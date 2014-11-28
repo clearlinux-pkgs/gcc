@@ -1,0 +1,4 @@
+#
+# This file contains pkgconfig build requirements that get picked up but are 
+# undesirable. One name per line, no whitespace.
+#
