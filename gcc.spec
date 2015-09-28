@@ -16,7 +16,7 @@
 
 Name     : gcc
 Version  : 5.2.0
-Release  : 51
+Release  : 52
 URL      : http://www.gnu.org/software/gcc/
 Source0  : http://ftp.gnu.org/gnu/gcc/gcc-5.2.0/gcc-5.2.0.tar.bz2
 Source1  : ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-%{isl_version}.tar.bz2
@@ -147,8 +147,8 @@ mkdir ../gcc-build
 pushd ../gcc-build
 unset CFLAGS
 unset CXXFLAGS
-export CFLAGS="-march=ivybridge -g -O2 -fstack-protector -Wl,-z -Wl,now -Wl,-z -Wl,relro  -Wl,-z,max-page-size=0x1000"
-export CXXFLAGS="-march=ivybridge -g -O2  -Wl,-z,max-page-size=0x1000"
+export CFLAGS="-march=westmere -g -O2 -fstack-protector -Wl,-z -Wl,now -Wl,-z -Wl,relro  -Wl,-z,max-page-size=0x1000"
+export CXXFLAGS="-march=westmere -g -O2  -Wl,-z,max-page-size=0x1000"
 
 export CPATH=%{_includedir}
 export LIBRARY_PATH=%{_libdir}
@@ -182,7 +182,7 @@ export LIBRARY_PATH=%{_libdir}
     --with-system-libunwind \
     --with-gnu-ld \
     --with-tune=haswell \
-    --with-arch=ivybridge \
+    --with-arch=westmere \
     --enable-libmpx
 
 make %{?_smp_mflags}
