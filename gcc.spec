@@ -16,7 +16,7 @@
 
 Name     : gcc
 Version  : 5.2.0
-Release  : 53
+Release  : 54
 URL      : http://www.gnu.org/software/gcc/
 Source0  : http://ftp.gnu.org/gnu/gcc/gcc-5.2.0/gcc-5.2.0.tar.bz2
 Source1  : ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-%{isl_version}.tar.bz2
@@ -90,6 +90,13 @@ Provides:       libgomp1
 %description -n libgcc1
 GNU cc and gcc C compilers.
 
+%package libubsan
+License:        GPL-3.0-with-GCC-exception and GPL-3.0
+Summary:        GNU cc and gcc C compilers
+Group:          devel
+
+%description libubsan
+Address sanitizer runtime libs
 
 %package -n libstdc++
 License:        GPL-3.0-with-GCC-exception and GPL-3.0
@@ -263,15 +270,10 @@ cat *.lang > %{name}.lang
 %{_bindir}/gcov-tool
 /lib/cpp
 %{_bindir}/cpp
-%{_prefix}/lib64/libasan*
-%{_prefix}/lib64/libtsan*
 %{_prefix}/lib64/libatomic*
 %{_prefix}/lib64/libitm*
 %{_prefix}/lib64/libquadmath*
 %{_prefix}/lib64/libcilkrts*
-%{_prefix}/lib64/liblsan*
-%{_prefix}/lib64/libsanit*
-%{_prefix}/lib64/libubsan*
 %{_prefix}/lib64/libvtv*
 %{_prefix}/lib64/libcc1*
 %{_libdir}/gcc/%{gcc_target}/%{version}/include-fixed/
@@ -376,3 +378,10 @@ cat *.lang > %{name}.lang
 /usr/lib64/go/*/x86_64-generic-linux/*/*/*.gox
 
 %files -n gcc-locale -f %{name}.lang
+
+%files libubsan
+%{_prefix}/lib64/libubsan*
+%{_prefix}/lib64/libasan*
+%{_prefix}/lib64/libtsan*
+%{_prefix}/lib64/liblsan*
+%{_prefix}/lib64/libsanit*
