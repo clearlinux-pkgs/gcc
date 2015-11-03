@@ -1,0 +1,973 @@
+diff --git a/gcc/Makefile.in b/gcc/Makefile.in
+index 07c6f0a..daab268 100644
+--- a/gcc/Makefile.in
++++ b/gcc/Makefile.in
+@@ -1338,6 +1338,7 @@ OBJS = \
+ 	mode-switching.o \
+ 	modulo-sched.o \
+ 	omega.o \
++	multiple_target.o \
+ 	omp-low.o \
+ 	optabs.o \
+ 	options-save.o \
+diff --git a/gcc/attribs.c b/gcc/attribs.c
+index c18bff2..affd17c 100644
+--- a/gcc/attribs.c
++++ b/gcc/attribs.c
+@@ -691,3 +691,21 @@ apply_tm_attr (tree fndecl, tree attr)
+ {
+   decl_attributes (&TREE_TYPE (fndecl), tree_cons (attr, NULL, NULL), 0);
+ }
++
++/* Makes a function attribute of the form NAME(ARG_NAME) and chains
++   it to CHAIN.  */
++
++tree
++make_attribute (const char *name, const char *arg_name, tree chain)
++{
++  tree attr_name;
++  tree attr_arg_name;
++  tree attr_args;
++  tree attr;
++
++  attr_name = get_identifier (name);
++  attr_arg_name = build_string (strlen (arg_name), arg_name);
++  attr_args = tree_cons (NULL_TREE, attr_arg_name, NULL_TREE);
++  attr = tree_cons (attr_name, attr_args, chain);
++  return attr;
++}
+diff --git a/gcc/attribs.h b/gcc/attribs.h
+index ac855d5..3c0be4f 100644
+--- a/gcc/attribs.h
++++ b/gcc/attribs.h
+@@ -36,5 +36,6 @@ extern tree decl_attributes (tree *, tree, int);
+ extern bool cxx11_attribute_p (const_tree);
+ extern tree get_attribute_name (const_tree);
+ extern void apply_tm_attr (tree, tree);
++extern tree make_attribute (const char *, const char *, tree);
+ 
+ #endif // GCC_ATTRIBS_H
+diff --git a/gcc/c-family/c-common.c b/gcc/c-family/c-common.c
+index 7fe7fa6..26bd4ac 100644
+--- a/gcc/c-family/c-common.c
++++ b/gcc/c-family/c-common.c
+@@ -390,6 +390,7 @@ static tree handle_alloc_size_attribute (tree *, tree, tree, int, bool *);
+ static tree handle_alloc_align_attribute (tree *, tree, tree, int, bool *);
+ static tree handle_assume_aligned_attribute (tree *, tree, tree, int, bool *);
+ static tree handle_target_attribute (tree *, tree, tree, int, bool *);
++static tree handle_target_clones_attribute (tree *, tree, tree, int, bool *);
+ static tree handle_optimize_attribute (tree *, tree, tree, int, bool *);
+ static tree ignore_attribute (tree *, tree, tree, int, bool *);
+ static tree handle_no_split_stack_attribute (tree *, tree, tree, int, bool *);
+@@ -789,6 +790,8 @@ const struct attribute_spec c_common_attribute_table[] =
+ 			      handle_error_attribute, false },
+   { "target",                 1, -1, true, false, false,
+ 			      handle_target_attribute, false },
++  { "target_clones",          1, -1, true, false, false,
++			      handle_target_clones_attribute, false },
+   { "optimize",               1, -1, true, false, false,
+ 			      handle_optimize_attribute, false },
+   /* For internal use only.  The leading '*' both prevents its usage in
+@@ -6898,6 +6901,12 @@ handle_always_inline_attribute (tree *node, tree name,
+ 		   "with %qs attribute", name, "noinline");
+ 	  *no_add_attrs = true;
+ 	}
++      else if (lookup_attribute ("target_clones", DECL_ATTRIBUTES (*node)))
++	{
++	  warning (OPT_Wattributes, "%qE attribute ignored due to conflict "
++		   "with %qs attribute", name, "target_clones");
++	  *no_add_attrs = true;
++	}
+       else
+ 	/* Set the attribute and mark it for disregarding inline
+ 	   limits.  */
+@@ -9299,6 +9308,12 @@ handle_target_attribute (tree *node, tree name, tree args, int flags,
+       warning (OPT_Wattributes, "%qE attribute ignored", name);
+       *no_add_attrs = true;
+     }
++  else if (lookup_attribute ("target_clones", DECL_ATTRIBUTES (*node)))
++    {
++      warning (OPT_Wattributes, "%qE attribute ignored due to conflict "
++		   "with %qs attribute", name, "target_clones");
++      *no_add_attrs = true;
++    }
+   else if (! targetm.target_option.valid_attribute_p (*node, name, args,
+ 						      flags))
+     *no_add_attrs = true;
+@@ -9306,6 +9321,39 @@ handle_target_attribute (tree *node, tree name, tree args, int flags,
+   return NULL_TREE;
+ }
+ 
++/* Handle a "target_clones" attribute.  */
++
++static tree
++handle_target_clones_attribute (tree *node, tree name, tree ARG_UNUSED (args),
++			  int ARG_UNUSED (flags), bool *no_add_attrs)
++{
++  /* Ensure we have a function type.  */
++  if (TREE_CODE (*node) == FUNCTION_DECL)
++    {
++      if (lookup_attribute ("always_inline", DECL_ATTRIBUTES (*node)))
++	{
++	  warning (OPT_Wattributes, "%qE attribute ignored due to conflict "
++		   "with %qs attribute", name, "always_inline");
++	  *no_add_attrs = true;
++	}
++      else if (lookup_attribute ("target", DECL_ATTRIBUTES (*node)))
++	{
++	  warning (OPT_Wattributes, "%qE attribute ignored due to conflict "
++		   "with %qs attribute", name, "target");
++	  *no_add_attrs = true;
++	}
++      else
++      /* Do not inline functions with multiple clone targets.  */
++	DECL_UNINLINABLE (*node) = 1;
++    }
++  else
++    {
++      warning (OPT_Wattributes, "%qE attribute ignored", name);
++      *no_add_attrs = true;
++    }
++  return NULL_TREE;
++}
++
+ /* Arguments being collected for optimization.  */
+ typedef const char *const_char_p;		/* For DEF_VEC_P.  */
+ static GTY(()) vec<const_char_p, va_gc> *optimize_args;
+diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
+index 7c28a55..3b99274 100644
+--- a/gcc/config/i386/i386.c
++++ b/gcc/config/i386/i386.c
+@@ -35298,24 +35298,6 @@ ix86_get_function_versions_dispatcher (void *decl)
+   return dispatch_decl;
+ }
+ 
+-/* Makes a function attribute of the form NAME(ARG_NAME) and chains
+-   it to CHAIN.  */
+-
+-static tree
+-make_attribute (const char *name, const char *arg_name, tree chain)
+-{
+-  tree attr_name;
+-  tree attr_arg_name;
+-  tree attr_args;
+-  tree attr;
+-
+-  attr_name = get_identifier (name);
+-  attr_arg_name = build_string (strlen (arg_name), arg_name);
+-  attr_args = tree_cons (NULL_TREE, attr_arg_name, NULL_TREE);
+-  attr = tree_cons (attr_name, attr_args, chain);
+-  return attr;
+-}
+-
+ /* Make the resolver function decl to dispatch the versions of
+    a multi-versioned function,  DEFAULT_DECL.  Create an
+    empty basic block in the resolver and store the pointer in
+diff --git a/gcc/doc/extend.texi b/gcc/doc/extend.texi
+index 79559c8..d076a18 100644
+--- a/gcc/doc/extend.texi
++++ b/gcc/doc/extend.texi
+@@ -3937,6 +3937,19 @@ to restart a system call after an interrupt without having to save/restore
+ the input registers.  This also prevents kernel data from leaking into
+ application code.
+ 
++@item target_clones (@var{options})
++@cindex @code{target_clones} function attribute
++The @code{target_clones} attribute is used to specify that a function is to
++be cloned into multiple versions compiled with different target options
++than specified on the command line.  The supported options and restrictions
++are the same as for @code{target} attribute.
++
++For instance on an x86, you could compile a function with
++@code{target_clones("sse4.1,avx")}. It will create 2 function clones,
++one compiled with @option{-msse4.1} and another with @option{-mavx}.
++At the function call it will create resolver @code{ifunc}, that will
++dynamically call a clone suitable for current architecture.
++
+ @item target
+ @cindex @code{target} function attribute
+ The @code{target} attribute is used to specify that a function is to
+diff --git a/gcc/multiple_target.c b/gcc/multiple_target.c
+new file mode 100644
+index 0000000..82ccd21
+--- /dev/null
++++ b/gcc/multiple_target.c
+@@ -0,0 +1,477 @@
++/* Pass for parsing functions with multiple target attributes.
++
++   Contributed by Evgeny Stupachenko <evstupac@gmail.com>
++
++   Copyright (C) 2015 Free Software Foundation, Inc.
++
++This file is part of GCC.
++
++GCC is free software; you can redistribute it and/or modify it under
++the terms of the GNU General Public License as published by the Free
++Software Foundation; either version 3, or (at your option) any later
++version.
++
++GCC is distributed in the hope that it will be useful, but WITHOUT ANY
++WARRANTY; without even the implied warranty of MERCHANTABILITY or
++FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
++for more details.
++
++You should have received a copy of the GNU General Public License
++along with GCC; see the file COPYING3.  If not see
++<http://www.gnu.org/licenses/>.  */
++
++#include "config.h"
++#include "system.h"
++#include "coretypes.h"
++#include "tm.h"
++#include "hash-set.h"
++#include "machmode.h"
++#include "vec.h"
++#include "double-int.h"
++#include "input.h"
++#include "alias.h"
++#include "symtab.h"
++#include "wide-int.h"
++#include "inchash.h"
++#include "tree.h"
++#include "fold-const.h"
++#include "stringpool.h"
++#include "stor-layout.h"
++#include "rtl.h"
++#include "predict.h"
++#include "hard-reg-set.h"
++#include "function.h"
++#include "dominance.h"
++#include "cfg.h"
++#include "cfganal.h"
++#include "basic-block.h"
++#include "tree-ssa-alias.h"
++#include "gimple-expr.h"
++#include "gimple.h"
++#include "tree-iterator.h"
++#include "diagnostic-core.h"
++#include "gimple-ssa.h"
++#include "hash-map.h"
++#include "plugin-api.h"
++#include "ipa-ref.h"
++#include "cgraph.h"
++#include "tree-cfg.h"
++#include "tree-phinodes.h"
++#include "calls.h"
++#include "stmt.h"
++#include "tree-pass.h"
++#include "target.h"
++#include "attribs.h"
++
++/* If the call in NODE has multiple target attribute with multiple fields,
++   replace it with dispatcher call and create dispatcher (once).  */
++
++static void
++create_dispatcher_calls (struct cgraph_node *node)
++{
++  cgraph_edge *e;
++  cgraph_edge *e_next;
++
++  /* We need to remember NEXT_CALLER as it could be modified in the loop.  */
++  for (e = node->callers; e ;e = (e == NULL) ? e_next : e->next_caller)
++    {
++      tree resolver_decl;
++      tree idecl;
++      tree decl;
++      gimple call = e->call_stmt;
++      struct cgraph_node *inode;
++
++      /* Checking if call of function is call of versioned function.
++	 Versioned function are not inlined, so there is no need to
++	 check for inline.  */
++      if (!call
++	  || !(decl = gimple_call_fndecl (call))
++	  || !DECL_FUNCTION_VERSIONED (decl))
++	continue;
++
++      if (!targetm.has_ifunc_p ())
++	{
++	  error_at (gimple_location (call),
++		    "the call requires ifunc, which is not"
++		    " supported by this target");
++	  break;
++	}
++      e_next = e->next_caller;
++      idecl = targetm.get_function_versions_dispatcher (decl);
++      if (!idecl)
++	{
++	  error_at (gimple_location (call),
++		    "default target_clones attribute was not set");
++	  break;
++	}
++      inode = cgraph_node::get (idecl);
++      gcc_assert (inode);
++      resolver_decl = targetm.generate_version_dispatcher_body (inode);
++
++      /* Update aliases.  */
++      inode->alias = true;
++      inode->alias_target = resolver_decl;
++      if (!inode->analyzed)
++	inode->resolve_alias (cgraph_node::get (resolver_decl));
++
++      e->redirect_callee (inode);
++      /*  Since REDIRECT_CALLEE modifies NEXT_CALLER field we move to
++	  previously set NEXT_CALLER.  */
++      e = NULL;
++    }
++}
++
++/* Return length of attribute names string,
++   if arglist chain > 1, -1 otherwise.  */
++
++static int
++get_attr_len (tree arglist)
++{
++  tree arg;
++  int str_len_sum = 0;
++  int argnum = 1;
++
++  for (arg = arglist; arg; arg = TREE_CHAIN (arg))
++    {
++      unsigned int i;
++      const char *str = TREE_STRING_POINTER (TREE_VALUE (arg));
++      int len = strlen (str);
++
++      str_len_sum += len + 1;
++      if (arg != arglist)
++	argnum++;
++      for (i = 0; i < strlen (str); i++)
++	if (str[i] == ',')
++	  argnum++;
++    }
++  if (argnum == 1)
++    return -1;
++  return str_len_sum;
++}
++
++/* Create string with attributes separated by comma.
++   Return number of attributes.  */
++
++static int
++get_attr_str (tree arglist, char *attr_str)
++{
++  tree arg;
++  size_t str_len_sum = 0;
++  int argnum = 0;
++
++  for (arg = arglist; arg; arg = TREE_CHAIN (arg))
++    {
++      const char *str = TREE_STRING_POINTER (TREE_VALUE (arg));
++
++      size_t len = strlen (str);
++      memcpy (attr_str + str_len_sum, str, len);
++      attr_str[str_len_sum + len] = TREE_CHAIN (arg) ? ',' : '\0';
++      str_len_sum += len + 1;
++      argnum++;
++    }
++  return argnum;
++}
++
++/* Return number of attributes separated by comma and put them into ARGS.
++   If there is no DEFAULT attribute return -1.  */
++
++static int
++separate_attrs (char *attr_str, char **attrs)
++{
++  int i = 0;
++  bool has_default = false;
++  char *attr = strtok (attr_str, ",");
++
++  while (attr != NULL)
++    {
++      if (strcmp (attr, "default") == 0)
++	{
++	  has_default = true;
++	  attr = strtok (NULL, ",");
++	  continue;
++	}
++      attrs[i] = attr;
++      attr = strtok (NULL, ",");
++      i++;
++    }
++  if (!has_default)
++    return -1;
++  return i;
++}
++
++/*  Return true if symbol is valid in assembler name.  */
++
++static bool
++is_valid_asm_symbol (char c)
++{
++  if ('a' <= c && c <= 'z')
++    return true;
++  if ('A' <= c && c <= 'Z')
++    return true;
++  if ('0' <= c && c <= '9')
++    return true;
++  if (c == '_')
++    return true;
++  return false;
++}
++
++/*  Replace all not valid assembler symbols with '_'.  */
++
++static void
++create_new_asm_name (char *old_asm_name, char *new_asm_name)
++{
++  int i;
++  int old_name_len = strlen (old_asm_name);
++
++  /* Replace all not valid assembler symbols with '_'.  */
++  for (i = 0; i < old_name_len; i++)
++    if (!is_valid_asm_symbol (old_asm_name[i]))
++      new_asm_name[i] = '_';
++    else
++      new_asm_name[i] = old_asm_name[i];
++  new_asm_name[old_name_len] = '\0';
++}
++
++/*  Creates target clone of NODE.  */
++
++static cgraph_node *
++create_target_clone (cgraph_node *node, bool definition, char *name)
++{
++  cgraph_node *new_node;
++
++  if (definition)
++    {
++      new_node = node->create_version_clone_with_body (vNULL, NULL,
++    						       NULL, false,
++						       NULL, NULL,
++						       name);
++      new_node->force_output = true;
++    }
++  else
++    {
++      tree new_decl = copy_node (node->decl);
++      new_node = cgraph_node::get_create (new_decl);
++      /* Generate a new name for the new version.  */
++      symtab->change_decl_assembler_name (new_node->decl,
++					  clone_function_name (node->decl,
++							       name));
++    }
++  return new_node;
++}
++
++/* If the function in NODE has multiple target attributes
++   create the appropriate clone for each valid target attribute.  */
++
++static bool
++expand_target_clones (struct cgraph_node *node, bool defenition)
++{
++  int i;
++  /* Parsing target attributes separated by comma.  */
++  tree attr_target = lookup_attribute ("target_clones",
++				       DECL_ATTRIBUTES (node->decl));
++  /* No targets specified.  */
++  if (!attr_target)
++    return false;
++
++  tree arglist = TREE_VALUE (attr_target);
++  int attr_len = get_attr_len (arglist);
++
++  /* No need to clone for 1 target attribute.  */
++  if (attr_len == -1)
++    {
++      warning_at (DECL_SOURCE_LOCATION (node->decl),
++		  0,
++		  "single target_clones attribute is ignored");
++      return false;
++    }
++
++  char *attr_str = XNEWVEC (char, attr_len);
++  int attrnum = get_attr_str (arglist, attr_str);
++  char **attrs = XNEWVEC (char *, attrnum);
++
++  attrnum = separate_attrs (attr_str, attrs);
++  if (attrnum == -1)
++    {
++      error_at (DECL_SOURCE_LOCATION (node->decl),
++		"default target was not set");
++      return false;
++    }
++
++  cgraph_function_version_info *decl1_v = NULL;
++  cgraph_function_version_info *decl2_v = NULL;
++  cgraph_function_version_info *before = NULL;
++  cgraph_function_version_info *after = NULL;
++  decl1_v = node->function_version ();
++  if (decl1_v == NULL)
++    decl1_v = node->insert_new_function_version ();
++  before = decl1_v;
++  DECL_FUNCTION_VERSIONED (node->decl) = 1;
++
++  for (i = 0; i < attrnum; i++)
++    {
++      char *attr = attrs[i];
++      char *suffix = XNEWVEC (char, strlen (attr) + 1);
++
++      create_new_asm_name (attr, suffix);
++      /* Create new target clone.  */
++      cgraph_node *new_node = create_target_clone (node, defenition, suffix);
++      XDELETEVEC (suffix);
++
++      /* Set new attribute for the clone.  */
++      tree attributes = make_attribute ("target", attr,
++					DECL_ATTRIBUTES (new_node->decl));
++      DECL_ATTRIBUTES (new_node->decl) = attributes;
++      if (!targetm.target_option.valid_attribute_p (new_node->decl, NULL,
++						    TREE_VALUE (attributes), 0))
++	{
++	  warning_at (DECL_SOURCE_LOCATION (node->decl), 0,
++		      "attribute(target_clones(\"%s\")) is not "
++		      "valid for current target", attr);
++	  continue;
++	}
++
++      decl2_v = new_node->function_version ();
++      if (decl2_v != NULL)
++        continue;
++      decl2_v = new_node->insert_new_function_version ();
++
++      /* Chain decl2_v and decl1_v.  All semantically identical versions
++	 will be chained together.  */
++      after = decl2_v;
++      while (before->next != NULL)
++	before = before->next;
++      while (after->prev != NULL)
++	after = after->prev;
++
++      before->next = after;
++      after->prev = before;
++      DECL_FUNCTION_VERSIONED (new_node->decl) = 1;
++    }
++
++  /* Setting new attribute to initial function.  */
++  tree attributes =  make_attribute ("target", "default",
++				     DECL_ATTRIBUTES (node->decl));
++  DECL_ATTRIBUTES (node->decl) = attributes;
++  if (!targetm.target_option.valid_attribute_p (node->decl, NULL,
++						TREE_VALUE (attributes), 0))
++    {
++      error_at (DECL_SOURCE_LOCATION (node->decl),
++		"attribute(target_clones(\"default\")) is not "
++		"valid for current target");
++      return false;
++    }
++
++  XDELETEVEC (attrs);
++  XDELETEVEC (attr_str);
++  return true;
++}
++
++static bool target_clone_pass;
++
++static unsigned int
++ipa_target_clone (void)
++{
++  struct cgraph_node *node;
++
++  target_clone_pass = false;
++  FOR_EACH_FUNCTION (node)
++    if (node->definition)
++      target_clone_pass |= expand_target_clones (node, true);
++  return 0;
++}
++
++namespace {
++
++const pass_data pass_data_target_clone =
++{
++  SIMPLE_IPA_PASS,		/* type */
++  "targetclone",		/* name */
++  OPTGROUP_NONE,		/* optinfo_flags */
++  TV_NONE,			/* tv_id */
++  ( PROP_ssa | PROP_cfg ),	/* properties_required */
++  0,				/* properties_provided */
++  0,				/* properties_destroyed */
++  0,				/* todo_flags_start */
++  0				/* todo_flags_finish */
++};
++
++class pass_target_clone : public simple_ipa_opt_pass
++{
++public:
++  pass_target_clone (gcc::context *ctxt)
++    : simple_ipa_opt_pass (pass_data_target_clone, ctxt)
++  {}
++
++  /* opt_pass methods: */
++  virtual bool gate (function *);
++  virtual unsigned int execute (function *) { return ipa_target_clone (); }
++};
++
++bool
++pass_target_clone::gate (function *)
++{
++  return true;
++}
++
++} // anon namespace
++
++simple_ipa_opt_pass *
++make_pass_target_clone (gcc::context *ctxt)
++{
++  return new pass_target_clone (ctxt);
++}
++
++static unsigned int
++ipa_dispatcher_calls (void)
++{
++  struct cgraph_node *node;
++
++  FOR_EACH_FUNCTION (node)
++    if (!node->definition)
++      target_clone_pass |= expand_target_clones (node, false);
++  if (target_clone_pass)
++    FOR_EACH_FUNCTION (node)
++      create_dispatcher_calls (node);
++  return 0;
++}
++
++namespace {
++
++const pass_data pass_data_dispatcher_calls =
++{
++  SIMPLE_IPA_PASS,		/* type */
++  "dispachercalls",		/* name */
++  OPTGROUP_NONE,		/* optinfo_flags */
++  TV_NONE,			/* tv_id */
++  ( PROP_ssa | PROP_cfg ),	/* properties_required */
++  0,				/* properties_provided */
++  0,				/* properties_destroyed */
++  0,				/* todo_flags_start */
++  0				/* todo_flags_finish */
++};
++
++class pass_dispatcher_calls : public simple_ipa_opt_pass
++{
++public:
++  pass_dispatcher_calls (gcc::context *ctxt)
++    : simple_ipa_opt_pass (pass_data_dispatcher_calls, ctxt)
++  {}
++
++  /* opt_pass methods: */
++  virtual bool gate (function *);
++  virtual unsigned int execute (function *) { return ipa_dispatcher_calls (); }
++};
++
++bool
++pass_dispatcher_calls::gate (function *)
++{
++  return true;
++}
++
++} // anon namespace
++
++simple_ipa_opt_pass *
++make_pass_dispatcher_calls (gcc::context *ctxt)
++{
++  return new pass_dispatcher_calls (ctxt);
++}
+diff --git a/gcc/passes.def b/gcc/passes.def
+index f77d3d3..b2a7fe0 100644
+--- a/gcc/passes.def
++++ b/gcc/passes.def
+@@ -124,6 +124,7 @@ along with GCC; see the file COPYING3.  If not see
+   NEXT_PASS (pass_ipa_devirt);
+   NEXT_PASS (pass_ipa_cp);
+   NEXT_PASS (pass_ipa_cdtor_merge);
++  NEXT_PASS (pass_target_clone);
+   NEXT_PASS (pass_ipa_inline);
+   NEXT_PASS (pass_ipa_pure_const);
+   NEXT_PASS (pass_ipa_reference);
+@@ -140,6 +141,7 @@ along with GCC; see the file COPYING3.  If not see
+      compiled unit.  */
+   INSERT_PASSES_AFTER (all_late_ipa_passes)
+   NEXT_PASS (pass_ipa_pta);
++  NEXT_PASS (pass_dispatcher_calls);
+   NEXT_PASS (pass_omp_simd_clone);
+   TERMINATE_PASS_LIST ()
+ 
+diff --git a/gcc/testsuite/g++.dg/ext/mvc1.C b/gcc/testsuite/g++.dg/ext/mvc1.C
+new file mode 100644
+index 0000000..ff37238
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/ext/mvc1.C
+@@ -0,0 +1,35 @@
++/* { dg-do run { target i?86-*-* x86_64-*-* } } */
++/* { dg-require-ifunc "" } */
++
++__attribute__((target_clones("avx","arch=slm","arch=core-avx2","default")))
++int
++foo ()
++{
++  return -2;
++}
++
++__attribute__((target("avx","arch=core-avx2")))
++int
++bar ()
++{
++  return 2;
++}
++
++__attribute__((target("default")))
++int
++bar ()
++{
++  return 2;
++}
++
++int
++main ()
++{
++  int r = 0;
++  r += bar ();
++  r += foo ();
++  r += bar ();
++  r += foo ();
++  r += bar ();
++  return r - 2;
++}
+diff --git a/gcc/testsuite/g++.dg/ext/mvc2.C b/gcc/testsuite/g++.dg/ext/mvc2.C
+new file mode 100644
+index 0000000..e7abab8
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/ext/mvc2.C
+@@ -0,0 +1,8 @@
++/* { dg-do compile { target i?86-*-* x86_64-*-* } } */
++
++__attribute__((target_clones("avx","arch=slm","default")))
++__attribute__((target("avx")))
++int foo (); /* { dg-warning "'target' attribute ignored due to conflict with 'target_clones' attribute" } */
++
++__attribute__((target_clones("avx","arch=slm","default"),always_inline))
++int bar (); /* { dg-warning "'always_inline' attribute ignored due to conflict with 'target_clones' attribute" } */
+diff --git a/gcc/testsuite/g++.dg/ext/mvc3.C b/gcc/testsuite/g++.dg/ext/mvc3.C
+new file mode 100644
+index 0000000..05bebf7
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/ext/mvc3.C
+@@ -0,0 +1,8 @@
++/* { dg-do compile { target i?86-*-* x86_64-*-* } } */
++
++__attribute__((target("avx")))
++__attribute__((target_clones("avx","arch=slm","default")))
++int foo (); /* { dg-warning "'target_clones' attribute ignored due to conflict with 'target' attribute" } */
++
++__attribute__((always_inline,target_clones("avx","arch=slm","default")))
++int bar (); /* { dg-warning "'target_clones' attribute ignored due to conflict with 'always_inline' attribute" } */
+diff --git a/gcc/testsuite/g++.dg/ext/mvc4.C b/gcc/testsuite/g++.dg/ext/mvc4.C
+new file mode 100644
+index 0000000..6e18e56
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/ext/mvc4.C
+@@ -0,0 +1,35 @@
++/* { dg-do compile { target i?86-*-* x86_64-*-* } } */
++/* { dg-require-ifunc "" } */
++/* { dg-options "-mavx" } */
++
++#include <immintrin.h>
++
++__m256 x, y, z;
++
++__attribute__((target("avx")))
++int bar()
++{
++  x = _mm256_add_ps (y, z);
++  return 1;
++}
++
++__attribute__((target("default")))
++int bar()
++{
++  return 2;
++}
++
++int
++foobar()
++{
++  if (__builtin_cpu_supports ("avx"))
++    return bar();
++  else
++    return 0;
++}
++
++__attribute__((target_clones("default","sse3")))
++int foo()
++{
++  return foobar();
++}
+diff --git a/gcc/testsuite/gcc.target/i386/mvc1.c b/gcc/testsuite/gcc.target/i386/mvc1.c
+new file mode 100644
+index 0000000..752b3af
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/mvc1.c
+@@ -0,0 +1,27 @@
++/* { dg-do run } */
++/* { dg-require-ifunc "" } */
++
++__attribute__((target_clones("avx","arch=slm","arch=core-avx2","default")))
++int
++foo ()
++{
++  return -2;
++}
++
++int
++bar ()
++{
++  return 2;
++}
++
++int
++main ()
++{
++  int r = 0;
++  r += bar ();
++  r += foo ();
++  r += bar ();
++  r += foo ();
++  r += bar ();
++  return r - 2;
++}
+diff --git a/gcc/testsuite/gcc.target/i386/mvc2.c b/gcc/testsuite/gcc.target/i386/mvc2.c
+new file mode 100644
+index 0000000..9635ec8
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/mvc2.c
+@@ -0,0 +1,4 @@
++/* { dg-do compile } */
++
++__attribute__((target_clones("avx","arch=slm","arch=core-avx2")))
++int foo ();
+diff --git a/gcc/testsuite/gcc.target/i386/mvc3.c b/gcc/testsuite/gcc.target/i386/mvc3.c
+new file mode 100644
+index 0000000..f940cdb
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/mvc3.c
+@@ -0,0 +1,10 @@
++/* { dg-do compile } */
++
++__attribute__((target_clones("avx","arch=slm","arch=core-avx2")))
++int foo (); /* { dg-error "default target was not set" } */
++
++int
++bar ()
++{
++  return foo();
++}
+diff --git a/gcc/testsuite/gcc.target/i386/mvc4.c b/gcc/testsuite/gcc.target/i386/mvc4.c
+new file mode 100644
+index 0000000..91293c3
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/mvc4.c
+@@ -0,0 +1,27 @@
++/* { dg-do run } */
++/* { dg-require-ifunc "" } */
++
++__attribute__((target_clones("default","avx","default")))
++int
++foo ()
++{
++  return -2;
++}
++
++int
++bar ()
++{
++  return 2;
++}
++
++int
++main ()
++{
++  int r = 0;
++  r += bar ();
++  r += foo ();
++  r += bar ();
++  r += foo ();
++  r += bar ();
++  return r - 2;
++}
+diff --git a/gcc/testsuite/gcc.target/i386/mvc5.c b/gcc/testsuite/gcc.target/i386/mvc5.c
+new file mode 100644
+index 0000000..8fea04c
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/mvc5.c
+@@ -0,0 +1,18 @@
++/* { dg-do compile } */
++/* { dg-require-ifunc "" } */
++/* { dg-options "-fno-inline" } */
++/* { dg-final { scan-assembler-times "foo.ifunc" 6 } } */
++
++__attribute__((target_clones("default","avx","avx2")))
++int
++foo ()
++{
++  return 10;
++}
++
++__attribute__((target_clones("default","avx","avx2")))
++int
++bar ()
++{
++  return -foo ();
++}
+diff --git a/gcc/testsuite/gcc.target/i386/mvc6.c b/gcc/testsuite/gcc.target/i386/mvc6.c
+new file mode 100644
+index 0000000..d584f57
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/mvc6.c
+@@ -0,0 +1,16 @@
++/* { dg-do compile } */
++/* { dg-options "-O3" } */
++/* { dg-final { scan-assembler "vpshufb" } } */
++/* { dg-final { scan-assembler "punpcklbw" } } */
++
++__attribute__((target_clones("arch=core-avx2","arch=slm","default")))
++void
++foo(char *in, char *out, int size)
++{
++  int i;
++  for(i = 0; i < size; i++)
++    {
++	out[2 * i] = in[i];
++	out[2 * i + 1] = in[i];
++    }
++}
+diff --git a/gcc/testsuite/gcc.target/i386/mvc7.c b/gcc/testsuite/gcc.target/i386/mvc7.c
+new file mode 100644
+index 0000000..9a9d7a3
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/mvc7.c
+@@ -0,0 +1,14 @@
++/* { dg-do compile } */
++/* { dg-require-ifunc "" } */
++/* { dg-final { scan-assembler "foo.resolver" } } */
++/* { dg-final { scan-assembler "avx" } } */
++/* { dg-final { scan-assembler "slm" } } */
++/* { dg-final { scan-assembler-times "foo.ifunc" 4 } } */
++
++__attribute__((target_clones("avx","default","arch=slm","arch=core-avx2")))
++int foo ();
++
++int main()
++{
++  return foo();
++}
+diff --git a/gcc/tree-pass.h b/gcc/tree-pass.h
+index 51ebcd7..0379542 100644
+--- a/gcc/tree-pass.h
++++ b/gcc/tree-pass.h
+@@ -479,6 +479,8 @@ extern ipa_opt_pass_d *make_pass_ipa_reference (gcc::context *ctxt);
+ extern ipa_opt_pass_d *make_pass_ipa_pure_const (gcc::context *ctxt);
+ extern simple_ipa_opt_pass *make_pass_ipa_pta (gcc::context *ctxt);
+ extern simple_ipa_opt_pass *make_pass_ipa_tm (gcc::context *ctxt);
++extern simple_ipa_opt_pass *make_pass_target_clone (gcc::context *ctxt);
++extern simple_ipa_opt_pass *make_pass_dispatcher_calls (gcc::context *ctxt);
+ extern simple_ipa_opt_pass *make_pass_omp_simd_clone (gcc::context *ctxt);
+ extern ipa_opt_pass_d *make_pass_ipa_profile (gcc::context *ctxt);
+ extern ipa_opt_pass_d *make_pass_ipa_cdtor_merge (gcc::context *ctxt);

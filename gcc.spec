@@ -24,7 +24,7 @@ Summary  : GNU cc and gcc C compilers
 Group    : Development/Tools
 License  : BSD-3-Clause BSL-1.0 GFDL-1.2 GFDL-1.3 GPL-2.0 GPL-3.0 LGPL-2.1 LGPL-3.0 MIT
 Patch0   : 0001-Fix-stack-protection-issues.patch
-Patch1   : multiver_gcc5.patch
+Patch1   : target_clones_gcc-5a.patch
 
 BuildRequires : bison
 BuildRequires : flex
