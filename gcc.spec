@@ -1,5 +1,5 @@
 %define keepstatic 1
-%define gcc_target x86_64-generic-linux
+%define gcc_target %{_arch}-generic-linux
 %define libstdcxx_maj 6
 %define libstdcxx_full 6.0.21
 %define isl_version 0.14
@@ -16,7 +16,7 @@
 
 Name     : gcc
 Version  : 5.2.0
-Release  : 56
+Release  : 57
 URL      : http://www.gnu.org/software/gcc/
 Source0  : http://ftp.gnu.org/gnu/gcc/gcc-5.2.0/gcc-5.2.0.tar.bz2
 Source1  : ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-%{isl_version}.tar.bz2
@@ -152,6 +152,7 @@ GNU cc and gcc C compilers.
 # Live in the gcc source tree
 tar xf %{SOURCE1} && ln -sf isl-%{isl_version} isl
 
+rm -rf ../gcc-build
 mkdir ../gcc-build
 pushd ../gcc-build
 unset CFLAGS
@@ -217,7 +218,7 @@ if [ -e %{gcc_target}-g77 ]; then
     ln -sf %{gcc_target}-g77 g77 || true
     ln -sf g77 f77 || true
 fi
-if [ -e x86_64-generic-linux-gfortran ]; then
+if [ -e %{_arch}-generic-linux-gfortran ]; then
     ln -sf %{gcc_target}-gfortran gfortran || true
     ln -sf gfortran f95 || true
 fi
@@ -296,8 +297,8 @@ cat *.lang > %{name}.lang
 
 #gfortran
 %{_bindir}/%{gcc_target}-gfortran
-%{_libdir}/gcc/x86_64-generic-linux/%{version}/f951
-%{_libdir}/gcc/x86_64-generic-linux/%{version}/finclude
+%{_libdir}/gcc/%{_arch}-generic-linux/%{version}/f951
+%{_libdir}/gcc/%{_arch}-generic-linux/%{version}/finclude
 %{_prefix}/lib64/libgfortran*
 %{_libdir}/gcc/%{gcc_target}/%{version}/libgfortran*
 %{_bindir}/f95
@@ -314,19 +315,19 @@ cat *.lang > %{name}.lang
 
 %files -n gcc-dev
 # libgcc-s-dev
-%{_libdir}/gcc/x86_64-generic-linux/%{version}/libgcc.a
-%{_libdir}/gcc/x86_64-generic-linux/%{version}/crtendS.o
-%{_libdir}/gcc/x86_64-generic-linux/%{version}/libgcc_eh.a
-%{_libdir}/gcc/x86_64-generic-linux/%{version}/crtprec32.o
-%{_libdir}/gcc/x86_64-generic-linux/%{version}/crtend.o
-%{_libdir}/gcc/x86_64-generic-linux/%{version}/crtbegin.o
-%{_libdir}/gcc/x86_64-generic-linux/%{version}/crtprec80.o
-%{_libdir}/gcc/x86_64-generic-linux/%{version}/crtfastmath.o
-%{_libdir}/gcc/x86_64-generic-linux/%{version}/crtbeginS.o
-%{_libdir}/gcc/x86_64-generic-linux/%{version}/crtprec64.o
-%{_libdir}/gcc/x86_64-generic-linux/%{version}/crtbeginT.o
+%{_libdir}/gcc/%{_arch}-generic-linux/%{version}/libgcc.a
+%{_libdir}/gcc/%{_arch}-generic-linux/%{version}/crtendS.o
+%{_libdir}/gcc/%{_arch}-generic-linux/%{version}/libgcc_eh.a
+%{_libdir}/gcc/%{_arch}-generic-linux/%{version}/crtprec32.o
+%{_libdir}/gcc/%{_arch}-generic-linux/%{version}/crtend.o
+%{_libdir}/gcc/%{_arch}-generic-linux/%{version}/crtbegin.o
+%{_libdir}/gcc/%{_arch}-generic-linux/%{version}/crtprec80.o
+%{_libdir}/gcc/%{_arch}-generic-linux/%{version}/crtfastmath.o
+%{_libdir}/gcc/%{_arch}-generic-linux/%{version}/crtbeginS.o
+%{_libdir}/gcc/%{_arch}-generic-linux/%{version}/crtprec64.o
+%{_libdir}/gcc/%{_arch}-generic-linux/%{version}/crtbeginT.o
 %{_libdir}/libgcc_s.so
-%{_libdir}/gcc/x86_64-generic-linux/%{version}/libgcov.a
+%{_libdir}/gcc/%{_arch}-generic-linux/%{version}/libgcov.a
 %{_libdir}/gcc/%{gcc_target}/%{version}/include/ssp
 %{_prefix}/lib64/libssp*.a
 /usr/lib64/libmpx.a
@@ -364,9 +365,9 @@ cat *.lang > %{name}.lang
 %files go
 /usr/libexec/gccgo/bin/*
 /usr/bin/gccgo
-/usr/bin/x86_64-generic-linux-gccgo
-/usr/lib64/gcc/x86_64-generic-linux/5.2.0/cgo
-/usr/lib64/gcc/x86_64-generic-linux/5.2.0/go1
+/usr/bin/%{_arch}-generic-linux-gccgo
+/usr/lib64/gcc/%{_arch}-generic-linux/5.2.0/cgo
+/usr/lib64/gcc/%{_arch}-generic-linux/5.2.0/go1
 /usr/lib64/libgo.a
 /usr/lib64/libgo.so
 /usr/lib64/libgobegin.a
@@ -375,15 +376,17 @@ cat *.lang > %{name}.lang
 
 %files go-lib
 /usr/lib64/libgo.so.*
-/usr/lib64/go/*/x86_64-generic-linux/*.gox
-/usr/lib64/go/*/x86_64-generic-linux/*/*.gox
-/usr/lib64/go/*/x86_64-generic-linux/*/*/*.gox
+/usr/lib64/go/*/%{_arch}-generic-linux/*.gox
+/usr/lib64/go/*/%{_arch}-generic-linux/*/*.gox
+/usr/lib64/go/*/%{_arch}-generic-linux/*/*/*.gox
 
 %files -n gcc-locale -f %{name}.lang
 
 %files libubsan
 %{_prefix}/lib64/libubsan*
 %{_prefix}/lib64/libasan*
+%ifnarch i386
 %{_prefix}/lib64/libtsan*
 %{_prefix}/lib64/liblsan*
+%endif
 %{_prefix}/lib64/libsanit*
