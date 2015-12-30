@@ -15,10 +15,10 @@
 %define march westmere
 
 Name     : gcc
-Version  : 5.2.0
+Version  : 5.3.0
 Release  : 57
 URL      : http://www.gnu.org/software/gcc/
-Source0  : http://ftp.gnu.org/gnu/gcc/gcc-5.2.0/gcc-5.2.0.tar.bz2
+Source0  : http://ftp.gnu.org/gnu/gcc/gcc-5.3.0/gcc-5.3.0.tar.bz2
 Source1  : ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-%{isl_version}.tar.bz2
 Summary  : GNU cc and gcc C compilers
 Group    : Development/Tools
@@ -343,6 +343,7 @@ cat *.lang > %{name}.lang
 %{_prefix}/lib64/libsupc++.a
 %{_includedir}/c++
 %{_datadir}/gdb/auto-load/%{_libdir}/libstdc++.so.*
+/usr/lib64/libstdc++fs.a
 
 %files -n libgcc1
 %{_libdir}/libgcc_s.so.1
@@ -366,8 +367,8 @@ cat *.lang > %{name}.lang
 /usr/libexec/gccgo/bin/*
 /usr/bin/gccgo
 /usr/bin/%{_arch}-generic-linux-gccgo
-/usr/lib64/gcc/%{_arch}-generic-linux/5.2.0/cgo
-/usr/lib64/gcc/%{_arch}-generic-linux/5.2.0/go1
+/usr/lib64/gcc/%{_arch}-generic-linux/5.3.0/cgo
+/usr/lib64/gcc/%{_arch}-generic-linux/5.3.0/go1
 /usr/lib64/libgo.a
 /usr/lib64/libgo.so
 /usr/lib64/libgobegin.a
