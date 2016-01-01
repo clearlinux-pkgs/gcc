@@ -16,7 +16,7 @@
 
 Name     : gcc
 Version  : 5.3.0
-Release  : 57
+Release  : 60
 URL      : http://www.gnu.org/software/gcc/
 Source0  : http://ftp.gnu.org/gnu/gcc/gcc-5.3.0/gcc-5.3.0.tar.bz2
 Source1  : ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-%{isl_version}.tar.bz2
@@ -25,6 +25,7 @@ Group    : Development/Tools
 License  : BSD-3-Clause BSL-1.0 GFDL-1.2 GFDL-1.3 GPL-2.0 GPL-3.0 LGPL-2.1 LGPL-3.0 MIT
 Patch0   : 0001-Fix-stack-protection-issues.patch
 Patch1   : target_clones_gcc-5a.patch
+Patch2   : openmp-vectorize.patch
 
 BuildRequires : bison
 BuildRequires : flex
@@ -146,6 +147,7 @@ GNU cc and gcc C compilers.
 %setup -q -n %{name}-%{version}
 %patch0 -p1
 %patch1 -p1
+%patch2 -p1
 
 %build
 
@@ -157,8 +159,8 @@ mkdir ../gcc-build
 pushd ../gcc-build
 unset CFLAGS
 unset CXXFLAGS
-export CFLAGS="-march=westmere -g -O2 -fstack-protector -Wl,-z -Wl,now -Wl,-z -Wl,relro  -Wl,-z,max-page-size=0x1000"
-export CXXFLAGS="-march=westmere -g -O2  -Wl,-z,max-page-size=0x1000"
+export CFLAGS="-march=westmere -g -O3 -fstack-protector -Wl,-z -Wl,now -Wl,-z -Wl,relro  -Wl,-z,max-page-size=0x1000"
+export CXXFLAGS="-march=westmere -g -O3  -Wl,-z,max-page-size=0x1000"
 
 export CPATH=%{_includedir}
 export LIBRARY_PATH=%{_libdir}

@@ -1,0 +1,14 @@
+--- gcc-5.3.0/gcc/opts.c.org	2016-01-01 15:08:15.128087498 -0500
++++ gcc-5.3.0/gcc/opts.c	2016-01-01 15:10:39.273285435 -0500
+@@ -669,6 +669,11 @@
+ {
+   enum unwind_info_type ui_except;
+ 
++  /* openmp to imply tree vectorize */
++  if (opts->x_flag_openmp) {
++	opts->x_flag_tree_vectorize = 1;
++  }
++
+   if (opts->x_dump_base_name
+       && ! IS_ABSOLUTE_PATH (opts->x_dump_base_name)
+       && ! opts->x_dump_base_name_prefixed)
