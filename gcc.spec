@@ -16,7 +16,7 @@
 
 Name     : gcc
 Version  : 5.3.0
-Release  : 60
+Release  : 61
 URL      : http://www.gnu.org/software/gcc/
 Source0  : http://ftp.gnu.org/gnu/gcc/gcc-5.3.0/gcc-5.3.0.tar.bz2
 Source1  : ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-%{isl_version}.tar.bz2
@@ -173,6 +173,8 @@ export LIBRARY_PATH=%{_libdir}
     --libexecdir=%{_libdir} \
     --with-system-zlib\
     --enable-shared\
+    --enable-gnu-indirect-function \
+    --disable-vtable-verify \
     --enable-threads=posix\
     --enable-__cxa_atexit\
     --enable-plugin\
@@ -186,7 +188,7 @@ export LIBRARY_PATH=%{_libdir}
     --target=%{gcc_target}\
     --enable-languages="c,c++,fortran,go" \
     --enable-bootstrap \
-    --with-ppl=no \
+    --with-ppl=yes \
     --includedir=%{_includedir} \
     --with-gxx-include-dir=%{_includedir}/c++/ \
     --exec-prefix=%{_prefix} \
