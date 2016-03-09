@@ -16,7 +16,7 @@
 
 Name     : gcc
 Version  : 5.3.0
-Release  : 612
+Release  : 613
 URL      : http://www.gnu.org/software/gcc/
 Source0  : http://ftp.gnu.org/gnu/gcc/gcc-5.3.0/gcc-5.3.0.tar.bz2
 Source1  : ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-%{isl_version}.tar.bz2
@@ -161,6 +161,7 @@ unset CFLAGS
 unset CXXFLAGS
 export CFLAGS="-march=westmere -g -O3 -fstack-protector -Wl,-z -Wl,now -Wl,-z -Wl,relro  -Wl,-z,max-page-size=0x1000"
 export CXXFLAGS="-march=westmere -g -O3  -Wl,-z,max-page-size=0x1000"
+export CFLAGS_FOR_TARGET="$CFLAGS"
 
 export CPATH=%{_includedir}
 export LIBRARY_PATH=%{_libdir}
