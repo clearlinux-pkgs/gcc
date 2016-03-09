@@ -144,7 +144,7 @@ GNU cc and gcc C compilers.
 
 
 %prep
-%setup -q -n %{name}-%{version}
+%setup -q -n gcc-%{version}
 %patch0 -p1
 %patch1 -p1
 %patch2 -p1
@@ -166,7 +166,7 @@ export CFLAGS_FOR_TARGET="$CFLAGS"
 export CPATH=%{_includedir}
 export LIBRARY_PATH=%{_libdir}
 
-../%{name}-%{version}/configure \
+../gcc-%{version}/configure \
     --prefix=%{_prefix} \
     --with-pkgversion='Clear Linux OS for Intel Architecture'\
     --libdir=%{_libdir} \
@@ -261,7 +261,7 @@ mv %{buildroot}/%{_prefix}/lib64/libstdc++.so.%{libstdcxx_full}-gdb.py %{buildro
 %find_lang cpplib cpp.lang
 %find_lang gcc tmp.lang
 %find_lang libstdc++ cxx.lang
-cat *.lang > %{name}.lang
+cat *.lang > gcc.lang
 
 %files
 %{_bindir}/%{gcc_target}-gcc-ar
@@ -299,7 +299,7 @@ cat *.lang > %{name}.lang
 %{_libdir}/gcc/%{gcc_target}/%{version}/plugin/gtype.state
 %{_libdir}/gcc/%{gcc_target}/%{version}/plugin/*.so.*
 %{_libdir}/gcc/%{gcc_target}/%{version}/plugin/include/
-%{_datadir}/%{name}-%{version}
+%{_datadir}/gcc-%{version}
 
 #gfortran
 %{_bindir}/%{gcc_target}-gfortran
@@ -387,7 +387,7 @@ cat *.lang > %{name}.lang
 /usr/lib64/go/*/%{_arch}-generic-linux/*/*.gox
 /usr/lib64/go/*/%{_arch}-generic-linux/*/*/*.gox
 
-%files -n gcc-locale -f %{name}.lang
+%files -n gcc-locale -f gcc.lang
 
 %files libubsan
 %{_prefix}/lib64/libubsan*
