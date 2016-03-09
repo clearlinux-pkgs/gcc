@@ -16,7 +16,7 @@
 
 Name     : gcc
 Version  : 5.3.0
-Release  : 613
+Release  : 614
 URL      : http://www.gnu.org/software/gcc/
 Source0  : http://ftp.gnu.org/gnu/gcc/gcc-5.3.0/gcc-5.3.0.tar.bz2
 Source1  : ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-%{isl_version}.tar.bz2
@@ -26,6 +26,7 @@ License  : BSD-3-Clause BSL-1.0 GFDL-1.2 GFDL-1.3 GPL-2.0 GPL-3.0 LGPL-2.1 LGPL-
 Patch0   : 0001-Fix-stack-protection-issues.patch
 Patch1   : target_clones_gcc-5a.patch
 Patch2   : openmp-vectorize.patch
+Patch3   : fortran-vector.patch
 
 BuildRequires : bison
 BuildRequires : flex
@@ -148,6 +149,7 @@ GNU cc and gcc C compilers.
 %patch0 -p1
 %patch1 -p1
 %patch2 -p1
+%patch3 -p1
 
 %build
 
