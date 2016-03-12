@@ -17,7 +17,7 @@
 
 Name     : gcc
 Version  : 5.3.0
-Release  : 616
+Release  : 617
 URL      : http://www.gnu.org/software/gcc/
 Source0  : http://ftp.gnu.org/gnu/gcc/gcc-5.3.0/gcc-5.3.0.tar.bz2
 Source1  : ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-%{isl_version}.tar.bz2
