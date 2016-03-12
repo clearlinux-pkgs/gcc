@@ -3,6 +3,7 @@
 %define libstdcxx_maj 6
 %define libstdcxx_full 6.0.21
 %define isl_version 0.14
+%define gccver 5.3.0
 
 %define debug_package %{nil}
 
@@ -16,7 +17,7 @@
 
 Name     : gcc
 Version  : 5.3.0
-Release  : 615
+Release  : 616
 URL      : http://www.gnu.org/software/gcc/
 Source0  : http://ftp.gnu.org/gnu/gcc/gcc-5.3.0/gcc-5.3.0.tar.bz2
 Source1  : ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-%{isl_version}.tar.bz2
@@ -27,6 +28,7 @@ Patch0   : 0001-Fix-stack-protection-issues.patch
 Patch1   : target_clones_gcc-5a.patch
 Patch2   : openmp-vectorize.patch
 Patch3   : fortran-vector.patch
+Patch4   : gcc-5.3.1.patch
 
 BuildRequires : bison
 BuildRequires : flex
@@ -150,6 +152,7 @@ GNU cc and gcc C compilers.
 %patch1 -p1
 %patch2 -p1
 %patch3 -p1
+%patch4 -p1
 
 %build
 
@@ -271,7 +274,7 @@ cat *.lang > gcc.lang
 %{_bindir}/%{gcc_target}-gcc-nm
 %{_bindir}/%{gcc_target}-gcc
 %{_bindir}/%{gcc_target}-c++
-%{_bindir}/%{gcc_target}-gcc-%{version}
+%{_bindir}/%{gcc_target}-gcc-%{gccver}
 %{_bindir}/gcc
 %{_bindir}/cc
 %{_bindir}/gcc-ar
@@ -287,28 +290,28 @@ cat *.lang > gcc.lang
 %{_prefix}/lib64/libcilkrts*
 %{_prefix}/lib64/libvtv*
 %{_prefix}/lib64/libcc1*
-%{_libdir}/gcc/%{gcc_target}/%{version}/include-fixed/
-%{_libdir}/gcc/%{gcc_target}/%{version}/install-tools/
-%{_libdir}/gcc/%{gcc_target}/%{version}/libcaf_*
-%{_libdir}/gcc/%{gcc_target}/%{version}/include/
-%{_libdir}/gcc/%{gcc_target}/%{version}/lto1
-%{_libdir}/gcc/%{gcc_target}/%{version}/lto-wrapper
-%{_libdir}/gcc/%{gcc_target}/%{version}/collect2
-%{_libdir}/gcc/%{gcc_target}/%{version}/cc1plus
-%{_libdir}/gcc/%{gcc_target}/%{version}/liblto_plugin.so.0.0.0
-%{_libdir}/gcc/%{gcc_target}/%{version}/liblto_plugin.so.0
-%{_libdir}/gcc/%{gcc_target}/%{version}/cc1
-%{_libdir}/gcc/%{gcc_target}/%{version}/plugin/gtype.state
-%{_libdir}/gcc/%{gcc_target}/%{version}/plugin/*.so.*
-%{_libdir}/gcc/%{gcc_target}/%{version}/plugin/include/
-%{_datadir}/gcc-%{version}
+%{_libdir}/gcc/%{gcc_target}/%{gccver}/include-fixed/
+%{_libdir}/gcc/%{gcc_target}/%{gccver}/install-tools/
+%{_libdir}/gcc/%{gcc_target}/%{gccver}/libcaf_*
+%{_libdir}/gcc/%{gcc_target}/%{gccver}/include/
+%{_libdir}/gcc/%{gcc_target}/%{gccver}/lto1
+%{_libdir}/gcc/%{gcc_target}/%{gccver}/lto-wrapper
+%{_libdir}/gcc/%{gcc_target}/%{gccver}/collect2
+%{_libdir}/gcc/%{gcc_target}/%{gccver}/cc1plus
+%{_libdir}/gcc/%{gcc_target}/%{gccver}/liblto_plugin.so.0.0.0
+%{_libdir}/gcc/%{gcc_target}/%{gccver}/liblto_plugin.so.0
+%{_libdir}/gcc/%{gcc_target}/%{gccver}/cc1
+%{_libdir}/gcc/%{gcc_target}/%{gccver}/plugin/gtype.state
+%{_libdir}/gcc/%{gcc_target}/%{gccver}/plugin/*.so.*
+%{_libdir}/gcc/%{gcc_target}/%{gccver}/plugin/include/
+%{_datadir}/gcc-%{gccver}
 
 #gfortran
 %{_bindir}/%{gcc_target}-gfortran
-%{_libdir}/gcc/%{_arch}-generic-linux/%{version}/f951
-%{_libdir}/gcc/%{_arch}-generic-linux/%{version}/finclude
+%{_libdir}/gcc/%{_arch}-generic-linux/%{gccver}/f951
+%{_libdir}/gcc/%{_arch}-generic-linux/%{gccver}/finclude
 %{_prefix}/lib64/libgfortran*
-%{_libdir}/gcc/%{gcc_target}/%{version}/libgfortran*
+%{_libdir}/gcc/%{gcc_target}/%{gccver}/libgfortran*
 %{_bindir}/f95
 %{_bindir}/gfortran
 
@@ -318,32 +321,32 @@ cat *.lang > gcc.lang
 %{_bindir}/g++
 
 # gcc-dev
-%{_libdir}/gcc/%{gcc_target}/%{version}/liblto_plugin.so
-%{_libdir}/gcc/%{gcc_target}/%{version}/plugin/*.so
+%{_libdir}/gcc/%{gcc_target}/%{gccver}/liblto_plugin.so
+%{_libdir}/gcc/%{gcc_target}/%{gccver}/plugin/*.so
 
 %files -n gcc-dev
 # libgcc-s-dev
-%{_libdir}/gcc/%{_arch}-generic-linux/%{version}/libgcc.a
-%{_libdir}/gcc/%{_arch}-generic-linux/%{version}/crtendS.o
-%{_libdir}/gcc/%{_arch}-generic-linux/%{version}/libgcc_eh.a
-%{_libdir}/gcc/%{_arch}-generic-linux/%{version}/crtprec32.o
-%{_libdir}/gcc/%{_arch}-generic-linux/%{version}/crtend.o
-%{_libdir}/gcc/%{_arch}-generic-linux/%{version}/crtbegin.o
-%{_libdir}/gcc/%{_arch}-generic-linux/%{version}/crtprec80.o
-%{_libdir}/gcc/%{_arch}-generic-linux/%{version}/crtfastmath.o
-%{_libdir}/gcc/%{_arch}-generic-linux/%{version}/crtbeginS.o
-%{_libdir}/gcc/%{_arch}-generic-linux/%{version}/crtprec64.o
-%{_libdir}/gcc/%{_arch}-generic-linux/%{version}/crtbeginT.o
+%{_libdir}/gcc/%{_arch}-generic-linux/%{gccver}/libgcc.a
+%{_libdir}/gcc/%{_arch}-generic-linux/%{gccver}/crtendS.o
+%{_libdir}/gcc/%{_arch}-generic-linux/%{gccver}/libgcc_eh.a
+%{_libdir}/gcc/%{_arch}-generic-linux/%{gccver}/crtprec32.o
+%{_libdir}/gcc/%{_arch}-generic-linux/%{gccver}/crtend.o
+%{_libdir}/gcc/%{_arch}-generic-linux/%{gccver}/crtbegin.o
+%{_libdir}/gcc/%{_arch}-generic-linux/%{gccver}/crtprec80.o
+%{_libdir}/gcc/%{_arch}-generic-linux/%{gccver}/crtfastmath.o
+%{_libdir}/gcc/%{_arch}-generic-linux/%{gccver}/crtbeginS.o
+%{_libdir}/gcc/%{_arch}-generic-linux/%{gccver}/crtprec64.o
+%{_libdir}/gcc/%{_arch}-generic-linux/%{gccver}/crtbeginT.o
 %{_libdir}/libgcc_s.so
-%{_libdir}/gcc/%{_arch}-generic-linux/%{version}/libgcov.a
-%{_libdir}/gcc/%{gcc_target}/%{version}/include/ssp
+%{_libdir}/gcc/%{_arch}-generic-linux/%{gccver}/libgcov.a
+%{_libdir}/gcc/%{gcc_target}/%{gccver}/include/ssp
 %{_prefix}/lib64/libssp*.a
 /usr/lib64/libmpx.a
 /usr/lib64/libmpx.so
 /usr/lib64/libmpxwrappers.a
 /usr/lib64/libmpxwrappers.so
 # gcc-plugin-dev
-%{_libdir}/gcc/%{gcc_target}/%{version}/plugin/gengtype
+%{_libdir}/gcc/%{gcc_target}/%{gccver}/plugin/gengtype
 
 # libstdc++
 %{_prefix}/lib64/libstdc++.so
