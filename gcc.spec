@@ -17,7 +17,7 @@
 
 Name     : gcc
 Version  : 5.3.0
-Release  : 621
+Release  : 620
 URL      : http://www.gnu.org/software/gcc/
 Source0  : http://ftp.gnu.org/gnu/gcc/gcc-5.3.0/gcc-5.3.0.tar.bz2
 Source1  : ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-%{isl_version}.tar.bz2
@@ -265,6 +265,12 @@ chmod -R a+x %{buildroot}/usr/lib64/gcc/
 mkdir -p %{buildroot}/%{_datadir}/gdb/auto-load/%{_libdir}
 mv %{buildroot}/%{_prefix}/lib64/libstdc++.so.%{libstdcxx_full}-gdb.py %{buildroot}/%{_datadir}/gdb/auto-load/%{_libdir}/.
 
+# clang compat
+ln -s /usr/lib64/gcc/x86_64-generic-linux/5.3.0/crtbegin.o %{buildroot}/usr/lib64
+ln -s /usr/lib64/gcc/x86_64-generic-linux/5.3.0/libgcc.a %{buildroot}/usr/lib64
+ln -s /usr/lib64/gcc/x86_64-generic-linux/5.3.0/crtend.o%{buildroot}/usr/lib64
+
+
 %find_lang cpplib cpp.lang
 %find_lang gcc tmp.lang
 %find_lang libstdc++ cxx.lang
@@ -307,6 +313,10 @@ cat *.lang > gcc.lang
 %{_libdir}/gcc/%{gcc_target}/%{gccver}/plugin/*.so.*
 %{_libdir}/gcc/%{gcc_target}/%{gccver}/plugin/include/
 %{_datadir}/gcc-%{gccver}
+/usr/lib64/libgcc.a
+/usr/lib64/crtbegin.o
+/usr/lib64/crtend.o
+
 
 #gfortran
 %{_bindir}/%{gcc_target}-gfortran
