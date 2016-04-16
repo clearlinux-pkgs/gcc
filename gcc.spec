@@ -268,7 +268,7 @@ mv %{buildroot}/%{_prefix}/lib64/libstdc++.so.%{libstdcxx_full}-gdb.py %{buildro
 # clang compat
 ln -s /usr/lib64/gcc/x86_64-generic-linux/5.3.0/crtbegin.o %{buildroot}/usr/lib64
 ln -s /usr/lib64/gcc/x86_64-generic-linux/5.3.0/libgcc.a %{buildroot}/usr/lib64
-ln -s /usr/lib64/gcc/x86_64-generic-linux/5.3.0/crtend.o%{buildroot}/usr/lib64
+ln -s /usr/lib64/gcc/x86_64-generic-linux/5.3.0/crtend.o %{buildroot}/usr/lib64
 
 
 %find_lang cpplib cpp.lang
