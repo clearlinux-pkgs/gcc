@@ -266,9 +266,8 @@ mkdir -p %{buildroot}/%{_datadir}/gdb/auto-load/%{_libdir}
 mv %{buildroot}/%{_prefix}/lib64/libstdc++.so.%{libstdcxx_full}-gdb.py %{buildroot}/%{_datadir}/gdb/auto-load/%{_libdir}/.
 
 # clang compat
-ln -s /usr/lib64/gcc/x86_64-generic-linux/5.3.0/crtbegin.o %{buildroot}/usr/lib64
-ln -s /usr/lib64/gcc/x86_64-generic-linux/5.3.0/libgcc.a %{buildroot}/usr/lib64
-ln -s /usr/lib64/gcc/x86_64-generic-linux/5.3.0/crtend.o %{buildroot}/usr/lib64
+for i in /usr/lib64/gcc/x86_64-generic-linux/5.3.0/*.o; do ln -s $i %{buildroot}/usr/lib64 ; done
+for i in /usr/lib64/gcc/x86_64-generic-linux/5.3.0/*.a; do ln -s $i %{buildroot}/usr/lib64 ; done
 
 
 %find_lang cpplib cpp.lang
@@ -313,9 +312,8 @@ cat *.lang > gcc.lang
 %{_libdir}/gcc/%{gcc_target}/%{gccver}/plugin/*.so.*
 %{_libdir}/gcc/%{gcc_target}/%{gccver}/plugin/include/
 %{_datadir}/gcc-%{gccver}
-/usr/lib64/libgcc.a
-/usr/lib64/crtbegin.o
-/usr/lib64/crtend.o
+/usr/lib64/*.a
+/usr/lib64/*.o
 
 
 #gfortran
