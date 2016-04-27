@@ -1,9 +1,9 @@
 %define keepstatic 1
 %define gcc_target %{_arch}-generic-linux
 %define libstdcxx_maj 6
-%define libstdcxx_full 6.0.21
+%define libstdcxx_full 6.0.22
 %define isl_version 0.14
-%define gccver 5.3.0
+%define gccver 6.1.0
 
 %define debug_package %{nil}
 
@@ -16,19 +16,17 @@
 %define march westmere
 
 Name     : gcc
-Version  : 5.3.0
+Version  : 6.1.0
 Release  : 625
 URL      : http://www.gnu.org/software/gcc/
-Source0  : http://ftp.gnu.org/gnu/gcc/gcc-5.3.0/gcc-5.3.0.tar.bz2
+Source0  : http://ftp.gnu.org/gnu/gcc/gcc-6.1.0/gcc-6.1.0.tar.bz2
 Source1  : ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-%{isl_version}.tar.bz2
 Summary  : GNU cc and gcc C compilers
 Group    : Development/Tools
 License  : BSD-3-Clause BSL-1.0 GFDL-1.2 GFDL-1.3 GPL-2.0 GPL-3.0 LGPL-2.1 LGPL-3.0 MIT
 Patch0   : 0001-Fix-stack-protection-issues.patch
-Patch1   : target_clones_gcc-5a.patch
 Patch2   : openmp-vectorize.patch
 Patch3   : fortran-vector.patch
-Patch4   : gcc-5.3.1.patch
 Patch5   : optimize.patch
 
 BuildRequires : bison
@@ -150,10 +148,8 @@ GNU cc and gcc C compilers.
 %prep
 %setup -q -n gcc-%{version}
 %patch0 -p1
-%patch1 -p1
 %patch2 -p1
 %patch3 -p1
-%patch4 -p1
 %patch5 -p1
 
 %build
@@ -266,8 +262,8 @@ mkdir -p %{buildroot}/%{_datadir}/gdb/auto-load/%{_libdir}
 mv %{buildroot}/%{_prefix}/lib64/libstdc++.so.%{libstdcxx_full}-gdb.py %{buildroot}/%{_datadir}/gdb/auto-load/%{_libdir}/.
 
 # clang compat
-for i in /usr/lib64/gcc/x86_64-generic-linux/5.3.0/*.o; do ln -s $i %{buildroot}/usr/lib64 ; done
-for i in /usr/lib64/gcc/x86_64-generic-linux/5.3.0/*.a; do ln -s $i %{buildroot}/usr/lib64 ; done
+for i in /usr/lib64/gcc/x86_64-generic-linux/6.1.0/*.o; do ln -s $i %{buildroot}/usr/lib64 ; done
+for i in /usr/lib64/gcc/x86_64-generic-linux/6.1.0/*.a; do ln -s $i %{buildroot}/usr/lib64 ; done
 
 
 %find_lang cpplib cpp.lang
@@ -321,7 +317,6 @@ cat *.lang > gcc.lang
 %{_libdir}/gcc/%{_arch}-generic-linux/%{gccver}/f951
 %{_libdir}/gcc/%{_arch}-generic-linux/%{gccver}/finclude
 %{_prefix}/lib64/libgfortran*
-%{_libdir}/gcc/%{gcc_target}/%{gccver}/libgfortran*
 %{_bindir}/f95
 %{_bindir}/gfortran
 
@@ -370,11 +365,11 @@ cat *.lang > gcc.lang
 %{_libdir}/libgcc_s.so.1
 %{_prefix}/lib64/libssp.so*
 %{_prefix}/lib64/libgomp*
-/usr/lib64/libmpx.so.0
-/usr/lib64/libmpx.so.0.0.0
+/usr/lib64/libmpx.so.2
+/usr/lib64/libmpx.so.2.0.0
 /usr/lib64/libmpx.spec
-/usr/lib64/libmpxwrappers.so.0
-/usr/lib64/libmpxwrappers.so.0.0.0
+/usr/lib64/libmpxwrappers.so.2
+/usr/lib64/libmpxwrappers.so.2.0.0
 
 %files -n libstdc++
 %{_prefix}/lib64/libstdc++.so.*
@@ -388,8 +383,8 @@ cat *.lang > gcc.lang
 /usr/libexec/gccgo/bin/*
 /usr/bin/gccgo
 /usr/bin/%{_arch}-generic-linux-gccgo
-/usr/lib64/gcc/%{_arch}-generic-linux/5.3.0/cgo
-/usr/lib64/gcc/%{_arch}-generic-linux/5.3.0/go1
+/usr/lib64/gcc/%{_arch}-generic-linux/6.1.0/cgo
+/usr/lib64/gcc/%{_arch}-generic-linux/6.1.0/go1
 /usr/lib64/libgo.a
 /usr/lib64/libgo.so
 /usr/lib64/libgobegin.a
