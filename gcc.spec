@@ -17,7 +17,7 @@
 
 Name     : gcc
 Version  : 6.1.0
-Release  : 1
+Release  : 2 
 URL      : http://www.gnu.org/software/gcc/
 Source0  : http://ftp.gnu.org/gnu/gcc/gcc-6.1.0/gcc-6.1.0.tar.bz2
 Source1  : ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-%{isl_version}.tar.bz2
@@ -346,7 +346,6 @@ cat *.lang > gcc.lang
 %{_libdir}/gcc/%{_arch}-generic-linux/%{gccver}/libgcov.a
 %{_libdir}/gcc/%{gcc_target}/%{gccver}/include/ssp
 %{_prefix}/lib64/libssp*.a
-%{_prefix}/lib64/libgomp*a
 /usr/lib64/libmpx.a
 /usr/lib64/libmpx.so
 /usr/lib64/libmpxwrappers.a
@@ -365,7 +364,7 @@ cat *.lang > gcc.lang
 %files -n libgcc1
 %{_libdir}/libgcc_s.so.1
 %{_prefix}/lib64/libssp.so*
-%{_prefix}/lib64/libgomp*so*
+%{_prefix}/lib64/libgomp*
 /usr/lib64/libmpx.so.2
 /usr/lib64/libmpx.so.2.0.0
 /usr/lib64/libmpx.spec
