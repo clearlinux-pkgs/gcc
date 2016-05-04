@@ -1,0 +1,106 @@
+From 3b0ace990f1b50fd72fc21d6d50c444ecd5ac65f Mon Sep 17 00:00:00 2001
+From: "H.J. Lu" <hjl.tools@gmail.com>
+Date: Sat, 5 Mar 2016 07:17:09 -0800
+Subject: [PATCH 18/25] Update i386 piecewise move and store
+
+We can use TImode/OImode/XImode integers for piecewise move and store.
+When vector register is used for piecewise move and store, we don't
+increase stack_alignment_needed since vector register spill isn't
+required for piecewise move and store.  Since stack_realign_needed is
+set to true by checking stack_alignment_estimated set by pseudo vector
+register usage, we also need to check stack_realign_needed to eliminate
+frame pointer.
+
+	* config/i386/i386.c (ix86_finalize_stack_realign_flags): Also
+	check stack_realign_needed for stack realignment.
+	(ix86_legitimate_constant_p): Always allow CONST_WIDE_INT smaller
+	than the largest integer supported by vector register.
+	* config/i386/i386.h (MOVE_MAX): Set to 64.
+	(MOVE_MAX_PIECES): Set to bytes of the largest integer supported
+	by vector register.
+	(STORE_MAX_PIECES): New.
+---
+ gcc/config/i386/i386.c | 19 ++++++++++++++++---
+ gcc/config/i386/i386.h | 25 +++++++++++++++++++++++--
+ 2 files changed, 39 insertions(+), 5 deletions(-)
+
+diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
+index ffe0bbe..16e5459 100644
+--- a/gcc/config/i386/i386.c
++++ b/gcc/config/i386/i386.c
+@@ -12872,8 +12872,15 @@ ix86_finalize_stack_realign_flags (void)
+   /* If the only reason for frame_pointer_needed is that we conservatively
+      assumed stack realignment might be needed, but in the end nothing that
+      needed the stack alignment had been spilled, clear frame_pointer_needed
+-     and say we don't need stack realignment.  */
+-  if (stack_realign
++     and say we don't need stack realignment.
++
++     When vector register is used for piecewise move and store, we don't
++     increase stack_alignment_needed as there is no register spill for
++     piecewise move and store.  Since stack_realign_needed is set to true
++     by checking stack_alignment_estimated which is updated by pseudo
++     vector register usage, we also need to check stack_realign_needed to
++     eliminate frame pointer.  */
++  if ((stack_realign || crtl->stack_realign_needed)
+       && frame_pointer_needed
+       && crtl->is_leaf
+       && flag_omit_frame_pointer
+@@ -14780,7 +14787,13 @@ ix86_legitimate_constant_p (machine_mode mode, rtx x)
+ 	  /* FALLTHRU */
+ 	case OImode:
+ 	case XImode:
+-	  if (!standard_sse_constant_p (x, mode))
++	  if (!standard_sse_constant_p (x, mode)
++	      && GET_MODE_SIZE (TARGET_AVX512F
++				? XImode
++				: (TARGET_AVX
++				   ? OImode
++				   : (TARGET_SSE2
++				      ? TImode : DImode))) < GET_MODE_SIZE (mode))
+ 	    return false;
+ 	default:
+ 	  break;
+diff --git a/gcc/config/i386/i386.h b/gcc/config/i386/i386.h
+index d0b418b..1bc8a9f 100644
+--- a/gcc/config/i386/i386.h
++++ b/gcc/config/i386/i386.h
+@@ -1928,12 +1928,33 @@ typedef struct ix86_args {
+ 
+ /* Max number of bytes we can move from memory to memory
+    in one reasonably fast instruction.  */
+-#define MOVE_MAX 16
++#define MOVE_MAX 64
+ 
+ /* MOVE_MAX_PIECES is the number of bytes at a time which we can
+    move efficiently, as opposed to  MOVE_MAX which is the maximum
+    number of bytes we can move with a single instruction.  */
+-#define MOVE_MAX_PIECES UNITS_PER_WORD
++#define MOVE_MAX_PIECES \
++  (TARGET_AVX512F \
++   ? 64 \
++   : (TARGET_AVX \
++      ? ((!TARGET_AVX256_SPLIT_UNALIGNED_LOAD \
++	  && !TARGET_AVX256_SPLIT_UNALIGNED_STORE) ? 32 : 16) \
++      : ((TARGET_SSE2 \
++	  && TARGET_SSE_UNALIGNED_LOAD_OPTIMAL \
++	  && TARGET_SSE_UNALIGNED_STORE_OPTIMAL) \
++	 ? 16 : UNITS_PER_WORD)))
++
++/* STORE_MAX_PIECES is the number of bytes at a time that we can
++   store efficiently.  */
++#define STORE_MAX_PIECES \
++  (TARGET_AVX512F \
++   ? 64 \
++   : (TARGET_AVX \
++      ? ((!TARGET_AVX256_SPLIT_UNALIGNED_STORE \
++	  && !TARGET_AVX256_SPLIT_UNALIGNED_STORE) ? 32 : 16) \
++      : ((TARGET_SSE2 \
++	  && TARGET_SSE_UNALIGNED_STORE_OPTIMAL) \
++	 ? 16 : UNITS_PER_WORD)))
+ 
+ /* If a memory-to-memory move would take MOVE_RATIO or more simple
+    move-instruction pairs, we will do a movmem or libcall instead.
+-- 
+2.8.1
+

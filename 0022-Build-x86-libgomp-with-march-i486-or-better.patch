@@ -1,0 +1,67 @@
+From 5e76228ec7b011451642223cbe5c3001b47aa352 Mon Sep 17 00:00:00 2001
+From: "H.J. Lu" <hjl.tools@gmail.com>
+Date: Mon, 25 Apr 2016 13:28:39 -0700
+Subject: [PATCH 22/25] Build x86 libgomp with -march=i486 or better
+
+If x86 libgomp isn't compiled with -march=i486 or better, append
+-march=i486 XCFLAGS for x86 libgomp build.
+
+	PR target/70454
+	* configure.tgt (XCFLAGS): Append -march=i486 to compile x86
+	libgomp if needed.
+---
+ libgomp/configure.tgt | 36 ++++++++++++++++--------------------
+ 1 file changed, 16 insertions(+), 20 deletions(-)
+
+diff --git a/libgomp/configure.tgt b/libgomp/configure.tgt
+index 77e73f0..c876e80 100644
+--- a/libgomp/configure.tgt
++++ b/libgomp/configure.tgt
+@@ -67,28 +67,24 @@ if test x$enable_linux_futex = xyes; then
+ 	;;
+ 
+     # Note that bare i386 is not included here.  We need cmpxchg.
+-    i[456]86-*-linux*)
++    i[456]86-*-linux* | x86_64-*-linux*)
+ 	config_path="linux/x86 linux posix"
+-	case " ${CC} ${CFLAGS} " in
+-	  *" -m64 "*|*" -mx32 "*)
+-	    ;;
+-	  *)
+-	    if test -z "$with_arch"; then
+-	      XCFLAGS="${XCFLAGS} -march=i486 -mtune=${target_cpu}"
++	# Need i486 or better.
++	cat > conftestx.c <<EOF
++#if defined __x86_64__ || defined __i486__ || defined __pentium__ \
++      || defined __pentiumpro__ || defined __pentium4__ \
++      || defined __geode__ || defined __SSE__
++# error Need i486 or better
++#endif
++EOF
++	if ${CC} ${CFLAGS} -c -o conftestx.o conftestx.c > /dev/null 2>&1; then
++	    if test "${target_cpu}" = x86_64; then
++		XCFLAGS="${XCFLAGS} -march=i486 -mtune=generic"
++	    else
++		XCFLAGS="${XCFLAGS} -march=i486 -mtune=${target_cpu}"
+ 	    fi
+-	esac
+-	;;
+-
+-    # Similar jiggery-pokery for x86_64 multilibs, except here we
+-    # can't rely on the --with-arch configure option, since that
+-    # applies to the 64-bit side.
+-    x86_64-*-linux*)
+-	config_path="linux/x86 linux posix"
+-	case " ${CC} ${CFLAGS} " in
+-	  *" -m32 "*)
+-	    XCFLAGS="${XCFLAGS} -march=i486 -mtune=generic"
+-	    ;;
+-	esac
++	fi
++	rm -f conftestx.c conftestx.o
+ 	;;
+ 
+     # Note that sparcv7 and sparcv8 is not included here.  We need cas.
+-- 
+2.8.1
+

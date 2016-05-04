@@ -1,0 +1,32 @@
+From 280c1883eedf11a70d9b8857b3b7d7ebd4efb603 Mon Sep 17 00:00:00 2001
+From: hjl <hjl@138bc75d-0d04-0410-961f-82ee72b054a4>
+Date: Wed, 20 Apr 2016 19:44:52 +0000
+Subject: [PATCH 11/25] Update load scan avx256-unaligned-load-1.c
+
+Since avx_loadups256 and sse_loadups have been replaced by movv8sf_internal
+and movv4sf_internal, respectively, we need to scan movv8sf_internal and
+movv4sf_internal for load.
+
+	* gcc.target/i386/avx256-unaligned-load-1.c: Update load scan.
+
+git-svn-id: svn+ssh://gcc.gnu.org/svn/gcc/trunk@235295 138bc75d-0d04-0410-961f-82ee72b054a4
+---
+ gcc/testsuite/gcc.target/i386/avx256-unaligned-load-1.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/gcc/testsuite/gcc.target/i386/avx256-unaligned-load-1.c b/gcc/testsuite/gcc.target/i386/avx256-unaligned-load-1.c
+index 0c476cd..68378a5 100644
+--- a/gcc/testsuite/gcc.target/i386/avx256-unaligned-load-1.c
++++ b/gcc/testsuite/gcc.target/i386/avx256-unaligned-load-1.c
+@@ -14,6 +14,6 @@ avx_test (void)
+     c[i] = a[i] * b[i+3];
+ }
+ 
+-/* { dg-final { scan-assembler-not "(avx_loadups256|vmovups\[^\n\r]*movv8sf_internal)" } } */
+-/* { dg-final { scan-assembler "(sse_loadups|movv4sf_internal)" } } */
++/* { dg-final { scan-assembler-not "vmovups\[^\n\r]*movv8sf_internal/2" } } */
++/* { dg-final { scan-assembler "movv4sf_internal/2" } } */
+ /* { dg-final { scan-assembler "vinsertf128" } } */
+-- 
+2.8.1
+

@@ -1,0 +1,150 @@
+From 73352c74e34cc1d30a84ad54ab654165c3031b5a Mon Sep 17 00:00:00 2001
+From: hjl <hjl@138bc75d-0d04-0410-961f-82ee72b054a4>
+Date: Fri, 29 Apr 2016 17:27:59 +0000
+Subject: [PATCH 10/25] Update scan-assembler-not in PR target/70155 tests
+
+Since PIC leads to the *movdi_internal pattern, check for nonexistence
+of the *movdi_internal pattern in PR target/70155 tests only if PIC is
+off.
+
+	* gcc.target/i386/pr70155-1.c: Check for nonexistence of the
+	*movdi_internal pattern only if PIC off.
+	* gcc.target/i386/pr70155-2.c: Likewise.
+	* gcc.target/i386/pr70155-3.c: Likewise.
+	* gcc.target/i386/pr70155-4.c: Likewise.
+	* gcc.target/i386/pr70155-5.c: Likewise.
+	* gcc.target/i386/pr70155-6.c: Likewise.
+	* gcc.target/i386/pr70155-7.c: Likewise.
+	* gcc.target/i386/pr70155-8.c: Likewise.
+	* gcc.target/i386/pr70155-15.c: Likewise.
+	* gcc.target/i386/pr70155-17.c: Likewise.
+	* gcc.target/i386/pr70155-22.c: Likewise.
+
+git-svn-id: svn+ssh://gcc.gnu.org/svn/gcc/trunk@235647 138bc75d-0d04-0410-961f-82ee72b054a4
+---
+ gcc/testsuite/gcc.target/i386/pr70155-1.c  | 2 +-
+ gcc/testsuite/gcc.target/i386/pr70155-15.c | 2 +-
+ gcc/testsuite/gcc.target/i386/pr70155-17.c | 2 +-
+ gcc/testsuite/gcc.target/i386/pr70155-2.c  | 2 +-
+ gcc/testsuite/gcc.target/i386/pr70155-22.c | 2 +-
+ gcc/testsuite/gcc.target/i386/pr70155-3.c  | 2 +-
+ gcc/testsuite/gcc.target/i386/pr70155-4.c  | 2 +-
+ gcc/testsuite/gcc.target/i386/pr70155-5.c  | 2 +-
+ gcc/testsuite/gcc.target/i386/pr70155-6.c  | 2 +-
+ gcc/testsuite/gcc.target/i386/pr70155-7.c  | 2 +-
+ gcc/testsuite/gcc.target/i386/pr70155-8.c  | 2 +-
+ 11 files changed, 11 insertions(+), 11 deletions(-)
+
+diff --git a/gcc/testsuite/gcc.target/i386/pr70155-1.c b/gcc/testsuite/gcc.target/i386/pr70155-1.c
+index 3500364..0586902 100644
+--- a/gcc/testsuite/gcc.target/i386/pr70155-1.c
++++ b/gcc/testsuite/gcc.target/i386/pr70155-1.c
+@@ -10,4 +10,4 @@ foo (void)
+ }
+ 
+ /* { dg-final { scan-assembler-times "movv1ti_internal" 2 } } */
+-/* { dg-final { scan-assembler-not "\\*movdi_internal" } } */
++/* { dg-final { scan-assembler-not "\\*movdi_internal" { target nonpic } } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr70155-15.c b/gcc/testsuite/gcc.target/i386/pr70155-15.c
+index e9cafcc..8f51cf6 100644
+--- a/gcc/testsuite/gcc.target/i386/pr70155-15.c
++++ b/gcc/testsuite/gcc.target/i386/pr70155-15.c
+@@ -15,4 +15,4 @@ foo (void)
+ }
+ 
+ /* { dg-final { scan-assembler-times "movv1ti_internal" 2 } } */
+-/* { dg-final { scan-assembler-not "\\*movdi_internal" } } */
++/* { dg-final { scan-assembler-not "\\*movdi_internal" { target nonpic } } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr70155-17.c b/gcc/testsuite/gcc.target/i386/pr70155-17.c
+index a9427e6..85d022d 100644
+--- a/gcc/testsuite/gcc.target/i386/pr70155-17.c
++++ b/gcc/testsuite/gcc.target/i386/pr70155-17.c
+@@ -15,4 +15,4 @@ foo (void)
+ }
+ 
+ /* { dg-final { scan-assembler-times "movv1ti_internal" 8 } } */
+-/* { dg-final { scan-assembler-not "\\*movdi_internal" } } */
++/* { dg-final { scan-assembler-not "\\*movdi_internal" { target nonpic } } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr70155-2.c b/gcc/testsuite/gcc.target/i386/pr70155-2.c
+index af2ddc6..567b31a 100644
+--- a/gcc/testsuite/gcc.target/i386/pr70155-2.c
++++ b/gcc/testsuite/gcc.target/i386/pr70155-2.c
+@@ -15,4 +15,4 @@ foo (void)
+ }
+ 
+ /* { dg-final { scan-assembler-times "movv1ti_internal" 2 } } */
+-/* { dg-final { scan-assembler-not "\\*movdi_internal" } } */
++/* { dg-final { scan-assembler-not "\\*movdi_internal" { target nonpic } } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr70155-22.c b/gcc/testsuite/gcc.target/i386/pr70155-22.c
+index ff5cbce..f56dc70 100644
+--- a/gcc/testsuite/gcc.target/i386/pr70155-22.c
++++ b/gcc/testsuite/gcc.target/i386/pr70155-22.c
+@@ -11,4 +11,4 @@ foo (void)
+ }
+ 
+ /* { dg-final { scan-assembler-times "movv1ti_internal" 2 } } */
+-/* { dg-final { scan-assembler-not "\\*movdi_internal" } } */
++/* { dg-final { scan-assembler-not "\\*movdi_internal" { target nonpic } } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr70155-3.c b/gcc/testsuite/gcc.target/i386/pr70155-3.c
+index 01b38aa..b11520f 100644
+--- a/gcc/testsuite/gcc.target/i386/pr70155-3.c
++++ b/gcc/testsuite/gcc.target/i386/pr70155-3.c
+@@ -17,4 +17,4 @@ foo (void)
+ }
+ 
+ /* { dg-final { scan-assembler-times "movv1ti_internal" 2 } } */
+-/* { dg-final { scan-assembler-not "\\*movdi_internal" } } */
++/* { dg-final { scan-assembler-not "\\*movdi_internal" { target nonpic } } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr70155-4.c b/gcc/testsuite/gcc.target/i386/pr70155-4.c
+index 31bc0a7..db68ee3 100644
+--- a/gcc/testsuite/gcc.target/i386/pr70155-4.c
++++ b/gcc/testsuite/gcc.target/i386/pr70155-4.c
+@@ -17,4 +17,4 @@ foo (void)
+ }
+ 
+ /* { dg-final { scan-assembler-times "movv1ti_internal" 2 } } */
+-/* { dg-final { scan-assembler-not "\\*movdi_internal" } } */
++/* { dg-final { scan-assembler-not "\\*movdi_internal" { target nonpic } } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr70155-5.c b/gcc/testsuite/gcc.target/i386/pr70155-5.c
+index 9647452..1ee3710 100644
+--- a/gcc/testsuite/gcc.target/i386/pr70155-5.c
++++ b/gcc/testsuite/gcc.target/i386/pr70155-5.c
+@@ -10,4 +10,4 @@ foo (void)
+ }
+ 
+ /* { dg-final { scan-assembler-times "movv1ti_internal" 2 } } */
+-/* { dg-final { scan-assembler-not "\\*movdi_internal" } } */
++/* { dg-final { scan-assembler-not "\\*movdi_internal" { target nonpic } } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr70155-6.c b/gcc/testsuite/gcc.target/i386/pr70155-6.c
+index 7e074a73..d040d27 100644
+--- a/gcc/testsuite/gcc.target/i386/pr70155-6.c
++++ b/gcc/testsuite/gcc.target/i386/pr70155-6.c
+@@ -10,4 +10,4 @@ foo (void)
+ }
+ 
+ /* { dg-final { scan-assembler-times "movv1ti_internal" 2 } } */
+-/* { dg-final { scan-assembler-not "\\*movdi_internal" } } */
++/* { dg-final { scan-assembler-not "\\*movdi_internal" { target nonpic } } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr70155-7.c b/gcc/testsuite/gcc.target/i386/pr70155-7.c
+index 93c6fc0..2f05ff0 100644
+--- a/gcc/testsuite/gcc.target/i386/pr70155-7.c
++++ b/gcc/testsuite/gcc.target/i386/pr70155-7.c
+@@ -15,4 +15,4 @@ foo (void)
+ }
+ 
+ /* { dg-final { scan-assembler-times "movv1ti_internal" 2 } } */
+-/* { dg-final { scan-assembler-not "\\*movdi_internal" } } */
++/* { dg-final { scan-assembler-not "\\*movdi_internal" { target nonpic } } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr70155-8.c b/gcc/testsuite/gcc.target/i386/pr70155-8.c
+index f304a4e..95857a1 100644
+--- a/gcc/testsuite/gcc.target/i386/pr70155-8.c
++++ b/gcc/testsuite/gcc.target/i386/pr70155-8.c
+@@ -15,4 +15,4 @@ foo (void)
+ }
+ 
+ /* { dg-final { scan-assembler-times "movv1ti_internal" 2 } } */
+-/* { dg-final { scan-assembler-not "\\*movdi_internal" } } */
++/* { dg-final { scan-assembler-not "\\*movdi_internal" { target nonpic } } } */
+-- 
+2.8.1
+

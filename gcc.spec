@@ -17,7 +17,7 @@
 
 Name     : gcc
 Version  : 6.1.0
-Release  : 6 
+Release  : 7
 URL      : http://www.gnu.org/software/gcc/
 Source0  : http://ftp.gnu.org/gnu/gcc/gcc-6.1.0/gcc-6.1.0.tar.bz2
 Source1  : ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-%{isl_version}.tar.bz2
@@ -28,6 +28,34 @@ Patch0   : 0001-Fix-stack-protection-issues.patch
 Patch2   : openmp-vectorize.patch
 Patch3   : fortran-vector.patch
 Patch5   : optimize.patch
+
+# HJ's patch queue
+Patch101: 0001-Remove-UNSPEC_LOADU-and-UNSPEC_STOREU.patch
+Patch102: 0002-Remove-ssememalign.patch
+Patch103: 0003-Simplify-ix86_expand_vector_move_misalign.patch
+Patch104: 0004-Backport-r235396-to-hjl-pr70155-gcc-6-branch.patch
+Patch105: 0005-Backport-r235416-to-hjl-pr70155-gcc-6-branch.patch
+Patch106: 0006-Backport-r235417-to-hjl-pr70155-gcc-6-branch.patch
+Patch107: 0007-Backport-r235422-to-hjl-pr70155-gcc-6-branch.patch
+Patch108: 0008-Extend-STV-pass-to-64-bit-mode.patch
+Patch109: 0009-Backport-r235635-to-hjl-pr70155-gcc-6-branch.patch
+Patch110: 0010-Update-scan-assembler-not-in-PR-target-70155-tests.patch
+Patch111: 0011-Update-load-scan-avx256-unaligned-load-1.c.patch
+Patch112: 0012-Backport-r235693-to-hjl-pr70155-gcc-6-branch.patch
+Patch113: 0013-Allocate-memory-on-cache-line-if-requested.patch
+Patch114: 0014-Backport-r265322-from-llvm-upstream.patch
+Patch115: 0015-Update-alignment_for_piecewise_move.patch
+Patch116: 0016-Add-TARGET_GEN_MEMSET_VALUE.patch
+Patch117: 0017-Remove-MAX_BITSIZE_MODE_ANY_INT.patch
+Patch118: 0018-Update-i386-piecewise-move-and-store.patch
+Patch119: 0019-gcc.target-i386-pieces-memset-1.c.patch
+Patch120: 0020-Disable-AVX-SSE-on-unwind-c.c-and-unwind-dw2.c.patch
+Patch121: 0021-Build-x86-libitm-with-march-i486-or-better.patch
+Patch122: 0022-Build-x86-libgomp-with-march-i486-or-better.patch
+Patch123: 0023-Build-x86-libatomic-with-march-i486-or-better.patch
+Patch124: 0024-Support-128-bit-constant-store-in-64-bit-STV.patch
+Patch125: 0025-Check-128-bit-constant-store-in-64-bit-mode.patch
+
 
 BuildRequires : bison
 BuildRequires : flex
@@ -151,6 +179,33 @@ GNU cc and gcc C compilers.
 %patch2 -p1
 %patch3 -p1
 %patch5 -p1
+
+%patch101 -p1
+%patch102 -p1
+%patch103 -p1
+%patch104 -p1
+%patch105 -p1
+%patch106 -p1
+%patch107 -p1
+%patch108 -p1
+%patch109 -p1
+%patch110 -p1
+%patch111 -p1
+%patch112 -p1
+%patch113 -p1
+%patch114 -p1
+%patch115 -p1
+%patch116 -p1
+%patch117 -p1
+%patch118 -p1
+%patch119 -p1
+%patch120 -p1
+%patch121 -p1
+%patch122 -p1
+%patch123 -p1
+%patch124 -p1
+%patch125 -p1
+
 
 %build
 

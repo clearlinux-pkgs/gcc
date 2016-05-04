@@ -1,0 +1,257 @@
+From 8a1f27d220ad505c60d997554805b1a2547dc39a Mon Sep 17 00:00:00 2001
+From: "H.J. Lu" <hjl.tools@gmail.com>
+Date: Sun, 6 Mar 2016 06:38:21 -0800
+Subject: [PATCH 16/25] Add TARGET_GEN_MEMSET_VALUE
+
+Add TARGET_GEN_MEMSET_VALUE to support target instructions to duplicate
+QImode value to TImode/OImode/XImode value used with memmset.
+
+	* builtins.c (c_readstr): Make it global.
+	(builtin_memset_gen_str): Call targetm.gen_memset_value.
+	* builtins.h: Add c_readstr.
+	* target.def (gen_memset_value): New hook.
+	* targhooks.c: Inclue "expmed.h" and "builtins.h".
+	(default_gen_memset_value): New function.
+	* targhooks.h (default_gen_memset_value): New prototype.
+	* config/i386/i386.c (ix86_gen_memset_value): New function.
+	(TARGET_GEN_MEMSET_VALUE): New.
+	* doc/tm.texi.in: Add TARGET_GEN_MEMSET_VALUE hook.
+	* doc/tm.texi: Updated.
+---
+ gcc/builtins.c         | 18 +++--------------
+ gcc/builtins.h         |  2 ++
+ gcc/config/i386/i386.c | 53 ++++++++++++++++++++++++++++++++++++++++++++++++++
+ gcc/doc/tm.texi        |  7 +++++++
+ gcc/doc/tm.texi.in     |  2 ++
+ gcc/target.def         |  9 +++++++++
+ gcc/targhooks.c        | 19 ++++++++++++++++++
+ gcc/targhooks.h        |  2 ++
+ 8 files changed, 97 insertions(+), 15 deletions(-)
+
+diff --git a/gcc/builtins.c b/gcc/builtins.c
+index 3d89baf..800dbe2 100644
+--- a/gcc/builtins.c
++++ b/gcc/builtins.c
+@@ -88,7 +88,6 @@ builtin_info_type builtin_info[(int)END_BUILTINS];
+ /* Non-zero if __builtin_constant_p should be folded right away.  */
+ bool force_folding_builtin_constant_p;
+ 
+-static rtx c_readstr (const char *, machine_mode);
+ static int target_char_cast (tree, char *);
+ static rtx get_memory_rtx (tree, tree);
+ static int apply_args_size (void);
+@@ -619,7 +618,7 @@ c_strlen (tree src, int only_value)
+ /* Return a constant integer corresponding to target reading
+    GET_MODE_BITSIZE (MODE) bits from string constant STR.  */
+ 
+-static rtx
++rtx
+ c_readstr (const char *str, machine_mode mode)
+ {
+   HOST_WIDE_INT ch;
+@@ -3414,21 +3413,10 @@ static rtx
+ builtin_memset_gen_str (void *data, HOST_WIDE_INT offset ATTRIBUTE_UNUSED,
+ 			machine_mode mode)
+ {
+-  rtx target, coeff;
+-  size_t size;
+-  char *p;
+-
+-  size = GET_MODE_SIZE (mode);
+-  if (size == 1)
++  if (GET_MODE_SIZE (mode) == 1)
+     return (rtx) data;
+ 
+-  p = XALLOCAVEC (char, size);
+-  memset (p, 1, size);
+-  coeff = c_readstr (p, mode);
+-
+-  target = convert_to_mode (mode, (rtx) data, 1);
+-  target = expand_mult (mode, target, coeff, NULL_RTX, 1);
+-  return force_reg (mode, target);
++  return targetm.gen_memset_value ((rtx) data, mode);
+ }
+ 
+ /* Expand expression EXP, which is a call to the memset builtin.  Return
+diff --git a/gcc/builtins.h b/gcc/builtins.h
+index b49def3..22636b8 100644
+--- a/gcc/builtins.h
++++ b/gcc/builtins.h
+@@ -99,4 +99,6 @@ extern char target_percent_s_newline[4];
+ extern internal_fn associated_internal_fn (tree);
+ extern internal_fn replacement_internal_fn (gcall *);
+ 
++extern rtx c_readstr (const char *, machine_mode);
++
+ #endif
+diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
+index f548d88..ffe0bbe 100644
+--- a/gcc/config/i386/i386.c
++++ b/gcc/config/i386/i386.c
+@@ -54556,6 +54556,56 @@ ix86_optab_supported_p (int op, machine_mode mode1, machine_mode,
+     }
+ }
+ 
++/* Implement the TARGET_GEN_MEMSET_VALUE hook.  */
++
++static rtx
++ix86_gen_memset_value (rtx data, machine_mode mode)
++{
++  if (GET_MODE_SIZE (mode) <= 8)
++    return default_gen_memset_value (data, mode);
++
++  rtx one, target;
++  machine_mode one_mode;
++
++  if (TARGET_AVX2)
++    {
++      switch (GET_MODE_SIZE (mode))
++	{
++	default:
++	  gcc_unreachable ();
++
++	case 64:
++	  if (!TARGET_AVX512BW)
++	    {
++	      rtx tmp = gen_reg_rtx (V32QImode);
++	      if (!ix86_vector_duplicate_value (V32QImode, tmp, data))
++		gcc_unreachable ();
++	      target = gen_rtx_VEC_CONCAT (V64QImode, tmp, tmp);
++	      return convert_to_mode (mode, target, 1);
++	    }
++	case 16:
++	case 32:
++	  one_mode = QImode;
++	  one = data;
++	  break;
++	}
++    }
++  else
++    {
++      one_mode = SImode;
++      one = default_gen_memset_value (data, one_mode);
++    }
++
++  machine_mode vector_mode
++    = mode_for_vector (one_mode,
++		       GET_MODE_SIZE (mode) / GET_MODE_SIZE (one_mode));
++  target = gen_reg_rtx (vector_mode);
++  if (ix86_vector_duplicate_value (vector_mode, target, one))
++    return convert_to_mode (mode, target, 1);
++  else
++    gcc_unreachable ();
++}
++
+ /* Address space support.
+ 
+    This is not "far pointers" in the 16-bit sense, but an easy way
+@@ -55052,6 +55102,9 @@ ix86_addr_space_zero_address_valid (addr_space_t as)
+ #undef TARGET_OPTAB_SUPPORTED_P
+ #define TARGET_OPTAB_SUPPORTED_P ix86_optab_supported_p
+ 
++#undef TARGET_GEN_MEMSET_VALUE
++#define TARGET_GEN_MEMSET_VALUE ix86_gen_memset_value
++
+ struct gcc_target targetm = TARGET_INITIALIZER;
+ 
+ #include "gt-i386.h"
+diff --git a/gcc/doc/tm.texi b/gcc/doc/tm.texi
+index 745910f..e4e30c2 100644
+--- a/gcc/doc/tm.texi
++++ b/gcc/doc/tm.texi
+@@ -11394,6 +11394,13 @@ This function prepares to emit a conditional comparison within a sequence
+  @var{bit_code} is @code{AND} or @code{IOR}, which is the op on the compares.
+ @end deftypefn
+ 
++@deftypefn {Target Hook} rtx TARGET_GEN_MEMSET_VALUE (rtx @var{data}, machine_mode @var{mode})
++This functio returns the RTL of a register containing
++@code{GET_MODE_SIZE (@var{mode})} consecutive copies of the unsigned
++char value given in the RTL register @var{data}.  For example, if
++@var{mode} is 4 bytes wide, return the RTL for 0x01010101*@var{data}.
++@end deftypefn
++
+ @deftypefn {Target Hook} unsigned TARGET_LOOP_UNROLL_ADJUST (unsigned @var{nunroll}, struct loop *@var{loop})
+ This target hook returns a new value for the number of times @var{loop}
+ should be unrolled. The parameter @var{nunroll} is the number of times
+diff --git a/gcc/doc/tm.texi.in b/gcc/doc/tm.texi.in
+index f31c763..0bf91df 100644
+--- a/gcc/doc/tm.texi.in
++++ b/gcc/doc/tm.texi.in
+@@ -8088,6 +8088,8 @@ build_type_attribute_variant (@var{mdecl},
+ 
+ @hook TARGET_GEN_CCMP_NEXT
+ 
++@hook TARGET_GEN_MEMSET_VALUE
++
+ @hook TARGET_LOOP_UNROLL_ADJUST
+ 
+ @defmac POWI_MAX_MULTS
+diff --git a/gcc/target.def b/gcc/target.def
+index 20f2b32..6aba9bc 100644
+--- a/gcc/target.def
++++ b/gcc/target.def
+@@ -2638,6 +2638,15 @@ DEFHOOK
+  rtx, (rtx *prep_seq, rtx *gen_seq, rtx prev, int cmp_code, tree op0, tree op1, int bit_code),
+  NULL)
+ 
++DEFHOOK
++(gen_memset_value,
++ "This functio returns the RTL of a register containing\n\
++@code{GET_MODE_SIZE (@var{mode})} consecutive copies of the unsigned\n\
++char value given in the RTL register @var{data}.  For example, if\n\
++@var{mode} is 4 bytes wide, return the RTL for 0x01010101*@var{data}.",
++ rtx, (rtx data, machine_mode mode),
++ default_gen_memset_value)
++
+ /* Return a new value for loop unroll size.  */
+ DEFHOOK
+ (loop_unroll_adjust,
+diff --git a/gcc/targhooks.c b/gcc/targhooks.c
+index a342277..108ec7b 100644
+--- a/gcc/targhooks.c
++++ b/gcc/targhooks.c
+@@ -74,6 +74,8 @@ along with GCC; see the file COPYING3.  If not see
+ #include "intl.h"
+ #include "opts.h"
+ #include "gimplify.h"
++#include "expmed.h"
++#include "builtins.h"
+ 
+ 
+ bool
+@@ -1965,4 +1967,21 @@ default_optab_supported_p (int, machine_mode, machine_mode, optimization_type)
+   return true;
+ }
+ 
++/* Default implementation of TARGET_GEN_MEMSET_VALUE.  */
++
++rtx
++default_gen_memset_value (rtx data, machine_mode mode)
++{
++  rtx target, coeff;
++  char *p;
++  size_t size = GET_MODE_SIZE (mode);
++  p = XALLOCAVEC (char, size);
++  memset (p, 1, size);
++  coeff = c_readstr (p, mode);
++
++  target = convert_to_mode (mode, (rtx) data, 1);
++  target = expand_mult (mode, target, coeff, NULL_RTX, 1);
++  return force_reg (mode, target);
++}
++
+ #include "gt-targhooks.h"
+diff --git a/gcc/targhooks.h b/gcc/targhooks.h
+index 7687c39..ff23604 100644
+--- a/gcc/targhooks.h
++++ b/gcc/targhooks.h
+@@ -254,4 +254,6 @@ extern void default_setup_incoming_vararg_bounds (cumulative_args_t ca ATTRIBUTE
+ extern bool default_optab_supported_p (int, machine_mode, machine_mode,
+ 				       optimization_type);
+ 
++extern rtx default_gen_memset_value (rtx, machine_mode);
++
+ #endif /* GCC_TARGHOOKS_H */
+-- 
+2.8.1
+

@@ -1,0 +1,143 @@
+From 827b2f75dfbf725caac7706f04b249b546a6e58b Mon Sep 17 00:00:00 2001
+From: "H.J. Lu" <hjl.tools@gmail.com>
+Date: Fri, 1 Apr 2016 13:30:46 -0700
+Subject: [PATCH 25/25] Check 128-bit constant store in 64-bit mode
+
+---
+ gcc/testsuite/gcc.target/i386/pieces-memset-10.c | 2 +-
+ gcc/testsuite/gcc.target/i386/pieces-memset-13.c | 2 +-
+ gcc/testsuite/gcc.target/i386/pieces-memset-16.c | 2 +-
+ gcc/testsuite/gcc.target/i386/pieces-memset-17.c | 2 +-
+ gcc/testsuite/gcc.target/i386/pieces-memset-18.c | 2 +-
+ gcc/testsuite/gcc.target/i386/pieces-memset-19.c | 2 +-
+ gcc/testsuite/gcc.target/i386/pieces-memset-22.c | 2 +-
+ gcc/testsuite/gcc.target/i386/pieces-memset-25.c | 2 +-
+ gcc/testsuite/gcc.target/i386/pieces-memset-26.c | 2 +-
+ gcc/testsuite/gcc.target/i386/pieces-memset-27.c | 2 +-
+ gcc/testsuite/gcc.target/i386/pieces-memset-28.c | 2 +-
+ gcc/testsuite/gcc.target/i386/pieces-memset-32.c | 2 +-
+ 12 files changed, 12 insertions(+), 12 deletions(-)
+
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-10.c b/gcc/testsuite/gcc.target/i386/pieces-memset-10.c
+index 6b09264..a6390d1 100644
+--- a/gcc/testsuite/gcc.target/i386/pieces-memset-10.c
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-10.c
+@@ -1,4 +1,4 @@
+-/* { dg-do compile { target ia32 } } */
++/* { dg-do compile } */
+ /* { dg-options "-O2 -mno-avx -msse2 -mtune=generic" } */
+ 
+ extern char *dst;
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-13.c b/gcc/testsuite/gcc.target/i386/pieces-memset-13.c
+index 01f222c..7f2cd3f 100644
+--- a/gcc/testsuite/gcc.target/i386/pieces-memset-13.c
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-13.c
+@@ -1,4 +1,4 @@
+-/* { dg-do compile { target ia32 } } */
++/* { dg-do compile } */
+ /* { dg-options "-O2 -mno-avx -msse2 -mtune=generic" } */
+ 
+ extern char *dst;
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-16.c b/gcc/testsuite/gcc.target/i386/pieces-memset-16.c
+index 7a29095..1c5d124 100644
+--- a/gcc/testsuite/gcc.target/i386/pieces-memset-16.c
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-16.c
+@@ -1,4 +1,4 @@
+-/* { dg-do compile { target ia32 } } */
++/* { dg-do compile } */
+ /* { dg-options "-O2 -mno-avx -msse2 -mtune=generic" } */
+ 
+ extern char *dst;
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-17.c b/gcc/testsuite/gcc.target/i386/pieces-memset-17.c
+index 7f128cb..260ec00 100644
+--- a/gcc/testsuite/gcc.target/i386/pieces-memset-17.c
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-17.c
+@@ -1,4 +1,4 @@
+-/* { dg-do compile { target ia32 } } */
++/* { dg-do compile } */
+ /* { dg-options "-O2 -mno-avx2 -mavx -mtune=generic" } */
+ 
+ extern char *dst;
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-18.c b/gcc/testsuite/gcc.target/i386/pieces-memset-18.c
+index 1b41823..98f2a47 100644
+--- a/gcc/testsuite/gcc.target/i386/pieces-memset-18.c
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-18.c
+@@ -1,4 +1,4 @@
+-/* { dg-do compile { target ia32 } } */
++/* { dg-do compile } */
+ /* { dg-options "-O2 -mavx512f -mtune=generic" } */
+ 
+ extern char *dst;
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-19.c b/gcc/testsuite/gcc.target/i386/pieces-memset-19.c
+index 4dcf797..7e9cf2e2 100644
+--- a/gcc/testsuite/gcc.target/i386/pieces-memset-19.c
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-19.c
+@@ -1,4 +1,4 @@
+-/* { dg-do compile { target ia32 } } */
++/* { dg-do compile } */
+ /* { dg-options "-O2 -mno-avx -msse2 -mtune=generic" } */
+ 
+ extern char *dst;
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-22.c b/gcc/testsuite/gcc.target/i386/pieces-memset-22.c
+index 048557d..5f3c454 100644
+--- a/gcc/testsuite/gcc.target/i386/pieces-memset-22.c
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-22.c
+@@ -1,4 +1,4 @@
+-/* { dg-do compile { target ia32 } } */
++/* { dg-do compile } */
+ /* { dg-options "-O2 -mno-avx -msse2 -mtune=generic" } */
+ 
+ extern char *dst;
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-25.c b/gcc/testsuite/gcc.target/i386/pieces-memset-25.c
+index f69cd16..195ddb6 100644
+--- a/gcc/testsuite/gcc.target/i386/pieces-memset-25.c
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-25.c
+@@ -1,4 +1,4 @@
+-/* { dg-do compile { target ia32 } } */
++/* { dg-do compile } */
+ /* { dg-options "-O2 -mno-avx -msse2 -mtune=generic" } */
+ 
+ extern char *dst;
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-26.c b/gcc/testsuite/gcc.target/i386/pieces-memset-26.c
+index 52d40ea..4932fb7 100644
+--- a/gcc/testsuite/gcc.target/i386/pieces-memset-26.c
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-26.c
+@@ -1,4 +1,4 @@
+-/* { dg-do compile { target ia32 } } */
++/* { dg-do compile } */
+ /* { dg-options "-O2 -mno-avx2 -mavx -mtune=generic" } */
+ 
+ extern char *dst;
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-27.c b/gcc/testsuite/gcc.target/i386/pieces-memset-27.c
+index e916d8d..df9ce80 100644
+--- a/gcc/testsuite/gcc.target/i386/pieces-memset-27.c
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-27.c
+@@ -1,4 +1,4 @@
+-/* { dg-do compile { target ia32 } } */
++/* { dg-do compile } */
+ /* { dg-options "-O2 -mavx512f -mtune=generic" } */
+ 
+ extern char *dst;
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-28.c b/gcc/testsuite/gcc.target/i386/pieces-memset-28.c
+index 3c1507e..83c2d3f 100644
+--- a/gcc/testsuite/gcc.target/i386/pieces-memset-28.c
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-28.c
+@@ -1,4 +1,4 @@
+-/* { dg-do compile { target ia32 } } */
++/* { dg-do compile } */
+ /* { dg-options "-O2 -mno-avx -msse2 -mtune=generic" } */
+ 
+ extern char *dst;
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-32.c b/gcc/testsuite/gcc.target/i386/pieces-memset-32.c
+index fd22dd9..c5ca0bd 100644
+--- a/gcc/testsuite/gcc.target/i386/pieces-memset-32.c
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-32.c
+@@ -1,4 +1,4 @@
+-/* { dg-do compile { target ia32 } } */
++/* { dg-do compile } */
+ /* { dg-options "-O2 -mno-avx -msse2 -mtune=generic" } */
+ 
+ extern char *dst;
+-- 
+2.8.1
+

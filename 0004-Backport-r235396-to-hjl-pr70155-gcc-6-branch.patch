@@ -1,0 +1,538 @@
+From fe0822aad06180931c547f235398aea26d53ff57 Mon Sep 17 00:00:00 2001
+From: uros <uros@138bc75d-0d04-0410-961f-82ee72b054a4>
+Date: Sun, 24 Apr 2016 20:58:02 +0000
+Subject: [PATCH 04/25] Backport r235396 to hjl/pr70155/gcc-6-branch
+
+	* config/i386/i386-protos.h (standard_sse_constant_p): Add
+	machine_mode argument.
+	* config/i386/i386.c (standard_sse_constant_p): Return 2 for
+	constm1_rtx operands.  For VOIDmode constants, get mode from
+	pred_mode.  Check mode size if the mode is supported by ABI.
+	(standard_sse_constant_opcode): Do not use standard_constant_p.
+	Strictly check ABI support for all-ones operands.
+	(ix86_legitimate_constant_p): Handle TImode, OImode and XImode
+	immediates. Update calls to standard_sse_constant_p.
+	(ix86_expand_vector_move): Update calls to standard_sse_constant_p.
+	(ix86_rtx_costs): Ditto.
+	* config/i386/i386.md (*movxi_internal_avx512f): Use
+	nonimmediate_or_sse_const_operand instead of vector_move_operand.
+	Use (v,BC) alternative instead of (v,C). Use register_operand
+	checks instead of MEM_P.
+	(*movoi_internal_avx): Use nonimmediate_or_sse_const_operand instead
+	of vector_move_operand.  Add (v,BC) alternative and corresponding avx2
+	isa attribute.  Use register_operand checks instead of MEM_P.
+	(*movti_internal): Use nonimmediate_or_sse_const_operand for
+	TARGET_SSE.  Improve TARGET_SSE insn constraint.  Add (v,BC)
+	alternative and corresponding sse2 isa attribute.
+	(*movtf_internal, *movdf_internal, *movsf_interal): Update calls
+	to standard_sse_constant_p.
+	(FP constant splitters): Ditto.
+	* config/i386/constraints.md (BC): Do not use standard_sse_constant_p.
+	(C): Ditto.
+	* config/i386/predicates.md (constm1_operand): Remove.
+	(nonimmediate_or_sse_const_operand): Rewrite using RTX.
+	* config/i386/sse.md (*<avx512>_cvtmask2<ssemodesuffix><mode>): Use
+	vector_all_ones_operand instead of constm1_operand.
+
+git-svn-id: svn+ssh://gcc.gnu.org/svn/gcc/trunk@235396 138bc75d-0d04-0410-961f-82ee72b054a4
+---
+ gcc/config/i386/constraints.md |   9 ++-
+ gcc/config/i386/i386-protos.h  |   2 +-
+ gcc/config/i386/i386.c         | 166 ++++++++++++++++++++++++++---------------
+ gcc/config/i386/i386.md        |  51 ++++++++-----
+ gcc/config/i386/predicates.md  |  21 +-----
+ gcc/config/i386/sse.md         |   4 +-
+ 6 files changed, 151 insertions(+), 102 deletions(-)
+
+diff --git a/gcc/config/i386/constraints.md b/gcc/config/i386/constraints.md
+index afdc546..fb9ead4 100644
+--- a/gcc/config/i386/constraints.md
++++ b/gcc/config/i386/constraints.md
+@@ -186,7 +186,10 @@
+ 
+ (define_constraint "BC"
+   "@internal SSE constant operand."
+-  (match_test "standard_sse_constant_p (op)"))
++  (and (match_test "TARGET_SSE")
++       (ior (match_test "op == const0_rtx || op == constm1_rtx")
++	    (match_operand 0 "const0_operand")
++	    (match_operand 0 "vector_all_ones_operand"))))
+ 
+ ;; Integer constant constraints.
+ (define_constraint "I"
+@@ -239,7 +242,9 @@
+ ;; This can theoretically be any mode's CONST0_RTX.
+ (define_constraint "C"
+   "SSE constant zero operand."
+-  (match_test "standard_sse_constant_p (op) == 1"))
++  (and (match_test "TARGET_SSE")
++       (ior (match_test "op == const0_rtx")
++	    (match_operand 0 "const0_operand"))))
+ 
+ ;; Constant-or-symbol-reference constraints.
+ 
+diff --git a/gcc/config/i386/i386-protos.h b/gcc/config/i386/i386-protos.h
+index ff47bc1..93b5e1e 100644
+--- a/gcc/config/i386/i386-protos.h
++++ b/gcc/config/i386/i386-protos.h
+@@ -50,7 +50,7 @@ extern bool ix86_using_red_zone (void);
+ extern int standard_80387_constant_p (rtx);
+ extern const char *standard_80387_constant_opcode (rtx);
+ extern rtx standard_80387_constant_rtx (int);
+-extern int standard_sse_constant_p (rtx);
++extern int standard_sse_constant_p (rtx, machine_mode);
+ extern const char *standard_sse_constant_opcode (rtx_insn *, rtx);
+ extern bool symbolic_reference_mentioned_p (rtx);
+ extern bool extended_reg_mentioned_p (rtx);
+diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
+index be94e42..ae43ff8 100644
+--- a/gcc/config/i386/i386.c
++++ b/gcc/config/i386/i386.c
+@@ -10762,11 +10762,11 @@ standard_80387_constant_rtx (int idx)
+ 				       XFmode);
+ }
+ 
+-/* Return 1 if X is all 0s and 2 if x is all 1s
++/* Return 1 if X is all bits 0 and 2 if X is all bits 1
+    in supported SSE/AVX vector mode.  */
+ 
+ int
+-standard_sse_constant_p (rtx x)
++standard_sse_constant_p (rtx x, machine_mode pred_mode)
+ {
+   machine_mode mode;
+ 
+@@ -10774,33 +10774,37 @@ standard_sse_constant_p (rtx x)
+     return 0;
+ 
+   mode = GET_MODE (x);
+-  
+-  if (x == const0_rtx || x == CONST0_RTX (mode))
++
++  if (x == const0_rtx || const0_operand (x, mode))
+     return 1;
+-  if (vector_all_ones_operand (x, mode))
+-    switch (mode)
+-      {
+-      case V16QImode:
+-      case V8HImode:
+-      case V4SImode:
+-      case V2DImode:
+-	if (TARGET_SSE2)
+-	  return 2;
+-      case V32QImode:
+-      case V16HImode:
+-      case V8SImode:
+-      case V4DImode:
+-	if (TARGET_AVX2)
+-	  return 2;
+-      case V64QImode:
+-      case V32HImode:
+-      case V16SImode:
+-      case V8DImode:
+-	if (TARGET_AVX512F)
+-	  return 2;
+-      default:
+-	break;
+-      }
++
++  if (x == constm1_rtx || vector_all_ones_operand (x, mode))
++    {
++      /* VOIDmode integer constant, get mode from the predicate.  */
++      if (mode == VOIDmode)
++	mode = pred_mode;
++
++      switch (GET_MODE_SIZE (mode))
++	{
++	case 64:
++	  if (TARGET_AVX512F)
++	    return 2;
++	  break;
++	case 32:
++	  if (TARGET_AVX2)
++	    return 2;
++	  break;
++	case 16:
++	  if (TARGET_SSE2)
++	    return 2;
++	  break;
++	case 0:
++	  /* VOIDmode */
++	  gcc_unreachable ();
++	default:
++	  break;
++	}
++    }
+ 
+   return 0;
+ }
+@@ -10811,53 +10815,85 @@ standard_sse_constant_p (rtx x)
+ const char *
+ standard_sse_constant_opcode (rtx_insn *insn, rtx x)
+ {
+-  switch (standard_sse_constant_p (x))
++  machine_mode mode;
++
++  gcc_assert (TARGET_SSE);
++
++  mode = GET_MODE (x);
++
++  if (x == const0_rtx || const0_operand (x, mode))
+     {
+-    case 1:
+       switch (get_attr_mode (insn))
+ 	{
+ 	case MODE_XI:
+ 	  return "vpxord\t%g0, %g0, %g0";
+-	case MODE_V16SF:
+-	  return TARGET_AVX512DQ ? "vxorps\t%g0, %g0, %g0"
+-				 : "vpxord\t%g0, %g0, %g0";
+-	case MODE_V8DF:
+-	  return TARGET_AVX512DQ ? "vxorpd\t%g0, %g0, %g0"
+-				 : "vpxorq\t%g0, %g0, %g0";
++	case MODE_OI:
++	  return (TARGET_AVX512VL
++		  ? "vpxord\t%x0, %x0, %x0"
++		  : "vpxor\t%x0, %x0, %x0");
+ 	case MODE_TI:
+-	  return TARGET_AVX512VL ? "vpxord\t%t0, %t0, %t0"
+-				 : "%vpxor\t%0, %d0";
++	  return (TARGET_AVX512VL
++		  ? "vpxord\t%t0, %t0, %t0"
++		  : "%vpxor\t%0, %d0");
++
++	case MODE_V8DF:
++	  return (TARGET_AVX512DQ
++		  ? "vxorpd\t%g0, %g0, %g0"
++		  : "vpxorq\t%g0, %g0, %g0");
++	case MODE_V4DF:
++	  return "vxorpd\t%x0, %x0, %x0";
+ 	case MODE_V2DF:
+ 	  return "%vxorpd\t%0, %d0";
++
++	case MODE_V16SF:
++	  return (TARGET_AVX512DQ
++		  ? "vxorps\t%g0, %g0, %g0"
++		  : "vpxord\t%g0, %g0, %g0");
++	case MODE_V8SF:
++	  return "vxorps\t%x0, %x0, %x0";
+ 	case MODE_V4SF:
+ 	  return "%vxorps\t%0, %d0";
+ 
++	default:
++	  gcc_unreachable ();
++	}
++    }
++  else if (x == constm1_rtx || vector_all_ones_operand (x, mode))
++    {
++      enum attr_mode insn_mode = get_attr_mode (insn);
++      
++      switch (insn_mode)
++	{
++	case MODE_XI:
++	case MODE_V8DF:
++	case MODE_V16SF:
++	  gcc_assert (TARGET_AVX512F);
++	  break;
+ 	case MODE_OI:
+-	  return TARGET_AVX512VL ? "vpxord\t%x0, %x0, %x0"
+-				 : "vpxor\t%x0, %x0, %x0";
+ 	case MODE_V4DF:
+-	  return "vxorpd\t%x0, %x0, %x0";
+ 	case MODE_V8SF:
+-	  return "vxorps\t%x0, %x0, %x0";
+-
+-	default:
++	  gcc_assert (TARGET_AVX2);
++	  break;
++	case MODE_TI:
++	case MODE_V2DF:
++	case MODE_V4SF:
++	  gcc_assert (TARGET_SSE2);
+ 	  break;
++	default:
++	  gcc_unreachable ();
+ 	}
+ 
+-    case 2:
+       if (TARGET_AVX512VL
+-	  || get_attr_mode (insn) == MODE_XI
+-	  || get_attr_mode (insn) == MODE_V8DF
+-	  || get_attr_mode (insn) == MODE_V16SF)
++	  || insn_mode == MODE_XI
++	  || insn_mode == MODE_V8DF
++	  || insn_mode == MODE_V16SF)
+ 	return "vpternlogd\t{$0xFF, %g0, %g0, %g0|%g0, %g0, %g0, 0xFF}";
+-      if (TARGET_AVX)
++      else if (TARGET_AVX)
+ 	return "vpcmpeqd\t%0, %0, %0";
+       else
+ 	return "pcmpeqd\t%0, %0";
++   }
+ 
+-    default:
+-      break;
+-    }
+   gcc_unreachable ();
+ }
+ 
+@@ -14360,7 +14396,7 @@ darwin_local_data_pic (rtx disp)
+    satisfies CONSTANT_P.  */
+ 
+ static bool
+-ix86_legitimate_constant_p (machine_mode, rtx x)
++ix86_legitimate_constant_p (machine_mode mode, rtx x)
+ {
+   /* Pointer bounds constants are not valid.  */
+   if (POINTER_BOUNDS_MODE_P (GET_MODE (x)))
+@@ -14426,13 +14462,25 @@ ix86_legitimate_constant_p (machine_mode, rtx x)
+ #endif
+       break;
+ 
++    case CONST_INT:
+     case CONST_WIDE_INT:
+-      if (!TARGET_64BIT && !standard_sse_constant_p (x))
+-	return false;
++      switch (mode)
++	{
++	case TImode:
++	  if (TARGET_64BIT)
++	    return true;
++	  /* FALLTHRU */
++	case OImode:
++	case XImode:
++	  if (!standard_sse_constant_p (x, mode))
++	    return false;
++	default:
++	  break;
++	}
+       break;
+ 
+     case CONST_VECTOR:
+-      if (!standard_sse_constant_p (x))
++      if (!standard_sse_constant_p (x, mode))
+ 	return false;
+ 
+     default:
+@@ -18759,7 +18807,7 @@ ix86_expand_vector_move (machine_mode mode, rtx operands[])
+       && (CONSTANT_P (op1)
+ 	  || (SUBREG_P (op1)
+ 	      && CONSTANT_P (SUBREG_REG (op1))))
+-      && !standard_sse_constant_p (op1))
++      && !standard_sse_constant_p (op1, mode))
+     op1 = validize_mem (force_const_mem (mode, op1));
+ 
+   /* We need to check memory alignment for SSE mode since attribute
+@@ -43680,8 +43728,8 @@ ix86_rtx_costs (rtx x, machine_mode mode, int outer_code_i, int opno,
+ 	}
+       if (SSE_FLOAT_MODE_P (mode))
+ 	{
+-    case CONST_VECTOR:
+-	  switch (standard_sse_constant_p (x))
++	case CONST_VECTOR:
++	  switch (standard_sse_constant_p (x, mode))
+ 	    {
+ 	    case 0:
+ 	      break;
+diff --git a/gcc/config/i386/i386.md b/gcc/config/i386/i386.md
+index 4ffbc03..155bdd2 100644
+--- a/gcc/config/i386/i386.md
++++ b/gcc/config/i386/i386.md
+@@ -1970,9 +1970,11 @@
+    (set_attr "length_immediate" "1")])
+ 
+ (define_insn "*movxi_internal_avx512f"
+-  [(set (match_operand:XI 0 "nonimmediate_operand" "=v,v ,m")
+-	(match_operand:XI 1 "vector_move_operand"  "C ,vm,v"))]
+-  "TARGET_AVX512F && !(MEM_P (operands[0]) && MEM_P (operands[1]))"
++  [(set (match_operand:XI 0 "nonimmediate_operand"		"=v,v ,m")
++	(match_operand:XI 1 "nonimmediate_or_sse_const_operand" "BC,vm,v"))]
++  "TARGET_AVX512F
++   && (register_operand (operands[0], XImode)
++       || register_operand (operands[1], XImode))"
+ {
+   switch (which_alternative)
+     {
+@@ -1994,9 +1996,11 @@
+    (set_attr "mode" "XI")])
+ 
+ (define_insn "*movoi_internal_avx"
+-  [(set (match_operand:OI 0 "nonimmediate_operand" "=v,v ,m")
+-	(match_operand:OI 1 "vector_move_operand"  "C ,vm,v"))]
+-  "TARGET_AVX && !(MEM_P (operands[0]) && MEM_P (operands[1]))"
++  [(set (match_operand:OI 0 "nonimmediate_operand"		"=v,v,v ,m")
++	(match_operand:OI 1 "nonimmediate_or_sse_const_operand" "BC,C,vm,v"))]
++  "TARGET_AVX
++   && (register_operand (operands[0], OImode)
++       || register_operand (operands[1], OImode))"
+ {
+   switch (get_attr_type (insn))
+     {
+@@ -2028,7 +2032,8 @@
+       gcc_unreachable ();
+     }
+ }
+-  [(set_attr "type" "sselog1,ssemov,ssemov")
++  [(set_attr "isa" "avx2,*,*,*")
++   (set_attr "type" "sselog1,sselog1,ssemov,ssemov")
+    (set_attr "prefix" "vex")
+    (set (attr "mode")
+ 	(cond [(ior (match_operand 0 "ext_sse_reg_operand")
+@@ -2036,17 +2041,21 @@
+ 		 (const_string "XI")
+ 	       (match_test "TARGET_SSE_PACKED_SINGLE_INSN_OPTIMAL")
+ 		 (const_string "V8SF")
+-	       (and (eq_attr "alternative" "2")
++	       (and (eq_attr "alternative" "3")
+ 		    (match_test "TARGET_SSE_TYPELESS_STORES"))
+ 		 (const_string "V8SF")
+ 	      ]
+ 	      (const_string "OI")))])
+ 
+ (define_insn "*movti_internal"
+-  [(set (match_operand:TI 0 "nonimmediate_operand" "=!r ,o ,v,v ,m")
+-	(match_operand:TI 1 "general_operand"      "riFo,re,C,vm,v"))]
+-  "(TARGET_64BIT || TARGET_SSE)
+-   && !(MEM_P (operands[0]) && MEM_P (operands[1]))"
++  [(set (match_operand:TI 0 "nonimmediate_operand" "=!r ,o ,v ,v,v ,m")
++	(match_operand:TI 1 "general_operand"	   "riFo,re,BC,C,vm,v"))]
++  "(TARGET_64BIT
++    && !(MEM_P (operands[0]) && MEM_P (operands[1])))
++   || (TARGET_SSE
++       && nonimmediate_or_sse_const_operand (operands[1], TImode)
++       && (register_operand (operands[0], TImode)
++	   || register_operand (operands[1], TImode)))"
+ {
+   switch (get_attr_type (insn))
+     {
+@@ -2083,8 +2092,8 @@
+       gcc_unreachable ();
+     }
+ }
+-  [(set_attr "isa" "x64,x64,*,*,*")
+-   (set_attr "type" "multi,multi,sselog1,ssemov,ssemov")
++  [(set_attr "isa" "x64,x64,sse2,*,*,*")
++   (set_attr "type" "multi,multi,sselog1,sselog1,ssemov,ssemov")
+    (set (attr "prefix")
+      (if_then_else (eq_attr "type" "sselog1,ssemov")
+        (const_string "maybe_vex")
+@@ -2098,7 +2107,7 @@
+ 	       (ior (not (match_test "TARGET_SSE2"))
+ 		    (match_test "TARGET_SSE_PACKED_SINGLE_INSN_OPTIMAL"))
+ 		 (const_string "V4SF")
+-	       (and (eq_attr "alternative" "4")
++	       (and (eq_attr "alternative" "5")
+ 		    (match_test "TARGET_SSE_TYPELESS_STORES"))
+ 		 (const_string "V4SF")
+ 	       (match_test "TARGET_AVX")
+@@ -3086,7 +3095,7 @@
+        || (ix86_cmodel == CM_MEDIUM || ix86_cmodel == CM_LARGE)
+        || !CONST_DOUBLE_P (operands[1])
+        || (optimize_function_for_size_p (cfun)
+-	   && standard_sse_constant_p (operands[1])
++	   && standard_sse_constant_p (operands[1], TFmode) == 1
+ 	   && !memory_operand (operands[0], TFmode))
+        || (!TARGET_MEMORY_MISMATCH_STALL
+ 	   && memory_operand (operands[0], TFmode)))"
+@@ -3240,7 +3249,7 @@
+ 	   && ((!(TARGET_SSE2 && TARGET_SSE_MATH)
+ 		&& standard_80387_constant_p (operands[1]) > 0)
+ 	       || (TARGET_SSE2 && TARGET_SSE_MATH
+-		   && standard_sse_constant_p (operands[1])))
++		   && standard_sse_constant_p (operands[1], DFmode) == 1))
+ 	   && !memory_operand (operands[0], DFmode))
+        || ((TARGET_64BIT || !TARGET_MEMORY_MISMATCH_STALL)
+ 	   && memory_operand (operands[0], DFmode))
+@@ -3442,7 +3451,7 @@
+ 	   && ((!TARGET_SSE_MATH
+ 		&& standard_80387_constant_p (operands[1]) > 0)
+ 	       || (TARGET_SSE_MATH
+-		   && standard_sse_constant_p (operands[1]))))
++		   && standard_sse_constant_p (operands[1], SFmode) == 1)))
+        || memory_operand (operands[0], SFmode)
+        || !TARGET_HARD_SF_REGS)"
+ {
+@@ -3579,7 +3588,8 @@
+ 
+   if (operands[2] == NULL_RTX
+       || (SSE_REGNO_P (REGNO (operands[0]))
+-	  && !standard_sse_constant_p (operands[2]))
++	  && standard_sse_constant_p (operands[2],
++				      GET_MODE (operands[0])) != 1)
+       || (STACK_REGNO_P (REGNO (operands[0]))
+ 	   && standard_80387_constant_p (operands[2]) < 1))
+     FAIL;
+@@ -3598,7 +3608,8 @@
+ 
+   if (operands[2] == NULL_RTX
+       || (SSE_REGNO_P (REGNO (operands[0]))
+-	  && !standard_sse_constant_p (operands[2]))
++	  && standard_sse_constant_p (operands[2],
++				      GET_MODE (operands[0])) != 1)
+       || (STACK_REGNO_P (REGNO (operands[0]))
+ 	   && standard_80387_constant_p (operands[2]) < 1))
+     FAIL;
+diff --git a/gcc/config/i386/predicates.md b/gcc/config/i386/predicates.md
+index 93dda7b..079cf4e 100644
+--- a/gcc/config/i386/predicates.md
++++ b/gcc/config/i386/predicates.md
+@@ -666,16 +666,7 @@
+   return op == CONST0_RTX (mode);
+ })
+ 
+-;; Match -1.
+-(define_predicate "constm1_operand"
+-  (match_code "const_int,const_wide_int,const_double,const_vector")
+-{
+-  if (mode == VOIDmode)
+-    mode = GET_MODE (op);
+-  return op == CONSTM1_RTX (mode);
+-})
+-
+-;; Match one or vector filled with ones.
++;; Match one or a vector with all elements equal to one.
+ (define_predicate "const1_operand"
+   (match_code "const_int,const_wide_int,const_double,const_vector")
+ {
+@@ -976,14 +967,8 @@
+ 
+ ;; Return true when OP is nonimmediate or standard SSE constant.
+ (define_predicate "nonimmediate_or_sse_const_operand"
+-  (match_operand 0 "general_operand")
+-{
+-  if (nonimmediate_operand (op, mode))
+-    return true;
+-  if (standard_sse_constant_p (op) > 0)
+-    return true;
+-  return false;
+-})
++  (ior (match_operand 0 "nonimmediate_operand")
++       (match_test "standard_sse_constant_p (op, mode)")))
+ 
+ ;; Return true if OP is a register or a zero.
+ (define_predicate "reg_or_0_operand"
+diff --git a/gcc/config/i386/sse.md b/gcc/config/i386/sse.md
+index 73ede40..c27918b 100644
+--- a/gcc/config/i386/sse.md
++++ b/gcc/config/i386/sse.md
+@@ -5097,7 +5097,7 @@
+ (define_insn "*<avx512>_cvtmask2<ssemodesuffix><mode>"
+   [(set (match_operand:VI12_AVX512VL 0 "register_operand" "=v")
+ 	(vec_merge:VI12_AVX512VL
+-	  (match_operand:VI12_AVX512VL 2 "constm1_operand")
++	  (match_operand:VI12_AVX512VL 2 "vector_all_ones_operand")
+ 	  (match_operand:VI12_AVX512VL 3 "const0_operand")
+ 	  (match_operand:<avx512fmaskmode> 1 "register_operand" "Yk")))]
+   "TARGET_AVX512BW"
+@@ -5120,7 +5120,7 @@
+ (define_insn "*<avx512>_cvtmask2<ssemodesuffix><mode>"
+   [(set (match_operand:VI48_AVX512VL 0 "register_operand" "=v")
+ 	(vec_merge:VI48_AVX512VL
+-	  (match_operand:VI48_AVX512VL 2 "constm1_operand")
++	  (match_operand:VI48_AVX512VL 2 "vector_all_ones_operand")
+ 	  (match_operand:VI48_AVX512VL 3 "const0_operand")
+ 	  (match_operand:<avx512fmaskmode> 1 "register_operand" "Yk")))]
+   "TARGET_AVX512DQ"
+-- 
+2.8.1
+

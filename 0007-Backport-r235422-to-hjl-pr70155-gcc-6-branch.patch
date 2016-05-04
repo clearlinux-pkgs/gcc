@@ -1,0 +1,103 @@
+From 39da7b617ffa5baef2333d1d5072e452310972b4 Mon Sep 17 00:00:00 2001
+From: uros <uros@138bc75d-0d04-0410-961f-82ee72b054a4>
+Date: Mon, 25 Apr 2016 21:57:42 +0000
+Subject: [PATCH 07/25] Backport r235422 to hjl/pr70155/gcc-6-branch
+
+	* config/i386/i386.md (*movxi_internal_avx512f): Use insn type
+	attribute instead of which_alternative.
+	* config/i386/sse.md (*mov<mode>_internal): Ditto.
+	Use EXT_REX_SSE_REG_P where appropriate.
+
+git-svn-id: svn+ssh://gcc.gnu.org/svn/gcc/trunk@235422 138bc75d-0d04-0410-961f-82ee72b054a4
+---
+ gcc/config/i386/i386.md |  9 +++++----
+ gcc/config/i386/sse.md  | 19 ++++++++++---------
+ 2 files changed, 15 insertions(+), 13 deletions(-)
+
+diff --git a/gcc/config/i386/i386.md b/gcc/config/i386/i386.md
+index e800d8d..7c8301d 100644
+--- a/gcc/config/i386/i386.md
++++ b/gcc/config/i386/i386.md
+@@ -1975,17 +1975,18 @@
+    && (register_operand (operands[0], XImode)
+        || register_operand (operands[1], XImode))"
+ {
+-  switch (which_alternative)
++  switch (get_attr_type (insn))
+     {
+-    case 0:
++    case TYPE_SSELOG1:
+       return standard_sse_constant_opcode (insn, operands[1]);
+-    case 1:
+-    case 2:
++
++    case TYPE_SSEMOV:
+       if (misaligned_operand (operands[0], XImode)
+ 	  || misaligned_operand (operands[1], XImode))
+ 	return "vmovdqu32\t{%1, %0|%0, %1}";
+       else
+ 	return "vmovdqa32\t{%1, %0|%0, %1}";
++
+     default:
+       gcc_unreachable ();
+     }
+diff --git a/gcc/config/i386/sse.md b/gcc/config/i386/sse.md
+index 6b5d573..824ab89 100644
+--- a/gcc/config/i386/sse.md
++++ b/gcc/config/i386/sse.md
+@@ -839,19 +839,18 @@
+    && (register_operand (operands[0], <MODE>mode)
+        || register_operand (operands[1], <MODE>mode))"
+ {
+-  int mode = get_attr_mode (insn);
+-  switch (which_alternative)
++  switch (get_attr_type (insn))
+     {
+-    case 0:
++    case TYPE_SSELOG1:
+       return standard_sse_constant_opcode (insn, operands[1]);
+-    case 1:
+-    case 2:
++
++    case TYPE_SSEMOV:
+       /* There is no evex-encoded vmov* for sizes smaller than 64-bytes
+ 	 in avx512f, so we need to use workarounds, to access sse registers
+ 	 16-31, which are evex-only. In avx512vl we don't need workarounds.  */
+       if (TARGET_AVX512F && <MODE_SIZE> < 64 && !TARGET_AVX512VL
+-	  && ((REG_P (operands[0]) && EXT_REX_SSE_REGNO_P (REGNO (operands[0])))
+-	      || (REG_P (operands[1]) && EXT_REX_SSE_REGNO_P (REGNO (operands[1])))))
++	  && (EXT_REX_SSE_REG_P (operands[0])
++	      || EXT_REX_SSE_REG_P (operands[1])))
+ 	{
+ 	  if (memory_operand (operands[0], <MODE>mode))
+ 	    {
+@@ -873,7 +872,7 @@
+ 	    }
+ 	  else
+ 	    /* Reg -> reg move is always aligned.  Just use wider move.  */
+-	    switch (mode)
++	    switch (get_attr_mode (insn))
+ 	      {
+ 	      case MODE_V8SF:
+ 	      case MODE_V4SF:
+@@ -888,7 +887,8 @@
+ 		gcc_unreachable ();
+ 	      }
+ 	}
+-      switch (mode)
++
++      switch (get_attr_mode (insn))
+ 	{
+ 	case MODE_V16SF:
+ 	case MODE_V8SF:
+@@ -931,6 +931,7 @@
+ 	default:
+ 	  gcc_unreachable ();
+ 	}
++
+     default:
+       gcc_unreachable ();
+     }
+-- 
+2.8.1
+

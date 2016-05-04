@@ -1,0 +1,57 @@
+From 9745ea74f784f909c10f6b4f756be929f55edf34 Mon Sep 17 00:00:00 2001
+From: hjl <hjl@138bc75d-0d04-0410-961f-82ee72b054a4>
+Date: Tue, 19 Apr 2016 17:01:11 +0000
+Subject: [PATCH 13/25] Allocate memory on cache line if requested
+
+Since GTM::gtm_thread has
+
+gtm_thread *next_thread __attribute__((__aligned__(HW_CACHELINE_SIZE)));
+
+GTM::gtm_thread::operator new () calls xmalloc with separate_cl == true.
+xmalloc must return memory on cache line in this case.
+
+	PR libitm/70456
+	* util.cc (xmalloc): Use posix_memalign to allocate memory on
+	on cache line if requested.
+
+git-svn-id: svn+ssh://gcc.gnu.org/svn/gcc/trunk@235211 138bc75d-0d04-0410-961f-82ee72b054a4
+---
+ libitm/util.cc | 22 ++++++++++++++++------
+ 1 file changed, 16 insertions(+), 6 deletions(-)
+
+diff --git a/libitm/util.cc b/libitm/util.cc
+index 16e5d03..f89b2e5 100644
+--- a/libitm/util.cc
++++ b/libitm/util.cc
+@@ -61,12 +61,22 @@ GTM_fatal (const char *fmt, ...)
+ void *
+ xmalloc (size_t size, bool separate_cl)
+ {
+-  // TODO Use posix_memalign if separate_cl is true, or some other allocation
+-  // method that will avoid sharing cache lines with data used by other
+-  // threads.
+-  void *r = malloc (size);
+-  if (r == 0)
+-    GTM_fatal ("Out of memory allocating %lu bytes", (unsigned long) size);
++  void *r;
++#ifdef HAVE_POSIX_MEMALIGN
++  if (separate_cl)
++    {
++      if (posix_memalign (&r, HW_CACHELINE_SIZE, size))
++	GTM_fatal ("Out of memory allocating %lu bytes aligned on cache line",
++		   (unsigned long) size);
++    }
++  else
++#endif
++    {
++      r = malloc (size);
++      if (r == 0)
++	GTM_fatal ("Out of memory allocating %lu bytes",
++		   (unsigned long) size);
++    }
+   return r;
+ }
+ 
+-- 
+2.8.1
+

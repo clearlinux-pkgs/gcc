@@ -1,0 +1,163 @@
+From 519869f3db16f4e7b2d9b8d9349685e8f606af65 Mon Sep 17 00:00:00 2001
+From: uros <uros@138bc75d-0d04-0410-961f-82ee72b054a4>
+Date: Mon, 25 Apr 2016 19:15:26 +0000
+Subject: [PATCH 05/25] Backport r235416 to hjl/pr70155/gcc-6-branch
+
+	* config/i386/i386.md (*movoi_internal_avx): Set mode attribute to XI
+	for SSE constm1 operands and TARGET_AVX512VL.
+	(*movti_internal): Ditto.
+	(*mov<mode>_or): Use constm1_operand predicate.
+	* config/i386/sse.md (*mov<mode>_internal): Set mode attribute to XI
+	for SSE vector_all_ones operands and TARGET_AVX512VL.
+	* config/i386/predicates.md (constm1_operand): New predicate.
+	* config/i386/i386.c (standard_sse_constant_opcode): Simplify
+	emission of constant -1 load.
+
+git-svn-id: svn+ssh://gcc.gnu.org/svn/gcc/trunk@235416 138bc75d-0d04-0410-961f-82ee72b054a4
+---
+ gcc/config/i386/i386.c        | 20 +++++++-------------
+ gcc/config/i386/i386.md       | 33 +++++++++++++++++++--------------
+ gcc/config/i386/predicates.md |  5 +++++
+ gcc/config/i386/sse.md        |  6 +++++-
+ 4 files changed, 36 insertions(+), 28 deletions(-)
+
+diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
+index ae43ff8..cf3833e 100644
+--- a/gcc/config/i386/i386.c
++++ b/gcc/config/i386/i386.c
+@@ -10868,30 +10868,24 @@ standard_sse_constant_opcode (rtx_insn *insn, rtx x)
+ 	case MODE_V8DF:
+ 	case MODE_V16SF:
+ 	  gcc_assert (TARGET_AVX512F);
+-	  break;
++	  return "vpternlogd\t{$0xFF, %g0, %g0, %g0|%g0, %g0, %g0, 0xFF}";
++
+ 	case MODE_OI:
+ 	case MODE_V4DF:
+ 	case MODE_V8SF:
+ 	  gcc_assert (TARGET_AVX2);
+-	  break;
++	  /* FALLTHRU */
+ 	case MODE_TI:
+ 	case MODE_V2DF:
+ 	case MODE_V4SF:
+ 	  gcc_assert (TARGET_SSE2);
+-	  break;
++	  return (TARGET_AVX
++		  ? "vpcmpeqd\t%0, %0, %0"
++		  : "pcmpeqd\t%0, %0");
++
+ 	default:
+ 	  gcc_unreachable ();
+ 	}
+-
+-      if (TARGET_AVX512VL
+-	  || insn_mode == MODE_XI
+-	  || insn_mode == MODE_V8DF
+-	  || insn_mode == MODE_V16SF)
+-	return "vpternlogd\t{$0xFF, %g0, %g0, %g0|%g0, %g0, %g0, 0xFF}";
+-      else if (TARGET_AVX)
+-	return "vpcmpeqd\t%0, %0, %0";
+-      else
+-	return "pcmpeqd\t%0, %0";
+    }
+ 
+   gcc_unreachable ();
+diff --git a/gcc/config/i386/i386.md b/gcc/config/i386/i386.md
+index 155bdd2..e800d8d 100644
+--- a/gcc/config/i386/i386.md
++++ b/gcc/config/i386/i386.md
+@@ -1960,10 +1960,9 @@
+ 
+ (define_insn "*mov<mode>_or"
+   [(set (match_operand:SWI48 0 "register_operand" "=r")
+-	(match_operand:SWI48 1 "const_int_operand"))
++	(match_operand:SWI48 1 "constm1_operand"))
+    (clobber (reg:CC FLAGS_REG))]
+-  "reload_completed
+-   && operands[1] == constm1_rtx"
++  "reload_completed"
+   "or{<imodesuffix>}\t{%1, %0|%0, %1}"
+   [(set_attr "type" "alu1")
+    (set_attr "mode" "<MODE>")
+@@ -2039,10 +2038,13 @@
+ 	(cond [(ior (match_operand 0 "ext_sse_reg_operand")
+ 		    (match_operand 1 "ext_sse_reg_operand"))
+ 		 (const_string "XI")
+-	       (match_test "TARGET_SSE_PACKED_SINGLE_INSN_OPTIMAL")
+-		 (const_string "V8SF")
+-	       (and (eq_attr "alternative" "3")
+-		    (match_test "TARGET_SSE_TYPELESS_STORES"))
++	       (and (eq_attr "alternative" "0")
++		    (and (match_test "TARGET_AVX512VL")
++			 (match_operand 1 "constm1_operand")))
++		 (const_string "XI")
++	       (ior (match_test "TARGET_SSE_PACKED_SINGLE_INSN_OPTIMAL")
++		    (and (eq_attr "alternative" "3")
++			 (match_test "TARGET_SSE_TYPELESS_STORES")))
+ 		 (const_string "V8SF")
+ 	      ]
+ 	      (const_string "OI")))])
+@@ -2099,16 +2101,19 @@
+        (const_string "maybe_vex")
+        (const_string "orig")))
+    (set (attr "mode")
+-	(cond [(ior (match_operand 0 "ext_sse_reg_operand")
++	(cond [(eq_attr "alternative" "0,1")
++		 (const_string "DI")
++	       (ior (match_operand 0 "ext_sse_reg_operand")
+ 		    (match_operand 1 "ext_sse_reg_operand"))
+ 		 (const_string "XI")
+-	       (eq_attr "alternative" "0,1")
+-		 (const_string "DI")
++	       (and (eq_attr "alternative" "2")
++		    (and (match_test "TARGET_AVX512VL")
++			 (match_operand 1 "constm1_operand")))
++		 (const_string "XI")
+ 	       (ior (not (match_test "TARGET_SSE2"))
+-		    (match_test "TARGET_SSE_PACKED_SINGLE_INSN_OPTIMAL"))
+-		 (const_string "V4SF")
+-	       (and (eq_attr "alternative" "5")
+-		    (match_test "TARGET_SSE_TYPELESS_STORES"))
++		    (ior (match_test "TARGET_SSE_PACKED_SINGLE_INSN_OPTIMAL")
++			 (and (eq_attr "alternative" "5")
++			      (match_test "TARGET_SSE_TYPELESS_STORES"))))
+ 		 (const_string "V4SF")
+ 	       (match_test "TARGET_AVX")
+ 		 (const_string "TI")
+diff --git a/gcc/config/i386/predicates.md b/gcc/config/i386/predicates.md
+index 079cf4e..89b7de0 100644
+--- a/gcc/config/i386/predicates.md
++++ b/gcc/config/i386/predicates.md
+@@ -675,6 +675,11 @@
+   return op == CONST1_RTX (mode);
+ })
+ 
++;; Match exactly -1.
++(define_predicate "constm1_operand"
++  (and (match_code "const_int")
++       (match_test "op = constm1_rtx")))
++
+ ;; Match exactly eight.
+ (define_predicate "const8_operand"
+   (and (match_code "const_int")
+diff --git a/gcc/config/i386/sse.md b/gcc/config/i386/sse.md
+index c27918b..6b5d573 100644
+--- a/gcc/config/i386/sse.md
++++ b/gcc/config/i386/sse.md
+@@ -938,7 +938,11 @@
+   [(set_attr "type" "sselog1,ssemov,ssemov")
+    (set_attr "prefix" "maybe_vex")
+    (set (attr "mode")
+-	(cond [(and (match_test "<MODE_SIZE> == 16")
++	(cond [(and (eq_attr "alternative" "0")
++		    (and (match_test "TARGET_AVX512VL")
++		    	 (match_operand 1 "vector_all_ones_operand")))
++		 (const_string "XI")
++	       (and (match_test "<MODE_SIZE> == 16")
+ 		    (ior (match_test "TARGET_SSE_PACKED_SINGLE_INSN_OPTIMAL")
+ 			 (and (eq_attr "alternative" "2")
+ 			      (match_test "TARGET_SSE_TYPELESS_STORES"))))
+-- 
+2.8.1
+

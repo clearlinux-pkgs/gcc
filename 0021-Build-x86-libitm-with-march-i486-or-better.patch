@@ -1,0 +1,75 @@
+From 4a1bc37ed8b8fb1f51c26ef8e63161104ffae4cb Mon Sep 17 00:00:00 2001
+From: "H.J. Lu" <hjl.tools@gmail.com>
+Date: Wed, 30 Mar 2016 05:57:48 -0700
+Subject: [PATCH 21/25] Build x86 libitm with -march=i486 or better
+
+If x86 libitm isn't compiled with -march=i486 or better, append
+-march=i486 XCFLAGS for x86 libitm build.
+
+	PR target/70454
+	* configure.tgt (XCFLAGS): Append -march=i486 to compile x86
+	libitm if needed.
+---
+ libitm/configure.tgt | 39 +++++++++++++++++++--------------------
+ 1 file changed, 19 insertions(+), 20 deletions(-)
+
+diff --git a/libitm/configure.tgt b/libitm/configure.tgt
+index e84382f..177c0c4 100644
+--- a/libitm/configure.tgt
++++ b/libitm/configure.tgt
+@@ -55,16 +55,25 @@ case "${target_cpu}" in
+ 
+   arm*)		ARCH=arm ;;
+ 
+-  i[3456]86)
+-	case " ${CC} ${CFLAGS} " in
+-	  *" -m64 "*|*" -mx32 "*)
+-	    ;;
+-	  *)
+-	    if test -z "$with_arch"; then
+-	      XCFLAGS="${XCFLAGS} -march=i486 -mtune=${target_cpu}"
+-	      XCFLAGS="${XCFLAGS} -fomit-frame-pointer"
+-	    fi
+-	esac
++  i[3456]86 | x86_64)
++	# Need i486 or better.
++	cat > conftestx.c <<EOF
++#if defined __x86_64__ || defined __i486__ || defined __pentium__ \
++      || defined __pentiumpro__ || defined __pentium4__ \
++      || defined __geode__ || defined __SSE__
++# error Need i486 or better
++#endif
++EOF
++	if ${CC} ${CFLAGS} -c -o conftestx.o conftestx.c > /dev/null 2>&1; then
++	  if test "${target_cpu}" = x86_64; then
++	    XCFLAGS="${XCFLAGS} -march=i486 -mtune=generic"
++	    XCFLAGS="${XCFLAGS} -fomit-frame-pointer"
++	  else
++	    XCFLAGS="${XCFLAGS} -march=i486 -mtune=${target_cpu}"
++	    XCFLAGS="${XCFLAGS} -fomit-frame-pointer"
++	  fi
++	fi
++	rm -f conftestx.c conftestx.o
+ 	XCFLAGS="${XCFLAGS} -mrtm"
+ 	ARCH=x86
+ 	;;
+@@ -99,16 +108,6 @@ case "${target_cpu}" in
+ 	ARCH=sparc
+ 	;;
+ 
+-  x86_64)
+-	case " ${CC} ${CFLAGS} " in
+-	  *" -m32 "*)
+-	    XCFLAGS="${XCFLAGS} -march=i486 -mtune=generic"
+-	    XCFLAGS="${XCFLAGS} -fomit-frame-pointer"
+-	    ;;
+-	esac
+-	XCFLAGS="${XCFLAGS} -mrtm"
+-	ARCH=x86
+-	;;
+   s390|s390x)
+ 	XCFLAGS="${XCFLAGS} -mzarch -mhtm"
+ 	ARCH=s390
+-- 
+2.8.1
+

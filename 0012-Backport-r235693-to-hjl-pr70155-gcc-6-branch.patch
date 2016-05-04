@@ -1,0 +1,257 @@
+From 4a9eaec2a5d5e65fbc96a9e833e241b3675f8d96 Mon Sep 17 00:00:00 2001
+From: uros <uros@138bc75d-0d04-0410-961f-82ee72b054a4>
+Date: Sun, 1 May 2016 19:04:05 +0000
+Subject: [PATCH 12/25] Backport r235693 to hjl/pr70155/gcc-6-branch
+
+	* config/i386/constraints.md (BC): Only allow -1 operands.
+	* config/i386/sse.md (mov<mode>_internal): Add (v,C) alternative.
+	Add "enabled" attribute.  Update XI mode attribute calculation.
+	* config/i386/i386.md (*movxi_internal_avx512f): Add (v,C) alternative.
+	(*movoi_internal_avx): Update XI mode attribute calculation.
+	(*movti_internal): Ditto.
+
+testsuite/ChangeLog:
+
+	* gcc.target/i386/avx256-unaligned-load-1.c: Update scan strings.
+	* gcc.target/i386/avx256-unaligned-store-1.c: Ditto.
+	* gcc.target/i386/avx256-unaligned-store-2.c: Ditto.
+	* gcc.target/i386/avx256-unaligned-store-3.c: Ditto.
+	* gcc.target/i386/avx256-unaligned-store-4.c: Ditto.
+
+git-svn-id: svn+ssh://gcc.gnu.org/svn/gcc/trunk@235693 138bc75d-0d04-0410-961f-82ee72b054a4
+---
+ gcc/config/i386/constraints.md                     |  5 ++--
+ gcc/config/i386/i386.md                            | 28 ++++++++++------------
+ gcc/config/i386/sse.md                             | 26 +++++++++++++-------
+ .../gcc.target/i386/avx256-unaligned-load-1.c      |  4 ++--
+ .../gcc.target/i386/avx256-unaligned-store-1.c     |  4 ++--
+ .../gcc.target/i386/avx256-unaligned-store-2.c     |  4 ++--
+ .../gcc.target/i386/avx256-unaligned-store-3.c     |  4 ++--
+ .../gcc.target/i386/avx256-unaligned-store-4.c     |  4 ++--
+ 8 files changed, 43 insertions(+), 36 deletions(-)
+
+diff --git a/gcc/config/i386/constraints.md b/gcc/config/i386/constraints.md
+index fb9ead4..93d136b 100644
+--- a/gcc/config/i386/constraints.md
++++ b/gcc/config/i386/constraints.md
+@@ -185,10 +185,9 @@
+   (match_operand 0 "constant_call_address_operand"))
+ 
+ (define_constraint "BC"
+-  "@internal SSE constant operand."
++  "@internal SSE constant -1 operand."
+   (and (match_test "TARGET_SSE")
+-       (ior (match_test "op == const0_rtx || op == constm1_rtx")
+-	    (match_operand 0 "const0_operand")
++       (ior (match_test "op == constm1_rtx")
+ 	    (match_operand 0 "vector_all_ones_operand"))))
+ 
+ ;; Integer constant constraints.
+diff --git a/gcc/config/i386/i386.md b/gcc/config/i386/i386.md
+index 7c8301d..c7396d8 100644
+--- a/gcc/config/i386/i386.md
++++ b/gcc/config/i386/i386.md
+@@ -1969,8 +1969,8 @@
+    (set_attr "length_immediate" "1")])
+ 
+ (define_insn "*movxi_internal_avx512f"
+-  [(set (match_operand:XI 0 "nonimmediate_operand"		"=v,v ,m")
+-	(match_operand:XI 1 "nonimmediate_or_sse_const_operand" "BC,vm,v"))]
++  [(set (match_operand:XI 0 "nonimmediate_operand"		"=v,v ,v ,m")
++	(match_operand:XI 1 "nonimmediate_or_sse_const_operand" " C,BC,vm,v"))]
+   "TARGET_AVX512F
+    && (register_operand (operands[0], XImode)
+        || register_operand (operands[1], XImode))"
+@@ -1991,13 +1991,13 @@
+       gcc_unreachable ();
+     }
+ }
+-  [(set_attr "type" "sselog1,ssemov,ssemov")
++  [(set_attr "type" "sselog1,sselog1,ssemov,ssemov")
+    (set_attr "prefix" "evex")
+    (set_attr "mode" "XI")])
+ 
+ (define_insn "*movoi_internal_avx"
+-  [(set (match_operand:OI 0 "nonimmediate_operand"		"=v,v,v ,m")
+-	(match_operand:OI 1 "nonimmediate_or_sse_const_operand" "BC,C,vm,v"))]
++  [(set (match_operand:OI 0 "nonimmediate_operand"		"=v,v ,v ,m")
++	(match_operand:OI 1 "nonimmediate_or_sse_const_operand" " C,BC,vm,v"))]
+   "TARGET_AVX
+    && (register_operand (operands[0], OImode)
+        || register_operand (operands[1], OImode))"
+@@ -2032,16 +2032,15 @@
+       gcc_unreachable ();
+     }
+ }
+-  [(set_attr "isa" "avx2,*,*,*")
++  [(set_attr "isa" "*,avx2,*,*")
+    (set_attr "type" "sselog1,sselog1,ssemov,ssemov")
+    (set_attr "prefix" "vex")
+    (set (attr "mode")
+ 	(cond [(ior (match_operand 0 "ext_sse_reg_operand")
+ 		    (match_operand 1 "ext_sse_reg_operand"))
+ 		 (const_string "XI")
+-	       (and (eq_attr "alternative" "0")
+-		    (and (match_test "TARGET_AVX512VL")
+-			 (match_operand 1 "constm1_operand")))
++	       (and (eq_attr "alternative" "1")
++		    (match_test "TARGET_AVX512VL"))
+ 		 (const_string "XI")
+ 	       (ior (match_test "TARGET_SSE_PACKED_SINGLE_INSN_OPTIMAL")
+ 		    (and (eq_attr "alternative" "3")
+@@ -2051,8 +2050,8 @@
+ 	      (const_string "OI")))])
+ 
+ (define_insn "*movti_internal"
+-  [(set (match_operand:TI 0 "nonimmediate_operand" "=!r ,o ,v ,v,v ,m")
+-	(match_operand:TI 1 "general_operand"	   "riFo,re,BC,C,vm,v"))]
++  [(set (match_operand:TI 0 "nonimmediate_operand" "=!r ,o ,v,v ,v ,m")
++	(match_operand:TI 1 "general_operand"	   "riFo,re,C,BC,vm,v"))]
+   "(TARGET_64BIT
+     && !(MEM_P (operands[0]) && MEM_P (operands[1])))
+    || (TARGET_SSE
+@@ -2095,7 +2094,7 @@
+       gcc_unreachable ();
+     }
+ }
+-  [(set_attr "isa" "x64,x64,sse2,*,*,*")
++  [(set_attr "isa" "x64,x64,*,sse2,*,*")
+    (set_attr "type" "multi,multi,sselog1,sselog1,ssemov,ssemov")
+    (set (attr "prefix")
+      (if_then_else (eq_attr "type" "sselog1,ssemov")
+@@ -2107,9 +2106,8 @@
+ 	       (ior (match_operand 0 "ext_sse_reg_operand")
+ 		    (match_operand 1 "ext_sse_reg_operand"))
+ 		 (const_string "XI")
+-	       (and (eq_attr "alternative" "2")
+-		    (and (match_test "TARGET_AVX512VL")
+-			 (match_operand 1 "constm1_operand")))
++	       (and (eq_attr "alternative" "3")
++		    (match_test "TARGET_AVX512VL"))
+ 		 (const_string "XI")
+ 	       (ior (not (match_test "TARGET_SSE2"))
+ 		    (ior (match_test "TARGET_SSE_PACKED_SINGLE_INSN_OPTIMAL")
+diff --git a/gcc/config/i386/sse.md b/gcc/config/i386/sse.md
+index 824ab89..b521d56 100644
+--- a/gcc/config/i386/sse.md
++++ b/gcc/config/i386/sse.md
+@@ -833,8 +833,10 @@
+ })
+ 
+ (define_insn "mov<mode>_internal"
+-  [(set (match_operand:VMOVE 0 "nonimmediate_operand"               "=v,v ,m")
+-	(match_operand:VMOVE 1 "nonimmediate_or_sse_const_operand"  "BC,vm,v"))]
++  [(set (match_operand:VMOVE 0 "nonimmediate_operand"
++	 "=v,v ,v ,m")
++	(match_operand:VMOVE 1 "nonimmediate_or_sse_const_operand"
++	 " C,BC,vm,v"))]
+   "TARGET_SSE
+    && (register_operand (operands[0], <MODE>mode)
+        || register_operand (operands[1], <MODE>mode))"
+@@ -936,16 +938,15 @@
+       gcc_unreachable ();
+     }
+ }
+-  [(set_attr "type" "sselog1,ssemov,ssemov")
++  [(set_attr "type" "sselog1,sselog1,ssemov,ssemov")
+    (set_attr "prefix" "maybe_vex")
+    (set (attr "mode")
+-	(cond [(and (eq_attr "alternative" "0")
+-		    (and (match_test "TARGET_AVX512VL")
+-		    	 (match_operand 1 "vector_all_ones_operand")))
++	(cond [(and (eq_attr "alternative" "1")
++		    (match_test "TARGET_AVX512VL"))
+ 		 (const_string "XI")
+ 	       (and (match_test "<MODE_SIZE> == 16")
+ 		    (ior (match_test "TARGET_SSE_PACKED_SINGLE_INSN_OPTIMAL")
+-			 (and (eq_attr "alternative" "2")
++			 (and (eq_attr "alternative" "3")
+ 			      (match_test "TARGET_SSE_TYPELESS_STORES"))))
+ 		 (const_string "<ssePSmode>")
+ 	       (match_test "TARGET_AVX")
+@@ -957,7 +958,16 @@
+ 		    (match_test "TARGET_SSE_LOAD0_BY_PXOR"))
+ 		 (const_string "TI")
+ 	      ]
+-	      (const_string "<sseinsnmode>")))])
++	      (const_string "<sseinsnmode>")))
++   (set (attr "enabled")
++        (cond [(and (match_test "<MODE_SIZE> == 16")
++		    (eq_attr "alternative" "1"))
++		 (symbol_ref "TARGET_SSE2")
++	       (and (match_test "<MODE_SIZE> == 32")
++		    (eq_attr "alternative" "1"))
++		 (symbol_ref "TARGET_AVX2")
++	      ]
++	      (symbol_ref "true")))])
+ 
+ (define_insn "<avx512>_load<mode>_mask"
+   [(set (match_operand:V48_AVX512VL 0 "register_operand" "=v,v")
+diff --git a/gcc/testsuite/gcc.target/i386/avx256-unaligned-load-1.c b/gcc/testsuite/gcc.target/i386/avx256-unaligned-load-1.c
+index 68378a5..7115b0a 100644
+--- a/gcc/testsuite/gcc.target/i386/avx256-unaligned-load-1.c
++++ b/gcc/testsuite/gcc.target/i386/avx256-unaligned-load-1.c
+@@ -14,6 +14,6 @@ avx_test (void)
+     c[i] = a[i] * b[i+3];
+ }
+ 
+-/* { dg-final { scan-assembler-not "vmovups\[^\n\r]*movv8sf_internal/2" } } */
+-/* { dg-final { scan-assembler "movv4sf_internal/2" } } */
++/* { dg-final { scan-assembler-not "vmovups\[^\n\r]*movv8sf_internal/3" } } */
++/* { dg-final { scan-assembler "movv4sf_internal/3" } } */
+ /* { dg-final { scan-assembler "vinsertf128" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/avx256-unaligned-store-1.c b/gcc/testsuite/gcc.target/i386/avx256-unaligned-store-1.c
+index d82aecf..4c71395 100644
+--- a/gcc/testsuite/gcc.target/i386/avx256-unaligned-store-1.c
++++ b/gcc/testsuite/gcc.target/i386/avx256-unaligned-store-1.c
+@@ -17,6 +17,6 @@ avx_test (void)
+     d[i] = c[i] * 20.0;
+ }
+ 
+-/* { dg-final { scan-assembler-not "vmovups.*movv8sf_internal/3" } } */
+-/* { dg-final { scan-assembler "vmovups.*movv4sf_internal/3" } } */
++/* { dg-final { scan-assembler-not "vmovups.*movv8sf_internal/4" } } */
++/* { dg-final { scan-assembler "vmovups.*movv4sf_internal/4" } } */
+ /* { dg-final { scan-assembler "vextractf128" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/avx256-unaligned-store-2.c b/gcc/testsuite/gcc.target/i386/avx256-unaligned-store-2.c
+index 817be17..64a3c74 100644
+--- a/gcc/testsuite/gcc.target/i386/avx256-unaligned-store-2.c
++++ b/gcc/testsuite/gcc.target/i386/avx256-unaligned-store-2.c
+@@ -23,6 +23,6 @@ avx_test (void)
+     }
+ }
+ 
+-/* { dg-final { scan-assembler-not "vmovups.*movv32qi_internal/3" } } */
+-/* { dg-final { scan-assembler "vmovups.*movv16qi_internal/3" } } */
++/* { dg-final { scan-assembler-not "vmovups.*movv32qi_internal/4" } } */
++/* { dg-final { scan-assembler "vmovups.*movv16qi_internal/4" } } */
+ /* { dg-final { scan-assembler "vextract.128" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/avx256-unaligned-store-3.c b/gcc/testsuite/gcc.target/i386/avx256-unaligned-store-3.c
+index a439a66..4574f6a 100644
+--- a/gcc/testsuite/gcc.target/i386/avx256-unaligned-store-3.c
++++ b/gcc/testsuite/gcc.target/i386/avx256-unaligned-store-3.c
+@@ -17,6 +17,6 @@ avx_test (void)
+     d[i] = c[i] * 20.0;
+ }
+ 
+-/* { dg-final { scan-assembler-not "vmovups.*movv4df_internal/3" } } */
+-/* { dg-final { scan-assembler "vmovups.*movv2df_internal/3" } } */
++/* { dg-final { scan-assembler-not "vmovups.*movv4df_internal/4" } } */
++/* { dg-final { scan-assembler "vmovups.*movv2df_internal/4" } } */
+ /* { dg-final { scan-assembler "vextractf128" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/avx256-unaligned-store-4.c b/gcc/testsuite/gcc.target/i386/avx256-unaligned-store-4.c
+index 463c1d8..c4566a3 100644
+--- a/gcc/testsuite/gcc.target/i386/avx256-unaligned-store-4.c
++++ b/gcc/testsuite/gcc.target/i386/avx256-unaligned-store-4.c
+@@ -14,6 +14,6 @@ avx_test (void)
+     b[i+3] = a[i] * c[i];
+ }
+ 
+-/* { dg-final { scan-assembler "vmovups.*movv8sf_internal/3" } } */
+-/* { dg-final { scan-assembler-not "movups.*movv4sf_internal/3" } } */
++/* { dg-final { scan-assembler "vmovups.*movv8sf_internal/4" } } */
++/* { dg-final { scan-assembler-not "movups.*movv4sf_internal/4" } } */
+ /* { dg-final { scan-assembler-not "vextractf128" } } */
+-- 
+2.8.1
+

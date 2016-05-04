@@ -1,0 +1,1391 @@
+From 1f4a58ee1dca6c36a54209a359989ef92e0d1215 Mon Sep 17 00:00:00 2001
+From: "H.J. Lu" <hjl.tools@gmail.com>
+Date: Tue, 22 Mar 2016 15:47:25 -0700
+Subject: [PATCH 19/25] gcc.target/i386/pieces-memset-1.c
+
+	* gcc.target/i386/pieces-memcpy-1.c: New test.
+	* gcc.target/i386/pieces-memcpy-2.c: Likewise.
+	* gcc.target/i386/pieces-memcpy-3.c: Likewise.
+	* gcc.target/i386/pieces-memcpy-4.c: Likewise.
+	* gcc.target/i386/pieces-memcpy-5.c: Likewise.
+	* gcc.target/i386/pieces-memcpy-6.c: Likewise.
+	* gcc.target/i386/pieces-memcpy-7.c: Likewise.
+	* gcc.target/i386/pieces-memcpy-8.c: Likewise.
+	* gcc.target/i386/pieces-memcpy-9.c: Likewise.
+	* gcc.target/i386/pieces-memcpy-10.c: Likewise.
+	* gcc.target/i386/pieces-memset-1.c: Likewise.
+	* gcc.target/i386/pieces-memset-2.c: Likewise.
+	* gcc.target/i386/pieces-memset-3.c: Likewise.
+	* gcc.target/i386/pieces-memset-4.c: Likewise.
+	* gcc.target/i386/pieces-memset-5.c: Likewise.
+	* gcc.target/i386/pieces-memset-6.c: Likewise.
+	* gcc.target/i386/pieces-memset-7.c: Likewise.
+	* gcc.target/i386/pieces-memset-8.c: Likewise.
+	* gcc.target/i386/pieces-memset-9.c: Likewise.
+	* gcc.target/i386/pieces-memset-10.c: Likewise.
+	* gcc.target/i386/pieces-memset-11.c: Likewise.
+	* gcc.target/i386/pieces-memset-12.c: Likewise.
+	* gcc.target/i386/pieces-memset-13.c: Likewise.
+	* gcc.target/i386/pieces-memset-14.c: Likewise.
+	* gcc.target/i386/pieces-memset-15.c: Likewise.
+	* gcc.target/i386/pieces-memset-16.c: Likewise.
+	* gcc.target/i386/pieces-memset-17.c: Likewise.
+	* gcc.target/i386/pieces-memset-18.c: Likewise.
+	* gcc.target/i386/pieces-memset-19.c: Likewise.
+	* gcc.target/i386/pieces-memset-20.c: Likewise.
+	* gcc.target/i386/pieces-memset-21.c: Likewise.
+	* gcc.target/i386/pieces-memset-22.c: Likewise.
+	* gcc.target/i386/pieces-memset-23.c: Likewise.
+	* gcc.target/i386/pieces-memset-24.c: Likewise.
+	* gcc.target/i386/pieces-memset-25.c: Likewise.
+	* gcc.target/i386/pieces-memset-26.c: Likewise.
+	* gcc.target/i386/pieces-memset-27.c: Likewise.
+	* gcc.target/i386/pieces-memset-28.c: Likewise.
+	* gcc.target/i386/pieces-memset-29.c: Likewise.
+	* gcc.target/i386/pieces-memset-30.c: Likewise.
+	* gcc.target/i386/pieces-memset-31.c: Likewise.
+	* gcc.target/i386/pieces-memset-32.c: Likewise.
+	* gcc.target/i386/pieces-memset-33.c: Likewise.
+	* gcc.target/i386/pieces-memset-34.c: Likewise.
+	* gcc.target/i386/pieces-memset-35.c: Likewise.
+	* gcc.target/i386/pieces-memset-36.c: Likewise.
+	* gcc.target/i386/pieces-memset-37.c: Likewise.
+	* gcc.target/i386/pieces-memset-38.c: Likewise.
+	* gcc.target/i386/pieces-memset-39.c: Likewise.
+	* gcc.target/i386/pieces-memset-40.c: Likewise.
+	* gcc.target/i386/pieces-memset-41.c: Likewise.
+	* gcc.target/i386/pieces-memset-42.c: Likewise.
+	* gcc.target/i386/pieces-memset-43.c: Likewise.
+	* gcc.target/i386/pieces-memset-44.c: Likewise.
+---
+ gcc/testsuite/gcc.target/i386/pieces-memcpy-1.c  | 17 +++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memcpy-10.c | 17 +++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memcpy-2.c  | 17 +++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memcpy-3.c  | 16 ++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memcpy-4.c  | 17 +++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memcpy-5.c  | 17 +++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memcpy-6.c  | 17 +++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memcpy-7.c  | 17 +++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memcpy-8.c  | 17 +++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memcpy-9.c  | 17 +++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memset-1.c  | 16 ++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memset-10.c | 16 ++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memset-11.c | 16 ++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memset-12.c | 16 ++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memset-13.c | 16 ++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memset-14.c | 16 ++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memset-15.c | 16 ++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memset-16.c | 16 ++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memset-17.c | 16 ++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memset-18.c | 16 ++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memset-19.c | 17 +++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memset-2.c  | 12 ++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memset-20.c | 17 +++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memset-21.c | 17 +++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memset-22.c | 17 +++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memset-23.c | 17 +++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memset-24.c | 17 +++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memset-25.c | 17 +++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memset-26.c | 17 +++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memset-27.c | 17 +++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memset-28.c | 17 +++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memset-29.c | 17 +++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memset-3.c  | 18 ++++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memset-30.c | 17 +++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memset-31.c | 17 +++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memset-32.c | 17 +++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memset-33.c | 17 +++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memset-34.c | 17 +++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memset-35.c | 17 +++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memset-36.c | 17 +++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memset-37.c | 17 +++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memset-38.c | 18 ++++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memset-39.c | 18 ++++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memset-4.c  | 16 ++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memset-40.c | 17 +++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memset-41.c | 16 ++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memset-42.c | 17 +++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memset-43.c | 17 +++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memset-44.c | 17 +++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memset-5.c  | 12 ++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memset-6.c  | 16 ++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memset-7.c  | 16 ++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memset-8.c  | 16 ++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pieces-memset-9.c  | 16 ++++++++++++++++
+ 54 files changed, 894 insertions(+)
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memcpy-1.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memcpy-10.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memcpy-2.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memcpy-3.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memcpy-4.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memcpy-5.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memcpy-6.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memcpy-7.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memcpy-8.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memcpy-9.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memset-1.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memset-10.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memset-11.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memset-12.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memset-13.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memset-14.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memset-15.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memset-16.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memset-17.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memset-18.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memset-19.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memset-2.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memset-20.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memset-21.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memset-22.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memset-23.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memset-24.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memset-25.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memset-26.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memset-27.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memset-28.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memset-29.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memset-3.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memset-30.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memset-31.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memset-32.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memset-33.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memset-34.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memset-35.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memset-36.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memset-37.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memset-38.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memset-39.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memset-4.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memset-40.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memset-41.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memset-42.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memset-43.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memset-44.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memset-5.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memset-6.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memset-7.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memset-8.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memset-9.c
+
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memcpy-1.c b/gcc/testsuite/gcc.target/i386/pieces-memcpy-1.c
+new file mode 100644
+index 0000000..b8917a7
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memcpy-1.c
+@@ -0,0 +1,17 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mno-avx -msse2 -mtune=generic" } */
++
++extern char *dst, *src;
++
++void
++foo (void)
++{
++  __builtin_memcpy (dst, src, 64);
++}
++
++/* { dg-final { scan-assembler-times "movdqu\[ \\t\]+\[^\n\]*%xmm" 4 } } */
++/* { dg-final { scan-assembler-times "movups\[ \\t\]+\[^\n\]*%xmm" 4 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memcpy-10.c b/gcc/testsuite/gcc.target/i386/pieces-memcpy-10.c
+new file mode 100644
+index 0000000..d69e40b
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memcpy-10.c
+@@ -0,0 +1,17 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mno-avx2 -mavx -mtune=sandybridge" } */
++
++extern char *dst, *src;
++
++void
++foo (void)
++{
++  __builtin_memcpy (dst, src, 33);
++}
++
++/* { dg-final { scan-assembler-times "vmovdqu\[ \\t\]+\[^\n\]*%xmm" 2 } } */
++/* { dg-final { scan-assembler-times "vmovups\[ \\t\]+\[^\n\]*%xmm" 2 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memcpy-2.c b/gcc/testsuite/gcc.target/i386/pieces-memcpy-2.c
+new file mode 100644
+index 0000000..5b9ce22
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memcpy-2.c
+@@ -0,0 +1,17 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mno-avx2 -mavx -mtune=haswell" } */
++
++extern char *dst, *src;
++
++void
++foo (void)
++{
++  __builtin_memcpy (dst, src, 64);
++}
++
++/* { dg-final { scan-assembler-times "vmovdqu\[ \\t\]+\[^\n\]*%ymm" 2 } } */
++/* { dg-final { scan-assembler-times "vmovups\[ \\t\]+\[^\n\]*%ymm" 2 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memcpy-3.c b/gcc/testsuite/gcc.target/i386/pieces-memcpy-3.c
+new file mode 100644
+index 0000000..10fa97d
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memcpy-3.c
+@@ -0,0 +1,16 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mavx512f -mtune=generic" } */
++
++extern char *dst, *src;
++
++void
++foo (void)
++{
++  __builtin_memcpy (dst, src, 66);
++}
++
++/* { dg-final { scan-assembler-times "vmovdqu32\[ \\t\]+\[^\n\]*%zmm" 2 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memcpy-4.c b/gcc/testsuite/gcc.target/i386/pieces-memcpy-4.c
+new file mode 100644
+index 0000000..7addc4c
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memcpy-4.c
+@@ -0,0 +1,17 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mno-avx -msse2 -mtune=generic" } */
++
++extern char *dst, *src;
++
++void
++foo (void)
++{
++  __builtin_memcpy (dst, src, 33);
++}
++
++/* { dg-final { scan-assembler-times "movdqu\[ \\t\]+\[^\n\]*%xmm" 2 } } */
++/* { dg-final { scan-assembler-times "movups\[ \\t\]+\[^\n\]*%xmm" 2 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memcpy-5.c b/gcc/testsuite/gcc.target/i386/pieces-memcpy-5.c
+new file mode 100644
+index 0000000..3b93eb5
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memcpy-5.c
+@@ -0,0 +1,17 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mno-avx2 -mavx -mtune=haswell" } */
++
++extern char *dst, *src;
++
++void
++foo (void)
++{
++  __builtin_memcpy (dst, src, 33);
++}
++
++/* { dg-final { scan-assembler-times "vmovdqu\[ \\t\]+\[^\n\]*%ymm" 1 } } */
++/* { dg-final { scan-assembler-times "vmovups\[ \\t\]+\[^\n\]*%ymm" 1 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memcpy-6.c b/gcc/testsuite/gcc.target/i386/pieces-memcpy-6.c
+new file mode 100644
+index 0000000..2ac895d
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memcpy-6.c
+@@ -0,0 +1,17 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mavx512f -mtune=generic" } */
++
++extern char *dst, *src;
++
++void
++foo (void)
++{
++  __builtin_memcpy (dst, src, 34);
++}
++
++/* { dg-final { scan-assembler-times "vmovdqu\[ \\t\]+\[^\n\]*%ymm" 1 } } */
++/* { dg-final { scan-assembler-times "vmovups\[ \\t\]+\[^\n\]*%ymm" 1 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memcpy-7.c b/gcc/testsuite/gcc.target/i386/pieces-memcpy-7.c
+new file mode 100644
+index 0000000..82ce464
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memcpy-7.c
+@@ -0,0 +1,17 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mno-avx -msse2 -mtune=generic" } */
++
++extern char *dst, *src;
++
++void
++foo (void)
++{
++  __builtin_memcpy (dst, src, 17);
++}
++
++/* { dg-final { scan-assembler-times "movdqu\[ \\t\]+\[^\n\]*%xmm" 1 } } */
++/* { dg-final { scan-assembler-times "movups\[ \\t\]+\[^\n\]*%xmm" 1 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memcpy-8.c b/gcc/testsuite/gcc.target/i386/pieces-memcpy-8.c
+new file mode 100644
+index 0000000..82522c6
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memcpy-8.c
+@@ -0,0 +1,17 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mno-avx2 -mavx -mtune=generic" } */
++
++extern char *dst, *src;
++
++void
++foo (void)
++{
++  __builtin_memcpy (dst, src, 18);
++}
++
++/* { dg-final { scan-assembler-times "vmovdqu\[ \\t\]+\[^\n\]*%xmm" 1 } } */
++/* { dg-final { scan-assembler-times "vmovups\[ \\t\]+\[^\n\]*%xmm" 1 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memcpy-9.c b/gcc/testsuite/gcc.target/i386/pieces-memcpy-9.c
+new file mode 100644
+index 0000000..3c6a69a
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memcpy-9.c
+@@ -0,0 +1,17 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mavx512f -mtune=generic" } */
++
++extern char *dst, *src;
++
++void
++foo (void)
++{
++  __builtin_memcpy (dst, src, 19);
++}
++
++/* { dg-final { scan-assembler-times "vmovdqu\[ \\t\]+\[^\n\]*%xmm" 1 } } */
++/* { dg-final { scan-assembler-times "vmovups\[ \\t\]+\[^\n\]*%xmm" 1 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-1.c b/gcc/testsuite/gcc.target/i386/pieces-memset-1.c
+new file mode 100644
+index 0000000..2b80326
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-1.c
+@@ -0,0 +1,16 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mno-avx -msse2 -mtune=generic" } */
++
++extern char *dst;
++
++void
++foo (int x)
++{
++  __builtin_memset (dst, x, 64);
++}
++
++/* { dg-final { scan-assembler-times "movups\[ \\t\]+\[^\n\]*%xmm" 4 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-10.c b/gcc/testsuite/gcc.target/i386/pieces-memset-10.c
+new file mode 100644
+index 0000000..6b09264
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-10.c
+@@ -0,0 +1,16 @@
++/* { dg-do compile { target ia32 } } */
++/* { dg-options "-O2 -mno-avx -msse2 -mtune=generic" } */
++
++extern char *dst;
++
++void
++foo (void)
++{
++  __builtin_memset (dst, 3, 64);
++}
++
++/* { dg-final { scan-assembler-times "movups\[ \\t\]+\[^\n\]*%xmm" 4 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-11.c b/gcc/testsuite/gcc.target/i386/pieces-memset-11.c
+new file mode 100644
+index 0000000..708e382
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-11.c
+@@ -0,0 +1,16 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mno-avx2 -mavx -mtune=haswell" } */
++
++extern char *dst;
++
++void
++foo (void)
++{
++  __builtin_memset (dst, 3, 64);
++}
++
++/* { dg-final { scan-assembler-times "vmovups\[ \\t\]+\[^\n\]*%ymm" 2 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-12.c b/gcc/testsuite/gcc.target/i386/pieces-memset-12.c
+new file mode 100644
+index 0000000..cceeb9a
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-12.c
+@@ -0,0 +1,16 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mavx512f -mtune=generic" } */
++
++extern char *dst;
++
++void
++foo (void)
++{
++  __builtin_memset (dst, 3, 66);
++}
++
++/* { dg-final { scan-assembler-times "vmovdqu32\[ \\t\]+\[^\n\]*%zmm" 1 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-13.c b/gcc/testsuite/gcc.target/i386/pieces-memset-13.c
+new file mode 100644
+index 0000000..01f222c
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-13.c
+@@ -0,0 +1,16 @@
++/* { dg-do compile { target ia32 } } */
++/* { dg-options "-O2 -mno-avx -msse2 -mtune=generic" } */
++
++extern char *dst;
++
++void
++foo (void)
++{
++  __builtin_memset (dst, 3, 33);
++}
++
++/* { dg-final { scan-assembler-times "movups\[ \\t\]+\[^\n\]*%xmm" 2 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-14.c b/gcc/testsuite/gcc.target/i386/pieces-memset-14.c
+new file mode 100644
+index 0000000..ad1f4e8
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-14.c
+@@ -0,0 +1,16 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mno-avx2 -mavx -mtune=haswell" } */
++
++extern char *dst;
++
++void
++foo (void)
++{
++  __builtin_memset (dst, 3, 33);
++}
++
++/* { dg-final { scan-assembler-times "vmovups\[ \\t\]+\[^\n\]*%ymm" 1 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-15.c b/gcc/testsuite/gcc.target/i386/pieces-memset-15.c
+new file mode 100644
+index 0000000..b023cb9
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-15.c
+@@ -0,0 +1,16 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mavx512f -mtune=generic" } */
++
++extern char *dst;
++
++void
++foo (void)
++{
++  __builtin_memset (dst, 3, 33);
++}
++
++/* { dg-final { scan-assembler-times "vmovups\[ \\t\]+\[^\n\]*%ymm" 1 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-16.c b/gcc/testsuite/gcc.target/i386/pieces-memset-16.c
+new file mode 100644
+index 0000000..7a29095
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-16.c
+@@ -0,0 +1,16 @@
++/* { dg-do compile { target ia32 } } */
++/* { dg-options "-O2 -mno-avx -msse2 -mtune=generic" } */
++
++extern char *dst;
++
++void
++foo (void)
++{
++  __builtin_memset (dst, 3, 17);
++}
++
++/* { dg-final { scan-assembler-times "movups\[ \\t\]+\[^\n\]*%xmm" 1 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-17.c b/gcc/testsuite/gcc.target/i386/pieces-memset-17.c
+new file mode 100644
+index 0000000..7f128cb
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-17.c
+@@ -0,0 +1,16 @@
++/* { dg-do compile { target ia32 } } */
++/* { dg-options "-O2 -mno-avx2 -mavx -mtune=generic" } */
++
++extern char *dst;
++
++void
++foo (void)
++{
++  __builtin_memset (dst, 3, 17);
++}
++
++/* { dg-final { scan-assembler-times "vmovups\[ \\t\]+\[^\n\]*%xmm" 1 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-18.c b/gcc/testsuite/gcc.target/i386/pieces-memset-18.c
+new file mode 100644
+index 0000000..1b41823
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-18.c
+@@ -0,0 +1,16 @@
++/* { dg-do compile { target ia32 } } */
++/* { dg-options "-O2 -mavx512f -mtune=generic" } */
++
++extern char *dst;
++
++void
++foo (void)
++{
++  __builtin_memset (dst, 3, 17);
++}
++
++/* { dg-final { scan-assembler-times "vmovups\[ \\t\]+\[^\n\]*%xmm" 1 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-19.c b/gcc/testsuite/gcc.target/i386/pieces-memset-19.c
+new file mode 100644
+index 0000000..4dcf797
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-19.c
+@@ -0,0 +1,17 @@
++/* { dg-do compile { target ia32 } } */
++/* { dg-options "-O2 -mno-avx -msse2 -mtune=generic" } */
++
++extern char *dst;
++
++void
++foo (void)
++{
++  __builtin_memset (dst, 0, 64);
++}
++
++/* { dg-final { scan-assembler-times "pxor\[ \\t\]+\[^\n\]*%xmm" 1 } } */
++/* { dg-final { scan-assembler-times "movups\[ \\t\]+\[^\n\]*%xmm" 4 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-2.c b/gcc/testsuite/gcc.target/i386/pieces-memset-2.c
+new file mode 100644
+index 0000000..2efc967
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-2.c
+@@ -0,0 +1,12 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mno-avx2 -mavx -mtune=haswell" } */
++
++extern char *dst;
++
++void
++foo (int x)
++{
++  __builtin_memset (dst, x, 64);
++}
++
++/* { dg-final { scan-assembler-times "vmovups\[ \\t\]+\[^\n\]*%ymm" 2 } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-20.c b/gcc/testsuite/gcc.target/i386/pieces-memset-20.c
+new file mode 100644
+index 0000000..f25ed3d
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-20.c
+@@ -0,0 +1,17 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mno-avx2 -mavx -mtune=haswell" } */
++
++extern char *dst;
++
++void
++foo (void)
++{
++  __builtin_memset (dst, 0, 64);
++}
++
++/* { dg-final { scan-assembler-times "vpxor\[ \\t\]+\[^\n\]*%xmm" 1 } } */
++/* { dg-final { scan-assembler-times "vmovups\[ \\t\]+\[^\n\]*%ymm" 2 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-21.c b/gcc/testsuite/gcc.target/i386/pieces-memset-21.c
+new file mode 100644
+index 0000000..42b68c0
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-21.c
+@@ -0,0 +1,17 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mavx512f -mtune=generic" } */
++
++extern char *dst;
++
++void
++foo (void)
++{
++  __builtin_memset (dst, 0, 66);
++}
++
++/* { dg-final { scan-assembler-times "vpxord\[ \\t\]+\[^\n\]*%zmm" 1 } } */
++/* { dg-final { scan-assembler-times "vmovdqu32\[ \\t\]+\[^\n\]*%zmm" 1 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-22.c b/gcc/testsuite/gcc.target/i386/pieces-memset-22.c
+new file mode 100644
+index 0000000..048557d
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-22.c
+@@ -0,0 +1,17 @@
++/* { dg-do compile { target ia32 } } */
++/* { dg-options "-O2 -mno-avx -msse2 -mtune=generic" } */
++
++extern char *dst;
++
++void
++foo (void)
++{
++  __builtin_memset (dst, 0, 33);
++}
++
++/* { dg-final { scan-assembler-times "pxor\[ \\t\]+\[^\n\]*%xmm" 1 } } */
++/* { dg-final { scan-assembler-times "movups\[ \\t\]+\[^\n\]*%xmm" 2 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-23.c b/gcc/testsuite/gcc.target/i386/pieces-memset-23.c
+new file mode 100644
+index 0000000..9115398
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-23.c
+@@ -0,0 +1,17 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mno-avx2 -mavx -mtune=haswell" } */
++
++extern char *dst;
++
++void
++foo (void)
++{
++  __builtin_memset (dst, 0, 33);
++}
++
++/* { dg-final { scan-assembler-times "vpxor\[ \\t\]+\[^\n\]*%xmm" 1 } } */
++/* { dg-final { scan-assembler-times "vmovups\[ \\t\]+\[^\n\]*%ymm" 1 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-24.c b/gcc/testsuite/gcc.target/i386/pieces-memset-24.c
+new file mode 100644
+index 0000000..43761d9
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-24.c
+@@ -0,0 +1,17 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mavx512f -mtune=generic" } */
++
++extern char *dst;
++
++void
++foo (void)
++{
++  __builtin_memset (dst, 0, 33);
++}
++
++/* { dg-final { scan-assembler-times "vpxor\[ \\t\]+\[^\n\]*%xmm" 1 } } */
++/* { dg-final { scan-assembler-times "vmovups\[ \\t\]+\[^\n\]*%ymm" 1 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-25.c b/gcc/testsuite/gcc.target/i386/pieces-memset-25.c
+new file mode 100644
+index 0000000..f69cd16
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-25.c
+@@ -0,0 +1,17 @@
++/* { dg-do compile { target ia32 } } */
++/* { dg-options "-O2 -mno-avx -msse2 -mtune=generic" } */
++
++extern char *dst;
++
++void
++foo (void)
++{
++  __builtin_memset (dst, 0, 17);
++}
++
++/* { dg-final { scan-assembler-times "pxor\[ \\t\]+\[^\n\]*%xmm" 1 } } */
++/* { dg-final { scan-assembler-times "movups\[ \\t\]+\[^\n\]*%xmm" 1 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-26.c b/gcc/testsuite/gcc.target/i386/pieces-memset-26.c
+new file mode 100644
+index 0000000..52d40ea
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-26.c
+@@ -0,0 +1,17 @@
++/* { dg-do compile { target ia32 } } */
++/* { dg-options "-O2 -mno-avx2 -mavx -mtune=generic" } */
++
++extern char *dst;
++
++void
++foo (void)
++{
++  __builtin_memset (dst, 0, 17);
++}
++
++/* { dg-final { scan-assembler-times "pxor\[ \\t\]+\[^\n\]*%xmm" 1 } } */
++/* { dg-final { scan-assembler-times "vmovups\[ \\t\]+\[^\n\]*%xmm" 1 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-27.c b/gcc/testsuite/gcc.target/i386/pieces-memset-27.c
+new file mode 100644
+index 0000000..e916d8d
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-27.c
+@@ -0,0 +1,17 @@
++/* { dg-do compile { target ia32 } } */
++/* { dg-options "-O2 -mavx512f -mtune=generic" } */
++
++extern char *dst;
++
++void
++foo (void)
++{
++  __builtin_memset (dst, 0, 17);
++}
++
++/* { dg-final { scan-assembler-times "pxor\[ \\t\]+\[^\n\]*%xmm" 1 } } */
++/* { dg-final { scan-assembler-times "vmovups\[ \\t\]+\[^\n\]*%xmm" 1 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-28.c b/gcc/testsuite/gcc.target/i386/pieces-memset-28.c
+new file mode 100644
+index 0000000..3c1507e
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-28.c
+@@ -0,0 +1,17 @@
++/* { dg-do compile { target ia32 } } */
++/* { dg-options "-O2 -mno-avx -msse2 -mtune=generic" } */
++
++extern char *dst;
++
++void
++foo (void)
++{
++  __builtin_memset (dst, -1, 64);
++}
++
++/* { dg-final { scan-assembler-times "pcmpeqd\[ \\t\]+\[^\n\]*%xmm" 1 } } */
++/* { dg-final { scan-assembler-times "movups\[ \\t\]+\[^\n\]*%xmm" 4 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-29.c b/gcc/testsuite/gcc.target/i386/pieces-memset-29.c
+new file mode 100644
+index 0000000..6e519de
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-29.c
+@@ -0,0 +1,17 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mno-avx2 -mavx -mtune=haswell" } */
++
++extern char *dst;
++
++void
++foo (void)
++{
++  __builtin_memset (dst, -1, 64);
++}
++
++/* { dg-final { scan-assembler-not "vpcmpeqd\[ \\t\]+\[^\n\]*%ymm" } } */
++/* { dg-final { scan-assembler-times "vmovups\[ \\t\]+\[^\n\]*%ymm" 2 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-3.c b/gcc/testsuite/gcc.target/i386/pieces-memset-3.c
+new file mode 100644
+index 0000000..c3a7d03
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-3.c
+@@ -0,0 +1,18 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mno-avx512bw -mavx512f -mtune=intel" } */
++
++extern char *dst;
++
++void
++foo (int x)
++{
++  __builtin_memset (dst, x, 66);
++}
++
++/* { dg-final { scan-assembler-times "vpbroadcastb\[ \\t\]+\[^\n\]*%ymm" 1 } } */
++/* { dg-final { scan-assembler-times "vinserti64x4\[ \\t\]+\[^\n\]*%zmm" 1 } } */
++/* { dg-final { scan-assembler-times "vmovdqu32\[ \\t\]+\[^\n\]*%zmm" 1 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" { target { ! ia32 } } } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-30.c b/gcc/testsuite/gcc.target/i386/pieces-memset-30.c
+new file mode 100644
+index 0000000..e2a18b4
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-30.c
+@@ -0,0 +1,17 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mno-avx512f -mavx2 -mtune=haswell" } */
++
++extern char *dst;
++
++void
++foo (void)
++{
++  __builtin_memset (dst, -1, 64);
++}
++
++/* { dg-final { scan-assembler-times "vpcmpeqd\[ \\t\]+\[^\n\]*%ymm" 1 } } */
++/* { dg-final { scan-assembler-times "vmovups\[ \\t\]+\[^\n\]*%ymm" 2 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-31.c b/gcc/testsuite/gcc.target/i386/pieces-memset-31.c
+new file mode 100644
+index 0000000..81054a7
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-31.c
+@@ -0,0 +1,17 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mavx512f -mtune=generic" } */
++
++extern char *dst;
++
++void
++foo (void)
++{
++  __builtin_memset (dst, -1, 66);
++}
++
++/* { dg-final { scan-assembler-times "vpternlogd\[ \\t\]+\[^\n\]*%zmm" 1 } } */
++/* { dg-final { scan-assembler-times "vmovdqu32\[ \\t\]+\[^\n\]*%zmm" 1 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-32.c b/gcc/testsuite/gcc.target/i386/pieces-memset-32.c
+new file mode 100644
+index 0000000..fd22dd9
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-32.c
+@@ -0,0 +1,17 @@
++/* { dg-do compile { target ia32 } } */
++/* { dg-options "-O2 -mno-avx -msse2 -mtune=generic" } */
++
++extern char *dst;
++
++void
++foo (void)
++{
++  __builtin_memset (dst, -1, 33);
++}
++
++/* { dg-final { scan-assembler-times "pcmpeqd\[ \\t\]+\[^\n\]*%xmm" 1 } } */
++/* { dg-final { scan-assembler-times "movups\[ \\t\]+\[^\n\]*%xmm" 2 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-33.c b/gcc/testsuite/gcc.target/i386/pieces-memset-33.c
+new file mode 100644
+index 0000000..b60c28c
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-33.c
+@@ -0,0 +1,17 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mno-avx2 -mavx -mtune=haswell" } */
++
++extern char *dst;
++
++void
++foo (void)
++{
++  __builtin_memset (dst, -1, 33);
++}
++
++/* { dg-final { scan-assembler-not "vpcmpeqd\[ \\t\]+\[^\n\]*%ymm" } } */
++/* { dg-final { scan-assembler-times "vmovups\[ \\t\]+\[^\n\]*%ymm" 1 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-34.c b/gcc/testsuite/gcc.target/i386/pieces-memset-34.c
+new file mode 100644
+index 0000000..5454748
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-34.c
+@@ -0,0 +1,17 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mno-avx512f -mavx2 -mtune=haswell" } */
++
++extern char *dst;
++
++void
++foo (void)
++{
++  __builtin_memset (dst, -1, 33);
++}
++
++/* { dg-final { scan-assembler-times "vpcmpeqd\[ \\t\]+\[^\n\]*%ymm" 1 } } */
++/* { dg-final { scan-assembler-times "vmovups\[ \\t\]+\[^\n\]*%ymm" 1 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-35.c b/gcc/testsuite/gcc.target/i386/pieces-memset-35.c
+new file mode 100644
+index 0000000..f7a307f
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-35.c
+@@ -0,0 +1,17 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mavx512f -mtune=generic" } */
++
++extern char *dst;
++
++void
++foo (void)
++{
++  __builtin_memset (dst, -1, 34);
++}
++
++/* { dg-final { scan-assembler-times "vpcmpeqd\[ \\t\]+\[^\n\]*%ymm" 1 } } */
++/* { dg-final { scan-assembler-times "vmovups\[ \\t\]+\[^\n\]*%ymm" 1 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-36.c b/gcc/testsuite/gcc.target/i386/pieces-memset-36.c
+new file mode 100644
+index 0000000..1970793
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-36.c
+@@ -0,0 +1,17 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mno-avx512f -mavx2 -mtune=generic" } */
++
++extern char *dst;
++
++void
++foo (int x)
++{
++  __builtin_memset (dst, x, 17);
++}
++
++/* { dg-final { scan-assembler-times "vpbroadcastb\[ \\t\]+\[^\n\]*%xmm" 1 } } */
++/* { dg-final { scan-assembler-times "vmovups\[ \\t\]+\[^\n\]*%xmm" 1 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-37.c b/gcc/testsuite/gcc.target/i386/pieces-memset-37.c
+new file mode 100644
+index 0000000..21c720a
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-37.c
+@@ -0,0 +1,17 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mno-avx512f -mavx2 -mtune=haswell" } */
++
++extern char *dst;
++
++void
++foo (int x)
++{
++  __builtin_memset (dst, x, 66);
++}
++
++/* { dg-final { scan-assembler-times "vpbroadcastb\[ \\t\]+\[^\n\]*%ymm" 1 } } */
++/* { dg-final { scan-assembler-times "vmovups\[ \\t\]+\[^\n\]*%ymm" 2 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-38.c b/gcc/testsuite/gcc.target/i386/pieces-memset-38.c
+new file mode 100644
+index 0000000..a2c5a4d
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-38.c
+@@ -0,0 +1,18 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mno-avx512bw -mavx512f -mtune=intel" } */
++
++extern char *dst;
++
++void
++foo (int x)
++{
++  __builtin_memset (dst, x, 66);
++}
++
++/* { dg-final { scan-assembler-times "vpbroadcastb\[ \\t\]+\[^\n\]*%ymm" 1 } } */
++/* { dg-final { scan-assembler-times "vinserti64x4\[ \\t\]+\[^\n\]*%ymm" 1 } } */
++/* { dg-final { scan-assembler-times "vmovdqu32\[ \\t\]+\[^\n\]*%zmm" 1 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" { target { ! ia32 } } } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-39.c b/gcc/testsuite/gcc.target/i386/pieces-memset-39.c
+new file mode 100644
+index 0000000..1e59cbb
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-39.c
+@@ -0,0 +1,18 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mavx512bw -mtune=generic" } */
++
++extern char *dst;
++
++void
++foo (int x)
++{
++  __builtin_memset (dst, x, 66);
++}
++
++/* { dg-final { scan-assembler-times "vpbroadcastb\[ \\t\]+\[^\n\]*%zmm" 1 } } */
++/* { dg-final { scan-assembler-not "vinserti64x4" } } */
++/* { dg-final { scan-assembler-times "vmovdqu32\[ \\t\]+\[^\n\]*%zmm" 1 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-4.c b/gcc/testsuite/gcc.target/i386/pieces-memset-4.c
+new file mode 100644
+index 0000000..9256919
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-4.c
+@@ -0,0 +1,16 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mno-avx -msse2 -mtune=generic" } */
++
++extern char *dst;
++
++void
++foo (int x)
++{
++  __builtin_memset (dst, x, 33);
++}
++
++/* { dg-final { scan-assembler-times "movups\[ \\t\]+\[^\n\]*%xmm" 2 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-40.c b/gcc/testsuite/gcc.target/i386/pieces-memset-40.c
+new file mode 100644
+index 0000000..4737f7f
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-40.c
+@@ -0,0 +1,17 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mno-avx512f -mavx2 -mtune=sandybridge" } */
++
++extern char *dst;
++
++void
++foo (int x)
++{
++  __builtin_memset (dst, x, 66);
++}
++
++/* { dg-final { scan-assembler-times "vpbroadcastb\[ \\t\]+\[^\n\]*%xmm" 1 } } */
++/* { dg-final { scan-assembler-times "vmovups\[ \\t\]+\[^\n\]*%xmm" 4 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-41.c b/gcc/testsuite/gcc.target/i386/pieces-memset-41.c
+new file mode 100644
+index 0000000..6d242aa
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-41.c
+@@ -0,0 +1,16 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mno-avx2 -mavx -mtune=sandybridge" } */
++
++extern char *dst;
++
++void
++foo (int x)
++{
++  __builtin_memset (dst, x, 33);
++}
++
++/* { dg-final { scan-assembler-times "vmovups\[ \\t\]+\[^\n\]*%xmm" 2 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-42.c b/gcc/testsuite/gcc.target/i386/pieces-memset-42.c
+new file mode 100644
+index 0000000..2503942
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-42.c
+@@ -0,0 +1,17 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mno-avx2 -mavx -mtune=sandybridge" } */
++
++extern char *dst;
++
++void
++foo (void)
++{
++  __builtin_memset (dst, 0, 33);
++}
++
++/* { dg-final { scan-assembler-times "vpxor\[ \\t\]+\[^\n\]*%xmm" 1 } } */
++/* { dg-final { scan-assembler-times "vmovups\[ \\t\]+\[^\n\]*%xmm" 2 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-43.c b/gcc/testsuite/gcc.target/i386/pieces-memset-43.c
+new file mode 100644
+index 0000000..48d891b
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-43.c
+@@ -0,0 +1,17 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mno-avx2 -mavx -mtune=sandybridge" } */
++
++extern char *dst;
++
++void
++foo (void)
++{
++  __builtin_memset (dst, -1, 33);
++}
++
++/* { dg-final { scan-assembler-times "vpcmpeqd\[ \\t\]+\[^\n\]*%xmm" 1 } } */
++/* { dg-final { scan-assembler-times "vmovups\[ \\t\]+\[^\n\]*%xmm" 2 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-44.c b/gcc/testsuite/gcc.target/i386/pieces-memset-44.c
+new file mode 100644
+index 0000000..0112d6f
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-44.c
+@@ -0,0 +1,17 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mno-avx512f -mavx2 -mtune=sandybridge" } */
++
++extern char *dst;
++
++void
++foo (void)
++{
++  __builtin_memset (dst, -1, 33);
++}
++
++/* { dg-final { scan-assembler-times "vpcmpeqd\[ \\t\]+\[^\n\]*%xmm" 1 } } */
++/* { dg-final { scan-assembler-times "vmovups\[ \\t\]+\[^\n\]*%xmm" 2 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-5.c b/gcc/testsuite/gcc.target/i386/pieces-memset-5.c
+new file mode 100644
+index 0000000..28e9db8
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-5.c
+@@ -0,0 +1,12 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mno-avx2 -mavx -mtune=haswell" } */
++
++extern char *dst;
++
++void
++foo (int x)
++{
++  __builtin_memset (dst, x, 33);
++}
++
++/* { dg-final { scan-assembler-times "vmovups\[ \\t\]+\[^\n\]*%ymm" 1 } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-6.c b/gcc/testsuite/gcc.target/i386/pieces-memset-6.c
+new file mode 100644
+index 0000000..571113c
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-6.c
+@@ -0,0 +1,16 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mavx512f -mtune=intel" } */
++
++extern char *dst;
++
++void
++foo (int x)
++{
++  __builtin_memset (dst, x, 33);
++}
++
++/* { dg-final { scan-assembler-times "vmovdqu\[ \\t\]+\[^\n\]*%ymm" 1 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" { target { ! ia32 } } } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-7.c b/gcc/testsuite/gcc.target/i386/pieces-memset-7.c
+new file mode 100644
+index 0000000..fd15986
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-7.c
+@@ -0,0 +1,16 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mno-avx -msse2 -mtune=generic" } */
++
++extern char *dst;
++
++void
++foo (int x)
++{
++  __builtin_memset (dst, x, 17);
++}
++
++/* { dg-final { scan-assembler-times "movups\[ \\t\]+\[^\n\]*%xmm" 1 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-8.c b/gcc/testsuite/gcc.target/i386/pieces-memset-8.c
+new file mode 100644
+index 0000000..9606f95
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-8.c
+@@ -0,0 +1,16 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mno-avx2 -mavx -mtune=generic" } */
++
++extern char *dst;
++
++void
++foo (int x)
++{
++  __builtin_memset (dst, x, 17);
++}
++
++/* { dg-final { scan-assembler-times "vmovups\[ \\t\]+\[^\n\]*%xmm" 1 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-9.c b/gcc/testsuite/gcc.target/i386/pieces-memset-9.c
+new file mode 100644
+index 0000000..6c65bbf
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-9.c
+@@ -0,0 +1,16 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mavx512f -mtune=generic" } */
++
++extern char *dst;
++
++void
++foo (int x)
++{
++  __builtin_memset (dst, x, 17);
++}
++
++/* { dg-final { scan-assembler-times "vmovups\[ \\t\]+\[^\n\]*%xmm" 1 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+-- 
+2.8.1
+

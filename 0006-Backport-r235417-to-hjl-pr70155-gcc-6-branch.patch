@@ -1,0 +1,39 @@
+From f5b8b9a5f4ca8465df1f12ffb7df3a18bac48170 Mon Sep 17 00:00:00 2001
+From: uros <uros@138bc75d-0d04-0410-961f-82ee72b054a4>
+Date: Mon, 25 Apr 2016 19:20:45 +0000
+Subject: [PATCH 06/25] Backport r235417 to hjl/pr70155/gcc-6-branch
+
+	* config/i386/predicates.md (const0_operand): Do not match
+	const_wide_int code.
+	(const1_operand): Ditto.
+
+git-svn-id: svn+ssh://gcc.gnu.org/svn/gcc/trunk@235417 138bc75d-0d04-0410-961f-82ee72b054a4
+---
+ gcc/config/i386/predicates.md | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/gcc/config/i386/predicates.md b/gcc/config/i386/predicates.md
+index 89b7de0..1980a62 100644
+--- a/gcc/config/i386/predicates.md
++++ b/gcc/config/i386/predicates.md
+@@ -659,7 +659,7 @@
+ 
+ ;; Match exactly zero.
+ (define_predicate "const0_operand"
+-  (match_code "const_int,const_wide_int,const_double,const_vector")
++  (match_code "const_int,const_double,const_vector")
+ {
+   if (mode == VOIDmode)
+     mode = GET_MODE (op);
+@@ -668,7 +668,7 @@
+ 
+ ;; Match one or a vector with all elements equal to one.
+ (define_predicate "const1_operand"
+-  (match_code "const_int,const_wide_int,const_double,const_vector")
++  (match_code "const_int,const_double,const_vector")
+ {
+   if (mode == VOIDmode)
+     mode = GET_MODE (op);
+-- 
+2.8.1
+

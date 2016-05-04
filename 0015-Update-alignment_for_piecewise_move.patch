@@ -1,0 +1,35 @@
+From 3a798c0e586aa945100bfdbc4a1f911d7169d81b Mon Sep 17 00:00:00 2001
+From: "H.J. Lu" <hjl.tools@gmail.com>
+Date: Sun, 6 Mar 2016 06:35:46 -0800
+Subject: [PATCH 15/25] Update alignment_for_piecewise_move
+
+alignment_for_piecewise_move is called only with MOVE_MAX_PIECES or
+STORE_MAX_PIECES, which are the number of bytes at a time that we
+can move or store efficiently.  We should call mode_for_size without
+limit to MAX_FIXED_MODE_SIZE, which is an integer expression for the
+size in bits of the largest integer machine mode that should actually
+be used, may be smaller than MOVE_MAX_PIECES or STORE_MAX_PIECES, which
+may use vector.
+
+	* expr.c (alignment_for_piecewise_move): Call mode_for_size
+	without limit to MAX_FIXED_MODE_SIZE.
+---
+ gcc/expr.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/gcc/expr.c b/gcc/expr.c
+index 29d22b0..c8185e4 100644
+--- a/gcc/expr.c
++++ b/gcc/expr.c
+@@ -733,7 +733,7 @@ alignment_for_piecewise_move (unsigned int max_pieces, unsigned int align)
+ {
+   machine_mode tmode;
+ 
+-  tmode = mode_for_size (max_pieces * BITS_PER_UNIT, MODE_INT, 1);
++  tmode = mode_for_size (max_pieces * BITS_PER_UNIT, MODE_INT, 0);
+   if (align >= GET_MODE_ALIGNMENT (tmode))
+     align = GET_MODE_ALIGNMENT (tmode);
+   else
+-- 
+2.8.1
+

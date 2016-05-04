@@ -1,0 +1,108 @@
+From 4b67d170c4f77037ea268aafcd4405099edd3f2c Mon Sep 17 00:00:00 2001
+From: "H.J. Lu" <hjl.tools@gmail.com>
+Date: Mon, 2 May 2016 09:44:07 -0700
+Subject: [PATCH 23/25] Build x86 libatomic with -march=i486 or better
+
+If x86 libatomic isn't compiled with -march=i486 or better, append
+-march=i486 XCFLAGS for x86 libatomic build.  Set try_ifunc to yes
+if -mcx16 isn't used to compile x86-64 libatomic or -march=i686 or
+better isn't used to compile x86 libatomic.
+
+	PR target/70454
+	* configure.tgt (XCFLAGS): Append -march=i486 to compile x86
+	libatomic if needed.
+	(try_ifunc): Set to yes only if needed.
+---
+ libatomic/configure.tgt | 73 +++++++++++++++++++++++++++++++++----------------
+ 1 file changed, 50 insertions(+), 23 deletions(-)
+
+diff --git a/libatomic/configure.tgt b/libatomic/configure.tgt
+index c5470d7..6dd6aae 100644
+--- a/libatomic/configure.tgt
++++ b/libatomic/configure.tgt
+@@ -66,32 +66,59 @@ case "${target_cpu}" in
+ 	ARCH=sparc
+ 	;;
+ 
+-  i[3456]86)
+-	case " ${CC} ${CFLAGS} " in
+-	  *" -m64 "*|*" -mx32 "*)
+-	    ;;
+-	  *)
+-	    if test -z "$with_arch"; then
+-	      XCFLAGS="${XCFLAGS} -march=i486 -mtune=${target_cpu}"
+-	      XCFLAGS="${XCFLAGS} -fomit-frame-pointer"
+-	    fi
+-	esac
+-	ARCH=x86
+-	# ??? Detect when -march=i686 is already enabled.
+-	try_ifunc=yes
+-	;;
+-  x86_64)
+-	case " ${CC} ${CFLAGS} " in
+-	  *" -m32 "*)
++  i[3456]86 | x86_64)
++	# Need i486 or better.
++	cat > conftestx.c <<EOF
++#if defined __x86_64__ || defined __i486__ || defined __pentium__ \
++      || defined __pentiumpro__ || defined __pentium4__ \
++      || defined __geode__ || defined __SSE__
++# error Need i486 or better
++#endif
++EOF
++	if ${CC} ${CFLAGS} -c -o conftestx.o conftestx.c > /dev/null 2>&1; then
++	  if test "${target_cpu}" = x86_64; then
+ 	    XCFLAGS="${XCFLAGS} -march=i486 -mtune=generic"
+ 	    XCFLAGS="${XCFLAGS} -fomit-frame-pointer"
+-	    ;;
+-	  *)
+-	    ;;
+-	esac
++	  else
++	    XCFLAGS="${XCFLAGS} -march=i486 -mtune=${target_cpu}"
++	    XCFLAGS="${XCFLAGS} -fomit-frame-pointer"
++	  fi
++	fi
++	# Detect if -march=i686/-mcx16 is already enabled.
++	cat > conftestx.c <<EOF
++#if defined __x86_64__
++__int128_t v = 0;
++__int128_t expected = 0;
++__int128_t max = ~0;
++__int128_t desired = ~0;
++__int128_t zero = 0;
++
++int
++foo (void)
++{
++  return !__atomic_compare_exchange_n (&v, &expected, max, 0,
++                                       __ATOMIC_RELAXED,
++                                       __ATOMIC_RELAXED);
++}
++#else
++# if defined __pentiumpro__ || defined __pentium4__ || defined __SSE__
++asm ("# has i686");
++# endif
++#endif
++EOF
++	if ${CC} ${CFLAGS} -S -o conftestx.s conftestx.c > /dev/null 2>&1; then
++	  if ${GREP} cmpxchg16b conftestx.s >/dev/null; then
++	    # This is the 64-bit library.
++	    try_ifunc=no
++	  elif ${GREP} i686 conftestx.s >/dev/null; then
++	    # This is the 32-bit library.
++	    try_ifunc=no
++	  else
++	    try_ifunc=yes
++	  fi
++	fi
++	rm -f conftestx.c conftestx.o conftestx.s
+ 	ARCH=x86
+-	# ??? Detect when -mcx16 is already enabled.
+-	try_ifunc=yes
+ 	;;
+ 
+   *)			ARCH="${target_cpu}" ;;
+-- 
+2.8.1
+

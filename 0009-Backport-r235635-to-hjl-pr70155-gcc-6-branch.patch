@@ -1,0 +1,28 @@
+From 2702ef9b2e36e1fc3aa5be1156634a529aa50615 Mon Sep 17 00:00:00 2001
+From: uros <uros@138bc75d-0d04-0410-961f-82ee72b054a4>
+Date: Fri, 29 Apr 2016 12:00:48 +0000
+Subject: [PATCH 09/25] Backport r235635 to hjl/pr70155/gcc-6-branch
+
+	* config/i386/predicates.md (constm1_operand): Fix comparison.
+
+git-svn-id: svn+ssh://gcc.gnu.org/svn/gcc/trunk@235635 138bc75d-0d04-0410-961f-82ee72b054a4
+---
+ gcc/config/i386/predicates.md | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/gcc/config/i386/predicates.md b/gcc/config/i386/predicates.md
+index 1980a62..d15dae4 100644
+--- a/gcc/config/i386/predicates.md
++++ b/gcc/config/i386/predicates.md
+@@ -678,7 +678,7 @@
+ ;; Match exactly -1.
+ (define_predicate "constm1_operand"
+   (and (match_code "const_int")
+-       (match_test "op = constm1_rtx")))
++       (match_test "op == constm1_rtx")))
+ 
+ ;; Match exactly eight.
+ (define_predicate "const8_operand"
+-- 
+2.8.1
+
