@@ -17,7 +17,7 @@
 
 Name     : gcc
 Version  : 6.1.0
-Release  : 7
+Release  : 8
 URL      : http://www.gnu.org/software/gcc/
 Source0  : http://ftp.gnu.org/gnu/gcc/gcc-6.1.0/gcc-6.1.0.tar.bz2
 Source1  : ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-%{isl_version}.tar.bz2
