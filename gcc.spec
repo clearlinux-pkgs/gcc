@@ -28,6 +28,7 @@ Patch0   : 0001-Fix-stack-protection-issues.patch
 Patch2   : openmp-vectorize.patch
 Patch3   : fortran-vector.patch
 Patch5   : optimize.patch
+Patch6   : ipa-cp.patch
 
 # HJ's patch queue
 Patch101: 0001-Remove-UNSPEC_LOADU-and-UNSPEC_STOREU.patch
@@ -179,6 +180,7 @@ GNU cc and gcc C compilers.
 %patch2 -p1
 %patch3 -p1
 %patch5 -p1
+%patch6 -p1
 
 %patch101 -p1
 %patch102 -p1
