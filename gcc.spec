@@ -17,7 +17,7 @@
 
 Name     : gcc
 Version  : 6.1.0
-Release  : 8
+Release  : 9
 URL      : http://www.gnu.org/software/gcc/
 Source0  : http://ftp.gnu.org/gnu/gcc/gcc-6.1.0/gcc-6.1.0.tar.bz2
 Source1  : ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-%{isl_version}.tar.bz2
@@ -78,6 +78,7 @@ BuildRequires : libxml2-dev
 BuildRequires : libxslt
 BuildRequires : graphviz
 BuildRequires : gdb-dev
+BuildRequires : bootstrap-helper
 
 Requires: gcc-libubsan
 
@@ -113,6 +114,18 @@ Provides:       libstdc++-dev
 GNU cc and gcc C compilers dev files
 
 
+
+%package dev32
+License:        GPL-3.0-with-GCC-exception and GPL-3.0
+Summary:        GNU cc and gcc C compilers
+Group:          devel
+
+%description dev32
+GNU cc and gcc C compilers dev files
+
+
+
+
 %package -n libgcc1
 License:        GPL-3.0-with-GCC-exception and GPL-3.0
 Summary:        GNU cc and gcc C compilers
@@ -122,6 +135,14 @@ Provides:       libssp0
 Provides:       libgomp1
 
 %description -n libgcc1
+GNU cc and gcc C compilers.
+
+%package libgcc32
+License:        GPL-3.0-with-GCC-exception and GPL-3.0
+Summary:        GNU cc and gcc C compilers
+Group:          devel
+
+%description libgcc32
 GNU cc and gcc C compilers.
 
 %package libubsan
@@ -136,9 +157,16 @@ Address sanitizer runtime libs
 License:        GPL-3.0-with-GCC-exception and GPL-3.0
 Summary:        GNU cc and gcc C compilers
 Group:          devel
-Provides:       libstdc++-extra
 
 %description -n libstdc++
+GNU cc and gcc C compilers.
+
+%package libstdc++32
+License:        GPL-3.0-with-GCC-exception and GPL-3.0
+Summary:        GNU cc and gcc C compilers
+Group:          devel
+
+%description libstdc++32
 GNU cc and gcc C compilers.
 
 %package -n gcc-doc
@@ -242,7 +270,7 @@ export LIBRARY_PATH=%{_libdir}
     --enable-ld=default\
     --enable-clocale=gnu\
     --disable-multiarch\
-    --disable-multilib\
+    --enable-multilib\
     --enable-lto\
     --enable-linker-build-id \
     --build=%{gcc_target}\
@@ -418,6 +446,53 @@ cat *.lang > gcc.lang
 %{_datadir}/gdb/auto-load/%{_libdir}/libstdc++.so.*
 /usr/lib64/libstdc++fs.a
 
+%files dev32
+/usr/lib/libstdc++.a
+/usr/lib/libstdc++.so
+/usr/lib/libstdc++fs.a
+/usr/lib/libsupc++.a
+/usr/lib64/gcc/x86_64-generic-linux/*/32/crtbegin.o
+/usr/lib64/gcc/x86_64-generic-linux/*/32/crtbeginS.o
+/usr/lib64/gcc/x86_64-generic-linux/*/32/crtbeginT.o
+/usr/lib64/gcc/x86_64-generic-linux/*/32/crtend.o
+/usr/lib64/gcc/x86_64-generic-linux/*/32/crtendS.o
+/usr/lib64/gcc/x86_64-generic-linux/*/32/crtfastmath.o
+/usr/lib64/gcc/x86_64-generic-linux/*/32/crtprec32.o
+/usr/lib64/gcc/x86_64-generic-linux/*/32/crtprec64.o
+/usr/lib64/gcc/x86_64-generic-linux/*/32/crtprec80.o
+/usr/lib64/gcc/x86_64-generic-linux/*/32/finclude/ieee_arithmetic.mod
+/usr/lib64/gcc/x86_64-generic-linux/*/32/finclude/ieee_exceptions.mod
+/usr/lib64/gcc/x86_64-generic-linux/*/32/finclude/ieee_features.mod
+/usr/lib64/gcc/x86_64-generic-linux/*/32/libcaf_single.a
+/usr/lib64/gcc/x86_64-generic-linux/*/32/libgcc.a
+/usr/lib64/gcc/x86_64-generic-linux/*/32/libgcc_eh.a
+/usr/lib64/gcc/x86_64-generic-linux/*/32/libgcov.a
+/usr/lib/libmpx.a
+/usr/lib/libmpx.so
+/usr/lib/libasan.a
+/usr/lib/libasan.so
+/usr/lib/libcilkrts.a
+/usr/lib/libcilkrts.so
+/usr/lib/libatomic.a
+/usr/lib/libatomic.so
+/usr/lib/libgfortran.a
+/usr/lib/libgfortran.so
+/usr/lib/libgomp.a
+/usr/lib/libgomp.so
+/usr/lib/libitm.a
+/usr/lib/libitm.so
+/usr/lib/libmpxwrappers.a
+/usr/lib/libmpxwrappers.so
+/usr/lib/libquadmath.a
+/usr/lib/libquadmath.so
+/usr/lib/libssp.a
+/usr/lib/libssp.so
+/usr/lib/libubsan.a
+/usr/lib/libubsan.so
+/usr/lib/libvtv.a
+/usr/lib/libvtv.so
+
+
 %files -n libgcc1
 %{_libdir}/libgcc_s.so.1
 %{_prefix}/lib64/libssp.so*
@@ -428,8 +503,53 @@ cat *.lang > gcc.lang
 /usr/lib64/libmpxwrappers.so.2
 /usr/lib64/libmpxwrappers.so.2.0.0
 
+%files libgcc32
+/usr/lib/libasan.so.3
+/usr/lib/libasan.so.3.0.0
+/usr/lib/libasan_preinit.o
+/usr/lib/libatomic.so.1
+/usr/lib/libatomic.so.1.2.0
+/usr/lib/libcilkrts.so.5
+/usr/lib/libcilkrts.so.5.0.0
+/usr/lib/libcilkrts.spec
+/usr/lib/libgcc_s.so
+/usr/lib/libgcc_s.so.1
+/usr/lib/libgfortran.so.3
+/usr/lib/libgfortran.so.3.0.0
+/usr/lib/libgfortran.spec
+%exclude /usr/lib/libgo.*
+%exclude /usr/lib/libgobegin.a
+%exclude /usr/lib/libgolibbegin.a
+/usr/lib/libgomp.so.1
+/usr/lib/libgomp.so.1.0.0
+/usr/lib/libgomp.spec
+/usr/lib/libitm.so.1
+/usr/lib/libitm.so.1.0.0
+/usr/lib/libitm.spec
+/usr/lib/libmpx.so.2
+/usr/lib/libmpx.so.2.0.0
+/usr/lib/libmpx.spec
+/usr/lib/libmpxwrappers.so.2
+/usr/lib/libmpxwrappers.so.2.0.0
+%exclude /usr/lib/libnetgo.a
+/usr/lib/libquadmath.so.0
+/usr/lib/libquadmath.so.0.0.0
+/usr/lib/libsanitizer.spec
+/usr/lib/libssp.so.0
+/usr/lib/libssp.so.0.0.0
+/usr/lib/libssp_nonshared.a
+/usr/lib/libubsan.so.0
+/usr/lib/libubsan.so.0.0.0
+/usr/lib/libvtv.so.0
+/usr/lib/libvtv.so.0.0.0
+
+
 %files -n libstdc++
 %{_prefix}/lib64/libstdc++.so.*
+
+%files libstdc++32
+/usr/lib/libstdc++.so.*
+
 
 %files -n gcc-doc
 %{_mandir}/man1
@@ -440,13 +560,15 @@ cat *.lang > gcc.lang
 /usr/libexec/gccgo/bin/*
 /usr/bin/gccgo
 /usr/bin/%{_arch}-generic-linux-gccgo
-/usr/lib64/gcc/%{_arch}-generic-linux/6.1.0/cgo
-/usr/lib64/gcc/%{_arch}-generic-linux/6.1.0/go1
+/usr/lib64/gcc/%{_arch}-generic-linux/*/cgo
+/usr/lib64/gcc/%{_arch}-generic-linux/*/go1
 /usr/lib64/libgo.a
 /usr/lib64/libgo.so
 /usr/lib64/libgobegin.a
 /usr/lib64/libgolibbegin.a
 /usr/lib64/libnetgo.a
+#no 32 bit go
+%exclude /usr/lib/go/
 
 %files go-lib
 /usr/lib64/libgo.so.*
