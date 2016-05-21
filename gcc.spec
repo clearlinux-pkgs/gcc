@@ -17,7 +17,7 @@
 
 Name     : gcc
 Version  : 6.1.0
-Release  : 9
+Release  : 10
 URL      : http://www.gnu.org/software/gcc/
 Source0  : http://ftp.gnu.org/gnu/gcc/gcc-6.1.0/gcc-6.1.0.tar.bz2
 Source1  : ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-%{isl_version}.tar.bz2
@@ -78,6 +78,7 @@ BuildRequires : libxml2-dev
 BuildRequires : libxslt
 BuildRequires : graphviz
 BuildRequires : gdb-dev
+BuildRequires : procps-ng
 BuildRequires : bootstrap-helper
 
 Requires: gcc-libubsan
@@ -333,11 +334,12 @@ mv %{buildroot}/usr/bin/gofmt %{buildroot}/usr/libexec/gccgo/bin
 
 find %{buildroot}%{_prefix}/ -name libiberty.a | xargs rm -f
 find %{buildroot}%{_prefix}/ -name libiberty.h | xargs rm -f
-chmod 0755 %{buildroot}/%{_libdir}/libgcc_s.so.1
+chmod 0755 %{buildroot}/usr/lib64/libgcc_s.so.1
+chmod 0755 %{buildroot}/usr/lib/libgcc_s.so.1
 
 chmod a+x %{buildroot}/usr/bin
 chmod a+x %{buildroot}/usr/lib64
-chmod -R a+x %{buildroot}/usr/lib64/gcc/
+chmod -R a+x %{buildroot}/usr/lib*/gcc/
 
 
 
