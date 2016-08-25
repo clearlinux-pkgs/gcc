@@ -17,7 +17,7 @@
 
 Name     : gcc
 Version  : 6.2.0
-Release  : 11
+Release  : 12
 URL      : http://www.gnu.org/software/gcc/
 Source0  : http://ftp.gnu.org/gnu/gcc/gcc-6.2.0/gcc-6.2.0.tar.bz2
 Source1  : ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-%{isl_version}.tar.bz2
@@ -328,7 +328,7 @@ cat *.lang > gcc.lang
 %{_prefix}/lib64/libitm*
 %{_prefix}/lib64/libquadmath*
 %{_prefix}/lib64/libcilkrts*
-%{_prefix}/lib64/libvtv*
+#%{_prefix}/lib64/libvtv*
 %{_prefix}/lib64/libcc1*
 %{_libdir}/gcc/%{gcc_target}/%{gccver}/include-fixed/
 %{_libdir}/gcc/%{gcc_target}/%{gccver}/install-tools/
@@ -441,8 +441,8 @@ cat *.lang > gcc.lang
 /usr/lib/libssp.so
 /usr/lib/libubsan.a
 /usr/lib/libubsan.so
-/usr/lib/libvtv.a
-/usr/lib/libvtv.so
+#/usr/lib/libvtv.a
+#/usr/lib/libvtv.so
 
 
 %files -n libgcc1
@@ -492,8 +492,8 @@ cat *.lang > gcc.lang
 /usr/lib/libssp_nonshared.a
 /usr/lib/libubsan.so.0
 /usr/lib/libubsan.so.0.0.0
-/usr/lib/libvtv.so.0
-/usr/lib/libvtv.so.0.0.0
+#/usr/lib/libvtv.so.0
+#/usr/lib/libvtv.so.0.0.0
 
 
 %files -n libstdc++
