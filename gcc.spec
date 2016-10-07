@@ -17,7 +17,7 @@
 
 Name     : gcc
 Version  : 6.2.0
-Release  : 15
+Release  : 16
 URL      : http://www.gnu.org/software/gcc/
 Source0  : http://ftp.gnu.org/gnu/gcc/gcc-6.2.0/gcc-6.2.0.tar.bz2
 Source1  : ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-%{isl_version}.tar.bz2
@@ -234,7 +234,7 @@ export LIBRARY_PATH=%{_libdir}
     --with-gxx-include-dir=%{_includedir}/c++/ \
     --exec-prefix=%{_prefix} \
     --with-glibc-version=2.19 \
-    --with-system-libunwind \
+    --disable-libunwind-exceptions \
     --with-gnu-ld \
     --with-tune=haswell \
     --with-arch=westmere \
@@ -450,6 +450,7 @@ cat *.lang > gcc.lang
 %{_libdir}/libgcc_s.so.1
 %{_prefix}/lib64/libssp.so*
 %{_prefix}/lib64/libgomp*so*
+/usr/lib64/libgomp.spec
 /usr/lib64/libmpx.so.2
 /usr/lib64/libmpx.so.2.0.0
 /usr/lib64/libmpx.spec
