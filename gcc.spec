@@ -17,7 +17,7 @@
 
 Name     : gcc
 Version  : 6.2.0
-Release  : 14
+Release  : 15
 URL      : http://www.gnu.org/software/gcc/
 Source0  : http://ftp.gnu.org/gnu/gcc/gcc-6.2.0/gcc-6.2.0.tar.bz2
 Source1  : ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-%{isl_version}.tar.bz2
@@ -198,8 +198,8 @@ mkdir ../gcc-build
 pushd ../gcc-build
 unset CFLAGS
 unset CXXFLAGS
-export CFLAGS="-march=westmere -g -O3 -fstack-protector -Wl,-z -Wl,now -Wl,-z -Wl,relro  -Wl,-z,max-page-size=0x1000"
-export CXXFLAGS="-march=westmere -g -O3  -Wl,-z,max-page-size=0x1000"
+export CFLAGS="-march=westmere -g1 -O3 -fstack-protector -Wl,-z -Wl,now -Wl,-z -Wl,relro  -Wl,-z,max-page-size=0x1000"
+export CXXFLAGS="-march=westmere -g1 -O3  -Wl,-z,max-page-size=0x1000"
 export CFLAGS_FOR_TARGET="$CFLAGS"
 
 export CPATH=%{_includedir}
@@ -384,6 +384,7 @@ cat *.lang > gcc.lang
 %{_libdir}/gcc/%{gcc_target}/%{gccver}/include/ssp
 %{_prefix}/lib64/libssp*.a
 /usr/lib64/libmpx.a
+/usr/lib64/libgomp.a
 /usr/lib64/libmpx.so
 /usr/lib64/libmpxwrappers.a
 /usr/lib64/libmpxwrappers.so
@@ -448,7 +449,7 @@ cat *.lang > gcc.lang
 %files -n libgcc1
 %{_libdir}/libgcc_s.so.1
 %{_prefix}/lib64/libssp.so*
-%{_prefix}/lib64/libgomp*
+%{_prefix}/lib64/libgomp*so*
 /usr/lib64/libmpx.so.2
 /usr/lib64/libmpx.so.2.0.0
 /usr/lib64/libmpx.spec
