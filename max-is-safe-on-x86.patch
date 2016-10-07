@@ -1,0 +1,13 @@
+--- gcc-6.2.0/gcc/tree-ssa-phiopt.c~	2016-05-25 20:44:21.000000000 +0000
++++ gcc-6.2.0/gcc/tree-ssa-phiopt.c	2016-10-07 18:26:51.025016956 +0000
+@@ -1053,10 +1053,6 @@
+ 
+   type = TREE_TYPE (PHI_RESULT (phi));
+ 
+-  /* The optimization may be unsafe due to NaNs.  */
+-  if (HONOR_NANS (type))
+-    return false;
+-
+   cond = as_a <gcond *> (last_stmt (cond_bb));
+   cmp = gimple_cond_code (cond);
+ 

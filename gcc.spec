@@ -17,7 +17,7 @@
 
 Name     : gcc
 Version  : 6.2.0
-Release  : 16
+Release  : 17
 URL      : http://www.gnu.org/software/gcc/
 Source0  : http://ftp.gnu.org/gnu/gcc/gcc-6.2.0/gcc-6.2.0.tar.bz2
 Source1  : ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-%{isl_version}.tar.bz2
@@ -29,6 +29,7 @@ Patch2   : openmp-vectorize.patch
 Patch3   : fortran-vector.patch
 Patch5   : optimize.patch
 Patch6   : ipa-cp.patch
+Patch7   : max-is-safe-on-x86.patch
 
 
 
@@ -185,6 +186,7 @@ GNU cc and gcc C compilers.
 %patch3 -p1
 %patch5 -p1
 %patch6 -p1
+%patch7 -p1
 
 
 
@@ -240,7 +242,7 @@ export LIBRARY_PATH=%{_libdir}
     --with-arch=westmere \
     --enable-libmpx
 
-make %{?_smp_mflags}
+make %{?_smp_mflags} profiledbootstrap
 
 popd
 
