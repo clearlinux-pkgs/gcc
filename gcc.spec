@@ -58,6 +58,7 @@ BuildRequires : glibc-libc32
 BuildRequires : glibc-dev32
 
 Requires: gcc-libubsan
+Requires: gcc-doc
 
 Provides:       gcc-symlinks
 Provides:       cpp
