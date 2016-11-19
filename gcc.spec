@@ -30,7 +30,7 @@ Patch3   : fortran-vector.patch
 Patch5   : optimize.patch
 Patch6   : ipa-cp.patch
 Patch7   : max-is-safe-on-x86.patch
-
+Patch8	 : optimize-at-least-some.patch
 
 
 BuildRequires : bison
@@ -188,6 +188,7 @@ GNU cc and gcc C compilers.
 %patch5 -p1
 %patch6 -p1
 %patch7 -p1
+%patch8 -p1
 
 
 
