@@ -3,7 +3,7 @@
 %define libstdcxx_maj 6
 %define libstdcxx_full 6.0.22
 %define isl_version 0.14
-%define gccver 6.2.0
+%define gccver 6.3.0
 
 %define debug_package %{nil}
 
@@ -16,10 +16,10 @@
 %define march westmere
 
 Name     : gcc
-Version  : 6.2.0
+Version  : 6.3.0
 Release  : 20
 URL      : http://www.gnu.org/software/gcc/
-Source0  : http://ftp.gnu.org/gnu/gcc/gcc-6.2.0/gcc-6.2.0.tar.bz2
+Source0  : http://ftp.gnu.org/gnu/gcc/gcc-6.3.0/gcc-6.3.0.tar.bz2
 Source1  : ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-%{isl_version}.tar.bz2
 Summary  : GNU cc and gcc C compilers
 Group    : Development/Tools
@@ -297,8 +297,8 @@ mkdir -p %{buildroot}/%{_datadir}/gdb/auto-load//usr/lib64
 mv %{buildroot}/%{_prefix}/lib64/libstdc++.so.%{libstdcxx_full}-gdb.py %{buildroot}/%{_datadir}/gdb/auto-load//usr/lib64/.
 
 # clang compat
-for i in /usr/lib64/gcc/x86_64-generic-linux/6.2.0/*.o; do ln -s $i %{buildroot}/usr/lib64 ; done
-for i in /usr/lib64/gcc/x86_64-generic-linux/6.2.0/*.a; do ln -s $i %{buildroot}/usr/lib64 ; done
+for i in /usr/lib64/gcc/x86_64-generic-linux/6.3.0/*.o; do ln -s $i %{buildroot}/usr/lib64 ; done
+for i in /usr/lib64/gcc/x86_64-generic-linux/6.3.0/*.a; do ln -s $i %{buildroot}/usr/lib64 ; done
 
 
 %find_lang cpplib cpp.lang
