@@ -17,7 +17,7 @@
 
 Name     : gcc
 Version  : 6.3.0
-Release  : 20
+Release  : 21
 URL      : http://www.gnu.org/software/gcc/
 Source0  : http://ftp.gnu.org/gnu/gcc/gcc-6.3.0/gcc-6.3.0.tar.bz2
 Source1  : ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-%{isl_version}.tar.bz2
@@ -246,6 +246,12 @@ export LIBRARY_PATH=/usr/lib64
 
 make %{?_smp_mflags} profiledbootstrap
 
+popd
+
+%check
+pushd ../gcc-build
+export CHECK_TEST_FRAMEWORK=1
+make -k  %{?_smp_mflags} check  || :
 popd
 
 
