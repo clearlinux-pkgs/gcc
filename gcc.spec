@@ -17,7 +17,7 @@
 
 Name     : gcc
 Version  : 6.3.0
-Release  : 22
+Release  : 23
 URL      : http://www.gnu.org/software/gcc/
 Source0  : http://ftp.gnu.org/gnu/gcc/gcc-6.3.0/gcc-6.3.0.tar.bz2
 Source1  : ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-%{isl_version}.tar.bz2
@@ -300,7 +300,9 @@ chmod -R a+x %{buildroot}/usr/lib*/gcc/
 
 # This is only for gdb
 mkdir -p %{buildroot}/%{_datadir}/gdb/auto-load//usr/lib64
+mkdir -p %{buildroot}/%{_datadir}/gdb/auto-load//usr/lib32
 mv %{buildroot}/%{_prefix}/lib64/libstdc++.so.%{libstdcxx_full}-gdb.py %{buildroot}/%{_datadir}/gdb/auto-load//usr/lib64/.
+mv %{buildroot}/%{_prefix}/lib32/libstdc++.so.%{libstdcxx_full}-gdb.py %{buildroot}/%{_datadir}/gdb/auto-load//usr/lib32/.
 
 # clang compat
 for i in /usr/lib64/gcc/x86_64-generic-linux/6.3.0/*.o; do ln -s $i %{buildroot}/usr/lib64 ; done
@@ -448,6 +450,7 @@ cat *.lang > gcc.lang
 /usr/lib32/libubsan.so
 #/usr/lib/libvtv.a
 #/usr/lib/libvtv.so
+%{_datadir}/gdb/auto-load//usr/lib32/libstdc++.so.*
 
 
 %files -n libgcc1
