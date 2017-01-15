@@ -1,0 +1,43 @@
+--- gcc-6.3.0/gcc/toplev.c~	2016-04-22 11:08:16.000000000 +0000
++++ gcc-6.3.0/gcc/toplev.c	2017-01-15 20:44:31.466414173 +0000
+@@ -313,6 +313,23 @@
+   return old;
+ }
+ 
++const char *
++mod_random_seed (const char *val)
++{
++  const char *old = flag_random_seed;
++  flag_random_seed = val;
++  if (flag_random_seed)
++    {
++      char *endp;
++
++      /* When the driver passed in a hex number don't crc it again */
++      random_seed ^= strtoul (flag_random_seed, &endp, 0);
++      if (!(endp > flag_random_seed && *endp == 0))
++        random_seed ^= crc32_string (0, flag_random_seed);
++    }
++  return old;
++}
++
+ /* Handler for fatal signals, such as SIGSEGV.  These are transformed
+    into ICE messages, which is much more user friendly.  In case the
+    error printer crashes, reset the signal to prevent infinite recursion.  */
+--- gcc-6.3.0/gcc/toplev.c~	2017-01-15 20:44:31.000000000 +0000
++++ gcc-6.3.0/gcc/toplev.c	2017-01-15 20:46:13.879268428 +0000
+@@ -2056,10 +2056,14 @@
+ int
+ toplev::main (int argc, char **argv)
+ {
++  int i;
+   /* Parsing and gimplification sometimes need quite large stack.
+      Increase stack size limits if possible.  */
+   stack_limit_increase (64 * 1024 * 1024);
+ 
++  for (i = 0; i < argc; i++)
++	mod_random_seed(argv[i]);
++
+   expandargv (&argc, &argv);
+ 
+   /* Initialization of GCC's environment, and diagnostics.  */
