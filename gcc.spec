@@ -17,7 +17,7 @@
 
 Name     : gcc
 Version  : 6.3.0
-Release  : 25
+Release  : 26
 URL      : http://www.gnu.org/software/gcc/
 Source0  : http://ftp.gnu.org/gnu/gcc/gcc-6.3.0/gcc-6.3.0.tar.bz2
 Source1  : ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-%{isl_version}.tar.bz2
@@ -213,7 +213,7 @@ export CPATH=%{_includedir}
 export LIBRARY_PATH=/usr/lib64
 
 ../gcc-%{version}/configure \
-    --prefix=%{_prefix} \
+    --prefix=/usr \
     --with-pkgversion='Clear Linux OS for Intel Architecture'\
     --libdir=/usr/lib64 \
     --enable-libstdcxx-pch\
@@ -239,7 +239,7 @@ export LIBRARY_PATH=/usr/lib64
     --with-isl \
     --includedir=%{_includedir} \
     --with-gxx-include-dir=%{_includedir}/c++/ \
-    --exec-prefix=%{_prefix} \
+    --exec-prefix=/usr \
     --with-glibc-version=2.19 \
     --disable-libunwind-exceptions \
     --with-gnu-ld \
@@ -289,8 +289,8 @@ mkdir -p %{buildroot}/usr/libexec/gccgo/bin
 mv %{buildroot}/usr/bin/go %{buildroot}/usr/libexec/gccgo/bin
 mv %{buildroot}/usr/bin/gofmt %{buildroot}/usr/libexec/gccgo/bin
 
-find %{buildroot}%{_prefix}/ -name libiberty.a | xargs rm -f
-find %{buildroot}%{_prefix}/ -name libiberty.h | xargs rm -f
+find %{buildroot}/usr/ -name libiberty.a | xargs rm -f
+find %{buildroot}/usr/ -name libiberty.h | xargs rm -f
 chmod 0755 %{buildroot}/usr/lib64/libgcc_s.so.1
 chmod 0755 %{buildroot}/usr/lib32/libgcc_s.so.1
 
@@ -304,8 +304,8 @@ chmod -R a+x %{buildroot}/usr/lib*/gcc/
 # This is only for gdb
 mkdir -p %{buildroot}/%{_datadir}/gdb/auto-load//usr/lib64
 mkdir -p %{buildroot}/%{_datadir}/gdb/auto-load//usr/lib32
-mv %{buildroot}/%{_prefix}/lib64/libstdc++.so.%{libstdcxx_full}-gdb.py %{buildroot}/%{_datadir}/gdb/auto-load//usr/lib64/.
-mv %{buildroot}/%{_prefix}/lib32/libstdc++.so.%{libstdcxx_full}-gdb.py %{buildroot}/%{_datadir}/gdb/auto-load//usr/lib32/.
+mv %{buildroot}//usr/lib64/libstdc++.so.%{libstdcxx_full}-gdb.py %{buildroot}/%{_datadir}/gdb/auto-load//usr/lib64/.
+mv %{buildroot}//usr/lib32/libstdc++.so.%{libstdcxx_full}-gdb.py %{buildroot}/%{_datadir}/gdb/auto-load//usr/lib32/.
 
 # clang compat
 for i in /usr/lib64/gcc/x86_64-generic-linux/6.3.0/*.o; do ln -s $i %{buildroot}/usr/lib64 ; done
@@ -333,12 +333,8 @@ cat *.lang > gcc.lang
 %{_bindir}/gcov-tool
 /lib/cpp
 %{_bindir}/cpp
-%{_prefix}/lib64/libatomic*
-%{_prefix}/lib64/libitm*
-%{_prefix}/lib64/libquadmath*
-%{_prefix}/lib64/libcilkrts*
-#%{_prefix}/lib64/libvtv*
-%{_prefix}/lib64/libcc1*
+#/usr/lib64/libvtv*
+/usr/lib64/libcc1*
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/include-fixed/
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/install-tools/
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/libcaf_*
@@ -362,7 +358,7 @@ cat *.lang > gcc.lang
 %{_bindir}/%{gcc_target}-gfortran
 /usr/lib64/gcc/%{_arch}-generic-linux/%{gccver}/f951
 /usr/lib64/gcc/%{_arch}-generic-linux/%{gccver}/finclude
-%{_prefix}/lib64/libgfortran*
+/usr/lib64/libgfortran*
 %{_bindir}/f95
 %{_bindir}/gfortran
 
@@ -391,7 +387,7 @@ cat *.lang > gcc.lang
 /usr/lib64/libgcc_s.so
 /usr/lib64/gcc/%{_arch}-generic-linux/%{gccver}/libgcov.a
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/include/ssp
-%{_prefix}/lib64/libssp*.a
+/usr/lib64/libssp*.a
 /usr/lib64/libmpx.a
 /usr/lib64/libgomp.a
 /usr/lib64/libmpx.so
@@ -401,9 +397,9 @@ cat *.lang > gcc.lang
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/plugin/gengtype
 
 # libstdc++
-%{_prefix}/lib64/libstdc++.so
-%{_prefix}/lib64/libstdc++.a
-%{_prefix}/lib64/libsupc++.a
+/usr/lib64/libstdc++.so
+/usr/lib64/libstdc++.a
+/usr/lib64/libsupc++.a
 %{_includedir}/c++
 %{_datadir}/gdb/auto-load//usr/lib64/libstdc++.so.*
 /usr/lib64/libstdc++fs.a
@@ -451,6 +447,13 @@ cat *.lang > gcc.lang
 /usr/lib32/libssp.so
 /usr/lib32/libubsan.a
 /usr/lib32/libubsan.so
+/usr/lib64/libatomic.so
+/usr/lib64/libcilkrts.so
+/usr/lib64/libcilkrts.spec
+/usr/lib64/libitm.so
+/usr/lib64/libitm.spec
+/usr/lib64/libquadmath.so
+
 #/usr/lib/libvtv.a
 #/usr/lib/libvtv.so
 %{_datadir}/gdb/auto-load//usr/lib32/libstdc++.so.*
@@ -458,14 +461,18 @@ cat *.lang > gcc.lang
 
 %files -n libgcc1
 /usr/lib64/libgcc_s.so.1
-%{_prefix}/lib64/libssp.so*
-%{_prefix}/lib64/libgomp*so*
+/usr/lib64/libssp.so*
+/usr/lib64/libgomp*so*
 /usr/lib64/libgomp.spec
 /usr/lib64/libmpx.so.2
 /usr/lib64/libmpx.so.2.0.0
 /usr/lib64/libmpx.spec
 /usr/lib64/libmpxwrappers.so.2
 /usr/lib64/libmpxwrappers.so.2.0.0
+/usr/lib64/libatomic*.so.*
+/usr/lib64/libitm*.so.*
+/usr/lib64/libquadmath*.so.*
+/usr/lib64/libcilkrts*.so.*
 
 %files libgcc32
 /usr/lib32/libasan.so.3
@@ -509,7 +516,7 @@ cat *.lang > gcc.lang
 
 
 %files -n libstdc++
-%{_prefix}/lib64/libstdc++.so.*
+/usr/lib64/libstdc++.so.*
 
 %files libstdc++32
 /usr/lib32/libstdc++.so.*
@@ -543,10 +550,10 @@ cat *.lang > gcc.lang
 %files -n gcc-locale -f gcc.lang
 
 %files libubsan
-%{_prefix}/lib64/libubsan*
-%{_prefix}/lib64/libasan*
+/usr/lib64/libubsan*
+/usr/lib64/libasan*
 %ifnarch i386
-%{_prefix}/lib64/libtsan*
-%{_prefix}/lib64/liblsan*
+/usr/lib64/libtsan*
+/usr/lib64/liblsan*
 %endif
-%{_prefix}/lib64/libsanit*
+/usr/lib64/libsanit*
