@@ -17,7 +17,7 @@
 
 Name     : gcc
 Version  : 6.3.0
-Release  : 26
+Release  : 27
 URL      : http://www.gnu.org/software/gcc/
 Source0  : http://ftp.gnu.org/gnu/gcc/gcc-6.3.0/gcc-6.3.0.tar.bz2
 Source1  : ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-%{isl_version}.tar.bz2
@@ -395,6 +395,7 @@ cat *.lang > gcc.lang
 /usr/lib64/libmpxwrappers.so
 # gcc-plugin-dev
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/plugin/gengtype
+/usr/lib64/libcilkrts*.so.*
 
 # libstdc++
 /usr/lib64/libstdc++.so
@@ -472,7 +473,6 @@ cat *.lang > gcc.lang
 /usr/lib64/libatomic*.so.*
 /usr/lib64/libitm*.so.*
 /usr/lib64/libquadmath*.so.*
-/usr/lib64/libcilkrts*.so.*
 
 %files libgcc32
 /usr/lib32/libasan.so.3
