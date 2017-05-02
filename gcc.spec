@@ -18,7 +18,7 @@
 
 Name     : gcc
 Version  : 7.1.0
-Release  : 31
+Release  : 32
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://ftp.gnu.org/pub/gnu/gcc/gcc-7.1.0/gcc-7.1.0.tar.gz
 Source1  : ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-%{isl_version}.tar.bz2
@@ -309,8 +309,8 @@ mv %{buildroot}//usr/lib64/libstdc++.so.%{libstdcxx_full}-gdb.py %{buildroot}//u
 mv %{buildroot}//usr/lib32/libstdc++.so.%{libstdcxx_full}-gdb.py %{buildroot}//usr/share/gdb/auto-load//usr/lib32/.
 
 # clang compat
-for i in /usr/lib64/gcc/x86_64-generic-linux/6.3.0/*.o; do ln -s $i %{buildroot}/usr/lib64 ; done
-for i in /usr/lib64/gcc/x86_64-generic-linux/6.3.0/*.a; do ln -s $i %{buildroot}/usr/lib64 ; done
+for i in /usr/lib64/gcc/x86_64-generic-linux/7.1.0/*.o; do ln -s $i %{buildroot}/usr/lib64 ; done
+for i in /usr/lib64/gcc/x86_64-generic-linux/7.1.0/*.a; do ln -s $i %{buildroot}/usr/lib64 ; done
 
 
 %find_lang cpplib cpp.lang
