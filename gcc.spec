@@ -1,9 +1,10 @@
 %define keepstatic 1
-%define gcc_target %{_arch}-generic-linux
+%define gcc_target x86_64-generic-linux
 %define libstdcxx_maj 6
-%define libstdcxx_full 6.0.22
-%define isl_version 0.14
-%define gccver 6.3.0
+%define libstdcxx_full 6.0.23
+%define isl_version 0.16.1
+%define gccver 7.1.0
+%define gccpath gcc-7.1.0
 
 %define debug_package %{nil}
 
@@ -16,10 +17,10 @@
 %define march westmere
 
 Name     : gcc
-Version  : 6.3.0
+Version  : 7.1.0
 Release  : 30
 URL      : http://www.gnu.org/software/gcc/
-Source0  : http://ftp.gnu.org/gnu/gcc/gcc-6.3.0/gcc-6.3.0.tar.bz2
+Source0  : https://ftp.gnu.org/pub/gnu/gcc/gcc-7.1.0/gcc-7.1.0.tar.gz
 Source1  : ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-%{isl_version}.tar.bz2
 Summary  : GNU cc and gcc C compilers
 Group    : Development/Tools
@@ -182,16 +183,16 @@ GNU cc and gcc C compilers.
 
 
 %prep
-%setup -q -n gcc-%{version}
+%setup -q -n %{gccpath}
 %patch0 -p1
 %patch2 -p1
 %patch3 -p1
 %patch5 -p1
 %patch6 -p1
-%patch7 -p1
+#%patch7 -p1
 %patch8 -p1
-%patch9 -p0
-%patch10 -p1
+#%patch9 -p0
+#%patch10 -p1
 
 
 
@@ -209,10 +210,10 @@ export CFLAGS="-march=westmere -g1 -O3 -fstack-protector -Wl,-z -Wl,now -Wl,-z -
 export CXXFLAGS="-march=westmere -g1 -O3  -Wl,-z,max-page-size=0x1000"
 export CFLAGS_FOR_TARGET="$CFLAGS"
 
-export CPATH=%{_includedir}
+export CPATH=/usr/include
 export LIBRARY_PATH=/usr/lib64
 
-../gcc-%{version}/configure \
+../%{gccpath}/configure \
     --prefix=/usr \
     --with-pkgversion='Clear Linux OS for Intel Architecture'\
     --libdir=/usr/lib64 \
@@ -237,8 +238,8 @@ export LIBRARY_PATH=/usr/lib64
     --enable-bootstrap \
     --with-ppl=yes \
     --with-isl \
-    --includedir=%{_includedir} \
-    --with-gxx-include-dir=%{_includedir}/c++/ \
+    --includedir=/usr/include \
+    --with-gxx-include-dir=/usr/include/c++/ \
     --exec-prefix=/usr \
     --with-glibc-version=2.19 \
     --disable-libunwind-exceptions \
@@ -251,26 +252,26 @@ make %{?_smp_mflags} profiledbootstrap
 
 popd
 
-%check
-pushd ../gcc-build
-export CHECK_TEST_FRAMEWORK=1
-make -k  %{?_smp_mflags} check  || :
-popd
+#%check
+#pushd ../gcc-build
+#export CHECK_TEST_FRAMEWORK=1
+#make -k  %{?_smp_mflags} check  || :
+#popd
 
 
 %install
-export CPATH=%{_includedir}
+export CPATH=/usr/include
 export LIBRARY_PATH=/usr/lib64
 pushd ../gcc-build
 %make_install
 cd -
 
-cd %{buildroot}%{_bindir}
+cd %{buildroot}/usr/bin
 if [ -e %{gcc_target}-g77 ]; then
     ln -sf %{gcc_target}-g77 g77 || true
     ln -sf g77 f77 || true
 fi
-if [ -e %{_arch}-generic-linux-gfortran ]; then
+if [ -e x86_64-generic-linux-gfortran ]; then
     ln -sf %{gcc_target}-gfortran gfortran || true
     ln -sf gfortran f95 || true
 fi
@@ -302,10 +303,10 @@ chmod -R a+x %{buildroot}/usr/lib*/gcc/
 
 
 # This is only for gdb
-mkdir -p %{buildroot}/%{_datadir}/gdb/auto-load//usr/lib64
-mkdir -p %{buildroot}/%{_datadir}/gdb/auto-load//usr/lib32
-mv %{buildroot}//usr/lib64/libstdc++.so.%{libstdcxx_full}-gdb.py %{buildroot}/%{_datadir}/gdb/auto-load//usr/lib64/.
-mv %{buildroot}//usr/lib32/libstdc++.so.%{libstdcxx_full}-gdb.py %{buildroot}/%{_datadir}/gdb/auto-load//usr/lib32/.
+mkdir -p %{buildroot}//usr/share/gdb/auto-load//usr/lib64
+mkdir -p %{buildroot}//usr/share/gdb/auto-load//usr/lib32
+mv %{buildroot}//usr/lib64/libstdc++.so.%{libstdcxx_full}-gdb.py %{buildroot}//usr/share/gdb/auto-load//usr/lib64/.
+mv %{buildroot}//usr/lib32/libstdc++.so.%{libstdcxx_full}-gdb.py %{buildroot}//usr/share/gdb/auto-load//usr/lib32/.
 
 # clang compat
 for i in /usr/lib64/gcc/x86_64-generic-linux/6.3.0/*.o; do ln -s $i %{buildroot}/usr/lib64 ; done
@@ -318,21 +319,21 @@ for i in /usr/lib64/gcc/x86_64-generic-linux/6.3.0/*.a; do ln -s $i %{buildroot}
 cat *.lang > gcc.lang
 
 %files
-%{_bindir}/%{gcc_target}-gcc-ar
-%{_bindir}/%{gcc_target}-gcc-ranlib
-%{_bindir}/%{gcc_target}-gcc-nm
-%{_bindir}/%{gcc_target}-gcc
-%{_bindir}/%{gcc_target}-c++
-%{_bindir}/%{gcc_target}-gcc-%{gccver}
-%{_bindir}/gcc
-%{_bindir}/cc
-%{_bindir}/gcc-ar
-%{_bindir}/gcc-nm
-%{_bindir}/gcc-ranlib
-%{_bindir}/gcov
-%{_bindir}/gcov-tool
+/usr/bin/%{gcc_target}-gcc-ar
+/usr/bin/%{gcc_target}-gcc-ranlib
+/usr/bin/%{gcc_target}-gcc-nm
+/usr/bin/%{gcc_target}-gcc
+/usr/bin/%{gcc_target}-c++
+/usr/bin/%{gcc_target}-gcc-%{gccver}
+/usr/bin/gcc
+/usr/bin/cc
+/usr/bin/gcc-ar
+/usr/bin/gcc-nm
+/usr/bin/gcc-ranlib
+/usr/bin/gcov
+/usr/bin/gcov-tool
 /lib/cpp
-%{_bindir}/cpp
+/usr/bin/cpp
 #/usr/lib64/libvtv*
 /usr/lib64/libcc1*
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/include-fixed/
@@ -349,43 +350,43 @@ cat *.lang > gcc.lang
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/plugin/gtype.state
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/plugin/*.so.*
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/plugin/include/
-%{_datadir}/gcc-%{gccver}
+/usr/share/gcc-%{gccver}
 /usr/lib64/*.a
 /usr/lib64/*.o
 
 
 #gfortran
-%{_bindir}/%{gcc_target}-gfortran
-/usr/lib64/gcc/%{_arch}-generic-linux/%{gccver}/f951
-/usr/lib64/gcc/%{_arch}-generic-linux/%{gccver}/finclude
+/usr/bin/%{gcc_target}-gfortran
+/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/f951
+/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/finclude
 /usr/lib64/libgfortran*
-%{_bindir}/f95
-%{_bindir}/gfortran
+/usr/bin/f95
+/usr/bin/gfortran
 
 #g++
-%{_bindir}/%{gcc_target}-g++
-%{_bindir}/c++
-%{_bindir}/g++
+/usr/bin/%{gcc_target}-g++
+/usr/bin/c++
+/usr/bin/g++
 
 # gcc-dev
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/liblto_plugin.so
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/plugin/*.so
 
-%files -n gcc-dev
+%files dev
 # libgcc-s-dev
-/usr/lib64/gcc/%{_arch}-generic-linux/%{gccver}/libgcc.a
-/usr/lib64/gcc/%{_arch}-generic-linux/%{gccver}/crtendS.o
-/usr/lib64/gcc/%{_arch}-generic-linux/%{gccver}/libgcc_eh.a
-/usr/lib64/gcc/%{_arch}-generic-linux/%{gccver}/crtprec32.o
-/usr/lib64/gcc/%{_arch}-generic-linux/%{gccver}/crtend.o
-/usr/lib64/gcc/%{_arch}-generic-linux/%{gccver}/crtbegin.o
-/usr/lib64/gcc/%{_arch}-generic-linux/%{gccver}/crtprec80.o
-/usr/lib64/gcc/%{_arch}-generic-linux/%{gccver}/crtfastmath.o
-/usr/lib64/gcc/%{_arch}-generic-linux/%{gccver}/crtbeginS.o
-/usr/lib64/gcc/%{_arch}-generic-linux/%{gccver}/crtprec64.o
-/usr/lib64/gcc/%{_arch}-generic-linux/%{gccver}/crtbeginT.o
+/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/libgcc.a
+/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtendS.o
+/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/libgcc_eh.a
+/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtprec32.o
+/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtend.o
+/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtbegin.o
+/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtprec80.o
+/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtfastmath.o
+/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtbeginS.o
+/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtprec64.o
+/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtbeginT.o
 /usr/lib64/libgcc_s.so
-/usr/lib64/gcc/%{_arch}-generic-linux/%{gccver}/libgcov.a
+/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/libgcov.a
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/include/ssp
 /usr/lib64/libssp*.a
 /usr/lib64/libmpx.a
@@ -401,9 +402,11 @@ cat *.lang > gcc.lang
 /usr/lib64/libstdc++.so
 /usr/lib64/libstdc++.a
 /usr/lib64/libsupc++.a
-%{_includedir}/c++
-%{_datadir}/gdb/auto-load//usr/lib64/libstdc++.so.*
+/usr/include/c++
+/usr/share/gdb/auto-load//usr/lib64/libstdc++.so.*
 /usr/lib64/libstdc++fs.a
+/usr/bin/gcov-dump
+/usr/lib64/gcc/x86_64-generic-linux/7.1.0/32/finclude/
 
 %files dev32
 /usr/lib32/libstdc++.a
@@ -457,7 +460,7 @@ cat *.lang > gcc.lang
 
 #/usr/lib/libvtv.a
 #/usr/lib/libvtv.so
-%{_datadir}/gdb/auto-load//usr/lib32/libstdc++.so.*
+/usr/share/gdb/auto-load//usr/lib32/libstdc++.so.*
 
 
 %files -n libgcc1
@@ -466,17 +469,17 @@ cat *.lang > gcc.lang
 /usr/lib64/libgomp*so*
 /usr/lib64/libgomp.spec
 /usr/lib64/libmpx.so.2
-/usr/lib64/libmpx.so.2.0.0
+/usr/lib64/libmpx.so.2.0.1
 /usr/lib64/libmpx.spec
 /usr/lib64/libmpxwrappers.so.2
-/usr/lib64/libmpxwrappers.so.2.0.0
+/usr/lib64/libmpxwrappers.so.2.0.1
 /usr/lib64/libatomic*.so.*
 /usr/lib64/libitm*.so.*
 /usr/lib64/libquadmath*.so.*
 
 %files libgcc32
-/usr/lib32/libasan.so.3
-/usr/lib32/libasan.so.3.0.0
+/usr/lib32/libasan.so.4
+/usr/lib32/libasan.so.4.0.0
 /usr/lib32/libasan_preinit.o
 /usr/lib32/libatomic.so.1
 /usr/lib32/libatomic.so.1.2.0
@@ -485,8 +488,8 @@ cat *.lang > gcc.lang
 /usr/lib32/libcilkrts.spec
 /usr/lib32/libgcc_s.so
 /usr/lib32/libgcc_s.so.1
-/usr/lib32/libgfortran.so.3
-/usr/lib32/libgfortran.so.3.0.0
+/usr/lib32/libgfortran.so.4
+/usr/lib32/libgfortran.so.4.0.0
 /usr/lib32/libgfortran.spec
 %exclude /usr/lib32/libgo.*
 %exclude /usr/lib32/libgobegin.a
@@ -498,11 +501,10 @@ cat *.lang > gcc.lang
 /usr/lib32/libitm.so.1.0.0
 /usr/lib32/libitm.spec
 /usr/lib32/libmpx.so.2
-/usr/lib32/libmpx.so.2.0.0
+/usr/lib32/libmpx.so.2.0.1
 /usr/lib32/libmpx.spec
 /usr/lib32/libmpxwrappers.so.2
-/usr/lib32/libmpxwrappers.so.2.0.0
-%exclude /usr/lib32/libnetgo.a
+/usr/lib32/libmpxwrappers.so.2.0.1
 /usr/lib32/libquadmath.so.0
 /usr/lib32/libquadmath.so.0.0.0
 /usr/lib32/libsanitizer.spec
@@ -530,22 +532,21 @@ cat *.lang > gcc.lang
 %files go
 /usr/libexec/gccgo/bin/*
 /usr/bin/gccgo
-/usr/bin/%{_arch}-generic-linux-gccgo
-/usr/lib64/gcc/%{_arch}-generic-linux/*/cgo
-/usr/lib64/gcc/%{_arch}-generic-linux/*/go1
+/usr/bin/x86_64-generic-linux-gccgo
+/usr/lib64/gcc/x86_64-generic-linux/*/cgo
+/usr/lib64/gcc/x86_64-generic-linux/*/go1
 /usr/lib64/libgo.a
 /usr/lib64/libgo.so
 /usr/lib64/libgobegin.a
 /usr/lib64/libgolibbegin.a
-/usr/lib64/libnetgo.a
 #no 32 bit go
 %exclude /usr/lib32/go/
 
 %files go-lib
 /usr/lib64/libgo.so.*
-/usr/lib64/go/*/%{_arch}-generic-linux/*.gox
-/usr/lib64/go/*/%{_arch}-generic-linux/*/*.gox
-/usr/lib64/go/*/%{_arch}-generic-linux/*/*/*.gox
+/usr/lib64/go/*/x86_64-generic-linux/*.gox
+/usr/lib64/go/*/x86_64-generic-linux/*/*.gox
+/usr/lib64/go/*/x86_64-generic-linux/*/*/*.gox
 
 %files -n gcc-locale -f gcc.lang
 

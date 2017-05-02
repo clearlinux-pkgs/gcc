@@ -17,21 +17,3 @@
    if (opts->x_dump_base_name
        && ! IS_ABSOLUTE_PATH (opts->x_dump_base_name)
        && ! opts->x_dump_base_name_prefixed)
---- gcc-6.2.0/gcc/opts.c~	2016-11-19 19:01:38.000000000 +0000
-+++ gcc-6.2.0/gcc/opts.c	2016-12-22 18:56:39.832472713 +0000
-@@ -519,6 +519,7 @@
-     { OPT_LEVELS_2_PLUS, OPT_fisolate_erroneous_paths_dereference, NULL, 1 },
-     { OPT_LEVELS_2_PLUS, OPT_fipa_ra, NULL, 1 },
-     { OPT_LEVELS_2_PLUS, OPT_flra_remat, NULL, 1 },
-+    { OPT_LEVELS_2_PLUS, OPT_ftree_loop_vectorize, NULL, 1 },
- 
-     /* -O3 optimizations.  */
-     { OPT_LEVELS_3_PLUS, OPT_ftree_loop_distribute_patterns, NULL, 1 },
-@@ -530,7 +531,6 @@
-     { OPT_LEVELS_1_PLUS_NOT_DEBUG, OPT_finline_functions_called_once, NULL, 1 },
-     { OPT_LEVELS_3_PLUS, OPT_funswitch_loops, NULL, 1 },
-     { OPT_LEVELS_3_PLUS, OPT_fgcse_after_reload, NULL, 1 },
--    { OPT_LEVELS_3_PLUS, OPT_ftree_loop_vectorize, NULL, 1 },
-     { OPT_LEVELS_3_PLUS, OPT_ftree_slp_vectorize, NULL, 1 },
-     { OPT_LEVELS_3_PLUS, OPT_fvect_cost_model_, NULL, VECT_COST_MODEL_DYNAMIC },
-     { OPT_LEVELS_3_PLUS, OPT_fipa_cp_clone, NULL, 1 },
