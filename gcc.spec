@@ -25,15 +25,14 @@ Source1  : ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-%{isl_version}.tar.bz2
 Summary  : GNU cc and gcc C compilers
 Group    : Development/Tools
 License  : BSD-3-Clause BSL-1.0 GFDL-1.2 GFDL-1.3 GPL-2.0 GPL-3.0 LGPL-2.1 LGPL-3.0 MIT
-Patch0   : 0001-Fix-stack-protection-issues.patch
+Patch0   : gcc-stable-branch.patch
+Patch1   : 0001-Fix-stack-protection-issues.patch
 Patch2   : openmp-vectorize.patch
 Patch3   : fortran-vector.patch
 Patch5   : optimize.patch
 Patch6   : ipa-cp.patch
 Patch7   : max-is-safe-on-x86.patch
 Patch8	 : optimize-at-least-some.patch
-Patch9   : gcc6-SOURCE_DATE_EPOCH.patch
-Patch10  : randomseed.patch
 
 BuildRequires : bison
 BuildRequires : flex
@@ -185,15 +184,12 @@ GNU cc and gcc C compilers.
 %prep
 %setup -q -n %{gccpath}
 %patch0 -p1
+%patch1 -p1
 %patch2 -p1
 %patch3 -p1
 %patch5 -p1
 %patch6 -p1
-#%patch7 -p1
 %patch8 -p1
-#%patch9 -p0
-#%patch10 -p1
-
 
 
 %build
