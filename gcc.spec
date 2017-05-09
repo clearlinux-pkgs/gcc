@@ -18,7 +18,7 @@
 
 Name     : gcc
 Version  : 7.1.0
-Release  : 33
+Release  : 34
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://ftp.gnu.org/pub/gnu/gcc/gcc-7.1.0/gcc-7.1.0.tar.gz
 Source1  : ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-%{isl_version}.tar.bz2
