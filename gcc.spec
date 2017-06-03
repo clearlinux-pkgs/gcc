@@ -3,7 +3,7 @@
 %define libstdcxx_maj 6
 %define libstdcxx_full 6.0.23
 %define isl_version 0.16.1
-%define gccver 7.1.0
+%define gccver 7.1.1
 %define gccpath gcc-7.1.0
 
 %define debug_package %{nil}
@@ -323,8 +323,8 @@ mv %{buildroot}//usr/lib64/libstdc++.so.%{libstdcxx_full}-gdb.py %{buildroot}//u
 mv %{buildroot}//usr/lib32/libstdc++.so.%{libstdcxx_full}-gdb.py %{buildroot}//usr/share/gdb/auto-load//usr/lib32/.
 
 # clang compat
-for i in /usr/lib64/gcc/x86_64-generic-linux/7.1.0/*.o; do ln -s $i %{buildroot}/usr/lib64 ; done
-for i in /usr/lib64/gcc/x86_64-generic-linux/7.1.0/*.a; do ln -s $i %{buildroot}/usr/lib64 ; done
+for i in /usr/lib64/gcc/x86_64-generic-linux/7.1.1/*.o; do ln -s $i %{buildroot}/usr/lib64 ; done
+for i in /usr/lib64/gcc/x86_64-generic-linux/7.1.1/*.a; do ln -s $i %{buildroot}/usr/lib64 ; done
 
 
 %find_lang cpplib cpp.lang
@@ -420,7 +420,7 @@ cat *.lang > gcc.lang
 /usr/share/gdb/auto-load//usr/lib64/libstdc++.so.*
 /usr/lib64/libstdc++fs.a
 /usr/bin/gcov-dump
-/usr/lib64/gcc/x86_64-generic-linux/7.1.0/32/finclude/
+/usr/lib64/gcc/x86_64-generic-linux/7.1.1/32/finclude/
 
 %files dev32
 /usr/lib32/libstdc++.a
@@ -480,7 +480,7 @@ cat *.lang > gcc.lang
 %files -n libgcc1
 /usr/lib64/libgcc_s.so.1
 
-$files libs-math
+%files libs-math
 /usr/lib64/libssp.so*
 /usr/lib64/libgomp*so*
 /usr/lib64/libgomp.spec
