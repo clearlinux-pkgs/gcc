@@ -18,7 +18,7 @@
 
 Name     : gcc
 Version  : 7.1.0
-Release  : 34
+Release  : 35
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://ftp.gnu.org/pub/gnu/gcc/gcc-7.1.0/gcc-7.1.0.tar.gz
 Source1  : ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-%{isl_version}.tar.bz2
@@ -57,6 +57,7 @@ BuildRequires : gdb-dev
 BuildRequires : procps-ng
 BuildRequires : glibc-libc32
 BuildRequires : glibc-dev32
+BuildRequires : docbook-xml
 
 Requires: gcc-libubsan
 Requires: gcc-doc
@@ -172,12 +173,29 @@ GNU Compile Collection GO runtime
 %description -n gcc-doc
 GNU cc and gcc C compilers.
 
-%package -n gcc-locale
+%package locale
 License:        GPL-3.0-with-GCC-exception and GPL-3.0
 Summary:        GNU cc and gcc C compilers
 Group:          libs
 
-%description -n gcc-locale
+%description locale
+GNU cc and gcc C compilers.
+
+%package libs-mpx
+License:        GPL-3.0-with-GCC-exception and GPL-3.0
+Summary:        GNU cc and gcc C compilers
+Group:          libs
+
+%description libs-mpx
+GNU cc and gcc C compilers.
+
+
+%package libs-math
+License:        GPL-3.0-with-GCC-exception and GPL-3.0
+Summary:        GNU cc and gcc C compilers
+Group:          libs
+
+%description libs-math
 GNU cc and gcc C compilers.
 
 
@@ -461,17 +479,21 @@ cat *.lang > gcc.lang
 
 %files -n libgcc1
 /usr/lib64/libgcc_s.so.1
+
+$files libs-math
 /usr/lib64/libssp.so*
 /usr/lib64/libgomp*so*
 /usr/lib64/libgomp.spec
+/usr/lib64/libatomic*.so.*
+/usr/lib64/libitm*.so.*
+/usr/lib64/libquadmath*.so.*
+
+%files libs-mpx
 /usr/lib64/libmpx.so.2
 /usr/lib64/libmpx.so.2.0.1
 /usr/lib64/libmpx.spec
 /usr/lib64/libmpxwrappers.so.2
 /usr/lib64/libmpxwrappers.so.2.0.1
-/usr/lib64/libatomic*.so.*
-/usr/lib64/libitm*.so.*
-/usr/lib64/libquadmath*.so.*
 
 %files libgcc32
 /usr/lib32/libasan.so.4
