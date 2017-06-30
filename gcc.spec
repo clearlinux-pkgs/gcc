@@ -18,7 +18,7 @@
 
 Name     : gcc
 Version  : 7.1.0
-Release  : 38
+Release  : 39
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://ftp.gnu.org/pub/gnu/gcc/gcc-7.1.0/gcc-7.1.0.tar.gz
 Source1  : ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-%{isl_version}.tar.bz2
@@ -33,6 +33,7 @@ Patch5   : optimize.patch
 Patch6   : ipa-cp.patch
 Patch7   : max-is-safe-on-x86.patch
 Patch8	 : optimize-at-least-some.patch
+Patch9	 : fma.patch
 
 BuildRequires : bison
 BuildRequires : flex
@@ -208,6 +209,7 @@ GNU cc and gcc C compilers.
 %patch5 -p1
 %patch6 -p1
 %patch8 -p1
+%patch9 -p1
 
 
 %build
@@ -319,8 +321,8 @@ chmod -R a+x %{buildroot}/usr/lib*/gcc/
 # This is only for gdb
 mkdir -p %{buildroot}//usr/share/gdb/auto-load//usr/lib64
 mkdir -p %{buildroot}//usr/share/gdb/auto-load//usr/lib32
-mv %{buildroot}//usr/lib64/libstdc++.so.%{libstdcxx_full}-gdb.py %{buildroot}//usr/share/gdb/auto-load//usr/lib64/.
-mv %{buildroot}//usr/lib32/libstdc++.so.%{libstdcxx_full}-gdb.py %{buildroot}//usr/share/gdb/auto-load//usr/lib32/.
+mv %{buildroot}//usr/lib64/libstdc++.so.%{libstdcxx_full}-gdb.py %{buildroot}//usr/share/gdb/auto-load//usr/lib64/. || :
+mv %{buildroot}//usr/lib32/libstdc++.so.%{libstdcxx_full}-gdb.py %{buildroot}//usr/share/gdb/auto-load//usr/lib32/. || :
 
 # clang compat
 for i in /usr/lib64/gcc/x86_64-generic-linux/7.1.1/*.o; do ln -s $i %{buildroot}/usr/lib64 ; done
@@ -417,7 +419,7 @@ cat *.lang > gcc.lang
 /usr/lib64/libstdc++.a
 /usr/lib64/libsupc++.a
 /usr/include/c++
-/usr/share/gdb/auto-load//usr/lib64/libstdc++.so.*
+#/usr/share/gdb/auto-load//usr/lib64/libstdc++.so.*
 /usr/lib64/libstdc++fs.a
 /usr/bin/gcov-dump
 /usr/lib64/gcc/x86_64-generic-linux/7.1.1/32/finclude/
@@ -474,7 +476,7 @@ cat *.lang > gcc.lang
 
 #/usr/lib/libvtv.a
 #/usr/lib/libvtv.so
-/usr/share/gdb/auto-load//usr/lib32/libstdc++.so.*
+#/usr/share/gdb/auto-load//usr/lib32/libstdc++.so.*
 
 
 %files -n libgcc1

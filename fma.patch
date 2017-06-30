@@ -1,0 +1,11 @@
+--- gcc-7.1.0/gcc/common/config/i386/i386-common.c~	2017-02-18 13:14:43.000000000 +0000
++++ gcc-7.1.0/gcc/common/config/i386/i386-common.c	2017-06-30 15:14:02.769828192 +0000
+@@ -403,6 +403,8 @@
+ 	{
+ 	  opts->x_ix86_isa_flags |= OPTION_MASK_ISA_AVX2_SET;
+ 	  opts->x_ix86_isa_flags_explicit |= OPTION_MASK_ISA_AVX2_SET;
++	  opts->x_ix86_isa_flags |= OPTION_MASK_ISA_FMA_SET;
++	  opts->x_ix86_isa_flags_explicit |= OPTION_MASK_ISA_FMA_SET;
+ 	}
+       else
+ 	{
