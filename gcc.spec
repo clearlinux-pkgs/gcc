@@ -1,7 +1,7 @@
 %define keepstatic 1
 %define gcc_target x86_64-generic-linux
 %define libstdcxx_maj 6
-%define libstdcxx_full 6.0.23
+%define libstdcxx_full 6.0.24
 %define isl_version 0.16.1
 %define gccver 7.1.1
 %define gccpath gcc-7.1.0
@@ -319,8 +319,8 @@ chmod -R a+x %{buildroot}/usr/lib*/gcc/
 # This is only for gdb
 mkdir -p %{buildroot}//usr/share/gdb/auto-load//usr/lib64
 mkdir -p %{buildroot}//usr/share/gdb/auto-load//usr/lib32
-mv %{buildroot}//usr/lib64/libstdc++.so.%{libstdcxx_full}-gdb.py %{buildroot}//usr/share/gdb/auto-load//usr/lib64/. || :
-mv %{buildroot}//usr/lib32/libstdc++.so.%{libstdcxx_full}-gdb.py %{buildroot}//usr/share/gdb/auto-load//usr/lib32/. || :
+mv %{buildroot}//usr/lib64/libstdc++.so.%{libstdcxx_full}-gdb.py %{buildroot}//usr/share/gdb/auto-load//usr/lib64/.
+mv %{buildroot}//usr/lib32/libstdc++.so.%{libstdcxx_full}-gdb.py %{buildroot}//usr/share/gdb/auto-load//usr/lib32/.
 
 # clang compat
 for i in /usr/lib64/gcc/x86_64-generic-linux/7.1.1/*.o; do ln -s $i %{buildroot}/usr/lib64 ; done
@@ -417,7 +417,7 @@ cat *.lang > gcc.lang
 /usr/lib64/libstdc++.a
 /usr/lib64/libsupc++.a
 /usr/include/c++
-#/usr/share/gdb/auto-load//usr/lib64/libstdc++.so.*
+/usr/share/gdb/auto-load//usr/lib64/libstdc++.so.*
 /usr/lib64/libstdc++fs.a
 /usr/bin/gcov-dump
 /usr/lib64/gcc/x86_64-generic-linux/7.1.1/32/finclude/
@@ -474,7 +474,7 @@ cat *.lang > gcc.lang
 
 #/usr/lib/libvtv.a
 #/usr/lib/libvtv.so
-#/usr/share/gdb/auto-load//usr/lib32/libstdc++.so.*
+/usr/share/gdb/auto-load//usr/lib32/libstdc++.so.*
 
 
 %files -n libgcc1
