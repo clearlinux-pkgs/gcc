@@ -18,7 +18,7 @@
 
 Name     : gcc
 Version  : 7.1.0
-Release  : 40
+Release  : 41
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://ftp.gnu.org/pub/gnu/gcc/gcc-7.1.0/gcc-7.1.0.tar.gz
 Source1  : ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-%{isl_version}.tar.bz2
@@ -33,7 +33,6 @@ Patch5   : optimize.patch
 Patch6   : ipa-cp.patch
 Patch7   : max-is-safe-on-x86.patch
 Patch8	 : optimize-at-least-some.patch
-Patch9	 : fma.patch
 
 BuildRequires : bison
 BuildRequires : flex
@@ -209,7 +208,6 @@ GNU cc and gcc C compilers.
 %patch5 -p1
 %patch6 -p1
 %patch8 -p1
-%patch9 -p1
 
 
 %build
