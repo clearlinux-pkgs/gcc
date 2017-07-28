@@ -1,0 +1,15 @@
+--- gcc-7.1.0/libgomp/config/linux/wait.h~	2017-01-01 12:07:43.000000000 +0000
++++ gcc-7.1.0/libgomp/config/linux/wait.h	2017-07-28 15:18:31.892553242 +0000
+@@ -56,8 +56,10 @@
+   for (i = 0; i < count; i++)
+     if (__builtin_expect (__atomic_load_n (addr, MEMMODEL_RELAXED) != val, 0))
+       return 0;
+-    else
+-      cpu_relax ();
++    else {
++      if (i > count/2)
++	      cpu_relax ();
++    }
+   return 1;
+ }
+ 
