@@ -18,7 +18,7 @@
 
 Name     : gcc
 Version  : 7.1.0
-Release  : 44
+Release  : 45
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://ftp.gnu.org/pub/gnu/gcc/gcc-7.1.0/gcc-7.1.0.tar.gz
 Source1  : ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-%{isl_version}.tar.bz2
@@ -260,7 +260,7 @@ export LIBRARY_PATH=/usr/lib64
     --with-glibc-version=2.19 \
     --disable-libunwind-exceptions \
     --with-gnu-ld \
-    --with-tune=haswell \
+    --with-tune=skylake \
     --with-arch=westmere \
     --enable-libmpx
 
