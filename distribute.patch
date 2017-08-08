@@ -1,0 +1,23 @@
+Given the loop distribution patches have been merged for a while and
+couple of issues fixed.  I am submitting updated patch to enable the
+pass by default at O3/above levels.
+Bootstrap and test on x86_64 and AArch64 ongoing.  Hmmer still can be
+improved.  Is it OK if no failure?
+
+Thanks,
+bin
+2017-08-07  Bin Cheng  <bin.cheng@arm.com>
+
+    * doc/invoke.texi: Document -ftree-loop-distribution for O3.
+    * opts.c (default_options_table): Add OPT_ftree_loop_distribution.
+
+--- gcc-7.1.0/gcc/opts.c~	2017-03-10 19:22:35.000000000 +0000
++++ gcc-7.1.0/gcc/opts.c	2017-08-08 15:33:55.855281992 +0000
+@@ -526,6 +526,7 @@
+ 
+     /* -O3 optimizations.  */
+     { OPT_LEVELS_3_PLUS, OPT_ftree_loop_distribute_patterns, NULL, 1 },
++    { OPT_LEVELS_3_PLUS, OPT_ftree_loop_distribution, NULL, 1 },
+     { OPT_LEVELS_3_PLUS, OPT_fpredictive_commoning, NULL, 1 },
+     { OPT_LEVELS_3_PLUS, OPT_fsplit_paths, NULL, 1 },
+     /* Inlining of functions reducing size is a good idea with -Os
