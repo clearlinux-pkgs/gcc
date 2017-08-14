@@ -1,0 +1,277 @@
+From 4f6bd884572bc336e13b0780269ac679b12b4198 Mon Sep 17 00:00:00 2001
+From: "H.J. Lu" <hjl.tools@gmail.com>
+Date: Sun, 6 Aug 2017 06:24:36 -0700
+Subject: [PATCH] i386: Don't use frame pointer without stack access
+
+When there is no stack access, there is no need to use frame pointer
+even if -fno-omit-frame-pointer is used and caller's frame pointer is
+unchanged.
+
+gcc/
+
+	PR target/81736
+	* config/i386/i386.c (ix86_finalize_stack_realign_flags): Renamed
+	to ...
+	(ix86_finalize_stack_frame_flags): This.  Also clear
+	frame_pointer_needed if -fno-omit-frame-pointer is used without
+	stack access.
+	(ix86_expand_prologue): Replace ix86_finalize_stack_realign_flags
+	with ix86_finalize_stack_frame_flags.
+	(ix86_expand_epilogue): Likewise.
+	(ix86_expand_split_stack_prologue): Likewise.
+	* doc/invoke.texi: Add a note for -fno-omit-frame-pointer.
+
+gcc/testsuite/
+
+	PR target/81736
+	* gcc.target/i386/pr81736-1.c: New test.
+	* gcc.target/i386/pr81736-2.c: Likewise.
+	* gcc.target/i386/pr81736-3.c: Likewise.
+	* gcc.target/i386/pr81736-4.c: Likewise.
+	* gcc.target/i386/pr81736-5.c: Likewise.
+	* gcc.target/i386/pr81736-6.c: Likewise.
+	* gcc.target/i386/pr81736-7.c: Likewise.
+
+(cherry picked from commit cd557ff63f388ad27c376d0a225e74d3594a6f9d)
+---
+ gcc/config/i386/i386.c                    | 23 ++++++++++++-----------
+ gcc/doc/invoke.texi                       |  4 ++++
+ gcc/testsuite/gcc.target/i386/pr81736-1.c | 13 +++++++++++++
+ gcc/testsuite/gcc.target/i386/pr81736-2.c | 14 ++++++++++++++
+ gcc/testsuite/gcc.target/i386/pr81736-3.c | 11 +++++++++++
+ gcc/testsuite/gcc.target/i386/pr81736-4.c | 11 +++++++++++
+ gcc/testsuite/gcc.target/i386/pr81736-5.c | 20 ++++++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pr81736-6.c | 16 ++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pr81736-7.c | 13 +++++++++++++
+ 9 files changed, 114 insertions(+), 11 deletions(-)
+ create mode 100644 gcc/testsuite/gcc.target/i386/pr81736-1.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pr81736-2.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pr81736-3.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pr81736-4.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pr81736-5.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pr81736-6.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pr81736-7.c
+
+diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
+index dc14d20..2cabe11 100644
+--- a/gcc/config/i386/i386.c
++++ b/gcc/config/i386/i386.c
+@@ -13571,10 +13571,11 @@ output_probe_stack_range (rtx reg, rtx end)
+   return "";
+ }
+ 
+-/* Finalize stack_realign_needed flag, which will guide prologue/epilogue
+-   to be generated in correct form.  */
++/* Finalize stack_realign_needed and frame_pointer_needed flags, which
++   will guide prologue/epilogue to be generated in correct form.  */
++
+ static void
+-ix86_finalize_stack_realign_flags (void)
++ix86_finalize_stack_frame_flags (void)
+ {
+   /* Check if stack realign is really needed after reload, and
+      stores result in cfun */
+@@ -13596,13 +13597,13 @@ ix86_finalize_stack_realign_flags (void)
+     }
+ 
+   /* If the only reason for frame_pointer_needed is that we conservatively
+-     assumed stack realignment might be needed, but in the end nothing that
+-     needed the stack alignment had been spilled, clear frame_pointer_needed
+-     and say we don't need stack realignment.  */
+-  if (stack_realign
++     assumed stack realignment might be needed or -fno-omit-frame-pointer
++     is used, but in the end nothing that needed the stack alignment had
++     been spilled nor stack access, clear frame_pointer_needed and say we
++     don't need stack realignment.  */
++  if ((stack_realign || !flag_omit_frame_pointer)
+       && frame_pointer_needed
+       && crtl->is_leaf
+-      && flag_omit_frame_pointer
+       && crtl->sp_is_unchanging
+       && !ix86_current_function_calls_tls_descriptor
+       && !crtl->accesses_prior_frames
+@@ -13709,7 +13710,7 @@ ix86_expand_prologue (void)
+   bool sse_registers_saved;
+   rtx static_chain = NULL_RTX;
+ 
+-  ix86_finalize_stack_realign_flags ();
++  ix86_finalize_stack_frame_flags ();
+ 
+   /* DRAP should not coexist with stack_realign_fp */
+   gcc_assert (!(crtl->drap_reg && stack_realign_fp));
+@@ -14393,7 +14394,7 @@ ix86_expand_epilogue (int style)
+   bool restore_regs_via_mov;
+   bool using_drap;
+ 
+-  ix86_finalize_stack_realign_flags ();
++  ix86_finalize_stack_frame_flags ();
+   ix86_compute_frame_layout (&frame);
+ 
+   m->fs.sp_valid = (!frame_pointer_needed
+@@ -14903,7 +14904,7 @@ ix86_expand_split_stack_prologue (void)
+ 
+   gcc_assert (flag_split_stack && reload_completed);
+ 
+-  ix86_finalize_stack_realign_flags ();
++  ix86_finalize_stack_frame_flags ();
+   ix86_compute_frame_layout (&frame);
+   allocate = frame.stack_pointer_offset - INCOMING_FRAME_SP_OFFSET;
+ 
+diff --git a/gcc/doc/invoke.texi b/gcc/doc/invoke.texi
+index a0fb09e..215b2ef 100644
+--- a/gcc/doc/invoke.texi
++++ b/gcc/doc/invoke.texi
+@@ -7223,6 +7223,10 @@ size) for 32-bit GNU/Linux x86 and 32-bit Darwin x86 targets is
+ @option{-fomit-frame-pointer}.  You can configure GCC with the
+ @option{--enable-frame-pointer} configure option to change the default.
+ 
++Note that @option{-fno-omit-frame-pointer} doesn't force a new stack
++frame for all functions if it isn't otherwise needed, and hence doesn't
++guarantee a new frame pointer for all functions.
++
+ Enabled at levels @option{-O}, @option{-O2}, @option{-O3}, @option{-Os}.
+ 
+ @item -foptimize-sibling-calls
+diff --git a/gcc/testsuite/gcc.target/i386/pr81736-1.c b/gcc/testsuite/gcc.target/i386/pr81736-1.c
+new file mode 100644
+index 0000000..92c7bc9
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr81736-1.c
+@@ -0,0 +1,13 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -fno-omit-frame-pointer" } */
++
++extern int i;
++
++int
++foo (void)
++{
++  return i;
++}
++
++/* No need to use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr81736-2.c b/gcc/testsuite/gcc.target/i386/pr81736-2.c
+new file mode 100644
+index 0000000..a372087
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr81736-2.c
+@@ -0,0 +1,14 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -fno-omit-frame-pointer" } */
++
++int
++#ifndef __x86_64__
++__attribute__((regparm(3)))
++#endif
++foo (int i)
++{
++  return i;
++}
++
++/* No need to use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr81736-3.c b/gcc/testsuite/gcc.target/i386/pr81736-3.c
+new file mode 100644
+index 0000000..c3bde7d
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr81736-3.c
+@@ -0,0 +1,11 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -fno-omit-frame-pointer" } */
++
++void
++foo (void)
++{
++  asm ("# " : : : "ebx");
++}
++
++/* Need to use a frame pointer.  */
++/* { dg-final { scan-assembler "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr81736-4.c b/gcc/testsuite/gcc.target/i386/pr81736-4.c
+new file mode 100644
+index 0000000..25f5001
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr81736-4.c
+@@ -0,0 +1,11 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -fno-omit-frame-pointer" } */
++
++int
++foo (int i1, int i2, int i3, int i4, int i5, int i6, int i7)
++{
++  return i7;
++}
++
++/* Need to use a frame pointer.  */
++/* { dg-final { scan-assembler "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr81736-5.c b/gcc/testsuite/gcc.target/i386/pr81736-5.c
+new file mode 100644
+index 0000000..e1602cf
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr81736-5.c
+@@ -0,0 +1,20 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -fno-omit-frame-pointer -mavx" } */
++
++typedef int v8si __attribute__ ((vector_size (32)));
++
++void
++#ifndef __x86_64__
++__attribute__((regparm(3)))
++#endif
++foo (v8si *out_start, v8si *out_end, v8si *regions)
++{
++  v8si base = regions[3];
++  *out_start = base;
++  *out_end = base;
++}
++
++/* No need to use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
++/* Verify no dynamic realignment is performed.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*sp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr81736-6.c b/gcc/testsuite/gcc.target/i386/pr81736-6.c
+new file mode 100644
+index 0000000..6198574
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr81736-6.c
+@@ -0,0 +1,16 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -fno-omit-frame-pointer" } */
++
++struct foo
++{
++  int head;
++} a;
++
++int
++bar (void)
++{
++  return a.head != 0;
++}
++
++/* No need to use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr81736-7.c b/gcc/testsuite/gcc.target/i386/pr81736-7.c
+new file mode 100644
+index 0000000..f947886
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr81736-7.c
+@@ -0,0 +1,13 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -fno-omit-frame-pointer" } */
++
++extern int foo (void);
++
++int
++bar (void)
++{
++  return foo ();
++}
++
++/* No need to use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+-- 
+2.9.3
+

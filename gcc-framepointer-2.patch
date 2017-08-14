@@ -1,0 +1,80 @@
+From ba50f66010be0582a5a78ca5b84ca25c691dd9c6 Mon Sep 17 00:00:00 2001
+From: "H.J. Lu" <hjl.tools@gmail.com>
+Date: Fri, 11 Aug 2017 11:17:04 -0700
+Subject: [PATCH] i386: Replace frame pointer with stack pointer in debug insns
+
+When we eliminate frame pointer, we should also replace frame pointer
+with stack pointer - UNITS_PER_WORD in debug insns.  This patch fixed:
+
+FAIL: gcc.dg/guality/pr58791-5.c   -Os  line pr58791-5.c:20 b1 == 9
+FAIL: gcc.dg/guality/pr58791-5.c   -Os  line pr58791-5.c:20 b2 == 73
+FAIL: gcc.dg/guality/pr58791-5.c   -Os  line pr58791-5.c:20 b3 == 585
+FAIL: gcc.dg/guality/pr58791-5.c   -Os  line pr58791-5.c:20 b4 == 4681
+FAIL: gcc.dg/guality/pr59776.c   -Os  line pr59776.c:17 s1.f == 5.0
+FAIL: gcc.dg/guality/pr59776.c   -Os  line pr59776.c:17 s1.g == 6.0
+FAIL: gcc.dg/guality/pr59776.c   -Os  line pr59776.c:17 s2.g == 6.0
+FAIL: gcc.dg/guality/pr59776.c   -Os  line pr59776.c:20 s1.f == 5.0
+FAIL: gcc.dg/guality/pr59776.c   -Os  line pr59776.c:20 s1.g == 6.0
+FAIL: gcc.dg/guality/pr59776.c   -Os  line pr59776.c:20 s2.f == 5.0
+FAIL: gcc.dg/guality/pr59776.c   -Os  line pr59776.c:20 s2.g == 6.0
+
+on Linux/i386.
+
+	PR target/81820
+	* config/i386/i386.c (ix86_finalize_stack_frame_flags): Replace
+	frame pointer with stack pointer - UNITS_PER_WORD in debug insns.
+
+(cherry picked from commit ac36c55f2dac2b54a657d242646d84dfd522eb55)
+---
+ gcc/config/i386/i386.c | 35 +++++++++++++++++++++++++++++++++++
+ 1 file changed, 35 insertions(+)
+
+diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
+index 2cabe11..a436fb3 100644
+--- a/gcc/config/i386/i386.c
++++ b/gcc/config/i386/i386.c
+@@ -13668,6 +13668,41 @@ ix86_finalize_stack_frame_flags (void)
+       df_scan_blocks ();
+       df_compute_regs_ever_live (true);
+       df_analyze ();
++
++      if (flag_var_tracking)
++	{
++	  /* Since frame pointer is no longer available, replace it with
++	     stack pointer - UNITS_PER_WORD in debug insns.  */
++	  df_ref ref, next;
++	  for (ref = DF_REG_USE_CHAIN (HARD_FRAME_POINTER_REGNUM);
++	       ref; ref = next)
++	    {
++	      rtx_insn *insn = DF_REF_INSN (ref);
++	      /* Make sure the next ref is for a different instruction,
++		 so that we're not affected by the rescan.  */
++	      next = DF_REF_NEXT_REG (ref);
++	      while (next && DF_REF_INSN (next) == insn)
++		next = DF_REF_NEXT_REG (next);
++
++	      if (DEBUG_INSN_P (insn))
++		{
++		  bool changed = false;
++		  for (; ref != next; ref = DF_REF_NEXT_REG (ref))
++		    {
++		      rtx *loc = DF_REF_LOC (ref);
++		      if (*loc == hard_frame_pointer_rtx)
++			{
++			  *loc = plus_constant (Pmode,
++						stack_pointer_rtx,
++						-UNITS_PER_WORD);
++			  changed = true;
++			}
++		    }
++		  if (changed)
++		    df_insn_rescan (insn);
++		}
++	    }
++	}
+     }
+ 
+   crtl->stack_realign_needed = stack_realign;
+-- 
+2.9.3
+
