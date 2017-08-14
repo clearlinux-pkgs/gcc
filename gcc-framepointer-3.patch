@@ -1,0 +1,196 @@
+From 18b267cb27d5bfa973c57d0ce5aafbd3ffc47187 Mon Sep 17 00:00:00 2001
+From: "H.J. Lu" <hjl.tools@gmail.com>
+Date: Thu, 6 Jul 2017 08:58:46 -0700
+Subject: [PATCH] x86: Use DRAP only if there are outgoing arguments on stack
+
+Since DRAP is needed only if there are outgoing arguments on stack, we
+should track outgoing arguments on stack and avoid setting need_drap to
+true when there are no outgoing arguments on stack.
+
+gcc/
+
+	PR target/81313
+	* config/i386/i386.c (ix86_function_arg_advance): Set
+	outgoing_args_on_stack to true if there are outgoing arguments
+	on stack.
+	(ix86_function_arg): Likewise.
+	(ix86_get_drap_rtx): Use DRAP only if there are outgoing
+	arguments on stack and ACCUMULATE_OUTGOING_ARGS is false.
+	* config/i386/i386.h (machine_function): Add
+	outgoing_args_on_stack.
+
+gcc/testsuite/
+
+	PR target/81313
+	* gcc.target/i386/pr81313-1.c: New test.
+	* gcc.target/i386/pr81313-2.c: Likewise.
+	* gcc.target/i386/pr81313-3.c: Likewise.
+	* gcc.target/i386/pr81313-4.c: Likewise.
+	* gcc.target/i386/pr81313-5.c: Likewise.
+
+(cherry picked from commit 84066338f533756496dc8ce09726fe8dad8b0cf5)
+---
+ gcc/config/i386/i386.c                    | 18 ++++++++++++++++--
+ gcc/config/i386/i386.h                    |  3 +++
+ gcc/testsuite/gcc.target/i386/pr81313-1.c | 12 ++++++++++++
+ gcc/testsuite/gcc.target/i386/pr81313-2.c | 12 ++++++++++++
+ gcc/testsuite/gcc.target/i386/pr81313-3.c | 12 ++++++++++++
+ gcc/testsuite/gcc.target/i386/pr81313-4.c | 12 ++++++++++++
+ gcc/testsuite/gcc.target/i386/pr81313-5.c | 12 ++++++++++++
+ 7 files changed, 79 insertions(+), 2 deletions(-)
+ create mode 100644 gcc/testsuite/gcc.target/i386/pr81313-1.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pr81313-2.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pr81313-3.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pr81313-4.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pr81313-5.c
+
+diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
+index dc14d20..9bd0a21 100644
+--- a/gcc/config/i386/i386.c
++++ b/gcc/config/i386/i386.c
+@@ -9788,7 +9788,13 @@ ix86_function_arg_advance (cumulative_args_t cum_v, machine_mode mode,
+   /* For pointers passed in memory we expect bounds passed in Bounds
+      Table.  */
+   if (!nregs)
+-    cum->bnds_in_bt = chkp_type_bounds_count (type);
++    {
++      /* Track if there are outgoing arguments on stack.  */
++      if (cum->caller)
++	cfun->machine->outgoing_args_on_stack = true;
++
++      cum->bnds_in_bt = chkp_type_bounds_count (type);
++    }
+ }
+ 
+ /* Define where to put the arguments to a function.
+@@ -10117,6 +10123,10 @@ ix86_function_arg (cumulative_args_t cum_v, machine_mode omode,
+   else
+     arg = function_arg_32 (cum, mode, omode, type, bytes, words);
+ 
++  /* Track if there are outgoing arguments on stack.  */
++  if (arg == NULL_RTX && cum->caller)
++    cfun->machine->outgoing_args_on_stack = true;
++
+   return arg;
+ }
+ 
+@@ -13127,7 +13137,11 @@ ix86_update_stack_boundary (void)
+ static rtx
+ ix86_get_drap_rtx (void)
+ {
+-  if (ix86_force_drap || !ACCUMULATE_OUTGOING_ARGS)
++  /* We must use DRAP if there are outgoing arguments on stack and
++     ACCUMULATE_OUTGOING_ARGS is false.  */
++  if (ix86_force_drap
++      || (cfun->machine->outgoing_args_on_stack
++	  && !ACCUMULATE_OUTGOING_ARGS))
+     crtl->need_drap = true;
+ 
+   if (stack_realign_drap)
+diff --git a/gcc/config/i386/i386.h b/gcc/config/i386/i386.h
+index 9e5f4d8..1c474af 100644
+--- a/gcc/config/i386/i386.h
++++ b/gcc/config/i386/i386.h
+@@ -2565,6 +2565,9 @@ struct GTY(()) machine_function {
+      pass arguments and can be used for indirect sibcall.  */
+   BOOL_BITFIELD arg_reg_available : 1;
+ 
++  /* Nonzero if the function places outgoing arguments on stack.  */
++  BOOL_BITFIELD outgoing_args_on_stack : 1;
++
+   /* During prologue/epilogue generation, the current frame state.
+      Otherwise, the frame state at the end of the prologue.  */
+   struct machine_frame_state fs;
+diff --git a/gcc/testsuite/gcc.target/i386/pr81313-1.c b/gcc/testsuite/gcc.target/i386/pr81313-1.c
+new file mode 100644
+index 0000000..f765003
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr81313-1.c
+@@ -0,0 +1,12 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mno-accumulate-outgoing-args -mincoming-stack-boundary=4 -mpreferred-stack-boundary=6" } */
++
++extern void foo (void);
++
++void
++bar (void)
++{
++  foo ();
++}
++
++/* { dg-final { scan-assembler-not "lea\[lq\]?\[\\t \]*\[0-9\]*\\(%\[er\]sp\\)" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr81313-2.c b/gcc/testsuite/gcc.target/i386/pr81313-2.c
+new file mode 100644
+index 0000000..2cdc645
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr81313-2.c
+@@ -0,0 +1,12 @@
++/* { dg-do compile { target ia32 } } */
++/* { dg-options "-O2 -mno-accumulate-outgoing-args -mincoming-stack-boundary=4 -mpreferred-stack-boundary=6 -mno-iamcu" } */
++
++extern void foo (int, int, int);
++
++void
++bar (void)
++{
++  foo (1, 2, 3);
++}
++
++/* { dg-final { scan-assembler "lea\[l\]?\[\\t \]*\[0-9\]*\\(%esp\\)" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr81313-3.c b/gcc/testsuite/gcc.target/i386/pr81313-3.c
+new file mode 100644
+index 0000000..9c1b232
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr81313-3.c
+@@ -0,0 +1,12 @@
++/* { dg-do compile { target ia32 } } */
++/* { dg-options "-O2 -mno-accumulate-outgoing-args -mincoming-stack-boundary=4 -mpreferred-stack-boundary=6" } */
++
++extern void foo (int, int, int) __attribute__ ((regparm(3)));
++
++void
++bar (int i1, int i2, int i3, int i4)
++{
++  foo (i1, i2, i3);
++}
++
++/* { dg-final { scan-assembler-not "lea\[l\]?\[\\t \]*\[0-9\]*\\(%esp\\)" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr81313-4.c b/gcc/testsuite/gcc.target/i386/pr81313-4.c
+new file mode 100644
+index 0000000..bad0b3c
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr81313-4.c
+@@ -0,0 +1,12 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mno-accumulate-outgoing-args -mincoming-stack-boundary=4 -mpreferred-stack-boundary=6" } */
++
++extern void foo (int, int, int, int, int, int, int);
++
++void
++bar (void)
++{
++  foo (1, 2, 3, 4, 5, 6, 7);
++}
++
++/* { dg-final { scan-assembler "lea\[lq\]?\[\\t \]*\[0-9\]*\\(%\[er\]sp\\)" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr81313-5.c b/gcc/testsuite/gcc.target/i386/pr81313-5.c
+new file mode 100644
+index 0000000..51a543c
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr81313-5.c
+@@ -0,0 +1,12 @@
++/* { dg-do compile { target { ! ia32 } } } */
++/* { dg-options "-O2 -mno-accumulate-outgoing-args -mincoming-stack-boundary=4 -mpreferred-stack-boundary=6" } */
++
++extern void foo (int, int, int, int, int, int);
++
++void
++bar (int i1, int i2, int i3, int i4, int i5, int i6, int i7)
++{
++  foo (i1, i2, i3, i4, i5, i6);
++}
++
++/* { dg-final { scan-assembler-not "lea\[lq\]?\[\\t \]*\[0-9\]*\\(%\[er\]sp\\)" } } */
+-- 
+2.9.3
+

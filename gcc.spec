@@ -3,7 +3,7 @@
 %define libstdcxx_maj 6
 %define libstdcxx_full 6.0.24
 %define isl_version 0.16.1
-%define gccver 7.1.1
+%define gccver 7.2.0
 %define gccpath gcc-7.2.0
 
 %define debug_package %{nil}
@@ -18,7 +18,7 @@
 
 Name     : gcc
 Version  : 7.2.0
-Release  : 53
+Release  : 54
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://ftp.gnu.org/pub/gnu/gcc/gcc-7.2.0/gcc-7.2.0.tar.gz
 Source1  : ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-%{isl_version}.tar.bz2
@@ -37,6 +37,8 @@ Patch9   : gomp-relax.patch
 Patch10	 : distribute.patch
 Patch11  : gcc-framepointer-1.patch
 Patch12  : gcc-framepointer-2.patch
+Patch13  : gcc-framepointer-3.patch
+Patch14  : gcc-framepointer-4.patch
 
 BuildRequires : bison
 BuildRequires : flex
@@ -216,6 +218,8 @@ GNU cc and gcc C compilers.
 %patch10 -p1
 %patch11 -p1
 %patch12 -p1
+%patch13 -p1
+%patch14 -p1
 
 
 %build
@@ -333,8 +337,8 @@ mv %{buildroot}//usr/lib64/libstdc++.so.%{libstdcxx_full}-gdb.py %{buildroot}//u
 mv %{buildroot}//usr/lib32/libstdc++.so.%{libstdcxx_full}-gdb.py %{buildroot}//usr/share/gdb/auto-load//usr/lib32/.
 
 # clang compat
-for i in /usr/lib64/gcc/x86_64-generic-linux/7.1.1/*.o; do ln -s $i %{buildroot}/usr/lib64 ; done
-for i in /usr/lib64/gcc/x86_64-generic-linux/7.1.1/*.a; do ln -s $i %{buildroot}/usr/lib64 ; done
+for i in /usr/lib64/gcc/x86_64-generic-linux/7.2.0/*.o; do ln -s $i %{buildroot}/usr/lib64 ; done
+for i in /usr/lib64/gcc/x86_64-generic-linux/7.2.0/*.a; do ln -s $i %{buildroot}/usr/lib64 ; done
 
 
 %find_lang cpplib cpp.lang
@@ -430,7 +434,7 @@ cat *.lang > gcc.lang
 /usr/share/gdb/auto-load//usr/lib64/libstdc++.so.*
 /usr/lib64/libstdc++fs.a
 /usr/bin/gcov-dump
-/usr/lib64/gcc/x86_64-generic-linux/7.1.1/32/finclude/
+/usr/lib64/gcc/x86_64-generic-linux/7.2.0/32/finclude/
 
 %files dev32
 /usr/lib32/libstdc++.a
