@@ -18,7 +18,7 @@
 
 Name     : gcc
 Version  : 7.2.0
-Release  : 56
+Release  : 57
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://ftp.gnu.org/pub/gnu/gcc/gcc-7.2.0/gcc-7.2.0.tar.gz
 Source1  : ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-%{isl_version}.tar.bz2
@@ -419,9 +419,7 @@ cat *.lang > gcc.lang
 /usr/lib64/libssp*.a
 /usr/lib64/libmpx.a
 /usr/lib64/libgomp.a
-/usr/lib64/libmpx.so
 /usr/lib64/libmpxwrappers.a
-/usr/lib64/libmpxwrappers.so
 # gcc-plugin-dev
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/plugin/gengtype
 /usr/lib64/libcilkrts*.so.*
@@ -435,6 +433,12 @@ cat *.lang > gcc.lang
 /usr/lib64/libstdc++fs.a
 /usr/bin/gcov-dump
 /usr/lib64/gcc/x86_64-generic-linux/7.2.0/32/finclude/
+/usr/lib64/libatomic.so
+/usr/lib64/libcilkrts.so
+/usr/lib64/libcilkrts.spec
+/usr/lib64/libitm.so
+/usr/lib64/libitm.spec
+/usr/lib64/libquadmath.so
 
 %files dev32
 /usr/lib32/libstdc++.a
@@ -479,12 +483,6 @@ cat *.lang > gcc.lang
 /usr/lib32/libssp.so
 /usr/lib32/libubsan.a
 /usr/lib32/libubsan.so
-/usr/lib64/libatomic.so
-/usr/lib64/libcilkrts.so
-/usr/lib64/libcilkrts.spec
-/usr/lib64/libitm.so
-/usr/lib64/libitm.spec
-/usr/lib64/libquadmath.so
 
 #/usr/lib/libvtv.a
 #/usr/lib/libvtv.so
@@ -508,6 +506,8 @@ cat *.lang > gcc.lang
 /usr/lib64/libmpx.spec
 /usr/lib64/libmpxwrappers.so.2
 /usr/lib64/libmpxwrappers.so.2.0.1
+/usr/lib64/libmpx.so
+/usr/lib64/libmpxwrappers.so
 
 %files libgcc32
 /usr/lib32/libasan.so.4
