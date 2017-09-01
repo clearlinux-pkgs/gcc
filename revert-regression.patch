@@ -1,0 +1,57 @@
+From: David Esparza <david.esparza.borquez@intel.com>
+
+
+This reverts commit 1176073cc1a63f14198c3ba0a02c8f5a52442c2f.
+---
+This patch reverts the commit that introduced a degadation observed on pts/c-ray once GCC 7 was introduced. We get a ~11% of performance improvement with this revert.
+ contrib/analyze_brprob.py        | 7 +++++++
+ gcc/predict.def                  | 2 +-
+ gcc/testsuite/gcc.dg/predict-9.c | 4 ++--
+ 3 files changed, 10 insertions(+), 3 deletions(-)
+
+diff --git a/contrib/analyze_brprob.py b/contrib/analyze_brprob.py
+index 8f83b5a0221..a69883b2cb6 100755
+--- a/contrib/analyze_brprob.py
++++ b/contrib/analyze_brprob.py
+@@ -256,6 +256,13 @@ class Profile:
+                 cut = 0.01 * v
+                 print('  avg. (%d%% cutoff) # of iter: %.2f'
+                     % (v, average_cutoff(self.niter_vector, cut)))
++        print('%-36s %8s %6s  %-16s %14s %8s %6s' % ('HEURISTICS', 'BRANCHES', '(REL)',
++              'HITRATE', 'COVERAGE', 'COVERAGE', '(REL)'))
++        for (k, v) in sorted(self.heuristics.items(), key = sorter):
++            print('%-36s %8i %5.1f%% %6.2f%% / %6.2f%% %14i %8s %5.1f%%' %
++            (k, v.branches, percentage(v.branches, self.branches_max ()),
++             percentage(v.hits, v.count), percentage(v.fits, v.count),
++             v.count, v.count_formatted(), percentage(v.count, self.count_max()) ))
+ 
+ parser = argparse.ArgumentParser()
+ parser.add_argument('dump_file', metavar = 'dump_file',
+diff --git a/gcc/predict.def b/gcc/predict.def
+index 326c39ae4c9..afcea547e93 100644
+--- a/gcc/predict.def
++++ b/gcc/predict.def
+@@ -89,7 +89,7 @@ DEF_PREDICTOR (PRED_COLD_FUNCTION, "cold function call", PROB_VERY_LIKELY,
+ 	       PRED_FLAG_FIRST_MATCH)
+ 
+ /* Edge causing loop to terminate is probably not taken.  */
+-DEF_PREDICTOR (PRED_LOOP_EXIT, "loop exit", HITRATE (85),
++DEF_PREDICTOR (PRED_LOOP_EXIT, "loop exit", HITRATE (92),
+ 	       PRED_FLAG_FIRST_MATCH)
+ 
+ /* Same as LOOP_EXIT but for loops containing recursive call.  */
+diff --git a/gcc/testsuite/gcc.dg/predict-9.c b/gcc/testsuite/gcc.dg/predict-9.c
+index ec467519504..240fce675db 100644
+--- a/gcc/testsuite/gcc.dg/predict-9.c
++++ b/gcc/testsuite/gcc.dg/predict-9.c
+@@ -19,5 +19,5 @@ void foo (int base)
+   }
+ }
+ 
+-/* { dg-final { scan-tree-dump-times "first match heuristics: 3.0%" 3 "profile_estimate"} } */
+-/* { dg-final { scan-tree-dump-times "first match heuristics: 7.5%" 1 "profile_estimate"} } */
++/* { dg-final { scan-tree-dump-times "first match heuristics: 2.0%" 3 "profile_estimate"} } */
++/* { dg-final { scan-tree-dump-times "first match heuristics: 4.0%" 1 "profile_estimate"} } */
+-- 
+2.12.2
+

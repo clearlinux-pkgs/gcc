@@ -18,7 +18,7 @@
 
 Name     : gcc
 Version  : 7.2.0
-Release  : 57
+Release  : 58
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://ftp.gnu.org/pub/gnu/gcc/gcc-7.2.0/gcc-7.2.0.tar.gz
 Source1  : ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-%{isl_version}.tar.bz2
@@ -39,6 +39,7 @@ Patch11  : gcc-framepointer-1.patch
 Patch12  : gcc-framepointer-2.patch
 Patch13  : gcc-framepointer-3.patch
 Patch14  : gcc-framepointer-4.patch
+Patch15  : revert-regression.patch
 
 BuildRequires : bison
 BuildRequires : flex
@@ -63,7 +64,8 @@ BuildRequires : gdb-dev
 BuildRequires : procps-ng
 BuildRequires : glibc-libc32
 BuildRequires : glibc-dev32
-BuildRequires : docbook-xml
+BuildRequires : docbook-xml docbook-utils doxygen
+
 
 Requires: gcc-libubsan
 Requires: gcc-doc
@@ -220,6 +222,7 @@ GNU cc and gcc C compilers.
 %patch12 -p1
 %patch13 -p1
 %patch14 -p1
+%patch15 -p1
 
 
 %build
