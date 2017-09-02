@@ -1,0 +1,34 @@
+
+This patch simplifies pow (C, x) into exp (x * C1) if C > 0, C1 = log (C).
+Do this only for fast-math as accuracy is reduced.  This is much faster
+since pow is more complex than exp - with current GLIBC the speedup is
+more than 7 times for this transformation.
+
+The worst-case ULP error of the transformation for powf (10.0, x) in SPEC
+was 2.5.  If we allow use of exp10 in match.pd, the ULP error would be lower.
+
+ChangeLog:
+2017-08-18  Wilco Dijkstra  <wdijkstr@arm.com>
+
+	* match.pd: Add pow (C, x) simplification.
+
+--- gcc-7.2.0/gcc/match.pd~	2017-07-17 19:45:59.000000000 +0000
++++ gcc-7.2.0/gcc/match.pd	2017-09-02 02:50:04.881118898 +0000
+@@ -3209,6 +3209,17 @@
+    (logs (pows @0 @1))
+    (mult @1 (logs @0))))
+ 
++ 
++ /* pow(C,x) -> exp(log(C)*x) if C > 0.  */
++ (for pows (POW)
++      exps (EXP)
++      logs (LOG)
++  (simplify
++   (pows REAL_CST@0 @1)
++    (if (real_compare (GT_EXPR, TREE_REAL_CST_PTR (@0), &dconst0)
++	 && real_isfinite (TREE_REAL_CST_PTR (@0)))
++     (exps (mult (logs @0) @1)))))
++
+  (for sqrts (SQRT)
+       cbrts (CBRT)
+       pows (POW)
