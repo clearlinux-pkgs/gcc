@@ -18,7 +18,7 @@
 
 Name     : gcc
 Version  : 7.2.0
-Release  : 60
+Release  : 61
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://ftp.gnu.org/pub/gnu/gcc/gcc-7.2.0/gcc-7.2.0.tar.gz
 Source1  : ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-%{isl_version}.tar.bz2
@@ -192,15 +192,6 @@ Group:          libs
 %description locale
 GNU cc and gcc C compilers.
 
-%package libs-mpx
-License:        GPL-3.0-with-GCC-exception and GPL-3.0
-Summary:        GNU cc and gcc C compilers
-Group:          libs
-
-%description libs-mpx
-GNU cc and gcc C compilers.
-
-
 %package libs-math
 License:        GPL-3.0-with-GCC-exception and GPL-3.0
 Summary:        GNU cc and gcc C compilers
@@ -281,7 +272,7 @@ export LIBRARY_PATH=/usr/lib64
     --with-gnu-ld \
     --with-tune=haswell \
     --with-arch=westmere \
-    --enable-libmpx
+    --disable-libmpx
 
 make %{?_smp_mflags} profiledbootstrap
 
@@ -424,9 +415,7 @@ cat *.lang > gcc.lang
 /usr/lib64/gcc/x86_64-generic-linux/%{gccver}/libgcov.a
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/include/ssp
 /usr/lib64/libssp*.a
-/usr/lib64/libmpx.a
 /usr/lib64/libgomp.a
-/usr/lib64/libmpxwrappers.a
 # gcc-plugin-dev
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/plugin/gengtype
 /usr/lib64/libcilkrts*.so.*
@@ -468,8 +457,6 @@ cat *.lang > gcc.lang
 /usr/lib64/gcc/x86_64-generic-linux/*/32/libgcc.a
 /usr/lib64/gcc/x86_64-generic-linux/*/32/libgcc_eh.a
 /usr/lib64/gcc/x86_64-generic-linux/*/32/libgcov.a
-/usr/lib32/libmpx.a
-/usr/lib32/libmpx.so
 /usr/lib32/libasan.a
 /usr/lib32/libasan.so
 /usr/lib32/libcilkrts.a
@@ -482,8 +469,6 @@ cat *.lang > gcc.lang
 /usr/lib32/libgomp.so
 /usr/lib32/libitm.a
 /usr/lib32/libitm.so
-/usr/lib32/libmpxwrappers.a
-/usr/lib32/libmpxwrappers.so
 /usr/lib32/libquadmath.a
 /usr/lib32/libquadmath.so
 /usr/lib32/libssp.a
@@ -506,15 +491,6 @@ cat *.lang > gcc.lang
 /usr/lib64/libatomic*.so.*
 /usr/lib64/libitm*.so.*
 /usr/lib64/libquadmath*.so.*
-
-%files libs-mpx
-/usr/lib64/libmpx.so.2
-/usr/lib64/libmpx.so.2.0.1
-/usr/lib64/libmpx.spec
-/usr/lib64/libmpxwrappers.so.2
-/usr/lib64/libmpxwrappers.so.2.0.1
-/usr/lib64/libmpx.so
-/usr/lib64/libmpxwrappers.so
 
 %files libgcc32
 /usr/lib32/libasan.so.4
@@ -539,11 +515,6 @@ cat *.lang > gcc.lang
 /usr/lib32/libitm.so.1
 /usr/lib32/libitm.so.1.0.0
 /usr/lib32/libitm.spec
-/usr/lib32/libmpx.so.2
-/usr/lib32/libmpx.so.2.0.1
-/usr/lib32/libmpx.spec
-/usr/lib32/libmpxwrappers.so.2
-/usr/lib32/libmpxwrappers.so.2.0.1
 /usr/lib32/libquadmath.so.0
 /usr/lib32/libquadmath.so.0.0.0
 /usr/lib32/libsanitizer.spec

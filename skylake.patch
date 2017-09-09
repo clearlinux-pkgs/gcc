@@ -1,5 +1,21 @@
 --- gcc-7.2.0/gcc/config/i386/haswell.md.org	2017-09-02 02:23:36.330778373 +0000
-+++ gcc-7.2.0/gcc/config/i386/haswell.md	2017-09-02 02:35:10.011793724 +0000
++++ gcc-7.2.0/gcc/config/i386/haswell.md	2017-09-09 23:57:57.358481805 +0000
+@@ -104,13 +104,13 @@
+ 				   (eq_attr "type" "imov")))
+ 			 "hsw_decodern,hsw_p4+(hsw_p2|hsw_p3|hsw_p7)")
+ 
+-(define_insn_reservation "hsw_icmov" 2
++(define_insn_reservation "hsw_icmov" 5
+ 			 (and (eq_attr "cpu" "haswell")
+ 			      (and (eq_attr "memory" "none")
+ 				   (eq_attr "type" "icmov")))
+ 			 "hsw_decodern,hsw_p0156,hsw_p0156")
+ 
+-(define_insn_reservation "hsw_icmov_load" 2
++(define_insn_reservation "hsw_icmov_load" 5
+ 			 (and (eq_attr "cpu" "haswell")
+ 			      (and (eq_attr "memory" "load")
+ 				   (eq_attr "type" "icmov")))
 @@ -482,91 +482,91 @@
  				   (eq_attr "type" "sselog,sselog1")))
  			 "hsw_decodern,hsw_p015+hsw_p23")
