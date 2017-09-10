@@ -3,7 +3,7 @@
 %define libstdcxx_maj 6
 %define libstdcxx_full 6.0.24
 %define isl_version 0.16.1
-%define gccver 7.2.0
+%define gccver 7.2.1
 %define gccpath gcc-7.2.0
 
 %define debug_package %{nil}
@@ -18,7 +18,7 @@
 
 Name     : gcc
 Version  : 7.2.0
-Release  : 62
+Release  : 63
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://ftp.gnu.org/pub/gnu/gcc/gcc-7.2.0/gcc-7.2.0.tar.gz
 Source1  : ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-%{isl_version}.tar.bz2
