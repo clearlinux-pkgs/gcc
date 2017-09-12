@@ -18,7 +18,7 @@
 
 Name     : gcc
 Version  : 7.2.0
-Release  : 67
+Release  : 68
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://ftp.gnu.org/pub/gnu/gcc/gcc-7.2.0/gcc-7.2.0.tar.gz
 Source1  : ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-%{isl_version}.tar.bz2
@@ -335,7 +335,7 @@ mv %{buildroot}//usr/lib64/libstdc++.so.%{libstdcxx_full}-gdb.py %{buildroot}//u
 mv %{buildroot}//usr/lib32/libstdc++.so.%{libstdcxx_full}-gdb.py %{buildroot}//usr/share/gdb/auto-load//usr/lib32/.
 
 # clang compat (maxdepth as we don't need/want 32bit compat here for now)
-(cd %{buildroot}/usr/lib64 && find gcc/x86_64-generic-linux/* -maxdepth 1 -name '*.[ao]' | xargs ln -s -t %{buildroot}/usr/lib64)
+(cd %{buildroot}/usr/lib64 && ln -s -t . gcc/x86_64-generic-linux/*/*.[ao])
 
 %find_lang cpplib cpp.lang
 %find_lang gcc tmp.lang
