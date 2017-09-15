@@ -1,0 +1,151 @@
+From 25126a78a6a9c118a381a9a56f93f0f4af596f90 Mon Sep 17 00:00:00 2001
+From: Sergey Shalnov <Sergey.Shalnov@intel.com>
+Date: Fri, 1 Sep 2017 14:55:52 +0300
+Subject: [PATCH 1/1] Option -mprefer-avx256 added for Intel AVX512
+ configuration
+
+---
+ gcc/config/i386/i386.c                         | 15 ++++++++-------
+ gcc/config/i386/i386.opt                       |  4 ++++
+ gcc/doc/invoke.texi                            |  7 ++++++-
+ gcc/testsuite/g++.dg/ext/pr57362.C             |  2 ++
+ gcc/testsuite/gcc.target/i386/avx512f-prefer.c | 18 ++++++++++++++++++
+ 5 files changed, 38 insertions(+), 8 deletions(-)
+ create mode 100644 gcc/testsuite/gcc.target/i386/avx512f-prefer.c
+
+diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
+index b2b02ac..159d0b4 100644
+--- a/gcc/config/i386/i386.c
++++ b/gcc/config/i386/i386.c
+@@ -4746,5 +4746,6 @@ ix86_target_string (HOST_WIDE_INT isa, HOST_WIDE_INT isa2,
+     { "-mavx256-split-unaligned-load",	MASK_AVX256_SPLIT_UNALIGNED_LOAD },
+     { "-mavx256-split-unaligned-store",	MASK_AVX256_SPLIT_UNALIGNED_STORE },
+-    { "-mprefer-avx128",		MASK_PREFER_AVX128 }
++    { "-mprefer-avx128",		MASK_PREFER_AVX128 },
++    { "-mprefer-avx256",		MASK_PREFER_AVX256 }
+   };
+ 
+@@ -51709,20 +51710,20 @@ ix86_preferred_simd_mode (scalar_mode mode)
+   switch (mode)
+     {
+     case QImode:
+-      return TARGET_AVX512BW ? V64QImode :
++      return (TARGET_AVX512BW && !TARGET_PREFER_AVX256) ? V64QImode :
+        (TARGET_AVX && !TARGET_PREFER_AVX128) ? V32QImode : V16QImode;
+     case HImode:
+-      return TARGET_AVX512BW ? V32HImode :
++      return (TARGET_AVX512BW && !TARGET_PREFER_AVX256) ? V32HImode :
+        (TARGET_AVX && !TARGET_PREFER_AVX128) ? V16HImode : V8HImode;
+     case SImode:
+-      return TARGET_AVX512F ? V16SImode :
++      return (TARGET_AVX512F && !TARGET_PREFER_AVX256) ? V16SImode :
+ 	(TARGET_AVX && !TARGET_PREFER_AVX128) ? V8SImode : V4SImode;
+     case DImode:
+-      return TARGET_AVX512F ? V8DImode :
++      return (TARGET_AVX512F && !TARGET_PREFER_AVX256) ? V8DImode :
+ 	(TARGET_AVX && !TARGET_PREFER_AVX128) ? V4DImode : V2DImode;
+ 
+     case SFmode:
+-      if (TARGET_AVX512F)
++      if (TARGET_AVX512F && !TARGET_PREFER_AVX256)
+ 	return V16SFmode;
+       else if (TARGET_AVX && !TARGET_PREFER_AVX128)
+ 	return V8SFmode;
+@@ -51730,7 +51731,7 @@ ix86_preferred_simd_mode (scalar_mode mode)
+ 	return V4SFmode;
+ 
+     case DFmode:
+-      if (TARGET_AVX512F)
++      if (TARGET_AVX512F && !TARGET_PREFER_AVX256)
+ 	return V8DFmode;
+       else if (TARGET_AVX && !TARGET_PREFER_AVX128)
+ 	return V4DFmode;
+@@ -51750,7 +51751,7 @@ ix86_preferred_simd_mode (scalar_mode mode)
+ static unsigned int
+ ix86_autovectorize_vector_sizes (void)
+ {
+-  return TARGET_AVX512F ? 64 | 32 | 16 :
++  return (TARGET_AVX512F && !TARGET_PREFER_AVX256) ? 64 | 32 | 16 :
+     (TARGET_AVX && !TARGET_PREFER_AVX128) ? 32 | 16 : 0;
+ }
+ 
+diff --git a/gcc/config/i386/i386.opt b/gcc/config/i386/i386.opt
+index 81bbc1e..af771bc 100644
+--- a/gcc/config/i386/i386.opt
++++ b/gcc/config/i386/i386.opt
+@@ -591,6 +591,10 @@ mprefer-avx128
+ Target Report Mask(PREFER_AVX128) SAVE
+ Use 128-bit AVX instructions instead of 256-bit AVX instructions in the auto-vectorizer.
+ 
++mprefer-avx256
++Target Report Mask(PREFER_AVX256) SAVE
++Use 256-bit AVX instructions instead of 512-bit AVX instructions in the auto-vectorizer.
++
+ ;; ISA support
+ 
+ m32
+diff --git a/gcc/doc/invoke.texi b/gcc/doc/invoke.texi
+index e4cacf2..41bcd41 100644
+--- a/gcc/doc/invoke.texi
++++ b/gcc/doc/invoke.texi
+@@ -1193,7 +1193,7 @@ See RS/6000 and PowerPC Options.
+ -mincoming-stack-boundary=@var{num} @gol
+ -mcld  -mcx16  -msahf  -mmovbe  -mcrc32 @gol
+ -mrecip  -mrecip=@var{opt} @gol
+--mvzeroupper  -mprefer-avx128 @gol
++-mvzeroupper  -mprefer-avx128 -mprefer-avx256 @gol
+ -mmmx  -msse  -msse2  -msse3  -mssse3  -msse4.1  -msse4.2  -msse4  -mavx @gol
+ -mavx2  -mavx512f  -mavx512pf  -mavx512er  -mavx512cd  -mavx512vl @gol
+ -mavx512bw  -mavx512dq  -mavx512ifma  -mavx512vbmi  -msha  -maes @gol
+@@ -25800,6 +25800,11 @@ intrinsics.
+ This option instructs GCC to use 128-bit AVX instructions instead of
+ 256-bit AVX instructions in the auto-vectorizer.
+ 
++@item -mprefer-avx256
++@opindex mprefer-avx256
++This option instructs GCC to use 256-bit AVX instructions instead of
++512-bit AVX instructions in the auto-vectorizer.
++
+ @item -mcx16
+ @opindex mcx16
+ This option enables GCC to generate @code{CMPXCHG16B} instructions in 64-bit
+diff --git a/gcc/testsuite/g++.dg/ext/pr57362.C b/gcc/testsuite/g++.dg/ext/pr57362.C
+index 71c53d3..3613b63 100644
+--- a/gcc/testsuite/g++.dg/ext/pr57362.C
++++ b/gcc/testsuite/g++.dg/ext/pr57362.C
+@@ -81,6 +81,8 @@ __attribute__((target("dispatch-scheduler")))
+ int foo(void) { return 1; }
+ __attribute__((target("prefer-avx128")))
+ int foo(void) { return 1; }
++__attribute__((target("prefer-avx256")))
++int foo(void) { return 1; }
+ __attribute__((target("32")))
+ int foo(void) { return 1; }
+ __attribute__((target("64")))
+diff --git a/gcc/testsuite/gcc.target/i386/avx512f-prefer.c b/gcc/testsuite/gcc.target/i386/avx512f-prefer.c
+new file mode 100644
+index 0000000..defe51e
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/avx512f-prefer.c
+@@ -0,0 +1,18 @@
++/* { dg-do compile } */
++/* { dg-options "-O3 -march=skylake-avx512 -mprefer-avx256" } */
++/* { dg-final { scan-assembler-not "%zmm\[0-9\]+" } } */
++/* { dg-final { scan-assembler "vmulpd" } } */
++
++#define N 1024
++
++double a[N], b[N], c[N];
++
++void
++avx512f_test (void)
++{
++  int i;
++
++  for (i = 0; i < N; i++)
++    c[i] = a[i] * b[i];
++}
++
+-- 
+1.8.3.1
+
