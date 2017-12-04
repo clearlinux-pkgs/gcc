@@ -206,7 +206,7 @@ GNU cc and gcc C compilers.
 %setup -q -n %{gccpath}
 %patch0 -p1
 %patch1 -p1
-#%patch2 -p1
+%patch2 -p1
 %patch3 -p1
 %patch5 -p1
 %patch6 -p1
