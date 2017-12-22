@@ -18,7 +18,7 @@
 
 Name     : gcc
 Version  : 7.2.0
-Release  : 76
+Release  : 77
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://ftp.gnu.org/pub/gnu/gcc/gcc-7.2.0/gcc-7.2.0.tar.gz
 Source1  : ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-%{isl_version}.tar.bz2
@@ -43,7 +43,6 @@ Patch15  : revert-regression.patch
 Patch16  : skylake.patch
 Patch17  : pow-optimization.patch
 patch18  : 0001-Option-mprefer-avx256-added-for-Intel-AVX512-configu.patch
-Patch19  : movups.patch
 
 BuildRequires : bison
 BuildRequires : flex
@@ -221,7 +220,6 @@ GNU cc and gcc C compilers.
 %patch16 -p1
 %patch17 -p1
 %patch18 -p1
-%patch19 -p1
 
 %build
 
