@@ -18,7 +18,7 @@
 
 Name     : gcc
 Version  : 7.2.0
-Release  : 79
+Release  : 80
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://ftp.gnu.org/pub/gnu/gcc/gcc-7.2.0/gcc-7.2.0.tar.gz
 Source1  : ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-%{isl_version}.tar.bz2
@@ -35,16 +35,13 @@ Patch7   : max-is-safe-on-x86.patch
 Patch8	 : optimize-at-least-some.patch
 Patch9   : gomp-relax.patch
 Patch10	 : distribute.patch
-Patch11  : gcc-framepointer-1.patch
-Patch12  : gcc-framepointer-2.patch
-Patch13  : gcc-framepointer-3.patch
-Patch14  : gcc-framepointer-4.patch
+
+Patch11  : retpoline.patch
+
 Patch15  : revert-regression.patch
 Patch16  : skylake.patch
 Patch17  : pow-optimization.patch
 patch18  : 0001-Option-mprefer-avx256-added-for-Intel-AVX512-configu.patch
-
-
 Patch20  : narrow-vpxor.patch
 
 BuildRequires : bison
@@ -207,6 +204,8 @@ GNU cc and gcc C compilers.
 %prep
 %setup -q -n %{gccpath}
 %patch0 -p1
+%patch11 -p1
+
 %patch1 -p1
 %patch2 -p1
 %patch3 -p1
@@ -215,10 +214,6 @@ GNU cc and gcc C compilers.
 %patch8 -p1
 %patch9 -p1
 %patch10 -p1
-%patch11 -p1
-%patch12 -p1
-%patch13 -p1
-%patch14 -p1
 %patch15 -p1
 %patch16 -p1
 %patch17 -p1
