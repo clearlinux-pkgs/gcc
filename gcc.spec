@@ -18,7 +18,7 @@
 
 Name     : gcc
 Version  : 7.2.0
-Release  : 84
+Release  : 85
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://ftp.gnu.org/pub/gnu/gcc/gcc-7.2.0/gcc-7.2.0.tar.gz
 Source1  : ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-0.16.1.tar.bz2
@@ -36,13 +36,22 @@ Patch8	 : optimize-at-least-some.patch
 Patch9   : gomp-relax.patch
 Patch10	 : distribute.patch
 
-Patch11  : retpoline.patch
 
 Patch15  : revert-regression.patch
 Patch16  : skylake.patch
 Patch17  : pow-optimization.patch
 patch18  : 0001-Option-mprefer-avx256-added-for-Intel-AVX512-configu.patch
 Patch20  : narrow-vpxor.patch
+
+Patch101 : 0001-i386-Move-struct-ix86_frame-to-machine_function.patch
+Patch102 : 0002-i386-Use-reference-of-struct-ix86_frame-to-avoid-cop.patch
+Patch103 : 0003-i386-More-use-reference-of-struct-ix86_frame-to-avoi.patch
+Patch104 : 0004-x86-Add-mindirect-branch.patch
+Patch105 : 0005-x86-Add-mindirect-branch-loop.patch
+Patch106 : 0006-x86-Add-mfunction-return.patch
+Patch107 : 0007-x86-Add-mindirect-branch-register.patch
+Patch108 : 0008-x86-Add-V-register-operand-modifier.patch
+
 
 BuildRequires : bison
 BuildRequires : flex
@@ -204,7 +213,14 @@ GNU cc and gcc C compilers.
 %prep
 %setup -q -n %{gccpath}
 %patch0 -p1
-%patch11 -p1
+%patch101 -p1
+%patch102 -p1
+%patch103 -p1
+%patch104 -p1
+%patch105 -p1
+%patch106 -p1
+%patch107 -p1
+%patch108 -p1
 
 %patch1 -p1
 %patch2 -p1
