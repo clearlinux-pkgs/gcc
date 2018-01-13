@@ -1,0 +1,26 @@
+commit 1176073cc1a63f14198c3ba0a02c8f5a52442c2f
+Author: marxin <marxin@138bc75d-0d04-0410-961f-82ee72b054a4>
+Date:   Fri Jun 17 14:28:57 2016 +0000
+
+    Change PRED_LOOP_EXIT from 92 to 85.
+    
+            * analyze_brprob.py: Fix columns of script output.
+            * predict.def: PRED_LOOP_EXIT from 92 to 85.
+            * gcc.dg/predict-9.c: Fix dump scanning.
+    
+    
+    git-svn-id: svn+ssh://gcc.gnu.org/svn/gcc/trunk@237556 138bc75d-0d04-0410-961f-82ee72b054a4
+
+diff --git a/gcc/predict.def b/gcc/predict.def
+index a0d0ba923a2..d3bc757bb97 100644
+--- a/gcc/predict.def
++++ b/gcc/predict.def
+@@ -89,7 +89,7 @@ DEF_PREDICTOR (PRED_COLD_FUNCTION, "cold function call", PROB_VERY_LIKELY,
+ 	       PRED_FLAG_FIRST_MATCH)
+ 
+ /* Edge causing loop to terminate is probably not taken.  */
+-DEF_PREDICTOR (PRED_LOOP_EXIT, "loop exit", HITRATE (92),
++DEF_PREDICTOR (PRED_LOOP_EXIT, "loop exit", HITRATE (85),
+ 	       PRED_FLAG_FIRST_MATCH)
+ 
+ /* Edge causing loop to terminate by computing value used by later
