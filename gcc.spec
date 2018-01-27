@@ -38,10 +38,17 @@ Patch10	 : distribute.patch
 
 
 Patch15  : revert-regression.patch
+# simplified version of gcc 8 upstream patch
 Patch16  : skylake.patch
 Patch17  : pow-optimization.patch
+# backport from gcc 8
 patch18  : 0001-Option-mprefer-avx256-added-for-Intel-AVX512-configu.patch
+
+# simplified version of gcc 8 upstream patch
 Patch20  : narrow-vpxor.patch
+
+# drop on next rebase
+Patch100 : debug-fma.patch
 
 
 BuildRequires : bison
@@ -219,6 +226,8 @@ GNU cc and gcc C compilers.
 %patch18 -p1
 %patch20 -p1
 
+%patch100 -p1
+
 %build
 
 # Live in the gcc source tree
@@ -229,8 +238,8 @@ mkdir ../gcc-build
 pushd ../gcc-build
 unset CFLAGS
 unset CXXFLAGS
-export CFLAGS="-march=westmere -g1 -O3 -fstack-protector -Wl,-z -Wl,now -Wl,-z -Wl,relro  -Wl,-z,max-page-size=0x1000 -mtune=skylake"
-export CXXFLAGS="-march=westmere -g1 -O3  -Wl,-z,max-page-size=0x1000 -mtune=skylake"
+export CFLAGS="-march=westmere -g -O3 -fstack-protector -Wl,-z -Wl,now -Wl,-z -Wl,relro  -Wl,-z,max-page-size=0x1000 -mtune=skylake"
+export CXXFLAGS="-march=westmere -g -O3  -Wl,-z,max-page-size=0x1000 -mtune=skylake"
 export CFLAGS_FOR_TARGET="$CFLAGS"
 export CXXFLAGS_FOR_TARGET="$CXXFLAGS"
 export FFLAGS_FOR_TARGET="$FFLAGS"

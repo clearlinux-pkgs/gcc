@@ -1,0 +1,11 @@
+--- gcc-7.2.0/gcc/tree-ssa-math-opts.c~	2017-01-01 12:07:43.000000000 +0000
++++ gcc-7.2.0/gcc/tree-ssa-math-opts.c	2018-01-27 20:59:18.362055526 +0000
+@@ -3426,7 +3426,7 @@
+    with uses in additions and subtractions to form fused multiply-add
+    operations.  Returns true if successful and MUL_STMT should be removed.  */
+ 
+-static bool
++bool
+ convert_mult_to_fma (gimple *mul_stmt, tree op1, tree op2)
+ {
+   tree mul_result = gimple_get_lhs (mul_stmt);
