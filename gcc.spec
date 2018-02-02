@@ -6,8 +6,6 @@
 %define gccver 7.3.0
 %define gccpath gcc-7.3.0
 
-%define debug_package %{nil}
-%define __strip /bin/true
 
 
 # Highest optimisation ABI we target
@@ -19,7 +17,7 @@
 
 Name     : gcc
 Version  : 7.3.0
-Release  : 88
+Release  : 89
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://ftp.gnu.org/pub/gnu/gcc/gcc-7.3.0/gcc-7.3.0.tar.gz
 Source1  : ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-0.16.1.tar.bz2
