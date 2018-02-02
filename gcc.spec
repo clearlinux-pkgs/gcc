@@ -6,6 +6,11 @@
 %define gccver 7.3.0
 %define gccpath gcc-7.3.0
 
+
+#
+# debug_package must be set to %{nil} for functional reasons
+# removing this breaks the crt* files for correctness
+#
 %define debug_package %{nil}
 
 # Highest optimisation ABI we target
