@@ -22,7 +22,7 @@
 
 Name     : gcc
 Version  : 7.3.0
-Release  : 92
+Release  : 93
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://ftp.gnu.org/pub/gnu/gcc/gcc-7.3.0/gcc-7.3.0.tar.gz
 Source1  : ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-0.16.1.tar.bz2
@@ -50,6 +50,9 @@ patch18  : 0001-Option-mprefer-avx256-added-for-Intel-AVX512-configu.patch
 
 # simplified version of gcc 8 upstream patch
 Patch20  : narrow-vpxor.patch
+
+# zero registers on ret to make ROP harder
+Patch21  : zero-regs.patch
 
 # drop on next rebase
 Patch100 : debug-fma.patch
@@ -229,6 +232,8 @@ GNU cc and gcc C compilers.
 %patch17 -p1
 %patch18 -p1
 %patch20 -p1
+
+%patch21 -p1
 
 %patch100 -p1
 
