@@ -111,9 +111,9 @@ index eca3ea68fb3..5ef5b3c71f5 100644
 +	  zero = reg;
 +	  emit_move_insn (reg, const0_rtx);
 +	}
-+      else
-+	emit_move_insn (reg, zero);
-+
++      else {
++	emit_move_insn (reg, zero); zero = NULL_RTX;
++      }
 +      /* Mark it in use  */
 +      emit_insn (gen_pro_epilogue_use (reg));
 +    }
