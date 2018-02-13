@@ -22,7 +22,7 @@
 
 Name     : gcc
 Version  : 7.3.0
-Release  : 94
+Release  : 95
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://ftp.gnu.org/pub/gnu/gcc/gcc-7.3.0/gcc-7.3.0.tar.gz
 Source1  : ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-0.16.1.tar.bz2
@@ -400,7 +400,6 @@ cat *.lang > gcc.lang
 /usr/bin/%{gcc_target}-gfortran
 /usr/lib64/gcc/x86_64-generic-linux/%{gccver}/f951
 /usr/lib64/gcc/x86_64-generic-linux/%{gccver}/finclude
-/usr/lib64/libgfortran*
 /usr/bin/f95
 /usr/bin/gfortran
 
@@ -506,6 +505,7 @@ cat *.lang > gcc.lang
 /usr/lib64/libatomic*.so.*
 /usr/lib64/libitm*.so.*
 /usr/lib64/libquadmath*.so.*
+/usr/lib64/libgfortran*
 
 %files libgcc32
 /usr/lib32/libasan.so.4
