@@ -22,7 +22,7 @@
 
 Name     : gcc
 Version  : 7.3.0
-Release  : 95
+Release  : 96
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://ftp.gnu.org/pub/gnu/gcc/gcc-7.3.0/gcc-7.3.0.tar.gz
 Source1  : ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-0.16.1.tar.bz2
@@ -113,6 +113,7 @@ Provides:       libgomp-staticdev
 Provides:       libgcc-s-dev
 Provides:       gcc-plugin-dev
 Provides:       libstdc++-dev
+Requires:       libs-math
 Requires:       libstdc++
 
 %description -n gcc-dev
