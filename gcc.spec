@@ -22,7 +22,7 @@
 
 Name     : gcc
 Version  : 7.3.0
-Release  : 99
+Release  : 100
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://mirrors.kernel.org/gnu/gcc/gcc-7.3.0/gcc-7.3.0.tar.gz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.16.1.tar.bz2
@@ -39,6 +39,7 @@ Patch7   : max-is-safe-on-x86.patch
 Patch8	 : optimize-at-least-some.patch
 Patch9   : gomp-relax.patch
 Patch10	 : distribute.patch
+Patch11  : memcpy-avx2.patch
 
 
 Patch15  : revert-regression.patch
@@ -229,6 +230,7 @@ GNU cc and gcc C compilers.
 %patch8 -p1
 %patch9 -p1
 %patch10 -p1
+%patch11 -p1
 %patch15 -p1
 %patch16 -p1
 %patch17 -p1
@@ -496,6 +498,9 @@ cat *.lang > gcc.lang
 #/usr/lib/libvtv.a
 #/usr/lib/libvtv.so
 /usr/share/gdb/auto-load//usr/lib32/libstdc++.so.*
+/usr/share/gdb/auto-load/usr/lib32/__pycache__/libstdc++.so.6.0.24-gdb.cpython-36.pyc
+/usr/share/gdb/auto-load/usr/lib64/__pycache__/libstdc++.so.6.0.24-gdb.cpython-36.pyc
+
 
 
 %files -n libgcc1

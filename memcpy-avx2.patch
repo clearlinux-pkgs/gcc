@@ -1,0 +1,48 @@
+--- gcc-7.3.0/gcc/config/i386/i386.h.org	2018-04-24 15:24:16.150162387 +0000
++++ gcc-7.3.0/gcc/config/i386/i386.h	2018-04-24 15:25:35.871169610 +0000
+@@ -1938,7 +1938,7 @@
+ 
+ /* Max number of bytes we can move from memory to memory
+    in one reasonably fast instruction.  */
+-#define MOVE_MAX 16
++#define MOVE_MAX 32
+ 
+ /* MOVE_MAX_PIECES is the number of bytes at a time which we can
+    move efficiently, as opposed to  MOVE_MAX which is the maximum
+@@ -1948,12 +1948,8 @@
+    if they are available.  But since by_pieces_ninsns determines the
+    widest mode with MAX_FIXED_MODE_SIZE, we can only use TImode in
+    64-bit mode.  */
+-#define MOVE_MAX_PIECES \
+-  ((TARGET_64BIT \
+-    && TARGET_SSE2 \
+-    && TARGET_SSE_UNALIGNED_LOAD_OPTIMAL \
+-    && TARGET_SSE_UNALIGNED_STORE_OPTIMAL) \
+-   ? GET_MODE_SIZE (TImode) : UNITS_PER_WORD)
++#define MOVE_MAX_PIECES ( TARGET_AVX ? 32 : (TARGET_SSE2? 16 : UNITS_PER_WORD) )
++#define STORE_MAX_PIECES ( TARGET_AVX ? 32 : (TARGET_SSE2? 16 : UNITS_PER_WORD))
+ 
+ /* If a memory-to-memory move would take MOVE_RATIO or more simple
+    move-instruction pairs, we will do a movmem or libcall instead.
+--- gcc-7.3.0/gcc/expr.c~	2018-01-01 11:30:28.000000000 +0000
++++ gcc-7.3.0/gcc/expr.c	2018-04-25 00:42:55.099199172 +0000
+@@ -694,7 +694,7 @@
+ {
+   machine_mode tmode;
+ 
+-  tmode = mode_for_size (max_pieces * BITS_PER_UNIT, MODE_INT, 1);
++  tmode = mode_for_size (max_pieces * BITS_PER_UNIT, MODE_INT, 0);
+   if (align >= GET_MODE_ALIGNMENT (tmode))
+     align = GET_MODE_ALIGNMENT (tmode);
+   else
+--- gcc-7.3.0/gcc/config/i386/i386.c~	2018-01-16 12:49:29.000000000 +0000
++++ gcc-7.3.0/gcc/config/i386/i386.c	2018-04-25 14:49:55.079803414 +0000
+@@ -13957,7 +13957,7 @@
+      assumed stack realignment might be needed, but in the end nothing that
+      needed the stack alignment had been spilled, clear frame_pointer_needed
+      and say we don't need stack realignment.  */
+-  if (stack_realign
++  if ((stack_realign || crtl->stack_realign_needed)
+       && frame_pointer_needed
+       && crtl->is_leaf
+       && flag_omit_frame_pointer
