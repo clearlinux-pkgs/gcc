@@ -20,7 +20,7 @@
 -    && TARGET_SSE_UNALIGNED_STORE_OPTIMAL) \
 -   ? GET_MODE_SIZE (TImode) : UNITS_PER_WORD)
 +#define MOVE_MAX_PIECES ( TARGET_AVX ? 32 : (TARGET_SSE2? 16 : UNITS_PER_WORD) )
-+#define STORE_MAX_PIECES ( TARGET_AVX ? 32 : (TARGET_SSE2? 16 : UNITS_PER_WORD))
++
  
  /* If a memory-to-memory move would take MOVE_RATIO or more simple
     move-instruction pairs, we will do a movmem or libcall instead.
