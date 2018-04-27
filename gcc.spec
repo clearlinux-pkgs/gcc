@@ -22,7 +22,7 @@
 
 Name     : gcc
 Version  : 7.3.0
-Release  : 102
+Release  : 103
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://mirrors.kernel.org/gnu/gcc/gcc-7.3.0/gcc-7.3.0.tar.gz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.16.1.tar.bz2
@@ -230,7 +230,7 @@ GNU cc and gcc C compilers.
 %patch8 -p1
 %patch9 -p1
 %patch10 -p1
-#%patch11 -p1
+%patch11 -p1
 %patch15 -p1
 %patch16 -p1
 %patch17 -p1
