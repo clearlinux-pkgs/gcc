@@ -22,7 +22,7 @@
 
 Name     : gcc
 Version  : 7.3.0
-Release  : 103
+Release  : 104
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://mirrors.kernel.org/gnu/gcc/gcc-7.3.0/gcc-7.3.0.tar.gz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.16.1.tar.bz2
