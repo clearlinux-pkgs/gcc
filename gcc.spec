@@ -1,10 +1,10 @@
 %define keepstatic 1
 %define gcc_target x86_64-generic-linux
 %define libstdcxx_maj 6
-%define libstdcxx_full 6.0.24
+%define libstdcxx_full 6.0.25
 %define isl_version 0.16.1
-%define gccver 7.3.0
-%define gccpath gcc-7.3.0
+%define gccver 8.1.0
+%define gccpath gcc-8.1.0
 
 
 #
@@ -21,43 +21,42 @@
 %define march westmere
 
 Name     : gcc
-Version  : 7.3.0
+Version  : 8.1.0
 Release  : 104
 URL      : http://www.gnu.org/software/gcc/
-Source0  : https://mirrors.kernel.org/gnu/gcc/gcc-7.3.0/gcc-7.3.0.tar.gz
+Source0  : https://mirrors.kernel.org/gnu/gcc/gcc-8.1.0/gcc-8.1.0.tar.gz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.16.1.tar.bz2
 Summary  : GNU cc and gcc C compilers
 Group    : Development/Tools
 License  : BSD-3-Clause BSL-1.0 GFDL-1.2 GFDL-1.3 GPL-2.0 GPL-3.0 LGPL-2.1 LGPL-3.0 MIT
 Patch0   : gcc-stable-branch.patch
-Patch1   : 0001-Fix-stack-protection-issues.patch
-Patch2   : openmp-vectorize.patch
-Patch3   : fortran-vector.patch
+Patch1   : Fix-stack-protection-issues.patch
+Patch2   : openmp-vectorize-v2.patch
+Patch3   : fortran-vector-v2.patch
 Patch5   : optimize.patch
 Patch6   : ipa-cp.patch
 Patch7   : max-is-safe-on-x86.patch
 Patch8	 : optimize-at-least-some.patch
 Patch9   : gomp-relax.patch
-Patch10	 : distribute.patch
 Patch11  : memcpy-avx2.patch
 
 
-Patch15  : revert-regression.patch
+#Patch15  : revert-regression.patch
 # simplified version of gcc 8 upstream patch
-Patch16  : skylake.patch
+Patch16  : Skylake-v2.patch
 Patch17  : pow-optimization.patch
 # backport from gcc 8
-patch18  : 0001-Option-mprefer-avx256-added-for-Intel-AVX512-configu.patch
-Patch19  : prefer-256.patch
+#patch18  : 0001-Option-mprefer-avx256-added-for-Intel-AVX512-configu.patch
+Patch19  : prefer-256-v2.patch
 
 # simplified version of gcc 8 upstream patch
-Patch20  : narrow-vpxor.patch
+#Patch20  : narrow-vpxor.patch
 
 # zero registers on ret to make ROP harder
-Patch21  : zero-regs.patch
+Patch21  : zero-regs-v2.patch
 
 # drop on next rebase
-Patch100 : debug-fma.patch
+Patch100 : debug-fma-v2.patch
 
 
 BuildRequires : bison
@@ -229,16 +228,15 @@ GNU cc and gcc C compilers.
 %patch6 -p1
 %patch8 -p1
 %patch9 -p1
-%patch10 -p1
 #%patch11 -p1
-%patch15 -p1
+#%patch15 -p1
 %patch16 -p1
 %patch17 -p1
-%patch18 -p1
+#%patch18 -p1
 %patch19 -p1
-%patch20 -p1
+#%patch20 -p1
 
-%patch21 -p1
+#%patch21 -p1
 
 %patch100 -p1
 
@@ -437,7 +435,6 @@ cat *.lang > gcc.lang
 /usr/lib64/libgomp.a
 # gcc-plugin-dev
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/plugin/gengtype
-/usr/lib64/libcilkrts*.so.*
 
 # libstdc++
 /usr/lib64/libstdc++.so
@@ -449,8 +446,6 @@ cat *.lang > gcc.lang
 /usr/bin/gcov-dump
 /usr/lib64/gcc/x86_64-generic-linux/%{gccver}/32/finclude/
 /usr/lib64/libatomic.so
-/usr/lib64/libcilkrts.so
-/usr/lib64/libcilkrts.spec
 /usr/lib64/libitm.so
 /usr/lib64/libitm.spec
 /usr/lib64/libquadmath.so
@@ -478,8 +473,6 @@ cat *.lang > gcc.lang
 /usr/lib64/gcc/x86_64-generic-linux/*/32/libgcov.a
 /usr/lib32/libasan.a
 /usr/lib32/libasan.so
-/usr/lib32/libcilkrts.a
-/usr/lib32/libcilkrts.so
 /usr/lib32/libatomic.a
 /usr/lib32/libatomic.so
 /usr/lib32/libgfortran.a
@@ -498,8 +491,8 @@ cat *.lang > gcc.lang
 #/usr/lib/libvtv.a
 #/usr/lib/libvtv.so
 /usr/share/gdb/auto-load//usr/lib32/libstdc++.so.*
-/usr/share/gdb/auto-load/usr/lib32/__pycache__/libstdc++.so.6.0.24-gdb.cpython-36.pyc
-/usr/share/gdb/auto-load/usr/lib64/__pycache__/libstdc++.so.6.0.24-gdb.cpython-36.pyc
+/usr/share/gdb/auto-load/usr/lib32/__pycache__/libstdc++.so.6.0.25-gdb.cpython-36.pyc
+/usr/share/gdb/auto-load/usr/lib64/__pycache__/libstdc++.so.6.0.25-gdb.cpython-36.pyc
 
 
 
@@ -516,18 +509,18 @@ cat *.lang > gcc.lang
 /usr/lib64/libgfortran*
 
 %files libgcc32
-/usr/lib32/libasan.so.4
-/usr/lib32/libasan.so.4.0.0
+/usr/lib32/libasan.so.5
+/usr/lib32/libasan.so.5.0.0
 /usr/lib32/libasan_preinit.o
 /usr/lib32/libatomic.so.1
 /usr/lib32/libatomic.so.1.2.0
-/usr/lib32/libcilkrts.so.5
-/usr/lib32/libcilkrts.so.5.0.0
-/usr/lib32/libcilkrts.spec
+#/usr/lib32/libcilkrts.so.5
+#/usr/lib32/libcilkrts.so.5.0.0
+#/usr/lib32/libcilkrts.spec
 /usr/lib32/libgcc_s.so
 /usr/lib32/libgcc_s.so.1
-/usr/lib32/libgfortran.so.4
-/usr/lib32/libgfortran.so.4.0.0
+/usr/lib32/libgfortran.so.5
+/usr/lib32/libgfortran.so.5.0.0
 /usr/lib32/libgfortran.spec
 %exclude /usr/lib32/libgo.*
 %exclude /usr/lib32/libgobegin.a
@@ -544,8 +537,8 @@ cat *.lang > gcc.lang
 /usr/lib32/libssp.so.0
 /usr/lib32/libssp.so.0.0.0
 /usr/lib32/libssp_nonshared.a
-/usr/lib32/libubsan.so.0
-/usr/lib32/libubsan.so.0.0.0
+/usr/lib32/libubsan.so.1
+/usr/lib32/libubsan.so.1.0.0
 #/usr/lib/libvtv.so.0
 #/usr/lib/libvtv.so.0.0.0
 
@@ -568,6 +561,9 @@ cat *.lang > gcc.lang
 /usr/bin/x86_64-generic-linux-gccgo
 /usr/lib64/gcc/x86_64-generic-linux/*/cgo
 /usr/lib64/gcc/x86_64-generic-linux/*/go1
+/usr/lib64/gcc/x86_64-generic-linux/*/buildid
+/usr/lib64/gcc/x86_64-generic-linux/*/test2json
+/usr/lib64/gcc/x86_64-generic-linux/*/vet
 /usr/lib64/libgo.a
 /usr/lib64/libgo.so
 /usr/lib64/libgobegin.a

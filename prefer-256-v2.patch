@@ -1,0 +1,71 @@
+From 6e95a3775fcc63bd086d898eebf2c52fc4260802 Mon Sep 17 00:00:00 2001
+From: Athenas Jimenez Gonzalez <athenas.jimenez.gonzalez@intel.com>
+Date: Wed, 2 May 2018 22:04:44 +0000
+Subject: [PATCH] prefer 256 v2
+
+---
+ gcc/config/i386/i386-c.c | 30 +++++++++++++++---------------
+ 1 file changed, 15 insertions(+), 15 deletions(-)
+
+diff --git a/gcc/config/i386/i386-c.c b/gcc/config/i386/i386-c.c
+index ae7d678e7..2dd746d9d 100644
+--- a/gcc/config/i386/i386-c.c
++++ b/gcc/config/i386/i386-c.c
+@@ -397,39 +397,39 @@ ix86_target_macros_internal (HOST_WIDE_INT isa_flag,
+     def_or_undef (parse_in, "__AVX__");
+   if (isa_flag & OPTION_MASK_ISA_AVX2)
+     def_or_undef (parse_in, "__AVX2__");
+-  if (isa_flag & OPTION_MASK_ISA_AVX512F)
++  if (isa_flag & OPTION_MASK_ISA_AVX512F && !TARGET_PREFER_AVX256)
+     def_or_undef (parse_in, "__AVX512F__");
+-  if (isa_flag & OPTION_MASK_ISA_AVX512ER)
++  if (isa_flag & OPTION_MASK_ISA_AVX512ER && !TARGET_PREFER_AVX256)
+     def_or_undef (parse_in, "__AVX512ER__");
+-  if (isa_flag & OPTION_MASK_ISA_AVX512CD)
++  if (isa_flag & OPTION_MASK_ISA_AVX512CD && !TARGET_PREFER_AVX256)
+     def_or_undef (parse_in, "__AVX512CD__");
+-  if (isa_flag & OPTION_MASK_ISA_AVX512PF)
++  if (isa_flag & OPTION_MASK_ISA_AVX512PF && !TARGET_PREFER_AVX256)
+     def_or_undef (parse_in, "__AVX512PF__");
+-  if (isa_flag & OPTION_MASK_ISA_AVX512DQ)
++  if (isa_flag & OPTION_MASK_ISA_AVX512DQ && !TARGET_PREFER_AVX256)
+     def_or_undef (parse_in, "__AVX512DQ__");
+-  if (isa_flag & OPTION_MASK_ISA_AVX512BW)
++  if (isa_flag & OPTION_MASK_ISA_AVX512BW && !TARGET_PREFER_AVX256)
+     def_or_undef (parse_in, "__AVX512BW__");
+-  if (isa_flag & OPTION_MASK_ISA_AVX512VL)
++  if (isa_flag & OPTION_MASK_ISA_AVX512VL && !TARGET_PREFER_AVX256)
+     def_or_undef (parse_in, "__AVX512VL__");
+-  if (isa_flag & OPTION_MASK_ISA_AVX512VBMI)
++  if (isa_flag & OPTION_MASK_ISA_AVX512VBMI && !TARGET_PREFER_AVX256)
+     def_or_undef (parse_in, "__AVX512VBMI__");
+-  if (isa_flag & OPTION_MASK_ISA_AVX512IFMA)
++  if (isa_flag & OPTION_MASK_ISA_AVX512IFMA && !TARGET_PREFER_AVX256)
+     def_or_undef (parse_in, "__AVX512IFMA__");
+-  if (isa_flag2 & OPTION_MASK_ISA_AVX5124VNNIW)
++  if (isa_flag2 & OPTION_MASK_ISA_AVX5124VNNIW && !TARGET_PREFER_AVX256)
+     def_or_undef (parse_in, "__AVX5124VNNIW__");
+-  if (isa_flag & OPTION_MASK_ISA_AVX512VBMI2)
++  if (isa_flag & OPTION_MASK_ISA_AVX512VBMI2 && !TARGET_PREFER_AVX256)
+     def_or_undef (parse_in, "__AVX512VBMI2__");
+-  if (isa_flag & OPTION_MASK_ISA_AVX512VNNI)
++  if (isa_flag & OPTION_MASK_ISA_AVX512VNNI && !TARGET_PREFER_AVX256)
+     def_or_undef (parse_in, "__AVX512VNNI__");
+   if (isa_flag2 & OPTION_MASK_ISA_PCONFIG)
+     def_or_undef (parse_in, "__PCONFIG__");
+   if (isa_flag2 & OPTION_MASK_ISA_SGX)
+     def_or_undef (parse_in, "__SGX__");
+-  if (isa_flag2 & OPTION_MASK_ISA_AVX5124FMAPS)
++  if (isa_flag2 & OPTION_MASK_ISA_AVX5124FMAPS && !TARGET_PREFER_AVX256)
+     def_or_undef (parse_in, "__AVX5124FMAPS__");
+-  if (isa_flag & OPTION_MASK_ISA_AVX512BITALG)
++  if (isa_flag & OPTION_MASK_ISA_AVX512BITALG && !TARGET_PREFER_AVX256)
+     def_or_undef (parse_in, "__AVX512BITALG__");
+-  if (isa_flag & OPTION_MASK_ISA_AVX512VPOPCNTDQ)
++  if (isa_flag & OPTION_MASK_ISA_AVX512VPOPCNTDQ && !TARGET_PREFER_AVX256)
+     def_or_undef (parse_in, "__AVX512VPOPCNTDQ__");
+   if (isa_flag & OPTION_MASK_ISA_FMA)
+     def_or_undef (parse_in, "__FMA__");
+-- 
+2.17.0
+

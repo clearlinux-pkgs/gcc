@@ -1,0 +1,26 @@
+From 74845a0b2dae8f70d007115b7de5c45f65d1f25e Mon Sep 17 00:00:00 2001
+From: Athenas Jimenez Gonzalez <athenas.jimenez.gonzalez@intel.com>
+Date: Wed, 2 May 2018 21:37:03 +0000
+Subject: [PATCH] fortran vector v2
+
+---
+ gcc/fortran/options.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/gcc/fortran/options.c b/gcc/fortran/options.c
+index 1405f1cf0..f6e6c7996 100644
+--- a/gcc/fortran/options.c
++++ b/gcc/fortran/options.c
+@@ -88,6 +88,9 @@ gfc_init_options_struct (struct gcc_options *opts)
+   opts->frontend_set_flag_errno_math = true;
+   opts->x_flag_associative_math = -1;
+   opts->frontend_set_flag_associative_math = true;
++  opts->x_flag_tree_loop_vectorize = 1;
++  //opts->x_ix86_isa_flags |= OPTION_MASK_ISA_AVX;
++  //opts->x_ix86_isa_flags_explicit |= OPTION_MASK_ISA_AVX;
+ }
+ 
+ /* Get ready for options handling. Keep in sync with
+-- 
+2.17.0
+
