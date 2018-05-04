@@ -43,7 +43,6 @@ Patch11  : memcpy-avx2.patch
 
 #Patch15  : revert-regression.patch
 # simplified version of gcc 8 upstream patch
-Patch16  : Skylake-v2.patch
 Patch17  : pow-optimization.patch
 # backport from gcc 8
 #patch18  : 0001-Option-mprefer-avx256-added-for-Intel-AVX512-configu.patch
@@ -230,7 +229,6 @@ GNU cc and gcc C compilers.
 %patch9 -p1
 #%patch11 -p1
 #%patch15 -p1
-%patch16 -p1
 %patch17 -p1
 #%patch18 -p1
 %patch19 -p1
