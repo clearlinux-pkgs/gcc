@@ -52,7 +52,7 @@ Patch19  : prefer-256-v2.patch
 #Patch20  : narrow-vpxor.patch
 
 # zero registers on ret to make ROP harder
-Patch21  : zero-regs-v2.patch
+Patch21  : zero-regs-gcc8.patch
 
 # drop on next rebase
 Patch100 : debug-fma-v2.patch
@@ -234,7 +234,7 @@ GNU cc and gcc C compilers.
 %patch19 -p1
 #%patch20 -p1
 
-#%patch21 -p1
+%patch21 -p1
 
 %patch100 -p1
 
