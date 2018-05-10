@@ -22,7 +22,7 @@
 
 Name     : gcc
 Version  : 8.1.0
-Release  : 105
+Release  : 106
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://mirrors.kernel.org/gnu/gcc/gcc-8.1.0/gcc-8.1.0.tar.gz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.16.1.tar.bz2
@@ -288,8 +288,10 @@ export LIBRARY_PATH=/usr/lib64
     --with-glibc-version=2.19 \
     --disable-libunwind-exceptions \
     --with-gnu-ld \
-    --with-tune=haswell \
+    --with-tune=skylake \
+    --with-tune-64=skylake \
     --with-arch=westmere \
+    --with-arch-64=westmere \
     --disable-libmpx
 
 make %{?_smp_mflags} profiledbootstrap
