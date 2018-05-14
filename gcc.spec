@@ -22,7 +22,7 @@
 
 Name     : gcc
 Version  : 8.1.0
-Release  : 108
+Release  : 109
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://mirrors.kernel.org/gnu/gcc/gcc-8.1.0/gcc-8.1.0.tar.gz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.16.1.tar.bz2
@@ -218,7 +218,7 @@ GNU cc and gcc C compilers.
 
 %prep
 %setup -q -n %{gccpath}
-#%patch0 -p1
+%patch0 -p1
 
 %patch1 -p1
 %patch2 -p1
