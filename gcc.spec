@@ -22,7 +22,7 @@
 
 Name     : gcc
 Version  : 8.1.0
-Release  : 110
+Release  : 111
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://mirrors.kernel.org/gnu/gcc/gcc-8.1.0/gcc-8.1.0.tar.gz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.16.1.tar.bz2
@@ -248,8 +248,8 @@ mkdir ../gcc-build
 pushd ../gcc-build
 unset CFLAGS
 unset CXXFLAGS
-export CFLAGS="-march=westmere -g -O3 -fstack-protector -Wl,-z -Wl,now -Wl,-z -Wl,relro  -Wl,-z,max-page-size=0x1000 -mtune=skylake"
-export CXXFLAGS="-march=westmere -g -O3  -Wl,-z,max-page-size=0x1000 -mtune=skylake"
+export CFLAGS="-march=westmere -g1 -O3 -fstack-protector -Wl,-z -Wl,now -Wl,-z -Wl,relro  -Wl,-z,max-page-size=0x1000 -mtune=skylake"
+export CXXFLAGS="-march=westmere -g1 -O3  -Wl,-z,max-page-size=0x1000 -mtune=skylake"
 export CFLAGS_FOR_TARGET="$CFLAGS"
 export CXXFLAGS_FOR_TARGET="$CXXFLAGS"
 export FFLAGS_FOR_TARGET="$FFLAGS"
