@@ -22,7 +22,7 @@
 
 Name     : gcc
 Version  : 8.1.0
-Release  : 111
+Release  : 112
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://mirrors.kernel.org/gnu/gcc/gcc-8.1.0/gcc-8.1.0.tar.gz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.16.1.tar.bz2
@@ -39,6 +39,7 @@ Patch7   : max-is-safe-on-x86.patch
 Patch8	 : optimize-at-least-some.patch
 Patch9   : gomp-relax.patch
 Patch11  : memcpy-avx2.patch
+Patch12	 : avx512-when-we-ask-for-it.patch
 
 
 #Patch15  : revert-regression.patch
@@ -229,6 +230,9 @@ GNU cc and gcc C compilers.
 %patch9 -p1
 #%patch11 -p1
 #%patch15 -p1
+
+%patch12 -p1
+
 %patch17 -p1
 #%patch18 -p1
 %patch19 -p1

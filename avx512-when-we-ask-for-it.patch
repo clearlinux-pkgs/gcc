@@ -1,0 +1,14 @@
+gcc8 turned off all AVX512 intrinsics for -march=skylake-avx512, that is not so great
+
+
+--- gcc-8.1.0/gcc/config/i386/x86-tune.def~	2018-04-16 05:59:52.000000000 +0000
++++ gcc-8.1.0/gcc/config/i386/x86-tune.def	2018-05-16 14:54:19.401210281 +0000
+@@ -429,7 +429,7 @@
+ 
+ /* X86_TUNE_AVX256_OPTIMAL: Use 256-bit AVX instructions instead of 512-bit AVX
+    instructions in the auto-vectorizer.  */
+-DEF_TUNE (X86_TUNE_AVX256_OPTIMAL, "avx256_optimal", m_SKYLAKE_AVX512)
++/* DEF_TUNE (X86_TUNE_AVX256_OPTIMAL, "avx256_optimal", m_SKYLAKE_AVX512) */
+ 
+ /*****************************************************************************/
+ /* Historical relics: tuning flags that helps a specific old CPU designs     */
