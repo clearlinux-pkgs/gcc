@@ -22,7 +22,7 @@
 
 Name     : gcc
 Version  : 8.1.0
-Release  : 115
+Release  : 116
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://mirrors.kernel.org/gnu/gcc/gcc-8.1.0/gcc-8.1.0.tar.gz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.16.1.tar.bz2
@@ -45,14 +45,14 @@ Patch12	 : avx512-when-we-ask-for-it.patch
 #Patch15  : revert-regression.patch
 # simplified version of gcc 8 upstream patch
 Patch17  : pow-optimization.patch
-# backport from gcc 8
-#patch18  : 0001-Option-mprefer-avx256-added-for-Intel-AVX512-configu.patch
 
-# simplified version of gcc 8 upstream patch
-#Patch20  : narrow-vpxor.patch
 
 # zero registers on ret to make ROP harder
 Patch21  : zero-regs-gcc8.patch
+
+# HJ backports
+Patch31  : 0001-x86-Enable-PARTIAL_REG_DEPENDENCY-and-MOVX-for-Haswe.patch
+Patch32  : 0002-x86-Tune-Skylake-Cannonlake-and-Icelake-as-Haswell.patch
 
 # drop on next rebase
 Patch100 : debug-fma-v2.patch
@@ -237,6 +237,10 @@ GNU cc and gcc C compilers.
 #%patch20 -p1
 
 %patch21 -p1
+
+%patch31 -p1
+%patch32 -p1
+
 
 %patch100 -p1
 
