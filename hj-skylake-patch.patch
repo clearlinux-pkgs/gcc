@@ -1,0 +1,244 @@
+From: hjl <hjl@138bc75d-0d04-0410-961f-82ee72b054a4>
+Date: Fri, 13 Jul 2018 20:36:01 +0000 (+0000)
+Subject: x86: Tune Skylake, Cannonlake and Icelake as Haswell
+X-Git-Url: https://gcc.gnu.org/git/?p=gcc.git;a=commitdiff_plain;h=4810dbfbd115be3180bc36984093e5627804e9f1;hp=950c7ddb563d0f91ef6db973f0393e7edba811f1
+
+x86: Tune Skylake, Cannonlake and Icelake as Haswell
+
+r259399, which added PROCESSOR_SKYLAKE, disabled many x86 optimizations
+which are enabled by PROCESSOR_HASWELL.  As the result, -mtune=skylake
+generates slower codes on Skylake than before.  The same also applies
+to Cannonlake and Icelak tuning.
+
+This patch changes -mtune={skylake|cannonlake|icelake} to tune like
+-mtune=haswell for until their tuning is properly adjusted. It also
+enables -mprefer-vector-width=256 for -mtune=haswell, which has no
+impact on codegen when AVX512 isn't enabled.
+
+Performance impacts on SPEC CPU 2017 rate with 1 copy using
+
+-march=native -mfpmath=sse -O2 -m64
+
+are
+
+1. On Broadwell server:
+
+500.perlbench_r		-0.56%
+502.gcc_r		-0.18%
+505.mcf_r		0.24%
+520.omnetpp_r		0.00%
+523.xalancbmk_r		-0.32%
+525.x264_r		-0.17%
+531.deepsjeng_r		0.00%
+541.leela_r		0.00%
+548.exchange2_r		0.12%
+557.xz_r		0.00%
+Geomean			0.00%
+
+503.bwaves_r		0.00%
+507.cactuBSSN_r		0.21%
+508.namd_r		0.00%
+510.parest_r		0.19%
+511.povray_r		-0.48%
+519.lbm_r		0.00%
+521.wrf_r		0.28%
+526.blender_r		0.19%
+527.cam4_r		0.39%
+538.imagick_r		0.00%
+544.nab_r		-0.36%
+549.fotonik3d_r		0.51%
+554.roms_r		0.00%
+Geomean			0.17%
+
+On Skylake client:
+
+500.perlbench_r		0.96%
+502.gcc_r		0.13%
+505.mcf_r		-1.03%
+520.omnetpp_r		-1.11%
+523.xalancbmk_r		1.02%
+525.x264_r		0.50%
+531.deepsjeng_r		2.97%
+541.leela_r		0.50%
+548.exchange2_r		-0.95%
+557.xz_r		2.41%
+Geomean			0.56%
+
+503.bwaves_r		0.49%
+507.cactuBSSN_r		3.17%
+508.namd_r		4.05%
+510.parest_r		0.15%
+511.povray_r		0.80%
+519.lbm_r		3.15%
+521.wrf_r		10.56%
+526.blender_r		2.97%
+527.cam4_r		2.36%
+538.imagick_r		46.40%
+544.nab_r		2.04%
+549.fotonik3d_r		0.00%
+554.roms_r		1.27%
+Geomean			5.49%
+
+On Skylake server:
+
+500.perlbench_r		0.71%
+502.gcc_r		-0.51%
+505.mcf_r		-1.06%
+520.omnetpp_r		-0.33%
+523.xalancbmk_r		-0.22%
+525.x264_r		1.72%
+531.deepsjeng_r		-0.26%
+541.leela_r		0.57%
+548.exchange2_r		-0.75%
+557.xz_r		-1.28%
+Geomean			-0.21%
+
+503.bwaves_r		0.00%
+507.cactuBSSN_r		2.66%
+508.namd_r		3.67%
+510.parest_r		1.25%
+511.povray_r		2.26%
+519.lbm_r		1.69%
+521.wrf_r		11.03%
+526.blender_r		3.39%
+527.cam4_r		1.69%
+538.imagick_r		64.59%
+544.nab_r		-0.54%
+549.fotonik3d_r		2.68%
+554.roms_r		0.00%
+Geomean			6.19%
+
+This patch improves -march=native performance on Skylake up to 60% and
+leaves -march=native performance unchanged on Haswell.
+
+gcc/
+
+	Backport from mainline
+	2018-07-13  H.J. Lu  <hongjiu.lu@intel.com>
+		    Sunil K Pandey  <sunil.k.pandey@intel.com>
+
+	PR target/84413
+	* config/i386/i386.c (m_CORE_AVX512): New.
+	(m_CORE_AVX2): Likewise.
+	(m_CORE_ALL): Add m_CORE_AVX2.
+	* config/i386/x86-tune.def: Replace m_HASWELL with m_CORE_AVX2.
+	Replace m_SKYLAKE_AVX512 with m_CORE_AVX512 on avx256_optimal
+	and remove the rest of m_SKYLAKE_AVX512.
+
+gcc/testsuite/
+
+	Backport from mainline
+	2018-07-13  H.J. Lu  <hongjiu.lu@intel.com>
+		    Sunil K Pandey  <sunil.k.pandey@intel.com>
+
+	PR target/84413
+	* gcc.target/i386/pr84413-1.c: New test.
+	* gcc.target/i386/pr84413-2.c: Likewise.
+	* gcc.target/i386/pr84413-3.c: Likewise.
+
+
+git-svn-id: svn+ssh://gcc.gnu.org/svn/gcc/branches/gcc-8-branch@262650 138bc75d-0d04-0410-961f-82ee72b054a4
+---
+
+diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
+index d7dad81..8a03237 100644
+--- a/gcc/config/i386/i386.c
++++ b/gcc/config/i386/i386.c
+@@ -139,7 +139,6 @@ const struct processor_costs *ix86_cost = NULL;
+ #define m_NEHALEM (HOST_WIDE_INT_1U<<PROCESSOR_NEHALEM)
+ #define m_SANDYBRIDGE (HOST_WIDE_INT_1U<<PROCESSOR_SANDYBRIDGE)
+ #define m_HASWELL (HOST_WIDE_INT_1U<<PROCESSOR_HASWELL)
+-#define m_CORE_ALL (m_CORE2 | m_NEHALEM  | m_SANDYBRIDGE | m_HASWELL)
+ #define m_BONNELL (HOST_WIDE_INT_1U<<PROCESSOR_BONNELL)
+ #define m_SILVERMONT (HOST_WIDE_INT_1U<<PROCESSOR_SILVERMONT)
+ #define m_KNL (HOST_WIDE_INT_1U<<PROCESSOR_KNL)
+@@ -149,6 +148,10 @@ const struct processor_costs *ix86_cost = NULL;
+ #define m_CANNONLAKE (HOST_WIDE_INT_1U<<PROCESSOR_CANNONLAKE)
+ #define m_ICELAKE_CLIENT (HOST_WIDE_INT_1U<<PROCESSOR_ICELAKE_CLIENT)
+ #define m_ICELAKE_SERVER (HOST_WIDE_INT_1U<<PROCESSOR_ICELAKE_SERVER)
++#define m_CORE_AVX512 (m_SKYLAKE_AVX512 | m_CANNONLAKE \
++		       | m_ICELAKE_CLIENT | m_ICELAKE_SERVER)
++#define m_CORE_AVX2 (m_HASWELL | m_SKYLAKE | m_CORE_AVX512)
++#define m_CORE_ALL (m_CORE2 | m_NEHALEM  | m_SANDYBRIDGE | m_CORE_AVX2)
+ #define m_INTEL (HOST_WIDE_INT_1U<<PROCESSOR_INTEL)
+ 
+ #define m_GEODE (HOST_WIDE_INT_1U<<PROCESSOR_GEODE)
+diff --git a/gcc/config/i386/x86-tune.def b/gcc/config/i386/x86-tune.def
+index 6062566..c99e45c 100644
+--- a/gcc/config/i386/x86-tune.def
++++ b/gcc/config/i386/x86-tune.def
+@@ -48,9 +48,9 @@ DEF_TUNE (X86_TUNE_SCHEDULE, "schedule",
+    over partial stores.  For example preffer MOVZBL or MOVQ to load 8bit
+    value over movb.  */
+ DEF_TUNE (X86_TUNE_PARTIAL_REG_DEPENDENCY, "partial_reg_dependency",
+-          m_P4_NOCONA | m_CORE2 | m_NEHALEM  | m_SANDYBRIDGE | m_HASWELL
++          m_P4_NOCONA | m_CORE2 | m_NEHALEM  | m_SANDYBRIDGE | m_CORE_AVX2
+ 	  | m_BONNELL | m_SILVERMONT | m_INTEL
+-	  | m_KNL | m_KNM | m_AMD_MULTIPLE | m_SKYLAKE_AVX512 | m_GENERIC)
++	  | m_KNL | m_KNM | m_AMD_MULTIPLE | m_GENERIC)
+ 
+ /* X86_TUNE_SSE_PARTIAL_REG_DEPENDENCY: This knob promotes all store
+    destinations to be 128bit to allow register renaming on 128bit SSE units,
+@@ -84,8 +84,8 @@ DEF_TUNE (X86_TUNE_PARTIAL_FLAG_REG_STALL, "partial_flag_reg_stall",
+    partial dependencies.  */
+ DEF_TUNE (X86_TUNE_MOVX, "movx",
+           m_PPRO | m_P4_NOCONA | m_CORE2 | m_NEHALEM  | m_SANDYBRIDGE
+-	  | m_BONNELL | m_SILVERMONT | m_KNL | m_KNM | m_INTEL | m_HASWELL
+-	  | m_GEODE | m_AMD_MULTIPLE | m_SKYLAKE_AVX512 | m_GENERIC)
++	  | m_BONNELL | m_SILVERMONT | m_KNL | m_KNM | m_INTEL | m_CORE_AVX2
++	  | m_GEODE | m_AMD_MULTIPLE | m_GENERIC)
+ 
+ /* X86_TUNE_MEMORY_MISMATCH_STALL: Avoid partial stores that are followed by
+    full sized loads.  */
+@@ -101,19 +101,19 @@ DEF_TUNE (X86_TUNE_FUSE_CMP_AND_BRANCH_32, "fuse_cmp_and_branch_32",
+ /* X86_TUNE_FUSE_CMP_AND_BRANCH_64: Fuse compare with a subsequent
+    conditional jump instruction for TARGET_64BIT.  */
+ DEF_TUNE (X86_TUNE_FUSE_CMP_AND_BRANCH_64, "fuse_cmp_and_branch_64",
+-	  m_NEHALEM | m_SANDYBRIDGE | m_HASWELL | m_BDVER | m_ZNVER1 | m_GENERIC)
++	  m_NEHALEM | m_SANDYBRIDGE | m_CORE_AVX2 | m_BDVER | m_ZNVER1 | m_GENERIC)
+ 
+ /* X86_TUNE_FUSE_CMP_AND_BRANCH_SOFLAGS: Fuse compare with a
+    subsequent conditional jump instruction when the condition jump
+    check sign flag (SF) or overflow flag (OF).  */
+ DEF_TUNE (X86_TUNE_FUSE_CMP_AND_BRANCH_SOFLAGS, "fuse_cmp_and_branch_soflags",
+-	  m_NEHALEM | m_SANDYBRIDGE | m_HASWELL | m_BDVER | m_ZNVER1 | m_GENERIC)
++	  m_NEHALEM | m_SANDYBRIDGE | m_CORE_AVX2 | m_BDVER | m_ZNVER1 | m_GENERIC)
+ 
+ /* X86_TUNE_FUSE_ALU_AND_BRANCH: Fuse alu with a subsequent conditional
+    jump instruction when the alu instruction produces the CCFLAG consumed by
+    the conditional jump instruction. */
+ DEF_TUNE (X86_TUNE_FUSE_ALU_AND_BRANCH, "fuse_alu_and_branch",
+-          m_SANDYBRIDGE | m_HASWELL | m_GENERIC)
++          m_SANDYBRIDGE | m_CORE_AVX2 | m_GENERIC)
+ 
+ 
+ /*****************************************************************************/
+@@ -286,7 +286,7 @@ DEF_TUNE (X86_TUNE_USE_BT, "use_bt",
+ /* X86_TUNE_AVOID_FALSE_DEP_FOR_BMI: Avoid false dependency
+    for bit-manipulation instructions.  */
+ DEF_TUNE (X86_TUNE_AVOID_FALSE_DEP_FOR_BMI, "avoid_false_dep_for_bmi",
+-	  m_SANDYBRIDGE | m_HASWELL | m_GENERIC)
++	  m_SANDYBRIDGE | m_CORE_AVX2 | m_GENERIC)
+ 
+ /* X86_TUNE_ADJUST_UNROLL: This enables adjusting the unroll factor based
+    on hardware capabilities. Bdver3 hardware has a loop buffer which makes
+@@ -335,15 +335,15 @@ DEF_TUNE (X86_TUNE_GENERAL_REGS_SSE_SPILL, "general_regs_sse_spill",
+ /* X86_TUNE_SSE_UNALIGNED_LOAD_OPTIMAL: Use movups for misaligned loads instead
+    of a sequence loading registers by parts.  */
+ DEF_TUNE (X86_TUNE_SSE_UNALIGNED_LOAD_OPTIMAL, "sse_unaligned_load_optimal",
+-	  m_NEHALEM | m_SANDYBRIDGE | m_HASWELL | m_SILVERMONT | m_KNL | m_KNM
+-	  | m_INTEL | m_SKYLAKE_AVX512 | m_AMDFAM10 | m_BDVER | m_BTVER
++	  m_NEHALEM | m_SANDYBRIDGE | m_CORE_AVX2 | m_SILVERMONT | m_KNL | m_KNM
++	  | m_INTEL | m_AMDFAM10 | m_BDVER | m_BTVER
+ 	  | m_ZNVER1 | m_GENERIC)
+ 
+ /* X86_TUNE_SSE_UNALIGNED_STORE_OPTIMAL: Use movups for misaligned stores instead
+    of a sequence loading registers by parts.  */
+ DEF_TUNE (X86_TUNE_SSE_UNALIGNED_STORE_OPTIMAL, "sse_unaligned_store_optimal",
+-	  m_NEHALEM | m_SANDYBRIDGE | m_HASWELL | m_SILVERMONT | m_KNL | m_KNM
+-	  | m_INTEL | m_SKYLAKE_AVX512 | m_BDVER | m_ZNVER1 | m_GENERIC)
++	  m_NEHALEM | m_SANDYBRIDGE | m_CORE_AVX2 | m_SILVERMONT | m_KNL | m_KNM
++	  | m_INTEL | m_BDVER | m_ZNVER1 | m_GENERIC)
+ 
+ /* Use packed single precision instructions where posisble.  I.e. movups instead
+    of movupd.  */

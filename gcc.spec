@@ -51,8 +51,8 @@ Patch17  : pow-optimization.patch
 Patch21  : zero-regs-gcc8.patch
 
 # HJ backports
-Patch31  : 0001-x86-Enable-PARTIAL_REG_DEPENDENCY-and-MOVX-for-Haswe.patch
-Patch32  : 0002-x86-Tune-Skylake-Cannonlake-and-Icelake-as-Haswell.patch
+Patch31 : 0001-x86-Enable-PARTIAL_REG_DEPENDENCY-and-MOVX-for-Haswe.patch
+Patch32  : hj-skylake-patch.patch
 
 # drop on next rebase
 Patch100 : debug-fma-v2.patch
@@ -240,7 +240,6 @@ GNU cc and gcc C compilers.
 
 %patch31 -p1
 %patch32 -p1
-
 
 %patch100 -p1
 
