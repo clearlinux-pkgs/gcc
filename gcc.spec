@@ -22,7 +22,7 @@
 
 Name     : gcc
 Version  : 8.1.0
-Release  : 117
+Release  : 118
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://mirrors.kernel.org/gnu/gcc/gcc-8.1.0/gcc-8.1.0.tar.gz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.16.1.tar.bz2
