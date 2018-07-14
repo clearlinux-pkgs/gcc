@@ -494,8 +494,6 @@ cat *.lang > gcc.lang
 #/usr/lib/libvtv.a
 #/usr/lib/libvtv.so
 /usr/share/gdb/auto-load//usr/lib32/libstdc++.so.*
-/usr/share/gdb/auto-load/usr/lib32/__pycache__/libstdc++.so.6.0.25-gdb.cpython-37.pyc
-/usr/share/gdb/auto-load/usr/lib64/__pycache__/libstdc++.so.6.0.25-gdb.cpython-37.pyc
 
 
 
