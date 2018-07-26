@@ -7,7 +7,7 @@ gcc8 turned off all AVX512 intrinsics for -march=skylake-avx512, that is not so 
  
  /* X86_TUNE_AVX256_OPTIMAL: Use 256-bit AVX instructions instead of 512-bit AVX
     instructions in the auto-vectorizer.  */
--DEF_TUNE (X86_TUNE_AVX256_OPTIMAL, "avx256_optimal", m_SKYLAKE_AVX512)
+-DEF_TUNE (X86_TUNE_AVX256_OPTIMAL, "avx256_optimal", m_CORE_AVX512)
 +DEF_TUNE (X86_TUNE_AVX256_OPTIMAL, "avx256_optimal", 0U) 
  
  /*****************************************************************************/

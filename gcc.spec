@@ -3,8 +3,8 @@
 %define libstdcxx_maj 6
 %define libstdcxx_full 6.0.25
 %define isl_version 0.16.1
-%define gccver 8.1.1
-%define gccpath gcc-8.1.0
+%define gccver 8.2.0
+%define gccpath gcc-8.2.0
 
 
 #
@@ -21,10 +21,10 @@
 %define march westmere
 
 Name     : gcc
-Version  : 8.1.0
+Version  : 8.2.0
 Release  : 119
 URL      : http://www.gnu.org/software/gcc/
-Source0  : https://mirrors.kernel.org/gnu/gcc/gcc-8.1.0/gcc-8.1.0.tar.gz
+Source0  : https://mirrors.kernel.org/gnu/gcc/gcc-8.2.0/gcc-8.2.0.tar.gz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.16.1.tar.bz2
 Summary  : GNU cc and gcc C compilers
 Group    : Development/Tools
@@ -50,9 +50,6 @@ Patch17  : pow-optimization.patch
 # zero registers on ret to make ROP harder
 Patch21  : zero-regs-gcc8.patch
 
-# HJ backports
-Patch31 : 0001-x86-Enable-PARTIAL_REG_DEPENDENCY-and-MOVX-for-Haswe.patch
-Patch32  : hj-skylake-patch.patch
 
 # drop on next rebase
 Patch100 : debug-fma-v2.patch
@@ -218,7 +215,7 @@ GNU cc and gcc C compilers.
 
 %prep
 %setup -q -n %{gccpath}
-%patch0 -p1
+#%patch0 -p1
 
 %patch1 -p1
 %patch2 -p1
@@ -238,10 +235,10 @@ GNU cc and gcc C compilers.
 
 %patch21 -p1
 
-%patch31 -p1
-%patch32 -p1
+#%patch31 -p1
+#%patch32 -p1
 
-%patch100 -p1
+#%patch100 -p1
 
 %build
 
