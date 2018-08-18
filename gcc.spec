@@ -22,13 +22,15 @@
 
 Name     : gcc
 Version  : 8.2.0
-Release  : 120
+Release  : 121
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://mirrors.kernel.org/gnu/gcc/gcc-8.2.0/gcc-8.2.0.tar.gz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.16.1.tar.bz2
 Summary  : GNU cc and gcc C compilers
 Group    : Development/Tools
 License  : BSD-3-Clause BSL-1.0 GFDL-1.2 GFDL-1.3 GPL-2.0 GPL-3.0 LGPL-2.1 LGPL-3.0 MIT
+
+
 Patch0   : gcc-stable-branch.patch
 Patch1   : 0001-Fix-stack-protection-issues.patch
 Patch2   : openmp-vectorize-v2.patch
@@ -50,9 +52,8 @@ Patch17  : pow-optimization.patch
 # zero registers on ret to make ROP harder
 Patch21  : zero-regs-gcc8.patch
 
+Patch30  : hj-patch-round.patch
 
-# drop on next rebase
-Patch100 : debug-fma-v2.patch
 
 
 BuildRequires : bison
@@ -235,10 +236,8 @@ GNU cc and gcc C compilers.
 
 %patch21 -p1
 
-#%patch31 -p1
-#%patch32 -p1
+%patch30 -p1
 
-#%patch100 -p1
 
 %build
 

@@ -1,0 +1,325 @@
+From 82795e121c6b92e626f9c447b41b515c9accaa20 Mon Sep 17 00:00:00 2001
+From: "H.J. Lu" <hjl.tools@gmail.com>
+Date: Wed, 15 Aug 2018 09:58:31 -0700
+Subject: [PATCH] i386: Add pass_remove_partial_avx_dependency
+
+With -mavx, for
+
+[hjl@gnu-cfl-1 skx-2]$ cat foo.i
+extern float f;
+extern double d;
+extern int i;
+
+void
+foo (void)
+{
+  d = f;
+  f = i;
+}
+
+we need to generate
+
+	vxorp[ds]	%xmmN, %xmmN, %xmmN
+	...
+	vcvtss2sd	f(%rip), %xmmN, %xmmX
+	...
+	vcvtsi2ss	i(%rip), %xmmN, %xmmY
+
+to avoid partial XMM register stall.  This patch adds a pass to generate
+a single
+
+	vxorps		%xmmN, %xmmN, %xmmN
+
+at function entry, which is shared by all SF and DF conversions, instead
+of generating one
+
+	vxorp[ds]	%xmmN, %xmmN, %xmmN
+
+for each SF/DF conversion.  It improves performance on 538.imagick_r in
+SPEC CPU 2017 on Skylake server by up to 10%.
+
+gcc/
+
+	PR target/87007
+	* config/i386/i386-passes.def: Add
+	pass_remove_partial_avx_dependency.
+	* config/i386/i386-protos.h
+	(make_pass_remove_partial_avx_dependency): New.
+	* config/i386/i386.c (make_pass_remove_partial_avx_dependency):
+	New function.
+	(pass_data_remove_partial_avx_dependency): New.
+	(pass_remove_partial_avx_dependency): Likewise.
+	(make_pass_remove_partial_avx_dependency): Likewise.
+	* config/i386/i386.md (SF/DF conversion splitters): Disabled
+	for TARGET_AVX.
+
+gcc/testsuite/
+
+	PR target/87007
+	* gcc.target/i386/pr87007.c: New file.
+---
+ gcc/config/i386/i386-passes.def         |   2 +
+ gcc/config/i386/i386-protos.h           |   2 +
+ gcc/config/i386/i386.c                  | 168 ++++++++++++++++++++++++
+ gcc/config/i386/i386.md                 |   9 +-
+ gcc/testsuite/gcc.target/i386/pr87007.c |  15 +++
+ 5 files changed, 193 insertions(+), 3 deletions(-)
+ create mode 100644 gcc/testsuite/gcc.target/i386/pr87007.c
+
+diff --git a/gcc/config/i386/i386-passes.def b/gcc/config/i386/i386-passes.def
+index 4a6a95cc2d9..b439f3a9028 100644
+--- a/gcc/config/i386/i386-passes.def
++++ b/gcc/config/i386/i386-passes.def
+@@ -31,3 +31,5 @@ along with GCC; see the file COPYING3.  If not see
+   INSERT_PASS_BEFORE (pass_cse2, 1, pass_stv, true /* timode_p */);
+ 
+   INSERT_PASS_BEFORE (pass_shorten_branches, 1, pass_insert_endbranch);
++
++  INSERT_PASS_AFTER (pass_combine, 1, pass_remove_partial_avx_dependency);
+diff --git a/gcc/config/i386/i386-protos.h b/gcc/config/i386/i386-protos.h
+index d1d59633dc0..1626c9d0d70 100644
+--- a/gcc/config/i386/i386-protos.h
++++ b/gcc/config/i386/i386-protos.h
+@@ -358,3 +358,5 @@ class rtl_opt_pass;
+ extern rtl_opt_pass *make_pass_insert_vzeroupper (gcc::context *);
+ extern rtl_opt_pass *make_pass_stv (gcc::context *);
+ extern rtl_opt_pass *make_pass_insert_endbranch (gcc::context *);
++extern rtl_opt_pass *make_pass_remove_partial_avx_dependency
++  (gcc::context *);
+diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
+index 3548de2169c..8f13a6f095c 100644
+--- a/gcc/config/i386/i386.c
++++ b/gcc/config/i386/i386.c
+@@ -2755,6 +2755,174 @@ make_pass_insert_endbranch (gcc::context *ctxt)
+   return new pass_insert_endbranch (ctxt);
+ }
+ 
++/* At function entry, generate a single
++	vxorps %xmmN, %xmmN, %xmmN
++   for all
++	vcvtss2sd  op, %xmmN, %xmmX
++	vcvtsd2ss  op, %xmmN, %xmmX
++	vcvtsi2ss  op, %xmmN, %xmmX
++	vcvtsi2sd  op, %xmmN, %xmmX
++ */
++
++static unsigned int
++remove_partial_avx_dependency (void)
++{
++  timevar_push (TV_MACH_DEP);
++
++  calculate_dominance_info (CDI_DOMINATORS);
++  df_set_flags (DF_DEFER_INSN_RESCAN);
++  df_chain_add_problem (DF_DU_CHAIN | DF_UD_CHAIN);
++  df_md_add_problem ();
++  df_analyze ();
++
++  basic_block bb;
++  rtx_insn *insn, *set_insn;
++  rtx set;
++  rtx v4sf_const0 = NULL_RTX;
++
++  FOR_EACH_BB_FN (bb, cfun)
++    {
++      FOR_BB_INSNS (bb, insn)
++	{
++	  if (!NONDEBUG_INSN_P (insn))
++	    continue;
++
++	  set = single_set (insn);
++	  if (set)
++	    {
++	      machine_mode dest_vecmode, dest_mode;
++	      rtx src = SET_SRC (set);
++	      rtx dest, vec, zero;
++
++	      /* Check for conversions to SF or DF.  */
++	      switch (GET_CODE (src))
++		{
++		case FLOAT_TRUNCATE:
++		  /* DF -> SF.  */
++		  if (GET_MODE (XEXP (src, 0)) != DFmode)
++		    continue;
++		  /* Fall through.  */
++		case FLOAT_EXTEND:
++		  /* SF -> DF.  */
++		case FLOAT:
++		  /* SI -> SF, SI -> DF, DI -> SF, DI -> DF.  */
++		  dest = SET_DEST (set);
++		  dest_mode = GET_MODE (dest);
++		  switch (dest_mode)
++		    {
++		    case E_SFmode:
++		      dest_vecmode = V4SFmode;
++		      break;
++		    case E_DFmode:
++		      dest_vecmode = V2DFmode;
++		      break;
++		    default:
++		      continue;
++		    }
++
++		  if (!TARGET_64BIT
++		      && GET_MODE (XEXP (src, 0)) == DImode)
++		    continue;
++
++		  if (!v4sf_const0)
++		    v4sf_const0 = gen_reg_rtx (V4SFmode);
++
++		  if (dest_vecmode == V4SFmode)
++		    zero = v4sf_const0;
++		  else
++		    zero = gen_rtx_SUBREG (V2DFmode, v4sf_const0, 0);
++
++		  /* Change source to vector mode.  */
++		  src = gen_rtx_VEC_DUPLICATE (dest_vecmode, src);
++		  src = gen_rtx_VEC_MERGE (dest_vecmode, src, zero,
++					   GEN_INT (HOST_WIDE_INT_1U));
++		  /* Change destination to vector mode.  */
++		  vec = gen_reg_rtx (dest_vecmode);
++		  /* Generate a XMM vector SET.  */
++		  set = gen_rtx_SET (vec, src);
++		  set_insn = emit_insn_before (set, insn);
++		  df_insn_rescan (set_insn);
++
++		  src = gen_rtx_SUBREG (dest_mode, vec, 0);
++		  set = gen_rtx_SET (dest, src);
++
++		  /* Drop possible dead definitions.  */
++		  PATTERN (insn) = set;
++
++		  INSN_CODE (insn) = -1;
++		  recog_memoized (insn);
++		  df_insn_rescan (insn);
++		  break;
++
++		default:
++		  break;
++		}
++	    }
++	}
++    }
++
++  if (v4sf_const0)
++    {
++      /* Generate a single vxorps at function entry and preform df
++	 rescan. */
++      bb = ENTRY_BLOCK_PTR_FOR_FN (cfun)->next_bb;
++      insn = BB_HEAD (bb);
++      set = gen_rtx_SET (v4sf_const0, CONST0_RTX (V4SFmode));
++      set_insn = emit_insn_after (set, insn);
++      df_insn_rescan (set_insn);
++      df_process_deferred_rescans ();
++    }
++
++  timevar_pop (TV_MACH_DEP);
++  return 0;
++}
++
++namespace {
++
++const pass_data pass_data_remove_partial_avx_dependency =
++{
++  RTL_PASS, /* type */
++  "rpad", /* name */
++  OPTGROUP_NONE, /* optinfo_flags */
++  TV_MACH_DEP, /* tv_id */
++  0, /* properties_required */
++  0, /* properties_provided */
++  0, /* properties_destroyed */
++  0, /* todo_flags_start */
++  TODO_df_finish, /* todo_flags_finish */
++};
++
++class pass_remove_partial_avx_dependency : public rtl_opt_pass
++{
++public:
++  pass_remove_partial_avx_dependency (gcc::context *ctxt)
++    : rtl_opt_pass (pass_data_remove_partial_avx_dependency, ctxt)
++  {}
++
++  /* opt_pass methods: */
++  virtual bool gate (function *)
++    {
++      return (TARGET_AVX
++	      && TARGET_SSE_PARTIAL_REG_DEPENDENCY
++	      && TARGET_SSE_MATH
++	      && optimize
++	      && optimize_function_for_speed_p (cfun));
++    }
++
++  virtual unsigned int execute (function *)
++    {
++      return remove_partial_avx_dependency ();
++    }
++}; // class pass_rpad
++
++} // anon namespace
++
++rtl_opt_pass *
++make_pass_remove_partial_avx_dependency (gcc::context *ctxt)
++{
++  return new pass_remove_partial_avx_dependency (ctxt);
++}
++
+ /* Return true if a red-zone is in use.  We can't use red-zone when
+    there are local indirect jumps, like "indirect_jump" or "tablejump",
+    which jumps to another place in the function, since "call" in the
+diff --git a/gcc/config/i386/i386.md b/gcc/config/i386/i386.md
+index 918241d953a..98150d37d8d 100644
+--- a/gcc/config/i386/i386.md
++++ b/gcc/config/i386/i386.md
+@@ -5489,7 +5489,8 @@
+ (define_split
+   [(set (match_operand:MODEF 0 "sse_reg_operand")
+ 	(float:MODEF (match_operand:SWI48 1 "nonimmediate_operand")))]
+-  "TARGET_SSE_PARTIAL_REG_DEPENDENCY && epilogue_completed
++  "!TARGET_AVX
++   && TARGET_SSE_PARTIAL_REG_DEPENDENCY && epilogue_completed
+    && optimize_function_for_speed_p (cfun)
+    && (!EXT_REX_SSE_REG_P (operands[0])
+        || TARGET_AVX512VL)"
+@@ -5515,7 +5516,8 @@
+   [(set (match_operand:SF 0 "sse_reg_operand")
+         (float_truncate:SF
+ 	  (match_operand:DF 1 "nonimmediate_operand")))]
+-  "TARGET_SSE_PARTIAL_REG_DEPENDENCY && epilogue_completed
++  "!TARGET_AVX
++   && TARGET_SSE_PARTIAL_REG_DEPENDENCY && epilogue_completed
+    && optimize_function_for_speed_p (cfun)
+    && (!REG_P (operands[1])
+        || REGNO (operands[0]) != REGNO (operands[1]))
+@@ -5541,7 +5543,8 @@
+   [(set (match_operand:DF 0 "sse_reg_operand")
+         (float_extend:DF
+           (match_operand:SF 1 "nonimmediate_operand")))]
+-  "TARGET_SSE_PARTIAL_REG_DEPENDENCY && epilogue_completed
++  "!TARGET_AVX
++   && TARGET_SSE_PARTIAL_REG_DEPENDENCY && epilogue_completed
+    && optimize_function_for_speed_p (cfun)
+    && (!REG_P (operands[1])
+        || REGNO (operands[0]) != REGNO (operands[1]))
+diff --git a/gcc/testsuite/gcc.target/i386/pr87007.c b/gcc/testsuite/gcc.target/i386/pr87007.c
+new file mode 100644
+index 00000000000..e6f17ad6dc0
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr87007.c
+@@ -0,0 +1,15 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -march=skylake" } */
++
++extern float f;
++extern double d;
++extern int i;
++
++void
++foo (void)
++{
++  d = f;
++  f = i;
++}
++
++/* { dg-final { scan-assembler-times "vxorp\[ds\]\[^\n\r\]*xmm\[0-9\]" 1 } } */
+-- 
+2.17.1
+
