@@ -3,7 +3,7 @@
 %define libstdcxx_maj 6
 %define libstdcxx_full 6.0.25
 %define isl_version 0.16.1
-%define gccver 8.2.0
+%define gccver 8.2.1
 %define gccpath gcc-8.2.0
 
 
@@ -216,7 +216,7 @@ GNU cc and gcc C compilers.
 
 %prep
 %setup -q -n %{gccpath}
-#%patch0 -p1
+%patch0 -p1
 
 %patch1 -p1
 %patch2 -p1
