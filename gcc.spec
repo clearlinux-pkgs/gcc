@@ -22,7 +22,7 @@
 
 Name     : gcc
 Version  : 8.2.0
-Release  : 129
+Release  : 130
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://mirrors.kernel.org/gnu/gcc/gcc-8.2.0/gcc-8.2.0.tar.gz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.16.1.tar.bz2
@@ -244,6 +244,7 @@ GNU cc and gcc C compilers.
 # Live in the gcc source tree
 tar xf %{SOURCE1} && ln -sf isl-%{isl_version} isl
 
+echo 20180502 > gcc/DATESTAMP
 rm -rf ../gcc-build
 mkdir ../gcc-build
 pushd ../gcc-build
