@@ -1,0 +1,71 @@
+From ffe83858711fe24b0474b29c54ae582d24a9f431 Mon Sep 17 00:00:00 2001
+From: "H.J. Lu" <hjl.tools@gmail.com>
+Date: Tue, 2 Oct 2018 12:34:40 -0700
+Subject: [PATCH] i386: Enable AVX512 broadcast for FMA
+
+	PR target/72782
+	* config/i386/sse.md (FMAMODE_AVX512_VEC): New.
+	(avx512bcst): Likewise.
+	(*fma_fmadd_avx512_<mode>_1): Likewise.
+	(*fma_fmadd_avx512_<mode>_2): Likewise.
+---
+ gcc/config/i386/sse.md | 36 ++++++++++++++++++++++++++++++++++++
+ 1 file changed, 36 insertions(+)
+
+diff --git a/gcc/config/i386/sse.md b/gcc/config/i386/sse.md
+index 0b655726c11..73b15bb972e 100644
+--- a/gcc/config/i386/sse.md
++++ b/gcc/config/i386/sse.md
+@@ -3699,6 +3699,16 @@
+ (define_mode_iterator FMAMODE
+   [SF DF V4SF V2DF V8SF V4DF])
+ 
++(define_mode_iterator FMAMODE_AVX512_VEC
++  [(V4SF "TARGET_AVX512VL") (V2DF "TARGET_AVX512VL")
++   (V8SF "TARGET_AVX512VL") (V4DF "TARGET_AVX512VL")
++   (V16SF "TARGET_AVX512F") (V8DF "TARGET_AVX512F")])
++
++(define_mode_attr avx512bcst
++  [(V4SF "%{1to4%}") (V2DF "%{1to2%}")
++   (V8SF "%{1to8%}") (V4DF "%{1to4%}")
++   (V16SF "%{1to16%}") (V8DF "%{1to8%}")])
++
+ (define_expand "fma4i_fmadd_<mode>"
+   [(set (match_operand:FMAMODE_AVX512 0 "register_operand")
+ 	(fma:FMAMODE_AVX512
+@@ -3737,6 +3747,32 @@
+    (set_attr "type" "ssemuladd")
+    (set_attr "mode" "<MODE>")])
+ 
++(define_insn "*fma_fmadd_avx512_<mode>_1"
++  [(set (match_operand:FMAMODE_AVX512_VEC 0 "register_operand" "=v")
++	(fma:FMAMODE_AVX512_VEC
++	  (vec_duplicate:FMAMODE_AVX512_VEC
++	    (match_operand:<FMAMODE_AVX512_VEC:ssescalarmode> 1 "nonimmediate_operand" "m"))
++	  (match_operand:FMAMODE_AVX512_VEC 2 "nonimmediate_operand" "0")
++	  (match_operand:FMAMODE_AVX512_VEC 3 "nonimmediate_operand" "v")))]
++  "TARGET_AVX512F"
++  "vfmadd132<ssemodesuffix>\t{%1<avx512bcst>, %3, %0|%0, %3, %1<avx512bcst>}"
++  [(set_attr "isa" "fma")
++   (set_attr "type" "ssemuladd")
++   (set_attr "mode" "<MODE>")])
++
++(define_insn "*fma_fmadd_avx512_<mode>_2"
++  [(set (match_operand:FMAMODE_AVX512_VEC 0 "register_operand" "=v")
++	(fma:FMAMODE_AVX512_VEC
++	  (match_operand:FMAMODE_AVX512_VEC 2 "nonimmediate_operand" "0")
++	  (match_operand:FMAMODE_AVX512_VEC 3 "nonimmediate_operand" "v")
++	  (vec_duplicate:FMAMODE_AVX512_VEC
++	    (match_operand:<FMAMODE_AVX512_VEC:ssescalarmode> 1 "nonimmediate_operand" "m"))))]
++  "TARGET_AVX512F"
++  "vfmadd213<ssemodesuffix>\t{%1<avx512bcst>, %3, %0|%0, %3, %1<avx512bcst>}"
++  [(set_attr "isa" "fma")
++   (set_attr "type" "ssemuladd")
++   (set_attr "mode" "<MODE>")])
++
+ ;; Suppose AVX-512F as baseline
+ (define_mode_iterator VF_SF_AVX512VL
+   [SF V16SF (V8SF "TARGET_AVX512VL") (V4SF "TARGET_AVX512VL")
+-- 
+2.17.1
+

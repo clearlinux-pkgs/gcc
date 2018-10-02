@@ -42,6 +42,7 @@ Patch8	 : optimize-at-least-some.patch
 Patch9   : gomp-relax.patch
 Patch11  : memcpy-avx2.patch
 Patch12	 : avx512-when-we-ask-for-it.patch
+Patch13  : 0001-i386-Enable-AVX512-broadcast-for-FMA.patch
 
 
 #Patch15  : revert-regression.patch
@@ -229,6 +230,7 @@ GNU cc and gcc C compilers.
 #%patch15 -p1
 
 %patch12 -p1
+%patch13 -p1
 
 %patch17 -p1
 #%patch18 -p1
