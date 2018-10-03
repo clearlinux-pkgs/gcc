@@ -230,7 +230,7 @@ GNU cc and gcc C compilers.
 #%patch15 -p1
 
 %patch12 -p1
-%patch13 -p1
+#%patch13 -p1
 
 %patch17 -p1
 #%patch18 -p1
