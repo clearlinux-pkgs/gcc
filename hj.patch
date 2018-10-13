@@ -1,0 +1,1846 @@
+diff --git a/gcc/config/i386/avx512fintrin.h b/gcc/config/i386/avx512fintrin.h
+index 8473cd0d26c..b2c1852ae93 100644
+--- a/gcc/config/i386/avx512fintrin.h
++++ b/gcc/config/i386/avx512fintrin.h
+@@ -240,7 +240,7 @@ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm512_set1_pd (double __A)
+ {
+   return (__m512d) __builtin_ia32_broadcastsd512 (__extension__
+-						  (__v2df) { __A, },
++						  __A,
+ 						  (__v8df)
+ 						  _mm512_undefined_pd (),
+ 						  (__mmask8) -1);
+@@ -251,7 +251,7 @@ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm512_set1_ps (float __A)
+ {
+   return (__m512) __builtin_ia32_broadcastss512 (__extension__
+-						 (__v4sf) { __A, },
++						 __A,
+ 						 (__v16sf)
+ 						 _mm512_undefined_ps (),
+ 						 (__mmask16) -1);
+@@ -3355,9 +3355,9 @@ extern __inline __m512d
+ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm512_fmsub_round_pd (__m512d __A, __m512d __B, __m512d __C, const int __R)
+ {
+-  return (__m512d) __builtin_ia32_vfmaddpd512_mask ((__v8df) __A,
++  return (__m512d) __builtin_ia32_vfmsubpd512_mask ((__v8df) __A,
+ 						    (__v8df) __B,
+-						    -(__v8df) __C,
++						    (__v8df) __C,
+ 						    (__mmask8) -1, __R);
+ }
+ 
+@@ -3366,9 +3366,9 @@ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm512_mask_fmsub_round_pd (__m512d __A, __mmask8 __U, __m512d __B,
+ 			    __m512d __C, const int __R)
+ {
+-  return (__m512d) __builtin_ia32_vfmaddpd512_mask ((__v8df) __A,
++  return (__m512d) __builtin_ia32_vfmsubpd512_mask ((__v8df) __A,
+ 						    (__v8df) __B,
+-						    -(__v8df) __C,
++						    (__v8df) __C,
+ 						    (__mmask8) __U, __R);
+ }
+ 
+@@ -3388,9 +3388,9 @@ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm512_maskz_fmsub_round_pd (__mmask8 __U, __m512d __A, __m512d __B,
+ 			     __m512d __C, const int __R)
+ {
+-  return (__m512d) __builtin_ia32_vfmaddpd512_maskz ((__v8df) __A,
++  return (__m512d) __builtin_ia32_vfmsubpd512_maskz ((__v8df) __A,
+ 						     (__v8df) __B,
+-						     -(__v8df) __C,
++						     (__v8df) __C,
+ 						     (__mmask8) __U, __R);
+ }
+ 
+@@ -3398,9 +3398,9 @@ extern __inline __m512
+ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm512_fmsub_round_ps (__m512 __A, __m512 __B, __m512 __C, const int __R)
+ {
+-  return (__m512) __builtin_ia32_vfmaddps512_mask ((__v16sf) __A,
++  return (__m512) __builtin_ia32_vfmsubps512_mask ((__v16sf) __A,
+ 						   (__v16sf) __B,
+-						   -(__v16sf) __C,
++						   (__v16sf) __C,
+ 						   (__mmask16) -1, __R);
+ }
+ 
+@@ -3409,9 +3409,9 @@ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm512_mask_fmsub_round_ps (__m512 __A, __mmask16 __U, __m512 __B,
+ 			    __m512 __C, const int __R)
+ {
+-  return (__m512) __builtin_ia32_vfmaddps512_mask ((__v16sf) __A,
++  return (__m512) __builtin_ia32_vfmsubps512_mask ((__v16sf) __A,
+ 						   (__v16sf) __B,
+-						   -(__v16sf) __C,
++						   (__v16sf) __C,
+ 						   (__mmask16) __U, __R);
+ }
+ 
+@@ -3431,9 +3431,9 @@ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm512_maskz_fmsub_round_ps (__mmask16 __U, __m512 __A, __m512 __B,
+ 			     __m512 __C, const int __R)
+ {
+-  return (__m512) __builtin_ia32_vfmaddps512_maskz ((__v16sf) __A,
++  return (__m512) __builtin_ia32_vfmsubps512_maskz ((__v16sf) __A,
+ 						    (__v16sf) __B,
+-						    -(__v16sf) __C,
++						    (__v16sf) __C,
+ 						    (__mmask16) __U, __R);
+ }
+ 
+@@ -3613,10 +3613,10 @@ extern __inline __m512d
+ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm512_fnmadd_round_pd (__m512d __A, __m512d __B, __m512d __C, const int __R)
+ {
+-  return (__m512d) __builtin_ia32_vfmaddpd512_mask (-(__v8df) __A,
+-						    (__v8df) __B,
+-						    (__v8df) __C,
+-						    (__mmask8) -1, __R);
++  return (__m512d) __builtin_ia32_vfnmaddpd512_mask ((__v8df) __A,
++						     (__v8df) __B,
++						     (__v8df) __C,
++						     (__mmask8) -1, __R);
+ }
+ 
+ extern __inline __m512d
+@@ -3635,7 +3635,7 @@ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm512_mask3_fnmadd_round_pd (__m512d __A, __m512d __B, __m512d __C,
+ 			      __mmask8 __U, const int __R)
+ {
+-  return (__m512d) __builtin_ia32_vfmaddpd512_mask3 (-(__v8df) __A,
++  return (__m512d) __builtin_ia32_vfmaddpd512_mask3 ((__v8df) __A,
+ 						     (__v8df) __B,
+ 						     (__v8df) __C,
+ 						     (__mmask8) __U, __R);
+@@ -3646,20 +3646,20 @@ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm512_maskz_fnmadd_round_pd (__mmask8 __U, __m512d __A, __m512d __B,
+ 			      __m512d __C, const int __R)
+ {
+-  return (__m512d) __builtin_ia32_vfmaddpd512_maskz (-(__v8df) __A,
+-						     (__v8df) __B,
+-						     (__v8df) __C,
+-						     (__mmask8) __U, __R);
++  return (__m512d) __builtin_ia32_vfnmaddpd512_maskz ((__v8df) __A,
++						      (__v8df) __B,
++						      (__v8df) __C,
++						      (__mmask8) __U, __R);
+ }
+ 
+ extern __inline __m512
+ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm512_fnmadd_round_ps (__m512 __A, __m512 __B, __m512 __C, const int __R)
+ {
+-  return (__m512) __builtin_ia32_vfmaddps512_mask (-(__v16sf) __A,
+-						   (__v16sf) __B,
+-						   (__v16sf) __C,
+-						   (__mmask16) -1, __R);
++  return (__m512) __builtin_ia32_vfnmaddps512_mask ((__v16sf) __A,
++						    (__v16sf) __B,
++						    (__v16sf) __C,
++						    (__mmask16) -1, __R);
+ }
+ 
+ extern __inline __m512
+@@ -3678,10 +3678,10 @@ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm512_mask3_fnmadd_round_ps (__m512 __A, __m512 __B, __m512 __C,
+ 			      __mmask16 __U, const int __R)
+ {
+-  return (__m512) __builtin_ia32_vfmaddps512_mask3 (-(__v16sf) __A,
+-						    (__v16sf) __B,
+-						    (__v16sf) __C,
+-						    (__mmask16) __U, __R);
++  return (__m512) __builtin_ia32_vfnmaddps512_mask3 ((__v16sf) __A,
++						     (__v16sf) __B,
++						     (__v16sf) __C,
++						     (__mmask16) __U, __R);
+ }
+ 
+ extern __inline __m512
+@@ -3689,20 +3689,20 @@ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm512_maskz_fnmadd_round_ps (__mmask16 __U, __m512 __A, __m512 __B,
+ 			      __m512 __C, const int __R)
+ {
+-  return (__m512) __builtin_ia32_vfmaddps512_maskz (-(__v16sf) __A,
+-						    (__v16sf) __B,
+-						    (__v16sf) __C,
+-						    (__mmask16) __U, __R);
++  return (__m512) __builtin_ia32_vfnmaddps512_maskz ((__v16sf) __A,
++						     (__v16sf) __B,
++						     (__v16sf) __C,
++						     (__mmask16) __U, __R);
+ }
+ 
+ extern __inline __m512d
+ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm512_fnmsub_round_pd (__m512d __A, __m512d __B, __m512d __C, const int __R)
+ {
+-  return (__m512d) __builtin_ia32_vfmaddpd512_mask (-(__v8df) __A,
+-						    (__v8df) __B,
+-						    -(__v8df) __C,
+-						    (__mmask8) -1, __R);
++  return (__m512d) __builtin_ia32_vfnmsubpd512_mask ((__v8df) __A,
++						     (__v8df) __B,
++						     (__v8df) __C,
++						     (__mmask8) -1, __R);
+ }
+ 
+ extern __inline __m512d
+@@ -3732,20 +3732,20 @@ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm512_maskz_fnmsub_round_pd (__mmask8 __U, __m512d __A, __m512d __B,
+ 			      __m512d __C, const int __R)
+ {
+-  return (__m512d) __builtin_ia32_vfmaddpd512_maskz (-(__v8df) __A,
+-						     (__v8df) __B,
+-						     -(__v8df) __C,
+-						     (__mmask8) __U, __R);
++  return (__m512d) __builtin_ia32_vfnmsubpd512_maskz ((__v8df) __A,
++						      (__v8df) __B,
++						      (__v8df) __C,
++						      (__mmask8) __U, __R);
+ }
+ 
+ extern __inline __m512
+ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm512_fnmsub_round_ps (__m512 __A, __m512 __B, __m512 __C, const int __R)
+ {
+-  return (__m512) __builtin_ia32_vfmaddps512_mask (-(__v16sf) __A,
+-						   (__v16sf) __B,
+-						   -(__v16sf) __C,
+-						   (__mmask16) -1, __R);
++  return (__m512) __builtin_ia32_vfnmsubps512_mask ((__v16sf) __A,
++						    (__v16sf) __B,
++						    (__v16sf) __C,
++						    (__mmask16) -1, __R);
+ }
+ 
+ extern __inline __m512
+@@ -3775,10 +3775,10 @@ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm512_maskz_fnmsub_round_ps (__mmask16 __U, __m512 __A, __m512 __B,
+ 			      __m512 __C, const int __R)
+ {
+-  return (__m512) __builtin_ia32_vfmaddps512_maskz (-(__v16sf) __A,
+-						    (__v16sf) __B,
+-						    -(__v16sf) __C,
+-						    (__mmask16) __U, __R);
++  return (__m512) __builtin_ia32_vfnmsubps512_maskz ((__v16sf) __A,
++						     (__v16sf) __B,
++						     (__v16sf) __C,
++						     (__mmask16) __U, __R);
+ }
+ #else
+ #define _mm512_fmadd_round_pd(A, B, C, R)            \
+@@ -3806,28 +3806,28 @@ _mm512_maskz_fnmsub_round_ps (__mmask16 __U, __m512 __A, __m512 __B,
+     (__m512)__builtin_ia32_vfmaddps512_maskz(A, B, C, U, R)
+ 
+ #define _mm512_fmsub_round_pd(A, B, C, R)            \
+-    (__m512d)__builtin_ia32_vfmaddpd512_mask(A, B, -(C), -1, R)
++    (__m512d)__builtin_ia32_vfmsubpd512_mask(A, B, C, -1, R)
+ 
+ #define _mm512_mask_fmsub_round_pd(A, U, B, C, R)    \
+-    (__m512d)__builtin_ia32_vfmaddpd512_mask(A, B, -(C), U, R)
++    (__m512d)__builtin_ia32_vfmsubpd512_mask(A, B, C, U, R)
+ 
+ #define _mm512_mask3_fmsub_round_pd(A, B, C, U, R)   \
+     (__m512d)__builtin_ia32_vfmsubpd512_mask3(A, B, C, U, R)
+ 
+ #define _mm512_maskz_fmsub_round_pd(U, A, B, C, R)   \
+-    (__m512d)__builtin_ia32_vfmaddpd512_maskz(A, B, -(C), U, R)
++    (__m512d)__builtin_ia32_vfmsubpd512_maskz(A, B, C, U, R)
+ 
+ #define _mm512_fmsub_round_ps(A, B, C, R)            \
+-    (__m512)__builtin_ia32_vfmaddps512_mask(A, B, -(C), -1, R)
++    (__m512)__builtin_ia32_vfmsubps512_mask(A, B, C, -1, R)
+ 
+ #define _mm512_mask_fmsub_round_ps(A, U, B, C, R)    \
+-    (__m512)__builtin_ia32_vfmaddps512_mask(A, B, -(C), U, R)
++    (__m512)__builtin_ia32_vfmsubps512_mask(A, B, C, U, R)
+ 
+ #define _mm512_mask3_fmsub_round_ps(A, B, C, U, R)   \
+     (__m512)__builtin_ia32_vfmsubps512_mask3(A, B, C, U, R)
+ 
+ #define _mm512_maskz_fmsub_round_ps(U, A, B, C, R)   \
+-    (__m512)__builtin_ia32_vfmaddps512_maskz(A, B, -(C), U, R)
++    (__m512)__builtin_ia32_vfmsubps512_maskz(A, B, C, U, R)
+ 
+ #define _mm512_fmaddsub_round_pd(A, B, C, R)            \
+     (__m512d)__builtin_ia32_vfmaddsubpd512_mask(A, B, C, -1, R)
+@@ -3878,31 +3878,31 @@ _mm512_maskz_fnmsub_round_ps (__mmask16 __U, __m512 __A, __m512 __B,
+     (__m512)__builtin_ia32_vfmaddsubps512_maskz(A, B, -(C), U, R)
+ 
+ #define _mm512_fnmadd_round_pd(A, B, C, R)            \
+-    (__m512d)__builtin_ia32_vfmaddpd512_mask(-(A), B, C, -1, R)
++    (__m512d)__builtin_ia32_vfnmaddpd512_mask(A, B, C, -1, R)
+ 
+ #define _mm512_mask_fnmadd_round_pd(A, U, B, C, R)    \
+-    (__m512d)__builtin_ia32_vfnmaddpd512_mask(-(A), B, C, U, R)
++    (__m512d)__builtin_ia32_vfnmaddpd512_mask(A, B, C, U, R)
+ 
+ #define _mm512_mask3_fnmadd_round_pd(A, B, C, U, R)   \
+-    (__m512d)__builtin_ia32_vfmaddpd512_mask3(-(A), B, C, U, R)
++    (__m512d)__builtin_ia32_vfnmaddpd512_mask3(A, B, C, U, R)
+ 
+ #define _mm512_maskz_fnmadd_round_pd(U, A, B, C, R)   \
+-    (__m512d)__builtin_ia32_vfmaddpd512_maskz(-(A), B, C, U, R)
++    (__m512d)__builtin_ia32_vfnmaddpd512_maskz(A, B, C, U, R)
+ 
+ #define _mm512_fnmadd_round_ps(A, B, C, R)            \
+-    (__m512)__builtin_ia32_vfmaddps512_mask(-(A), B, C, -1, R)
++    (__m512)__builtin_ia32_vfnmaddps512_mask(A, B, C, -1, R)
+ 
+ #define _mm512_mask_fnmadd_round_ps(A, U, B, C, R)    \
+-    (__m512)__builtin_ia32_vfnmaddps512_mask(-(A), B, C, U, R)
++    (__m512)__builtin_ia32_vfnmaddps512_mask(A, B, C, U, R)
+ 
+ #define _mm512_mask3_fnmadd_round_ps(A, B, C, U, R)   \
+-    (__m512)__builtin_ia32_vfmaddps512_mask3(-(A), B, C, U, R)
++    (__m512)__builtin_ia32_vfnmaddps512_mask3(A, B, C, U, R)
+ 
+ #define _mm512_maskz_fnmadd_round_ps(U, A, B, C, R)   \
+-    (__m512)__builtin_ia32_vfmaddps512_maskz(-(A), B, C, U, R)
++    (__m512)__builtin_ia32_vfnmaddps512_maskz(A, B, C, U, R)
+ 
+ #define _mm512_fnmsub_round_pd(A, B, C, R)            \
+-    (__m512d)__builtin_ia32_vfmaddpd512_mask(-(A), B, -(C), -1, R)
++    (__m512d)__builtin_ia32_vfnmsubpd512_mask(A, B, C, -1, R)
+ 
+ #define _mm512_mask_fnmsub_round_pd(A, U, B, C, R)    \
+     (__m512d)__builtin_ia32_vfnmsubpd512_mask(A, B, C, U, R)
+@@ -3911,10 +3911,10 @@ _mm512_maskz_fnmsub_round_ps (__mmask16 __U, __m512 __A, __m512 __B,
+     (__m512d)__builtin_ia32_vfnmsubpd512_mask3(A, B, C, U, R)
+ 
+ #define _mm512_maskz_fnmsub_round_pd(U, A, B, C, R)   \
+-    (__m512d)__builtin_ia32_vfmaddpd512_maskz(-(A), B, -(C), U, R)
++    (__m512d)__builtin_ia32_vfnmsubpd512_maskz(A, B, C, U, R)
+ 
+ #define _mm512_fnmsub_round_ps(A, B, C, R)            \
+-    (__m512)__builtin_ia32_vfmaddps512_mask(-(A), B, -(C), -1, R)
++    (__m512)__builtin_ia32_vfnmsubps512_mask(A, B, C, -1, R)
+ 
+ #define _mm512_mask_fnmsub_round_ps(A, U, B, C, R)    \
+     (__m512)__builtin_ia32_vfnmsubps512_mask(A, B, C, U, R)
+@@ -3923,7 +3923,7 @@ _mm512_maskz_fnmsub_round_ps (__mmask16 __U, __m512 __A, __m512 __B,
+     (__m512)__builtin_ia32_vfnmsubps512_mask3(A, B, C, U, R)
+ 
+ #define _mm512_maskz_fnmsub_round_ps(U, A, B, C, R)   \
+-    (__m512)__builtin_ia32_vfmaddps512_maskz(-(A), B, -(C), U, R)
++    (__m512)__builtin_ia32_vfnmsubps512_maskz(A, B, C, U, R)
+ #endif
+ 
+ extern __inline __m512i
+@@ -3988,7 +3988,8 @@ extern __inline __m512
+ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm512_broadcastss_ps (__m128 __A)
+ {
+-  return (__m512) __builtin_ia32_broadcastss512 ((__v4sf) __A,
++  return (__m512) __builtin_ia32_broadcastss512 (__extension__
++						 ((__v4sf) __A)[0],
+ 						 (__v16sf)
+ 						 _mm512_undefined_ps (),
+ 						 (__mmask16) -1);
+@@ -3998,7 +3999,8 @@ extern __inline __m512
+ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm512_mask_broadcastss_ps (__m512 __O, __mmask16 __M, __m128 __A)
+ {
+-  return (__m512) __builtin_ia32_broadcastss512 ((__v4sf) __A,
++  return (__m512) __builtin_ia32_broadcastss512 (__extension__
++						 ((__v4sf) __A)[0],
+ 						 (__v16sf) __O, __M);
+ }
+ 
+@@ -4006,7 +4008,8 @@ extern __inline __m512
+ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm512_maskz_broadcastss_ps (__mmask16 __M, __m128 __A)
+ {
+-  return (__m512) __builtin_ia32_broadcastss512 ((__v4sf) __A,
++  return (__m512) __builtin_ia32_broadcastss512 (__extension__
++						 ((__v4sf) __A)[0],
+ 						 (__v16sf)
+ 						 _mm512_setzero_ps (),
+ 						 __M);
+@@ -4016,7 +4019,8 @@ extern __inline __m512d
+ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm512_broadcastsd_pd (__m128d __A)
+ {
+-  return (__m512d) __builtin_ia32_broadcastsd512 ((__v2df) __A,
++  return (__m512d) __builtin_ia32_broadcastsd512 (__extension__
++						  ((__v2df) __A)[0],
+ 						  (__v8df)
+ 						  _mm512_undefined_pd (),
+ 						  (__mmask8) -1);
+@@ -4026,7 +4030,8 @@ extern __inline __m512d
+ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm512_mask_broadcastsd_pd (__m512d __O, __mmask8 __M, __m128d __A)
+ {
+-  return (__m512d) __builtin_ia32_broadcastsd512 ((__v2df) __A,
++  return (__m512d) __builtin_ia32_broadcastsd512 (__extension__
++						  ((__v2df) __A)[0],
+ 						  (__v8df) __O, __M);
+ }
+ 
+@@ -4034,7 +4039,8 @@ extern __inline __m512d
+ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm512_maskz_broadcastsd_pd (__mmask8 __M, __m128d __A)
+ {
+-  return (__m512d) __builtin_ia32_broadcastsd512 ((__v2df) __A,
++  return (__m512d) __builtin_ia32_broadcastsd512 (__extension__
++						  ((__v2df) __A)[0],
+ 						  (__v8df)
+ 						  _mm512_setzero_pd (),
+ 						  __M);
+@@ -12416,9 +12422,9 @@ extern __inline __m512d
+ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm512_fmsub_pd (__m512d __A, __m512d __B, __m512d __C)
+ {
+-  return (__m512d) __builtin_ia32_vfmaddpd512_mask ((__v8df) __A,
++  return (__m512d) __builtin_ia32_vfmsubpd512_mask ((__v8df) __A,
+ 						    (__v8df) __B,
+-						    -(__v8df) __C,
++						    (__v8df) __C,
+ 						    (__mmask8) -1,
+ 						    _MM_FROUND_CUR_DIRECTION);
+ }
+@@ -12427,9 +12433,9 @@ extern __inline __m512d
+ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm512_mask_fmsub_pd (__m512d __A, __mmask8 __U, __m512d __B, __m512d __C)
+ {
+-  return (__m512d) __builtin_ia32_vfmaddpd512_mask ((__v8df) __A,
++  return (__m512d) __builtin_ia32_vfmsubpd512_mask ((__v8df) __A,
+ 						    (__v8df) __B,
+-						    -(__v8df) __C,
++						    (__v8df) __C,
+ 						    (__mmask8) __U,
+ 						    _MM_FROUND_CUR_DIRECTION);
+ }
+@@ -12449,9 +12455,9 @@ extern __inline __m512d
+ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm512_maskz_fmsub_pd (__mmask8 __U, __m512d __A, __m512d __B, __m512d __C)
+ {
+-  return (__m512d) __builtin_ia32_vfmaddpd512_maskz ((__v8df) __A,
++  return (__m512d) __builtin_ia32_vfmsubpd512_maskz ((__v8df) __A,
+ 						     (__v8df) __B,
+-						     -(__v8df) __C,
++						     (__v8df) __C,
+ 						     (__mmask8) __U,
+ 						     _MM_FROUND_CUR_DIRECTION);
+ }
+@@ -12460,9 +12466,9 @@ extern __inline __m512
+ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm512_fmsub_ps (__m512 __A, __m512 __B, __m512 __C)
+ {
+-  return (__m512) __builtin_ia32_vfmaddps512_mask ((__v16sf) __A,
++  return (__m512) __builtin_ia32_vfmsubps512_mask ((__v16sf) __A,
+ 						   (__v16sf) __B,
+-						   -(__v16sf) __C,
++						   (__v16sf) __C,
+ 						   (__mmask16) -1,
+ 						   _MM_FROUND_CUR_DIRECTION);
+ }
+@@ -12471,9 +12477,9 @@ extern __inline __m512
+ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm512_mask_fmsub_ps (__m512 __A, __mmask16 __U, __m512 __B, __m512 __C)
+ {
+-  return (__m512) __builtin_ia32_vfmaddps512_mask ((__v16sf) __A,
++  return (__m512) __builtin_ia32_vfmsubps512_mask ((__v16sf) __A,
+ 						   (__v16sf) __B,
+-						   -(__v16sf) __C,
++						   (__v16sf) __C,
+ 						   (__mmask16) __U,
+ 						   _MM_FROUND_CUR_DIRECTION);
+ }
+@@ -12493,9 +12499,9 @@ extern __inline __m512
+ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm512_maskz_fmsub_ps (__mmask16 __U, __m512 __A, __m512 __B, __m512 __C)
+ {
+-  return (__m512) __builtin_ia32_vfmaddps512_maskz ((__v16sf) __A,
++  return (__m512) __builtin_ia32_vfmsubps512_maskz ((__v16sf) __A,
+ 						    (__v16sf) __B,
+-						    -(__v16sf) __C,
++						    (__v16sf) __C,
+ 						    (__mmask16) __U,
+ 						    _MM_FROUND_CUR_DIRECTION);
+ }
+@@ -12680,11 +12686,11 @@ extern __inline __m512d
+ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm512_fnmadd_pd (__m512d __A, __m512d __B, __m512d __C)
+ {
+-  return (__m512d) __builtin_ia32_vfmaddpd512_mask (-(__v8df) __A,
+-						    (__v8df) __B,
+-						    (__v8df) __C,
+-						    (__mmask8) -1,
+-						    _MM_FROUND_CUR_DIRECTION);
++  return (__m512d) __builtin_ia32_vfnmaddpd512_mask ((__v8df) __A,
++						     (__v8df) __B,
++						     (__v8df) __C,
++						     (__mmask8) -1,
++						     _MM_FROUND_CUR_DIRECTION);
+ }
+ 
+ extern __inline __m512d
+@@ -12702,33 +12708,33 @@ extern __inline __m512d
+ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm512_mask3_fnmadd_pd (__m512d __A, __m512d __B, __m512d __C, __mmask8 __U)
+ {
+-  return (__m512d) __builtin_ia32_vfmaddpd512_mask3 (-(__v8df) __A,
+-						     (__v8df) __B,
+-						     (__v8df) __C,
+-						     (__mmask8) __U,
+-						     _MM_FROUND_CUR_DIRECTION);
++  return (__m512d) __builtin_ia32_vfnmaddpd512_mask3 ((__v8df) __A,
++						      (__v8df) __B,
++						      (__v8df) __C,
++						      (__mmask8) __U,
++						      _MM_FROUND_CUR_DIRECTION);
+ }
+ 
+ extern __inline __m512d
+ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm512_maskz_fnmadd_pd (__mmask8 __U, __m512d __A, __m512d __B, __m512d __C)
+ {
+-  return (__m512d) __builtin_ia32_vfmaddpd512_maskz (-(__v8df) __A,
+-						     (__v8df) __B,
+-						     (__v8df) __C,
+-						     (__mmask8) __U,
+-						     _MM_FROUND_CUR_DIRECTION);
++  return (__m512d) __builtin_ia32_vfnmaddpd512_maskz ((__v8df) __A,
++						      (__v8df) __B,
++						      (__v8df) __C,
++						      (__mmask8) __U,
++						      _MM_FROUND_CUR_DIRECTION);
+ }
+ 
+ extern __inline __m512
+ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm512_fnmadd_ps (__m512 __A, __m512 __B, __m512 __C)
+ {
+-  return (__m512) __builtin_ia32_vfmaddps512_mask (-(__v16sf) __A,
+-						   (__v16sf) __B,
+-						   (__v16sf) __C,
+-						   (__mmask16) -1,
+-						   _MM_FROUND_CUR_DIRECTION);
++  return (__m512) __builtin_ia32_vfnmaddps512_mask ((__v16sf) __A,
++						    (__v16sf) __B,
++						    (__v16sf) __C,
++						    (__mmask16) -1,
++						    _MM_FROUND_CUR_DIRECTION);
+ }
+ 
+ extern __inline __m512
+@@ -12746,33 +12752,33 @@ extern __inline __m512
+ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm512_mask3_fnmadd_ps (__m512 __A, __m512 __B, __m512 __C, __mmask16 __U)
+ {
+-  return (__m512) __builtin_ia32_vfmaddps512_mask3 (-(__v16sf) __A,
+-						    (__v16sf) __B,
+-						    (__v16sf) __C,
+-						    (__mmask16) __U,
+-						    _MM_FROUND_CUR_DIRECTION);
++  return (__m512) __builtin_ia32_vfnmaddps512_mask3 ((__v16sf) __A,
++						     (__v16sf) __B,
++						     (__v16sf) __C,
++						     (__mmask16) __U,
++						     _MM_FROUND_CUR_DIRECTION);
+ }
+ 
+ extern __inline __m512
+ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm512_maskz_fnmadd_ps (__mmask16 __U, __m512 __A, __m512 __B, __m512 __C)
+ {
+-  return (__m512) __builtin_ia32_vfmaddps512_maskz (-(__v16sf) __A,
+-						    (__v16sf) __B,
+-						    (__v16sf) __C,
+-						    (__mmask16) __U,
+-						    _MM_FROUND_CUR_DIRECTION);
++  return (__m512) __builtin_ia32_vfnmaddps512_maskz ((__v16sf) __A,
++						     (__v16sf) __B,
++						     (__v16sf) __C,
++						     (__mmask16) __U,
++						     _MM_FROUND_CUR_DIRECTION);
+ }
+ 
+ extern __inline __m512d
+ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm512_fnmsub_pd (__m512d __A, __m512d __B, __m512d __C)
+ {
+-  return (__m512d) __builtin_ia32_vfmaddpd512_mask (-(__v8df) __A,
+-						    (__v8df) __B,
+-						    -(__v8df) __C,
+-						    (__mmask8) -1,
+-						    _MM_FROUND_CUR_DIRECTION);
++  return (__m512d) __builtin_ia32_vfnmsubpd512_mask ((__v8df) __A,
++						     (__v8df) __B,
++						     (__v8df) __C,
++						     (__mmask8) -1,
++						     _MM_FROUND_CUR_DIRECTION);
+ }
+ 
+ extern __inline __m512d
+@@ -12801,22 +12807,22 @@ extern __inline __m512d
+ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm512_maskz_fnmsub_pd (__mmask8 __U, __m512d __A, __m512d __B, __m512d __C)
+ {
+-  return (__m512d) __builtin_ia32_vfmaddpd512_maskz (-(__v8df) __A,
+-						     (__v8df) __B,
+-						     -(__v8df) __C,
+-						     (__mmask8) __U,
+-						     _MM_FROUND_CUR_DIRECTION);
++  return (__m512d) __builtin_ia32_vfnmsubpd512_maskz ((__v8df) __A,
++						      (__v8df) __B,
++						      (__v8df) __C,
++						      (__mmask8) __U,
++						      _MM_FROUND_CUR_DIRECTION);
+ }
+ 
+ extern __inline __m512
+ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm512_fnmsub_ps (__m512 __A, __m512 __B, __m512 __C)
+ {
+-  return (__m512) __builtin_ia32_vfmaddps512_mask (-(__v16sf) __A,
+-						   (__v16sf) __B,
+-						   -(__v16sf) __C,
+-						   (__mmask16) -1,
+-						   _MM_FROUND_CUR_DIRECTION);
++  return (__m512) __builtin_ia32_vfnmsubps512_mask ((__v16sf) __A,
++						    (__v16sf) __B,
++						    (__v16sf) __C,
++						    (__mmask16) -1,
++						    _MM_FROUND_CUR_DIRECTION);
+ }
+ 
+ extern __inline __m512
+@@ -12845,11 +12851,11 @@ extern __inline __m512
+ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm512_maskz_fnmsub_ps (__mmask16 __U, __m512 __A, __m512 __B, __m512 __C)
+ {
+-  return (__m512) __builtin_ia32_vfmaddps512_maskz (-(__v16sf) __A,
+-						    (__v16sf) __B,
+-						    -(__v16sf) __C,
+-						    (__mmask16) __U,
+-						    _MM_FROUND_CUR_DIRECTION);
++  return (__m512) __builtin_ia32_vfnmsubps512_maskz ((__v16sf) __A,
++						     (__v16sf) __B,
++						     (__v16sf) __C,
++						     (__mmask16) __U,
++						     _MM_FROUND_CUR_DIRECTION);
+ }
+ 
+ extern __inline __m256i
+diff --git a/gcc/config/i386/avx512vlintrin.h b/gcc/config/i386/avx512vlintrin.h
+index 68b5537845b..c7151787d83 100644
+--- a/gcc/config/i386/avx512vlintrin.h
++++ b/gcc/config/i386/avx512vlintrin.h
+@@ -4117,9 +4117,9 @@ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm256_mask_fmsub_pd (__m256d __A, __mmask8 __U, __m256d __B,
+ 		      __m256d __C)
+ {
+-  return (__m256d) __builtin_ia32_vfmaddpd256_mask ((__v4df) __A,
++  return (__m256d) __builtin_ia32_vfmsubpd256_mask ((__v4df) __A,
+ 						    (__v4df) __B,
+-						    -(__v4df) __C,
++						    (__v4df) __C,
+ 						    (__mmask8) __U);
+ }
+ 
+@@ -4139,9 +4139,9 @@ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm256_maskz_fmsub_pd (__mmask8 __U, __m256d __A, __m256d __B,
+ 		       __m256d __C)
+ {
+-  return (__m256d) __builtin_ia32_vfmaddpd256_maskz ((__v4df) __A,
++  return (__m256d) __builtin_ia32_vfmsubpd256_maskz ((__v4df) __A,
+ 						     (__v4df) __B,
+-						     -(__v4df) __C,
++						     (__v4df) __C,
+ 						     (__mmask8) __U);
+ }
+ 
+@@ -4149,9 +4149,9 @@ extern __inline __m128d
+ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm_mask_fmsub_pd (__m128d __A, __mmask8 __U, __m128d __B, __m128d __C)
+ {
+-  return (__m128d) __builtin_ia32_vfmaddpd128_mask ((__v2df) __A,
++  return (__m128d) __builtin_ia32_vfmsubpd128_mask ((__v2df) __A,
+ 						    (__v2df) __B,
+-						    -(__v2df) __C,
++						    (__v2df) __C,
+ 						    (__mmask8) __U);
+ }
+ 
+@@ -4171,9 +4171,9 @@ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm_maskz_fmsub_pd (__mmask8 __U, __m128d __A, __m128d __B,
+ 		    __m128d __C)
+ {
+-  return (__m128d) __builtin_ia32_vfmaddpd128_maskz ((__v2df) __A,
++  return (__m128d) __builtin_ia32_vfmsubpd128_maskz ((__v2df) __A,
+ 						     (__v2df) __B,
+-						     -(__v2df) __C,
++						     (__v2df) __C,
+ 						     (__mmask8) __U);
+ }
+ 
+@@ -4181,9 +4181,9 @@ extern __inline __m256
+ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm256_mask_fmsub_ps (__m256 __A, __mmask8 __U, __m256 __B, __m256 __C)
+ {
+-  return (__m256) __builtin_ia32_vfmaddps256_mask ((__v8sf) __A,
++  return (__m256) __builtin_ia32_vfmsubps256_mask ((__v8sf) __A,
+ 						   (__v8sf) __B,
+-						   -(__v8sf) __C,
++						   (__v8sf) __C,
+ 						   (__mmask8) __U);
+ }
+ 
+@@ -4203,9 +4203,9 @@ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm256_maskz_fmsub_ps (__mmask8 __U, __m256 __A, __m256 __B,
+ 		       __m256 __C)
+ {
+-  return (__m256) __builtin_ia32_vfmaddps256_maskz ((__v8sf) __A,
++  return (__m256) __builtin_ia32_vfmsubps256_maskz ((__v8sf) __A,
+ 						    (__v8sf) __B,
+-						    -(__v8sf) __C,
++						    (__v8sf) __C,
+ 						    (__mmask8) __U);
+ }
+ 
+@@ -4213,9 +4213,9 @@ extern __inline __m128
+ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm_mask_fmsub_ps (__m128 __A, __mmask8 __U, __m128 __B, __m128 __C)
+ {
+-  return (__m128) __builtin_ia32_vfmaddps128_mask ((__v4sf) __A,
++  return (__m128) __builtin_ia32_vfmsubps128_mask ((__v4sf) __A,
+ 						   (__v4sf) __B,
+-						   -(__v4sf) __C,
++						   (__v4sf) __C,
+ 						   (__mmask8) __U);
+ }
+ 
+@@ -4233,9 +4233,9 @@ extern __inline __m128
+ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm_maskz_fmsub_ps (__mmask8 __U, __m128 __A, __m128 __B, __m128 __C)
+ {
+-  return (__m128) __builtin_ia32_vfmaddps128_maskz ((__v4sf) __A,
++  return (__m128) __builtin_ia32_vfmsubps128_maskz ((__v4sf) __A,
+ 						    (__v4sf) __B,
+-						    -(__v4sf) __C,
++						    (__v4sf) __C,
+ 						    (__mmask8) __U);
+ }
+ 
+@@ -4525,10 +4525,10 @@ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm256_mask3_fnmadd_pd (__m256d __A, __m256d __B, __m256d __C,
+ 			__mmask8 __U)
+ {
+-  return (__m256d) __builtin_ia32_vfmaddpd256_mask3 (-(__v4df) __A,
+-						     (__v4df) __B,
+-						     (__v4df) __C,
+-						     (__mmask8) __U);
++  return (__m256d) __builtin_ia32_vfnmaddpd256_mask3 ((__v4df) __A,
++						      (__v4df) __B,
++						      (__v4df) __C,
++						      (__mmask8) __U);
+ }
+ 
+ extern __inline __m256d
+@@ -4536,10 +4536,10 @@ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm256_maskz_fnmadd_pd (__mmask8 __U, __m256d __A, __m256d __B,
+ 			__m256d __C)
+ {
+-  return (__m256d) __builtin_ia32_vfmaddpd256_maskz (-(__v4df) __A,
+-						     (__v4df) __B,
+-						     (__v4df) __C,
+-						     (__mmask8) __U);
++  return (__m256d) __builtin_ia32_vfnmaddpd256_maskz ((__v4df) __A,
++						      (__v4df) __B,
++						      (__v4df) __C,
++						      (__mmask8) __U);
+ }
+ 
+ extern __inline __m128d
+@@ -4558,10 +4558,10 @@ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm_mask3_fnmadd_pd (__m128d __A, __m128d __B, __m128d __C,
+ 		     __mmask8 __U)
+ {
+-  return (__m128d) __builtin_ia32_vfmaddpd128_mask3 (-(__v2df) __A,
+-						     (__v2df) __B,
+-						     (__v2df) __C,
+-						     (__mmask8) __U);
++  return (__m128d) __builtin_ia32_vfnmaddpd128_mask3 ((__v2df) __A,
++						      (__v2df) __B,
++						      (__v2df) __C,
++						      (__mmask8) __U);
+ }
+ 
+ extern __inline __m128d
+@@ -4569,10 +4569,10 @@ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm_maskz_fnmadd_pd (__mmask8 __U, __m128d __A, __m128d __B,
+ 		     __m128d __C)
+ {
+-  return (__m128d) __builtin_ia32_vfmaddpd128_maskz (-(__v2df) __A,
+-						     (__v2df) __B,
+-						     (__v2df) __C,
+-						     (__mmask8) __U);
++  return (__m128d) __builtin_ia32_vfnmaddpd128_maskz ((__v2df) __A,
++						      (__v2df) __B,
++						      (__v2df) __C,
++						      (__mmask8) __U);
+ }
+ 
+ extern __inline __m256
+@@ -4591,10 +4591,10 @@ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm256_mask3_fnmadd_ps (__m256 __A, __m256 __B, __m256 __C,
+ 			__mmask8 __U)
+ {
+-  return (__m256) __builtin_ia32_vfmaddps256_mask3 (-(__v8sf) __A,
+-						    (__v8sf) __B,
+-						    (__v8sf) __C,
+-						    (__mmask8) __U);
++  return (__m256) __builtin_ia32_vfnmaddps256_mask3 ((__v8sf) __A,
++						     (__v8sf) __B,
++						     (__v8sf) __C,
++						     (__mmask8) __U);
+ }
+ 
+ extern __inline __m256
+@@ -4602,10 +4602,10 @@ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm256_maskz_fnmadd_ps (__mmask8 __U, __m256 __A, __m256 __B,
+ 			__m256 __C)
+ {
+-  return (__m256) __builtin_ia32_vfmaddps256_maskz (-(__v8sf) __A,
+-						    (__v8sf) __B,
+-						    (__v8sf) __C,
+-						    (__mmask8) __U);
++  return (__m256) __builtin_ia32_vfnmaddps256_maskz ((__v8sf) __A,
++						     (__v8sf) __B,
++						     (__v8sf) __C,
++						     (__mmask8) __U);
+ }
+ 
+ extern __inline __m128
+@@ -4622,20 +4622,20 @@ extern __inline __m128
+ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm_mask3_fnmadd_ps (__m128 __A, __m128 __B, __m128 __C, __mmask8 __U)
+ {
+-  return (__m128) __builtin_ia32_vfmaddps128_mask3 (-(__v4sf) __A,
+-						    (__v4sf) __B,
+-						    (__v4sf) __C,
+-						    (__mmask8) __U);
++  return (__m128) __builtin_ia32_vfnmaddps128_mask3 ((__v4sf) __A,
++						     (__v4sf) __B,
++						     (__v4sf) __C,
++						     (__mmask8) __U);
+ }
+ 
+ extern __inline __m128
+ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm_maskz_fnmadd_ps (__mmask8 __U, __m128 __A, __m128 __B, __m128 __C)
+ {
+-  return (__m128) __builtin_ia32_vfmaddps128_maskz (-(__v4sf) __A,
+-						    (__v4sf) __B,
+-						    (__v4sf) __C,
+-						    (__mmask8) __U);
++  return (__m128) __builtin_ia32_vfnmaddps128_maskz ((__v4sf) __A,
++						     (__v4sf) __B,
++						     (__v4sf) __C,
++						     (__mmask8) __U);
+ }
+ 
+ extern __inline __m256d
+@@ -4665,10 +4665,10 @@ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm256_maskz_fnmsub_pd (__mmask8 __U, __m256d __A, __m256d __B,
+ 			__m256d __C)
+ {
+-  return (__m256d) __builtin_ia32_vfmaddpd256_maskz (-(__v4df) __A,
+-						     (__v4df) __B,
+-						     -(__v4df) __C,
+-						     (__mmask8) __U);
++  return (__m256d) __builtin_ia32_vfnmsubpd256_maskz ((__v4df) __A,
++						      (__v4df) __B,
++						      (__v4df) __C,
++						      (__mmask8) __U);
+ }
+ 
+ extern __inline __m128d
+@@ -4698,10 +4698,10 @@ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm_maskz_fnmsub_pd (__mmask8 __U, __m128d __A, __m128d __B,
+ 		     __m128d __C)
+ {
+-  return (__m128d) __builtin_ia32_vfmaddpd128_maskz (-(__v2df) __A,
+-						     (__v2df) __B,
+-						     -(__v2df) __C,
+-						     (__mmask8) __U);
++  return (__m128d) __builtin_ia32_vfnmsubpd128_maskz ((__v2df) __A,
++						      (__v2df) __B,
++						      (__v2df) __C,
++						      (__mmask8) __U);
+ }
+ 
+ extern __inline __m256
+@@ -4731,10 +4731,10 @@ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm256_maskz_fnmsub_ps (__mmask8 __U, __m256 __A, __m256 __B,
+ 			__m256 __C)
+ {
+-  return (__m256) __builtin_ia32_vfmaddps256_maskz (-(__v8sf) __A,
+-						    (__v8sf) __B,
+-						    -(__v8sf) __C,
+-						    (__mmask8) __U);
++  return (__m256) __builtin_ia32_vfnmsubps256_maskz ((__v8sf) __A,
++						     (__v8sf) __B,
++						     (__v8sf) __C,
++						     (__mmask8) __U);
+ }
+ 
+ extern __inline __m128
+@@ -4761,10 +4761,10 @@ extern __inline __m128
+ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm_maskz_fnmsub_ps (__mmask8 __U, __m128 __A, __m128 __B, __m128 __C)
+ {
+-  return (__m128) __builtin_ia32_vfmaddps128_maskz (-(__v4sf) __A,
+-						    (__v4sf) __B,
+-						    -(__v4sf) __C,
+-						    (__mmask8) __U);
++  return (__m128) __builtin_ia32_vfnmsubps128_maskz ((__v4sf) __A,
++						     (__v4sf) __B,
++						     (__v4sf) __C,
++						     (__mmask8) __U);
+ }
+ 
+ extern __inline __m128i
+diff --git a/gcc/config/i386/i386-builtin-types.def b/gcc/config/i386/i386-builtin-types.def
+index 886cf1b6ecc..5f427a50f39 100644
+--- a/gcc/config/i386/i386-builtin-types.def
++++ b/gcc/config/i386/i386-builtin-types.def
+@@ -767,8 +767,10 @@ DEF_FUNCTION_TYPE (V16SF, V16SI, V16SF, V16SF, UHI)
+ DEF_FUNCTION_TYPE (V16SF, V16SF, V16SI, V16SF, UHI)
+ DEF_FUNCTION_TYPE (V16SF, V8SF, V16SF, UHI)
+ DEF_FUNCTION_TYPE (V16SF, V4SF, V16SF, UHI)
++DEF_FUNCTION_TYPE (V16SF, FLOAT, V16SF, UHI)
+ DEF_FUNCTION_TYPE (V8DF, V4DF, V8DF, UQI)
+ DEF_FUNCTION_TYPE (V8DF, V2DF, V8DF, UQI)
++DEF_FUNCTION_TYPE (V8DF, DOUBLE, V8DF, UQI)
+ DEF_FUNCTION_TYPE (V16SI, V8SI, V16SI, UHI)
+ DEF_FUNCTION_TYPE (V16SI, V4SI, V16SI, UHI)
+ DEF_FUNCTION_TYPE (V16SI, SI, V16SI, UHI)
+diff --git a/gcc/config/i386/i386-builtin.def b/gcc/config/i386/i386-builtin.def
+index dc4c70c7ea3..0c9bc9f88f9 100644
+--- a/gcc/config/i386/i386-builtin.def
++++ b/gcc/config/i386/i386-builtin.def
+@@ -1194,9 +1194,9 @@ BDESC (OPTION_MASK_ISA_AVX2, CODE_FOR_avx2_interleave_lowv16hi, "__builtin_ia32_
+ BDESC (OPTION_MASK_ISA_AVX2, CODE_FOR_avx2_interleave_lowv8si, "__builtin_ia32_punpckldq256", IX86_BUILTIN_PUNPCKLDQ256, UNKNOWN, (int) V8SI_FTYPE_V8SI_V8SI)
+ BDESC (OPTION_MASK_ISA_AVX2, CODE_FOR_avx2_interleave_lowv4di, "__builtin_ia32_punpcklqdq256", IX86_BUILTIN_PUNPCKLQDQ256, UNKNOWN, (int) V4DI_FTYPE_V4DI_V4DI)
+ BDESC (OPTION_MASK_ISA_AVX2, CODE_FOR_xorv4di3, "__builtin_ia32_pxor256", IX86_BUILTIN_PXOR256, UNKNOWN, (int) V4DI_FTYPE_V4DI_V4DI)
+-BDESC (OPTION_MASK_ISA_AVX2, CODE_FOR_avx2_vec_dupv4sf, "__builtin_ia32_vbroadcastss_ps", IX86_BUILTIN_VBROADCASTSS_PS, UNKNOWN, (int) V4SF_FTYPE_V4SF)
+-BDESC (OPTION_MASK_ISA_AVX2, CODE_FOR_avx2_vec_dupv8sf, "__builtin_ia32_vbroadcastss_ps256", IX86_BUILTIN_VBROADCASTSS_PS256, UNKNOWN, (int) V8SF_FTYPE_V4SF)
+-BDESC (OPTION_MASK_ISA_AVX2, CODE_FOR_avx2_vec_dupv4df, "__builtin_ia32_vbroadcastsd_pd256", IX86_BUILTIN_VBROADCASTSD_PD256, UNKNOWN, (int) V4DF_FTYPE_V2DF)
++BDESC (OPTION_MASK_ISA_AVX2, CODE_FOR_vec_dupv4sf, "__builtin_ia32_vbroadcastss_ps", IX86_BUILTIN_VBROADCASTSS_PS, UNKNOWN, (int) V4SF_FTYPE_V4SF)
++BDESC (OPTION_MASK_ISA_AVX2, CODE_FOR_vec_dupv8sf, "__builtin_ia32_vbroadcastss_ps256", IX86_BUILTIN_VBROADCASTSS_PS256, UNKNOWN, (int) V8SF_FTYPE_V4SF)
++BDESC (OPTION_MASK_ISA_AVX2, CODE_FOR_vec_dupv4df, "__builtin_ia32_vbroadcastsd_pd256", IX86_BUILTIN_VBROADCASTSD_PD256, UNKNOWN, (int) V4DF_FTYPE_V2DF)
+ BDESC (OPTION_MASK_ISA_AVX2, CODE_FOR_avx2_vbroadcasti128_v4di, "__builtin_ia32_vbroadcastsi256", IX86_BUILTIN_VBROADCASTSI256, UNKNOWN, (int) V4DI_FTYPE_V2DI)
+ BDESC (OPTION_MASK_ISA_AVX2, CODE_FOR_avx2_pblenddv4si, "__builtin_ia32_pblendd128", IX86_BUILTIN_PBLENDD128, UNKNOWN, (int) V4SI_FTYPE_V4SI_V4SI_INT)
+ BDESC (OPTION_MASK_ISA_AVX2, CODE_FOR_avx2_pblenddv8si, "__builtin_ia32_pblendd256", IX86_BUILTIN_PBLENDD256, UNKNOWN, (int) V8SI_FTYPE_V8SI_V8SI_INT)
+@@ -1278,8 +1278,8 @@ BDESC (OPTION_MASK_ISA_AVX512F, CODE_FOR_avx512f_broadcastv16sf_mask, "__builtin
+ BDESC (OPTION_MASK_ISA_AVX512F, CODE_FOR_avx512f_broadcastv8df_mask, "__builtin_ia32_broadcastf64x4_512", IX86_BUILTIN_BROADCASTF64X4_512, UNKNOWN, (int) V8DF_FTYPE_V4DF_V8DF_UQI)
+ BDESC (OPTION_MASK_ISA_AVX512F, CODE_FOR_avx512f_broadcastv16si_mask, "__builtin_ia32_broadcasti32x4_512", IX86_BUILTIN_BROADCASTI32X4_512, UNKNOWN, (int) V16SI_FTYPE_V4SI_V16SI_UHI)
+ BDESC (OPTION_MASK_ISA_AVX512F, CODE_FOR_avx512f_broadcastv8di_mask, "__builtin_ia32_broadcasti64x4_512", IX86_BUILTIN_BROADCASTI64X4_512, UNKNOWN, (int) V8DI_FTYPE_V4DI_V8DI_UQI)
+-BDESC (OPTION_MASK_ISA_AVX512F, CODE_FOR_avx512f_vec_dupv8df_mask, "__builtin_ia32_broadcastsd512", IX86_BUILTIN_BROADCASTSD512, UNKNOWN, (int) V8DF_FTYPE_V2DF_V8DF_UQI)
+-BDESC (OPTION_MASK_ISA_AVX512F, CODE_FOR_avx512f_vec_dupv16sf_mask, "__builtin_ia32_broadcastss512", IX86_BUILTIN_BROADCASTSS512, UNKNOWN, (int) V16SF_FTYPE_V4SF_V16SF_UHI)
++BDESC (OPTION_MASK_ISA_AVX512F, CODE_FOR_avx512f_vec_dupv8df_mask, "__builtin_ia32_broadcastsd512", IX86_BUILTIN_BROADCASTSD512, UNKNOWN, (int) V8DF_FTYPE_DOUBLE_V8DF_UQI)
++BDESC (OPTION_MASK_ISA_AVX512F, CODE_FOR_avx512f_vec_dupv16sf_mask, "__builtin_ia32_broadcastss512", IX86_BUILTIN_BROADCASTSS512, UNKNOWN, (int) V16SF_FTYPE_FLOAT_V16SF_UHI)
+ BDESC (OPTION_MASK_ISA_AVX512F, CODE_FOR_avx512f_cmpv16si3_mask, "__builtin_ia32_cmpd512_mask", IX86_BUILTIN_CMPD512, UNKNOWN, (int) UHI_FTYPE_V16SI_V16SI_INT_UHI)
+ BDESC (OPTION_MASK_ISA_AVX512F, CODE_FOR_avx512f_cmpv8di3_mask, "__builtin_ia32_cmpq512_mask", IX86_BUILTIN_CMPQ512, UNKNOWN, (int) UQI_FTYPE_V8DI_V8DI_INT_UQI)
+ BDESC (OPTION_MASK_ISA_AVX512F, CODE_FOR_avx512f_compressv8df_mask, "__builtin_ia32_compressdf512_mask", IX86_BUILTIN_COMPRESSPD512, UNKNOWN, (int) V8DF_FTYPE_V8DF_V8DF_UQI)
+@@ -1903,22 +1903,44 @@ BDESC (OPTION_MASK_ISA_AVX512VL, CODE_FOR_avx512vl_fmadd_v8sf_maskz, "__builtin_
+ BDESC (OPTION_MASK_ISA_AVX512VL, CODE_FOR_avx512vl_fmadd_v4sf_mask, "__builtin_ia32_vfmaddps128_mask", IX86_BUILTIN_VFMADDPS128_MASK, UNKNOWN, (int) V4SF_FTYPE_V4SF_V4SF_V4SF_UQI)
+ BDESC (OPTION_MASK_ISA_AVX512VL, CODE_FOR_avx512vl_fmadd_v4sf_mask3, "__builtin_ia32_vfmaddps128_mask3", IX86_BUILTIN_VFMADDPS128_MASK3, UNKNOWN, (int) V4SF_FTYPE_V4SF_V4SF_V4SF_UQI)
+ BDESC (OPTION_MASK_ISA_AVX512VL, CODE_FOR_avx512vl_fmadd_v4sf_maskz, "__builtin_ia32_vfmaddps128_maskz", IX86_BUILTIN_VFMADDPS128_MASKZ, UNKNOWN, (int) V4SF_FTYPE_V4SF_V4SF_V4SF_UQI)
++BDESC (OPTION_MASK_ISA_AVX512VL, CODE_FOR_avx512vl_fmsub_v4df_mask, "__builtin_ia32_vfmsubpd256_mask", IX86_BUILTIN_VFMSUBPD256_MASK, UNKNOWN, (int) V4DF_FTYPE_V4DF_V4DF_V4DF_UQI)
+ BDESC (OPTION_MASK_ISA_AVX512VL, CODE_FOR_avx512vl_fmsub_v4df_mask3, "__builtin_ia32_vfmsubpd256_mask3", IX86_BUILTIN_VFMSUBPD256_MASK3, UNKNOWN, (int) V4DF_FTYPE_V4DF_V4DF_V4DF_UQI)
++BDESC (OPTION_MASK_ISA_AVX512VL, CODE_FOR_avx512vl_fmsub_v4df_maskz, "__builtin_ia32_vfmsubpd256_maskz", IX86_BUILTIN_VFMSUBPD256_MASKZ, UNKNOWN, (int) V4DF_FTYPE_V4DF_V4DF_V4DF_UQI)
++BDESC (OPTION_MASK_ISA_AVX512VL, CODE_FOR_avx512vl_fmsub_v2df_mask, "__builtin_ia32_vfmsubpd128_mask", IX86_BUILTIN_VFMSUBPD128_MASK, UNKNOWN, (int) V2DF_FTYPE_V2DF_V2DF_V2DF_UQI)
+ BDESC (OPTION_MASK_ISA_AVX512VL, CODE_FOR_avx512vl_fmsub_v2df_mask3, "__builtin_ia32_vfmsubpd128_mask3", IX86_BUILTIN_VFMSUBPD128_MASK3, UNKNOWN, (int) V2DF_FTYPE_V2DF_V2DF_V2DF_UQI)
++BDESC (OPTION_MASK_ISA_AVX512VL, CODE_FOR_avx512vl_fmsub_v2df_maskz, "__builtin_ia32_vfmsubpd128_maskz", IX86_BUILTIN_VFMSUBPD128_MASKZ, UNKNOWN, (int) V2DF_FTYPE_V2DF_V2DF_V2DF_UQI)
++BDESC (OPTION_MASK_ISA_AVX512VL, CODE_FOR_avx512vl_fmsub_v8sf_mask, "__builtin_ia32_vfmsubps256_mask", IX86_BUILTIN_VFMSUBPS256_MASK, UNKNOWN, (int) V8SF_FTYPE_V8SF_V8SF_V8SF_UQI)
+ BDESC (OPTION_MASK_ISA_AVX512VL, CODE_FOR_avx512vl_fmsub_v8sf_mask3, "__builtin_ia32_vfmsubps256_mask3", IX86_BUILTIN_VFMSUBPS256_MASK3, UNKNOWN, (int) V8SF_FTYPE_V8SF_V8SF_V8SF_UQI)
++BDESC (OPTION_MASK_ISA_AVX512VL, CODE_FOR_avx512vl_fmsub_v8sf_maskz, "__builtin_ia32_vfmsubps256_maskz", IX86_BUILTIN_VFMSUBPS256_MASKZ, UNKNOWN, (int) V8SF_FTYPE_V8SF_V8SF_V8SF_UQI)
++BDESC (OPTION_MASK_ISA_AVX512VL, CODE_FOR_avx512vl_fmsub_v4sf_mask, "__builtin_ia32_vfmsubps128_mask", IX86_BUILTIN_VFMSUBPS128_MASK, UNKNOWN, (int) V4SF_FTYPE_V4SF_V4SF_V4SF_UQI)
+ BDESC (OPTION_MASK_ISA_AVX512VL, CODE_FOR_avx512vl_fmsub_v4sf_mask3, "__builtin_ia32_vfmsubps128_mask3", IX86_BUILTIN_VFMSUBPS128_MASK3, UNKNOWN, (int) V4SF_FTYPE_V4SF_V4SF_V4SF_UQI)
++BDESC (OPTION_MASK_ISA_AVX512VL, CODE_FOR_avx512vl_fmsub_v4sf_maskz, "__builtin_ia32_vfmsubps128_maskz", IX86_BUILTIN_VFMSUBPS128_MASKZ, UNKNOWN, (int) V4SF_FTYPE_V4SF_V4SF_V4SF_UQI)
+ BDESC (OPTION_MASK_ISA_AVX512VL, CODE_FOR_avx512vl_fnmadd_v4df_mask, "__builtin_ia32_vfnmaddpd256_mask", IX86_BUILTIN_VFNMADDPD256_MASK, UNKNOWN, (int) V4DF_FTYPE_V4DF_V4DF_V4DF_UQI)
++BDESC (OPTION_MASK_ISA_AVX512VL, CODE_FOR_avx512vl_fnmadd_v4df_mask3, "__builtin_ia32_vfnmaddpd256_mask3", IX86_BUILTIN_VFNMADDPD256_MASK3, UNKNOWN, (int) V4DF_FTYPE_V4DF_V4DF_V4DF_UQI)
++BDESC (OPTION_MASK_ISA_AVX512VL, CODE_FOR_avx512vl_fnmadd_v4df_maskz,
++"__builtin_ia32_vfnmaddpd256_maskz", IX86_BUILTIN_VFNMADDPD256_MASKZ, UNKNOWN, (int) V4DF_FTYPE_V4DF_V4DF_V4DF_UQI)
+ BDESC (OPTION_MASK_ISA_AVX512VL, CODE_FOR_avx512vl_fnmadd_v2df_mask, "__builtin_ia32_vfnmaddpd128_mask", IX86_BUILTIN_VFNMADDPD128_MASK, UNKNOWN, (int) V2DF_FTYPE_V2DF_V2DF_V2DF_UQI)
++BDESC (OPTION_MASK_ISA_AVX512VL, CODE_FOR_avx512vl_fnmadd_v2df_mask3, "__builtin_ia32_vfnmaddpd128_mask3", IX86_BUILTIN_VFNMADDPD128_MASK3, UNKNOWN, (int) V2DF_FTYPE_V2DF_V2DF_V2DF_UQI)
++BDESC (OPTION_MASK_ISA_AVX512VL, CODE_FOR_avx512vl_fnmadd_v2df_maskz,
++"__builtin_ia32_vfnmaddpd128_maskz", IX86_BUILTIN_VFNMADDPD128_MASKZ, UNKNOWN, (int) V2DF_FTYPE_V2DF_V2DF_V2DF_UQI)
+ BDESC (OPTION_MASK_ISA_AVX512VL, CODE_FOR_avx512vl_fnmadd_v8sf_mask, "__builtin_ia32_vfnmaddps256_mask", IX86_BUILTIN_VFNMADDPS256_MASK, UNKNOWN, (int) V8SF_FTYPE_V8SF_V8SF_V8SF_UQI)
++BDESC (OPTION_MASK_ISA_AVX512VL, CODE_FOR_avx512vl_fnmadd_v8sf_mask3, "__builtin_ia32_vfnmaddps256_mask3", IX86_BUILTIN_VFNMADDPS256_MASK3, UNKNOWN, (int) V8SF_FTYPE_V8SF_V8SF_V8SF_UQI)
++BDESC (OPTION_MASK_ISA_AVX512VL, CODE_FOR_avx512vl_fnmadd_v8sf_maskz, "__builtin_ia32_vfnmaddps256_maskz", IX86_BUILTIN_VFNMADDPS256_MASKZ, UNKNOWN, (int) V8SF_FTYPE_V8SF_V8SF_V8SF_UQI)
+ BDESC (OPTION_MASK_ISA_AVX512VL, CODE_FOR_avx512vl_fnmadd_v4sf_mask, "__builtin_ia32_vfnmaddps128_mask", IX86_BUILTIN_VFNMADDPS128_MASK, UNKNOWN, (int) V4SF_FTYPE_V4SF_V4SF_V4SF_UQI)
++BDESC (OPTION_MASK_ISA_AVX512VL, CODE_FOR_avx512vl_fnmadd_v4sf_mask3, "__builtin_ia32_vfnmaddps128_mask3", IX86_BUILTIN_VFNMADDPS128_MASK3, UNKNOWN, (int) V4SF_FTYPE_V4SF_V4SF_V4SF_UQI)
++BDESC (OPTION_MASK_ISA_AVX512VL, CODE_FOR_avx512vl_fnmadd_v4sf_maskz, "__builtin_ia32_vfnmaddps128_maskz", IX86_BUILTIN_VFNMADDPS128_MASKZ, UNKNOWN, (int) V4SF_FTYPE_V4SF_V4SF_V4SF_UQI)
+ BDESC (OPTION_MASK_ISA_AVX512VL, CODE_FOR_avx512vl_fnmsub_v4df_mask, "__builtin_ia32_vfnmsubpd256_mask", IX86_BUILTIN_VFNMSUBPD256_MASK, UNKNOWN, (int) V4DF_FTYPE_V4DF_V4DF_V4DF_UQI)
+ BDESC (OPTION_MASK_ISA_AVX512VL, CODE_FOR_avx512vl_fnmsub_v4df_mask3, "__builtin_ia32_vfnmsubpd256_mask3", IX86_BUILTIN_VFNMSUBPD256_MASK3, UNKNOWN, (int) V4DF_FTYPE_V4DF_V4DF_V4DF_UQI)
++BDESC (OPTION_MASK_ISA_AVX512VL, CODE_FOR_avx512vl_fnmsub_v4df_maskz, "__builtin_ia32_vfnmsubpd256_maskz", IX86_BUILTIN_VFNMSUBPD256_MASKZ, UNKNOWN, (int) V4DF_FTYPE_V4DF_V4DF_V4DF_UQI)
+ BDESC (OPTION_MASK_ISA_AVX512VL, CODE_FOR_avx512vl_fnmsub_v2df_mask, "__builtin_ia32_vfnmsubpd128_mask", IX86_BUILTIN_VFNMSUBPD128_MASK, UNKNOWN, (int) V2DF_FTYPE_V2DF_V2DF_V2DF_UQI)
+ BDESC (OPTION_MASK_ISA_AVX512VL, CODE_FOR_avx512vl_fnmsub_v2df_mask3, "__builtin_ia32_vfnmsubpd128_mask3", IX86_BUILTIN_VFNMSUBPD128_MASK3, UNKNOWN, (int) V2DF_FTYPE_V2DF_V2DF_V2DF_UQI)
++BDESC (OPTION_MASK_ISA_AVX512VL, CODE_FOR_avx512vl_fnmsub_v2df_maskz, "__builtin_ia32_vfnmsubpd128_maskz", IX86_BUILTIN_VFNMSUBPD128_MASKZ, UNKNOWN, (int) V2DF_FTYPE_V2DF_V2DF_V2DF_UQI)
+ BDESC (OPTION_MASK_ISA_AVX512VL, CODE_FOR_avx512vl_fnmsub_v8sf_mask, "__builtin_ia32_vfnmsubps256_mask", IX86_BUILTIN_VFNMSUBPS256_MASK, UNKNOWN, (int) V8SF_FTYPE_V8SF_V8SF_V8SF_UQI)
+ BDESC (OPTION_MASK_ISA_AVX512VL, CODE_FOR_avx512vl_fnmsub_v8sf_mask3, "__builtin_ia32_vfnmsubps256_mask3", IX86_BUILTIN_VFNMSUBPS256_MASK3, UNKNOWN, (int) V8SF_FTYPE_V8SF_V8SF_V8SF_UQI)
++BDESC (OPTION_MASK_ISA_AVX512VL, CODE_FOR_avx512vl_fnmsub_v8sf_maskz, "__builtin_ia32_vfnmsubps256_maskz", IX86_BUILTIN_VFNMSUBPS256_MASKZ, UNKNOWN, (int) V8SF_FTYPE_V8SF_V8SF_V8SF_UQI)
+ BDESC (OPTION_MASK_ISA_AVX512VL, CODE_FOR_avx512vl_fnmsub_v4sf_mask, "__builtin_ia32_vfnmsubps128_mask", IX86_BUILTIN_VFNMSUBPS128_MASK, UNKNOWN, (int) V4SF_FTYPE_V4SF_V4SF_V4SF_UQI)
+ BDESC (OPTION_MASK_ISA_AVX512VL, CODE_FOR_avx512vl_fnmsub_v4sf_mask3, "__builtin_ia32_vfnmsubps128_mask3", IX86_BUILTIN_VFNMSUBPS128_MASK3, UNKNOWN, (int) V4SF_FTYPE_V4SF_V4SF_V4SF_UQI)
++BDESC (OPTION_MASK_ISA_AVX512VL, CODE_FOR_avx512vl_fnmsub_v4sf_maskz, "__builtin_ia32_vfnmsubps128_maskz", IX86_BUILTIN_VFNMSUBPS128_MASKZ, UNKNOWN, (int) V4SF_FTYPE_V4SF_V4SF_V4SF_UQI)
+ BDESC (OPTION_MASK_ISA_AVX512VL, CODE_FOR_avx512vl_fmaddsub_v4df_mask, "__builtin_ia32_vfmaddsubpd256_mask", IX86_BUILTIN_VFMADDSUBPD256_MASK, UNKNOWN, (int) V4DF_FTYPE_V4DF_V4DF_V4DF_UQI)
+ BDESC (OPTION_MASK_ISA_AVX512VL, CODE_FOR_avx512vl_fmaddsub_v4df_mask3, "__builtin_ia32_vfmaddsubpd256_mask3", IX86_BUILTIN_VFMADDSUBPD256_MASK3, UNKNOWN, (int) V4DF_FTYPE_V4DF_V4DF_V4DF_UQI)
+ BDESC (OPTION_MASK_ISA_AVX512VL, CODE_FOR_avx512vl_fmaddsub_v4df_maskz, "__builtin_ia32_vfmaddsubpd256_maskz", IX86_BUILTIN_VFMADDSUBPD256_MASKZ, UNKNOWN, (int) V4DF_FTYPE_V4DF_V4DF_V4DF_UQI)
+@@ -2768,14 +2790,24 @@ BDESC (OPTION_MASK_ISA_AVX512F, CODE_FOR_avx512f_fmaddsub_v16sf_mask3_round, "__
+ BDESC (OPTION_MASK_ISA_AVX512F, CODE_FOR_avx512f_fmaddsub_v16sf_maskz_round, "__builtin_ia32_vfmaddsubps512_maskz", IX86_BUILTIN_VFMADDSUBPS512_MASKZ, UNKNOWN, (int) V16SF_FTYPE_V16SF_V16SF_V16SF_HI_INT)
+ BDESC (OPTION_MASK_ISA_AVX512F, CODE_FOR_avx512f_fmsubadd_v8df_mask3_round, "__builtin_ia32_vfmsubaddpd512_mask3", IX86_BUILTIN_VFMSUBADDPD512_MASK3, UNKNOWN, (int) V8DF_FTYPE_V8DF_V8DF_V8DF_UQI_INT)
+ BDESC (OPTION_MASK_ISA_AVX512F, CODE_FOR_avx512f_fmsubadd_v16sf_mask3_round, "__builtin_ia32_vfmsubaddps512_mask3", IX86_BUILTIN_VFMSUBADDPS512_MASK3, UNKNOWN, (int) V16SF_FTYPE_V16SF_V16SF_V16SF_HI_INT)
++BDESC (OPTION_MASK_ISA_AVX512F, CODE_FOR_avx512f_fmsub_v8df_mask_round, "__builtin_ia32_vfmsubpd512_mask", IX86_BUILTIN_VFMSUBPD512_MASK, UNKNOWN, (int) V8DF_FTYPE_V8DF_V8DF_V8DF_UQI_INT)
+ BDESC (OPTION_MASK_ISA_AVX512F, CODE_FOR_avx512f_fmsub_v8df_mask3_round, "__builtin_ia32_vfmsubpd512_mask3", IX86_BUILTIN_VFMSUBPD512_MASK3, UNKNOWN, (int) V8DF_FTYPE_V8DF_V8DF_V8DF_UQI_INT)
++BDESC (OPTION_MASK_ISA_AVX512F, CODE_FOR_avx512f_fmsub_v8df_maskz_round, "__builtin_ia32_vfmsubpd512_maskz", IX86_BUILTIN_VFMSUBPD512_MASKZ, UNKNOWN, (int) V8DF_FTYPE_V8DF_V8DF_V8DF_UQI_INT)
++BDESC (OPTION_MASK_ISA_AVX512F, CODE_FOR_avx512f_fmsub_v16sf_mask_round, "__builtin_ia32_vfmsubps512_mask", IX86_BUILTIN_VFMSUBPS512_MASK, UNKNOWN, (int) V16SF_FTYPE_V16SF_V16SF_V16SF_HI_INT)
+ BDESC (OPTION_MASK_ISA_AVX512F, CODE_FOR_avx512f_fmsub_v16sf_mask3_round, "__builtin_ia32_vfmsubps512_mask3", IX86_BUILTIN_VFMSUBPS512_MASK3, UNKNOWN, (int) V16SF_FTYPE_V16SF_V16SF_V16SF_HI_INT)
++BDESC (OPTION_MASK_ISA_AVX512F, CODE_FOR_avx512f_fmsub_v16sf_maskz_round, "__builtin_ia32_vfmsubps512_maskz", IX86_BUILTIN_VFMSUBPS512_MASKZ, UNKNOWN, (int) V16SF_FTYPE_V16SF_V16SF_V16SF_HI_INT)
+ BDESC (OPTION_MASK_ISA_AVX512F, CODE_FOR_avx512f_fnmadd_v8df_mask_round, "__builtin_ia32_vfnmaddpd512_mask", IX86_BUILTIN_VFNMADDPD512_MASK, UNKNOWN, (int) V8DF_FTYPE_V8DF_V8DF_V8DF_UQI_INT)
++BDESC (OPTION_MASK_ISA_AVX512F, CODE_FOR_avx512f_fnmadd_v8df_mask3_round, "__builtin_ia32_vfnmaddpd512_mask3", IX86_BUILTIN_VFNMADDPD512_MASK3, UNKNOWN, (int) V8DF_FTYPE_V8DF_V8DF_V8DF_UQI_INT)
++BDESC (OPTION_MASK_ISA_AVX512F, CODE_FOR_avx512f_fnmadd_v8df_maskz_round, "__builtin_ia32_vfnmaddpd512_maskz", IX86_BUILTIN_VFNMADDPD512_MASKZ, UNKNOWN, (int) V8DF_FTYPE_V8DF_V8DF_V8DF_UQI_INT)
+ BDESC (OPTION_MASK_ISA_AVX512F, CODE_FOR_avx512f_fnmadd_v16sf_mask_round, "__builtin_ia32_vfnmaddps512_mask", IX86_BUILTIN_VFNMADDPS512_MASK, UNKNOWN, (int) V16SF_FTYPE_V16SF_V16SF_V16SF_HI_INT)
++BDESC (OPTION_MASK_ISA_AVX512F, CODE_FOR_avx512f_fnmadd_v16sf_mask3_round, "__builtin_ia32_vfnmaddps512_mask3", IX86_BUILTIN_VFNMADDPS512_MASK3, UNKNOWN, (int) V16SF_FTYPE_V16SF_V16SF_V16SF_HI_INT)
++BDESC (OPTION_MASK_ISA_AVX512F, CODE_FOR_avx512f_fnmadd_v16sf_maskz_round, "__builtin_ia32_vfnmaddps512_maskz", IX86_BUILTIN_VFNMADDPS512_MASKZ, UNKNOWN, (int) V16SF_FTYPE_V16SF_V16SF_V16SF_HI_INT)
+ BDESC (OPTION_MASK_ISA_AVX512F, CODE_FOR_avx512f_fnmsub_v8df_mask_round, "__builtin_ia32_vfnmsubpd512_mask", IX86_BUILTIN_VFNMSUBPD512_MASK, UNKNOWN, (int) V8DF_FTYPE_V8DF_V8DF_V8DF_UQI_INT)
+ BDESC (OPTION_MASK_ISA_AVX512F, CODE_FOR_avx512f_fnmsub_v8df_mask3_round, "__builtin_ia32_vfnmsubpd512_mask3", IX86_BUILTIN_VFNMSUBPD512_MASK3, UNKNOWN, (int) V8DF_FTYPE_V8DF_V8DF_V8DF_UQI_INT)
++BDESC (OPTION_MASK_ISA_AVX512F, CODE_FOR_avx512f_fnmsub_v8df_maskz_round, "__builtin_ia32_vfnmsubpd512_maskz", IX86_BUILTIN_VFNMSUBPD512_MASKZ, UNKNOWN, (int) V8DF_FTYPE_V8DF_V8DF_V8DF_UQI_INT)
+ BDESC (OPTION_MASK_ISA_AVX512F, CODE_FOR_avx512f_fnmsub_v16sf_mask_round, "__builtin_ia32_vfnmsubps512_mask", IX86_BUILTIN_VFNMSUBPS512_MASK, UNKNOWN, (int) V16SF_FTYPE_V16SF_V16SF_V16SF_HI_INT)
+ BDESC (OPTION_MASK_ISA_AVX512F, CODE_FOR_avx512f_fnmsub_v16sf_mask3_round, "__builtin_ia32_vfnmsubps512_mask3", IX86_BUILTIN_VFNMSUBPS512_MASK3, UNKNOWN, (int) V16SF_FTYPE_V16SF_V16SF_V16SF_HI_INT)
++BDESC (OPTION_MASK_ISA_AVX512F, CODE_FOR_avx512f_fnmsub_v16sf_maskz_round, "__builtin_ia32_vfnmsubps512_maskz", IX86_BUILTIN_VFNMSUBPS512_MASKZ, UNKNOWN, (int) V16SF_FTYPE_V16SF_V16SF_V16SF_HI_INT)
+ 
+ /* AVX512ER */
+ BDESC (OPTION_MASK_ISA_AVX512ER, CODE_FOR_avx512er_exp2v8df_mask_round, "__builtin_ia32_exp2pd_mask", IX86_BUILTIN_EXP2PD_MASK, UNKNOWN, (int) V8DF_FTYPE_V8DF_V8DF_QI_INT)
+diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
+index 0cf4152acb2..a41236a91ad 100644
+--- a/gcc/config/i386/i386.c
++++ b/gcc/config/i386/i386.c
+@@ -34594,6 +34594,7 @@ ix86_expand_args_builtin (const struct builtin_description *d,
+     case V16QI_FTYPE_V8DI_V16QI_UQI:
+     case V16SF_FTYPE_V16SF_V16SF_UHI:
+     case V16SF_FTYPE_V4SF_V16SF_UHI:
++    case V16SF_FTYPE_FLOAT_V16SF_UHI:
+     case V16SI_FTYPE_SI_V16SI_UHI:
+     case V16SI_FTYPE_V16HI_V16SI_UHI:
+     case V16SI_FTYPE_V16QI_V16SI_UHI:
+@@ -34673,6 +34674,7 @@ ix86_expand_args_builtin (const struct builtin_description *d,
+     case V4SI_FTYPE_V16QI_V4SI_UQI:
+     case V4DI_FTYPE_V4DI_V4DI_V4DI:
+     case V8DF_FTYPE_V2DF_V8DF_UQI:
++    case V8DF_FTYPE_DOUBLE_V8DF_UQI:
+     case V8DF_FTYPE_V4DF_V8DF_UQI:
+     case V8DF_FTYPE_V8DF_V8DF_UQI:
+     case V8SF_FTYPE_V8SF_V8SF_UQI:
+@@ -45980,49 +45982,62 @@ expand_vec_perm_1 (struct expand_vec_perm_d *d)
+ 	{
+ 	  /* Use vpbroadcast{b,w,d}.  */
+ 	  rtx (*gen) (rtx, rtx) = NULL;
++	  machine_mode scalar_mode;
+ 	  switch (d->vmode)
+ 	    {
+ 	    case E_V64QImode:
++	      scalar_mode = QImode;
+ 	      if (TARGET_AVX512BW)
+-		gen = gen_avx512bw_vec_dupv64qi_1;
++		gen = gen_avx512bw_vec_dupv64qi;
+ 	      break;
+ 	    case E_V32QImode:
+-	      gen = gen_avx2_pbroadcastv32qi_1;
++	      scalar_mode = QImode;
++	      gen = gen_avx2_pbroadcastv32qi;
+ 	      break;
+ 	    case E_V32HImode:
++	      scalar_mode = HImode;
+ 	      if (TARGET_AVX512BW)
+-		gen = gen_avx512bw_vec_dupv32hi_1;
++		gen = gen_avx512bw_vec_dupv32hi;
+ 	      break;
+ 	    case E_V16HImode:
+-	      gen = gen_avx2_pbroadcastv16hi_1;
++	      scalar_mode = HImode;
++	      gen = gen_avx2_pbroadcastv16hi;
+ 	      break;
+ 	    case E_V16SImode:
++	      scalar_mode = SImode;
+ 	      if (TARGET_AVX512F)
+-		gen = gen_avx512f_vec_dupv16si_1;
++		gen = gen_avx512f_vec_dupv16si;
+ 	      break;
+ 	    case E_V8SImode:
+-	      gen = gen_avx2_pbroadcastv8si_1;
++	      scalar_mode = SImode;
++	      gen = gen_avx2_pbroadcastv8si;
+ 	      break;
+ 	    case E_V16QImode:
++	      scalar_mode = QImode;
+ 	      gen = gen_avx2_pbroadcastv16qi;
+ 	      break;
+ 	    case E_V8HImode:
++	      scalar_mode = HImode;
+ 	      gen = gen_avx2_pbroadcastv8hi;
+ 	      break;
+ 	    case E_V16SFmode:
++	      scalar_mode = SFmode;
+ 	      if (TARGET_AVX512F)
+-		gen = gen_avx512f_vec_dupv16sf_1;
++		gen = gen_avx512f_vec_dupv16sf;
+ 	      break;
+ 	    case E_V8SFmode:
+-	      gen = gen_avx2_vec_dupv8sf_1;
++	      scalar_mode = SFmode;
++	      gen = gen_vec_dupv8sf;
+ 	      break;
+ 	    case E_V8DFmode:
++	      scalar_mode = DFmode;
+ 	      if (TARGET_AVX512F)
+-		gen = gen_avx512f_vec_dupv8df_1;
++		gen = gen_avx512f_vec_dupv8df;
+ 	      break;
+ 	    case E_V8DImode:
++	      scalar_mode = DImode;
+ 	      if (TARGET_AVX512F)
+-		gen = gen_avx512f_vec_dupv8di_1;
++		gen = gen_avx512f_vec_dupv8di;
+ 	      break;
+ 	    /* For other modes prefer other shuffles this function creates.  */
+ 	    default: break;
+@@ -46030,7 +46045,18 @@ expand_vec_perm_1 (struct expand_vec_perm_d *d)
+ 	  if (gen != NULL)
+ 	    {
+ 	      if (!d->testing_p)
+-		emit_insn (gen (d->target, d->op0));
++		{
++		  rtx op = d->op0;
++		  unsigned int oppos = 0;
++		  if (SUBREG_P (op))
++		    {
++		      op = SUBREG_REG (op);
++		      oppos = SUBREG_BYTE (op);
++		    }
++		  emit_insn (gen (d->target,
++				  gen_rtx_SUBREG (scalar_mode,
++						  op, oppos)));
++		}
+ 	      return true;
+ 	    }
+ 	}
+diff --git a/gcc/config/i386/i386.md b/gcc/config/i386/i386.md
+index 7fb2b144f47..4a6fa077db5 100644
+--- a/gcc/config/i386/i386.md
++++ b/gcc/config/i386/i386.md
+@@ -4399,7 +4399,7 @@
+       else
+ 	{
+ 	  rtx tmp = lowpart_subreg (V16SFmode, operands[3], V4SFmode);
+-	  emit_insn (gen_avx512f_vec_dupv16sf_1 (tmp, tmp));
++	  emit_insn (gen_avx512f_vec_dupv16sf (tmp, tmp));
+ 	}
+     }
+   else
+diff --git a/gcc/config/i386/sse.md b/gcc/config/i386/sse.md
+index 9fc5819a863..00a9c634461 100644
+--- a/gcc/config/i386/sse.md
++++ b/gcc/config/i386/sse.md
+@@ -650,6 +650,16 @@
+    (V2DI "TARGET_AVX512VL") (V2DF "TARGET_AVX512VL")])
+ (define_mode_iterator VI48F_256 [V8SI V8SF V4DI V4DF])
+ 
++(define_mode_iterator VF_AVX512
++  [(V4SF "TARGET_AVX512VL") (V2DF "TARGET_AVX512VL")
++   (V8SF "TARGET_AVX512VL") (V4DF "TARGET_AVX512VL")
++   (V16SF "TARGET_AVX512F") (V8DF "TARGET_AVX512F")])
++
++(define_mode_attr avx512bcst
++  [(V4SF "%{1to4%}") (V2DF "%{1to2%}")
++   (V8SF "%{1to8%}") (V4DF "%{1to4%}")
++   (V16SF "%{1to16%}") (V8DF "%{1to8%}")])
++
+ ;; Mapping from float mode to required SSE level
+ (define_mode_attr sse
+   [(SF "sse") (DF "sse2")
+@@ -1674,6 +1684,34 @@
+    (set_attr "prefix" "<mask_prefix3>")
+    (set_attr "mode" "<MODE>")])
+ 
++(define_insn "*<plusminus_insn><mode>3<mask_name>_bcst_1"
++  [(set (match_operand:VF_AVX512 0 "register_operand" "=v")
++	(plusminus:VF_AVX512
++	  (match_operand:VF_AVX512 1 "nonimmediate_operand" "v")
++	  (vec_duplicate:VF_AVX512
++	    (match_operand:<VF_AVX512:ssescalarmode> 2 "nonimmediate_operand" "m"))))]
++  "TARGET_AVX512F
++   && ix86_binary_operator_ok (<CODE>, <MODE>mode, operands)
++   && <mask_mode512bit_condition>"
++  "v<plusminus_mnemonic><ssemodesuffix>\t{%2<avx512bcst>, %1, %0<mask_operand3>|%0<mask_operand3>, %1, %2<avx512bcst>}"
++  [(set_attr "prefix" "evex")
++   (set_attr "type" "sseadd")
++   (set_attr "mode" "<MODE>")])
++
++(define_insn "*add<mode>3<mask_name>_bcst_2"
++  [(set (match_operand:VF_AVX512 0 "register_operand" "=v")
++	(plus:VF_AVX512
++	  (vec_duplicate:VF_AVX512
++	    (match_operand:<VF_AVX512:ssescalarmode> 1 "nonimmediate_operand" "m"))
++	  (match_operand:VF_AVX512 2 "nonimmediate_operand" "v")))]
++  "TARGET_AVX512F
++   && ix86_binary_operator_ok (PLUS, <MODE>mode, operands)
++   && <mask_mode512bit_condition>"
++  "vadd<ssemodesuffix>\t{%1<avx512bcst>, %2, %0<mask_operand3>|%0<mask_operand3>, %2, %1<avx512bcst>}"
++  [(set_attr "prefix" "evex")
++   (set_attr "type" "sseadd")
++   (set_attr "mode" "<MODE>")])
++
+ (define_insn "<sse>_vm<plusminus_insn><mode>3<mask_scalar_name><round_scalar_name>"
+   [(set (match_operand:VF_128 0 "register_operand" "=x,v")
+ 	(vec_merge:VF_128
+@@ -1716,6 +1754,34 @@
+    (set_attr "btver2_decode" "direct,double")
+    (set_attr "mode" "<MODE>")])
+ 
++(define_insn "*mul<mode>3<mask_name>_bcst_1"
++  [(set (match_operand:VF_AVX512 0 "register_operand" "=v")
++	(mult:VF_AVX512
++	  (match_operand:VF_AVX512 1 "nonimmediate_operand" "v")
++	  (vec_duplicate:VF_AVX512
++	     (match_operand:<ssescalarmode> 2 "nonimmediate_operand" "m"))))]
++  "TARGET_AVX512F
++   && !(MEM_P (operands[1]) && MEM_P (operands[2]))
++   && <mask_mode512bit_condition>"
++  "vmul<ssemodesuffix>\t{%2<avx512bcst>, %1, %0<mask_operand3>|%0<mask_operand3>, %1, %2<<avx512bcst>>}"
++  [(set_attr "prefix" "evex")
++   (set_attr "type" "ssemul")
++   (set_attr "mode" "<MODE>")])
++
++(define_insn "*mul<mode>3<mask_name>_bcst_2"
++  [(set (match_operand:VF_AVX512 0 "register_operand" "=v")
++	(mult:VF_AVX512
++	  (vec_duplicate:VF_AVX512
++	     (match_operand:<ssescalarmode> 1 "nonimmediate_operand" "m"))
++	  (match_operand:VF_AVX512 2 "nonimmediate_operand" "v")))]
++  "TARGET_AVX512F
++   && !(MEM_P (operands[1]) && MEM_P (operands[2]))
++   && <mask_mode512bit_condition>"
++  "vmul<ssemodesuffix>\t{%1<avx512bcst>, %2, %0<mask_operand3>|%0<mask_operand3>, %2, %1<<avx512bcst>>}"
++  [(set_attr "prefix" "evex")
++   (set_attr "type" "ssemul")
++   (set_attr "mode" "<MODE>")])
++
+ (define_insn "<sse>_vm<multdiv_mnemonic><mode>3<mask_scalar_name><round_scalar_name>"
+   [(set (match_operand:VF_128 0 "register_operand" "=x,v")
+ 	(vec_merge:VF_128
+@@ -1774,6 +1840,18 @@
+    (set_attr "prefix" "<mask_prefix3>")
+    (set_attr "mode" "<MODE>")])
+ 
++(define_insn "*<avx512>_div<mode>3<mask_name>_bcst"
++  [(set (match_operand:VF_AVX512 0 "register_operand" "=v")
++	(div:VF_AVX512
++	  (match_operand:VF_AVX512 1 "register_operand" "v")
++	  (vec_duplicate:VF_AVX512
++	     (match_operand:<VF_AVX512:ssescalarmode> 2 "nonimmediate_operand" "m"))))]
++  "TARGET_AVX512F && <mask_mode512bit_condition>"
++  "vdiv<ssemodesuffix>\t{%2<avx512bcst>, %1, %0<mask_operand3>|%0<mask_operand3>, %1, %2<<avx512bcst>>}"
++  [(set_attr "prefix" "evex")
++    (set_attr "type" "ssediv")
++   (set_attr "mode" "<MODE>")])
++
+ (define_insn "<sse>_rcp<mode>2"
+   [(set (match_operand:VF1_128_256 0 "register_operand" "=x")
+ 	(unspec:VF1_128_256
+@@ -3736,6 +3814,46 @@
+   [(set_attr "type" "ssemuladd")
+    (set_attr "mode" "<MODE>")])
+ 
++(define_insn "*<sd_mask_codefor>fma_fmadd_<mode><sd_maskz_name>_bcst_1"
++  [(set (match_operand:VF_AVX512 0 "register_operand" "=v,v")
++	(fma:VF_AVX512
++	  (match_operand:VF_AVX512 1 "nonimmediate_operand" "0,v")
++	  (match_operand:VF_AVX512 2 "nonimmediate_operand" "v,0")
++	  (vec_duplicate:VF_AVX512
++	    (match_operand:<ssescalarmode> 3 "nonimmediate_operand" "m,m"))))]
++  "TARGET_AVX512F && <sd_mask_mode512bit_condition>"
++  "vfmadd213<ssemodesuffix>\t{%3<avx512bcst>, %2, %0<sd_mask_op4>|%0<sd_mask_op4>, %2, %3<avx512bcst>}"
++  [(set_attr "type" "ssemuladd")
++   (set_attr "mode" "<MODE>")])
++
++(define_insn "*<sd_mask_codefor>fma_fmadd_<mode><sd_maskz_name>_bcst_2"
++  [(set (match_operand:VF_AVX512 0 "register_operand" "=v,v")
++	(fma:VF_AVX512
++	  (vec_duplicate:VF_AVX512
++	    (match_operand:<ssescalarmode> 1 "nonimmediate_operand" "m,m"))
++	  (match_operand:VF_AVX512 2 "nonimmediate_operand" "0,v")
++	  (match_operand:VF_AVX512 3 "nonimmediate_operand" "v,0")))]
++  "TARGET_AVX512F && <sd_mask_mode512bit_condition>"
++  "@
++   vfmadd132<ssemodesuffix>\t{%1<avx512bcst>, %3, %0<sd_mask_op4>|%0<sd_mask_op4>, %3, %1<avx512bcst>}
++   vfmadd231<ssemodesuffix>\t{%1<avx512bcst>, %2, %0<sd_mask_op4>|%0<sd_mask_op4>, %2, %1<avx512bcst>}"
++  [(set_attr "type" "ssemuladd")
++   (set_attr "mode" "<MODE>")])
++
++(define_insn "*<sd_mask_codefor>fma_fmadd_<mode><sd_maskz_name>_bcst_3"
++  [(set (match_operand:VF_AVX512 0 "register_operand" "=v,v")
++	(fma:VF_AVX512
++	  (match_operand:VF_AVX512 1 "nonimmediate_operand" "0,v")
++	  (vec_duplicate:VF_AVX512
++	    (match_operand:<ssescalarmode> 2 "nonimmediate_operand" "m,m"))
++	  (match_operand:VF_AVX512 3 "nonimmediate_operand" "v,0")))]
++  "TARGET_AVX512F && <sd_mask_mode512bit_condition>"
++  "@
++   vfmadd132<ssemodesuffix>\t{%2<avx512bcst>, %3, %0<sd_mask_op4>|%0<sd_mask_op4>, %3, %2<avx512bcst>}
++   vfmadd231<ssemodesuffix>\t{%2<avx512bcst>, %1, %0<sd_mask_op4>|%0<sd_mask_op4>, %1, %2<avx512bcst>}"
++  [(set_attr "type" "ssemuladd")
++   (set_attr "mode" "<MODE>")])
++
+ (define_insn "<avx512>_fmadd_<mode>_mask<round_name>"
+   [(set (match_operand:VF_AVX512VL 0 "register_operand" "=v,v")
+ 	(vec_merge:VF_AVX512VL
+@@ -3784,6 +3902,20 @@
+    (set_attr "type" "ssemuladd")
+    (set_attr "mode" "<MODE>")])
+ 
++(define_expand "<avx512>_fmsub_<mode>_maskz<round_expand_name>"
++  [(match_operand:VF_AVX512VL 0 "register_operand")
++   (match_operand:VF_AVX512VL 1 "<round_expand_nimm_predicate>")
++   (match_operand:VF_AVX512VL 2 "<round_expand_nimm_predicate>")
++   (match_operand:VF_AVX512VL 3 "<round_expand_nimm_predicate>")
++   (match_operand:<avx512fmaskmode> 4 "register_operand")]
++  "TARGET_AVX512F && <round_mode512bit_condition>"
++{
++  emit_insn (gen_fma_fmsub_<mode>_maskz_1<round_expand_name> (
++    operands[0], operands[1], operands[2], operands[3],
++    CONST0_RTX (<MODE>mode), operands[4]<round_expand_operand>));
++  DONE;
++})
++
+ (define_insn "<sd_mask_codefor>fma_fmsub_<mode><sd_maskz_name><round_name>"
+   [(set (match_operand:VF_SF_AVX512VL 0 "register_operand" "=v,v,v")
+ 	(fma:VF_SF_AVX512VL
+@@ -3799,6 +3931,49 @@
+   [(set_attr "type" "ssemuladd")
+    (set_attr "mode" "<MODE>")])
+ 
++(define_insn "*<sd_mask_codefor>fma_fmsub_<mode><sd_maskz_name>_bcst_1"
++  [(set (match_operand:VF_AVX512 0 "register_operand" "=v,v")
++	(fma:VF_AVX512
++	  (match_operand:VF_AVX512 1 "nonimmediate_operand" "0,v")
++	  (match_operand:VF_AVX512 2 "nonimmediate_operand" "v,0")
++	  (neg:VF_AVX512
++	    (vec_duplicate:VF_AVX512
++	      (match_operand:<ssescalarmode> 3 "nonimmediate_operand" "m,m")))))]
++  "TARGET_AVX512F && <sd_mask_mode512bit_condition>"
++  "vfmsub213<ssemodesuffix>\t{%3<avx512bcst>, %2, %0<sd_mask_op4>|%0<sd_mask_op4>, %2, %3<avx512bcst>}"
++  [(set_attr "type" "ssemuladd")
++   (set_attr "mode" "<MODE>")])
++
++(define_insn "*<sd_mask_codefor>fma_fmsub_<mode><sd_maskz_name>_bcst_2"
++  [(set (match_operand:VF_AVX512 0 "register_operand" "=v,v")
++	(fma:VF_AVX512
++	  (vec_duplicate:VF_AVX512
++	    (match_operand:<ssescalarmode> 1 "nonimmediate_operand" "m,m"))
++	  (match_operand:VF_AVX512 2 "nonimmediate_operand" "0,v")
++	  (neg:VF_AVX512
++	    (match_operand:VF_AVX512 3 "nonimmediate_operand" "v,0"))))]
++  "TARGET_AVX512F && <sd_mask_mode512bit_condition>"
++  "@
++   vfmsub132<ssemodesuffix>\t{%1<avx512bcst>, %3, %0<sd_mask_op4>|%0<sd_mask_op4>, %3, %1<avx512bcst>}
++   vfmsub231<ssemodesuffix>\t{%1<avx512bcst>, %2, %0<sd_mask_op4>|%0<sd_mask_op4>, %2, %1<avx512bcst>}"
++  [(set_attr "type" "ssemuladd")
++   (set_attr "mode" "<MODE>")])
++
++(define_insn "*<sd_mask_codefor>fma_fmsub_<mode><sd_maskz_name>_bcst_3"
++  [(set (match_operand:VF_AVX512 0 "register_operand" "=v,v")
++	(fma:VF_AVX512
++	  (match_operand:VF_AVX512 1 "nonimmediate_operand" "0,v")
++	  (vec_duplicate:VF_AVX512
++	    (match_operand:<ssescalarmode> 2 "nonimmediate_operand" "m,m"))
++	  (neg:VF_AVX512
++	    (match_operand:VF_AVX512 3 "nonimmediate_operand" "v,0"))))]
++  "TARGET_AVX512F && <sd_mask_mode512bit_condition>"
++  "@
++   vfmsub132<ssemodesuffix>\t{%2<avx512bcst>, %3, %0<sd_mask_op4>|%0<sd_mask_op4>, %3, %2<avx512bcst>}
++   vfmsub231<ssemodesuffix>\t{%2<avx512bcst>, %1, %0<sd_mask_op4>|%0<sd_mask_op4>, %1, %2<avx512bcst>}"
++  [(set_attr "type" "ssemuladd")
++   (set_attr "mode" "<MODE>")])
++
+ (define_insn "<avx512>_fmsub_<mode>_mask<round_name>"
+   [(set (match_operand:VF_AVX512VL 0 "register_operand" "=v,v")
+ 	(vec_merge:VF_AVX512VL
+@@ -3849,6 +4024,20 @@
+    (set_attr "type" "ssemuladd")
+    (set_attr "mode" "<MODE>")])
+ 
++(define_expand "<avx512>_fnmadd_<mode>_maskz<round_expand_name>"
++  [(match_operand:VF_AVX512VL 0 "register_operand")
++   (match_operand:VF_AVX512VL 1 "<round_expand_nimm_predicate>")
++   (match_operand:VF_AVX512VL 2 "<round_expand_nimm_predicate>")
++   (match_operand:VF_AVX512VL 3 "<round_expand_nimm_predicate>")
++   (match_operand:<avx512fmaskmode> 4 "register_operand")]
++  "TARGET_AVX512F && <round_mode512bit_condition>"
++{
++  emit_insn (gen_fma_fnmadd_<mode>_maskz_1<round_expand_name> (
++    operands[0], operands[1], operands[2], operands[3],
++    CONST0_RTX (<MODE>mode), operands[4]<round_expand_operand>));
++  DONE;
++})
++
+ (define_insn "<sd_mask_codefor>fma_fnmadd_<mode><sd_maskz_name><round_name>"
+   [(set (match_operand:VF_SF_AVX512VL 0 "register_operand" "=v,v,v")
+ 	(fma:VF_SF_AVX512VL
+@@ -3864,6 +4053,49 @@
+   [(set_attr "type" "ssemuladd")
+    (set_attr "mode" "<MODE>")])
+ 
++(define_insn "*<sd_mask_codefor>fma_fnmadd_<mode><sd_maskz_name>_bcst_1"
++  [(set (match_operand:VF_AVX512 0 "register_operand" "=v,v")
++	(fma:VF_AVX512
++	  (neg:VF_AVX512
++	    (match_operand:VF_AVX512 1 "nonimmediate_operand" "0,v"))
++	  (match_operand:VF_AVX512 2 "nonimmediate_operand" "v,0")
++	  (vec_duplicate:VF_AVX512
++	    (match_operand:<ssescalarmode> 3 "nonimmediate_operand" "m,m"))))]
++  "TARGET_AVX512F && <sd_mask_mode512bit_condition>"
++  "vfnmadd213<ssemodesuffix>\t{%3<avx512bcst>, %2, %0<sd_mask_op4>|%0<sd_mask_op4>, %2, %3<avx512bcst>}"
++  [(set_attr "type" "ssemuladd")
++   (set_attr "mode" "<MODE>")])
++
++(define_insn "*<sd_mask_codefor>fma_fnmadd_<mode><sd_maskz_name>_bcst_2"
++  [(set (match_operand:VF_AVX512 0 "register_operand" "=v,v")
++	(fma:VF_AVX512
++	  (neg:VF_AVX512
++	    (vec_duplicate:VF_AVX512
++	      (match_operand:<ssescalarmode> 1 "nonimmediate_operand" "m,m")))
++	  (match_operand:VF_AVX512 2 "nonimmediate_operand" "0,v")
++	  (match_operand:VF_AVX512 3 "nonimmediate_operand" "v,0")))]
++  "TARGET_AVX512F && <sd_mask_mode512bit_condition>"
++  "@
++   vfnmadd132<ssemodesuffix>\t{%1<avx512bcst>, %3, %0<sd_mask_op4>|%0<sd_mask_op4>, %3, %1<avx512bcst>}
++   vfnmadd231<ssemodesuffix>\t{%1<avx512bcst>, %2, %0<sd_mask_op4>|%0<sd_mask_op4>, %2, %1<avx512bcst>}"
++  [(set_attr "type" "ssemuladd")
++   (set_attr "mode" "<MODE>")])
++
++(define_insn "*<sd_mask_codefor>fma_fnmadd_<mode><sd_maskz_name>_bcst_3"
++  [(set (match_operand:VF_AVX512 0 "register_operand" "=v,v")
++	(fma:VF_AVX512
++	  (neg:VF_AVX512
++	    (match_operand:VF_AVX512 1 "nonimmediate_operand" "0,v"))
++	  (vec_duplicate:VF_AVX512
++	    (match_operand:<ssescalarmode> 2 "nonimmediate_operand" "m,m"))
++	  (match_operand:VF_AVX512 3 "nonimmediate_operand" "v,0")))]
++  "TARGET_AVX512F && <sd_mask_mode512bit_condition>"
++  "@
++   vfnmadd132<ssemodesuffix>\t{%2<avx512bcst>, %3, %0<sd_mask_op4>|%0<sd_mask_op4>, %3, %2<avx512bcst>}
++   vfnmadd231<ssemodesuffix>\t{%2<avx512bcst>, %1, %0<sd_mask_op4>|%0<sd_mask_op4>, %1, %2<avx512bcst>}"
++  [(set_attr "type" "ssemuladd")
++   (set_attr "mode" "<MODE>")])
++
+ (define_insn "<avx512>_fnmadd_<mode>_mask<round_name>"
+   [(set (match_operand:VF_AVX512VL 0 "register_operand" "=v,v")
+ 	(vec_merge:VF_AVX512VL
+@@ -3915,6 +4147,20 @@
+    (set_attr "type" "ssemuladd")
+    (set_attr "mode" "<MODE>")])
+ 
++(define_expand "<avx512>_fnmsub_<mode>_maskz<round_expand_name>"
++  [(match_operand:VF_AVX512VL 0 "register_operand")
++   (match_operand:VF_AVX512VL 1 "<round_expand_nimm_predicate>")
++   (match_operand:VF_AVX512VL 2 "<round_expand_nimm_predicate>")
++   (match_operand:VF_AVX512VL 3 "<round_expand_nimm_predicate>")
++   (match_operand:<avx512fmaskmode> 4 "register_operand")]
++  "TARGET_AVX512F && <round_mode512bit_condition>"
++{
++  emit_insn (gen_fma_fnmsub_<mode>_maskz_1<round_expand_name> (
++    operands[0], operands[1], operands[2], operands[3],
++    CONST0_RTX (<MODE>mode), operands[4]<round_expand_operand>));
++  DONE;
++})
++
+ (define_insn "<sd_mask_codefor>fma_fnmsub_<mode><sd_maskz_name><round_name>"
+   [(set (match_operand:VF_SF_AVX512VL 0 "register_operand" "=v,v,v")
+ 	(fma:VF_SF_AVX512VL
+@@ -3931,6 +4177,52 @@
+   [(set_attr "type" "ssemuladd")
+    (set_attr "mode" "<MODE>")])
+ 
++(define_insn "*<sd_mask_codefor>fma_fnmsub_<mode><sd_maskz_name>_bcst_1"
++  [(set (match_operand:VF_AVX512 0 "register_operand" "=v,v")
++	(fma:VF_AVX512
++	  (neg:VF_AVX512
++	    (match_operand:VF_AVX512 1 "nonimmediate_operand" "0,v"))
++	  (match_operand:VF_AVX512 2 "nonimmediate_operand" "v,0")
++	  (neg:VF_AVX512
++	    (vec_duplicate:VF_AVX512
++	      (match_operand:<ssescalarmode> 3 "nonimmediate_operand" "m,m")))))]
++  "TARGET_AVX512F && <sd_mask_mode512bit_condition>"
++  "vfnmsub213<ssemodesuffix>\t{%3<avx512bcst>, %2, %0<sd_mask_op4>|%0<sd_mask_op4>, %2, %3<avx512bcst>}"
++  [(set_attr "type" "ssemuladd")
++   (set_attr "mode" "<MODE>")])
++
++(define_insn "*<sd_mask_codefor>fma_fnmsub_<mode><sd_maskz_name>_bcst_2"
++  [(set (match_operand:VF_AVX512 0 "register_operand" "=v,v")
++	(fma:VF_AVX512
++	  (neg:VF_AVX512
++	    (vec_duplicate:VF_AVX512
++	      (match_operand:<ssescalarmode> 1 "nonimmediate_operand" "m,m")))
++	  (match_operand:VF_AVX512 2 "nonimmediate_operand" "0,v")
++	  (neg:VF_AVX512
++	    (match_operand:VF_AVX512 3 "nonimmediate_operand" "v,0"))))]
++  "TARGET_AVX512F && <sd_mask_mode512bit_condition>"
++  "@
++   vfnmsub132<ssemodesuffix>\t{%1<avx512bcst>, %3, %0<sd_mask_op4>|%0<sd_mask_op4>, %3, %1<avx512bcst>}
++   vfnmsub231<ssemodesuffix>\t{%1<avx512bcst>, %2, %0<sd_mask_op4>|%0<sd_mask_op4>, %2, %1<avx512bcst>}"
++  [(set_attr "type" "ssemuladd")
++   (set_attr "mode" "<MODE>")])
++
++(define_insn "*<sd_mask_codefor>fma_fnmsub_<mode><sd_maskz_name>_bcst_3"
++  [(set (match_operand:VF_AVX512 0 "register_operand" "=v,v")
++	(fma:VF_AVX512
++	  (neg:VF_AVX512
++	    (match_operand:VF_AVX512 1 "nonimmediate_operand" "0,v"))
++	  (vec_duplicate:VF_AVX512
++	    (match_operand:<ssescalarmode> 2 "nonimmediate_operand" "m,m"))
++	  (neg:VF_AVX512
++	    (match_operand:VF_AVX512 3 "nonimmediate_operand" "v,0"))))]
++  "TARGET_AVX512F && <sd_mask_mode512bit_condition>"
++  "@
++   vfnmsub132<ssemodesuffix>\t{%2<avx512bcst>, %3, %0<sd_mask_op4>|%0<sd_mask_op4>, %3, %2<avx512bcst>}
++   vfnmsub231<ssemodesuffix>\t{%2<avx512bcst>, %1, %0<sd_mask_op4>|%0<sd_mask_op4>, %1, %2<avx512bcst>}"
++  [(set_attr "type" "ssemuladd")
++   (set_attr "mode" "<MODE>")])
++
+ (define_insn "<avx512>_fnmsub_<mode>_mask<round_name>"
+   [(set (match_operand:VF_AVX512VL 0 "register_operand" "=v,v")
+ 	(vec_merge:VF_AVX512VL
+@@ -6776,42 +7068,6 @@
+    (set_attr "prefix" "orig,maybe_evex")
+    (set_attr "mode" "SF")])
+ 
+-(define_insn "avx2_vec_dup<mode>"
+-  [(set (match_operand:VF1_128_256 0 "register_operand" "=v")
+-	(vec_duplicate:VF1_128_256
+-	  (vec_select:SF
+-	    (match_operand:V4SF 1 "register_operand" "v")
+-	    (parallel [(const_int 0)]))))]
+-  "TARGET_AVX2"
+-  "vbroadcastss\t{%1, %0|%0, %1}"
+-  [(set_attr "type" "sselog1")
+-    (set_attr "prefix" "maybe_evex")
+-    (set_attr "mode" "<MODE>")])
+-
+-(define_insn "avx2_vec_dupv8sf_1"
+-  [(set (match_operand:V8SF 0 "register_operand" "=v")
+-	(vec_duplicate:V8SF
+-	  (vec_select:SF
+-	    (match_operand:V8SF 1 "register_operand" "v")
+-	    (parallel [(const_int 0)]))))]
+-  "TARGET_AVX2"
+-  "vbroadcastss\t{%x1, %0|%0, %x1}"
+-  [(set_attr "type" "sselog1")
+-    (set_attr "prefix" "maybe_evex")
+-    (set_attr "mode" "V8SF")])
+-
+-(define_insn "avx512f_vec_dup<mode>_1"
+-  [(set (match_operand:VF_512 0 "register_operand" "=v")
+-	(vec_duplicate:VF_512
+-	  (vec_select:<ssescalarmode>
+-	    (match_operand:VF_512 1 "register_operand" "v")
+-	    (parallel [(const_int 0)]))))]
+-  "TARGET_AVX512F"
+-  "vbroadcast<bcstscalarsuff>\t{%x1, %0|%0, %x1}"
+-  [(set_attr "type" "sselog1")
+-    (set_attr "prefix" "evex")
+-    (set_attr "mode" "<MODE>")])
+-
+ ;; Although insertps takes register source, we prefer
+ ;; unpcklps with register source since it is shorter.
+ (define_insn "*vec_concatv2sf_sse4_1"
+@@ -17508,6 +17764,33 @@
+    (set_attr "btver2_decode" "vector")
+    (set_attr "mode" "OI")])
+ 
++;; Prefer broadcast with GPR.
++(define_insn "<mask_codefor><avx512>_vec_dup_gpr<mode><mask_name>"
++  [(set (match_operand:VI48_AVX512VL 0 "register_operand" "=v,v")
++	(vec_duplicate:VI48_AVX512VL
++	  (match_operand:<ssescalarmode> 1 "nonimmediate_operand" "vm,r")))]
++  "TARGET_AVX512F"
++  "v<sseintprefix>broadcast<bcstscalarsuff>\t{%1, %0<mask_operand2>|%0<mask_operand2>, %1}"
++  [(set_attr "type" "ssemov")
++   (set_attr "prefix" "evex")
++   (set_attr "mode" "<sseinsnmode>")
++   (set (attr "enabled")
++     (if_then_else (eq_attr "alternative" "1")
++	(symbol_ref "<ssescalarmode>mode != DImode || TARGET_64BIT")
++	(const_int 1)))])
++
++(define_insn "<mask_codefor><avx512>_vec_dup_gpr<mode><mask_name>"
++  [(set (match_operand:VI12_AVX512VL 0 "register_operand" "=v,v")
++	(vec_duplicate:VI12_AVX512VL
++	  (match_operand:<ssescalarmode> 1 "nonimmediate_operand" "vm,r")))]
++  "TARGET_AVX512BW"
++  "@
++   vpbroadcast<bcstscalarsuff>\t{%1, %0<mask_operand2>|%0<mask_operand2>, %1}
++   vpbroadcast<bcstscalarsuff>\t{%k1, %0<mask_operand2>|%0<mask_operand2>, %k1}"
++  [(set_attr "type" "ssemov")
++   (set_attr "prefix" "evex")
++   (set_attr "mode" "<sseinsnmode>")])
++
+ (define_mode_attr pbroadcast_evex_isa
+   [(V64QI "avx512bw") (V32QI "avx512bw") (V16QI "avx512bw")
+    (V32HI "avx512bw") (V16HI "avx512bw") (V8HI "avx512bw")
+@@ -17517,9 +17800,7 @@
+ (define_insn "avx2_pbroadcast<mode>"
+   [(set (match_operand:VI 0 "register_operand" "=x,v")
+ 	(vec_duplicate:VI
+-	  (vec_select:<ssescalarmode>
+-	    (match_operand:<ssexmmmode> 1 "nonimmediate_operand" "xm,vm")
+-	    (parallel [(const_int 0)]))))]
++	  (match_operand:<ssescalarmode> 1 "nonimmediate_operand" "xm,vm")))]
+   "TARGET_AVX2"
+   "vpbroadcast<ssemodesuffix>\t{%1, %0|%0, %<iptr>1}"
+   [(set_attr "isa" "*,<pbroadcast_evex_isa>")
+@@ -17528,24 +17809,6 @@
+    (set_attr "prefix" "vex,evex")
+    (set_attr "mode" "<sseinsnmode>")])
+ 
+-(define_insn "avx2_pbroadcast<mode>_1"
+-  [(set (match_operand:VI_256 0 "register_operand" "=x,x,v,v")
+-	(vec_duplicate:VI_256
+-	  (vec_select:<ssescalarmode>
+-	    (match_operand:VI_256 1 "nonimmediate_operand" "m,x,m,v")
+-	    (parallel [(const_int 0)]))))]
+-  "TARGET_AVX2"
+-  "@
+-   vpbroadcast<ssemodesuffix>\t{%1, %0|%0, %<iptr>1}
+-   vpbroadcast<ssemodesuffix>\t{%x1, %0|%0, %x1}
+-   vpbroadcast<ssemodesuffix>\t{%1, %0|%0, %<iptr>1}
+-   vpbroadcast<ssemodesuffix>\t{%x1, %0|%0, %x1}"
+-  [(set_attr "isa" "*,*,<pbroadcast_evex_isa>,<pbroadcast_evex_isa>")
+-   (set_attr "type" "ssemov")
+-   (set_attr "prefix_extra" "1")
+-   (set_attr "prefix" "vex")
+-   (set_attr "mode" "<sseinsnmode>")])
+-
+ (define_insn "<avx2_avx512>_permvar<mode><mask_name>"
+   [(set (match_operand:VI48F_256_512 0 "register_operand" "=v")
+ 	(unspec:VI48F_256_512
+@@ -17721,38 +17984,10 @@
+    (set_attr "prefix" "vex")
+    (set_attr "mode" "OI")])
+ 
+-(define_insn "avx2_vec_dupv4df"
+-  [(set (match_operand:V4DF 0 "register_operand" "=v")
+-	(vec_duplicate:V4DF
+-	  (vec_select:DF
+-	    (match_operand:V2DF 1 "register_operand" "v")
+-	    (parallel [(const_int 0)]))))]
+-  "TARGET_AVX2"
+-  "vbroadcastsd\t{%1, %0|%0, %1}"
+-  [(set_attr "type" "sselog1")
+-   (set_attr "prefix" "maybe_evex")
+-   (set_attr "mode" "V4DF")])
+-
+-(define_insn "<avx512>_vec_dup<mode>_1"
+-  [(set (match_operand:VI_AVX512BW 0 "register_operand" "=v,v")
+-	(vec_duplicate:VI_AVX512BW
+-	  (vec_select:<ssescalarmode>
+-	    (match_operand:VI_AVX512BW 1 "nonimmediate_operand" "v,m")
+-	    (parallel [(const_int 0)]))))]
+-  "TARGET_AVX512F"
+-  "@
+-   vpbroadcast<ssemodesuffix>\t{%x1, %0|%0, %x1}
+-   vpbroadcast<ssemodesuffix>\t{%x1, %0|%0, %<iptr>1}"
+-  [(set_attr "type" "ssemov")
+-   (set_attr "prefix" "evex")
+-   (set_attr "mode" "<sseinsnmode>")])
+-
+ (define_insn "<avx512>_vec_dup<mode><mask_name>"
+   [(set (match_operand:V48_AVX512VL 0 "register_operand" "=v")
+ 	(vec_duplicate:V48_AVX512VL
+-	  (vec_select:<ssescalarmode>
+-	    (match_operand:<ssexmmmode> 1 "nonimmediate_operand" "vm")
+-	    (parallel [(const_int 0)]))))]
++	  (match_operand:<ssescalarmode> 1 "nonimmediate_operand" "vm")))]
+   "TARGET_AVX512F"
+ {
+   /*  There is no DF broadcast (in AVX-512*) to 128b register.
+@@ -17769,9 +18004,7 @@
+ (define_insn "<avx512>_vec_dup<mode><mask_name>"
+   [(set (match_operand:VI12_AVX512VL 0 "register_operand" "=v")
+ 	(vec_duplicate:VI12_AVX512VL
+-	  (vec_select:<ssescalarmode>
+-	    (match_operand:<ssexmmmode> 1 "nonimmediate_operand" "vm")
+-	    (parallel [(const_int 0)]))))]
++	  (match_operand:<ssescalarmode> 1 "nonimmediate_operand" "vm")))]
+   "TARGET_AVX512BW"
+   "vpbroadcast<bcstscalarsuff>\t{%1, %0<mask_operand2>|%0<mask_operand2>, %<iptr>1}"
+   [(set_attr "type" "ssemov")
+@@ -17802,33 +18035,6 @@
+    (set_attr "prefix" "evex")
+    (set_attr "mode" "<sseinsnmode>")])
+ 
+-(define_insn "<mask_codefor><avx512>_vec_dup_gpr<mode><mask_name>"
+-  [(set (match_operand:VI12_AVX512VL 0 "register_operand" "=v,v")
+-	(vec_duplicate:VI12_AVX512VL
+-	  (match_operand:<ssescalarmode> 1 "nonimmediate_operand" "vm,r")))]
+-  "TARGET_AVX512BW"
+-  "@
+-   vpbroadcast<bcstscalarsuff>\t{%1, %0<mask_operand2>|%0<mask_operand2>, %1}
+-   vpbroadcast<bcstscalarsuff>\t{%k1, %0<mask_operand2>|%0<mask_operand2>, %k1}"
+-  [(set_attr "type" "ssemov")
+-   (set_attr "prefix" "evex")
+-   (set_attr "mode" "<sseinsnmode>")])
+-
+-(define_insn "<mask_codefor><avx512>_vec_dup_gpr<mode><mask_name>"
+-  [(set (match_operand:V48_AVX512VL 0 "register_operand" "=v,v")
+-	(vec_duplicate:V48_AVX512VL
+-	  (match_operand:<ssescalarmode> 1 "nonimmediate_operand" "vm,r")))]
+-  "TARGET_AVX512F"
+-  "v<sseintprefix>broadcast<bcstscalarsuff>\t{%1, %0<mask_operand2>|%0<mask_operand2>, %1}"
+-  [(set_attr "type" "ssemov")
+-   (set_attr "prefix" "evex")
+-   (set_attr "mode" "<sseinsnmode>")
+-   (set (attr "enabled")
+-     (if_then_else (eq_attr "alternative" "1")
+-	(symbol_ref "GET_MODE_CLASS (<ssescalarmode>mode) == MODE_INT
+-		     && (<ssescalarmode>mode != DImode || TARGET_64BIT)")
+-	(const_int 1)))])
+-
+ (define_insn "vec_dupv4sf"
+   [(set (match_operand:V4SF 0 "register_operand" "=v,v,x")
+ 	(vec_duplicate:V4SF
+@@ -18155,8 +18361,7 @@
+ 	     or VSHUFF128.  */
+ 	  gcc_assert (<MODE>mode == V8SFmode);
+ 	  if ((mask & 1) == 0)
+-	    emit_insn (gen_avx2_vec_dupv8sf (op0,
+-					     gen_lowpart (V4SFmode, op0)));
++	    emit_insn (gen_vec_dupv8sf (op0, gen_lowpart (V4SFmode, op0)));
+ 	  else
+ 	    emit_insn (gen_avx512vl_shuf_f32x4_1 (op0, op0, op0,
+ 						  GEN_INT (4), GEN_INT (5),
+diff --git a/gcc/simplify-rtx.c b/gcc/simplify-rtx.c
+index 9bc53866b9f..78e498779c1 100644
+--- a/gcc/simplify-rtx.c
++++ b/gcc/simplify-rtx.c
+@@ -6601,6 +6601,22 @@ simplify_subreg (machine_mode outermode, rtx op,
+       return NULL_RTX;
+     }
+ 
++  /* Return X for
++	(subreg
++	  (vec_merge
++	     (vec_duplicate X)
++	     (const_vector)
++	     (const_int 1))
++	  0)
++   */
++  if (known_eq (byte, 0U)
++      && GET_CODE (op) == VEC_MERGE
++      && GET_CODE (XEXP (op, 0)) == VEC_DUPLICATE
++      && GET_MODE (XEXP (XEXP (op, 0), 0)) == outermode
++      && CONST_INT_P (XEXP (op, 2))
++      && INTVAL (XEXP (op, 2)) == 1)
++    return XEXP (XEXP (op, 0), 0);
++
+   /* A SUBREG resulting from a zero extension may fold to zero if
+      it extracts higher bits that the ZERO_EXTEND's source bits.  */
+   if (GET_CODE (op) == ZERO_EXTEND && SCALAR_INT_MODE_P (innermode))
+diff --git a/gcc/testsuite/gcc.target/i386/avx-1.c b/gcc/testsuite/gcc.target/i386/avx-1.c
+index c877f9996b3..f67bc5f5044 100644
+--- a/gcc/testsuite/gcc.target/i386/avx-1.c
++++ b/gcc/testsuite/gcc.target/i386/avx-1.c
+@@ -351,16 +351,26 @@
+ #define __builtin_ia32_vfmaddsubps512_maskz(A, B, C, D, E) __builtin_ia32_vfmaddsubps512_maskz(A, B, C, D, 8)
+ #define __builtin_ia32_vfmsubaddpd512_mask3(A, B, C, D, E) __builtin_ia32_vfmsubaddpd512_mask3(A, B, C, D, 8)
+ #define __builtin_ia32_vfmsubaddps512_mask3(A, B, C, D, E) __builtin_ia32_vfmsubaddps512_mask3(A, B, C, D, 8)
++#define __builtin_ia32_vfmsubpd512_mask(A, B, C, D, E) __builtin_ia32_vfmsubpd512_mask(A, B, C, D, 8)
+ #define __builtin_ia32_vfmsubpd512_mask3(A, B, C, D, E) __builtin_ia32_vfmsubpd512_mask3(A, B, C, D, 8)
++#define __builtin_ia32_vfmsubpd512_maskz(A, B, C, D, E) __builtin_ia32_vfmsubpd512_maskz(A, B, C, D, 8)
++#define __builtin_ia32_vfmsubps512_mask(A, B, C, D, E) __builtin_ia32_vfmsubps512_mask(A, B, C, D, 8)
+ #define __builtin_ia32_vfmsubps512_mask3(A, B, C, D, E) __builtin_ia32_vfmsubps512_mask3(A, B, C, D, 8)
++#define __builtin_ia32_vfmsubps512_maskz(A, B, C, D, E) __builtin_ia32_vfmsubps512_maskz(A, B, C, D, 8)
+ #define __builtin_ia32_vfmsubsd3_mask3(A, B, C, D, E) __builtin_ia32_vfmsubsd3_mask3(A, B, C, D, 8)
+ #define __builtin_ia32_vfmsubss3_mask3(A, B, C, D, E) __builtin_ia32_vfmsubss3_mask3(A, B, C, D, 8)
+ #define __builtin_ia32_vfnmaddpd512_mask(A, B, C, D, E) __builtin_ia32_vfnmaddpd512_mask(A, B, C, D, 8)
++#define __builtin_ia32_vfnmaddpd512_mask3(A, B, C, D, E) __builtin_ia32_vfnmaddpd512_mask3(A, B, C, D, 8)
++#define __builtin_ia32_vfnmaddpd512_maskz(A, B, C, D, E) __builtin_ia32_vfnmaddpd512_maskz(A, B, C, D, 8)
+ #define __builtin_ia32_vfnmaddps512_mask(A, B, C, D, E) __builtin_ia32_vfnmaddps512_mask(A, B, C, D, 8)
++#define __builtin_ia32_vfnmaddps512_mask3(A, B, C, D, E) __builtin_ia32_vfnmaddps512_mask3(A, B, C, D, 8)
++#define __builtin_ia32_vfnmaddps512_maskz(A, B, C, D, E) __builtin_ia32_vfnmaddps512_maskz(A, B, C, D, 8)
+ #define __builtin_ia32_vfnmsubpd512_mask(A, B, C, D, E) __builtin_ia32_vfnmsubpd512_mask(A, B, C, D, 8)
+ #define __builtin_ia32_vfnmsubpd512_mask3(A, B, C, D, E) __builtin_ia32_vfnmsubpd512_mask3(A, B, C, D, 8)
++#define __builtin_ia32_vfnmsubpd512_maskz(A, B, C, D, E) __builtin_ia32_vfnmsubpd512_maskz(A, B, C, D, 8)
+ #define __builtin_ia32_vfnmsubps512_mask(A, B, C, D, E) __builtin_ia32_vfnmsubps512_mask(A, B, C, D, 8)
+ #define __builtin_ia32_vfnmsubps512_mask3(A, B, C, D, E) __builtin_ia32_vfnmsubps512_mask3(A, B, C, D, 8)
++#define __builtin_ia32_vfnmsubps512_maskz(A, B, C, D, E) __builtin_ia32_vfnmsubps512_maskz(A, B, C, D, 8)
+ #define __builtin_ia32_vpermilpd512_mask(A, E, C, D) __builtin_ia32_vpermilpd512_mask(A, 1, C, D)
+ #define __builtin_ia32_vpermilps512_mask(A, E, C, D) __builtin_ia32_vpermilps512_mask(A, 1, C, D)
+ 
+diff --git a/gcc/testsuite/gcc.target/i386/sse-13.c b/gcc/testsuite/gcc.target/i386/sse-13.c
+index 310ebfff73a..64da3cd1992 100644
+--- a/gcc/testsuite/gcc.target/i386/sse-13.c
++++ b/gcc/testsuite/gcc.target/i386/sse-13.c
+@@ -368,16 +368,26 @@
+ #define __builtin_ia32_vfmaddsubps512_maskz(A, B, C, D, E) __builtin_ia32_vfmaddsubps512_maskz(A, B, C, D, 8)
+ #define __builtin_ia32_vfmsubaddpd512_mask3(A, B, C, D, E) __builtin_ia32_vfmsubaddpd512_mask3(A, B, C, D, 8)
+ #define __builtin_ia32_vfmsubaddps512_mask3(A, B, C, D, E) __builtin_ia32_vfmsubaddps512_mask3(A, B, C, D, 8)
++#define __builtin_ia32_vfmsubpd512_mask(A, B, C, D, E) __builtin_ia32_vfmsubpd512_mask(A, B, C, D, 8)
+ #define __builtin_ia32_vfmsubpd512_mask3(A, B, C, D, E) __builtin_ia32_vfmsubpd512_mask3(A, B, C, D, 8)
++#define __builtin_ia32_vfmsubpd512_maskz(A, B, C, D, E) __builtin_ia32_vfmsubpd512_maskz(A, B, C, D, 8)
++#define __builtin_ia32_vfmsubps512_mask(A, B, C, D, E) __builtin_ia32_vfmsubps512_mask(A, B, C, D, 8)
+ #define __builtin_ia32_vfmsubps512_mask3(A, B, C, D, E) __builtin_ia32_vfmsubps512_mask3(A, B, C, D, 8)
++#define __builtin_ia32_vfmsubps512_maskz(A, B, C, D, E) __builtin_ia32_vfmsubps512_maskz(A, B, C, D, 8)
+ #define __builtin_ia32_vfmsubsd3_mask3(A, B, C, D, E) __builtin_ia32_vfmsubsd3_mask3(A, B, C, D, 8)
+ #define __builtin_ia32_vfmsubss3_mask3(A, B, C, D, E) __builtin_ia32_vfmsubss3_mask3(A, B, C, D, 8)
+ #define __builtin_ia32_vfnmaddpd512_mask(A, B, C, D, E) __builtin_ia32_vfnmaddpd512_mask(A, B, C, D, 8)
++#define __builtin_ia32_vfnmaddpd512_mask3(A, B, C, D, E) __builtin_ia32_vfnmaddpd512_mask3(A, B, C, D, 8)
++#define __builtin_ia32_vfnmaddpd512_maskz(A, B, C, D, E) __builtin_ia32_vfnmaddpd512_maskz(A, B, C, D, 8)
+ #define __builtin_ia32_vfnmaddps512_mask(A, B, C, D, E) __builtin_ia32_vfnmaddps512_mask(A, B, C, D, 8)
++#define __builtin_ia32_vfnmaddps512_mask3(A, B, C, D, E) __builtin_ia32_vfnmaddps512_mask3(A, B, C, D, 8)
++#define __builtin_ia32_vfnmaddps512_maskz(A, B, C, D, E) __builtin_ia32_vfnmaddps512_maskz(A, B, C, D, 8)
+ #define __builtin_ia32_vfnmsubpd512_mask(A, B, C, D, E) __builtin_ia32_vfnmsubpd512_mask(A, B, C, D, 8)
+ #define __builtin_ia32_vfnmsubpd512_mask3(A, B, C, D, E) __builtin_ia32_vfnmsubpd512_mask3(A, B, C, D, 8)
++#define __builtin_ia32_vfnmsubpd512_maskz(A, B, C, D, E) __builtin_ia32_vfnmsubpd512_maskz(A, B, C, D, 8)
+ #define __builtin_ia32_vfnmsubps512_mask(A, B, C, D, E) __builtin_ia32_vfnmsubps512_mask(A, B, C, D, 8)
+ #define __builtin_ia32_vfnmsubps512_mask3(A, B, C, D, E) __builtin_ia32_vfnmsubps512_mask3(A, B, C, D, 8)
++#define __builtin_ia32_vfnmsubps512_maskz(A, B, C, D, E) __builtin_ia32_vfnmsubps512_maskz(A, B, C, D, 8)
+ #define __builtin_ia32_vpermilpd512_mask(A, E, C, D) __builtin_ia32_vpermilpd512_mask(A, 1, C, D)
+ #define __builtin_ia32_vpermilps512_mask(A, E, C, D) __builtin_ia32_vpermilps512_mask(A, 1, C, D)
+ 
+diff --git a/gcc/testsuite/gcc.target/i386/sse-23.c b/gcc/testsuite/gcc.target/i386/sse-23.c
+index cb5cdd8cd10..eae03ad3f48 100644
+--- a/gcc/testsuite/gcc.target/i386/sse-23.c
++++ b/gcc/testsuite/gcc.target/i386/sse-23.c
+@@ -369,14 +369,23 @@
+ #define __builtin_ia32_vfmaddsubps512_maskz(A, B, C, D, E) __builtin_ia32_vfmaddsubps512_maskz(A, B, C, D, 8)
+ #define __builtin_ia32_vfmsubaddpd512_mask3(A, B, C, D, E) __builtin_ia32_vfmsubaddpd512_mask3(A, B, C, D, 8)
+ #define __builtin_ia32_vfmsubaddps512_mask3(A, B, C, D, E) __builtin_ia32_vfmsubaddps512_mask3(A, B, C, D, 8)
++#define __builtin_ia32_vfmsubpd512_mask(A, B, C, D, E) __builtin_ia32_vfmsubpd512_mask(A, B, C, D, 8)
+ #define __builtin_ia32_vfmsubpd512_mask3(A, B, C, D, E) __builtin_ia32_vfmsubpd512_mask3(A, B, C, D, 8)
++#define __builtin_ia32_vfmsubpd512_maskz(A, B, C, D, E) __builtin_ia32_vfmsubpd512_maskz(A, B, C, D, 8)
++#define __builtin_ia32_vfmsubps512_mask(A, B, C, D, E) __builtin_ia32_vfmsubps512_mask(A, B, C, D, 8)
+ #define __builtin_ia32_vfmsubps512_mask3(A, B, C, D, E) __builtin_ia32_vfmsubps512_mask3(A, B, C, D, 8)
++#define __builtin_ia32_vfmsubps512_maskz(A, B, C, D, E) __builtin_ia32_vfmsubps512_maskz(A, B, C, D, 8)
+ #define __builtin_ia32_vfnmaddpd512_mask(A, B, C, D, E) __builtin_ia32_vfnmaddpd512_mask(A, B, C, D, 8)
++#define __builtin_ia32_vfnmaddpd512_maskz(A, B, C, D, E) __builtin_ia32_vfnmaddpd512_maskz(A, B, C, D, 8)
+ #define __builtin_ia32_vfnmaddps512_mask(A, B, C, D, E) __builtin_ia32_vfnmaddps512_mask(A, B, C, D, 8)
++#define __builtin_ia32_vfnmaddps512_mask3(A, B, C, D, E) __builtin_ia32_vfnmaddps512_mask3(A, B, C, D, 8)
++#define __builtin_ia32_vfnmaddps512_maskz(A, B, C, D, E) __builtin_ia32_vfnmaddps512_maskz(A, B, C, D, 8)
+ #define __builtin_ia32_vfnmsubpd512_mask(A, B, C, D, E) __builtin_ia32_vfnmsubpd512_mask(A, B, C, D, 8)
+ #define __builtin_ia32_vfnmsubpd512_mask3(A, B, C, D, E) __builtin_ia32_vfnmsubpd512_mask3(A, B, C, D, 8)
++#define __builtin_ia32_vfnmsubpd512_maskz(A, B, C, D, E) __builtin_ia32_vfnmsubpd512_maskz(A, B, C, D, 8)
+ #define __builtin_ia32_vfnmsubps512_mask(A, B, C, D, E) __builtin_ia32_vfnmsubps512_mask(A, B, C, D, 8)
+ #define __builtin_ia32_vfnmsubps512_mask3(A, B, C, D, E) __builtin_ia32_vfnmsubps512_mask3(A, B, C, D, 8)
++#define __builtin_ia32_vfnmsubps512_maskz(A, B, C, D, E) __builtin_ia32_vfnmsubps512_maskz(A, B, C, D, 8)
+ #define __builtin_ia32_vpermilpd512_mask(A, E, C, D) __builtin_ia32_vpermilpd512_mask(A, 1, C, D)
+ #define __builtin_ia32_vpermilps512_mask(A, E, C, D) __builtin_ia32_vpermilps512_mask(A, 1, C, D)
+ 
