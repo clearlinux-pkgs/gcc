@@ -22,7 +22,7 @@
 
 Name     : gcc
 Version  : 8.2.0
-Release  : 253
+Release  : 254
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://mirrors.kernel.org/gnu/gcc/gcc-8.2.0/gcc-8.2.0.tar.gz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.16.1.tar.bz2
@@ -55,6 +55,8 @@ Patch21  : zero-regs-gcc8.patch
 
 Patch30  : hj-patch-round.patch
 
+# cves: 1xx
+Patch0100: CVE-2018-18484.patch
 
 
 BuildRequires : bison
@@ -239,6 +241,8 @@ GNU cc and gcc C compilers.
 %patch21 -p1
 
 %patch30 -p1
+
+%patch0100 -p1
 
 
 %build
