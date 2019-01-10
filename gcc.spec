@@ -6,13 +6,6 @@
 %define gccver 8.2.1
 %define gccpath gcc-8.2.0
 
-
-#
-# debug_package must be set to %{nil} for functional reasons
-# removing this breaks the crt* files for correctness
-#
-%define debug_package %{nil}
-
 # Highest optimisation ABI we target
 %define mtune haswell
 
@@ -22,7 +15,7 @@
 
 Name     : gcc
 Version  : 8.2.0
-Release  : 279
+Release  : 280
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://mirrors.kernel.org/gnu/gcc/gcc-8.2.0/gcc-8.2.0.tar.gz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.16.1.tar.bz2
@@ -352,9 +345,8 @@ chmod 0755 %{buildroot}/usr/lib32/libgcc_s.so.1
 
 chmod a+x %{buildroot}/usr/bin
 chmod a+x %{buildroot}/usr/lib64
-chmod -R a+x %{buildroot}/usr/lib*/gcc/
-
-
+find %{buildroot}/usr/lib64 %{buildroot}/usr/lib*/gcc -name '*.so*' -print0 | xargs -r0 chmod 755
+find %{buildroot}/usr/lib64 %{buildroot}/usr/lib*/gcc -name '*.o' -print0 | xargs -r0 chmod 644
 
 
 # This is only for gdb
