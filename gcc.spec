@@ -43,6 +43,7 @@ Patch9   : gomp-relax.patch
 Patch11  : memcpy-avx2.patch
 Patch12	 : avx512-when-we-ask-for-it.patch
 Patch13  : hj.patch
+Patch14  : arch-native-override.patch
 
 
 #Patch15  : revert-regression.patch
@@ -233,6 +234,8 @@ GNU cc and gcc C compilers.
 
 %patch12 -p1
 %patch13 -p1
+
+%patch14 -p1
 
 %patch17 -p1
 #%patch18 -p1
