@@ -1,0 +1,12 @@
+--- gcc-8.2.0/gcc/config/i386/driver-i386.c~	2018-04-20 13:30:13.000000000 +0000
++++ gcc-8.2.0/gcc/config/i386/driver-i386.c	2019-01-17 20:53:33.310525767 +0000
+@@ -432,6 +432,9 @@
+   if (argc < 1)
+     return NULL;
+ 
++  if (getenv("GCC_ARCH_NATIVE_OVERRIDE"))
++	 return concat ("-m", argv[0], "=", getenv("GCC_NO_ARCH_NATIVE"), options, NULL);
++
+   arch = !strcmp (argv[0], "arch");
+ 
+   if (!arch && strcmp (argv[0], "tune"))
