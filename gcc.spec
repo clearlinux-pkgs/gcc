@@ -19,6 +19,8 @@ Release  : 292
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://mirrors.kernel.org/gnu/gcc/gcc-8.2.0/gcc-8.2.0.tar.gz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.16.1.tar.bz2
+Source2  : DATESTAMP
+Source3  : REVISION
 Summary  : GNU cc and gcc C compilers
 Group    : Development/Tools
 License  : BSD-3-Clause BSL-1.0 GFDL-1.2 GFDL-1.3 GPL-2.0 GPL-3.0 LGPL-2.1 LGPL-3.0 MIT
@@ -246,7 +248,10 @@ GNU cc and gcc C compilers.
 # Live in the gcc source tree
 tar xf %{SOURCE1} && ln -sf isl-%{isl_version} isl
 
-echo 20180502 > gcc/DATESTAMP
+# Update the DATESTAMP and add a revision
+tee `find -name DATESTAMP` > /dev/null < %{SOURCE2}
+cp %{SOURCE3} gcc/
+
 rm -rf ../gcc-build
 mkdir ../gcc-build
 pushd ../gcc-build
