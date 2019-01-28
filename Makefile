@@ -11,6 +11,6 @@ update:
 	git -C $(GCCGIT) shortlog gcc-8_2_0-release..origin/gcc-8-branch > gcc-stable-branch.patch
 	git -C $(GCCGIT) diff gcc-8_2_0-release..origin/gcc-8-branch >> gcc-stable-branch.patch
 	! git diff --exit-code  gcc-stable-branch.patch > /dev/null
-	git commit -m "stable branch update" gcc-stable-branch.patch
-	$(MAKE) bump
+	$(MAKE) bumpnogit
+	git commit -m "stable branch update" -a
 	test -n "$(NO_KOJI)" || $(MAKE) koji-nowait
