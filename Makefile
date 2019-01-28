@@ -1,10 +1,13 @@
 PKG_NAME := gcc
-URL := https://mirrors.kernel.org/gnu/gcc/gcc-7.3.0/gcc-7.3.0.tar.gz
+URL := https://mirrors.kernel.org/gnu/gcc/gcc-8.2.0/gcc-8.2.0.tar.gz
 
 include ../common/Makefile.common
 
+GCCGIT = ~/git/gcc
 GCCVER = 8_2_0
 
 update:
-	pushd ~/git/gcc ; git remote update -p ; git shortlog gcc-8_2_0-release..origin/gcc-8-branch  > ~/clear/packages/gcc/gcc-stable-branch.patch ; git diff gcc-8_2_0-release..origin/gcc-8-branch  >> ~/clear/packages/gcc/gcc-stable-branch.patch ; popd
-	git diff --exit-code  gcc-stable-branch.patch || bash ./update.sh
+	git -C $(GCCGIT) remote update -p
+	git -C $(GCCGIT) shortlog gcc-8_2_0-release..origin/gcc-8-branch > gcc-stable-branch.patch
+	git -C $(GCCGIT) diff gcc-8_2_0-release..origin/gcc-8-branch >> gcc-stable-branch.patch
+	git diff --exit-code  gcc-stable-branch.patch > /dev/null || bash ./update.sh
