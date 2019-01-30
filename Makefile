@@ -6,10 +6,13 @@ include ../common/Makefile.common
 GCCGIT = ~/git/gcc
 GCCVER = 8_2_0
 
+GCCTAG = gcc-$(GCCVER)-release
+GCCBRANCH = origin/gcc-$(shell echo $(GCCVER) | sed 's/_.*//')-branch
+
 update:
 	git -C $(GCCGIT) remote update -p
-	git -C $(GCCGIT) shortlog gcc-8_2_0-release..origin/gcc-8-branch > gcc-stable-branch.patch
-	git -C $(GCCGIT) diff gcc-8_2_0-release..origin/gcc-8-branch >> gcc-stable-branch.patch
+	git -C $(GCCGIT) shortlog $(GCCTAG)..$(GCCBRANCH) > gcc-stable-branch.patch
+	git -C $(GCCGIT) diff $(GCCTAG)..$(GCCBRANCH) >> gcc-stable-branch.patch
 	! git diff --exit-code  gcc-stable-branch.patch > /dev/null
 	$(MAKE) bumpnogit
 	git commit -m "stable branch update" -a
