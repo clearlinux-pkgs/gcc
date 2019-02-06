@@ -1,0 +1,109 @@
+From a0d4c581eaade7553d3f46e9e67a1d7bfcf154fd Mon Sep 17 00:00:00 2001
+From: Thiago Macieira <thiago.macieira@intel.com>
+Date: Wed, 6 Feb 2019 10:39:43 -0800
+Subject: [PATCH] Revert "[PR c++/86610] lambda captures in templates"
+
+This reverts commit ac961f9da2f7d442f2aa3df56228940a15dbc2af (SVN 268029).
+
+See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=88995
+---
+ gcc/cp/ChangeLog                     |  3 +++
+ gcc/cp/semantics.c                   |  5 +++--
+ gcc/testsuite/ChangeLog              |  3 +++
+ gcc/testsuite/g++.dg/cpp0x/pr86610.C | 31 ----------------------------
+ 4 files changed, 9 insertions(+), 33 deletions(-)
+ delete mode 100644 gcc/testsuite/g++.dg/cpp0x/pr86610.C
+
+diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
+index 2822e7c3a3c..b96db878c61 100644
+--- a/gcc/cp/ChangeLog
++++ b/gcc/cp/ChangeLog
+@@ -1,3 +1,4 @@
++<<<<<<< HEAD
+ 2019-02-06  Marek Polacek  <polacek@redhat.com>
+ 
+ 	Backport from mainline
+@@ -53,6 +54,8 @@
+ 	* semantics.c (process_outer_var_ref): Only skip dependent types
+ 	in templates.
+ 
++=======
++>>>>>>> parent of ac961f9da2f... [PR c++/86610] lambda captures in templates
+ 2019-01-08  Jakub Jelinek  <jakub@redhat.com>
+ 
+ 	Backported from mainline
+diff --git a/gcc/cp/semantics.c b/gcc/cp/semantics.c
+index 223a5687d7d..1f6c9be6d6f 100644
+--- a/gcc/cp/semantics.c
++++ b/gcc/cp/semantics.c
+@@ -3415,9 +3415,10 @@ process_outer_var_ref (tree decl, tsubst_flags_t complain, bool odr_use)
+     }
+ 
+   /* In a lambda within a template, wait until instantiation
+-     time to implicitly capture a dependent type.  */
++     time to implicitly capture.  */
+   if (context == containing_function
+-      && dependent_type_p (TREE_TYPE (decl)))
++      && DECL_TEMPLATE_INFO (containing_function)
++      && uses_template_parms (DECL_TI_ARGS (containing_function)))
+     return decl;
+ 
+   if (lambda_expr && VAR_P (decl)
+diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
+index 1e2c758c2f7..5b6c4183efa 100644
+--- a/gcc/testsuite/ChangeLog
++++ b/gcc/testsuite/ChangeLog
+@@ -1,3 +1,4 @@
++<<<<<<< HEAD
+ 2019-02-06  Richard Biener  <rguenther@suse.de>
+ 
+ 	Backport from mainline
+@@ -204,6 +205,8 @@
+ 	PR c++/86610
+ 	* g++.dg/cpp0x/pr86610.C: New.
+ 
++=======
++>>>>>>> parent of ac961f9da2f... [PR c++/86610] lambda captures in templates
+ 2019-01-16  Martin Jambor  <mjambor@suse.cz>
+ 
+ 	Backported from mainline
+diff --git a/gcc/testsuite/g++.dg/cpp0x/pr86610.C b/gcc/testsuite/g++.dg/cpp0x/pr86610.C
+deleted file mode 100644
+index dc0e2f5d52e..00000000000
+--- a/gcc/testsuite/g++.dg/cpp0x/pr86610.C
++++ /dev/null
+@@ -1,31 +0,0 @@
+-// { dg-do run { target c++11 } }
+-// PR c++86610 lambda capture inside template
+-
+-struct C
+-{
+-  int operator[](int)
+-  { return 1; }
+-
+-  int operator[](int) const
+-  { return 0; } // Want this one
+-};
+-
+-int q()
+-{
+-  C c;
+-  return [=] { return c[0]; }();
+-}
+-
+-template <typename T>
+-int f()
+-{
+-  C c;
+-  T d;
+-  return [=] { return c[0]; }() 
+-    + [=] { return c[0] + d[0]; }();
+-}
+-
+-int main()
+-{
+-  return q () + f<C>();
+-}
+-- 
+2.20.1
+
