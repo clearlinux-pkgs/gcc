@@ -15,7 +15,7 @@
 
 Name     : gcc
 Version  : 8.2.0
-Release  : 307
+Release  : 308
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://mirrors.kernel.org/gnu/gcc/gcc-8.2.0/gcc-8.2.0.tar.gz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.16.1.tar.bz2
