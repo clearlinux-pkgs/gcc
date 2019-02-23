@@ -1,10 +1,10 @@
 PKG_NAME := gcc
-URL := https://mirrors.kernel.org/gnu/gcc/gcc-8.2.0/gcc-8.2.0.tar.gz
+URL := https://mirrors.kernel.org/gnu/gcc/gcc-8.3.0/gcc-8.3.0.tar.gz
 
 include ../common/Makefile.common
 
 GCCGIT = ~/git/gcc
-GCCVER = 8_2_0
+GCCVER = 8_3_0
 
 GCCTAG = gcc-$(GCCVER)-release
 GCCBRANCH = origin/gcc-$(shell echo $(GCCVER) | sed 's/_.*//')-branch
