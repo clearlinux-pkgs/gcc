@@ -1,17 +1,25 @@
+amodra (1):
+      [RS6000] Fix <bd>_<mode> and <bd>tf_<mode> splitters
+
 ebotcazou (1):
       PR ada/89349 	Backport from mainline 	2018-05-25  Arnaud Charlet  <charlet@adacore.com>
 
-gccadmin (1):
+gccadmin (2):
+      Daily bump.
       Daily bump.
 
 jakub (1):
       * BASE-VER: Set to 8.3.1.
 
+pault (1):
+      2019-02-23  Paul Thomas  <pault@gcc.gnu.org>
+
 redi (1):
       PR libstdc++/89446 fix null pointer dereference in char_traits
 
-tkoenig (1):
+tkoenig (2):
       2019-02-22  Thomas Koenig  <tkoenig@gcc.gnu.org>
+      2019-02-23  Thomas Koenig  <tkoenig@gcc.gnu.org>
 
 diff --git a/gcc/BASE-VER b/gcc/BASE-VER
 index 2bf50aaf17a..56b6be4ebb2 100644
@@ -21,10 +29,17 @@ index 2bf50aaf17a..56b6be4ebb2 100644
 -8.3.0
 +8.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d1fd9f6a7b9..af4903cd718 100644
+index d1fd9f6a7b9..938bb312c37 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,7 @@
+@@ -1,3 +1,14 @@
++2019-02-24  Alan Modra  <amodra@gmail.com>
++
++	PR target/89271
++	* config/rs6000/rs6000.md (<bd>_<mode> split): Check for an int
++	output reg on add insn.
++	(<bd>tf_<mode> split): Likewise.  Match predicates with insn.
++
 +2019-02-22  Jakub Jelinek  <jakub@redhat.com>
 +
 +	* BASE-VER: Set to 8.3.1.
@@ -121,11 +136,60 @@ index 65a87fe4ce3..6c75b521456 100644
 -   --  avoid function calls every time we want to reset the attributes).
 -
  end Osint;
+diff --git a/gcc/config/rs6000/rs6000.md b/gcc/config/rs6000/rs6000.md
+index 4d69c1dfa0e..fa65b2a8bcc 100644
+--- a/gcc/config/rs6000/rs6000.md
++++ b/gcc/config/rs6000/rs6000.md
+@@ -12699,7 +12699,7 @@
+ 				const0_rtx);
+   emit_insn (gen_rtx_SET (operands[3],
+ 			  gen_rtx_COMPARE (CCmode, operands[1], const1_rtx)));
+-  if (gpc_reg_operand (operands[0], <MODE>mode))
++  if (int_reg_operand (operands[0], <MODE>mode))
+     emit_insn (gen_add<mode>3 (operands[0], operands[1], constm1_rtx));
+   else
+     {
+@@ -12768,7 +12768,7 @@
+ 		       (const_int 0)]))
+ 	  (match_operand 4)
+ 	  (match_operand 5)))
+-   (set (match_operand:P 6 "int_reg_operand")
++   (set (match_operand:P 6 "nonimmediate_operand")
+ 	(plus:P (match_dup 0)
+ 		(const_int -1)))
+    (clobber (match_scratch:P 7))
+@@ -12801,7 +12801,7 @@
+   else
+      emit_insn (gen_cceq_ior_compare_complement (operands[9], andexpr, ctrcmpcc,
+ 						 operands[8], cccmp, ccin));
+-  if (gpc_reg_operand (operands[0], <MODE>mode))
++  if (int_reg_operand (ctrout, <MODE>mode))
+      emit_insn (gen_add<mode>3 (ctrout, ctr, constm1_rtx));
+   else
+     {
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index 4d2782f1b19..87b2b229c6f 100644
+index 4d2782f1b19..1f7984fcad9 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,12 @@
+@@ -1,3 +1,30 @@
++2019-02-23  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	PR fortran/86119
++	Backport from trunk
++	* class.c (gfc_get_len_component): Add argument k for kind.
++	If the kind of the resulting expression is not equal to k,
++	convert it.
++	* gfortran.h (gfc_len_component): Adjust prototype.
++	* simplify.c (gfc_simplify_len): Pass kind to
++	gfc_get_len_component.
++
++2019-02-23  Paul Thomas  <pault@gcc.gnu.org>
++
++	Backport from trunk
++	PR fortran/88117
++	* resolve.c (deferred_op_assign): Return if the lhs expression
++	has the pointer attribute.
++
 +2019-02-22  Thomas Koenig  <tkoenig@gcc.gnu.org>
 +
 +	PR fortran/71066
@@ -138,6 +202,74 @@ index 4d2782f1b19..87b2b229c6f 100644
  2019-02-22  Release Manager
  
  	* GCC 8.3.0 released.
+diff --git a/gcc/fortran/class.c b/gcc/fortran/class.c
+index 2eae7f0f351..58a09f479a9 100644
+--- a/gcc/fortran/class.c
++++ b/gcc/fortran/class.c
+@@ -561,7 +561,7 @@ gfc_intrinsic_hash_value (gfc_typespec *ts)
+    ref to the _len component.  */
+ 
+ gfc_expr *
+-gfc_get_len_component (gfc_expr *e)
++gfc_get_len_component (gfc_expr *e, int k)
+ {
+   gfc_expr *ptr;
+   gfc_ref *ref, **last;
+@@ -586,6 +586,14 @@ gfc_get_len_component (gfc_expr *e)
+     }
+   /* And replace if with a ref to the _len component.  */
+   gfc_add_len_component (ptr);
++  if (k != ptr->ts.kind)
++    {
++      gfc_typespec ts;
++      gfc_clear_ts (&ts);
++      ts.type = BT_INTEGER;
++      ts.kind = k;
++      gfc_convert_type_warn (ptr, &ts, 2, 0);
++    }
+   return ptr;
+ }
+ 
+diff --git a/gcc/fortran/gfortran.h b/gcc/fortran/gfortran.h
+index 698d211d74e..abdefe12ed2 100644
+--- a/gcc/fortran/gfortran.h
++++ b/gcc/fortran/gfortran.h
+@@ -3426,7 +3426,7 @@ bool gfc_is_class_scalar_expr (gfc_expr *);
+ bool gfc_is_class_container_ref (gfc_expr *e);
+ gfc_expr *gfc_class_initializer (gfc_typespec *, gfc_expr *);
+ unsigned int gfc_hash_value (gfc_symbol *);
+-gfc_expr *gfc_get_len_component (gfc_expr *e);
++gfc_expr *gfc_get_len_component (gfc_expr *e, int);
+ bool gfc_build_class_symbol (gfc_typespec *, symbol_attribute *,
+ 			     gfc_array_spec **);
+ gfc_symbol *gfc_find_derived_vtab (gfc_symbol *);
+diff --git a/gcc/fortran/resolve.c b/gcc/fortran/resolve.c
+index f70747a586f..df3ab562f48 100644
+--- a/gcc/fortran/resolve.c
++++ b/gcc/fortran/resolve.c
+@@ -11011,6 +11011,9 @@ deferred_op_assign (gfc_code **code, gfc_namespace *ns)
+   if (!gfc_check_dependency ((*code)->expr1, (*code)->expr2, 1))
+     return false;
+ 
++  if (gfc_expr_attr ((*code)->expr1).pointer)
++    return false;
++
+   tmp_expr = get_temp_from_expr ((*code)->expr1, ns);
+   tmp_expr->where = (*code)->loc;
+ 
+diff --git a/gcc/fortran/simplify.c b/gcc/fortran/simplify.c
+index 0d0f57922ea..c9916f1d7f4 100644
+--- a/gcc/fortran/simplify.c
++++ b/gcc/fortran/simplify.c
+@@ -4469,7 +4469,7 @@ gfc_simplify_len (gfc_expr *e, gfc_expr *kind)
+     /* The expression in assoc->target points to a ref to the _data component
+        of the unlimited polymorphic entity.  To get the _len component the last
+        _data ref needs to be stripped and a ref to the _len component added.  */
+-    return gfc_get_len_component (e->symtree->n.sym->assoc->target);
++    return gfc_get_len_component (e->symtree->n.sym->assoc->target, k);
+   else
+     return NULL;
+ }
 diff --git a/gcc/fortran/trans-decl.c b/gcc/fortran/trans-decl.c
 index 548380a4e86..7eb3c229475 100644
 --- a/gcc/fortran/trans-decl.c
@@ -177,10 +309,22 @@ index 548380a4e86..7eb3c229475 100644
        tmp = gfc_trans_assignment (gfc_lval_expr_from_sym (sym), sym->value,
  				  true, false);
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 7d5e65b1a74..ba7ba7496e8 100644
+index 7d5e65b1a74..39c39af726d 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,9 @@
+@@ -1,3 +1,21 @@
++2019-02-23  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	PR fortran/86119
++	Backport from trunk
++	* gfortran.dg/warn_conversion_11.f90: New test.
++
++2019-02-23  Paul Thomas  <pault@gcc.gnu.org>
++
++	Backport from trunk
++	PR fortran/88117
++	* gfortran.dg/deferred_character_32.f90: New test
++
 +2019-02-12  Thomas Koenig  <tkoenig@gcc.gnu.org>
 +
 +	PR fortran/71066
@@ -207,6 +351,49 @@ index 00000000000..94ab4c26cec
 +   if (any (a /= 0.0)) stop 1
 +   if (any (b /= reshape([1234, 2345, 3456, 4567],[2,2]))) stop 2
 +end
+diff --git a/gcc/testsuite/gfortran.dg/deferred_character_32.f90 b/gcc/testsuite/gfortran.dg/deferred_character_32.f90
+new file mode 100644
+index 00000000000..3969d97ffc9
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/deferred_character_32.f90
+@@ -0,0 +1,13 @@
++! { dg-do run }
++!
++! Test the fix for PR88117.
++!
++! Contributed by Gerhard Steinmetz  <gscfq@t-online.de>
++!
++program p
++   character(:), pointer :: z(:)
++   allocate (z, source  = ['abcd', 'bcde'])
++   z = (z) ! gimplifier choked here.
++   if (any (z .ne. ['abcd', 'bcde'])) stop 1
++   deallocate (z)
++end
+diff --git a/gcc/testsuite/gfortran.dg/warn_conversion_11.f90 b/gcc/testsuite/gfortran.dg/warn_conversion_11.f90
+new file mode 100644
+index 00000000000..3393e07d31e
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/warn_conversion_11.f90
+@@ -0,0 +1,18 @@
++! { dg-do compile }
++! { dg-options "-Wconversion" }
++! PR 86119 - this used to warn.
++program proglen
++
++implicit none
++
++   class(*), allocatable :: s
++   integer :: l2
++
++   allocate(s, source = '123  ')
++
++   select type(s)
++   type is (character(len=*))
++      l2 = len(s)
++   end select
++
++end program proglen
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
 index aac255a46f9..45bb87b3342 100644
 --- a/libstdc++-v3/ChangeLog
