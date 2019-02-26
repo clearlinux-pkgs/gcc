@@ -1,8 +1,10 @@
 amodra (1):
       [RS6000] Fix <bd>_<mode> and <bd>tf_<mode> splitters
 
-ebotcazou (1):
+ebotcazou (3):
       PR ada/89349 	Backport from mainline 	2018-05-25  Arnaud Charlet  <charlet@adacore.com>
+      * tree-ssa-dom.c (edge_info::derive_equivalences) <BIT_IOR_EXPR>: Fix 	and move around comment. 	<BIT_AND_EXPR>: Likewise. 	<BIT_NOT_EXPR>: Add specific handling for boolean types.
+      Backport from mainline 	2019-02-19  Eric Botcazou  <ebotcazou@adacore.com>
 
 gccadmin (4):
       Daily bump.
@@ -31,10 +33,25 @@ index 2bf50aaf17a..56b6be4ebb2 100644
 -8.3.0
 +8.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d1fd9f6a7b9..938bb312c37 100644
+index d1fd9f6a7b9..69b1323d115 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,14 @@
+@@ -1,3 +1,29 @@
++2019-02-26  Eric Botcazou  <ebotcazou@adacore.com>
++
++	Backport from mainline
++	2019-02-19  Eric Botcazou  <ebotcazou@adacore.com>
++
++	* rtlanal.c (get_initial_register_offset): Fall back to the estimate
++	as long as the epilogue isn't completed.
++
++2019-02-26  Eric Botcazou  <ebotcazou@adacore.com>
++
++	* tree-ssa-dom.c (edge_info::derive_equivalences) <BIT_IOR_EXPR>: Fix
++	and move around comment.
++	<BIT_AND_EXPR>: Likewise.
++	<BIT_NOT_EXPR>: Add specific handling for boolean types.
++
 +2019-02-24  Alan Modra  <amodra@gmail.com>
 +
 +	PR target/89271
@@ -310,11 +327,35 @@ index 548380a4e86..7eb3c229475 100644
        sym->attr.pointer = 1;
        tmp = gfc_trans_assignment (gfc_lval_expr_from_sym (sym), sym->value,
  				  true, false);
+diff --git a/gcc/rtlanal.c b/gcc/rtlanal.c
+index 0e79e53fb61..dabc5403f28 100644
+--- a/gcc/rtlanal.c
++++ b/gcc/rtlanal.c
+@@ -358,10 +358,10 @@ get_initial_register_offset (int from, int to)
+   if (to == from)
+     return 0;
+ 
+-  /* It is not safe to call INITIAL_ELIMINATION_OFFSET
+-     before the reload pass.  We need to give at least
+-     an estimation for the resulting frame size.  */
+-  if (! reload_completed)
++  /* It is not safe to call INITIAL_ELIMINATION_OFFSET before the epilogue
++     is completed, but we need to give at least an estimate for the stack
++     pointer based on the frame size.  */
++  if (!epilogue_completed)
+     {
+       offset1 = crtl->outgoing_args_size + get_frame_size ();
+ #if !STACK_GROWS_DOWNWARD
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 7d5e65b1a74..39c39af726d 100644
+index 7d5e65b1a74..387a44eaa28 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,21 @@
+@@ -1,3 +1,26 @@
++2019-02-26  Eric Botcazou  <ebotcazou@adacore.com>
++
++	* gnat.dg/opt77.adb: New test.
++	* gnat.dg/opt77_pkg.ad[sb]: New helper.
++
 +2019-02-23  Thomas Koenig  <tkoenig@gcc.gnu.org>
 +
 +	PR fortran/86119
@@ -396,6 +437,136 @@ index 00000000000..3393e07d31e
 +   end select
 +
 +end program proglen
+diff --git a/gcc/testsuite/gnat.dg/opt77.adb b/gcc/testsuite/gnat.dg/opt77.adb
+new file mode 100644
+index 00000000000..4d0288abfaf
+--- /dev/null
++++ b/gcc/testsuite/gnat.dg/opt77.adb
+@@ -0,0 +1,14 @@
++-- { dg-do run }
++-- { dg-options "-O -fno-inline" }
++
++with Opt77_Pkg; use Opt77_Pkg;
++
++procedure Opt77 is
++  N : Natural := 0;
++  To_Add : Boolean;
++begin
++  Proc ("One", N, To_Add);
++  if To_Add then
++    raise Program_Error;
++  end if;
++end;
+diff --git a/gcc/testsuite/gnat.dg/opt77_pkg.adb b/gcc/testsuite/gnat.dg/opt77_pkg.adb
+new file mode 100644
+index 00000000000..b3c1e4b81d8
+--- /dev/null
++++ b/gcc/testsuite/gnat.dg/opt77_pkg.adb
+@@ -0,0 +1,28 @@
++package body Opt77_Pkg is
++
++  function Compare (S : String) return Boolean is
++  begin
++    return S = "Two";
++  end;
++
++  procedure Proc (S : String; N : in out Natural; To_Add : out Boolean) is
++    To_Take : Boolean := False;
++    To_Read : Boolean := False;
++  begin
++    To_Add := False;
++
++    if S = "One" then
++      To_Read := True;
++      To_Take := Compare (S);
++    end if;
++
++    if To_Read and not To_Take then
++      N := N + 1;
++    end if;
++
++    if To_Take then
++      To_Add := True;
++    end if;
++  end;
++
++end Opt77_Pkg;
+diff --git a/gcc/testsuite/gnat.dg/opt77_pkg.ads b/gcc/testsuite/gnat.dg/opt77_pkg.ads
+new file mode 100644
+index 00000000000..ce3985a1363
+--- /dev/null
++++ b/gcc/testsuite/gnat.dg/opt77_pkg.ads
+@@ -0,0 +1,5 @@
++package Opt77_Pkg is
++
++  procedure Proc (S : String; N : in out Natural; To_Add : out Boolean);
++
++end Opt77_Pkg;
+diff --git a/gcc/tree-ssa-dom.c b/gcc/tree-ssa-dom.c
+index f60e96cdfbe..b08a73f252a 100644
+--- a/gcc/tree-ssa-dom.c
++++ b/gcc/tree-ssa-dom.c
+@@ -170,11 +170,10 @@ edge_info::derive_equivalences (tree name, tree value, int recursion_limit)
+   gimple *def_stmt = SSA_NAME_DEF_STMT (name);
+   if (is_gimple_assign (def_stmt))
+     {
+-      /* We know the result of DEF_STMT was zero.  See if that allows
+-	 us to deduce anything about the SSA_NAMEs used on the RHS.  */
+       enum tree_code code = gimple_assign_rhs_code (def_stmt);
+       switch (code)
+ 	{
++	/* If the result of an OR is zero, then its operands are, too.  */
+ 	case BIT_IOR_EXPR:
+ 	  if (integer_zerop (value))
+ 	    {
+@@ -188,8 +187,7 @@ edge_info::derive_equivalences (tree name, tree value, int recursion_limit)
+ 	    }
+ 	  break;
+ 
+-      /* We know the result of DEF_STMT was one.  See if that allows
+-	 us to deduce anything about the SSA_NAMEs used on the RHS.  */
++	/* If the result of an AND is nonzero, then its operands are, too.  */
+ 	case BIT_AND_EXPR:
+ 	  if (!integer_zerop (value))
+ 	    {
+@@ -296,7 +294,6 @@ edge_info::derive_equivalences (tree name, tree value, int recursion_limit)
+ 	    break;
+ 	  }
+ 
+-
+ 	case EQ_EXPR:
+ 	case NE_EXPR:
+ 	  {
+@@ -336,7 +333,28 @@ edge_info::derive_equivalences (tree name, tree value, int recursion_limit)
+ 	case NEGATE_EXPR:
+ 	  {
+ 	    tree rhs = gimple_assign_rhs1 (def_stmt);
+-	    tree res = fold_build1 (code, TREE_TYPE (rhs), value);
++	    tree res;
++	    /* If this is a NOT and the operand has a boolean range, then we
++	       know its value must be zero or one.  We are not supposed to
++	       have a BIT_NOT_EXPR for boolean types with precision > 1 in
++	       the general case, see e.g. the handling of TRUTH_NOT_EXPR in
++	       the gimplifier, but it can be generated by match.pd out of
++	       a BIT_XOR_EXPR wrapped in a BIT_AND_EXPR.  Now the handling
++	       of BIT_AND_EXPR above already forces a specific semantics for
++	       boolean types with precision > 1 so we must do the same here,
++	       otherwise we could change the semantics of TRUTH_NOT_EXPR for
++	       boolean types with precision > 1.  */
++	    if (code == BIT_NOT_EXPR
++		&& TREE_CODE (rhs) == SSA_NAME
++		&& ssa_name_has_boolean_range (rhs))
++	      {
++		if (integer_zerop (value))
++		  res = build_one_cst (TREE_TYPE (rhs));
++		else
++		  res = build_zero_cst (TREE_TYPE (rhs));
++	      }
++	    else
++	      res = fold_build1 (code, TREE_TYPE (rhs), value);
+ 	    derive_equivalences (rhs, res, recursion_limit - 1);
+ 	    break;
+ 	  }
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
 index aac255a46f9..45bb87b3342 100644
 --- a/libstdc++-v3/ChangeLog
