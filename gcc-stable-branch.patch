@@ -6,7 +6,8 @@ ebotcazou (3):
       * tree-ssa-dom.c (edge_info::derive_equivalences) <BIT_IOR_EXPR>: Fix 	and move around comment. 	<BIT_AND_EXPR>: Likewise. 	<BIT_NOT_EXPR>: Add specific handling for boolean types.
       Backport from mainline 	2019-02-19  Eric Botcazou  <ebotcazou@adacore.com>
 
-gccadmin (4):
+gccadmin (5):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
