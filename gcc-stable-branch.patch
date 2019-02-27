@@ -30,6 +30,9 @@ tkoenig (2):
       2019-02-22  Thomas Koenig  <tkoenig@gcc.gnu.org>
       2019-02-23  Thomas Koenig  <tkoenig@gcc.gnu.org>
 
+uros (1):
+      PR target/89397 	* config/i386/i386.c (ix86_atomic_assign_expand_fenv): Check 	TARGET_SSE in addition to TARGET_SSE_MATH.
+
 diff --git a/gcc/BASE-VER b/gcc/BASE-VER
 index 2bf50aaf17a..56b6be4ebb2 100644
 --- a/gcc/BASE-VER
@@ -38,15 +41,26 @@ index 2bf50aaf17a..56b6be4ebb2 100644
 -8.3.0
 +8.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d1fd9f6a7b9..dfa654f291a 100644
+index d1fd9f6a7b9..0f0601ea867 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,42 @@
+@@ -1,3 +1,53 @@
++2019-02-27  Uroš Bizjak  <ubizjak@gmail.com>
++
++	PR target/89397
++	* config/i386/i386.c (ix86_atomic_assign_expand_fenv): Check
++	TARGET_SSE in addition to TARGET_SSE_MATH.
++
++	(ix86_excess_precision): Ditto.
++	(ix86_float_exceptions_rounding_supported_p): Ditto.
++	(use_rsqrt_p): Ditto.
++	* config/i386/sse.md (rsqrt<mode>2): Ditto.
++
 +2019-02-27  Jakub Jelinek  <jakub@redhat.com>
 +
 +	Backported from mainline
 +	2019-02-18  Jakub Jelinek  <jakub@redhat.com>
-+ 
++
 +	PR target/89361
 +	* config/s390/s390.c (s390_indirect_branch_attrvalue,
 +	s390_indirect_branch_settings): Define unconditionally.
@@ -173,6 +187,68 @@ index 65a87fe4ce3..6c75b521456 100644
 -   --  avoid function calls every time we want to reset the attributes).
 -
  end Osint;
+diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
+index 7732f882f78..a88a29b51e6 100644
+--- a/gcc/config/i386/i386.c
++++ b/gcc/config/i386/i386.c
+@@ -39641,7 +39641,7 @@ ix86_vectorize_builtin_scatter (const_tree vectype,
+ static bool
+ use_rsqrt_p ()
+ {
+-  return (TARGET_SSE_MATH
++  return (TARGET_SSE && TARGET_SSE_MATH
+ 	  && flag_finite_math_only
+ 	  && !flag_trapping_math
+ 	  && flag_unsafe_math_optimizations);
+@@ -50999,7 +50999,7 @@ ix86_float_exceptions_rounding_supported_p (void)
+      there is no adddf3 pattern (since x87 floating point only has
+      XFmode operations) so the default hook implementation gets this
+      wrong.  */
+-  return TARGET_80387 || TARGET_SSE_MATH;
++  return TARGET_80387 || (TARGET_SSE && TARGET_SSE_MATH);
+ }
+ 
+ /* Implement TARGET_ATOMIC_ASSIGN_EXPAND_FENV.  */
+@@ -51007,7 +51007,7 @@ ix86_float_exceptions_rounding_supported_p (void)
+ static void
+ ix86_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
+ {
+-  if (!TARGET_80387 && !TARGET_SSE_MATH)
++  if (!TARGET_80387 && !(TARGET_SSE && TARGET_SSE_MATH))
+     return;
+   tree exceptions_var = create_tmp_var_raw (integer_type_node);
+   if (TARGET_80387)
+@@ -51042,7 +51042,7 @@ ix86_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
+       tree update_fldenv = build_call_expr (fldenv, 1, fenv_addr);
+       *update = build2 (COMPOUND_EXPR, void_type_node, *update, update_fldenv);
+     }
+-  if (TARGET_SSE_MATH)
++  if (TARGET_SSE && TARGET_SSE_MATH)
+     {
+       tree mxcsr_orig_var = create_tmp_var_raw (unsigned_type_node);
+       tree mxcsr_mod_var = create_tmp_var_raw (unsigned_type_node);
+@@ -51399,7 +51399,7 @@ ix86_excess_precision (enum excess_precision_type type)
+ 	  return FLT_EVAL_METHOD_PROMOTE_TO_FLOAT;
+ 	else if (!TARGET_MIX_SSE_I387)
+ 	  {
+-	    if (!TARGET_SSE_MATH)
++	    if (!(TARGET_SSE && TARGET_SSE_MATH))
+ 	      return FLT_EVAL_METHOD_PROMOTE_TO_LONG_DOUBLE;
+ 	    else if (TARGET_SSE2)
+ 	      return FLT_EVAL_METHOD_PROMOTE_TO_FLOAT;
+diff --git a/gcc/config/i386/sse.md b/gcc/config/i386/sse.md
+index d5cab80f60f..0a75bd10976 100644
+--- a/gcc/config/i386/sse.md
++++ b/gcc/config/i386/sse.md
+@@ -1908,7 +1908,7 @@
+   [(set (match_operand:VF1_128_256 0 "register_operand")
+ 	(unspec:VF1_128_256
+ 	  [(match_operand:VF1_128_256 1 "vector_operand")] UNSPEC_RSQRT))]
+-  "TARGET_SSE_MATH"
++  "TARGET_SSE && TARGET_SSE_MATH"
+ {
+   ix86_emit_swsqrtsf (operands[0], operands[1], <MODE>mode, true);
+   DONE;
 diff --git a/gcc/config/rs6000/rs6000.md b/gcc/config/rs6000/rs6000.md
 index 4d69c1dfa0e..fa65b2a8bcc 100644
 --- a/gcc/config/rs6000/rs6000.md
