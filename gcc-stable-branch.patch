@@ -6,12 +6,16 @@ ebotcazou (3):
       * tree-ssa-dom.c (edge_info::derive_equivalences) <BIT_IOR_EXPR>: Fix 	and move around comment. 	<BIT_AND_EXPR>: Likewise. 	<BIT_NOT_EXPR>: Add specific handling for boolean types.
       Backport from mainline 	2019-02-19  Eric Botcazou  <ebotcazou@adacore.com>
 
-gccadmin (5):
+gccadmin (6):
       Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
+      Daily bump.
+
+helijia (1):
+      Backport from trunk 	2019-02-20  Li Jia He  <helijia@linux.ibm.com>
 
 jakub (2):
       * BASE-VER: Set to 8.3.1.
@@ -41,10 +45,21 @@ index 2bf50aaf17a..56b6be4ebb2 100644
 -8.3.0
 +8.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d1fd9f6a7b9..0f0601ea867 100644
+index d1fd9f6a7b9..a32122cfe17 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,53 @@
+@@ -1,3 +1,64 @@
++2019-02-28  Li Jia He  <helijia@linux.ibm.com>
++
++	Backport from trunk
++	2019-02-20  Li Jia He  <helijia@linux.ibm.com>
++
++	PR target/88100
++	* gcc/config/rs6000/rs6000.c (rs6000_gimple_fold_builtin)
++	<case ALTIVEC_BUILTIN_VSPLTISB, ALTIVEC_BUILTIN_VSPLTISH,
++	ALTIVEC_BUILTIN_VSPLTISW>: Don't convert the operand before
++	range checking it.
++
 +2019-02-27  Uroš Bizjak  <ubizjak@gmail.com>
 +
 +	PR target/89397
@@ -249,6 +264,35 @@ index d5cab80f60f..0a75bd10976 100644
  {
    ix86_emit_swsqrtsf (operands[0], operands[1], <MODE>mode, true);
    DONE;
+diff --git a/gcc/config/rs6000/rs6000.c b/gcc/config/rs6000/rs6000.c
+index 22e40f9109f..fdc7285bb74 100644
+--- a/gcc/config/rs6000/rs6000.c
++++ b/gcc/config/rs6000/rs6000.c
+@@ -16765,23 +16765,13 @@ rs6000_gimple_fold_builtin (gimple_stmt_iterator *gsi)
+     case ALTIVEC_BUILTIN_VSPLTISH:
+     case ALTIVEC_BUILTIN_VSPLTISW:
+       {
+-	 int size;
+-
+-         if (fn_code == ALTIVEC_BUILTIN_VSPLTISB)
+-           size = 8;
+-         else if (fn_code == ALTIVEC_BUILTIN_VSPLTISH)
+-           size = 16;
+-         else
+-           size = 32;
+-
+ 	 arg0 = gimple_call_arg (stmt, 0);
+ 	 lhs = gimple_call_lhs (stmt);
+ 
+ 	 /* Only fold the vec_splat_*() if the lower bits of arg 0 is a
+ 	    5-bit signed constant in range -16 to +15.  */
+ 	 if (TREE_CODE (arg0) != INTEGER_CST
+-	     || !IN_RANGE (sext_hwi(TREE_INT_CST_LOW (arg0), size),
+-			   -16, 15))
++	     || !IN_RANGE (TREE_INT_CST_LOW (arg0), -16, 15))
+ 	   return false;
+ 	 gimple_seq stmts = NULL;
+ 	 location_t loc = gimple_location (stmt);
 diff --git a/gcc/config/rs6000/rs6000.md b/gcc/config/rs6000/rs6000.md
 index 4d69c1dfa0e..fa65b2a8bcc 100644
 --- a/gcc/config/rs6000/rs6000.md
@@ -535,10 +579,18 @@ index 0e79e53fb61..dabc5403f28 100644
        offset1 = crtl->outgoing_args_size + get_frame_size ();
  #if !STACK_GROWS_DOWNWARD
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 7d5e65b1a74..387a44eaa28 100644
+index 7d5e65b1a74..27ede2d3dc4 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,26 @@
+@@ -1,3 +1,34 @@
++2019-02-28  Li Jia He  <helijia@linux.ibm.com>
++
++	Backport from trunk
++	2019-02-20  Li Jia He  <helijia@linux.ibm.com>
++
++	PR target/88100
++	* gcc/testsuite/gcc.target/powerpc/pr88100.c: New testcase.
++
 +2019-02-26  Eric Botcazou  <ebotcazou@adacore.com>
 +
 +	* gnat.dg/opt77.adb: New test.
@@ -615,6 +667,56 @@ index 00000000000..54e66af2095
 +    void bar();
 +    p<void, void, A, A, &A::bar> j;
 +};
+diff --git a/gcc/testsuite/gcc.target/powerpc/pr88100.c b/gcc/testsuite/gcc.target/powerpc/pr88100.c
+new file mode 100644
+index 00000000000..4452145ce95
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/powerpc/pr88100.c
+@@ -0,0 +1,44 @@
++/* PR88100.  Verify that rs6000 gimple-folding code handles the
++   vec_splat_{su}{8,16,32} invalid data properly. */
++
++/* { dg-do compile } */
++/* { dg-require-effective-target powerpc_altivec_ok } */
++/* { dg-options "-maltivec" } */
++
++#include <altivec.h>
++
++vector unsigned char
++splatu1 (void)
++{
++  return vec_splat_u8(0x100);/* { dg-error "argument 1 must be a 5-bit signed literal" } */
++}
++
++vector unsigned short
++splatu2 (void)
++{
++  return vec_splat_u16(0x10000);/* { dg-error "argument 1 must be a 5-bit signed literal" } */
++}
++
++vector unsigned int
++splatu3 (void)
++{
++  return vec_splat_u32(0x10000000);/* { dg-error "argument 1 must be a 5-bit signed literal" } */
++}
++
++vector signed char
++splats1 (void)
++{
++  return vec_splat_s8(0x100);/* { dg-error "argument 1 must be a 5-bit signed literal" } */
++}
++
++vector signed short
++splats2 (void)
++{
++  return vec_splat_s16(0x10000);/* { dg-error "argument 1 must be a 5-bit signed literal" } */
++}
++
++vector signed int
++splats3 (void)
++{
++  return vec_splat_s32(0x10000000);/* { dg-error "argument 1 must be a 5-bit signed literal" } */
++}
 diff --git a/gcc/testsuite/gfortran.dg/coarray_data_1.f90 b/gcc/testsuite/gfortran.dg/coarray_data_1.f90
 new file mode 100644
 index 00000000000..94ab4c26cec
