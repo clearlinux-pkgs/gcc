@@ -32,9 +32,15 @@ pault (1):
 redi (1):
       PR libstdc++/89446 fix null pointer dereference in char_traits
 
+rguenth (1):
+      2019-03-01  Richard Biener  <rguenther@suse.de>
+
 tkoenig (2):
       2019-02-22  Thomas Koenig  <tkoenig@gcc.gnu.org>
       2019-02-23  Thomas Koenig  <tkoenig@gcc.gnu.org>
+
+tnfchris (1):
+      AArch64: Make every option in options.def one line (GCC-8).
 
 uros (1):
       PR target/89397 	* config/i386/i386.c (ix86_atomic_assign_expand_fenv): Check 	TARGET_SSE in addition to TARGET_SSE_MATH.
@@ -47,10 +53,45 @@ index 2bf50aaf17a..56b6be4ebb2 100644
 -8.3.0
 +8.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d1fd9f6a7b9..0516f978a30 100644
+index d1fd9f6a7b9..9b96616ea4c 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,70 @@
+@@ -1,3 +1,105 @@
++2019-03-01  Tamar Christina  <tamar.christina@arm.com>
++
++	PR target/89517
++	* config/aarch64/aarch64-option-extensions.def (fp, simd, crypto,
++	fp16): Collapse line.
++
++2019-03-01  Richard Biener  <rguenther@suse.de>
++
++	Backport from mainline
++	2019-03-01  Jakub Jelinek  <jakub@redhat.com>
++
++	PR bootstrap/89539
++	* dwarf2out.c (output_comdat_type_unit): Add ATTRIBUTE_UNUSED to
++	early_lto_debug argument.
++
++	2019-02-27  Richard Biener  <rguenther@suse.de>
++
++	PR debug/88878
++	* dwarf2out.c (use_debug_types): Disable when in_lto_p.
++
++	2019-02-27  Richard Biener  <rguenther@suse.de>
++
++	PR debug/88878
++	* dwarf2out.c (output_comdat_type_unit): Add early_lto_debug
++	parameter, prefix section name with .gnu.debuglto_ if true.
++	(dwarf2out_finish): Pass false to output_comdat_type_unit.
++	(dwarf2out_early_finish): Pass true to output_comdat_type_unit.
++
++	2019-02-27  Richard Biener  <rguenther@suse.de>
++
++	PR debug/89514
++	* dwarf2out.c (size_of_die): Key on AT_ref (a)->comdat_type_p
++	rather than on use_debug_types, doing what output_die does.
++	(value_format): Likewise.
++
 +2019-02-28  Eric Botcazou  <ebotcazou@adacore.com>
 +
 +	PR tree-optimization/89536
@@ -210,6 +251,58 @@ index 65a87fe4ce3..6c75b521456 100644
 -   --  avoid function calls every time we want to reset the attributes).
 -
  end Osint;
+diff --git a/gcc/config/aarch64/aarch64-option-extensions.def b/gcc/config/aarch64/aarch64-option-extensions.def
+index 5fe5e3f7ddd..a1b71cedb14 100644
+--- a/gcc/config/aarch64/aarch64-option-extensions.def
++++ b/gcc/config/aarch64/aarch64-option-extensions.def
+@@ -38,26 +38,27 @@
+    should contain a space (" ") separated list of the strings in 'Features'
+    that are required.  Their order is not important.  */
+ 
++/* NOTE: This file is being parsed by config.gcc and so the
++   AARCH64_OPT_EXTENSION must adhere to a strict format:
++   1) No space between the AARCH64_OPT_EXTENSION and the opening (.
++   2) No space between the opening ( and the extension name.
++   3) No space after the extension name before the ,.
++   4) Spaces are only allowed after a , and around |.
++   5) Everything must be on one line.  */
++
+ /* Enabling "fp" just enables "fp".
+    Disabling "fp" also disables "simd", "crypto", "fp16", "aes", "sha2",
+    "sha3", sm3/sm4 and "sve".  */
+-AARCH64_OPT_EXTENSION("fp", AARCH64_FL_FP, 0, AARCH64_FL_SIMD | AARCH64_FL_CRYPTO |\
+-		      AARCH64_FL_F16 | AARCH64_FL_AES | AARCH64_FL_SHA2 |\
+-		      AARCH64_FL_SHA3 | AARCH64_FL_SM4 | AARCH64_FL_SVE, "fp")
++AARCH64_OPT_EXTENSION("fp", AARCH64_FL_FP, 0, AARCH64_FL_SIMD | AARCH64_FL_CRYPTO | AARCH64_FL_F16 | AARCH64_FL_AES | AARCH64_FL_SHA2 | AARCH64_FL_SHA3 | AARCH64_FL_SM4 | AARCH64_FL_SVE, "fp")
+ 
+ /* Enabling "simd" also enables "fp".
+    Disabling "simd" also disables "crypto", "dotprod", "aes", "sha2", "sha3",
+    "sm3/sm4" and "sve".  */
+-AARCH64_OPT_EXTENSION("simd", AARCH64_FL_SIMD, AARCH64_FL_FP, AARCH64_FL_CRYPTO |\
+-		      AARCH64_FL_DOTPROD | AARCH64_FL_AES | AARCH64_FL_SHA2 |\
+-		      AARCH64_FL_SHA3 | AARCH64_FL_SM4 | AARCH64_FL_SVE,
+-		      "asimd")
++AARCH64_OPT_EXTENSION("simd", AARCH64_FL_SIMD, AARCH64_FL_FP, AARCH64_FL_CRYPTO | AARCH64_FL_DOTPROD | AARCH64_FL_AES | AARCH64_FL_SHA2 | AARCH64_FL_SHA3 | AARCH64_FL_SM4 | AARCH64_FL_SVE, "asimd")
+ 
+ /* Enabling "crypto" also enables "fp" and "simd".
+    Disabling "crypto" disables "crypto", "aes", "sha2", "sha3" and "sm3/sm4".  */
+-AARCH64_OPT_EXTENSION("crypto", AARCH64_FL_CRYPTO, AARCH64_FL_FP | AARCH64_FL_SIMD,\
+-		      AARCH64_FL_AES | AARCH64_FL_SHA2 |AARCH64_FL_SHA3 | AARCH64_FL_SM4,\
+-		      "aes pmull sha1 sha2")
++AARCH64_OPT_EXTENSION("crypto", AARCH64_FL_CRYPTO, AARCH64_FL_FP | AARCH64_FL_SIMD, AARCH64_FL_AES | AARCH64_FL_SHA2 |AARCH64_FL_SHA3 | AARCH64_FL_SM4, "aes pmull sha1 sha2")
+ 
+ /* Enabling or disabling "crc" only changes "crc".  */
+ AARCH64_OPT_EXTENSION("crc", AARCH64_FL_CRC, 0, 0, "crc32")
+@@ -67,8 +68,7 @@ AARCH64_OPT_EXTENSION("lse", AARCH64_FL_LSE, 0, 0, "atomics")
+ 
+ /* Enabling "fp16" also enables "fp".
+    Disabling "fp16" disables "fp16", "fp16fml" and "sve".  */
+-AARCH64_OPT_EXTENSION("fp16", AARCH64_FL_F16, AARCH64_FL_FP,
+-		      AARCH64_FL_F16FML | AARCH64_FL_SVE, "fphp asimdhp")
++AARCH64_OPT_EXTENSION("fp16", AARCH64_FL_F16, AARCH64_FL_FP, AARCH64_FL_F16FML | AARCH64_FL_SVE, "fphp asimdhp")
+ 
+ /* Enabling or disabling "rcpc" only changes "rcpc".  */
+ AARCH64_OPT_EXTENSION("rcpc", AARCH64_FL_RCPC, 0, 0, "lrcpc")
 diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
 index 7732f882f78..a88a29b51e6 100644
 --- a/gcc/config/i386/i386.c
@@ -426,6 +519,107 @@ index f1a8feef397..92c8e51b746 100644
  	n = vec_safe_copy (CONSTRUCTOR_ELTS (t));
          newlen = vec_safe_length (n);
  	FOR_EACH_VEC_SAFE_ELT (n, idx, ce)
+diff --git a/gcc/dwarf2out.c b/gcc/dwarf2out.c
+index 0940959cb54..36884c71fe0 100644
+--- a/gcc/dwarf2out.c
++++ b/gcc/dwarf2out.c
+@@ -2875,9 +2875,13 @@ const struct gcc_debug_hooks dwarf2_lineno_debug_hooks =
+    separate comdat sections since the linker will then be able to
+    remove duplicates.  But not all tools support .debug_types sections
+    yet.  For Dwarf V5 or higher .debug_types doesn't exist any more,
+-   it is DW_UT_type unit type in .debug_info section.  */
++   it is DW_UT_type unit type in .debug_info section.  For late LTO
++   debug there should be almost no types emitted so avoid enabling
++   -fdebug-types-section there.  */
+ 
+-#define use_debug_types (dwarf_version >= 4 && flag_debug_types_section)
++#define use_debug_types (dwarf_version >= 4 \
++			 && flag_debug_types_section \
++			 && !in_lto_p)
+ 
+ /* Various DIE's use offsets relative to the beginning of the
+    .debug_info section to refer to each other.  */
+@@ -3713,7 +3717,7 @@ static void output_die_abbrevs (unsigned long, dw_die_ref);
+ static void output_die (dw_die_ref);
+ static void output_compilation_unit_header (enum dwarf_unit_type);
+ static void output_comp_unit (dw_die_ref, int, const unsigned char *);
+-static void output_comdat_type_unit (comdat_type_node *);
++static void output_comdat_type_unit (comdat_type_node *, bool);
+ static const char *dwarf2_name (tree, int);
+ static void add_pubname (tree, dw_die_ref);
+ static void add_enumerator_pubname (const char *, dw_die_ref);
+@@ -9425,7 +9429,7 @@ size_of_die (dw_die_ref die)
+ 		 we use DW_FORM_ref_addr.  In DWARF2, DW_FORM_ref_addr
+ 		 is sized by target address length, whereas in DWARF3
+ 		 it's always sized as an offset.  */
+-	      if (use_debug_types)
++	      if (AT_ref (a)->comdat_type_p)
+ 		size += DWARF_TYPE_SIGNATURE_SIZE;
+ 	      else if (dwarf_version == 2)
+ 		size += DWARF2_ADDR_SIZE;
+@@ -9869,7 +9873,12 @@ value_format (dw_attr_node *a)
+       return DW_FORM_flag;
+     case dw_val_class_die_ref:
+       if (AT_ref_external (a))
+-	return use_debug_types ? DW_FORM_ref_sig8 : DW_FORM_ref_addr;
++	{
++	  if (AT_ref (a)->comdat_type_p)
++	    return DW_FORM_ref_sig8;
++	  else
++	    return DW_FORM_ref_addr;
++	}
+       else
+ 	return DW_FORM_ref;
+     case dw_val_class_fde_ref:
+@@ -11217,7 +11226,8 @@ output_skeleton_debug_sections (dw_die_ref comp_unit,
+ /* Output a comdat type unit DIE and its children.  */
+ 
+ static void
+-output_comdat_type_unit (comdat_type_node *node)
++output_comdat_type_unit (comdat_type_node *node,
++			 bool early_lto_debug ATTRIBUTE_UNUSED)
+ {
+   const char *secname;
+   char *tmp;
+@@ -11244,14 +11254,16 @@ output_comdat_type_unit (comdat_type_node *node)
+   if (dwarf_version >= 5)
+     {
+       if (!dwarf_split_debug_info)
+-	secname = ".debug_info";
++	secname = early_lto_debug ? DEBUG_LTO_INFO_SECTION : DEBUG_INFO_SECTION;
+       else
+-	secname = ".debug_info.dwo";
++	secname = (early_lto_debug
++		   ? DEBUG_LTO_DWO_INFO_SECTION : DEBUG_DWO_INFO_SECTION);
+     }
+   else if (!dwarf_split_debug_info)
+-    secname = ".debug_types";
++    secname = early_lto_debug ? ".gnu.debuglto_.debug_types" : ".debug_types";
+   else
+-    secname = ".debug_types.dwo";
++    secname = (early_lto_debug
++	       ? ".gnu.debuglto_.debug_types.dwo" : ".debug_types.dwo");
+ 
+   tmp = XALLOCAVEC (char, 4 + DWARF_TYPE_SIGNATURE_SIZE * 2);
+   sprintf (tmp, dwarf_version >= 5 ? "wi." : "wt.");
+@@ -31398,7 +31410,7 @@ dwarf2out_finish (const char *)
+                          ? dl_section_ref
+                          : debug_skeleton_line_section_label));
+ 
+-      output_comdat_type_unit (ctnode);
++      output_comdat_type_unit (ctnode, false);
+       *slot = ctnode;
+     }
+ 
+@@ -32039,7 +32051,7 @@ dwarf2out_early_finish (const char *filename)
+                          ? debug_line_section_label
+                          : debug_skeleton_line_section_label));
+ 
+-      output_comdat_type_unit (ctnode);
++      output_comdat_type_unit (ctnode, true);
+       *slot = ctnode;
+     }
+ 
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
 index 4d2782f1b19..1f7984fcad9 100644
 --- a/gcc/fortran/ChangeLog
