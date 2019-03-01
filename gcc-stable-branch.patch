@@ -1,10 +1,11 @@
 amodra (1):
       [RS6000] Fix <bd>_<mode> and <bd>tf_<mode> splitters
 
-ebotcazou (3):
+ebotcazou (4):
       PR ada/89349 	Backport from mainline 	2018-05-25  Arnaud Charlet  <charlet@adacore.com>
       * tree-ssa-dom.c (edge_info::derive_equivalences) <BIT_IOR_EXPR>: Fix 	and move around comment. 	<BIT_AND_EXPR>: Likewise. 	<BIT_NOT_EXPR>: Add specific handling for boolean types.
       Backport from mainline 	2019-02-19  Eric Botcazou  <ebotcazou@adacore.com>
+      PR tree-optimization/89536 	* tree-ssa-dom.c (edge_info::derive_equivalences) <BIT_NOT_EXPR>: Test 	only whether bit #0 of the value is 0 instead of the entire value.
 
 gccadmin (6):
       Daily bump.
@@ -45,10 +46,16 @@ index 2bf50aaf17a..56b6be4ebb2 100644
 -8.3.0
 +8.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d1fd9f6a7b9..a32122cfe17 100644
+index d1fd9f6a7b9..0516f978a30 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,64 @@
+@@ -1,3 +1,70 @@
++2019-02-28  Eric Botcazou  <ebotcazou@adacore.com>
++
++	PR tree-optimization/89536
++	* tree-ssa-dom.c (edge_info::derive_equivalences) <BIT_NOT_EXPR>: Test
++	only whether bit #0 of the value is 0 instead of the entire value.
++
 +2019-02-28  Li Jia He  <helijia@linux.ibm.com>
 +
 +	Backport from trunk
@@ -579,10 +586,14 @@ index 0e79e53fb61..dabc5403f28 100644
        offset1 = crtl->outgoing_args_size + get_frame_size ();
  #if !STACK_GROWS_DOWNWARD
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 7d5e65b1a74..27ede2d3dc4 100644
+index 7d5e65b1a74..4b73b5e42f5 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,34 @@
+@@ -1,3 +1,38 @@
++2019-02-28  Eric Botcazou  <ebotcazou@adacore.com>
++
++	* gcc.c-torture/execute/20190228-1.c: New test.
++
 +2019-02-28  Li Jia He  <helijia@linux.ibm.com>
 +
 +	Backport from trunk
@@ -667,6 +678,28 @@ index 00000000000..54e66af2095
 +    void bar();
 +    p<void, void, A, A, &A::bar> j;
 +};
+diff --git a/gcc/testsuite/gcc.c-torture/execute/20190228-1.c b/gcc/testsuite/gcc.c-torture/execute/20190228-1.c
+new file mode 100644
+index 00000000000..e71f33a279b
+--- /dev/null
++++ b/gcc/testsuite/gcc.c-torture/execute/20190228-1.c
+@@ -0,0 +1,16 @@
++/* PR tree-optimization/89536 */
++/* Testcase by Zhendong Su <su@cs.ucdavis.edu> */
++
++int a = 1;
++
++int main (void)
++{
++  a = ~(a && 1); 
++  if (a < -1)
++    a = ~a;
++  
++  if (!a)
++    __builtin_abort ();
++
++  return 0;
++}
 diff --git a/gcc/testsuite/gcc.target/powerpc/pr88100.c b/gcc/testsuite/gcc.target/powerpc/pr88100.c
 new file mode 100644
 index 00000000000..4452145ce95
@@ -843,7 +876,7 @@ index 00000000000..ce3985a1363
 +
 +end Opt77_Pkg;
 diff --git a/gcc/tree-ssa-dom.c b/gcc/tree-ssa-dom.c
-index f60e96cdfbe..b08a73f252a 100644
+index f60e96cdfbe..0ebcc6d43c7 100644
 --- a/gcc/tree-ssa-dom.c
 +++ b/gcc/tree-ssa-dom.c
 @@ -170,11 +170,10 @@ edge_info::derive_equivalences (tree name, tree value, int recursion_limit)
@@ -897,7 +930,7 @@ index f60e96cdfbe..b08a73f252a 100644
 +		&& TREE_CODE (rhs) == SSA_NAME
 +		&& ssa_name_has_boolean_range (rhs))
 +	      {
-+		if (integer_zerop (value))
++		if ((TREE_INT_CST_LOW (value) & 1) == 0)
 +		  res = build_one_cst (TREE_TYPE (rhs));
 +		else
 +		  res = build_zero_cst (TREE_TYPE (rhs));
