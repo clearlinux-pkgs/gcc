@@ -28,8 +28,9 @@ jakub (2):
       * BASE-VER: Set to 8.3.1.
       Backported from mainline 	2019-02-18  Jakub Jelinek  <jakub@redhat.com>
 
-jvdelisle (1):
+jvdelisle (2):
       2019-03-02  Jerry DeLisle  <jvdelisle@gcc.gnu.org>
+      2019-03-02  Jerry DeLisle <jvdelisle@gcc.gnu.org>
 
 mpolacek (1):
       PR c++/89212 - ICE converting nullptr to pointer-to-member-function. 	* pt.c (tsubst_copy_and_build) <case CONSTRUCTOR>: Return early for 	null member pointer value.
@@ -43,9 +44,11 @@ redi (1):
 rguenth (1):
       2019-03-01  Richard Biener  <rguenther@suse.de>
 
-tkoenig (2):
+tkoenig (4):
       2019-02-22  Thomas Koenig  <tkoenig@gcc.gnu.org>
       2019-02-23  Thomas Koenig  <tkoenig@gcc.gnu.org>
+      2019-03-03  Thomas Koenig  <tkoenig@gcc.gnu.org>
+      2019-03-03  Thomas Koenig  <tkoenig@gcc.gnu.org>
 
 tnfchris (1):
       AArch64: Make every option in options.def one line (GCC-8).
@@ -629,10 +632,41 @@ index 0940959cb54..36884c71fe0 100644
      }
  
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index 4d2782f1b19..834608217af 100644
+index 4d2782f1b19..c5624af2328 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,54 @@
+@@ -1,3 +1,85 @@
++2019-03-03  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	PR fortran/89174
++	Backport from trunk
++	* trans-expr.c (gfc_find_and_cut_at_last_class_ref): Add is_mold
++	to garguments. If we are dealing with a MOLD, call
++	gfc_expr_to_initialize().
++	* trans-stmt.c (gfc_trans_allocate): For MOLD, pass is_mold=true
++	to gfc_find_and_cut_at_last_class_ref.
++	* trans.h (gfc_find_and_cut_at_last_class_ref): Add optional
++	argument is_mold with default false.
++
++2019-03-03  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	PR fortran/87689
++	Backport from trunk
++	* gfortran.dg/lto/20091028-1_0.f90: Add -Wno-lto-type-mismatch to
++	options.
++	* gfortran.dg/lto/20091028-2_0.f90: Likewise.
++	* gfortran.dg/lto/pr87689_0.f: New file.
++	* gfortran.dg/lto/pr87689_1.f: New file.
++	* gfortran.dg/altreturn_9_0.f90: New file.
++	* gfortran.dg/altreturn_9_1.f90: New file.
++
++2019-03-02  Jerry DeLisle <jvdelisle@gcc.gnu.org>
++
++	Backport from trunk
++	PR fortran/84387
++	* trans-io.c (transfer_expr): Do not return if there are no
++	components to the derived type or class.
++
 +2019-03-02  Harald Anlauf  <anlauf@gmx.de>
 +
 +	Backport from trunk
@@ -1036,9 +1070,27 @@ index 8f25899a92c..0a4316e6641 100644
  /* Write a constant expression in binary form to a target buffer.  */
  size_t gfc_encode_character (int, size_t, const gfc_char_t *, unsigned char *,
 diff --git a/gcc/fortran/trans-decl.c b/gcc/fortran/trans-decl.c
-index 548380a4e86..7eb3c229475 100644
+index 548380a4e86..a2172c3ddeb 100644
 --- a/gcc/fortran/trans-decl.c
 +++ b/gcc/fortran/trans-decl.c
+@@ -1977,7 +1977,7 @@ get_proc_pointer_decl (gfc_symbol *sym)
+ /* Get a basic decl for an external function.  */
+ 
+ tree
+-gfc_get_extern_function_decl (gfc_symbol * sym)
++gfc_get_extern_function_decl (gfc_symbol * sym, gfc_actual_arglist *actual_args)
+ {
+   tree type;
+   tree fndecl;
+@@ -2150,7 +2150,7 @@ module_sym:
+       mangled_name = gfc_sym_mangled_function_id (sym);
+     }
+ 
+-  type = gfc_get_function_type (sym);
++  type = gfc_get_function_type (sym, actual_args);
+   fndecl = build_decl (input_location,
+ 		       FUNCTION_DECL, name, type);
+ 
 @@ -5384,6 +5384,33 @@ generate_coarray_sym_init (gfc_symbol *sym)
    /* Handle "static" initializer.  */
    if (sym->value)
@@ -1073,6 +1125,195 @@ index 548380a4e86..7eb3c229475 100644
        sym->attr.pointer = 1;
        tmp = gfc_trans_assignment (gfc_lval_expr_from_sym (sym), sym->value,
  				  true, false);
+diff --git a/gcc/fortran/trans-expr.c b/gcc/fortran/trans-expr.c
+index 8ed79f135cf..b95cf8ddc4f 100644
+--- a/gcc/fortran/trans-expr.c
++++ b/gcc/fortran/trans-expr.c
+@@ -352,7 +352,7 @@ gfc_vptr_size_get (tree vptr)
+    of refs following.  */
+ 
+ gfc_expr *
+-gfc_find_and_cut_at_last_class_ref (gfc_expr *e)
++gfc_find_and_cut_at_last_class_ref (gfc_expr *e, bool is_mold)
+ {
+   gfc_expr *base_expr;
+   gfc_ref *ref, *class_ref, *tail = NULL, *array_ref;
+@@ -394,7 +394,10 @@ gfc_find_and_cut_at_last_class_ref (gfc_expr *e)
+       e->ref = NULL;
+     }
+ 
+-  base_expr = gfc_copy_expr (e);
++  if (is_mold)
++    base_expr = gfc_expr_to_initialize (e);
++  else
++    base_expr = gfc_copy_expr (e);
+ 
+   /* Restore the original tail expression.  */
+   if (class_ref)
+@@ -3834,7 +3837,8 @@ conv_base_obj_fcn_val (gfc_se * se, tree base_object, gfc_expr * expr)
+ 
+ 
+ static void
+-conv_function_val (gfc_se * se, gfc_symbol * sym, gfc_expr * expr)
++conv_function_val (gfc_se * se, gfc_symbol * sym, gfc_expr * expr,
++		   gfc_actual_arglist *actual_args)
+ {
+   tree tmp;
+ 
+@@ -3852,7 +3856,7 @@ conv_function_val (gfc_se * se, gfc_symbol * sym, gfc_expr * expr)
+   else
+     {
+       if (!sym->backend_decl)
+-	sym->backend_decl = gfc_get_extern_function_decl (sym);
++	sym->backend_decl = gfc_get_extern_function_decl (sym, actual_args);
+ 
+       TREE_USED (sym->backend_decl) = 1;
+ 
+@@ -6276,7 +6280,7 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
+ 
+   /* Generate the actual call.  */
+   if (base_object == NULL_TREE)
+-    conv_function_val (se, sym, expr);
++    conv_function_val (se, sym, expr, args);
+   else
+     conv_base_obj_fcn_val (se, base_object, expr);
+ 
+diff --git a/gcc/fortran/trans-io.c b/gcc/fortran/trans-io.c
+index 2626c4651e2..b07ce83c378 100644
+--- a/gcc/fortran/trans-io.c
++++ b/gcc/fortran/trans-io.c
+@@ -2408,8 +2408,6 @@ transfer_expr (gfc_se * se, gfc_typespec * ts, tree addr_expr,
+ 
+     case_bt_struct:
+     case BT_CLASS:
+-      if (ts->u.derived->components == NULL)
+-	return;
+       if (gfc_bt_struct (ts->type) || ts->type == BT_CLASS)
+ 	{
+ 	  gfc_symbol *derived;
+diff --git a/gcc/fortran/trans-stmt.c b/gcc/fortran/trans-stmt.c
+index 5b2d4e8279d..eb976c70a3a 100644
+--- a/gcc/fortran/trans-stmt.c
++++ b/gcc/fortran/trans-stmt.c
+@@ -6606,7 +6606,7 @@ gfc_trans_allocate (gfc_code * code)
+ 	  /* Use class_init_assign to initialize expr.  */
+ 	  gfc_code *ini;
+ 	  ini = gfc_get_code (EXEC_INIT_ASSIGN);
+-	  ini->expr1 = gfc_find_and_cut_at_last_class_ref (expr);
++	  ini->expr1 = gfc_find_and_cut_at_last_class_ref (expr, true);
+ 	  tmp = gfc_trans_class_init_assign (ini);
+ 	  gfc_free_statements (ini);
+ 	  gfc_add_expr_to_block (&block, tmp);
+diff --git a/gcc/fortran/trans-types.c b/gcc/fortran/trans-types.c
+index f50eb0a9f01..b47475e1602 100644
+--- a/gcc/fortran/trans-types.c
++++ b/gcc/fortran/trans-types.c
+@@ -2991,9 +2991,57 @@ create_fn_spec (gfc_symbol *sym, tree fntype)
+   return build_type_attribute_variant (fntype, tmp);
+ }
+ 
++/* Helper function - if we do not find an interface for a procedure,
++   construct it from the actual arglist.  Luckily, this can only
++   happen for call by reference, so the information we actually need
++   to provide (and which would be impossible to guess from the call
++   itself) is not actually needed.  */
++
++static void
++get_formal_from_actual_arglist (gfc_symbol *sym, gfc_actual_arglist *actual_args)
++{
++  gfc_actual_arglist *a;
++  gfc_formal_arglist **f;
++  gfc_symbol *s;
++  char name[GFC_MAX_SYMBOL_LEN + 1];
++  static int var_num;
++
++  f = &sym->formal;
++  for (a = actual_args; a != NULL; a = a->next)
++    {
++      (*f) = gfc_get_formal_arglist ();
++      if (a->expr)
++	{
++	  snprintf (name, GFC_MAX_SYMBOL_LEN, "_formal_%d", var_num ++);
++	  gfc_get_symbol (name, NULL, &s);
++	  if (a->expr->ts.type == BT_PROCEDURE)
++	    {
++	      s->attr.flavor = FL_PROCEDURE;
++	    }
++	  else
++	    {
++	      s->ts = a->expr->ts;
++	      s->attr.flavor = FL_VARIABLE;
++	      if (a->expr->rank > 0)
++		{
++		  s->attr.dimension = 1;
++		  s->as = gfc_get_array_spec ();
++		  s->as->type = AS_ASSUMED_SIZE;
++		}
++	    }
++	  s->attr.dummy = 1;
++	  s->attr.intent = INTENT_UNKNOWN;
++	  (*f)->sym = s;
++	}
++      else  /* If a->expr is NULL, this is an alternate rerturn.  */
++	(*f)->sym = NULL;
++
++      f = &((*f)->next);
++    }
++}
+ 
+ tree
+-gfc_get_function_type (gfc_symbol * sym)
++gfc_get_function_type (gfc_symbol * sym, gfc_actual_arglist *actual_args)
+ {
+   tree type;
+   vec<tree, va_gc> *typelist = NULL;
+@@ -3051,6 +3099,10 @@ gfc_get_function_type (gfc_symbol * sym)
+ 	    vec_safe_push (typelist, build_pointer_type(gfc_charlen_type_node));
+ 	}
+     }
++  if (sym->backend_decl == error_mark_node && actual_args != NULL
++      && sym->formal == NULL && (sym->attr.proc == PROC_EXTERNAL
++				 || sym->attr.proc == PROC_UNKNOWN))
++    get_formal_from_actual_arglist (sym, actual_args);
+ 
+   /* Build the argument types for the function.  */
+   for (f = gfc_sym_get_dummy_args (sym); f; f = f->next)
+diff --git a/gcc/fortran/trans-types.h b/gcc/fortran/trans-types.h
+index 197b173f041..28312cfd33e 100644
+--- a/gcc/fortran/trans-types.h
++++ b/gcc/fortran/trans-types.h
+@@ -88,7 +88,7 @@ tree gfc_sym_type (gfc_symbol *);
+ tree gfc_typenode_for_spec (gfc_typespec *, int c = 0);
+ int gfc_copy_dt_decls_ifequal (gfc_symbol *, gfc_symbol *, bool);
+ 
+-tree gfc_get_function_type (gfc_symbol *);
++tree gfc_get_function_type (gfc_symbol *, gfc_actual_arglist *args = NULL);
+ 
+ tree gfc_type_for_size (unsigned, int);
+ tree gfc_type_for_mode (machine_mode, int);
+diff --git a/gcc/fortran/trans.h b/gcc/fortran/trans.h
+index d16c15061c6..103ad6787ad 100644
+--- a/gcc/fortran/trans.h
++++ b/gcc/fortran/trans.h
+@@ -412,7 +412,7 @@ tree gfc_class_data_get (tree);
+ tree gfc_class_vptr_get (tree);
+ tree gfc_class_len_get (tree);
+ tree gfc_class_len_or_zero_get (tree);
+-gfc_expr * gfc_find_and_cut_at_last_class_ref (gfc_expr *);
++gfc_expr * gfc_find_and_cut_at_last_class_ref (gfc_expr *, bool is_mold = false);
+ /* Get an accessor to the class' vtab's * field, when a class handle is
+    available.  */
+ tree gfc_class_vtab_hash_get (tree);
+@@ -579,7 +579,8 @@ void gfc_merge_block_scope (stmtblock_t * block);
+ tree gfc_get_label_decl (gfc_st_label *);
+ 
+ /* Return the decl for an external function.  */
+-tree gfc_get_extern_function_decl (gfc_symbol *);
++tree gfc_get_extern_function_decl (gfc_symbol *,
++				   gfc_actual_arglist *args = NULL);
+ 
+ /* Return the decl for a function.  */
+ tree gfc_get_function_decl (gfc_symbol *);
 diff --git a/gcc/rtlanal.c b/gcc/rtlanal.c
 index 0e79e53fb61..dabc5403f28 100644
 --- a/gcc/rtlanal.c
@@ -1093,10 +1334,34 @@ index 0e79e53fb61..dabc5403f28 100644
        offset1 = crtl->outgoing_args_size + get_frame_size ();
  #if !STACK_GROWS_DOWNWARD
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 7d5e65b1a74..714abb3b45c 100644
+index 7d5e65b1a74..f7b780a3ce4 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,53 @@
+@@ -1,3 +1,77 @@
++2019-03-03  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	PR fortran/89174
++	Backport from trunk
++	* gfortran.dg/allocate_with_mold_3.f90: New test.
++
++2019-03-03  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	PR fortran/87689
++	Backport from trunk
++	* gfortran.dg/lto/20091028-1_0.f90: Add -Wno-lto-type-mismatch to
++	options.
++	* gfortran.dg/lto/20091028-2_0.f90: Likewise.
++	* gfortran.dg/lto/pr87689_0.f: New file.
++	* gfortran.dg/lto/pr87689_1.f: New file.
++	* gfortran.dg/altreturn_9_0.f90: New file.
++	* gfortran.dg/altreturn_9_1.f90: New file.
++
++2019-03-02  Jerry DeLisle <jvdelisle@gcc.gnu.org>
++
++	Backport from trunk
++	PR fortran/84387
++	* gfortran.dg/dtio_34.f90: New test.
++
 +2019-03-02  Harald Anlauf  <anlauf@gmx.de>
 +
 +	Backport from trunk
@@ -1272,6 +1537,62 @@ index 00000000000..4452145ce95
 +{
 +  return vec_splat_s32(0x10000000);/* { dg-error "argument 1 must be a 5-bit signed literal" } */
 +}
+diff --git a/gcc/testsuite/gfortran.dg/allocate_with_mold_3.f90 b/gcc/testsuite/gfortran.dg/allocate_with_mold_3.f90
+new file mode 100644
+index 00000000000..797edbe7d49
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/allocate_with_mold_3.f90
+@@ -0,0 +1,21 @@
++! { dg-do  run }
++! PR fortran/89174 - this used to segfault on execution.
++! Test case by Neil Carlson.
++module mod
++  type :: array_data
++    class(*), allocatable :: mold
++  contains
++    procedure :: push
++  end type
++contains
++  subroutine push(this, value)
++    class(array_data), intent(inout) :: this
++    class(*), intent(in) :: value
++    allocate(this%mold, mold=value) ! <== SEGFAULTS HERE
++  end subroutine
++end module
++
++use mod
++type(array_data) :: foo
++call foo%push(42)
++end
+diff --git a/gcc/testsuite/gfortran.dg/altreturn_9_0.f90 b/gcc/testsuite/gfortran.dg/altreturn_9_0.f90
+new file mode 100644
+index 00000000000..58715c7db40
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/altreturn_9_0.f90
+@@ -0,0 +1,10 @@
++! { dg-do  run }
++! { dg-options -std=gnu }
++! { dg-additional-sources altreturn_9_1.f90 }
++! PR 89496 - wrong type for alternate return was generated
++
++program main
++  call sub(10, *10, 20)
++  stop 1
++10 continue
++end program main
+diff --git a/gcc/testsuite/gfortran.dg/altreturn_9_1.f90 b/gcc/testsuite/gfortran.dg/altreturn_9_1.f90
+new file mode 100644
+index 00000000000..9549869a6be
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/altreturn_9_1.f90
+@@ -0,0 +1,7 @@
++! { dg-do compile }
++! { dg-options "-std=gnu" }
++! See altreturn_9_0.f90
++subroutine sub(i, *, j)
++  if (i == 10 .and. j == 20) return 1
++  return
++end subroutine sub
 diff --git a/gcc/testsuite/gfortran.dg/coarray_data_1.f90 b/gcc/testsuite/gfortran.dg/coarray_data_1.f90
 new file mode 100644
 index 00000000000..94ab4c26cec
@@ -1308,6 +1629,102 @@ index 00000000000..3969d97ffc9
 +   if (any (z .ne. ['abcd', 'bcde'])) stop 1
 +   deallocate (z)
 +end
+diff --git a/gcc/testsuite/gfortran.dg/dtio_34.f90 b/gcc/testsuite/gfortran.dg/dtio_34.f90
+new file mode 100644
+index 00000000000..7cecc8b9141
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/dtio_34.f90
+@@ -0,0 +1,32 @@
++! { dg-do run }
++! PR84387 Defined output does not work for a derived type that
++! has no components 
++module m
++   type :: t
++      private
++      !integer :: m_i = 0  !<-- ***
++   contains
++      private
++      procedure, pass(this) :: write_t
++      generic, public :: write(formatted) => write_t
++   end type
++contains
++   subroutine write_t(this, lun, iotype, vlist, istat, imsg)
++      ! argument definitions
++      class(t), intent(in)            :: this
++      integer, intent(in)             :: lun
++      character(len=*), intent(in)    :: iotype
++      integer, intent(in)             :: vlist(:)
++      integer, intent(out)            :: istat
++      character(len=*), intent(inout) :: imsg
++      write(lun, fmt=*, iostat=istat, iomsg=imsg) "Hello World!"
++      return
++   end subroutine write_t
++
++end module
++
++program p
++   use m, only : t
++   type(t) :: foo
++   print "(dt)", foo ! { dg-output " Hello World!" }
++end program
+diff --git a/gcc/testsuite/gfortran.dg/lto/20091028-1_0.f90 b/gcc/testsuite/gfortran.dg/lto/20091028-1_0.f90
+index 57c1b1f6028..f33f6c8b946 100644
+--- a/gcc/testsuite/gfortran.dg/lto/20091028-1_0.f90
++++ b/gcc/testsuite/gfortran.dg/lto/20091028-1_0.f90
+@@ -1,5 +1,5 @@
+ ! { dg-lto-do link }
+-! { dg-extra-ld-options "-r -nostdlib -finline-functions" }
++! { dg-extra-ld-options "-r -nostdlib -finline-functions -Wno-lto-type-mismatch" }
+ 
+ SUBROUTINE int_gen_ti_header_char( hdrbuf, hdrbufsize, itypesize, &
+                               DataHandle, Element, VarName, Data, code )
+diff --git a/gcc/testsuite/gfortran.dg/lto/20091028-2_0.f90 b/gcc/testsuite/gfortran.dg/lto/20091028-2_0.f90
+index 57c1b1f6028..f33f6c8b946 100644
+--- a/gcc/testsuite/gfortran.dg/lto/20091028-2_0.f90
++++ b/gcc/testsuite/gfortran.dg/lto/20091028-2_0.f90
+@@ -1,5 +1,5 @@
+ ! { dg-lto-do link }
+-! { dg-extra-ld-options "-r -nostdlib -finline-functions" }
++! { dg-extra-ld-options "-r -nostdlib -finline-functions -Wno-lto-type-mismatch" }
+ 
+ SUBROUTINE int_gen_ti_header_char( hdrbuf, hdrbufsize, itypesize, &
+                               DataHandle, Element, VarName, Data, code )
+diff --git a/gcc/testsuite/gfortran.dg/lto/pr87689_0.f b/gcc/testsuite/gfortran.dg/lto/pr87689_0.f
+new file mode 100644
+index 00000000000..5beee9391c6
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/lto/pr87689_0.f
+@@ -0,0 +1,13 @@
++! { dg-lto-run }
++! PR 87689 - this used to fail for POWER, plus it used to
++! give warnings about mismatches with LTO.
++! Original test case by Judicaël Grasset.
++      program main
++        implicit none
++        character :: c
++        character(len=20) :: res, doesntwork_p8
++        external doesntwork_p8
++        c = 'o'
++        res = doesntwork_p8(c,1,2,3,4,5,6)
++        if (res /= 'foo') stop 3
++      end program main
+diff --git a/gcc/testsuite/gfortran.dg/lto/pr87689_1.f b/gcc/testsuite/gfortran.dg/lto/pr87689_1.f
+new file mode 100644
+index 00000000000..f293a0054bd
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/lto/pr87689_1.f
+@@ -0,0 +1,11 @@
++      function doesntwork_p8(c,a1,a2,a3,a4,a5,a6)
++        implicit none
++        character(len=20) :: doesntwork_p8
++        character :: c
++        integer :: a1,a2,a3,a4,a5,a6
++        if (a1 /= 1 .or. a2 /= 2 .or. a3 /= 3 .or. a4 /= 4 .or. a5 /= 5
++     &       .or. a6 /= 6) stop 1
++       if (c /= 'o ') stop 2
++       doesntwork_p8 = 'foo'
++       return
++       end
 diff --git a/gcc/testsuite/gfortran.dg/pr88326.f90 b/gcc/testsuite/gfortran.dg/pr88326.f90
 new file mode 100644
 index 00000000000..3cde68369f4
