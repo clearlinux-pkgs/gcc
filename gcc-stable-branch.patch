@@ -1,13 +1,17 @@
 amodra (1):
       [RS6000] Fix <bd>_<mode> and <bd>tf_<mode> splitters
 
+anlauf (1):
+      2019-03-02  Harald Anlauf  <anlauf@gmx.de>
+
 ebotcazou (4):
       PR ada/89349 	Backport from mainline 	2018-05-25  Arnaud Charlet  <charlet@adacore.com>
       * tree-ssa-dom.c (edge_info::derive_equivalences) <BIT_IOR_EXPR>: Fix 	and move around comment. 	<BIT_AND_EXPR>: Likewise. 	<BIT_NOT_EXPR>: Add specific handling for boolean types.
       Backport from mainline 	2019-02-19  Eric Botcazou  <ebotcazou@adacore.com>
       PR tree-optimization/89536 	* tree-ssa-dom.c (edge_info::derive_equivalences) <BIT_NOT_EXPR>: Test 	only whether bit #0 of the value is 0 instead of the entire value.
 
-gccadmin (8):
+gccadmin (9):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -23,6 +27,9 @@ helijia (1):
 jakub (2):
       * BASE-VER: Set to 8.3.1.
       Backported from mainline 	2019-02-18  Jakub Jelinek  <jakub@redhat.com>
+
+jvdelisle (1):
+      2019-03-02  Jerry DeLisle  <jvdelisle@gcc.gnu.org>
 
 mpolacek (1):
       PR c++/89212 - ICE converting nullptr to pointer-to-member-function. 	* pt.c (tsubst_copy_and_build) <case CONSTRUCTOR>: Return early for 	null member pointer value.
@@ -622,10 +629,34 @@ index 0940959cb54..36884c71fe0 100644
      }
  
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index 4d2782f1b19..1f7984fcad9 100644
+index 4d2782f1b19..834608217af 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,30 @@
+@@ -1,3 +1,54 @@
++2019-03-02  Harald Anlauf  <anlauf@gmx.de>
++
++	Backport from trunk
++	PR fortran/89516
++	* check.c (gfc_calculate_transfer_sizes): Correct checks for cases
++	where storage size of elements of MOLD is 0.
++
++	PR fortran/89492
++	* check.c (gfc_calculate_transfer_sizes): Handle cases where
++	storage size of elements of MOLD is 0.
++
++	PR fortran/89266
++	PR fortran/88326
++	* target-memory.c (gfc_element_size): Return false if element size
++	cannot be determined; element size is returned separately.
++	(gfc_target_expr_size): Return false if expression size cannot be
++	determined; expression size is returned separately.
++	* target-memory.h: Adjust prototypes.
++	* check.c (gfc_calculate_transfer_sizes): Adjust references to
++	gfc_target_expr_size, gfc_element_size.
++	* arith.c (hollerith2representation): Likewise.
++	* class.c (find_intrinsic_vtab): Likewise.
++	* simplify.c (gfc_simplify_sizeof): Likewise.
++
 +2019-02-23  Thomas Koenig  <tkoenig@gcc.gnu.org>
 +
 +	PR fortran/86119
@@ -656,8 +687,76 @@ index 4d2782f1b19..1f7984fcad9 100644
  2019-02-22  Release Manager
  
  	* GCC 8.3.0 released.
+diff --git a/gcc/fortran/arith.c b/gcc/fortran/arith.c
+index fc9b3f90c65..ef9d67412d6 100644
+--- a/gcc/fortran/arith.c
++++ b/gcc/fortran/arith.c
+@@ -2548,10 +2548,10 @@ gfc_character2character (gfc_expr *src, int kind)
+ static void
+ hollerith2representation (gfc_expr *result, gfc_expr *src)
+ {
+-  int src_len, result_len;
++  size_t src_len, result_len;
+ 
+   src_len = src->representation.length - src->ts.u.pad;
+-  result_len = gfc_target_expr_size (result);
++  gfc_target_expr_size (result, &result_len);
+ 
+   if (src_len > result_len)
+     {
+diff --git a/gcc/fortran/check.c b/gcc/fortran/check.c
+index f304154ac68..febf77fd3e7 100644
+--- a/gcc/fortran/check.c
++++ b/gcc/fortran/check.c
+@@ -5413,16 +5413,41 @@ gfc_calculate_transfer_sizes (gfc_expr *source, gfc_expr *mold, gfc_expr *size,
+     return false;
+ 
+   /* Calculate the size of the source.  */
+-  *source_size = gfc_target_expr_size (source);
+-  if (*source_size == 0)
++  if (!gfc_target_expr_size (source, source_size))
+     return false;
+ 
+   /* Determine the size of the element.  */
+-  result_elt_size = gfc_element_size (mold);
+-  if (result_elt_size == 0)
++  if (!gfc_element_size (mold, &result_elt_size))
+     return false;
+ 
+-  if (mold->expr_type == EXPR_ARRAY || mold->rank || size)
++  /* If the storage size of SOURCE is greater than zero and MOLD is an array,
++   * a scalar with the type and type parameters of MOLD shall not have a
++   * storage size equal to zero.
++   * If MOLD is a scalar and SIZE is absent, the result is a scalar.
++   * If MOLD is an array and SIZE is absent, the result is an array and of
++   * rank one. Its size is as small as possible such that its physical
++   * representation is not shorter than that of SOURCE.
++   * If SIZE is present, the result is an array of rank one and size SIZE.
++   */
++  if (result_elt_size == 0 && *source_size > 0 && !size
++      && mold->expr_type == EXPR_ARRAY)
++    {
++      gfc_error ("%<MOLD%> argument of %<TRANSFER%> intrinsic at %L is an "
++		 "array and shall not have storage size 0 when %<SOURCE%> "
++		 "argument has size greater than 0", &mold->where);
++      return false;
++    }
++
++  if (result_elt_size == 0 && *source_size == 0 && !size)
++    {
++      *result_size = 0;
++      if (result_length_p)
++	*result_length_p = 0;
++      return true;
++    }
++
++  if ((result_elt_size > 0 && (mold->expr_type == EXPR_ARRAY || mold->rank))
++      || size)
+     {
+       int result_length;
+ 
 diff --git a/gcc/fortran/class.c b/gcc/fortran/class.c
-index 2eae7f0f351..58a09f479a9 100644
+index 2eae7f0f351..cb9f0d9f23d 100644
 --- a/gcc/fortran/class.c
 +++ b/gcc/fortran/class.c
 @@ -561,7 +561,7 @@ gfc_intrinsic_hash_value (gfc_typespec *ts)
@@ -684,6 +783,31 @@ index 2eae7f0f351..58a09f479a9 100644
    return ptr;
  }
  
+@@ -2661,6 +2669,7 @@ find_intrinsic_vtab (gfc_typespec *ts)
+ 	      gfc_namespace *sub_ns;
+ 	      gfc_namespace *contained;
+ 	      gfc_expr *e;
++	      size_t e_size;
+ 
+ 	      gfc_get_symbol (name, ns, &vtype);
+ 	      if (!gfc_add_flavor (&vtype->attr, FL_DERIVED, NULL,
+@@ -2695,11 +2704,13 @@ find_intrinsic_vtab (gfc_typespec *ts)
+ 	      e = gfc_get_expr ();
+ 	      e->ts = *ts;
+ 	      e->expr_type = EXPR_VARIABLE;
++	      if (ts->type == BT_CHARACTER)
++		e_size = ts->kind;
++	      else
++		gfc_element_size (e, &e_size);
+ 	      c->initializer = gfc_get_int_expr (gfc_size_kind,
+ 						 NULL,
+-						 ts->type == BT_CHARACTER
+-						 ? ts->kind
+-						 : gfc_element_size (e));
++						 e_size);
+ 	      gfc_free_expr (e);
+ 
+ 	      /* Add component _extends.  */
 diff --git a/gcc/fortran/gfortran.h b/gcc/fortran/gfortran.h
 index 698d211d74e..abdefe12ed2 100644
 --- a/gcc/fortran/gfortran.h
@@ -712,7 +836,7 @@ index f70747a586f..df3ab562f48 100644
    tmp_expr->where = (*code)->loc;
  
 diff --git a/gcc/fortran/simplify.c b/gcc/fortran/simplify.c
-index 0d0f57922ea..c9916f1d7f4 100644
+index 0d0f57922ea..65fc19151e7 100644
 --- a/gcc/fortran/simplify.c
 +++ b/gcc/fortran/simplify.c
 @@ -4469,7 +4469,7 @@ gfc_simplify_len (gfc_expr *e, gfc_expr *kind)
@@ -724,6 +848,193 @@ index 0d0f57922ea..c9916f1d7f4 100644
    else
      return NULL;
  }
+@@ -6921,6 +6921,7 @@ gfc_simplify_sizeof (gfc_expr *x)
+ {
+   gfc_expr *result = NULL;
+   mpz_t array_size;
++  size_t res_size;
+ 
+   if (x->ts.type == BT_CLASS || x->ts.deferred)
+     return NULL;
+@@ -6936,7 +6937,8 @@ gfc_simplify_sizeof (gfc_expr *x)
+ 
+   result = gfc_get_constant_expr (BT_INTEGER, gfc_index_integer_kind,
+ 				  &x->where);
+-  mpz_set_si (result->value.integer, gfc_target_expr_size (x));
++  gfc_target_expr_size (x, &res_size);
++  mpz_set_si (result->value.integer, res_size);
+ 
+   return result;
+ }
+@@ -6950,6 +6952,7 @@ gfc_simplify_storage_size (gfc_expr *x,
+ {
+   gfc_expr *result = NULL;
+   int k;
++  size_t siz;
+ 
+   if (x->ts.type == BT_CLASS || x->ts.deferred)
+     return NULL;
+@@ -6965,7 +6968,8 @@ gfc_simplify_storage_size (gfc_expr *x,
+ 
+   result = gfc_get_constant_expr (BT_INTEGER, k, &x->where);
+ 
+-  mpz_set_si (result->value.integer, gfc_element_size (x));
++  gfc_element_size (x, &siz);
++  mpz_set_si (result->value.integer, siz);
+   mpz_mul_ui (result->value.integer, result->value.integer, BITS_PER_UNIT);
+ 
+   return range_check (result, "STORAGE_SIZE");
+diff --git a/gcc/fortran/target-memory.c b/gcc/fortran/target-memory.c
+index 6b9292b5faf..c924cb529d1 100644
+--- a/gcc/fortran/target-memory.c
++++ b/gcc/fortran/target-memory.c
+@@ -73,26 +73,30 @@ size_character (gfc_charlen_t length, int kind)
+ 
+ 
+ /* Return the size of a single element of the given expression.
+-   Identical to gfc_target_expr_size for scalars.  */
++   Equivalent to gfc_target_expr_size for scalars.  */
+ 
+-size_t
+-gfc_element_size (gfc_expr *e)
++bool
++gfc_element_size (gfc_expr *e, size_t *siz)
+ {
+   tree type;
+ 
+   switch (e->ts.type)
+     {
+     case BT_INTEGER:
+-      return size_integer (e->ts.kind);
++      *siz = size_integer (e->ts.kind);
++      return true;
+     case BT_REAL:
+-      return size_float (e->ts.kind);
++      *siz = size_float (e->ts.kind);
++      return true;
+     case BT_COMPLEX:
+-      return size_complex (e->ts.kind);
++      *siz = size_complex (e->ts.kind);
++      return true;
+     case BT_LOGICAL:
+-      return size_logical (e->ts.kind);
++      *siz = size_logical (e->ts.kind);
++      return true;
+     case BT_CHARACTER:
+       if (e->expr_type == EXPR_CONSTANT)
+-	return size_character (e->value.character.length, e->ts.kind);
++	*siz = size_character (e->value.character.length, e->ts.kind);
+       else if (e->ts.u.cl != NULL && e->ts.u.cl->length != NULL
+ 	       && e->ts.u.cl->length->expr_type == EXPR_CONSTANT
+ 	       && e->ts.u.cl->length->ts.type == BT_INTEGER)
+@@ -100,13 +104,18 @@ gfc_element_size (gfc_expr *e)
+ 	  HOST_WIDE_INT length;
+ 
+ 	  gfc_extract_hwi (e->ts.u.cl->length, &length);
+-	  return size_character (length, e->ts.kind);
++	  *siz = size_character (length, e->ts.kind);
+ 	}
+       else
+-	return 0;
++	{
++	  *siz = 0;
++	  return false;
++	}
++      return true;
+ 
+     case BT_HOLLERITH:
+-      return e->representation.length;
++      *siz = e->representation.length;
++      return true;
+     case BT_DERIVED:
+     case BT_CLASS:
+     case BT_VOID:
+@@ -120,36 +129,43 @@ gfc_element_size (gfc_expr *e)
+ 	type = gfc_typenode_for_spec (&ts);
+ 	size = int_size_in_bytes (type);
+ 	gcc_assert (size >= 0);
+-	return size;
++	*siz = size;
+       }
++      return true;
+     default:
+       gfc_internal_error ("Invalid expression in gfc_element_size.");
+-      return 0;
++      *siz = 0;
++      return false;
+     }
++  return true;
+ }
+ 
+ 
+ /* Return the size of an expression in its target representation.  */
+ 
+-size_t
+-gfc_target_expr_size (gfc_expr *e)
++bool
++gfc_target_expr_size (gfc_expr *e, size_t *size)
+ {
+   mpz_t tmp;
+-  size_t asz;
++  size_t asz, el_size;
+ 
+   gcc_assert (e != NULL);
+ 
++  *size = 0;
+   if (e->rank)
+     {
+       if (gfc_array_size (e, &tmp))
+ 	asz = mpz_get_ui (tmp);
+       else
+-	asz = 0;
++	return false;
+     }
+   else
+     asz = 1;
+ 
+-  return asz * gfc_element_size (e);
++  if (!gfc_element_size (e, &el_size))
++    return false;
++  *size = asz * el_size;
++  return true;
+ }
+ 
+ 
+@@ -675,7 +691,7 @@ expr_to_char (gfc_expr *e, locus *loc,
+ 
+   /* Otherwise, use the target-memory machinery to write a bitwise image, appropriate
+      to the target, in a buffer and check off the initialized part of the buffer.  */
+-  len = gfc_target_expr_size (e);
++  gfc_target_expr_size (e, &len);
+   buffer = (unsigned char*)alloca (len);
+   len = gfc_target_encode_expr (e, buffer, len);
+ 
+@@ -722,7 +738,9 @@ gfc_merge_initializers (gfc_typespec ts, gfc_expr *e, locus *loc,
+       for (c = gfc_constructor_first (e->value.constructor);
+ 	   c; c = gfc_constructor_next (c))
+ 	{
+-	  size_t elt_size = gfc_target_expr_size (c->expr);
++	  size_t elt_size;
++
++	  gfc_target_expr_size (c->expr, &elt_size);
+ 
+ 	  if (mpz_cmp_si (c->offset, 0) != 0)
+ 	    len = elt_size * (size_t)mpz_get_si (c->offset);
+diff --git a/gcc/fortran/target-memory.h b/gcc/fortran/target-memory.h
+index 8f25899a92c..0a4316e6641 100644
+--- a/gcc/fortran/target-memory.h
++++ b/gcc/fortran/target-memory.h
+@@ -24,8 +24,8 @@ along with GCC; see the file COPYING3.  If not see
+ /* Convert a BOZ to REAL or COMPLEX.  */
+ bool gfc_convert_boz (gfc_expr *, gfc_typespec *);
+ 
+-size_t gfc_element_size (gfc_expr *);
+-size_t gfc_target_expr_size (gfc_expr *);
++bool gfc_element_size (gfc_expr *, size_t *);
++bool gfc_target_expr_size (gfc_expr *, size_t *);
+ 
+ /* Write a constant expression in binary form to a target buffer.  */
+ size_t gfc_encode_character (int, size_t, const gfc_char_t *, unsigned char *,
 diff --git a/gcc/fortran/trans-decl.c b/gcc/fortran/trans-decl.c
 index 548380a4e86..7eb3c229475 100644
 --- a/gcc/fortran/trans-decl.c
@@ -782,10 +1093,25 @@ index 0e79e53fb61..dabc5403f28 100644
        offset1 = crtl->outgoing_args_size + get_frame_size ();
  #if !STACK_GROWS_DOWNWARD
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 7d5e65b1a74..4b73b5e42f5 100644
+index 7d5e65b1a74..714abb3b45c 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,38 @@
+@@ -1,3 +1,53 @@
++2019-03-02  Harald Anlauf  <anlauf@gmx.de>
++
++	Backport from trunk
++	PR fortran/89516
++	* gfortran.dg/pr89492.f90: Adjust testcase.
++	* gfortran.dg/transfer_check_5.f90: New test.
++
++	PR fortran/89492
++	* gfortran.dg/pr89492.f90: New test.
++
++	PR fortran/89266
++	PR fortran/88326
++	* gfortran.dg/pr89266.f90: New test.
++	* gfortran.dg/pr88326.f90: New test.
++
 +2019-02-28  Eric Botcazou  <ebotcazou@adacore.com>
 +
 +	* gcc.c-torture/execute/20190228-1.c: New test.
@@ -982,6 +1308,107 @@ index 00000000000..3969d97ffc9
 +   if (any (z .ne. ['abcd', 'bcde'])) stop 1
 +   deallocate (z)
 +end
+diff --git a/gcc/testsuite/gfortran.dg/pr88326.f90 b/gcc/testsuite/gfortran.dg/pr88326.f90
+new file mode 100644
+index 00000000000..3cde68369f4
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr88326.f90
+@@ -0,0 +1,11 @@
++! { dg-do compile }
++!
++! PR fortran/88326 - ICE in gfc_conv_array_initializer
++
++program p
++  character, parameter :: x(3) = ['a','b','c']
++  character    :: y(1) = transfer('', x) ! { dg-error "Different shape for array assignment" }
++  character(0) :: z(1) = transfer('', x) ! { dg-error "Different shape for array assignment" }
++  character    :: u(0) = transfer('', x)
++  print *, y, z, u
++end
+diff --git a/gcc/testsuite/gfortran.dg/pr89266.f90 b/gcc/testsuite/gfortran.dg/pr89266.f90
+new file mode 100644
+index 00000000000..f078adeb4fc
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr89266.f90
+@@ -0,0 +1,25 @@
++! { dg-do run }
++!
++! PR fortran/89266 - ICE with TRANSFER of len=0 character array constructor
++
++program test
++  implicit none
++  character(*), parameter :: n = ''
++  character(*), parameter :: o = transfer ([''], n)
++  character(*), parameter :: p = transfer ( n , n)
++  character(*), parameter :: q = transfer ([n], n)
++  character(6), save      :: r = transfer ([''], n)
++  character(6), save      :: s = transfer ( n , n)
++  character(6), save      :: t = transfer ([n], n)
++  integer,      parameter :: a(0) = 0
++  integer,      parameter :: b(0) = transfer (a, a)
++  integer,      save      :: c(0) = transfer (a, a)
++  if (len (o) /= 0) stop 1
++  if (len (p) /= 0) stop 2
++  if (len (q) /= 0) stop 3
++  if (r /= "") stop 4
++  if (s /= "") stop 5
++  if (t /= "") stop 6
++  if (size (b) /= 0 .or. any (b /= 0)) stop 7
++  if (size (c) /= 0 .or. any (c /= 0)) stop 8
++end program test
+diff --git a/gcc/testsuite/gfortran.dg/pr89492.f90 b/gcc/testsuite/gfortran.dg/pr89492.f90
+new file mode 100644
+index 00000000000..00405519269
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr89492.f90
+@@ -0,0 +1,27 @@
++! { dg-do compile }
++!
++! PR fortran/89492 - Endless compilation of an invalid TRANSFER after r269177
++! Test error recovery for invalid uses of TRANSFER
++! Test proper simplification for MOLD with size 0
++!
++! Derived from original testcase by Dominique d'Humieres
++
++program bug4a
++  implicit none
++  type bug4
++! Intentionally left empty
++  end type bug4
++  integer, parameter :: k = size(transfer('',['']))  ! k = 0
++  integer, parameter :: i = len (transfer('',['']))  ! i = 0
++  integer, parameter :: l = len (transfer('', '' ))  ! l = 0
++  integer, parameter :: m(k) = k
++  integer, parameter :: j(i) = i
++  integer, parameter :: n(l) = l
++  print *, k,i,l,m,j,n
++  print *,      transfer(1,[''])                ! { dg-error "shall not have storage size 0" }
++  print *,      transfer(1, '' )                ! No error
++  print *, size(transfer(1,['']))               ! { dg-error "shall not have storage size 0" }
++  print *, len (transfer(1, '' ))               ! No error
++  print *, size(transfer([1],[bug4()]))         ! { dg-error "shall not have storage size 0" }
++  print *, transfer(transfer([1],[bug4()]),[1]) ! { dg-error "shall not have storage size 0" }
++end program bug4a
+diff --git a/gcc/testsuite/gfortran.dg/transfer_check_5.f90 b/gcc/testsuite/gfortran.dg/transfer_check_5.f90
+new file mode 100644
+index 00000000000..4e416e18aac
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/transfer_check_5.f90
+@@ -0,0 +1,14 @@
++! { dg-do compile }
++! { dg-options "-Wsurprising" }
++!
++! PR fortran/89516 - ICE in gfc_calculate_transfer_sizes at gcc/fortran/check.c:5506
++! Found by Martin Liška
++
++program test
++  character(*), parameter :: n = ''
++  character(*), parameter :: o = transfer ([''], n)
++  print *, transfer(1,'',size=0) ! No warning
++  print *, transfer(1,'',size=1) ! No warning
++  print *, transfer('',1,size=0) ! No warning
++  print *, transfer('',1,size=1) ! { dg-warning "has partly undefined result" }
++end program test
 diff --git a/gcc/testsuite/gfortran.dg/warn_conversion_11.f90 b/gcc/testsuite/gfortran.dg/warn_conversion_11.f90
 new file mode 100644
 index 00000000000..3393e07d31e
@@ -1136,6 +1563,47 @@ index f60e96cdfbe..0ebcc6d43c7 100644
  	    derive_equivalences (rhs, res, recursion_limit - 1);
  	    break;
  	  }
+diff --git a/libgfortran/ChangeLog b/libgfortran/ChangeLog
+index 2909548317c..c5c76614119 100644
+--- a/libgfortran/ChangeLog
++++ b/libgfortran/ChangeLog
+@@ -1,3 +1,9 @@
++2019-03-02  Jerry DeLisle  <jvdelisle@gcc.gnu.org>
++
++	PR libfortran/89020
++	* io/close.c (st_close): Generate error if calls to 'remove' return
++	an error.
++
+ 2019-02-22  Release Manager
+ 
+ 	* GCC 8.3.0 released.
+diff --git a/libgfortran/io/close.c b/libgfortran/io/close.c
+index 879bdf4e082..fdf19eeeea0 100644
+--- a/libgfortran/io/close.c
++++ b/libgfortran/io/close.c
+@@ -90,7 +90,10 @@ st_close (st_parameter_close *clp)
+ 	      else
+ 		{
+ #if HAVE_UNLINK_OPEN_FILE
+-		  remove (u->filename);
++
++		  if (remove (u->filename))
++		    generate_error (&clp->common, LIBERROR_OS,
++				    "File cannot be deleted");
+ #else
+ 		  path = strdup (u->filename);
+ #endif
+@@ -103,7 +106,9 @@ st_close (st_parameter_close *clp)
+ #if !HAVE_UNLINK_OPEN_FILE
+       if (path != NULL)
+ 	{
+-	  remove (path);
++	  if (remove (path))
++	    generate_error (&clp->common, LIBERROR_OS,
++			    "File cannot be deleted");
+ 	  free (path);
+ 	}
+ #endif
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
 index aac255a46f9..45bb87b3342 100644
 --- a/libstdc++-v3/ChangeLog
