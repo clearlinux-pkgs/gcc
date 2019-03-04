@@ -297,6 +297,7 @@ export LIBRARY_PATH=/usr/lib64
     --with-gnu-ld \
     --with-tune=haswell \
     --with-arch=westmere \
+    --enable-cet \
     --disable-libmpx
 
 make %{?_smp_mflags} profiledbootstrap
