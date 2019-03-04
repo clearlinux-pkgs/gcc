@@ -1,8 +1,10 @@
 amodra (1):
       [RS6000] Fix <bd>_<mode> and <bd>tf_<mode> splitters
 
-anlauf (1):
+anlauf (3):
       2019-03-02  Harald Anlauf  <anlauf@gmx.de>
+      2019-03-03  Harald Anlauf  <anlauf@gmx.de> 	    Steven G. Kargl  <kargl@gcc.gnu.org>
+      2019-03-03  Harald Anlauf  <anlauf@gmx.de>
 
 ebotcazou (4):
       PR ada/89349 	Backport from mainline 	2018-05-25  Arnaud Charlet  <charlet@adacore.com>
@@ -10,7 +12,8 @@ ebotcazou (4):
       Backport from mainline 	2019-02-19  Eric Botcazou  <ebotcazou@adacore.com>
       PR tree-optimization/89536 	* tree-ssa-dom.c (edge_info::derive_equivalences) <BIT_NOT_EXPR>: Test 	only whether bit #0 of the value is 0 instead of the entire value.
 
-gccadmin (9):
+gccadmin (10):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -632,10 +635,27 @@ index 0940959cb54..36884c71fe0 100644
      }
  
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index 4d2782f1b19..c5624af2328 100644
+index 4d2782f1b19..2110c0a18e8 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,85 @@
+@@ -1,3 +1,102 @@
++2019-03-03  Harald Anlauf  <anlauf@gmx.de>
++
++	Backport from trunk
++	PR fortran/89077
++	* decl.c (gfc_set_constant_character_len): Clear original string
++	representation after padding has been performed to target length.
++	* resolve.c (gfc_resolve_substring_charlen): Check substring
++	length for constantness prior to general calculation of length.
++
++2019-03-03  Harald Anlauf  <anlauf@gmx.de>
++	    Steven G. Kargl  <kargl@gcc.gnu.org>
++
++	Backport from trunk
++	PR fortran/77583
++	* symbol.c (check_conflict): Check for valid procedure name
++	passed to error reporting routine.
++
 +2019-03-03  Thomas Koenig  <tkoenig@gcc.gnu.org>
 +
 +	PR fortran/89174
@@ -842,6 +862,25 @@ index 2eae7f0f351..cb9f0d9f23d 100644
  	      gfc_free_expr (e);
  
  	      /* Add component _extends.  */
+diff --git a/gcc/fortran/decl.c b/gcc/fortran/decl.c
+index 9ce89c093c0..41b1a992a57 100644
+--- a/gcc/fortran/decl.c
++++ b/gcc/fortran/decl.c
+@@ -1678,6 +1678,14 @@ gfc_set_constant_character_len (gfc_charlen_t len, gfc_expr *expr,
+       free (expr->value.character.string);
+       expr->value.character.string = s;
+       expr->value.character.length = len;
++      /* If explicit representation was given, clear it
++	 as it is no longer needed after padding.  */
++      if (expr->representation.length)
++	{
++	  expr->representation.length = 0;
++	  free (expr->representation.string);
++	  expr->representation.string = NULL;
++	}
+     }
+ }
+ 
 diff --git a/gcc/fortran/gfortran.h b/gcc/fortran/gfortran.h
 index 698d211d74e..abdefe12ed2 100644
 --- a/gcc/fortran/gfortran.h
@@ -856,10 +895,49 @@ index 698d211d74e..abdefe12ed2 100644
  			     gfc_array_spec **);
  gfc_symbol *gfc_find_derived_vtab (gfc_symbol *);
 diff --git a/gcc/fortran/resolve.c b/gcc/fortran/resolve.c
-index f70747a586f..df3ab562f48 100644
+index f70747a586f..b2c907495a2 100644
 --- a/gcc/fortran/resolve.c
 +++ b/gcc/fortran/resolve.c
-@@ -11011,6 +11011,9 @@ deferred_op_assign (gfc_code **code, gfc_namespace *ns)
+@@ -4881,6 +4881,7 @@ gfc_resolve_substring_charlen (gfc_expr *e)
+   gfc_ref *char_ref;
+   gfc_expr *start, *end;
+   gfc_typespec *ts = NULL;
++  mpz_t diff;
+ 
+   for (char_ref = e->ref; char_ref; char_ref = char_ref->next)
+     {
+@@ -4932,11 +4933,25 @@ gfc_resolve_substring_charlen (gfc_expr *e)
+       return;
+     }
+ 
+-  /* Length = (end - start + 1).  */
+-  e->ts.u.cl->length = gfc_subtract (end, start);
+-  e->ts.u.cl->length = gfc_add (e->ts.u.cl->length,
+-				gfc_get_int_expr (gfc_charlen_int_kind,
+-						  NULL, 1));
++  /* Length = (end - start + 1).
++     Check first whether it has a constant length.  */
++  if (gfc_dep_difference (end, start, &diff))
++    {
++      gfc_expr *len = gfc_get_constant_expr (BT_INTEGER, gfc_charlen_int_kind,
++					     &e->where);
++
++      mpz_add_ui (len->value.integer, diff, 1);
++      mpz_clear (diff);
++      e->ts.u.cl->length = len;
++      /* The check for length < 0 is handled below */
++    }
++  else
++    {
++      e->ts.u.cl->length = gfc_subtract (end, start);
++      e->ts.u.cl->length = gfc_add (e->ts.u.cl->length,
++				    gfc_get_int_expr (gfc_charlen_int_kind,
++						      NULL, 1));
++    }
+ 
+   /* F2008, 6.4.1:  Both the starting point and the ending point shall
+      be within the range 1, 2, ..., n unless the starting point exceeds
+@@ -11011,6 +11026,9 @@ deferred_op_assign (gfc_code **code, gfc_namespace *ns)
    if (!gfc_check_dependency ((*code)->expr1, (*code)->expr2, 1))
      return false;
  
@@ -918,6 +996,19 @@ index 0d0f57922ea..65fc19151e7 100644
    mpz_mul_ui (result->value.integer, result->value.integer, BITS_PER_UNIT);
  
    return range_check (result, "STORAGE_SIZE");
+diff --git a/gcc/fortran/symbol.c b/gcc/fortran/symbol.c
+index 4ea66e3f387..00d9303d290 100644
+--- a/gcc/fortran/symbol.c
++++ b/gcc/fortran/symbol.c
+@@ -522,7 +522,7 @@ check_conflict (symbol_attribute *attr, const char *name, locus *where)
+   /* The copying of procedure dummy arguments for module procedures in
+      a submodule occur whilst the current state is COMP_CONTAINS. It
+      is necessary, therefore, to let this through.  */
+-  if (attr->dummy
++  if (name && attr->dummy
+       && (attr->function || attr->subroutine)
+       && gfc_current_state () == COMP_CONTAINS
+       && !(gfc_new_block && gfc_new_block->abr_modproc_decl))
 diff --git a/gcc/fortran/target-memory.c b/gcc/fortran/target-memory.c
 index 6b9292b5faf..c924cb529d1 100644
 --- a/gcc/fortran/target-memory.c
@@ -1334,10 +1425,23 @@ index 0e79e53fb61..dabc5403f28 100644
        offset1 = crtl->outgoing_args_size + get_frame_size ();
  #if !STACK_GROWS_DOWNWARD
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 7d5e65b1a74..f7b780a3ce4 100644
+index 7d5e65b1a74..aa95fd0ece6 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,77 @@
+@@ -1,3 +1,90 @@
++2019-03-03  Harald Anlauf  <anlauf@gmx.de>
++
++	Backport from trunk
++	PR fortran/89077
++	* gfortran.dg/transfer_simplify_12.f90: New test.
++	* gfortran.dg/substr_simplify.f90: New test.
++
++2019-03-03  Harald Anlauf  <anlauf@gmx.de>
++
++	Backport from trunk
++	PR fortran/77583
++	* gfortran.dg/pr77583.f90: New test.
++
 +2019-03-03  Thomas Koenig  <tkoenig@gcc.gnu.org>
 +
 +	PR fortran/89174
@@ -1725,6 +1829,22 @@ index 00000000000..f293a0054bd
 +       doesntwork_p8 = 'foo'
 +       return
 +       end
+diff --git a/gcc/testsuite/gfortran.dg/pr77583.f90 b/gcc/testsuite/gfortran.dg/pr77583.f90
+new file mode 100644
+index 00000000000..c2ee0744297
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr77583.f90
+@@ -0,0 +1,10 @@
++! { dg-do compile }
++!
++! PR fortran/77583 - ICE in pp_quoted_string, at pretty-print.c:966
++! Contributed by Gerhard Steinmetz <gerhard.steinmetz.fortran@t-online.de>
++
++pure subroutine sub(s)
++contains
++   pure subroutine s  ! { dg-error "conflicts with DUMMY argument" }
++   end
++end
 diff --git a/gcc/testsuite/gfortran.dg/pr88326.f90 b/gcc/testsuite/gfortran.dg/pr88326.f90
 new file mode 100644
 index 00000000000..3cde68369f4
@@ -1806,6 +1926,32 @@ index 00000000000..00405519269
 +  print *, size(transfer([1],[bug4()]))         ! { dg-error "shall not have storage size 0" }
 +  print *, transfer(transfer([1],[bug4()]),[1]) ! { dg-error "shall not have storage size 0" }
 +end program bug4a
+diff --git a/gcc/testsuite/gfortran.dg/substr_simplify.f90 b/gcc/testsuite/gfortran.dg/substr_simplify.f90
+new file mode 100644
+index 00000000000..7e1e1c24369
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/substr_simplify.f90
+@@ -0,0 +1,20 @@
++! { dg-do run }
++!
++! Test fixes for substring simplications derived from
++! PR fortran/89077 - ICE using * as len specifier for character parameter
++
++program test
++  implicit none
++  integer :: i
++  character(*), parameter :: s = 'abcdef', y = 'efcdab'
++  character(6), save      :: t = transfer ([(s(i:i),  i=1,len(s)  )], s)
++  character(*), parameter :: u = transfer ([(s(i:i+2),i=1,len(s),3)], s)
++  character(6), save      :: v = transfer ([(s(i:i+2),i=1,len(s),3)], s)
++  character(*), parameter :: w = transfer ([(y(i:i+1),i=len(s)-1,1,-2)], s)
++  character(6), save      :: x = transfer ([(y(i:i+1),i=len(s)-1,1,-2)], s)
++  if (len (t) /= len (s) .or. t /= s) stop 1
++  if (len (u) /= len (s) .or. u /= s) stop 2
++  if (len (v) /= len (s) .or. v /= s) stop 3
++  if (len (w) /= len (s) .or. w /= s) stop 4
++  if (len (x) /= len (s) .or. x /= s) stop 5
++end
 diff --git a/gcc/testsuite/gfortran.dg/transfer_check_5.f90 b/gcc/testsuite/gfortran.dg/transfer_check_5.f90
 new file mode 100644
 index 00000000000..4e416e18aac
@@ -1825,6 +1971,39 @@ index 00000000000..4e416e18aac
 +  print *, transfer(1,'',size=1) ! No warning
 +  print *, transfer('',1,size=0) ! No warning
 +  print *, transfer('',1,size=1) ! { dg-warning "has partly undefined result" }
++end program test
+diff --git a/gcc/testsuite/gfortran.dg/transfer_simplify_12.f90 b/gcc/testsuite/gfortran.dg/transfer_simplify_12.f90
+new file mode 100644
+index 00000000000..344b3ae1229
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/transfer_simplify_12.f90
+@@ -0,0 +1,27 @@
++! { dg-do run }
++! { dg-options "-O -std=legacy" }
++!
++! Test fixes for some findings while resolving PR fortran/89077
++
++program test
++  implicit none
++  integer :: i
++  character(*)  ,parameter :: s =  'abcdef'   ! Length will be 6
++  character(*)  ,parameter :: h = 6Habcdef    ! Length will be 8 (Hollerith!)
++  character(10) ,parameter :: k = 6Habcdef
++  character(10) ,parameter :: t = transfer (s, s)
++  character(10) ,save      :: u = transfer (s, s)
++  character(10) ,parameter :: v = transfer (h, h)
++  character(10) ,save      :: w = transfer (h, h)
++  character(10) ,parameter :: x = transfer ([(s(i:i),i=len(s),1,-1)], s)
++  character(10) ,save      :: y = transfer ([(s(i:i),i=len(s),1,-1)], s)
++  if (len (h) /= 8) stop 1
++  if (h /= s) stop 2
++  if (k /= s) stop 3
++  if (t /= s) stop 4
++  if (u /= s) stop 5
++  if (v /= s) stop 6
++  if (w /= s) stop 7
++  if (x /= "fedcba") stop 8
++  if (y /= x) stop 9
 +end program test
 diff --git a/gcc/testsuite/gfortran.dg/warn_conversion_11.f90 b/gcc/testsuite/gfortran.dg/warn_conversion_11.f90
 new file mode 100644
