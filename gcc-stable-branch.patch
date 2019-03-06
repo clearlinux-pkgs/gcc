@@ -12,7 +12,8 @@ ebotcazou (4):
       Backport from mainline 	2019-02-19  Eric Botcazou  <ebotcazou@adacore.com>
       PR tree-optimization/89536 	* tree-ssa-dom.c (edge_info::derive_equivalences) <BIT_NOT_EXPR>: Test 	only whether bit #0 of the value is 0 instead of the entire value.
 
-gccadmin (11):
+gccadmin (12):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -35,6 +36,9 @@ jakub (2):
 jvdelisle (2):
       2019-03-02  Jerry DeLisle  <jvdelisle@gcc.gnu.org>
       2019-03-02  Jerry DeLisle <jvdelisle@gcc.gnu.org>
+
+luoxhu (1):
+      backport r268834 from mainline to gcc-8-branch
 
 mpolacek (1):
       PR c++/89212 - ICE converting nullptr to pointer-to-member-function. 	* pt.c (tsubst_copy_and_build) <case CONSTRUCTOR>: Return early for 	null member pointer value.
@@ -69,10 +73,29 @@ index 2bf50aaf17a..56b6be4ebb2 100644
 -8.3.0
 +8.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d1fd9f6a7b9..29945bab951 100644
+index d1fd9f6a7b9..a21a49728aa 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,115 @@
+@@ -1,3 +1,134 @@
++2019-03-06  Xiong Hu Luo  <luoxhu@linux.ibm.com>
++
++	Backport of r268834 from mainline to gcc-8-branch.
++	2019-02-13  Xiong Hu Luo  <luoxhu@linux.vnet.ibm.com>
++
++	* config/rs6000/altivec.h (vec_sbox_be, vec_cipher_be,
++	vec_cipherlast_be, vec_ncipher_be, vec_ncipherlast_be): New #defines.
++	* config/rs6000/crypto.md (CR_vqdi): New define_mode_iterator.
++	(crypto_vsbox_<mode>, crypto_<CR_insn>_<mode>): New define_insns.
++	* config/rs6000/rs6000-builtin.def (VSBOX_BE): New BU_CRYPTO_1.
++	(VCIPHER_BE, VCIPHERLAST_BE, VNCIPHER_BE, VNCIPHERLAST_BE):
++	New BU_CRYPTO_2.
++	* config/rs6000/rs6000.c (builtin_function_type)
++	<CRYPTO_BUILTIN_VSBOX_BE, CRYPTO_BUILTIN_VCIPHER_BE,
++	CRYPTO_BUILTIN_VCIPHERLAST_BE, CRYPTO_BUILTIN_VNCIPHER_BE,
++	CRYPTO_BUILTIN_VNCIPHERLAST_BE>: New switch options.
++	* doc/extend.texi (vec_sbox_be, vec_cipher_be, vec_cipherlast_be,
++	vec_ncipher_be, vec_ncipherlast_be): New builtin functions.
++
 +2019-03-05  Richard Biener  <rguenther@suse.de>
 +
 +	Backport from mainline
@@ -391,8 +414,98 @@ index d5cab80f60f..0a75bd10976 100644
  {
    ix86_emit_swsqrtsf (operands[0], operands[1], <MODE>mode, true);
    DONE;
+diff --git a/gcc/config/rs6000/altivec.h b/gcc/config/rs6000/altivec.h
+index 5a3416235da..6c5757eadf5 100644
+--- a/gcc/config/rs6000/altivec.h
++++ b/gcc/config/rs6000/altivec.h
+@@ -418,6 +418,11 @@
+ #define vec_vupkhsw __builtin_vec_vupkhsw
+ #define vec_vupklsw __builtin_vec_vupklsw
+ #define vec_revb __builtin_vec_revb
++#define vec_sbox_be __builtin_crypto_vsbox_be
++#define vec_cipher_be __builtin_crypto_vcipher_be
++#define vec_cipherlast_be __builtin_crypto_vcipherlast_be
++#define vec_ncipher_be __builtin_crypto_vncipher_be
++#define vec_ncipherlast_be __builtin_crypto_vncipherlast_be
+ #endif
+ 
+ #ifdef __POWER9_VECTOR__
+diff --git a/gcc/config/rs6000/crypto.md b/gcc/config/rs6000/crypto.md
+index 0f34e141580..5dc569996e2 100644
+--- a/gcc/config/rs6000/crypto.md
++++ b/gcc/config/rs6000/crypto.md
+@@ -48,6 +48,9 @@
+ ;; Iterator for VSHASIGMAD/VSHASIGMAW
+ (define_mode_iterator CR_hash [V4SI V2DI])
+ 
++;; Iterator for VSBOX/VCIPHER/VNCIPHER/VCIPHERLAST/VNCIPHERLAST
++(define_mode_iterator CR_vqdi [V16QI V2DI])
++
+ ;; Iterator for the other crypto functions
+ (define_int_iterator CR_code   [UNSPEC_VCIPHER
+ 				UNSPEC_VNCIPHER
+@@ -60,10 +63,10 @@
+ 			  (UNSPEC_VNCIPHERLAST "vncipherlast")])
+ 
+ ;; 2 operand crypto instructions
+-(define_insn "crypto_<CR_insn>"
+-  [(set (match_operand:V2DI 0 "register_operand" "=v")
+-	(unspec:V2DI [(match_operand:V2DI 1 "register_operand" "v")
+-		      (match_operand:V2DI 2 "register_operand" "v")]
++(define_insn "crypto_<CR_insn>_<mode>"
++  [(set (match_operand:CR_vqdi 0 "register_operand" "=v")
++	(unspec:CR_vqdi [(match_operand:CR_vqdi 1 "register_operand" "v")
++		      (match_operand:CR_vqdi 2 "register_operand" "v")]
+ 		     CR_code))]
+   "TARGET_CRYPTO"
+   "<CR_insn> %0,%1,%2"
+@@ -90,9 +93,9 @@
+   [(set_attr "type" "vecperm")])
+ 
+ ;; 1 operand crypto instruction
+-(define_insn "crypto_vsbox"
+-  [(set (match_operand:V2DI 0 "register_operand" "=v")
+-	(unspec:V2DI [(match_operand:V2DI 1 "register_operand" "v")]
++(define_insn "crypto_vsbox_<mode>"
++  [(set (match_operand:CR_vqdi 0 "register_operand" "=v")
++	(unspec:CR_vqdi [(match_operand:CR_vqdi 1 "register_operand" "v")]
+ 		     UNSPEC_VSBOX))]
+   "TARGET_CRYPTO"
+   "vsbox %0,%1"
+diff --git a/gcc/config/rs6000/rs6000-builtin.def b/gcc/config/rs6000/rs6000-builtin.def
+index 5abbd3e791b..d2896fce7c3 100644
+--- a/gcc/config/rs6000/rs6000-builtin.def
++++ b/gcc/config/rs6000/rs6000-builtin.def
+@@ -2442,13 +2442,22 @@ BU_P9_OVERLOAD_2 (CMPRB2,	"byte_in_either_range")
+ BU_P9_OVERLOAD_2 (CMPEQB,	"byte_in_set")
+ 
+ /* 1 argument crypto functions.  */
+-BU_CRYPTO_1 (VSBOX,		"vsbox",	  CONST, crypto_vsbox)
++BU_CRYPTO_1 (VSBOX,		"vsbox",	  CONST, crypto_vsbox_v2di)
++BU_CRYPTO_1 (VSBOX_BE,		"vsbox_be",	  CONST, crypto_vsbox_v16qi)
+ 
+ /* 2 argument crypto functions.  */
+-BU_CRYPTO_2 (VCIPHER,		"vcipher",	  CONST, crypto_vcipher)
+-BU_CRYPTO_2 (VCIPHERLAST,	"vcipherlast",	  CONST, crypto_vcipherlast)
+-BU_CRYPTO_2 (VNCIPHER,		"vncipher",	  CONST, crypto_vncipher)
+-BU_CRYPTO_2 (VNCIPHERLAST,	"vncipherlast",	  CONST, crypto_vncipherlast)
++BU_CRYPTO_2 (VCIPHER,		"vcipher",	  CONST, crypto_vcipher_v2di)
++BU_CRYPTO_2 (VCIPHER_BE,	"vcipher_be",	  CONST, crypto_vcipher_v16qi)
++BU_CRYPTO_2 (VCIPHERLAST,	"vcipherlast",
++	     CONST, crypto_vcipherlast_v2di)
++BU_CRYPTO_2 (VCIPHERLAST_BE,	"vcipherlast_be",
++	     CONST, crypto_vcipherlast_v16qi)
++BU_CRYPTO_2 (VNCIPHER,		"vncipher",	  CONST, crypto_vncipher_v2di)
++BU_CRYPTO_2 (VNCIPHER_BE,	"vncipher_be",	  CONST, crypto_vncipher_v16qi)
++BU_CRYPTO_2 (VNCIPHERLAST,	"vncipherlast",
++	     CONST, crypto_vncipherlast_v2di)
++BU_CRYPTO_2 (VNCIPHERLAST_BE,	"vncipherlast_be",
++	     CONST, crypto_vncipherlast_v16qi)
+ BU_CRYPTO_2A (VPMSUMB,		"vpmsumb",	  CONST, crypto_vpmsumb)
+ BU_CRYPTO_2A (VPMSUMH,		"vpmsumh",	  CONST, crypto_vpmsumh)
+ BU_CRYPTO_2A (VPMSUMW,		"vpmsumw",	  CONST, crypto_vpmsumw)
 diff --git a/gcc/config/rs6000/rs6000.c b/gcc/config/rs6000/rs6000.c
-index 22e40f9109f..fdc7285bb74 100644
+index 22e40f9109f..fee41e171a7 100644
 --- a/gcc/config/rs6000/rs6000.c
 +++ b/gcc/config/rs6000/rs6000.c
 @@ -16765,23 +16765,13 @@ rs6000_gimple_fold_builtin (gimple_stmt_iterator *gsi)
@@ -420,6 +533,28 @@ index 22e40f9109f..fdc7285bb74 100644
  	   return false;
  	 gimple_seq stmts = NULL;
  	 location_t loc = gimple_location (stmt);
+@@ -18261,6 +18251,7 @@ builtin_function_type (machine_mode mode_ret, machine_mode mode_arg0,
+     {
+     /* unsigned 1 argument functions.  */
+     case CRYPTO_BUILTIN_VSBOX:
++    case CRYPTO_BUILTIN_VSBOX_BE:
+     case P8V_BUILTIN_VGBBD:
+     case MISC_BUILTIN_CDTBCD:
+     case MISC_BUILTIN_CBCDTD:
+@@ -18276,9 +18267,13 @@ builtin_function_type (machine_mode mode_ret, machine_mode mode_arg0,
+     case ALTIVEC_BUILTIN_VMULOUH:
+     case P8V_BUILTIN_VMULOUW:
+     case CRYPTO_BUILTIN_VCIPHER:
++    case CRYPTO_BUILTIN_VCIPHER_BE:
+     case CRYPTO_BUILTIN_VCIPHERLAST:
++    case CRYPTO_BUILTIN_VCIPHERLAST_BE:
+     case CRYPTO_BUILTIN_VNCIPHER:
++    case CRYPTO_BUILTIN_VNCIPHER_BE:
+     case CRYPTO_BUILTIN_VNCIPHERLAST:
++    case CRYPTO_BUILTIN_VNCIPHERLAST_BE:
+     case CRYPTO_BUILTIN_VPMSUMB:
+     case CRYPTO_BUILTIN_VPMSUMH:
+     case CRYPTO_BUILTIN_VPMSUMW:
 diff --git a/gcc/config/rs6000/rs6000.md b/gcc/config/rs6000/rs6000.md
 index 4d69c1dfa0e..fa65b2a8bcc 100644
 --- a/gcc/config/rs6000/rs6000.md
@@ -545,6 +680,44 @@ index f1a8feef397..92c8e51b746 100644
  	n = vec_safe_copy (CONSTRUCTOR_ELTS (t));
          newlen = vec_safe_length (n);
  	FOR_EACH_VEC_SAFE_ELT (n, idx, ce)
+diff --git a/gcc/doc/extend.texi b/gcc/doc/extend.texi
+index 11e926e9d47..297f7d5975b 100644
+--- a/gcc/doc/extend.texi
++++ b/gcc/doc/extend.texi
+@@ -19708,20 +19708,33 @@ If the cryptographic instructions are enabled (@option{-mcrypto} or
+ @smallexample
+ vector unsigned long long __builtin_crypto_vsbox (vector unsigned long long);
+ 
++vector unsigned char vec_sbox_be (vector unsigned char);
++
+ vector unsigned long long __builtin_crypto_vcipher (vector unsigned long long,
+                                                     vector unsigned long long);
+ 
++vector unsigned char vec_cipher_be (vector unsigned char, vector unsigned char);
++
+ vector unsigned long long __builtin_crypto_vcipherlast
+                                      (vector unsigned long long,
+                                       vector unsigned long long);
+ 
++vector unsigned char vec_cipherlast_be (vector unsigned char,
++                                        vector unsigned char);
++
+ vector unsigned long long __builtin_crypto_vncipher (vector unsigned long long,
+                                                      vector unsigned long long);
+ 
++vector unsigned char vec_ncipher_be (vector unsigned char,
++                                     vector unsigned char);
++
+ vector unsigned long long __builtin_crypto_vncipherlast
+                                      (vector unsigned long long,
+                                       vector unsigned long long);
+ 
++vector unsigned char vec_ncipherlast_be (vector unsigned char,
++                                         vector unsigned char);
++
+ vector unsigned char __builtin_crypto_vpermxor (vector unsigned char,
+                                                 vector unsigned char,
+                                                 vector unsigned char);
 diff --git a/gcc/dwarf2out.c b/gcc/dwarf2out.c
 index 0940959cb54..36884c71fe0 100644
 --- a/gcc/dwarf2out.c
@@ -1437,10 +1610,19 @@ index 0e79e53fb61..dabc5403f28 100644
        offset1 = crtl->outgoing_args_size + get_frame_size ();
  #if !STACK_GROWS_DOWNWARD
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 7d5e65b1a74..d3d02ddcd39 100644
+index 7d5e65b1a74..0db36e31e32 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,98 @@
+@@ -1,3 +1,107 @@
++2019-03-06  Xiong Hu Luo  <luoxhu@linux.ibm.com>
++
++	Backport of r268834 from mainline to gcc-8-branch.
++	2019-01-23  Xiong Hu Luo  <luoxhu@linux.vnet.ibm.com>
++
++	* gcc.target/powerpc/crypto-builtin-1.c
++	(crypto1_be, crypto2_be, crypto3_be, crypto4_be, crypto5_be):
++	New testcases.
++
 +2019-03-05  Richard Biener  <rguenther@suse.de>
 +
 +	Backport from mainline
@@ -1639,6 +1821,96 @@ index 00000000000..6fca475ad9d
 +    __builtin_abort ();
 +  return 0;
 +}
+diff --git a/gcc/testsuite/gcc.target/powerpc/crypto-builtin-1.c b/gcc/testsuite/gcc.target/powerpc/crypto-builtin-1.c
+index 234041d5c35..38245ffc370 100644
+--- a/gcc/testsuite/gcc.target/powerpc/crypto-builtin-1.c
++++ b/gcc/testsuite/gcc.target/powerpc/crypto-builtin-1.c
+@@ -4,37 +4,63 @@
+ /* { dg-skip-if "do not override -mcpu" { powerpc*-*-* } { "-mcpu=*" } { "-mcpu=power8" } } */
+ /* { dg-options "-mcpu=power8 -O2 -ftree-vectorize -fvect-cost-model=dynamic -fno-unroll-loops -fno-unroll-all-loops" } */
+ 
++#include <altivec.h>
+ typedef vector unsigned long long	crypto_t;
+ typedef vector unsigned long long	v2di_t;
+ typedef vector unsigned int		v4si_t;
+ typedef vector unsigned short		v8hi_t;
+ typedef vector unsigned char		v16qi_t;
+ 
+-crypto_t crpyto1 (crypto_t a)
++crypto_t crypto1 (crypto_t a)
+ {
+   return __builtin_crypto_vsbox (a);
+ }
+ 
++v16qi_t crypto1_be (v16qi_t a)
++{
++  return vec_sbox_be (a);
++}
++
+ crypto_t crypto2 (crypto_t a, crypto_t b)
+ {
+   return __builtin_crypto_vcipher (a, b);
+ }
+ 
++v16qi_t crypto2_be (v16qi_t a, v16qi_t b)
++{
++  return vec_cipher_be (a, b);
++}
++
+ crypto_t crypto3 (crypto_t a, crypto_t b)
+ {
+   return __builtin_crypto_vcipherlast (a, b);
+ }
+ 
++v16qi_t crypto3_be (v16qi_t a, v16qi_t b)
++{
++  return vec_cipherlast_be (a, b);
++}
++
+ crypto_t crypto4 (crypto_t a, crypto_t b)
+ {
+   return __builtin_crypto_vncipher (a, b);
+ }
+ 
++v16qi_t crypto4_be (v16qi_t a, v16qi_t b)
++{
++  return vec_ncipher_be (a, b);
++}
++
+ crypto_t crypto5 (crypto_t a, crypto_t b)
+ {
+   return __builtin_crypto_vncipherlast (a, b);
+ }
+ 
++v16qi_t crypto5_be (v16qi_t a, v16qi_t b)
++{
++  return vec_ncipherlast_be (a, b);
++}
++
+ v16qi_t crypto6a (v16qi_t a, v16qi_t b, v16qi_t c)
+ {
+   return __builtin_crypto_vpermxor (a, b, c);
+@@ -117,15 +143,15 @@ v4si_t crypto8d (v4si_t a)
+ 
+ /* Note space is used after the instruction so that vcipherlast does not match
+    vcipher.  */
+-/* { dg-final { scan-assembler-times "vcipher "      1 } } */
+-/* { dg-final { scan-assembler-times "vcipherlast "  1 } } */
+-/* { dg-final { scan-assembler-times "vncipher "     1 } } */
+-/* { dg-final { scan-assembler-times "vncipherlast " 1 } } */
++/* { dg-final { scan-assembler-times "vcipher "      2 } } */
++/* { dg-final { scan-assembler-times "vcipherlast "  2 } } */
++/* { dg-final { scan-assembler-times "vncipher "     2 } } */
++/* { dg-final { scan-assembler-times "vncipherlast " 2 } } */
+ /* { dg-final { scan-assembler-times "vpermxor "     4 } } */
+ /* { dg-final { scan-assembler-times "vpmsumb "      2 } } */
+ /* { dg-final { scan-assembler-times "vpmsumd "      2 } } */
+ /* { dg-final { scan-assembler-times "vpmsumh "      2 } } */
+ /* { dg-final { scan-assembler-times "vpmsumw "      2 } } */
+-/* { dg-final { scan-assembler-times "vsbox "        1 } } */
++/* { dg-final { scan-assembler-times "vsbox "        2 } } */
+ /* { dg-final { scan-assembler-times "vshasigmad "   2 } } */
+ /* { dg-final { scan-assembler-times "vshasigmaw "   2 } } */
 diff --git a/gcc/testsuite/gcc.target/powerpc/pr88100.c b/gcc/testsuite/gcc.target/powerpc/pr88100.c
 new file mode 100644
 index 00000000000..4452145ce95
