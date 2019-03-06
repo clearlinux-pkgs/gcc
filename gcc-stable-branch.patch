@@ -59,8 +59,10 @@ tkoenig (4):
       2019-03-03  Thomas Koenig  <tkoenig@gcc.gnu.org>
       2019-03-03  Thomas Koenig  <tkoenig@gcc.gnu.org>
 
-tnfchris (1):
+tnfchris (3):
       AArch64: Make every option in options.def one line (GCC-8).
+      AArch64: Have empty HWCAPs string ignored during native feature detection.
+      AArch64: Fix command line options canonicalization version.
 
 uros (1):
       PR target/89397 	* config/i386/i386.c (ix86_atomic_assign_expand_fenv): Check 	TARGET_SSE in addition to TARGET_SSE_MATH.
@@ -73,10 +75,45 @@ index 2bf50aaf17a..56b6be4ebb2 100644
 -8.3.0
 +8.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d1fd9f6a7b9..a21a49728aa 100644
+index d1fd9f6a7b9..87d6db9003c 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,134 @@
+@@ -1,3 +1,169 @@
++2019-03-06  Tamar Christina  <tamar.christina@arm.com>
++
++	Backport from trunk.
++	2019-02-25  Tamar Christina  <tamar.christina@arm.com>
++
++	PR target/88530
++	* common/config/aarch64/aarch64-common.c
++	(struct aarch64_option_extension): Add is_synthetic.
++	(all_extensions): Use it.
++	(TARGET_OPTION_INIT_STRUCT): Define hook.
++	(struct gcc_targetm_common): Moved to end.
++	(all_extensions_by_on): New.
++	(opt_ext_cmp, typedef opt_ext): New.
++	(aarch64_option_init_struct): New.
++	(aarch64_contains_opt): New.
++	(aarch64_get_extension_string_for_isa_flags): Output smallest set.
++	* config/aarch64/aarch64-option-extensions.def
++	(AARCH64_OPT_EXTENSION): Explicitly include AES and SHA2 in crypto.
++	(fp, simd, crc, lse, fp16, rcpc, rdma, dotprod, aes, sha2, sha3,
++	sm4, fp16fml, sve):
++	Set is_synthetic to false.
++	(crypto): Set is_synthetic to true.
++	* config/aarch64/driver-aarch64.c (AARCH64_OPT_EXTENSION): Add
++	SYNTHETIC.
++
++2019-03-06  Tamar Christina  <tamar.christina@arm.com>
++
++	Backport from trunk.
++	2019-02-28  Tamar Christina  <tamar.christina@arm.com>
++
++	PR target/88530
++	* config/aarch64/aarch64-option-extensions.def: Document it.
++	* config/aarch64/driver-aarch64.c (host_detect_local_cpu): Skip feature
++	if empty hwcaps.
++
 +2019-03-06  Xiong Hu Luo  <luoxhu@linux.ibm.com>
 +
 +	Backport of r268834 from mainline to gcc-8-branch.
@@ -300,14 +337,310 @@ index 65a87fe4ce3..6c75b521456 100644
 -   --  avoid function calls every time we want to reset the attributes).
 -
  end Osint;
+diff --git a/gcc/common/config/aarch64/aarch64-common.c b/gcc/common/config/aarch64/aarch64-common.c
+index a9fc5f1707e..4bd61e8be1f 100644
+--- a/gcc/common/config/aarch64/aarch64-common.c
++++ b/gcc/common/config/aarch64/aarch64-common.c
+@@ -41,6 +41,8 @@
+ 
+ #undef	TARGET_OPTION_OPTIMIZATION_TABLE
+ #define TARGET_OPTION_OPTIMIZATION_TABLE aarch_option_optimization_table
++#undef TARGET_OPTION_INIT_STRUCT
++#define TARGET_OPTION_INIT_STRUCT aarch64_option_init_struct
+ 
+ /* Set default optimization options.  */
+ static const struct default_options aarch_option_optimization_table[] =
+@@ -113,8 +115,6 @@ aarch64_handle_option (struct gcc_options *opts,
+     }
+ }
+ 
+-struct gcc_targetm_common targetm_common = TARGETM_COMMON_INITIALIZER;
+-
+ /* An ISA extension in the co-processor and main instruction set space.  */
+ struct aarch64_option_extension
+ {
+@@ -122,15 +122,28 @@ struct aarch64_option_extension
+   const unsigned long flag_canonical;
+   const unsigned long flags_on;
+   const unsigned long flags_off;
++  const bool is_synthetic;
+ };
+ 
+ /* ISA extensions in AArch64.  */
+ static const struct aarch64_option_extension all_extensions[] =
+ {
+-#define AARCH64_OPT_EXTENSION(NAME, FLAG_CANONICAL, FLAGS_ON, FLAGS_OFF, Z) \
+-  {NAME, FLAG_CANONICAL, FLAGS_ON, FLAGS_OFF},
++#define AARCH64_OPT_EXTENSION(NAME, FLAG_CANONICAL, FLAGS_ON, FLAGS_OFF, \
++			      SYNTHETIC, Z) \
++  {NAME, FLAG_CANONICAL, FLAGS_ON, FLAGS_OFF, SYNTHETIC},
++#include "config/aarch64/aarch64-option-extensions.def"
++  {NULL, 0, 0, 0, false}
++};
++
++/* A copy of the ISA extensions list for AArch64 sorted by the popcount of
++   bits and extension turned on.  Cached for efficiency.  */
++static struct aarch64_option_extension all_extensions_by_on[] =
++{
++#define AARCH64_OPT_EXTENSION(NAME, FLAG_CANONICAL, FLAGS_ON, FLAGS_OFF, \
++			      SYNTHETIC, Z) \
++  {NAME, FLAG_CANONICAL, FLAGS_ON, FLAGS_OFF, SYNTHETIC},
+ #include "config/aarch64/aarch64-option-extensions.def"
+-  {NULL, 0, 0, 0}
++  {NULL, 0, 0, 0, false}
+ };
+ 
+ struct processor_name_to_arch
+@@ -232,6 +245,76 @@ aarch64_parse_extension (const char *str, unsigned long *isa_flags)
+   return AARCH64_PARSE_OK;
+ }
+ 
++/* Comparer to sort aarch64's feature extensions by population count. Largest
++   first.  */
++
++typedef const struct aarch64_option_extension opt_ext;
++
++int opt_ext_cmp (const void* a, const void* b)
++{
++  opt_ext *opt_a = (opt_ext *)a;
++  opt_ext *opt_b = (opt_ext *)b;
++
++  /* We consider the total set of bits an options turns on to be the union of
++     the singleton set containing the option itself and the set of options it
++     turns on as a dependency.  As an example +dotprod turns on FL_DOTPROD and
++     FL_SIMD.  As such the set of bits represented by this option is
++     {FL_DOTPROD, FL_SIMD}. */
++  unsigned long total_flags_a = opt_a->flag_canonical & opt_a->flags_on;
++  unsigned long total_flags_b = opt_b->flag_canonical & opt_b->flags_on;
++  int popcnt_a = popcount_hwi ((HOST_WIDE_INT)total_flags_a);
++  int popcnt_b = popcount_hwi ((HOST_WIDE_INT)total_flags_b);
++  int order = popcnt_b - popcnt_a;
++
++  /* If they have the same amount of bits set, give it a more
++     deterministic ordering by using the value of the bits themselves.  */
++  if (order == 0)
++    return total_flags_b - total_flags_a;
++
++  return order;
++}
++
++/* Implement TARGET_OPTION_INIT_STRUCT.  */
++
++static void
++aarch64_option_init_struct (struct gcc_options *opts ATTRIBUTE_UNUSED)
++{
++    /* Sort the extensions based on how many bits they set, order the larger
++       counts first.  We sort the list because this makes processing the
++       feature bits O(n) instead of O(n^2).  While n is small, the function
++       to calculate the feature strings is called on every options push,
++       pop and attribute change (arm_neon headers, lto etc all cause this to
++       happen quite frequently).  It is a trade-off between time and space and
++       so time won.  */
++    int n_extensions
++      = sizeof (all_extensions) / sizeof (struct aarch64_option_extension);
++    qsort (&all_extensions_by_on, n_extensions,
++	   sizeof (struct aarch64_option_extension), opt_ext_cmp);
++}
++
++/* Checks to see if enough bits from the option OPT are enabled in
++   ISA_FLAG_BITS to be able to replace the individual options with the
++   canonicalized version of the option.  This is done based on two rules:
++
++   1) Synthetic groups, such as +crypto we only care about the bits that are
++      turned on. e.g. +aes+sha2 can be replaced with +crypto.
++
++   2) Options that themselves have a bit, such as +rdma, in this case, all the
++      feature bits they turn on must be available and the bit for the option
++      itself must be.  In this case it's effectively a reduction rather than a
++      grouping. e.g. +fp+simd is not enough to turn on +rdma, for that you would
++      need +rdma+fp+simd which is reduced down to +rdma.
++*/
++
++static bool
++aarch64_contains_opt (unsigned long isa_flag_bits, opt_ext *opt)
++{
++  unsigned long flags_check
++    = opt->is_synthetic ? opt->flags_on : opt->flag_canonical;
++
++  return (isa_flag_bits & flags_check) == flags_check;
++}
++
+ /* Return a string representation of ISA_FLAGS.  DEFAULT_ARCH_FLAGS
+    gives the default set of flags which are implied by whatever -march
+    we'd put out.  Our job is to figure out the minimal set of "+" and
+@@ -245,26 +328,97 @@ aarch64_get_extension_string_for_isa_flags (unsigned long isa_flags,
+   const struct aarch64_option_extension *opt = NULL;
+   std::string outstr = "";
+ 
+-  /* Pass one: Find all the things we need to turn on.  As a special case,
+-     we always want to put out +crc if it is enabled.  */
+-  for (opt = all_extensions; opt->name != NULL; opt++)
+-    if ((isa_flags & opt->flag_canonical
+-	 && !(default_arch_flags & opt->flag_canonical))
+-	|| (default_arch_flags & opt->flag_canonical
+-            && opt->flag_canonical == AARCH64_ISA_CRC))
+-      {
+-	outstr += "+";
+-	outstr += opt->name;
+-      }
++  unsigned long isa_flag_bits = isa_flags;
+ 
+-  /* Pass two: Find all the things we need to turn off.  */
+-  for (opt = all_extensions; opt->name != NULL; opt++)
+-    if ((~isa_flags) & opt->flag_canonical
+-	&& !((~default_arch_flags) & opt->flag_canonical))
++  /* Pass one: Minimize the search space by reducing the set of options
++     to the smallest set that still turns on the same features as before in
++     conjunction with the bits that are turned on by default for the selected
++     architecture.  */
++  for (opt = all_extensions_by_on; opt->name != NULL; opt++)
++    {
++      /* If the bit is on by default, then all the options it turns on are also
++	 on by default due to the transitive dependencies.
++
++         If the option is enabled explicitly in the set then we need to emit
++	 an option for it.  Since this list is sorted by extensions setting the
++	 largest number of featers first, we can be sure that nothing else will
++	 ever need to set the bits we already set.  Consider the following
++	 situation:
++
++	  Feat1 = A + B + C
++	  Feat2 = A + B
++	  Feat3 = A + D
++	  Feat4 = B + C
++	  Feat5 = C
++
++	The following results are expected:
++
++	  A + C = A + Feat5
++	  B + C = Feat4
++	  Feat4 + A = Feat1
++	  Feat2 + Feat5 = Feat1
++	  Feat1 + C = Feat1
++          Feat3 + Feat4 = Feat1 + D
++
++	This search assumes that all invidual feature bits are use visible,
++	in other words the user must be able to do +A, +B, +C and +D.  */
++      if (aarch64_contains_opt (isa_flag_bits | default_arch_flags, opt))
+       {
+-	outstr += "+no";
+-	outstr += opt->name;
++	/* We remove all the dependent bits, to prevent them from being turned
++	   on twice.  This only works because we assume that all there are
++	   individual options to set all bits standalone.  */
++	isa_flag_bits &= ~opt->flags_on;
++	isa_flag_bits |= opt->flag_canonical;
+       }
++    }
++
++   /* By toggling bits on and off, we may have set bits on that are already
++      enabled by default.  So we mask the default set out so we don't emit an
++      option for them.  Instead of checking for this each time during Pass One
++      we just mask all default bits away at the end.  */
++   isa_flag_bits &= ~default_arch_flags;
++
++   /* We now have the smallest set of features we need to process.  A subsequent
++      linear scan of the bits in isa_flag_bits will allow us to print the ext
++      names.  However as a special case if CRC was enabled before, always print
++      it.  This is required because some CPUs have an incorrect specification
++      in older assemblers.  Even though CRC should be the default for these
++      cases the -mcpu values won't turn it on.  */
++  if (isa_flags & AARCH64_ISA_CRC)
++    isa_flag_bits |= AARCH64_ISA_CRC;
++
++  /* Pass Two:
++     Print the option names that we're sure we must turn on.  These are only
++     optional extension names.  Mandatory ones have already been removed and
++     ones we explicitly want off have been too.  */
++  for (opt = all_extensions_by_on; opt->name != NULL; opt++)
++    {
++      if (isa_flag_bits & opt->flag_canonical)
++	{
++	  outstr += "+";
++	  outstr += opt->name;
++	}
++    }
++
++  /* Pass Three:
++     Print out a +no for any mandatory extension that we are
++     turning off.  By this point aarch64_parse_extension would have ensured
++     that any optional extensions are turned off.  The only things left are
++     things that can't be turned off usually, e.g. something that is on by
++     default because it's mandatory and we want it off.  For turning off bits
++     we don't guarantee the smallest set of flags, but instead just emit all
++     options the user has specified.
++
++     The assembler requires all +<opts> to be printed before +no<opts>.  */
++  for (opt = all_extensions_by_on; opt->name != NULL; opt++)
++    {
++      if ((~isa_flags) & opt->flag_canonical
++		&& !((~default_arch_flags) & opt->flag_canonical))
++	{
++	  outstr += "+no";
++	  outstr += opt->name;
++	}
++    }
+ 
+   return outstr;
+ }
+@@ -345,5 +499,7 @@ aarch64_rewrite_mcpu (int argc, const char **argv)
+   return aarch64_rewrite_selected_cpu (argv[argc - 1]);
+ }
+ 
++struct gcc_targetm_common targetm_common = TARGETM_COMMON_INITIALIZER;
++
+ #undef AARCH64_CPU_NAME_LENGTH
+ 
 diff --git a/gcc/config/aarch64/aarch64-option-extensions.def b/gcc/config/aarch64/aarch64-option-extensions.def
-index 5fe5e3f7ddd..a1b71cedb14 100644
+index 5fe5e3f7ddd..a575448e406 100644
 --- a/gcc/config/aarch64/aarch64-option-extensions.def
 +++ b/gcc/config/aarch64/aarch64-option-extensions.def
-@@ -38,26 +38,27 @@
-    should contain a space (" ") separated list of the strings in 'Features'
-    that are required.  Their order is not important.  */
+@@ -21,88 +21,97 @@
  
+    Before using #include to read this file, define a macro:
+ 
+-      AARCH64_OPT_EXTENSION(EXT_NAME, FLAG_CANONICAL, FLAGS_ON, FLAGS_OFF, FEATURE_STRING)
+-
+-   EXT_NAME is the name of the extension, represented as a string constant.
+-   FLAGS_CANONICAL is the canonical internal name for this flag.
+-   FLAGS_ON are the bitwise-or of the features that enabling the extension
+-   adds, or zero if enabling this extension has no effect on other features.
+-   FLAGS_OFF are the bitwise-or of the features that disabling the extension
+-   removes, or zero if disabling this extension has no effect on other
+-   features.
+-   FEAT_STRING is a string containing the entries in the 'Features' field of
+-   /proc/cpuinfo on a GNU/Linux system that correspond to this architecture
+-   extension being available.  Sometimes multiple entries are needed to enable
+-   the extension (for example, the 'crypto' extension depends on four
+-   entries: aes, pmull, sha1, sha2 being present).  In that case this field
+-   should contain a space (" ") separated list of the strings in 'Features'
+-   that are required.  Their order is not important.  */
++      AARCH64_OPT_EXTENSION(EXT_NAME, FLAG_CANONICAL, FLAGS_ON, FLAGS_OFF,
++			    SYNTHETIC, FEATURE_STRING)
++
++   - EXT_NAME is the name of the extension, represented as a string constant.
++   - FLAGS_CANONICAL is the canonical internal name for this flag.
++   - FLAGS_ON are the bitwise-or of the features that enabling the extension
++     adds, or zero if enabling this extension has no effect on other features.
++   - FLAGS_OFF are the bitwise-or of the features that disabling the extension
++     removes, or zero if disabling this extension has no effect on other
++     features.
++   - SYNTHETIC is a boolean to indicate whether the option is a purely synthetic
++     grouping of options and that the option itself has no feature bit (e.g.
++     crypto).  This is used to determine when sum of the individual options in
++     FLAGS_ON can be replaced by FLAG_CANONICAL in options minimization.  If the
++     group is synthetic then they can be replaced when all options in FLAGS_ON
++     are enabled, otherwise they can only be replaced when
++     FLAGS_ON | FLAG_CANONICAL are enabled.
++   - FEAT_STRING is a string containing the entries in the 'Features' field of
++     /proc/cpuinfo on a GNU/Linux system that correspond to this architecture
++     extension being available.  Sometimes multiple entries are needed to enable
++     the extension (for example, the 'crypto' extension depends on four
++     entries: aes, pmull, sha1, sha2 being present).  In that case this field
++     should contain a space (" ") separated list of the strings in 'Features'
++     that are required.  Their order is not important.  An empty string means
++     do not detect this feature during auto detection.  */
++
 +/* NOTE: This file is being parsed by config.gcc and so the
 +   AARCH64_OPT_EXTENSION must adhere to a strict format:
 +   1) No space between the AARCH64_OPT_EXTENSION and the opening (.
@@ -315,14 +648,14 @@ index 5fe5e3f7ddd..a1b71cedb14 100644
 +   3) No space after the extension name before the ,.
 +   4) Spaces are only allowed after a , and around |.
 +   5) Everything must be on one line.  */
-+
+ 
  /* Enabling "fp" just enables "fp".
     Disabling "fp" also disables "simd", "crypto", "fp16", "aes", "sha2",
     "sha3", sm3/sm4 and "sve".  */
 -AARCH64_OPT_EXTENSION("fp", AARCH64_FL_FP, 0, AARCH64_FL_SIMD | AARCH64_FL_CRYPTO |\
 -		      AARCH64_FL_F16 | AARCH64_FL_AES | AARCH64_FL_SHA2 |\
 -		      AARCH64_FL_SHA3 | AARCH64_FL_SM4 | AARCH64_FL_SVE, "fp")
-+AARCH64_OPT_EXTENSION("fp", AARCH64_FL_FP, 0, AARCH64_FL_SIMD | AARCH64_FL_CRYPTO | AARCH64_FL_F16 | AARCH64_FL_AES | AARCH64_FL_SHA2 | AARCH64_FL_SHA3 | AARCH64_FL_SM4 | AARCH64_FL_SVE, "fp")
++AARCH64_OPT_EXTENSION("fp", AARCH64_FL_FP, 0, AARCH64_FL_SIMD | AARCH64_FL_CRYPTO | AARCH64_FL_F16 | AARCH64_FL_AES | AARCH64_FL_SHA2 | AARCH64_FL_SHA3 | AARCH64_FL_SM4 | AARCH64_FL_SVE, false, "fp")
  
  /* Enabling "simd" also enables "fp".
     Disabling "simd" also disables "crypto", "dotprod", "aes", "sha2", "sha3",
@@ -331,27 +664,150 @@ index 5fe5e3f7ddd..a1b71cedb14 100644
 -		      AARCH64_FL_DOTPROD | AARCH64_FL_AES | AARCH64_FL_SHA2 |\
 -		      AARCH64_FL_SHA3 | AARCH64_FL_SM4 | AARCH64_FL_SVE,
 -		      "asimd")
-+AARCH64_OPT_EXTENSION("simd", AARCH64_FL_SIMD, AARCH64_FL_FP, AARCH64_FL_CRYPTO | AARCH64_FL_DOTPROD | AARCH64_FL_AES | AARCH64_FL_SHA2 | AARCH64_FL_SHA3 | AARCH64_FL_SM4 | AARCH64_FL_SVE, "asimd")
++AARCH64_OPT_EXTENSION("simd", AARCH64_FL_SIMD, AARCH64_FL_FP, AARCH64_FL_CRYPTO | AARCH64_FL_DOTPROD | AARCH64_FL_AES | AARCH64_FL_SHA2 | AARCH64_FL_SHA3 | AARCH64_FL_SM4 | AARCH64_FL_SVE, false, "asimd")
  
- /* Enabling "crypto" also enables "fp" and "simd".
+-/* Enabling "crypto" also enables "fp" and "simd".
++/* Enabling "crypto" also enables "fp", "simd", "aes" and "sha2".
     Disabling "crypto" disables "crypto", "aes", "sha2", "sha3" and "sm3/sm4".  */
 -AARCH64_OPT_EXTENSION("crypto", AARCH64_FL_CRYPTO, AARCH64_FL_FP | AARCH64_FL_SIMD,\
 -		      AARCH64_FL_AES | AARCH64_FL_SHA2 |AARCH64_FL_SHA3 | AARCH64_FL_SM4,\
 -		      "aes pmull sha1 sha2")
-+AARCH64_OPT_EXTENSION("crypto", AARCH64_FL_CRYPTO, AARCH64_FL_FP | AARCH64_FL_SIMD, AARCH64_FL_AES | AARCH64_FL_SHA2 |AARCH64_FL_SHA3 | AARCH64_FL_SM4, "aes pmull sha1 sha2")
++AARCH64_OPT_EXTENSION("crypto", AARCH64_FL_CRYPTO, AARCH64_FL_FP | AARCH64_FL_SIMD | AARCH64_FL_AES | AARCH64_FL_SHA2, AARCH64_FL_AES | AARCH64_FL_SHA2 |AARCH64_FL_SHA3 | AARCH64_FL_SM4, true, "aes pmull sha1 sha2")
  
  /* Enabling or disabling "crc" only changes "crc".  */
- AARCH64_OPT_EXTENSION("crc", AARCH64_FL_CRC, 0, 0, "crc32")
-@@ -67,8 +68,7 @@ AARCH64_OPT_EXTENSION("lse", AARCH64_FL_LSE, 0, 0, "atomics")
+-AARCH64_OPT_EXTENSION("crc", AARCH64_FL_CRC, 0, 0, "crc32")
++AARCH64_OPT_EXTENSION("crc", AARCH64_FL_CRC, 0, 0, false, "crc32")
+ 
+ /* Enabling or disabling "lse" only changes "lse".  */
+-AARCH64_OPT_EXTENSION("lse", AARCH64_FL_LSE, 0, 0, "atomics")
++AARCH64_OPT_EXTENSION("lse", AARCH64_FL_LSE, 0, 0, false, "atomics")
  
  /* Enabling "fp16" also enables "fp".
     Disabling "fp16" disables "fp16", "fp16fml" and "sve".  */
 -AARCH64_OPT_EXTENSION("fp16", AARCH64_FL_F16, AARCH64_FL_FP,
 -		      AARCH64_FL_F16FML | AARCH64_FL_SVE, "fphp asimdhp")
-+AARCH64_OPT_EXTENSION("fp16", AARCH64_FL_F16, AARCH64_FL_FP, AARCH64_FL_F16FML | AARCH64_FL_SVE, "fphp asimdhp")
++AARCH64_OPT_EXTENSION("fp16", AARCH64_FL_F16, AARCH64_FL_FP, AARCH64_FL_F16FML | AARCH64_FL_SVE, false, "fphp asimdhp")
  
  /* Enabling or disabling "rcpc" only changes "rcpc".  */
- AARCH64_OPT_EXTENSION("rcpc", AARCH64_FL_RCPC, 0, 0, "lrcpc")
+-AARCH64_OPT_EXTENSION("rcpc", AARCH64_FL_RCPC, 0, 0, "lrcpc")
++AARCH64_OPT_EXTENSION("rcpc", AARCH64_FL_RCPC, 0, 0, false, "lrcpc")
+ 
+ /* Enabling "rdma" also enables "fp", "simd".
+    Disabling "rdma" just disables "rdma".  */
+-AARCH64_OPT_EXTENSION("rdma", AARCH64_FL_RDMA, AARCH64_FL_FP | AARCH64_FL_SIMD, 0, "asimdrdm")
++AARCH64_OPT_EXTENSION("rdma", AARCH64_FL_RDMA, AARCH64_FL_FP | AARCH64_FL_SIMD, 0, false, "asimdrdm")
+ 
+ /* Enabling "dotprod" also enables "simd".
+    Disabling "dotprod" only disables "dotprod".  */
+-AARCH64_OPT_EXTENSION("dotprod", AARCH64_FL_DOTPROD, AARCH64_FL_SIMD, 0, "asimddp")
++AARCH64_OPT_EXTENSION("dotprod", AARCH64_FL_DOTPROD, AARCH64_FL_SIMD, 0, false, "asimddp")
+ 
+ /* Enabling "aes" also enables "simd".
+    Disabling "aes" just disables "aes".  */
+-AARCH64_OPT_EXTENSION("aes", AARCH64_FL_AES, AARCH64_FL_SIMD, 0, "aes")
++AARCH64_OPT_EXTENSION("aes", AARCH64_FL_AES, AARCH64_FL_SIMD, 0, false, "aes")
+ 
+ /* Enabling "sha2" also enables "simd".
+    Disabling "sha2" just disables "sha2".  */
+-AARCH64_OPT_EXTENSION("sha2", AARCH64_FL_SHA2, AARCH64_FL_SIMD, 0, "sha1 sha2")
++AARCH64_OPT_EXTENSION("sha2", AARCH64_FL_SHA2, AARCH64_FL_SIMD, 0, false, "sha1 sha2")
+ 
+ /* Enabling "sha3" enables "simd" and "sha2".
+    Disabling "sha3" just disables "sha3".  */
+-AARCH64_OPT_EXTENSION("sha3", AARCH64_FL_SHA3, AARCH64_FL_SIMD | AARCH64_FL_SHA2, 0, "sha3 sha512")
++AARCH64_OPT_EXTENSION("sha3", AARCH64_FL_SHA3, AARCH64_FL_SIMD | AARCH64_FL_SHA2, 0, false, "sha3 sha512")
+ 
+ /* Enabling "sm4" also enables "simd".
+    Disabling "sm4" just disables "sm4".  */
+-AARCH64_OPT_EXTENSION("sm4", AARCH64_FL_SM4, AARCH64_FL_SIMD, 0, "sm3 sm4")
++AARCH64_OPT_EXTENSION("sm4", AARCH64_FL_SM4, AARCH64_FL_SIMD, 0, false, "sm3 sm4")
+ 
+ /* Enabling "fp16fml" also enables "fp" and "fp16".
+    Disabling "fp16fml" just disables "fp16fml".  */
+-AARCH64_OPT_EXTENSION("fp16fml", AARCH64_FL_F16FML, AARCH64_FL_FP | AARCH64_FL_F16, 0, "asimdfml")
++AARCH64_OPT_EXTENSION("fp16fml", AARCH64_FL_F16FML, AARCH64_FL_FP | AARCH64_FL_F16, 0, false, "asimdfml")
+ 
+ /* Enabling "sve" also enables "fp16", "fp" and "simd".
+    Disabling "sve" just disables "sve".  */
+-AARCH64_OPT_EXTENSION("sve", AARCH64_FL_SVE, AARCH64_FL_FP | AARCH64_FL_SIMD | AARCH64_FL_F16, 0, "sve")
++AARCH64_OPT_EXTENSION("sve", AARCH64_FL_SVE, AARCH64_FL_FP | AARCH64_FL_SIMD | AARCH64_FL_F16, 0, false, "sve")
+ 
+ #undef AARCH64_OPT_EXTENSION
+diff --git a/gcc/config/aarch64/driver-aarch64.c b/gcc/config/aarch64/driver-aarch64.c
+index 4e83c7a7679..c68bdfdc57f 100644
+--- a/gcc/config/aarch64/driver-aarch64.c
++++ b/gcc/config/aarch64/driver-aarch64.c
+@@ -36,7 +36,8 @@ struct aarch64_arch_extension
+   const char *feat_string;
+ };
+ 
+-#define AARCH64_OPT_EXTENSION(EXT_NAME, FLAG_CANONICAL, FLAGS_ON, FLAGS_OFF, FEATURE_STRING) \
++#define AARCH64_OPT_EXTENSION(EXT_NAME, FLAG_CANONICAL, FLAGS_ON, FLAGS_OFF, \
++			      SYNTHETIC, FEATURE_STRING) \
+   { EXT_NAME, FLAG_CANONICAL, FEATURE_STRING },
+ static struct aarch64_arch_extension aarch64_extensions[] =
+ {
+@@ -249,27 +250,35 @@ host_detect_local_cpu (int argc, const char **argv)
+ 	{
+ 	  for (i = 0; i < num_exts; i++)
+ 	    {
+-	      char *p = NULL;
+-	      char *feat_string
+-		= concat (aarch64_extensions[i].feat_string, NULL);
++	      const char *p = aarch64_extensions[i].feat_string;
++
++	      /* If the feature contains no HWCAPS string then ignore it for the
++		 auto detection.  */
++	      if (*p == '\0')
++		continue;
++
+ 	      bool enabled = true;
+ 
+ 	      /* This may be a multi-token feature string.  We need
+-		 to match all parts, which could be in any order.
+-		 If this isn't a multi-token feature string, strtok is
+-		 just going to return a pointer to feat_string.  */
+-	      p = strtok (feat_string, " ");
+-	      while (p != NULL)
++		 to match all parts, which could be in any order.  */
++	      size_t len = strlen (buf);
++	      do
+ 		{
+-		  if (strstr (buf, p) == NULL)
++		  const char *end = strchr (p, ' ');
++		  if (end == NULL)
++		    end = strchr (p, '\0');
++		  if (memmem (buf, len, p, end - p) == NULL)
+ 		    {
+ 		      /* Failed to match this token.  Turn off the
+ 			 features we'd otherwise enable.  */
+ 		      enabled = false;
+ 		      break;
+ 		    }
+-		  p = strtok (NULL, " ");
++		  if (*end == '\0')
++		    break;
++		  p = end + 1;
+ 		}
++	      while (1);
+ 
+ 	      if (enabled)
+ 		extension_flags |= aarch64_extensions[i].flag;
+@@ -359,12 +368,12 @@ host_detect_local_cpu (int argc, const char **argv)
+ not_found:
+   {
+    /* If detection fails we ignore the option.
+-      Clean up and return empty string.  */
++      Clean up and return NULL.  */
+ 
+     if (f)
+       fclose (f);
+ 
+-    return "";
++    return NULL;
+   }
+ }
+ 
 diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
 index 7732f882f78..a88a29b51e6 100644
 --- a/gcc/config/i386/i386.c
@@ -1610,10 +2066,43 @@ index 0e79e53fb61..dabc5403f28 100644
        offset1 = crtl->outgoing_args_size + get_frame_size ();
  #if !STACK_GROWS_DOWNWARD
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 7d5e65b1a74..0db36e31e32 100644
+index 7d5e65b1a74..5517e72dceb 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,107 @@
+@@ -1,3 +1,140 @@
++2019-03-06  Tamar Christina  <tamar.christina@arm.com>
++
++	Backport from trunk.
++	2019-02-25  Tamar Christina  <tamar.christina@arm.com>
++
++	PR target/88530
++	* common/config/aarch64/aarch64-common.c
++	(struct aarch64_option_extension): Add is_synthetic.
++	(all_extensions): Use it.
++	(TARGET_OPTION_INIT_STRUCT): Define hook.
++	(struct gcc_targetm_common): Moved to end.
++	(all_extensions_by_on): New.
++	(opt_ext_cmp, typedef opt_ext): New.
++	(aarch64_option_init_struct): New.
++	(aarch64_contains_opt): New.
++	(aarch64_get_extension_string_for_isa_flags): Output smallest set.
++	* config/aarch64/aarch64-option-extensions.def
++	(AARCH64_OPT_EXTENSION): Explicitly include AES and SHA2 in crypto.
++	(fp, simd, crc, lse, fp16, rcpc, rdma, dotprod, aes, sha2, sha3,
++	sm4, fp16fml, sve):
++	Set is_synthetic to false.
++	(crypto): Set is_synthetic to true.
++	* config/aarch64/driver-aarch64.c (AARCH64_OPT_EXTENSION): Add
++	SYNTHETIC.
++
++2019-03-06  Tamar Christina  <tamar.christina@arm.com>
++
++	Backport from trunk.
++	2019-02-28  Tamar Christina  <tamar.christina@arm.com>
++
++	PR target/88530
++	* gcc.target/aarch64/options_set_10.c: New test.
++
 +2019-03-06  Xiong Hu Luo  <luoxhu@linux.ibm.com>
 +
 +	Backport of r268834 from mainline to gcc-8-branch.
@@ -1821,6 +2310,184 @@ index 00000000000..6fca475ad9d
 +    __builtin_abort ();
 +  return 0;
 +}
+diff --git a/gcc/testsuite/gcc.target/aarch64/options_set_1.c b/gcc/testsuite/gcc.target/aarch64/options_set_1.c
+new file mode 100644
+index 00000000000..40d9a05c905
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/options_set_1.c
+@@ -0,0 +1,11 @@
++/* { dg-do compile } */
++/* { dg-additional-options "-march=armv8.2-a" } */
++
++int main ()
++{
++  return 0;
++}
++
++/* { dg-final { scan-assembler-times {\.arch armv8\.2\-a\+crc} 1 } } */
++
++/* Check to see if crc is output by default.  */
+diff --git a/gcc/testsuite/gcc.target/aarch64/options_set_10.c b/gcc/testsuite/gcc.target/aarch64/options_set_10.c
+new file mode 100644
+index 00000000000..1fc8aa86fd6
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/options_set_10.c
+@@ -0,0 +1,11 @@
++/* { dg-do compile { target { { aarch64*-*-linux*} && native } } } */
++/* { dg-additional-options "-mcpu=native" } */
++
++int main ()
++{
++  return 0;
++}
++
++/* { dg-final { scan-assembler-not {\.arch .+\+profile.*} } } */
++
++ /* Check that an empty feature string is not detected during mcpu=native.  */
+diff --git a/gcc/testsuite/gcc.target/aarch64/options_set_2.c b/gcc/testsuite/gcc.target/aarch64/options_set_2.c
+new file mode 100644
+index 00000000000..3476febce70
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/options_set_2.c
+@@ -0,0 +1,11 @@
++/* { dg-do compile } */
++/* { dg-additional-options "-march=armv8.2-a+crypto" } */
++
++int main ()
++{
++  return 0;
++}
++
++/* { dg-final { scan-assembler-times {\.arch armv8\.2\-a\+crypto\+crc} 1 } } */
++
++/* Check to see if crc and crypto are maintained if crypto specified.  */
+diff --git a/gcc/testsuite/gcc.target/aarch64/options_set_3.c b/gcc/testsuite/gcc.target/aarch64/options_set_3.c
+new file mode 100644
+index 00000000000..4558339f16c
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/options_set_3.c
+@@ -0,0 +1,11 @@
++/* { dg-do compile } */
++/* { dg-additional-options "-march=armv8.2-a+aes+sha2+crypto" } */
++
++int main ()
++{
++  return 0;
++}
++
++/* { dg-final { scan-assembler-times {\.arch armv8\.2\-a\+crypto\+crc} 1 } } */
++
++/* Check if smallest set is maintained when outputting. */
+diff --git a/gcc/testsuite/gcc.target/aarch64/options_set_4.c b/gcc/testsuite/gcc.target/aarch64/options_set_4.c
+new file mode 100644
+index 00000000000..15514bfe93e
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/options_set_4.c
+@@ -0,0 +1,12 @@
++/* { dg-do compile } */
++/* { dg-additional-options "-march=armv8.2-a+aes+sha2" } */
++
++int main ()
++{
++  return 0;
++}
++
++/* { dg-final { scan-assembler-times {\.arch armv8\.2\-a\+crypto\+crc} 1 } } */
++
++/* Check if individual bits that make up a grouping is specified that only the
++   grouping is kept. */
+\ No newline at end of file
+diff --git a/gcc/testsuite/gcc.target/aarch64/options_set_5.c b/gcc/testsuite/gcc.target/aarch64/options_set_5.c
+new file mode 100644
+index 00000000000..b4c0901195e
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/options_set_5.c
+@@ -0,0 +1,12 @@
++/* { dg-do compile } */
++/* { dg-additional-options "-march=armv8.2-a+aes+sha2+nosha2" } */
++
++int main ()
++{
++  return 0;
++}
++
++/* { dg-final { scan-assembler-times {\.arch armv8\.2\-a\+crc\+aes} 1 } } */
++
++/* Check if turning off feature bits works correctly and grouping is no
++   longer valid.   */
+diff --git a/gcc/testsuite/gcc.target/aarch64/options_set_6.c b/gcc/testsuite/gcc.target/aarch64/options_set_6.c
+new file mode 100644
+index 00000000000..90a055928a2
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/options_set_6.c
+@@ -0,0 +1,12 @@
++/* { dg-do compile } */
++/* { dg-additional-options "-march=armv8.2-a+crypto+nosha2" } */
++
++int main ()
++{
++  return 0;
++}
++
++/* { dg-final { scan-assembler-times {\.arch armv8\.2\-a\+crypto\+crc} 1 } } */
++
++/* Group as a whole was requested to be turned on, crypto itself is a bit and so
++   just turning off one feature can't turn it off.   */
+diff --git a/gcc/testsuite/gcc.target/aarch64/options_set_7.c b/gcc/testsuite/gcc.target/aarch64/options_set_7.c
+new file mode 100644
+index 00000000000..71a2c8a1905
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/options_set_7.c
+@@ -0,0 +1,11 @@
++/* { dg-do compile } */
++/* { dg-additional-options "-march=armv8.4-a+dotprod" } */
++
++int main ()
++{
++  return 0;
++}
++
++/* { dg-final { scan-assembler-times {\.arch armv8\.4\-a} 1 } } */
++
++/* Checking if enabling default features drops the superfluous bits.   */
+diff --git a/gcc/testsuite/gcc.target/aarch64/options_set_8.c b/gcc/testsuite/gcc.target/aarch64/options_set_8.c
+new file mode 100644
+index 00000000000..83be1bd7a5c
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/options_set_8.c
+@@ -0,0 +1,12 @@
++/* { dg-do compile } */
++/* { dg-additional-options "-march=armv8.4-a+nodotprod" } */
++
++int main ()
++{
++  return 0;
++}
++
++/* { dg-final { scan-assembler-times {\.arch armv8\.4\-a} 1 } } */
++
++/* Checking if trying to turn off default features propagates the commandline
++   option.  */
+diff --git a/gcc/testsuite/gcc.target/aarch64/options_set_9.c b/gcc/testsuite/gcc.target/aarch64/options_set_9.c
+new file mode 100644
+index 00000000000..e3c7cdc54ff
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/options_set_9.c
+@@ -0,0 +1,14 @@
++/* { dg-do compile } */
++/* { dg-additional-options "-march=armv8-a+simd+fp" } */
++
++int main ()
++{
++  return 0;
++}
++
++/* { dg-final { scan-assembler-times {\.arch armv8\-a} 1 } } */
++
++ /* Check that grouping of bits that don't form a synthetic group don't turn
++    on the parent. e.g. rdma turns on simd+fp, but simd+fp does not turn on
++    rdma since rdma is it's own group.  crypto however turns on aes and sha2
++    and turning on sha2 and eas should turn on crypto!.  */
 diff --git a/gcc/testsuite/gcc.target/powerpc/crypto-builtin-1.c b/gcc/testsuite/gcc.target/powerpc/crypto-builtin-1.c
 index 234041d5c35..38245ffc370 100644
 --- a/gcc/testsuite/gcc.target/powerpc/crypto-builtin-1.c
