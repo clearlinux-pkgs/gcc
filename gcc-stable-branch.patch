@@ -1,10 +1,11 @@
 amodra (1):
       [RS6000] Fix <bd>_<mode> and <bd>tf_<mode> splitters
 
-anlauf (3):
+anlauf (4):
       2019-03-02  Harald Anlauf  <anlauf@gmx.de>
       2019-03-03  Harald Anlauf  <anlauf@gmx.de> 	    Steven G. Kargl  <kargl@gcc.gnu.org>
       2019-03-03  Harald Anlauf  <anlauf@gmx.de>
+      2019-03-06  Harald Anlauf  <anlauf@gmx.de>
 
 ebotcazou (4):
       PR ada/89349 	Backport from mainline 	2018-05-25  Arnaud Charlet  <charlet@adacore.com>
@@ -12,7 +13,8 @@ ebotcazou (4):
       Backport from mainline 	2019-02-19  Eric Botcazou  <ebotcazou@adacore.com>
       PR tree-optimization/89536 	* tree-ssa-dom.c (edge_info::derive_equivalences) <BIT_NOT_EXPR>: Test 	only whether bit #0 of the value is 0 instead of the entire value.
 
-gccadmin (12):
+gccadmin (13):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -53,11 +55,12 @@ rguenth (2):
       2019-03-01  Richard Biener  <rguenther@suse.de>
       2019-03-05  Richard Biener  <rguenther@suse.de>
 
-tkoenig (4):
+tkoenig (5):
       2019-02-22  Thomas Koenig  <tkoenig@gcc.gnu.org>
       2019-02-23  Thomas Koenig  <tkoenig@gcc.gnu.org>
       2019-03-03  Thomas Koenig  <tkoenig@gcc.gnu.org>
       2019-03-03  Thomas Koenig  <tkoenig@gcc.gnu.org>
+      2019-03-06  Thomas Koenig  <tkoenig@gcc.gnu.org>
 
 tnfchris (3):
       AArch64: Make every option in options.def one line (GCC-8).
@@ -1276,10 +1279,22 @@ index 0940959cb54..36884c71fe0 100644
      }
  
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index 4d2782f1b19..2110c0a18e8 100644
+index 4d2782f1b19..51bef2a2922 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,102 @@
+@@ -1,3 +1,114 @@
++2019-03-06  Harald Anlauf  <anlauf@gmx.de>
++
++	Backport from trunk
++	PR fortran/71203
++	* expr.c (simplify_const_ref): Avoid null pointer dereference.
++
++2019-03-06  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	PR fortran/72714
++	Backport from trunk
++	* resolve.c (resolve_allocate_expr): Add some tests for coarrays.
++
 +2019-03-03  Harald Anlauf  <anlauf@gmx.de>
 +
 +	Backport from trunk
@@ -1522,6 +1537,27 @@ index 9ce89c093c0..41b1a992a57 100644
      }
  }
  
+diff --git a/gcc/fortran/expr.c b/gcc/fortran/expr.c
+index 6ef4eb864e6..2731a714fca 100644
+--- a/gcc/fortran/expr.c
++++ b/gcc/fortran/expr.c
+@@ -1784,8 +1784,14 @@ simplify_const_ref (gfc_expr *p)
+ 			string_len = 0;
+ 
+ 		      if (!p->ts.u.cl)
+-			p->ts.u.cl = gfc_new_charlen (p->symtree->n.sym->ns,
+-						      NULL);
++			{
++			  if (p->symtree)
++			    p->ts.u.cl = gfc_new_charlen (p->symtree->n.sym->ns,
++							  NULL);
++			  else
++			    p->ts.u.cl = gfc_new_charlen (gfc_current_ns,
++							  NULL);
++			}
+ 		      else
+ 			gfc_free_expr (p->ts.u.cl->length);
+ 
 diff --git a/gcc/fortran/gfortran.h b/gcc/fortran/gfortran.h
 index 698d211d74e..abdefe12ed2 100644
 --- a/gcc/fortran/gfortran.h
@@ -1536,7 +1572,7 @@ index 698d211d74e..abdefe12ed2 100644
  			     gfc_array_spec **);
  gfc_symbol *gfc_find_derived_vtab (gfc_symbol *);
 diff --git a/gcc/fortran/resolve.c b/gcc/fortran/resolve.c
-index f70747a586f..b2c907495a2 100644
+index f70747a586f..24b472ed58f 100644
 --- a/gcc/fortran/resolve.c
 +++ b/gcc/fortran/resolve.c
 @@ -4881,6 +4881,7 @@ gfc_resolve_substring_charlen (gfc_expr *e)
@@ -1578,7 +1614,68 @@ index f70747a586f..b2c907495a2 100644
  
    /* F2008, 6.4.1:  Both the starting point and the ending point shall
       be within the range 1, 2, ..., n unless the starting point exceeds
-@@ -11011,6 +11026,9 @@ deferred_op_assign (gfc_code **code, gfc_namespace *ns)
+@@ -7640,13 +7655,54 @@ resolve_allocate_expr (gfc_expr *e, gfc_code *code, bool *array_alloc_wo_spec)
+ 
+   if (codimension)
+     for (i = ar->dimen; i < ar->dimen + ar->codimen; i++)
+-      if (ar->dimen_type[i] == DIMEN_THIS_IMAGE)
+-	{
+-	  gfc_error ("Coarray specification required in ALLOCATE statement "
+-		     "at %L", &e->where);
+-	  goto failure;
+-	}
++      {
++	switch (ar->dimen_type[i])
++	  {
++	  case DIMEN_THIS_IMAGE:
++	    gfc_error ("Coarray specification required in ALLOCATE statement "
++		       "at %L", &e->where);
++	    goto failure;
++
++	  case  DIMEN_RANGE:
++	    if (ar->start[i] == 0 || ar->end[i] == 0)
++	      {
++		/* If ar->stride[i] is NULL, we issued a previous error.  */
++		if (ar->stride[i] == NULL)
++		  gfc_error ("Bad array specification in ALLOCATE statement "
++			     "at %L", &e->where);
++		goto failure;
++	      }
++	    else if (gfc_dep_compare_expr (ar->start[i], ar->end[i]) == 1)
++	      {
++		gfc_error ("Upper cobound is less than lower cobound at %L",
++			   &ar->start[i]->where);
++		goto failure;
++	      }
++	    break;
++
++	  case DIMEN_ELEMENT:
++	    if (ar->start[i]->expr_type == EXPR_CONSTANT)
++	      {
++		gcc_assert (ar->start[i]->ts.type == BT_INTEGER);
++		if (mpz_cmp_si (ar->start[i]->value.integer, 1) < 0)
++		  {
++		    gfc_error ("Upper cobound is less than lower cobound "
++			       " of 1 at %L", &ar->start[i]->where);
++		    goto failure;
++		  }
++	      }
++	    break;
++
++	  case DIMEN_STAR:
++	    break;
++
++	  default:
++	    gfc_error ("Bad array specification in ALLOCATE statement at %L",
++		       &e->where);
++	    goto failure;
+ 
++	  }
++      }
+   for (i = 0; i < ar->dimen; i++)
+     {
+       if (ar->type == AR_ELEMENT || ar->type == AR_FULL)
+@@ -11011,6 +11067,9 @@ deferred_op_assign (gfc_code **code, gfc_namespace *ns)
    if (!gfc_check_dependency ((*code)->expr1, (*code)->expr2, 1))
      return false;
  
@@ -2066,10 +2163,22 @@ index 0e79e53fb61..dabc5403f28 100644
        offset1 = crtl->outgoing_args_size + get_frame_size ();
  #if !STACK_GROWS_DOWNWARD
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 7d5e65b1a74..5517e72dceb 100644
+index 7d5e65b1a74..5fa4460e6a0 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,140 @@
+@@ -1,3 +1,152 @@
++2019-03-06  Harald Anlauf  <anlauf@gmx.de>
++
++	Backport from trunk
++	PR fortran/71203
++	* gfortran.dg/substr_8.f90: New test.
++
++2019-03-06  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	PR fortran/72714
++	Backport from trunk
++	* gfortran.dg/coarray_allocate_11.f90: New test.
++
 +2019-03-06  Tamar Christina  <tamar.christina@arm.com>
 +
 +	Backport from trunk.
@@ -2684,6 +2793,27 @@ index 00000000000..9549869a6be
 +  if (i == 10 .and. j == 20) return 1
 +  return
 +end subroutine sub
+diff --git a/gcc/testsuite/gfortran.dg/coarray_allocate_11.f90 b/gcc/testsuite/gfortran.dg/coarray_allocate_11.f90
+new file mode 100644
+index 00000000000..0e806f0955b
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/coarray_allocate_11.f90
+@@ -0,0 +1,15 @@
++! { dg-do compile }
++! { dg-additional-options -fcoarray=single }
++program p
++   integer, allocatable :: z[:,:]
++   integer :: i
++   allocate (z[1:,*]) ! { dg-error "Bad array specification in ALLOCATE statement" }
++   allocate (z[:2,*]) ! { dg-error "Bad array specification in ALLOCATE statement" }
++   allocate (z[2:1,*]) ! { dg-error "Upper cobound is less than lower cobound" }
++   allocate (z[:0,*]) ! { dg-error "Bad array specification in ALLOCATE statement" }
++   allocate (z[0,*]) ! { dg-error "Upper cobound is less than lower cobound" }
++   allocate (z[1,*]) ! This is OK
++   allocate (z[1:1,*]) ! This is OK
++   allocate (z[i:i,*]) ! This is OK
++   allocate (z[i:i-1,*]) ! { dg-error "Upper cobound is less than lower cobound" }
++end
 diff --git a/gcc/testsuite/gfortran.dg/coarray_data_1.f90 b/gcc/testsuite/gfortran.dg/coarray_data_1.f90
 new file mode 100644
 index 00000000000..94ab4c26cec
@@ -2913,6 +3043,27 @@ index 00000000000..00405519269
 +  print *, size(transfer([1],[bug4()]))         ! { dg-error "shall not have storage size 0" }
 +  print *, transfer(transfer([1],[bug4()]),[1]) ! { dg-error "shall not have storage size 0" }
 +end program bug4a
+diff --git a/gcc/testsuite/gfortran.dg/substr_8.f90 b/gcc/testsuite/gfortran.dg/substr_8.f90
+new file mode 100644
+index 00000000000..a3b77873f7c
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/substr_8.f90
+@@ -0,0 +1,15 @@
++! { dg-do run }
++! PR fortran/71203 - used to ICE on zero-length arrays or substrings
++! Derived from original test cases by Gerhard Steinmetz
++
++program p
++  implicit none
++  character(3), parameter :: a(4) = ' '
++  character(*), parameter :: b(4) = 'abc'
++  character(*), parameter :: x(*) = a(2:2)(3:1)
++  character(*), parameter :: y(*) = a(2:1)(3:1)
++  character(*), parameter :: z(*) = b(2:1)(2:3)
++  if (size (x) /= 1 .or. len(x) /= 0) stop 1
++  if (size (y) /= 0 .or. len(y) /= 0) stop 2
++  if (size (z) /= 0 .or. len(z) /= 2) stop 3
++end
 diff --git a/gcc/testsuite/gfortran.dg/substr_simplify.f90 b/gcc/testsuite/gfortran.dg/substr_simplify.f90
 new file mode 100644
 index 00000000000..7e1e1c24369
