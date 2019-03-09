@@ -13,7 +13,8 @@ ebotcazou (4):
       Backport from mainline 	2019-02-19  Eric Botcazou  <ebotcazou@adacore.com>
       PR tree-optimization/89536 	* tree-ssa-dom.c (edge_info::derive_equivalences) <BIT_NOT_EXPR>: Test 	only whether bit #0 of the value is 0 instead of the entire value.
 
-gccadmin (14):
+gccadmin (15):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -36,6 +37,21 @@ jakub (3):
       * BASE-VER: Set to 8.3.1.
       Backported from mainline 	2019-02-18  Jakub Jelinek  <jakub@redhat.com>
       PR c++/89585 	* parser.c (cp_parser_asm_definition): Parse asm qualifiers even 	at toplevel, but diagnose them.
+
+jamborm (1):
+      Relax cgraph_node::clone_of_p to also look through former clones
+
+jason (10):
+      PR c++/88183 - ICE with .* fold-expression.
+      PR c++/87513 - 'sorry' mangling PMF template-id.
+      PR c++/89422 - ICE with -g and lambda in default arg in template.
+      PR c++/89576 - if constexpr of lambda capture.
+      PR c++/89381 - implicit copy and using-declaration.
+      PR c++/87921 - wrong error with inline static data member.
+      PR c++/88690 - C++17 ICE with empty base in aggregate.
+      PR c++/88419 - C++17 ICE with class template arg deduction.
+      PR c++/88869 - C++17 ICE with CTAD and explicit specialization.
+      PR c++/88820 - ICE with CTAD and member template used in DMI.
 
 jvdelisle (2):
       2019-03-02  Jerry DeLisle  <jvdelisle@gcc.gnu.org>
@@ -80,10 +96,22 @@ index 2bf50aaf17a..56b6be4ebb2 100644
 -8.3.0
 +8.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d1fd9f6a7b9..87d6db9003c 100644
+index d1fd9f6a7b9..7b4f7c00c3c 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,169 @@
+@@ -1,3 +1,181 @@
++2019-03-08  Martin Jambor  <mjambor@suse.cz>
++
++	Backport from mainline
++	2019-03-07  Martin Jambor  <mjambor@suse.cz>
++
++	PR ipa/88235
++	* cgraph.h (cgraph_node): New inline method former_thunk_p.
++	* cgraph.c (cgraph_node::dump): Dump a note if node is a former thunk.
++	(clone_of_p): Treat expanded thunks like thunks, be optimistic if they
++	have multiple callees.  At the end check if declarations match as
++	opposed to cgraph_nodes.
++
 +2019-03-06  Tamar Christina  <tamar.christina@arm.com>
 +
 +	Backport from trunk.
@@ -342,6 +370,80 @@ index 65a87fe4ce3..6c75b521456 100644
 -   --  avoid function calls every time we want to reset the attributes).
 -
  end Osint;
+diff --git a/gcc/cgraph.c b/gcc/cgraph.c
+index 9f3a2929f6b..8f4019b1fb9 100644
+--- a/gcc/cgraph.c
++++ b/gcc/cgraph.c
+@@ -3007,7 +3007,9 @@ cgraph_node::collect_callers (void)
+   return redirect_callers;
+ }
+ 
+-/* Return TRUE if NODE2 a clone of NODE or is equivalent to it.  */
++
++/* Return TRUE if NODE2 a clone of NODE or is equivalent to it.  Return
++   optimistically true if this cannot be determined.  */
+ 
+ static bool
+ clone_of_p (cgraph_node *node, cgraph_node *node2)
+@@ -3019,12 +3021,17 @@ clone_of_p (cgraph_node *node, cgraph_node *node2)
+   /* There are no virtual clones of thunks so check former_clone_of or if we
+      might have skipped thunks because this adjustments are no longer
+      necessary.  */
+-  while (node->thunk.thunk_p)
++  while (node->thunk.thunk_p || node->former_thunk_p ())
+     {
+       if (node2->former_clone_of == node->decl)
+ 	return true;
+       if (!node->thunk.this_adjusting)
+ 	return false;
++      /* In case of instrumented expanded thunks, which can have multiple calls
++	 in them, we do not know how to continue and just have to be
++	 optimistic.  */
++      if (node->callees->next_callee)
++	return true;
+       node = node->callees->callee->ultimate_alias_target ();
+       skipped_thunk = true;
+     }
+@@ -3040,7 +3047,7 @@ clone_of_p (cgraph_node *node, cgraph_node *node2)
+ 	return false;
+     }
+ 
+-  while (node != node2 && node2)
++  while (node2 && node->decl != node2->decl)
+     node2 = node2->clone_of;
+   return node2 != NULL;
+ }
+diff --git a/gcc/cgraph.h b/gcc/cgraph.h
+index afb2745a841..2509cd28881 100644
+--- a/gcc/cgraph.h
++++ b/gcc/cgraph.h
+@@ -1258,6 +1258,9 @@ public:
+      Note that at WPA stage, the function body may not be present in memory.  */
+   inline bool has_gimple_body_p (void);
+ 
++  /* Return true if this node represents a former, i.e. an expanded, thunk.  */
++  inline bool former_thunk_p (void);
++
+   /* Return true if function should be optimized for size.  */
+   bool optimize_for_size_p (void);
+ 
+@@ -2858,6 +2861,16 @@ cgraph_node::has_gimple_body_p (void)
+   return definition && !thunk.thunk_p && !alias;
+ }
+ 
++/* Return true if this node represents a former, i.e. an expanded, thunk.  */
++
++inline bool
++cgraph_node::former_thunk_p (void)
++{
++  return (!thunk.thunk_p
++	  && (thunk.fixed_offset
++	      || thunk.virtual_offset_p));
++}
++
+ /* Walk all functions with body defined.  */
+ #define FOR_EACH_FUNCTION_WITH_GIMPLE_BODY(node) \
+    for ((node) = symtab->first_function_with_gimple_body (); (node); \
 diff --git a/gcc/common/config/aarch64/aarch64-common.c b/gcc/common/config/aarch64/aarch64-common.c
 index a9fc5f1707e..4bd61e8be1f 100644
 --- a/gcc/common/config/aarch64/aarch64-common.c
@@ -1108,10 +1210,50 @@ index 374be7de5db..8921f6d82f5 100644
  #define TARGET_OPTION_VALID_ATTRIBUTE_P s390_valid_target_attribute_p
  
 diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
-index 05de96e23fc..f8fdbb1d3d6 100644
+index 05de96e23fc..ad157c3f961 100644
 --- a/gcc/cp/ChangeLog
 +++ b/gcc/cp/ChangeLog
-@@ -1,3 +1,18 @@
+@@ -1,3 +1,58 @@
++2019-03-08  Jason Merrill  <jason@redhat.com>
++
++	PR c++/88820 - ICE with CTAD and member template used in DMI.
++	* pt.c (do_class_deduction): Handle parm used as its own arg.
++
++	PR c++/88869 - C++17 ICE with CTAD and explicit specialization.
++	* pt.c (do_class_deduction): Don't include explicit specialization
++	args in outer_args.
++
++	PR c++/88419 - C++17 ICE with class template arg deduction.
++	* pt.c (make_template_placeholder): Set TYPE_CANONICAL after
++	CLASS_PLACEHOLDER_TEMPLATE.
++
++	PR c++/88690 - C++17 ICE with empty base in aggregate.
++	* typeck2.c (process_init_constructor_record): Skip trivial
++	initialization of an empty base.
++
++	PR c++/87921 - wrong error with inline static data member.
++	* decl2.c (c_parse_final_cleanups): Don't force out uninstantiated
++	inline static data members.
++
++	PR c++/89381 - implicit copy and using-declaration.
++	* class.c (classtype_has_move_assign_or_move_ctor_p): Don't consider
++	op= brought in by a using-declaration.
++
++	PR c++/89576 - if constexpr of lambda capture.
++	* semantics.c (maybe_convert_cond): Do convert a non-dependent
++	condition in a template.
++	* typeck.c (condition_conversion): Handle being called in a
++	template.
++
++	PR c++/89422 - ICE with -g and lambda in default arg in template.
++	* pt.c (tsubst_function_decl): SET_DECL_FRIEND_CONTEXT sooner.
++
++	PR c++/87513 - 'sorry' mangling PMF template-id.
++	* mangle.c (write_expression): Handle SCOPE_REF to BASELINK.
++
++	PR c++/88183 - ICE with .* fold-expression.
++	* pt.c (fold_expression) [DOTSTAR_EXPR]: Remove special handling.
++
 +2019-03-07  Jakub Jelinek  <jakub@redhat.com>
 +
 +	PR c++/89585
@@ -1130,6 +1272,51 @@ index 05de96e23fc..f8fdbb1d3d6 100644
  2019-02-22  Release Manager
  
  	* GCC 8.3.0 released.
+diff --git a/gcc/cp/class.c b/gcc/cp/class.c
+index 834ba17a85d..0b789b17337 100644
+--- a/gcc/cp/class.c
++++ b/gcc/cp/class.c
+@@ -5171,7 +5171,9 @@ classtype_has_move_assign_or_move_ctor_p (tree t, bool user_p)
+     for (ovl_iterator iter (get_class_binding_direct
+ 			    (t, assign_op_identifier));
+ 	 iter; ++iter)
+-      if ((!user_p || !DECL_ARTIFICIAL (*iter)) && move_fn_p (*iter))
++      if ((!user_p || !DECL_ARTIFICIAL (*iter))
++	  && DECL_CONTEXT (*iter) == t
++	  && move_fn_p (*iter))
+ 	return true;
+   
+   return false;
+diff --git a/gcc/cp/decl2.c b/gcc/cp/decl2.c
+index 6a67c4e5b33..1043af49b91 100644
+--- a/gcc/cp/decl2.c
++++ b/gcc/cp/decl2.c
+@@ -4905,7 +4905,10 @@ c_parse_final_cleanups (void)
+ 	{
+ 	  if (var_finalized_p (decl) || DECL_REALLY_EXTERN (decl)
+ 	      /* Don't write it out if we haven't seen a definition.  */
+-	      || (DECL_IN_AGGR_P (decl) && !DECL_INLINE_VAR_P (decl)))
++	      || (DECL_IN_AGGR_P (decl) && !DECL_INLINE_VAR_P (decl))
++	      /* Or haven't instantiated it.  */
++	      || (DECL_TEMPLATE_INSTANTIATION (decl)
++		  && !DECL_TEMPLATE_INSTANTIATED (decl)))
+ 	    continue;
+ 	  import_export_decl (decl);
+ 	  /* If this static data member is needed, provide it to the
+diff --git a/gcc/cp/mangle.c b/gcc/cp/mangle.c
+index 2f65709d7d8..5146162404f 100644
+--- a/gcc/cp/mangle.c
++++ b/gcc/cp/mangle.c
+@@ -3047,7 +3047,8 @@ write_expression (tree expr)
+ 	{
+ 	  scope = TREE_OPERAND (expr, 0);
+ 	  member = TREE_OPERAND (expr, 1);
+-	  gcc_assert (!BASELINK_P (member));
++	  if (BASELINK_P (member))
++	    member = BASELINK_FUNCTIONS (member);
+ 	}
+       else
+ 	{
 diff --git a/gcc/cp/parser.c b/gcc/cp/parser.c
 index 18b09affb59..e479ed96d30 100644
 --- a/gcc/cp/parser.c
@@ -1177,10 +1364,43 @@ index 18b09affb59..e479ed96d30 100644
    if (!cp_parser_require (parser, CPP_OPEN_PAREN, RT_OPEN_PAREN))
      return;
 diff --git a/gcc/cp/pt.c b/gcc/cp/pt.c
-index f1a8feef397..92c8e51b746 100644
+index f1a8feef397..d0001c4895b 100644
 --- a/gcc/cp/pt.c
 +++ b/gcc/cp/pt.c
-@@ -18797,6 +18797,12 @@ tsubst_copy_and_build (tree t,
+@@ -11732,8 +11732,6 @@ fold_expression (tree t, tree left, tree right, tsubst_flags_t complain)
+     {
+     case COMPOUND_EXPR:
+       return build_x_compound_expr (input_location, left, right, complain);
+-    case DOTSTAR_EXPR:
+-      return build_m_component_ref (left, right, complain);
+     default:
+       return build_x_binary_op (input_location, code,
+                                 left, TREE_CODE (left),
+@@ -13023,6 +13021,11 @@ tsubst_function_decl (tree t, tree args, tsubst_flags_t complain,
+ 	set_constraints (r, ci);
+       }
+ 
++  if (DECL_FRIEND_P (t) && DECL_FRIEND_CONTEXT (t))
++    SET_DECL_FRIEND_CONTEXT (r,
++			     tsubst (DECL_FRIEND_CONTEXT (t),
++				     args, complain, in_decl));
++
+   /* Set up the DECL_TEMPLATE_INFO for R.  There's no need to do
+      this in the special friend case mentioned above where
+      GEN_TMPL is NULL.  */
+@@ -13084,11 +13087,6 @@ tsubst_function_decl (tree t, tree args, tsubst_flags_t complain,
+ 	   && !grok_op_properties (r, /*complain=*/true))
+     return error_mark_node;
+ 
+-  if (DECL_FRIEND_P (t) && DECL_FRIEND_CONTEXT (t))
+-    SET_DECL_FRIEND_CONTEXT (r,
+-			     tsubst (DECL_FRIEND_CONTEXT (t),
+-				     args, complain, in_decl));
+-
+   /* Possibly limit visibility based on template args.  */
+   DECL_VISIBILITY (r) = VISIBILITY_DEFAULT;
+   if (DECL_VISIBILITY_SPECIFIED (t))
+@@ -18797,6 +18795,12 @@ tsubst_copy_and_build (tree t,
  	   looked up by digest_init.  */
  	process_index_p = !(type && MAYBE_CLASS_TYPE_P (type));
  
@@ -1193,6 +1413,102 @@ index f1a8feef397..92c8e51b746 100644
  	n = vec_safe_copy (CONSTRUCTOR_ELTS (t));
          newlen = vec_safe_length (n);
  	FOR_EACH_VEC_SAFE_ELT (n, idx, ce)
+@@ -25998,8 +26002,10 @@ make_auto (void)
+ tree
+ make_template_placeholder (tree tmpl)
+ {
+-  tree t = make_auto_1 (DECL_NAME (tmpl), true);
++  tree t = make_auto_1 (DECL_NAME (tmpl), false);
+   CLASS_PLACEHOLDER_TEMPLATE (t) = tmpl;
++  /* Our canonical type depends on the placeholder.  */
++  TYPE_CANONICAL (t) = canonical_type_parameter (t);
+   return t;
+ }
+ 
+@@ -26534,6 +26540,9 @@ do_class_deduction (tree ptype, tree tmpl, tree init, int flags,
+ 	error ("non-class template %qT used without template arguments", tmpl);
+       return error_mark_node;
+     }
++  if (init && TREE_TYPE (init) == ptype)
++    /* Using the template parm as its own argument.  */
++    return ptype;
+ 
+   tree type = TREE_TYPE (tmpl);
+ 
+@@ -26601,7 +26610,7 @@ do_class_deduction (tree ptype, tree tmpl, tree init, int flags,
+ 
+   tree outer_args = NULL_TREE;
+   if (DECL_CLASS_SCOPE_P (tmpl)
+-      && CLASSTYPE_TEMPLATE_INFO (DECL_CONTEXT (tmpl)))
++      && CLASSTYPE_TEMPLATE_INSTANTIATION (DECL_CONTEXT (tmpl)))
+     {
+       outer_args = CLASSTYPE_TI_ARGS (DECL_CONTEXT (tmpl));
+       type = TREE_TYPE (most_general_template (tmpl));
+diff --git a/gcc/cp/semantics.c b/gcc/cp/semantics.c
+index a5460fa392e..0d7d75a1a60 100644
+--- a/gcc/cp/semantics.c
++++ b/gcc/cp/semantics.c
+@@ -645,10 +645,13 @@ maybe_convert_cond (tree cond)
+     return NULL_TREE;
+ 
+   /* Wait until we instantiate templates before doing conversion.  */
+-  if (processing_template_decl)
++  if (processing_template_decl
++      && (type_dependent_expression_p (cond)
++	  /* For GCC 8 only convert non-dependent condition in a lambda.  */
++	  || !current_lambda_expr ()))
+     return cond;
+ 
+-  if (warn_sequence_point)
++  if (warn_sequence_point && !processing_template_decl)
+     verify_sequence_points (cond);
+ 
+   /* Do the conversion.  */
+diff --git a/gcc/cp/typeck.c b/gcc/cp/typeck.c
+index 9ffea19fba9..afc1fd795b2 100644
+--- a/gcc/cp/typeck.c
++++ b/gcc/cp/typeck.c
+@@ -5747,18 +5747,17 @@ cp_truthvalue_conversion (tree expr)
+     return c_common_truthvalue_conversion (input_location, expr);
+ }
+ 
+-/* Just like cp_truthvalue_conversion, but we want a CLEANUP_POINT_EXPR.  */
++/* Just like cp_truthvalue_conversion, but we want a CLEANUP_POINT_EXPR.  This
++   is a low-level function; most callers should use maybe_convert_cond.  */
+ 
+ tree
+ condition_conversion (tree expr)
+ {
+   tree t;
+-  /* Anything that might happen in a template should go through
+-     maybe_convert_cond.  */
+-  gcc_assert (!processing_template_decl);
+   t = perform_implicit_conversion_flags (boolean_type_node, expr,
+ 					 tf_warning_or_error, LOOKUP_NORMAL);
+-  t = fold_build_cleanup_point_expr (boolean_type_node, t);
++  if (!processing_template_decl)
++    t = fold_build_cleanup_point_expr (boolean_type_node, t);
+   return t;
+ }
+ 
+diff --git a/gcc/cp/typeck2.c b/gcc/cp/typeck2.c
+index b91c98d594b..34284074a21 100644
+--- a/gcc/cp/typeck2.c
++++ b/gcc/cp/typeck2.c
+@@ -1538,6 +1538,13 @@ process_init_constructor_record (tree type, tree init, int nested,
+ 	    }
+ 	}
+ 
++      if (DECL_SIZE (field) && integer_zerop (DECL_SIZE (field))
++	  && !TREE_SIDE_EFFECTS (next))
++	/* Don't add trivial initialization of an empty base/field to the
++	   constructor, as they might not be ordered the way the back-end
++	   expects.  */
++	continue;
++
+       /* If this is a bitfield, now convert to the lowered type.  */
+       if (type != TREE_TYPE (field))
+ 	next = cp_convert_and_check (TREE_TYPE (field), next, complain);
 diff --git a/gcc/doc/extend.texi b/gcc/doc/extend.texi
 index 11e926e9d47..297f7d5975b 100644
 --- a/gcc/doc/extend.texi
@@ -2217,10 +2533,17 @@ index 0e79e53fb61..dabc5403f28 100644
        offset1 = crtl->outgoing_args_size + get_frame_size ();
  #if !STACK_GROWS_DOWNWARD
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 7d5e65b1a74..9789ecf577f 100644
+index 7d5e65b1a74..cec790a4c9d 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,157 @@
+@@ -1,3 +1,164 @@
++2019-03-08  Martin Jambor  <mjambor@suse.cz>
++
++	Backport from mainline
++	2019-03-07  Martin Jambor  <mjambor@suse.cz>
++
++	* g++.dg/ipa/pr88235.C: New test.
++
 +2019-03-07  Jakub Jelinek  <jakub@redhat.com>
 +
 +	PR c++/89585
@@ -2398,6 +2721,80 @@ index 95c9b570a5f..6faf0ef5e06 100644
  
  // There are many other things wrong with this code, so:
  // { dg-excess-errors "" }
+diff --git a/gcc/testsuite/g++.dg/cpp0x/decltype-tid1.C b/gcc/testsuite/g++.dg/cpp0x/decltype-tid1.C
+new file mode 100644
+index 00000000000..03285022087
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp0x/decltype-tid1.C
+@@ -0,0 +1,9 @@
++// PR c++/87513
++// { dg-do compile { target c++11 } }
++
++struct A { template <long> void foo (); };
++template <long t> auto bar () -> decltype (&A::foo<t>);
++void foo ()
++{
++  bar<0> ();
++}
+diff --git a/gcc/testsuite/g++.dg/cpp0x/implicit16.C b/gcc/testsuite/g++.dg/cpp0x/implicit16.C
+new file mode 100644
+index 00000000000..229f2b4cd81
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp0x/implicit16.C
+@@ -0,0 +1,37 @@
++// PR c++/89381
++// { dg-do compile { target c++11 } }
++
++template<typename T>
++struct base
++{
++  base() { }
++  base(const base&) { }
++  base(base&&) { }
++  base& operator=(const base&) { return *this; }
++  base& operator=(base&&) { return *this; }
++};
++
++struct foo : base<int>
++{
++    using base<int>::base;
++    using base<int>::operator=;
++};
++
++//using workaround = decltype(foo{*static_cast<foo const*>(0)});
++
++struct bar
++{
++    bar& operator=(foo ve)
++    {
++        value = ve;
++        return *this;
++    }
++
++    foo value;
++};
++
++int main()
++{
++    foo a;
++    foo b{a};
++}
+diff --git a/gcc/testsuite/g++.dg/cpp0x/lambda/lambda-defarg9.C b/gcc/testsuite/g++.dg/cpp0x/lambda/lambda-defarg9.C
+new file mode 100644
+index 00000000000..f0436adfe9a
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp0x/lambda/lambda-defarg9.C
+@@ -0,0 +1,10 @@
++// PR c++/89422
++// { dg-do compile { target c++11 } }
++// { dg-additional-options -g }
++
++template <int> struct S
++{
++  friend void foo (int a = []{ return 0; }()) {}
++  int b;
++};
++S<0> t;
 diff --git a/gcc/testsuite/g++.dg/cpp0x/nullptr40.C b/gcc/testsuite/g++.dg/cpp0x/nullptr40.C
 new file mode 100644
 index 00000000000..21c188bdb5e
@@ -2448,6 +2845,205 @@ index 00000000000..54e66af2095
 +    void bar();
 +    p<void, void, A, A, &A::bar> j;
 +};
+diff --git a/gcc/testsuite/g++.dg/cpp1z/aggr-base7.C b/gcc/testsuite/g++.dg/cpp1z/aggr-base7.C
+new file mode 100644
+index 00000000000..bc1793e79ca
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp1z/aggr-base7.C
+@@ -0,0 +1,8 @@
++// PR c++/88690
++// { dg-do compile { target c++11 } }
++
++struct A { int a = 1; };
++struct B { int b = 0; };
++struct C { C() = default; C (const C&) = delete; };
++struct D : public B, public C {};
++struct E : A { D f; } g{};
+diff --git a/gcc/testsuite/g++.dg/cpp1z/class-deduction62.C b/gcc/testsuite/g++.dg/cpp1z/class-deduction62.C
+new file mode 100644
+index 00000000000..2baa3acb8c1
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp1z/class-deduction62.C
+@@ -0,0 +1,22 @@
++// PR c++/88419
++// { dg-do compile { target c++17 } }
++
++template<class> struct ref_view {
++  template<class T> ref_view(T&&);
++};
++
++template<class R> ref_view(R&) -> ref_view<R>;
++
++struct ref_fn {
++  template<class R> auto operator()(R r) const
++    noexcept(noexcept(ref_view{r}));
++};
++
++template<class R> struct indirect_view {
++  indirect_view(R);
++};
++
++struct indirect_fn {
++  template<class R> auto operator()(R r) const
++    noexcept(noexcept(indirect_view{r}));
++};
+diff --git a/gcc/testsuite/g++.dg/cpp1z/class-deduction63.C b/gcc/testsuite/g++.dg/cpp1z/class-deduction63.C
+new file mode 100644
+index 00000000000..4fc66fcbe15
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp1z/class-deduction63.C
+@@ -0,0 +1,11 @@
++// PR c++/88869
++// { dg-do compile { target c++17 } }
++
++template <typename> struct B;
++template <> struct B<int> {
++  template <typename T> struct C {
++    T e;
++    C (T f) : e(f) {}
++  };
++  void foo () { C c (42); }
++};
+diff --git a/gcc/testsuite/g++.dg/cpp1z/class-deduction64.C b/gcc/testsuite/g++.dg/cpp1z/class-deduction64.C
+new file mode 100644
+index 00000000000..3a06e6fb522
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp1z/class-deduction64.C
+@@ -0,0 +1,9 @@
++// PR c++/88820
++// { dg-do compile { target c++17 } }
++
++template <int> struct S;
++
++template <S> struct W {
++  template <typename> static int foo();
++  bool b = foo<int>();
++};
+diff --git a/gcc/testsuite/g++.dg/cpp1z/constexpr-if28.C b/gcc/testsuite/g++.dg/cpp1z/constexpr-if28.C
+new file mode 100644
+index 00000000000..8bfde6c1bdb
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp1z/constexpr-if28.C
+@@ -0,0 +1,11 @@
++// PR c++/89576
++// { dg-do compile { target c++17 } }
++
++template <class T>
++void foo()
++{
++    constexpr int x = 0;
++    [&] {
++        if constexpr (x) {}
++    };
++}
+diff --git a/gcc/testsuite/g++.dg/cpp1z/fold-lambda3.C b/gcc/testsuite/g++.dg/cpp1z/fold-lambda3.C
+new file mode 100644
+index 00000000000..5a53c866284
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp1z/fold-lambda3.C
+@@ -0,0 +1,19 @@
++// PR c++/88183
++// { dg-do compile { target c++17 } }
++
++struct A { int i; };
++
++template <class T> T& g(T);
++
++template <class U, class... Vs>
++void f(U u, Vs... vs)
++{ 
++  [vs...](auto x) {
++    (g(x) .* ... .* vs) = 42;
++  }(u);
++}
++
++int main()
++{
++  f(A(), &A::i);
++}
+diff --git a/gcc/testsuite/g++.dg/cpp1z/inline-var5.C b/gcc/testsuite/g++.dg/cpp1z/inline-var5.C
+new file mode 100644
+index 00000000000..27730106f27
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp1z/inline-var5.C
+@@ -0,0 +1,16 @@
++// PR c++/87921
++// { dg-do compile { target c++17 } }
++
++template <class H>
++struct X
++{
++  static inline long x[] = { 1L };
++  long foo () { return x[0]; }
++};
++
++void
++bar ()
++{
++  class L {};
++  X<L> v {};
++}
+diff --git a/gcc/testsuite/g++.dg/ipa/pr88235.C b/gcc/testsuite/g++.dg/ipa/pr88235.C
+new file mode 100644
+index 00000000000..29f3252b828
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/ipa/pr88235.C
+@@ -0,0 +1,55 @@
++// { dg-do compile }
++// { dg-options "-O1 -fdevirtualize -finline-small-functions -fipa-cp -fipa-cp-clone --param ipa-cp-eval-threshold=125 --param max-inline-insns-single=4" }
++
++extern "C" int printf (const char *, ...);
++enum E { vf_request, vf_event } want;
++
++int errs = 0;
++
++class ivResource {
++public:
++  virtual ~ivResource () { }
++};
++
++class ivHandler   : public ivResource   {
++public:
++  virtual void event() { }
++};
++
++class ivGlyph   : public ivResource   {
++public:
++  virtual ~ivGlyph  () { }
++  virtual void request () {
++    if (want!=vf_request)
++      ++errs;
++  }
++};
++
++class ItemView : public ivGlyph, public ivHandler {
++public:
++  virtual void event () {
++    if (want!=vf_event)
++      ++errs;
++  }
++} a;
++
++ivGlyph *bar() {
++  return &a;
++}
++
++ivHandler *bar2() {
++  return &a;
++}
++
++int main() {
++  want=vf_request;
++  bar()->request();
++  want=vf_event;
++  bar2()->event();
++  if (errs) {
++    printf("FAIL\n");
++    return 1;
++  }
++  printf("PASS\n");
++  return 0;
++}
 diff --git a/gcc/testsuite/gcc.c-torture/execute/20190228-1.c b/gcc/testsuite/gcc.c-torture/execute/20190228-1.c
 new file mode 100644
 index 00000000000..e71f33a279b
