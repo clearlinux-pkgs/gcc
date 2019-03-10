@@ -74,12 +74,14 @@ rguenth (2):
       2019-03-01  Richard Biener  <rguenther@suse.de>
       2019-03-05  Richard Biener  <rguenther@suse.de>
 
-tkoenig (5):
+tkoenig (7):
       2019-02-22  Thomas Koenig  <tkoenig@gcc.gnu.org>
       2019-02-23  Thomas Koenig  <tkoenig@gcc.gnu.org>
       2019-03-03  Thomas Koenig  <tkoenig@gcc.gnu.org>
       2019-03-03  Thomas Koenig  <tkoenig@gcc.gnu.org>
       2019-03-06  Thomas Koenig  <tkoenig@gcc.gnu.org>
+      2019-03-10  Thomas Koenig  <tkoenig@gcc.gnu.org> 	Steven G. Kargl  <kargl@gcc.gnu.org>
+      2019-03-10  Thomas Koenig  <tkoenig@gcc.gnu.org>
 
 tnfchris (3):
       AArch64: Make every option in options.def one line (GCC-8).
@@ -1650,10 +1652,27 @@ index 0940959cb54..36884c71fe0 100644
      }
  
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index 4d2782f1b19..51bef2a2922 100644
+index 4d2782f1b19..03edb662ff8 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,114 @@
+@@ -1,3 +1,131 @@
++2019-03-10  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	PR fortran/71544
++	Backport from trunk
++	* trans-types.c (gfc_typenode_for_spec) Set ts->is_c_interop of
++	C_PTR and C_FUNPTR.
++	(create_fn_spec): Mark argument as escaping if ts->is_c_interop is set.
++
++2019-03-10  Thomas Koenig  <tkoenig@gcc.gnu.org>
++	Steven G. Kargl  <kargl@gcc.gnu.org>
++
++	PR fortran/87734
++	Backort from trunk
++	* symbol.c (gfc_add_procedure): Only throw an error if the
++	procedure has not been declared either PUBLIC or PRIVATE.
++	* resolve.c (is_illegal_recursion): Remove an assert().
++
 +2019-03-06  Harald Anlauf  <anlauf@gmx.de>
 +
 +	Backport from trunk
@@ -1943,10 +1962,19 @@ index 698d211d74e..abdefe12ed2 100644
  			     gfc_array_spec **);
  gfc_symbol *gfc_find_derived_vtab (gfc_symbol *);
 diff --git a/gcc/fortran/resolve.c b/gcc/fortran/resolve.c
-index f70747a586f..24b472ed58f 100644
+index f70747a586f..7291039782e 100644
 --- a/gcc/fortran/resolve.c
 +++ b/gcc/fortran/resolve.c
-@@ -4881,6 +4881,7 @@ gfc_resolve_substring_charlen (gfc_expr *e)
+@@ -1681,8 +1681,6 @@ is_illegal_recursion (gfc_symbol* sym, gfc_namespace* context)
+       || gfc_fl_struct (sym->attr.flavor))
+     return false;
+ 
+-  gcc_assert (sym->attr.flavor == FL_PROCEDURE);
+-
+   /* If we've got an ENTRY, find real procedure.  */
+   if (sym->attr.entry && sym->ns->entries)
+     proc_sym = sym->ns->entries->sym;
+@@ -4881,6 +4879,7 @@ gfc_resolve_substring_charlen (gfc_expr *e)
    gfc_ref *char_ref;
    gfc_expr *start, *end;
    gfc_typespec *ts = NULL;
@@ -1954,7 +1982,7 @@ index f70747a586f..24b472ed58f 100644
  
    for (char_ref = e->ref; char_ref; char_ref = char_ref->next)
      {
-@@ -4932,11 +4933,25 @@ gfc_resolve_substring_charlen (gfc_expr *e)
+@@ -4932,11 +4931,25 @@ gfc_resolve_substring_charlen (gfc_expr *e)
        return;
      }
  
@@ -1985,7 +2013,7 @@ index f70747a586f..24b472ed58f 100644
  
    /* F2008, 6.4.1:  Both the starting point and the ending point shall
       be within the range 1, 2, ..., n unless the starting point exceeds
-@@ -7640,13 +7655,54 @@ resolve_allocate_expr (gfc_expr *e, gfc_code *code, bool *array_alloc_wo_spec)
+@@ -7640,13 +7653,54 @@ resolve_allocate_expr (gfc_expr *e, gfc_code *code, bool *array_alloc_wo_spec)
  
    if (codimension)
      for (i = ar->dimen; i < ar->dimen + ar->codimen; i++)
@@ -2002,7 +2030,7 @@ index f70747a586f..24b472ed58f 100644
 +	    gfc_error ("Coarray specification required in ALLOCATE statement "
 +		       "at %L", &e->where);
 +	    goto failure;
-+
+ 
 +	  case  DIMEN_RANGE:
 +	    if (ar->start[i] == 0 || ar->end[i] == 0)
 +	      {
@@ -2040,13 +2068,13 @@ index f70747a586f..24b472ed58f 100644
 +	    gfc_error ("Bad array specification in ALLOCATE statement at %L",
 +		       &e->where);
 +	    goto failure;
- 
++
 +	  }
 +      }
    for (i = 0; i < ar->dimen; i++)
      {
        if (ar->type == AR_ELEMENT || ar->type == AR_FULL)
-@@ -11011,6 +11067,9 @@ deferred_op_assign (gfc_code **code, gfc_namespace *ns)
+@@ -11011,6 +11065,9 @@ deferred_op_assign (gfc_code **code, gfc_namespace *ns)
    if (!gfc_check_dependency ((*code)->expr1, (*code)->expr2, 1))
      return false;
  
@@ -2106,7 +2134,7 @@ index 0d0f57922ea..65fc19151e7 100644
  
    return range_check (result, "STORAGE_SIZE");
 diff --git a/gcc/fortran/symbol.c b/gcc/fortran/symbol.c
-index 4ea66e3f387..00d9303d290 100644
+index 4ea66e3f387..ebb57eda9c5 100644
 --- a/gcc/fortran/symbol.c
 +++ b/gcc/fortran/symbol.c
 @@ -522,7 +522,7 @@ check_conflict (symbol_attribute *attr, const char *name, locus *where)
@@ -2118,6 +2146,16 @@ index 4ea66e3f387..00d9303d290 100644
        && (attr->function || attr->subroutine)
        && gfc_current_state () == COMP_CONTAINS
        && !(gfc_new_block && gfc_new_block->abr_modproc_decl))
+@@ -1801,7 +1801,8 @@ gfc_add_procedure (symbol_attribute *attr, procedure_type t,
+   if (where == NULL)
+     where = &gfc_current_locus;
+ 
+-  if (attr->proc != PROC_UNKNOWN && !attr->module_procedure)
++  if (attr->proc != PROC_UNKNOWN && !attr->module_procedure
++      && attr->access == ACCESS_UNKNOWN)
+     {
+       if (attr->proc == PROC_ST_FUNCTION && t == PROC_INTERNAL
+ 	  && !gfc_notification_std (GFC_STD_F2008))
 diff --git a/gcc/fortran/target-memory.c b/gcc/fortran/target-memory.c
 index 6b9292b5faf..c924cb529d1 100644
 --- a/gcc/fortran/target-memory.c
@@ -2405,10 +2443,30 @@ index 5b2d4e8279d..eb976c70a3a 100644
  	  gfc_free_statements (ini);
  	  gfc_add_expr_to_block (&block, tmp);
 diff --git a/gcc/fortran/trans-types.c b/gcc/fortran/trans-types.c
-index f50eb0a9f01..b47475e1602 100644
+index f50eb0a9f01..a3659e65e43 100644
 --- a/gcc/fortran/trans-types.c
 +++ b/gcc/fortran/trans-types.c
-@@ -2991,9 +2991,57 @@ create_fn_spec (gfc_symbol *sym, tree fntype)
+@@ -1213,7 +1213,8 @@ gfc_typenode_for_spec (gfc_typespec * spec, int codim)
+         {
+           spec->type = BT_INTEGER;
+           spec->kind = gfc_index_integer_kind;
+-          spec->f90_type = BT_VOID;
++	  spec->f90_type = BT_VOID;
++	  spec->is_c_interop = 1;  /* Mark as escaping later.  */
+         }
+       break;
+     case BT_VOID:
+@@ -2978,7 +2979,8 @@ create_fn_spec (gfc_symbol *sym, tree fntype)
+ 		    || f->sym->ts.u.derived->attr.pointer_comp))
+ 	    || (f->sym->ts.type == BT_CLASS
+ 		&& (CLASS_DATA (f->sym)->ts.u.derived->attr.proc_pointer_comp
+-		    || CLASS_DATA (f->sym)->ts.u.derived->attr.pointer_comp)))
++		    || CLASS_DATA (f->sym)->ts.u.derived->attr.pointer_comp))
++	    || (f->sym->ts.type == BT_INTEGER && f->sym->ts.is_c_interop))
+ 	  spec[spec_len++] = '.';
+ 	else if (f->sym->attr.intent == INTENT_IN)
+ 	  spec[spec_len++] = 'r';
+@@ -2991,9 +2993,57 @@ create_fn_spec (gfc_symbol *sym, tree fntype)
    return build_type_attribute_variant (fntype, tmp);
  }
  
@@ -2467,7 +2525,7 @@ index f50eb0a9f01..b47475e1602 100644
  {
    tree type;
    vec<tree, va_gc> *typelist = NULL;
-@@ -3051,6 +3099,10 @@ gfc_get_function_type (gfc_symbol * sym)
+@@ -3051,6 +3101,10 @@ gfc_get_function_type (gfc_symbol * sym)
  	    vec_safe_push (typelist, build_pointer_type(gfc_charlen_type_node));
  	}
      }
@@ -2534,10 +2592,22 @@ index 0e79e53fb61..dabc5403f28 100644
        offset1 = crtl->outgoing_args_size + get_frame_size ();
  #if !STACK_GROWS_DOWNWARD
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 7d5e65b1a74..cec790a4c9d 100644
+index 7d5e65b1a74..30b858d6d3b 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,164 @@
+@@ -1,3 +1,176 @@
++2019-03-10  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	PR fortran/71544
++	Backport from trunk
++	* gfortran.dg/c_ptr_tests_19.f90: New test.
++
++2019-03-10  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	PR fortran/87734
++	Backport from trunk
++	* gfortran.dg/public_private_module_10.f90: New test.
++
 +2019-03-08  Martin Jambor  <mjambor@suse.cz>
 +
 +	Backport from mainline
@@ -3469,6 +3539,48 @@ index 00000000000..9549869a6be
 +  if (i == 10 .and. j == 20) return 1
 +  return
 +end subroutine sub
+diff --git a/gcc/testsuite/gfortran.dg/c_ptr_tests_19.f90 b/gcc/testsuite/gfortran.dg/c_ptr_tests_19.f90
+new file mode 100644
+index 00000000000..2cb0b183c88
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/c_ptr_tests_19.f90
+@@ -0,0 +1,36 @@
++! { dg-do run }
++
++! PR 71544 - this failed with some optimization options due to a
++! pointer not being marked as escaping.
++
++module store_cptr
++    use, intrinsic :: iso_c_binding
++    implicit none
++    public
++    type(c_ptr), save :: cptr
++end module store_cptr
++
++subroutine init()
++    use, intrinsic :: iso_c_binding
++    implicit none
++    integer(c_int), pointer :: a
++    allocate(a)
++    call save_cptr(c_loc(a))
++    a = 100
++end subroutine init
++
++subroutine save_cptr(cptr_in)
++    use store_cptr
++    implicit none
++    type(c_ptr), intent(in) :: cptr_in
++    cptr = cptr_in
++end subroutine save_cptr
++
++program init_fails
++    use store_cptr
++    implicit none
++    integer(c_int), pointer :: val
++    call init()
++    call c_f_pointer(cptr,val)
++    if (val /= 100) stop 1
++end program init_fails
 diff --git a/gcc/testsuite/gfortran.dg/coarray_allocate_11.f90 b/gcc/testsuite/gfortran.dg/coarray_allocate_11.f90
 new file mode 100644
 index 00000000000..0e806f0955b
@@ -3719,6 +3831,30 @@ index 00000000000..00405519269
 +  print *, size(transfer([1],[bug4()]))         ! { dg-error "shall not have storage size 0" }
 +  print *, transfer(transfer([1],[bug4()]),[1]) ! { dg-error "shall not have storage size 0" }
 +end program bug4a
+diff --git a/gcc/testsuite/gfortran.dg/public_private_module_10.f90 b/gcc/testsuite/gfortran.dg/public_private_module_10.f90
+new file mode 100644
+index 00000000000..1877cc23279
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/public_private_module_10.f90
+@@ -0,0 +1,18 @@
++! { dg-do compile }
++! PR 87734 - this used to issue spurious errors.
++
++module m_vstring
++  implicit none
++
++  public :: vstring_length
++
++contains
++
++  subroutine vstring_cast()
++    character ( len = vstring_length() ) :: char_string
++  end subroutine
++
++  pure integer function vstring_length ()
++  end function
++
++end module
 diff --git a/gcc/testsuite/gfortran.dg/substr_8.f90 b/gcc/testsuite/gfortran.dg/substr_8.f90
 new file mode 100644
 index 00000000000..a3b77873f7c
