@@ -7,13 +7,15 @@ anlauf (4):
       2019-03-03  Harald Anlauf  <anlauf@gmx.de>
       2019-03-06  Harald Anlauf  <anlauf@gmx.de>
 
-ebotcazou (4):
+ebotcazou (5):
       PR ada/89349 	Backport from mainline 	2018-05-25  Arnaud Charlet  <charlet@adacore.com>
       * tree-ssa-dom.c (edge_info::derive_equivalences) <BIT_IOR_EXPR>: Fix 	and move around comment. 	<BIT_AND_EXPR>: Likewise. 	<BIT_NOT_EXPR>: Add specific handling for boolean types.
       Backport from mainline 	2019-02-19  Eric Botcazou  <ebotcazou@adacore.com>
       PR tree-optimization/89536 	* tree-ssa-dom.c (edge_info::derive_equivalences) <BIT_NOT_EXPR>: Test 	only whether bit #0 of the value is 0 instead of the entire value.
+      PR rtl-optimization/89588 	* loop-unroll.c (decide_unroll_constant_iterations): Make guard for 	explicit unrolling factor more robust.
 
-gccadmin (16):
+gccadmin (17):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -61,6 +63,12 @@ jvdelisle (2):
 luoxhu (1):
       backport r268834 from mainline to gcc-8-branch
 
+marxin (4):
+      Backport r268789
+      Backport r268981
+      Backport r269492
+      Backport r269558
+
 mpolacek (1):
       PR c++/89212 - ICE converting nullptr to pointer-to-member-function. 	* pt.c (tsubst_copy_and_build) <case CONSTRUCTOR>: Return early for 	null member pointer value.
 
@@ -99,10 +107,34 @@ index 2bf50aaf17a..56b6be4ebb2 100644
 -8.3.0
 +8.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d1fd9f6a7b9..7b4f7c00c3c 100644
+index d1fd9f6a7b9..166d9ea98ac 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,181 @@
+@@ -1,3 +1,205 @@
++2019-03-11  Eric Botcazou  <ebotcazou@adacore.com>
++
++	PR rtl-optimization/89588
++	* loop-unroll.c (decide_unroll_constant_iterations): Make guard for
++	explicit unrolling factor more robust.
++
++2019-03-11  Martin Liska  <mliska@suse.cz>
++
++	Backport from mainline
++	2019-03-08  Martin Liska  <mliska@suse.cz>
++
++	PR target/86952
++	* config/i386/i386.c (ix86_option_override_internal): Disable
++	jump tables when retpolines are used.
++
++2019-03-11  Martin Liska  <mliska@suse.cz>
++
++	Backport from mainline
++	2019-02-11  David Malcolm  <dmalcolm@redhat.com>
++
++	PR lto/88147
++	* input.c (selftest::test_line_offset_overflow): New selftest.
++	(selftest::input_c_tests): Call it.
++
 +2019-03-08  Martin Jambor  <mjambor@suse.cz>
 +
 +	Backport from mainline
@@ -919,10 +951,23 @@ index 4e83c7a7679..c68bdfdc57f 100644
  }
  
 diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
-index 7732f882f78..a88a29b51e6 100644
+index 7732f882f78..f1de97f73df 100644
 --- a/gcc/config/i386/i386.c
 +++ b/gcc/config/i386/i386.c
-@@ -39641,7 +39641,7 @@ ix86_vectorize_builtin_scatter (const_tree vectype,
+@@ -4958,6 +4958,12 @@ ix86_option_override_internal (bool main_args_p,
+ 			   opts->x_param_values,
+ 			   opts_set->x_param_values);
+ 
++  /* PR86952: jump table usage with retpolines is slow.
++     The PR provides some numbers about the slowness.  */
++  if (ix86_indirect_branch != indirect_branch_keep
++      && !opts_set->x_flag_jump_tables)
++    opts->x_flag_jump_tables = 0;
++
+   return true;
+ }
+ 
+@@ -39641,7 +39647,7 @@ ix86_vectorize_builtin_scatter (const_tree vectype,
  static bool
  use_rsqrt_p ()
  {
@@ -931,7 +976,7 @@ index 7732f882f78..a88a29b51e6 100644
  	  && flag_finite_math_only
  	  && !flag_trapping_math
  	  && flag_unsafe_math_optimizations);
-@@ -50999,7 +50999,7 @@ ix86_float_exceptions_rounding_supported_p (void)
+@@ -50999,7 +51005,7 @@ ix86_float_exceptions_rounding_supported_p (void)
       there is no adddf3 pattern (since x87 floating point only has
       XFmode operations) so the default hook implementation gets this
       wrong.  */
@@ -940,7 +985,7 @@ index 7732f882f78..a88a29b51e6 100644
  }
  
  /* Implement TARGET_ATOMIC_ASSIGN_EXPAND_FENV.  */
-@@ -51007,7 +51007,7 @@ ix86_float_exceptions_rounding_supported_p (void)
+@@ -51007,7 +51013,7 @@ ix86_float_exceptions_rounding_supported_p (void)
  static void
  ix86_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
  {
@@ -949,7 +994,7 @@ index 7732f882f78..a88a29b51e6 100644
      return;
    tree exceptions_var = create_tmp_var_raw (integer_type_node);
    if (TARGET_80387)
-@@ -51042,7 +51042,7 @@ ix86_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
+@@ -51042,7 +51048,7 @@ ix86_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
        tree update_fldenv = build_call_expr (fldenv, 1, fenv_addr);
        *update = build2 (COMPOUND_EXPR, void_type_node, *update, update_fldenv);
      }
@@ -958,7 +1003,7 @@ index 7732f882f78..a88a29b51e6 100644
      {
        tree mxcsr_orig_var = create_tmp_var_raw (unsigned_type_node);
        tree mxcsr_mod_var = create_tmp_var_raw (unsigned_type_node);
-@@ -51399,7 +51399,7 @@ ix86_excess_precision (enum excess_precision_type type)
+@@ -51399,7 +51405,7 @@ ix86_excess_precision (enum excess_precision_type type)
  	  return FLT_EVAL_METHOD_PROMOTE_TO_FLOAT;
  	else if (!TARGET_MIX_SSE_I387)
  	  {
@@ -2572,6 +2617,67 @@ index d16c15061c6..103ad6787ad 100644
  
  /* Return the decl for a function.  */
  tree gfc_get_function_decl (gfc_symbol *);
+diff --git a/gcc/input.c b/gcc/input.c
+index b6675768722..26c2bf21d52 100644
+--- a/gcc/input.c
++++ b/gcc/input.c
+@@ -3538,6 +3538,34 @@ for_each_line_table_case (void (*testcase) (const line_table_case &))
+   ASSERT_EQ (num_cases_tested, 2 * 12);
+ }
+ 
++/* Verify that when presented with a consecutive pair of locations with
++   a very large line offset, we don't attempt to consolidate them into
++   a single ordinary linemap where the line offsets within the line map
++   would lead to overflow (PR lto/88147).  */
++
++static void
++test_line_offset_overflow ()
++{
++  line_table_test ltt (line_table_case (5, 0));
++
++  linemap_add (line_table, LC_ENTER, false, "foo.c", 0);
++  linemap_line_start (line_table, 1, 100);
++  location_t loc_a = linemap_line_start (line_table, 2578, 255);
++  assert_loceq ("foo.c", 2578, 0, loc_a);
++
++  const line_map_ordinary *ordmap_a = LINEMAPS_LAST_ORDINARY_MAP (line_table);
++  ASSERT_EQ (ordmap_a->m_column_and_range_bits, 13);
++  ASSERT_EQ (ordmap_a->m_range_bits, 5);
++
++  location_t loc_b = linemap_line_start (line_table, 404198, 512);
++  assert_loceq ("foo.c", 404198, 0, loc_b);
++
++  /* We should have started a new linemap, rather than attempting to store
++     a very large line offset.  */
++  const line_map_ordinary *ordmap_b = LINEMAPS_LAST_ORDINARY_MAP (line_table);
++  ASSERT_NE (ordmap_a, ordmap_b);
++}
++
+ /* Run all of the selftests within this file.  */
+ 
+ void
+@@ -3577,6 +3605,8 @@ input_c_tests ()
+   for_each_line_table_case (test_lexer_char_constants);
+ 
+   test_reading_source_line ();
++
++  test_line_offset_overflow ();
+ }
+ 
+ } // namespace selftest
+diff --git a/gcc/loop-unroll.c b/gcc/loop-unroll.c
+index 5a0393224cb..4b36e7c44c3 100644
+--- a/gcc/loop-unroll.c
++++ b/gcc/loop-unroll.c
+@@ -399,7 +399,7 @@ decide_unroll_constant_iterations (struct loop *loop, int flags)
+     {
+       /* However we cannot unroll completely at the RTL level a loop with
+ 	 constant number of iterations; it should have been peeled instead.  */
+-      if ((unsigned) loop->unroll - 1 > desc->niter - 2)
++      if ((unsigned) loop->unroll > desc->niter - 1)
+ 	{
+ 	  if (dump_file)
+ 	    fprintf (dump_file, ";; Loop should have been peeled\n");
 diff --git a/gcc/rtlanal.c b/gcc/rtlanal.c
 index 0e79e53fb61..dabc5403f28 100644
 --- a/gcc/rtlanal.c
@@ -2592,10 +2698,32 @@ index 0e79e53fb61..dabc5403f28 100644
        offset1 = crtl->outgoing_args_size + get_frame_size ();
  #if !STACK_GROWS_DOWNWARD
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 7d5e65b1a74..30b858d6d3b 100644
+index 7d5e65b1a74..3cbe732c64a 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,176 @@
+@@ -1,3 +1,198 @@
++2019-03-11  Eric Botcazou  <ebotcazou@adacore.com>
++
++	* c-c++-common/unroll-6.c: New test.
++
++2019-03-11  Martin Liska  <mliska@suse.cz>
++
++	Backport from mainline
++	2019-03-10  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
++
++	* gcc.target/i386/indirect-thunk-extern-7.c: Add -fjump-tables to
++	dg-options.
++
++2019-03-11  Martin Liska  <mliska@suse.cz>
++
++	Backport from mainline
++	2019-03-08  Martin Liska  <mliska@suse.cz>
++
++	PR target/86952
++	* gcc.target/i386/indirect-thunk-7.c: Use jump tables to match
++	scanned pattern.
++	* gcc.target/i386/indirect-thunk-inline-7.c: Likewise.
++
 +2019-03-10  Thomas Koenig  <tkoenig@gcc.gnu.org>
 +
 +	PR fortran/71544
@@ -2772,6 +2900,21 @@ index 7d5e65b1a74..30b858d6d3b 100644
  2019-02-22  Release Manager
  
  	* GCC 8.3.0 released.
+diff --git a/gcc/testsuite/c-c++-common/unroll-6.c b/gcc/testsuite/c-c++-common/unroll-6.c
+new file mode 100644
+index 00000000000..fd74f19bed5
+--- /dev/null
++++ b/gcc/testsuite/c-c++-common/unroll-6.c
+@@ -0,0 +1,9 @@
++/* { dg-do compile } */
++/* { dg-options "-O -fno-tree-loop-optimize" } */
++
++void test (void)
++{
++  #pragma GCC unroll 2
++  for (int nv = 0; nv <= 2; nv += 2)
++    {}
++}
 diff --git a/gcc/testsuite/g++.dg/asm-qual-3.C b/gcc/testsuite/g++.dg/asm-qual-3.C
 index 95c9b570a5f..6faf0ef5e06 100644
 --- a/gcc/testsuite/g++.dg/asm-qual-3.C
@@ -3343,6 +3486,39 @@ index 00000000000..e3c7cdc54ff
 +    on the parent. e.g. rdma turns on simd+fp, but simd+fp does not turn on
 +    rdma since rdma is it's own group.  crypto however turns on aes and sha2
 +    and turning on sha2 and eas should turn on crypto!.  */
+diff --git a/gcc/testsuite/gcc.target/i386/indirect-thunk-7.c b/gcc/testsuite/gcc.target/i386/indirect-thunk-7.c
+index 3c72036dbaf..53868f46558 100644
+--- a/gcc/testsuite/gcc.target/i386/indirect-thunk-7.c
++++ b/gcc/testsuite/gcc.target/i386/indirect-thunk-7.c
+@@ -1,5 +1,5 @@
+ /* { dg-do compile } */
+-/* { dg-options "-O2 -mno-indirect-branch-register -mfunction-return=keep -mindirect-branch=thunk -fno-pic" } */
++/* { dg-options "-O2 -mno-indirect-branch-register -mfunction-return=keep -mindirect-branch=thunk -fno-pic -fjump-tables" } */
+ 
+ void func0 (void);
+ void func1 (void);
+diff --git a/gcc/testsuite/gcc.target/i386/indirect-thunk-extern-7.c b/gcc/testsuite/gcc.target/i386/indirect-thunk-extern-7.c
+index b7339745116..95c5cc176ae 100644
+--- a/gcc/testsuite/gcc.target/i386/indirect-thunk-extern-7.c
++++ b/gcc/testsuite/gcc.target/i386/indirect-thunk-extern-7.c
+@@ -1,5 +1,5 @@
+ /* { dg-do compile } */
+-/* { dg-options "-O2 -mno-indirect-branch-register -mfunction-return=keep -mindirect-branch=thunk-extern -fno-pic" } */
++/* { dg-options "-O2 -mno-indirect-branch-register -mfunction-return=keep -mindirect-branch=thunk-extern -fno-pic -fjump-tables" } */
+ 
+ void func0 (void);
+ void func1 (void);
+diff --git a/gcc/testsuite/gcc.target/i386/indirect-thunk-inline-7.c b/gcc/testsuite/gcc.target/i386/indirect-thunk-inline-7.c
+index ea009245a58..e6f064959a1 100644
+--- a/gcc/testsuite/gcc.target/i386/indirect-thunk-inline-7.c
++++ b/gcc/testsuite/gcc.target/i386/indirect-thunk-inline-7.c
+@@ -1,5 +1,5 @@
+ /* { dg-do compile } */
+-/* { dg-options "-O2 -mno-indirect-branch-register -mfunction-return=keep -mindirect-branch=thunk-inline -fno-pic" } */
++/* { dg-options "-O2 -mno-indirect-branch-register -mfunction-return=keep -mindirect-branch=thunk-inline -fno-pic -fjump-tables" } */
+ 
+ void func0 (void);
+ void func1 (void);
 diff --git a/gcc/testsuite/gcc.target/powerpc/crypto-builtin-1.c b/gcc/testsuite/gcc.target/powerpc/crypto-builtin-1.c
 index 234041d5c35..38245ffc370 100644
 --- a/gcc/testsuite/gcc.target/powerpc/crypto-builtin-1.c
@@ -4125,6 +4301,49 @@ index 373946f518a..0e69629f879 100644
  	      varinfo_t escaped = get_varinfo (find (escaped_id));
  	      if (bitmap_bit_p (escaped->solution, restrict_var->id))
  		escaped_p = true;
+diff --git a/libcpp/ChangeLog b/libcpp/ChangeLog
+index afc70cfce6c..bc1208a689b 100644
+--- a/libcpp/ChangeLog
++++ b/libcpp/ChangeLog
+@@ -1,3 +1,22 @@
++2019-03-11  Martin Liska  <mliska@suse.cz>
++
++	Backport from mainline
++	2019-02-18  Martin Liska  <mliska@suse.cz>
++
++	PR c++/89383
++	* line-map.c (linemap_line_start): Use 1UL in order
++	to not overflow.
++
++2019-03-11  Martin Liska  <mliska@suse.cz>
++
++	Backport from mainline
++	2019-02-11  Martin Liska  <mliska@suse.cz>
++
++	PR lto/88147
++	* line-map.c (linemap_line_start): Don't reuse the existing line
++	map if the line offset is sufficiently large to cause overflow
++	when computing location_t values.
++
+ 2019-02-22  Release Manager
+ 
+ 	* GCC 8.3.0 released.
+diff --git a/libcpp/line-map.c b/libcpp/line-map.c
+index a84084c99f0..72fe2c0dcec 100644
+--- a/libcpp/line-map.c
++++ b/libcpp/line-map.c
+@@ -755,6 +755,11 @@ linemap_line_start (struct line_maps *set, linenum_type to_line,
+       if (line_delta < 0
+ 	  || last_line != ORDINARY_MAP_STARTING_LINE_NUMBER (map)
+ 	  || SOURCE_COLUMN (map, highest) >= (1U << (column_bits - range_bits))
++	  || ( /* We can't reuse the map if the line offset is sufficiently
++		  large to cause overflow when computing location_t values.  */
++	      (to_line - ORDINARY_MAP_STARTING_LINE_NUMBER (map))
++	      >= (((uint64_t) 1)
++		  << (CHAR_BIT * sizeof (linenum_type) - column_bits)))
+ 	  || range_bits < map->m_range_bits)
+ 	map = linemap_check_ordinary
+ 	        (const_cast <line_map *>
 diff --git a/libgfortran/ChangeLog b/libgfortran/ChangeLog
 index 2909548317c..c5c76614119 100644
 --- a/libgfortran/ChangeLog
