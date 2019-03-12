@@ -82,9 +82,10 @@ pault (1):
 redi (1):
       PR libstdc++/89446 fix null pointer dereference in char_traits
 
-rguenth (2):
+rguenth (3):
       2019-03-01  Richard Biener  <rguenther@suse.de>
       2019-03-05  Richard Biener  <rguenther@suse.de>
+      2019-03-12  Richard Biener  <rguenther@suse.de>
 
 tkoenig (7):
       2019-02-22  Thomas Koenig  <tkoenig@gcc.gnu.org>
@@ -111,10 +112,16 @@ index 2bf50aaf17a..56b6be4ebb2 100644
 -8.3.0
 +8.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d1fd9f6a7b9..3de25eb3ec7 100644
+index d1fd9f6a7b9..217c3a2972c 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,213 @@
+@@ -1,3 +1,219 @@
++2019-03-12  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/89664
++	* tree-ssa-math-opts.c (execute_cse_reciprocals_1): Properly
++	free the occurance tree after the early out.
++
 +2019-03-12  Andre Vieira  <andre.simoesdiasvieira@arm.com>
 +
 +	Backport from mainline
@@ -2723,10 +2730,15 @@ index 0e79e53fb61..dabc5403f28 100644
        offset1 = crtl->outgoing_args_size + get_frame_size ();
  #if !STACK_GROWS_DOWNWARD
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 7d5e65b1a74..c6574c81295 100644
+index 7d5e65b1a74..52711b38a2f 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,211 @@
+@@ -1,3 +1,216 @@
++2019-03-12  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/89664
++	* gfortran.dg/pr89664.f90: New testcase.
++
 +2019-03-12  Andre Vieira  <andre.simoesdiasvieira@arm.com>
 +
 +	Backport from mainline
@@ -4067,6 +4079,36 @@ index 00000000000..00405519269
 +  print *, size(transfer([1],[bug4()]))         ! { dg-error "shall not have storage size 0" }
 +  print *, transfer(transfer([1],[bug4()]),[1]) ! { dg-error "shall not have storage size 0" }
 +end program bug4a
+diff --git a/gcc/testsuite/gfortran.dg/pr89664.f90 b/gcc/testsuite/gfortran.dg/pr89664.f90
+new file mode 100644
+index 00000000000..55578069957
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr89664.f90
+@@ -0,0 +1,24 @@
++! { dg-do compile }
++! { dg-options "-Ofast" }
++
++subroutine s (x)
++   real :: x
++   call sub (x)
++end
++subroutine sub (x)
++   real :: x, y
++   logical :: a, b
++   real :: f1, f2, f3, f4
++   y = f1()
++   a = .false.
++   if ( f2() > f3() ) a = .true.
++   b = .false.
++   if ( f2() > f4() ) b = .true.
++   if ( a ) then
++      x = 1.0
++   else if ( b ) then
++      x = 1.0/y**2
++   else
++      x = 1.0/y - y**2
++   end if
++end
 diff --git a/gcc/testsuite/gfortran.dg/public_private_module_10.f90 b/gcc/testsuite/gfortran.dg/public_private_module_10.f90
 new file mode 100644
 index 00000000000..1877cc23279
@@ -4345,6 +4387,27 @@ index f60e96cdfbe..0ebcc6d43c7 100644
  	    derive_equivalences (rhs, res, recursion_limit - 1);
  	    break;
  	  }
+diff --git a/gcc/tree-ssa-math-opts.c b/gcc/tree-ssa-math-opts.c
+index 8463979b4c8..a8f275bb78f 100644
+--- a/gcc/tree-ssa-math-opts.c
++++ b/gcc/tree-ssa-math-opts.c
+@@ -603,7 +603,7 @@ execute_cse_reciprocals_1 (gimple_stmt_iterator *def_gsi, tree def)
+ 
+   /* If it is more profitable to optimize 1 / x, don't optimize 1 / (x * x).  */
+   if (sqrt_recip_count > square_recip_count)
+-    return;
++    goto out;
+ 
+   /* Do the expensive part only if we can hope to optimize something.  */
+   if (count + square_recip_count >= threshold && count >= 1)
+@@ -646,6 +646,7 @@ execute_cse_reciprocals_1 (gimple_stmt_iterator *def_gsi, tree def)
+ 	}
+     }
+ 
++out:
+   for (occ = occ_head; occ; )
+     occ = free_bb (occ);
+ 
 diff --git a/gcc/tree-ssa-structalias.c b/gcc/tree-ssa-structalias.c
 index 373946f518a..0e69629f879 100644
 --- a/gcc/tree-ssa-structalias.c
