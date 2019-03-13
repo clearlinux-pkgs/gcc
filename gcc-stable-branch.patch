@@ -87,10 +87,11 @@ pault (1):
 redi (1):
       PR libstdc++/89446 fix null pointer dereference in char_traits
 
-rguenth (3):
+rguenth (4):
       2019-03-01  Richard Biener  <rguenther@suse.de>
       2019-03-05  Richard Biener  <rguenther@suse.de>
       2019-03-12  Richard Biener  <rguenther@suse.de>
+      2019-03-14  Richard Biener  <rguenther@suse.de>
 
 tkoenig (7):
       2019-02-22  Thomas Koenig  <tkoenig@gcc.gnu.org>
@@ -117,10 +118,38 @@ index 2bf50aaf17a..56b6be4ebb2 100644
 -8.3.0
 +8.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d1fd9f6a7b9..e97bd4a2327 100644
+index d1fd9f6a7b9..ce29caf81e4 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,240 @@
+@@ -1,3 +1,268 @@
++2019-03-14  Richard Biener  <rguenther@suse.de>
++
++	Backport from mainline
++	2019-03-13  Richard Biener  <rguenther@suse.de>
++
++	PR middle-end/89677
++	* tree-scalar-evolution.c (simplify_peeled_chrec): Do not
++	throw FP expressions at tree-affine.
++
++	2019-03-01  Richard Biener  <rguenther@suse.de>
++
++	PR middle-end/89497
++	* tree-cfgcleanup.h (cleanup_tree_cfg): Add SSA update flags
++	argument, defaulted to zero.
++	* passes.c (execute_function_todo): Pass down SSA update flags
++	to cleanup_tree_cfg.
++	* tree-cfgcleanup.c: Include tree-into-ssa.h and tree-cfgcleanup.h.
++	(cleanup_tree_cfg_1): After cleanup_control_flow_pre update SSA
++	form if requested.
++	(cleanup_tree_cfg_noloop): Pass down SSA update flags.
++	(cleanup_tree_cfg): Get and pass down SSA update flags.
++
++	2019-02-18  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/89296
++	* tree-ssa-loop-ch.c (ch_base::copy_headers): Restrict setting
++	of no-warning flag to cases that might emit the bogus warning.
++
 +2019-03-13  Andreas Krebbel  <krebbel@linux.ibm.com>
 +
 +	Backport from mainline
@@ -2997,6 +3026,19 @@ index 5a0393224cb..4b36e7c44c3 100644
  	{
  	  if (dump_file)
  	    fprintf (dump_file, ";; Loop should have been peeled\n");
+diff --git a/gcc/passes.c b/gcc/passes.c
+index 65ad690f6d9..a6c118543e6 100644
+--- a/gcc/passes.c
++++ b/gcc/passes.c
+@@ -1944,7 +1944,7 @@ execute_function_todo (function *fn, void *data)
+   /* Always cleanup the CFG before trying to update SSA.  */
+   if (flags & TODO_cleanup_cfg)
+     {
+-      cleanup_tree_cfg ();
++      cleanup_tree_cfg (flags & TODO_update_ssa_any);
+ 
+       /* When cleanup_tree_cfg merges consecutive blocks, it may
+ 	 perform some simplistic propagation when removing single
 diff --git a/gcc/rtlanal.c b/gcc/rtlanal.c
 index 0e79e53fb61..dabc5403f28 100644
 --- a/gcc/rtlanal.c
@@ -3017,10 +3059,31 @@ index 0e79e53fb61..dabc5403f28 100644
        offset1 = crtl->outgoing_args_size + get_frame_size ();
  #if !STACK_GROWS_DOWNWARD
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 7d5e65b1a74..51a1713741f 100644
+index 7d5e65b1a74..eeacad549d0 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,231 @@
+@@ -1,3 +1,252 @@
++2019-03-14  Richard Biener  <rguenther@suse.de>
++
++	Backport from mainline
++	2019-03-13  Richard Biener  <rguenther@suse.de>
++
++	PR middle-end/89677
++	* gcc.dg/torture/pr89677.c: New testcase.
++
++	2019-03-01  Richard Biener  <rguenther@suse.de>
++
++	PR middle-end/89497
++	* gcc.dg/tree-ssa/reassoc-43.c: Avoid false match in regex.
++	* g++.dg/tree-prof/devirt.C: Scan tracer dump for foldings
++	that happen now earlier.
++
++	2019-02-18  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/89296
++	* tree-ssa-loop-ch.c (ch_base::copy_headers): Restrict setting
++	of no-warning flag to cases that might emit the bogus warning.
++
 +2019-03-13  Andreas Krebbel  <krebbel@linux.ibm.com>
 +
 +	Backport from mainline
@@ -3610,6 +3673,27 @@ index 00000000000..29f3252b828
 +  printf("PASS\n");
 +  return 0;
 +}
+diff --git a/gcc/testsuite/g++.dg/tree-prof/devirt.C b/gcc/testsuite/g++.dg/tree-prof/devirt.C
+index 3de5dbcf688..d8fb2d9ef46 100644
+--- a/gcc/testsuite/g++.dg/tree-prof/devirt.C
++++ b/gcc/testsuite/g++.dg/tree-prof/devirt.C
+@@ -1,5 +1,5 @@
+ /* PR ipa/88561 */
+-/* { dg-options "-O3 -fdump-tree-dom3-details" } */
++/* { dg-options "-O3 -fdump-tree-tracer-details -fdump-tree-dom3-details" } */
+ 
+ struct nsISupports
+ {
+@@ -121,6 +121,6 @@ main ()
+     __builtin_abort ();
+ }
+ 
+-/* { dg-final-use-not-autofdo { scan-tree-dump-times "folding virtual function call to virtual unsigned int mozPersonalDictionary::_ZThn16" 1 "dom3" { target { lp64 || llp64 } } } } */
+-/* { dg-final-use-not-autofdo { scan-tree-dump-times "folding virtual function call to virtual unsigned int mozPersonalDictionary::_ZThn8" 1 "dom3" { target ilp32 } } } */
+-/* { dg-final-use-not-autofdo { scan-tree-dump-times "folding virtual function call to virtual unsigned int mozPersonalDictionary::AddRef" 1 "dom3" } } */
++/* { dg-final-use-not-autofdo { scan-tree-dump-times "folding virtual function call to virtual unsigned int mozPersonalDictionary::_ZThn16" 1 "tracer" { target { lp64 || llp64 } } } } */
++/* { dg-final-use-not-autofdo { scan-tree-dump-times "folding virtual function call to virtual unsigned int mozPersonalDictionary::_ZThn8" 1 "tracer" { target ilp32 } } } */
++/* { dg-final-use-not-autofdo { scan-tree-dump-times "folding virtual function call to virtual unsigned int mozPersonalDictionary::AddRef" 1 "tracer" } } */
 diff --git a/gcc/testsuite/gcc.c-torture/execute/20190228-1.c b/gcc/testsuite/gcc.c-torture/execute/20190228-1.c
 new file mode 100644
 index 00000000000..e71f33a279b
@@ -3659,6 +3743,56 @@ index 00000000000..6fca475ad9d
 +  if (foo (&s, 0) != 2)
 +    __builtin_abort ();
 +  return 0;
++}
+diff --git a/gcc/testsuite/gcc.dg/torture/pr89677.c b/gcc/testsuite/gcc.dg/torture/pr89677.c
+new file mode 100644
+index 00000000000..a45ca1f61a1
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/torture/pr89677.c
+@@ -0,0 +1,15 @@
++/* { dg-do compile } */
++/* { dg-require-effective-target int32plus } */
++
++int a, b, d;
++unsigned c;
++float e, f, g;
++void h() {
++    float *i = &g;
++    for (; c < 10; c += 3)
++      for (; d; d += 3) {
++	  a = *i;
++	  g = f + 0;
++	  f = b + *i + (b - e + 305219) + -b + 3;
++      }
++}
+diff --git a/gcc/testsuite/gcc.dg/tree-ssa/reassoc-43.c b/gcc/testsuite/gcc.dg/tree-ssa/reassoc-43.c
+index ea44f300f94..90e1e86b3cb 100644
+--- a/gcc/testsuite/gcc.dg/tree-ssa/reassoc-43.c
++++ b/gcc/testsuite/gcc.dg/tree-ssa/reassoc-43.c
+@@ -50,4 +50,4 @@ c_parser_translation_unit (c_parser * parser)
+ 	}
+     }
+ }
+-/* { dg-final { scan-tree-dump-not "0 != 0" "reassoc2"} } */
++/* { dg-final { scan-tree-dump-not "\[ (\]0 != 0" "reassoc2"} } */
+diff --git a/gcc/testsuite/gcc.dg/uninit-pr89296.c b/gcc/testsuite/gcc.dg/uninit-pr89296.c
+new file mode 100644
+index 00000000000..9d81b32b979
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/uninit-pr89296.c
+@@ -0,0 +1,13 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -Wuninitialized" } */
++
++int get_a_value ();
++void printk(const char *);
++void test_func()
++{
++    int loop;
++    while (!loop) {             /* { dg-warning "is used uninitialized" } */
++	loop = get_a_value();
++	printk("...");
++    }
 +}
 diff --git a/gcc/testsuite/gcc.target/aarch64/options_set_1.c b/gcc/testsuite/gcc.target/aarch64/options_set_1.c
 new file mode 100644
@@ -4745,6 +4879,96 @@ index 00000000000..ce3985a1363
 +  procedure Proc (S : String; N : in out Natural; To_Add : out Boolean);
 +
 +end Opt77_Pkg;
+diff --git a/gcc/tree-cfgcleanup.c b/gcc/tree-cfgcleanup.c
+index c261e71d43b..6d57329d4eb 100644
+--- a/gcc/tree-cfgcleanup.c
++++ b/gcc/tree-cfgcleanup.c
+@@ -43,6 +43,8 @@ along with GCC; see the file COPYING3.  If not see
+ #include "gimple-match.h"
+ #include "gimple-fold.h"
+ #include "tree-ssa-loop-niter.h"
++#include "tree-into-ssa.h"
++#include "tree-cfgcleanup.h"
+ 
+ 
+ /* The set of blocks in that at least one of the following changes happened:
+@@ -761,7 +763,7 @@ cleanup_control_flow_pre ()
+ /* Iterate the cfg cleanups, while anything changes.  */
+ 
+ static bool
+-cleanup_tree_cfg_1 (void)
++cleanup_tree_cfg_1 (unsigned ssa_update_flags)
+ {
+   bool retval = false;
+   basic_block bb;
+@@ -786,6 +788,8 @@ cleanup_tree_cfg_1 (void)
+ 
+   /* After doing the above SSA form should be valid (or an update SSA
+      should be required).  */
++  if (ssa_update_flags)
++    update_ssa (ssa_update_flags);
+ 
+   /* Continue by iterating over all basic blocks looking for BB merging
+      opportunities.  */
+@@ -828,7 +832,7 @@ mfb_keep_latches (edge e)
+    Return true if the flowgraph was modified, false otherwise.  */
+ 
+ static bool
+-cleanup_tree_cfg_noloop (void)
++cleanup_tree_cfg_noloop (unsigned ssa_update_flags)
+ {
+   bool changed;
+ 
+@@ -908,7 +912,7 @@ cleanup_tree_cfg_noloop (void)
+ 	  }
+     }
+ 
+-  changed |= cleanup_tree_cfg_1 ();
++  changed |= cleanup_tree_cfg_1 (ssa_update_flags);
+ 
+   gcc_assert (dom_info_available_p (CDI_DOMINATORS));
+ 
+@@ -966,9 +970,9 @@ repair_loop_structures (void)
+ /* Cleanup cfg and repair loop structures.  */
+ 
+ bool
+-cleanup_tree_cfg (void)
++cleanup_tree_cfg (unsigned ssa_update_flags)
+ {
+-  bool changed = cleanup_tree_cfg_noloop ();
++  bool changed = cleanup_tree_cfg_noloop (ssa_update_flags);
+ 
+   if (current_loops != NULL
+       && loops_state_satisfies_p (LOOPS_NEED_FIXUP))
+diff --git a/gcc/tree-cfgcleanup.h b/gcc/tree-cfgcleanup.h
+index 0b33d875365..7b6dbc1ee79 100644
+--- a/gcc/tree-cfgcleanup.h
++++ b/gcc/tree-cfgcleanup.h
+@@ -22,7 +22,7 @@ along with GCC; see the file COPYING3.  If not see
+ 
+ /* In tree-cfgcleanup.c  */
+ extern bitmap cfgcleanup_altered_bbs;
+-extern bool cleanup_tree_cfg (void);
++extern bool cleanup_tree_cfg (unsigned = 0);
+ extern bool fixup_noreturn_call (gimple *stmt);
+ 
+ #endif /* GCC_TREE_CFGCLEANUP_H */
+diff --git a/gcc/tree-scalar-evolution.c b/gcc/tree-scalar-evolution.c
+index fefc9de96af..c955352018a 100644
+--- a/gcc/tree-scalar-evolution.c
++++ b/gcc/tree-scalar-evolution.c
+@@ -1421,6 +1421,11 @@ simplify_peeled_chrec (struct loop *loop, tree arg, tree init_cond)
+       return build_polynomial_chrec (loop->num, init_cond, right);
+     }
+ 
++  /* The affine code only deals with pointer and integer types.  */
++  if (!POINTER_TYPE_P (type)
++      && !INTEGRAL_TYPE_P (type))
++    return chrec_dont_know;
++
+   /* Try harder to check if they are equal.  */
+   tree_to_aff_combination_expand (left, type, &aff1, &peeled_chrec_map);
+   tree_to_aff_combination_expand (step_val, type, &aff2, &peeled_chrec_map);
 diff --git a/gcc/tree-ssa-dom.c b/gcc/tree-ssa-dom.c
 index f60e96cdfbe..0ebcc6d43c7 100644
 --- a/gcc/tree-ssa-dom.c
@@ -4810,6 +5034,36 @@ index f60e96cdfbe..0ebcc6d43c7 100644
  	    derive_equivalences (rhs, res, recursion_limit - 1);
  	    break;
  	  }
+diff --git a/gcc/tree-ssa-loop-ch.c b/gcc/tree-ssa-loop-ch.c
+index 488999dd8ce..92e0c435e98 100644
+--- a/gcc/tree-ssa-loop-ch.c
++++ b/gcc/tree-ssa-loop-ch.c
+@@ -376,11 +376,23 @@ ch_base::copy_headers (function *fun)
+ 		{
+ 		  gimple *stmt = gsi_stmt (bsi);
+ 		  if (gimple_code (stmt) == GIMPLE_COND)
+-		    gimple_set_no_warning (stmt, true);
++		    {
++		      tree lhs = gimple_cond_lhs (stmt);
++		      if (gimple_cond_code (stmt) != EQ_EXPR
++			  && gimple_cond_code (stmt) != NE_EXPR
++			  && INTEGRAL_TYPE_P (TREE_TYPE (lhs))
++			  && TYPE_OVERFLOW_UNDEFINED (TREE_TYPE (lhs)))
++			gimple_set_no_warning (stmt, true);
++		    }
+ 		  else if (is_gimple_assign (stmt))
+ 		    {
+ 		      enum tree_code rhs_code = gimple_assign_rhs_code (stmt);
+-		      if (TREE_CODE_CLASS (rhs_code) == tcc_comparison)
++		      tree rhs1 = gimple_assign_rhs1 (stmt);
++		      if (TREE_CODE_CLASS (rhs_code) == tcc_comparison
++			  && rhs_code != EQ_EXPR
++			  && rhs_code != NE_EXPR
++			  && INTEGRAL_TYPE_P (TREE_TYPE (rhs1))
++			  && TYPE_OVERFLOW_UNDEFINED (TREE_TYPE (rhs1)))
+ 			gimple_set_no_warning (stmt, true);
+ 		    }
+ 		}
 diff --git a/gcc/tree-ssa-math-opts.c b/gcc/tree-ssa-math-opts.c
 index 8463979b4c8..a8f275bb78f 100644
 --- a/gcc/tree-ssa-math-opts.c
