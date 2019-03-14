@@ -88,10 +88,11 @@ pault (1):
 redi (1):
       PR libstdc++/89446 fix null pointer dereference in char_traits
 
-rguenth (4):
+rguenth (5):
       2019-03-01  Richard Biener  <rguenther@suse.de>
       2019-03-05  Richard Biener  <rguenther@suse.de>
       2019-03-12  Richard Biener  <rguenther@suse.de>
+      2019-03-14  Richard Biener  <rguenther@suse.de>
       2019-03-14  Richard Biener  <rguenther@suse.de>
 
 tkoenig (8):
@@ -123,10 +124,18 @@ index 2bf50aaf17a..56b6be4ebb2 100644
 -8.3.0
 +8.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d1fd9f6a7b9..c779ed45d92 100644
+index d1fd9f6a7b9..038b1bd714e 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,274 @@
+@@ -1,3 +1,282 @@
++2019-03-14  Richard Biener  <rguenther@suse.de>
++
++	PR middle-end/89572
++	* tree-scalar-evolution.c (get_loop_exit_condition): Use
++	safe_dyn_cast.
++	* tree-ssa-loop-ivcanon.c (canonicalize_loop_induction_variables):
++	Use gimple_location_safe.
++
 +2019-03-13  Vladimir Makarov  <vmakarov@redhat.com>
 +
 +	PR target/85860
@@ -3102,10 +3111,15 @@ index 0e79e53fb61..dabc5403f28 100644
        offset1 = crtl->outgoing_args_size + get_frame_size ();
  #if !STACK_GROWS_DOWNWARD
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 7d5e65b1a74..015e934309a 100644
+index 7d5e65b1a74..4ba559dbd3f 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,263 @@
+@@ -1,3 +1,268 @@
++2019-03-14  Richard Biener  <rguenther@suse.de>
++
++	PR middle-end/89572
++	* gcc.dg/torture/pr89572.c: New testcase.
++
 +2019-03-13  Thomas Koenig  <tkoenig@gcc.gnu.org>
 +
 +	PR fortran/87673
@@ -3797,6 +3811,40 @@ index 00000000000..6fca475ad9d
 +  if (foo (&s, 0) != 2)
 +    __builtin_abort ();
 +  return 0;
++}
+diff --git a/gcc/testsuite/gcc.dg/torture/pr89572.c b/gcc/testsuite/gcc.dg/torture/pr89572.c
+new file mode 100644
+index 00000000000..1c293850c11
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/torture/pr89572.c
+@@ -0,0 +1,28 @@
++/* { dg-do compile } */
++/* { dg-additional-options "-finline-functions" } */
++
++int vh, it, k1;
++
++void
++vn (void)
++{
++  ++vh;
++  if (vh == 0 && it == 0)
++    k1 = -k1;
++}
++
++__attribute__ ((returns_twice)) void
++ef (int *uw)
++{
++  while (uw != (void *) 0)
++    {
++      vn ();
++      *uw = 0;
++    }
++}
++
++void
++gu (int *uw)
++{
++  ef (uw);
 +}
 diff --git a/gcc/testsuite/gcc.dg/torture/pr89677.c b/gcc/testsuite/gcc.dg/torture/pr89677.c
 new file mode 100644
@@ -5057,9 +5105,18 @@ index 0b33d875365..7b6dbc1ee79 100644
  
  #endif /* GCC_TREE_CFGCLEANUP_H */
 diff --git a/gcc/tree-scalar-evolution.c b/gcc/tree-scalar-evolution.c
-index fefc9de96af..c955352018a 100644
+index fefc9de96af..759bc612566 100644
 --- a/gcc/tree-scalar-evolution.c
 +++ b/gcc/tree-scalar-evolution.c
+@@ -875,7 +875,7 @@ get_loop_exit_condition (const struct loop *loop)
+       gimple *stmt;
+ 
+       stmt = last_stmt (exit_edge->src);
+-      if (gcond *cond_stmt = dyn_cast <gcond *> (stmt))
++      if (gcond *cond_stmt = safe_dyn_cast <gcond *> (stmt))
+ 	res = cond_stmt;
+     }
+ 
 @@ -1421,6 +1421,11 @@ simplify_peeled_chrec (struct loop *loop, tree arg, tree init_cond)
        return build_polynomial_chrec (loop->num, init_cond, right);
      }
@@ -5167,6 +5224,28 @@ index 488999dd8ce..92e0c435e98 100644
  			gimple_set_no_warning (stmt, true);
  		    }
  		}
+diff --git a/gcc/tree-ssa-loop-ivcanon.c b/gcc/tree-ssa-loop-ivcanon.c
+index 7f8b5199b6b..5b6db6aa9f3 100644
+--- a/gcc/tree-ssa-loop-ivcanon.c
++++ b/gcc/tree-ssa-loop-ivcanon.c
+@@ -1177,7 +1177,7 @@ canonicalize_loop_induction_variables (struct loop *loop,
+ 	= niter_desc.may_be_zero && !integer_zerop (niter_desc.may_be_zero);
+     }
+   if (TREE_CODE (niter) == INTEGER_CST)
+-    locus = gimple_location (last_stmt (exit->src));
++    locus = gimple_location_safe (last_stmt (exit->src));
+   else
+     {
+       /* For non-constant niter fold may_be_zero into niter again.  */
+@@ -1204,7 +1204,7 @@ canonicalize_loop_induction_variables (struct loop *loop,
+ 	niter = find_loop_niter_by_eval (loop, &exit);
+ 
+       if (exit)
+-        locus = gimple_location (last_stmt (exit->src));
++        locus = gimple_location_safe (last_stmt (exit->src));
+ 
+       if (TREE_CODE (niter) != INTEGER_CST)
+ 	exit = NULL;
 diff --git a/gcc/tree-ssa-math-opts.c b/gcc/tree-ssa-math-opts.c
 index 8463979b4c8..a8f275bb78f 100644
 --- a/gcc/tree-ssa-math-opts.c
