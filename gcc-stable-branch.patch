@@ -17,7 +17,8 @@ ebotcazou (5):
       PR tree-optimization/89536 	* tree-ssa-dom.c (edge_info::derive_equivalences) <BIT_NOT_EXPR>: Test 	only whether bit #0 of the value is 0 instead of the entire value.
       PR rtl-optimization/89588 	* loop-unroll.c (decide_unroll_constant_iterations): Make guard for 	explicit unrolling factor more robust.
 
-gccadmin (20):
+gccadmin (21):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -74,11 +75,12 @@ krebbel (2):
 luoxhu (1):
       backport r268834 from mainline to gcc-8-branch
 
-marxin (4):
+marxin (5):
       Backport r268789
       Backport r268981
       Backport r269492
       Backport r269558
+      Subject: Backport r269684
 
 mpolacek (1):
       PR c++/89212 - ICE converting nullptr to pointer-to-member-function. 	* pt.c (tsubst_copy_and_build) <case CONSTRUCTOR>: Return early for 	null member pointer value.
@@ -89,12 +91,13 @@ pault (1):
 redi (1):
       PR libstdc++/89446 fix null pointer dereference in char_traits
 
-rguenth (5):
+rguenth (6):
       2019-03-01  Richard Biener  <rguenther@suse.de>
       2019-03-05  Richard Biener  <rguenther@suse.de>
       2019-03-12  Richard Biener  <rguenther@suse.de>
       2019-03-14  Richard Biener  <rguenther@suse.de>
       2019-03-14  Richard Biener  <rguenther@suse.de>
+      2019-03-15  Richard Biener  <rguenther@suse.de>
 
 tkoenig (8):
       2019-02-22  Thomas Koenig  <tkoenig@gcc.gnu.org>
@@ -125,10 +128,27 @@ index 2bf50aaf17a..56b6be4ebb2 100644
 -8.3.0
 +8.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d1fd9f6a7b9..df07bb57464 100644
+index d1fd9f6a7b9..f566e1610c7 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,291 @@
+@@ -1,3 +1,308 @@
++2019-03-15  Richard Biener  <rguenther@suse.de>
++
++	Backport from mainline
++	2018-11-30  Jakub Jelinek  <jakub@redhat.com>
++
++	PR testsuite/85368
++	* params.def (PARAM_LOGICAL_OP_NON_SHORT_CIRCUIT): New param.
++	* tree-ssa-ifcombine.c (ifcombine_ifandif): If
++	--param logical-op-non-short-circuit is present, override
++	LOGICAL_OP_NON_SHORT_CIRCUIT value from the param.
++	* fold-const.c (fold_range_test, fold_truth_andor): Likewise.
++
++2019-03-15  Martin Liska  <mliska@suse.cz>
++
++	PR other/89712
++	* doc/invoke.texi: Remove -fdump-class-hierarchy option.
++
 +2019-03-14  Martin Jambor  <mjambor@suse.cz>
 +
 +	Backport from mainline
@@ -1973,6 +1993,18 @@ index 11e926e9d47..297f7d5975b 100644
  vector unsigned char __builtin_crypto_vpermxor (vector unsigned char,
                                                  vector unsigned char,
                                                  vector unsigned char);
+diff --git a/gcc/doc/invoke.texi b/gcc/doc/invoke.texi
+index e5c4e8125aa..4ee24c3ab78 100644
+--- a/gcc/doc/invoke.texi
++++ b/gcc/doc/invoke.texi
+@@ -554,7 +554,6 @@ Objective-C and Objective-C++ Dialects}.
+ -fdisable-tree-@var{pass_name} @gol
+ -fdisable-tree-@var{pass-name}=@var{range-list} @gol
+ -fdump-noaddr  -fdump-unnumbered  -fdump-unnumbered-links @gol
+--fdump-class-hierarchy@r{[}-@var{n}@r{]} @gol
+ -fdump-final-insns@r{[}=@var{file}@r{]} @gol
+ -fdump-ipa-all  -fdump-ipa-cgraph  -fdump-ipa-inline @gol
+ -fdump-lang-all @gol
 diff --git a/gcc/dwarf2out.c b/gcc/dwarf2out.c
 index 0940959cb54..36884c71fe0 100644
 --- a/gcc/dwarf2out.c
@@ -2074,6 +2106,45 @@ index 0940959cb54..36884c71fe0 100644
        *slot = ctnode;
      }
  
+diff --git a/gcc/fold-const.c b/gcc/fold-const.c
+index 36bcc65f14d..af67feb5fbc 100644
+--- a/gcc/fold-const.c
++++ b/gcc/fold-const.c
+@@ -5515,12 +5515,15 @@ fold_range_test (location_t loc, enum tree_code code, tree type,
+   /* On machines where the branch cost is expensive, if this is a
+      short-circuited branch and the underlying object on both sides
+      is the same, make a non-short-circuit operation.  */
+-  else if (LOGICAL_OP_NON_SHORT_CIRCUIT
+-	   && !flag_sanitize_coverage
+-	   && lhs != 0 && rhs != 0
+-	   && (code == TRUTH_ANDIF_EXPR
+-	       || code == TRUTH_ORIF_EXPR)
+-	   && operand_equal_p (lhs, rhs, 0))
++  bool logical_op_non_short_circuit = LOGICAL_OP_NON_SHORT_CIRCUIT;
++  if (PARAM_VALUE (PARAM_LOGICAL_OP_NON_SHORT_CIRCUIT) != -1)
++    logical_op_non_short_circuit
++      = PARAM_VALUE (PARAM_LOGICAL_OP_NON_SHORT_CIRCUIT);
++  if (logical_op_non_short_circuit
++      && !flag_sanitize_coverage
++      && lhs != 0 && rhs != 0
++      && (code == TRUTH_ANDIF_EXPR || code == TRUTH_ORIF_EXPR)
++      && operand_equal_p (lhs, rhs, 0))
+     {
+       /* If simple enough, just rewrite.  Otherwise, make a SAVE_EXPR
+ 	 unless we are at top level or LHS contains a PLACEHOLDER_EXPR, in
+@@ -8165,7 +8168,11 @@ fold_truth_andor (location_t loc, enum tree_code code, tree type,
+   if ((tem = fold_truth_andor_1 (loc, code, type, arg0, arg1)) != 0)
+     return tem;
+ 
+-  if (LOGICAL_OP_NON_SHORT_CIRCUIT
++  bool logical_op_non_short_circuit = LOGICAL_OP_NON_SHORT_CIRCUIT;
++  if (PARAM_VALUE (PARAM_LOGICAL_OP_NON_SHORT_CIRCUIT) != -1)
++    logical_op_non_short_circuit
++      = PARAM_VALUE (PARAM_LOGICAL_OP_NON_SHORT_CIRCUIT);
++  if (logical_op_non_short_circuit
+       && !flag_sanitize_coverage
+       && (code == TRUTH_AND_EXPR
+           || code == TRUTH_ANDIF_EXPR
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
 index 4d2782f1b19..3b0b6a25ba0 100644
 --- a/gcc/fortran/ChangeLog
@@ -3116,6 +3187,22 @@ index 5405c4d2adb..e3adf78e57c 100644
  		    }
  		  /* We should invalidate potential inheritance or
  		     splitting for the current insn usages to the next
+diff --git a/gcc/params.def b/gcc/params.def
+index dad47ec2b00..e3ad05fd182 100644
+--- a/gcc/params.def
++++ b/gcc/params.def
+@@ -1331,6 +1331,11 @@ DEFPARAM(PARAM_AVOID_FMA_MAX_BITS,
+ 	 "Maximum number of bits for which we avoid creating FMAs.",
+ 	 0, 0, 512)
+ 
++DEFPARAM(PARAM_LOGICAL_OP_NON_SHORT_CIRCUIT,
++	 "logical-op-non-short-circuit",
++	 "True if a non-short-circuit operation is optimal.",
++	 -1, -1, 1)
++
+ /*
+ 
+ Local variables:
 diff --git a/gcc/passes.c b/gcc/passes.c
 index 65ad690f6d9..a6c118543e6 100644
 --- a/gcc/passes.c
@@ -3149,10 +3236,19 @@ index 0e79e53fb61..dabc5403f28 100644
        offset1 = crtl->outgoing_args_size + get_frame_size ();
  #if !STACK_GROWS_DOWNWARD
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 7d5e65b1a74..9aabab1cf32 100644
+index 7d5e65b1a74..c631992f486 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,276 @@
+@@ -1,3 +1,285 @@
++2019-03-15  Richard Biener  <rguenther@suse.de>
++
++	Backport from mainline
++	2019-03-06  Richard Biener  <rguenther@suse.de>
++
++	PR testsuite/89551
++	* gcc.dg/uninit-pred-8_b.c: Force logical-op-non-short-circuit
++	the way that makes the testcase PASS.
++
 +2019-03-14  Martin Jambor  <mjambor@suse.cz>
 +
 +	Backport from mainline
@@ -3993,6 +4089,20 @@ index 00000000000..9d81b32b979
 +	printk("...");
 +    }
 +}
+diff --git a/gcc/testsuite/gcc.dg/uninit-pred-8_b.c b/gcc/testsuite/gcc.dg/uninit-pred-8_b.c
+index 06e2eba27d0..d9c3c42c302 100644
+--- a/gcc/testsuite/gcc.dg/uninit-pred-8_b.c
++++ b/gcc/testsuite/gcc.dg/uninit-pred-8_b.c
+@@ -1,6 +1,7 @@
+-
+ /* { dg-do compile } */
+-/* { dg-options "-Wuninitialized -O2" } */
++/* ???  Jump threading makes a mess of the logical-op-non-short-circuit=0 case
++   so force it our way.  */
++/* { dg-options "-Wuninitialized -O2 --param logical-op-non-short-circuit=1" } */
+ 
+ int g;
+ void bar();
 diff --git a/gcc/testsuite/gcc.target/aarch64/options_set_1.c b/gcc/testsuite/gcc.target/aarch64/options_set_1.c
 new file mode 100644
 index 00000000000..40d9a05c905
@@ -5291,6 +5401,31 @@ index f60e96cdfbe..0ebcc6d43c7 100644
  	    derive_equivalences (rhs, res, recursion_limit - 1);
  	    break;
  	  }
+diff --git a/gcc/tree-ssa-ifcombine.c b/gcc/tree-ssa-ifcombine.c
+index b63c600c47b..828ee81d898 100644
+--- a/gcc/tree-ssa-ifcombine.c
++++ b/gcc/tree-ssa-ifcombine.c
+@@ -40,6 +40,7 @@ along with GCC; see the file COPYING3.  If not see
+ #include "gimplify-me.h"
+ #include "tree-cfg.h"
+ #include "tree-ssa.h"
++#include "params.h"
+ 
+ #ifndef LOGICAL_OP_NON_SHORT_CIRCUIT
+ #define LOGICAL_OP_NON_SHORT_CIRCUIT \
+@@ -556,7 +557,11 @@ ifcombine_ifandif (basic_block inner_cond_bb, bool inner_inv,
+ 	{
+ 	  tree t1, t2;
+ 	  gimple_stmt_iterator gsi;
+-	  if (!LOGICAL_OP_NON_SHORT_CIRCUIT || flag_sanitize_coverage)
++	  bool logical_op_non_short_circuit = LOGICAL_OP_NON_SHORT_CIRCUIT;
++	  if (PARAM_VALUE (PARAM_LOGICAL_OP_NON_SHORT_CIRCUIT) != -1)
++	    logical_op_non_short_circuit
++	      = PARAM_VALUE (PARAM_LOGICAL_OP_NON_SHORT_CIRCUIT);
++	  if (!logical_op_non_short_circuit || flag_sanitize_coverage)
+ 	    return false;
+ 	  /* Only do this optimization if the inner bb contains only the conditional. */
+ 	  if (!gsi_one_before_end_p (gsi_start_nondebug_after_labels_bb (inner_cond_bb)))
 diff --git a/gcc/tree-ssa-loop-ch.c b/gcc/tree-ssa-loop-ch.c
 index 488999dd8ce..92e0c435e98 100644
 --- a/gcc/tree-ssa-loop-ch.c
