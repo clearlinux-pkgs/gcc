@@ -17,7 +17,9 @@ ebotcazou (5):
       PR tree-optimization/89536 	* tree-ssa-dom.c (edge_info::derive_equivalences) <BIT_NOT_EXPR>: Test 	only whether bit #0 of the value is 0 instead of the entire value.
       PR rtl-optimization/89588 	* loop-unroll.c (decide_unroll_constant_iterations): Make guard for 	explicit unrolling factor more robust.
 
-gccadmin (21):
+gccadmin (23):
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -99,7 +101,7 @@ rguenth (6):
       2019-03-14  Richard Biener  <rguenther@suse.de>
       2019-03-15  Richard Biener  <rguenther@suse.de>
 
-tkoenig (8):
+tkoenig (10):
       2019-02-22  Thomas Koenig  <tkoenig@gcc.gnu.org>
       2019-02-23  Thomas Koenig  <tkoenig@gcc.gnu.org>
       2019-03-03  Thomas Koenig  <tkoenig@gcc.gnu.org>
@@ -108,6 +110,8 @@ tkoenig (8):
       2019-03-10  Thomas Koenig  <tkoenig@gcc.gnu.org> 	Steven G. Kargl  <kargl@gcc.gnu.org>
       2019-03-10  Thomas Koenig  <tkoenig@gcc.gnu.org>
       2019-03-13  Thomas Koenig  <tkoenig@gcc.gnu.org>
+      2019-03-16  Thomas Koenig  <tkoenig@gcc.gnu.org>
+      2019-03-16  Thomas Koenig  <tkoenig@gcc.gnu.org>
 
 tnfchris (3):
       AArch64: Make every option in options.def one line (GCC-8).
@@ -2146,10 +2150,43 @@ index 36bcc65f14d..af67feb5fbc 100644
        && (code == TRUTH_AND_EXPR
            || code == TRUTH_ANDIF_EXPR
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index 4d2782f1b19..3b0b6a25ba0 100644
+index 4d2782f1b19..27f7b562bc1 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,138 @@
+@@ -1,3 +1,171 @@
++2019-03-16  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	PR fortran/66089
++	Backport from trunk
++	* trans-array.c (gfc_scalar_elemental_arg_saved_as_reference):
++	Return false if a scalar tempoary is needed.
++	(gfc_walk_variable_expr): Fix up class refs.
++
++2019-03-16  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	PR fortran/66695
++	PR fortran/77746
++	PR fortran/79485
++	Backport from trunk
++	* gfortran.h (gfc_symbol): Add bind_c component.
++	(gfc_get_gsymbol): Add argument bind_c.
++	* decl.c (add_global_entry): Add bind_c argument to
++	gfc_get_symbol.
++	* parse.c (parse_block_data): Likewise.
++	(parse_module): Likewise.
++	(add_global_procedure): Likewise.
++	(add_global_program): Likewise.
++	* resolve.c (resolve_common_blocks): Likewise.
++	(resolve_global_procedure): Likewise.
++	(gfc_verify_binding_labels): Likewise.
++	* symbol.c (gfc_get_gsymbol): Add argument bind_c. Set bind_c
++	in gsym.
++	* trans-decl.c (gfc_get_module_backend_decl): Add bind_c argument
++	to gfc_get_symbol.
++	(gfc_get_extern_function_decl): If the sym has a binding label
++	and it cannot be found in the global symbol tabel, it is the wrong
++	one and vice versa.
++
 +2019-03-13  Thomas Koenig  <tkoenig@gcc.gnu.org>
 +
 +	PR fortran/87673
@@ -2410,7 +2447,7 @@ index 2eae7f0f351..cb9f0d9f23d 100644
  
  	      /* Add component _extends.  */
 diff --git a/gcc/fortran/decl.c b/gcc/fortran/decl.c
-index 9ce89c093c0..41b1a992a57 100644
+index 9ce89c093c0..7cc276ea64a 100644
 --- a/gcc/fortran/decl.c
 +++ b/gcc/fortran/decl.c
 @@ -1678,6 +1678,14 @@ gfc_set_constant_character_len (gfc_charlen_t len, gfc_expr *expr,
@@ -2428,6 +2465,24 @@ index 9ce89c093c0..41b1a992a57 100644
      }
  }
  
+@@ -7156,7 +7164,7 @@ add_global_entry (const char *name, const char *binding_label, bool sub,
+      name is a global identifier.  */
+   if (!binding_label || gfc_notification_std (GFC_STD_F2008))
+     {
+-      s = gfc_get_gsymbol (name);
++      s = gfc_get_gsymbol (name, false);
+ 
+       if (s->defined || (s->type != GSYM_UNKNOWN && s->type != type))
+ 	{
+@@ -7178,7 +7186,7 @@ add_global_entry (const char *name, const char *binding_label, bool sub,
+       && (!gfc_notification_std (GFC_STD_F2008)
+ 	  || strcmp (name, binding_label) != 0))
+     {
+-      s = gfc_get_gsymbol (binding_label);
++      s = gfc_get_gsymbol (binding_label, true);
+ 
+       if (s->defined || (s->type != GSYM_UNKNOWN && s->type != type))
+ 	{
 diff --git a/gcc/fortran/expr.c b/gcc/fortran/expr.c
 index 6ef4eb864e6..2731a714fca 100644
 --- a/gcc/fortran/expr.c
@@ -2450,10 +2505,27 @@ index 6ef4eb864e6..2731a714fca 100644
  			gfc_free_expr (p->ts.u.cl->length);
  
 diff --git a/gcc/fortran/gfortran.h b/gcc/fortran/gfortran.h
-index 698d211d74e..abdefe12ed2 100644
+index 698d211d74e..dd512d94922 100644
 --- a/gcc/fortran/gfortran.h
 +++ b/gcc/fortran/gfortran.h
-@@ -3426,7 +3426,7 @@ bool gfc_is_class_scalar_expr (gfc_expr *);
+@@ -1883,6 +1883,7 @@ typedef struct gfc_gsymbol
+   enum gfc_symbol_type type;
+ 
+   int defined, used;
++  bool bind_c;
+   locus where;
+   gfc_namespace *ns;
+ }
+@@ -3059,7 +3060,7 @@ void gfc_enforce_clean_symbol_state (void);
+ void gfc_free_dt_list (void);
+ 
+ 
+-gfc_gsymbol *gfc_get_gsymbol (const char *);
++gfc_gsymbol *gfc_get_gsymbol (const char *, bool bind_c);
+ gfc_gsymbol *gfc_find_gsymbol (gfc_gsymbol *, const char *);
+ gfc_gsymbol *gfc_find_case_gsymbol (gfc_gsymbol *, const char *);
+ 
+@@ -3426,7 +3427,7 @@ bool gfc_is_class_scalar_expr (gfc_expr *);
  bool gfc_is_class_container_ref (gfc_expr *e);
  gfc_expr *gfc_class_initializer (gfc_typespec *, gfc_expr *);
  unsigned int gfc_hash_value (gfc_symbol *);
@@ -2475,10 +2547,77 @@ index 8185e51d5a9..d0a4b53da6b 100644
  
        if (m == MATCH_NO)
  	m = MATCH_YES;
+diff --git a/gcc/fortran/parse.c b/gcc/fortran/parse.c
+index 4ce6eb42750..e920c71d569 100644
+--- a/gcc/fortran/parse.c
++++ b/gcc/fortran/parse.c
+@@ -5830,7 +5830,7 @@ parse_block_data (void)
+     }
+   else
+     {
+-      s = gfc_get_gsymbol (gfc_new_block->name);
++      s = gfc_get_gsymbol (gfc_new_block->name, false);
+       if (s->defined
+ 	  || (s->type != GSYM_UNKNOWN && s->type != GSYM_BLOCK_DATA))
+        gfc_global_used (s, &gfc_new_block->declared_at);
+@@ -5912,7 +5912,7 @@ parse_module (void)
+   gfc_gsymbol *s;
+   bool error;
+ 
+-  s = gfc_get_gsymbol (gfc_new_block->name);
++  s = gfc_get_gsymbol (gfc_new_block->name, false);
+   if (s->defined || (s->type != GSYM_UNKNOWN && s->type != GSYM_MODULE))
+     gfc_global_used (s, &gfc_new_block->declared_at);
+   else
+@@ -5976,7 +5976,7 @@ add_global_procedure (bool sub)
+      name is a global identifier.  */
+   if (!gfc_new_block->binding_label || gfc_notification_std (GFC_STD_F2008))
+     {
+-      s = gfc_get_gsymbol (gfc_new_block->name);
++      s = gfc_get_gsymbol (gfc_new_block->name, false);
+ 
+       if (s->defined
+ 	  || (s->type != GSYM_UNKNOWN
+@@ -6001,7 +6001,7 @@ add_global_procedure (bool sub)
+       && (!gfc_notification_std (GFC_STD_F2008)
+           || strcmp (gfc_new_block->name, gfc_new_block->binding_label) != 0))
+     {
+-      s = gfc_get_gsymbol (gfc_new_block->binding_label);
++      s = gfc_get_gsymbol (gfc_new_block->binding_label, true);
+ 
+       if (s->defined
+ 	  || (s->type != GSYM_UNKNOWN
+@@ -6033,7 +6033,7 @@ add_global_program (void)
+ 
+   if (gfc_new_block == NULL)
+     return;
+-  s = gfc_get_gsymbol (gfc_new_block->name);
++  s = gfc_get_gsymbol (gfc_new_block->name, false);
+ 
+   if (s->defined || (s->type != GSYM_UNKNOWN && s->type != GSYM_PROGRAM))
+     gfc_global_used (s, &gfc_new_block->declared_at);
 diff --git a/gcc/fortran/resolve.c b/gcc/fortran/resolve.c
-index f70747a586f..7291039782e 100644
+index f70747a586f..d2b1d26a5a7 100644
 --- a/gcc/fortran/resolve.c
 +++ b/gcc/fortran/resolve.c
+@@ -1045,7 +1045,7 @@ resolve_common_blocks (gfc_symtree *common_root)
+ 	}
+       if (!gsym)
+ 	{
+-	  gsym = gfc_get_gsymbol (common_root->n.common->name);
++	  gsym = gfc_get_gsymbol (common_root->n.common->name, false);
+ 	  gsym->type = GSYM_COMMON;
+ 	  gsym->where = common_root->n.common->where;
+ 	  gsym->defined = 1;
+@@ -1067,7 +1067,7 @@ resolve_common_blocks (gfc_symtree *common_root)
+ 	}
+       if (!gsym)
+ 	{
+-	  gsym = gfc_get_gsymbol (common_root->n.common->binding_label);
++	  gsym = gfc_get_gsymbol (common_root->n.common->binding_label, true);
+ 	  gsym->type = GSYM_COMMON;
+ 	  gsym->where = common_root->n.common->where;
+ 	  gsym->defined = 1;
 @@ -1681,8 +1681,6 @@ is_illegal_recursion (gfc_symbol* sym, gfc_namespace* context)
        || gfc_fl_struct (sym->attr.flavor))
      return false;
@@ -2488,7 +2627,17 @@ index f70747a586f..7291039782e 100644
    /* If we've got an ENTRY, find real procedure.  */
    if (sym->attr.entry && sym->ns->entries)
      proc_sym = sym->ns->entries->sym;
-@@ -4881,6 +4879,7 @@ gfc_resolve_substring_charlen (gfc_expr *e)
+@@ -2484,7 +2482,8 @@ resolve_global_procedure (gfc_symbol *sym, locus *where,
+ 
+   type = sub ? GSYM_SUBROUTINE : GSYM_FUNCTION;
+ 
+-  gsym = gfc_get_gsymbol (sym->binding_label ? sym->binding_label : sym->name);
++  gsym = gfc_get_gsymbol (sym->binding_label ? sym->binding_label : sym->name,
++			  sym->binding_label != NULL);
+ 
+   if ((gsym->type != GSYM_UNKNOWN && gsym->type != type))
+     gfc_global_used (gsym, where);
+@@ -4881,6 +4880,7 @@ gfc_resolve_substring_charlen (gfc_expr *e)
    gfc_ref *char_ref;
    gfc_expr *start, *end;
    gfc_typespec *ts = NULL;
@@ -2496,7 +2645,7 @@ index f70747a586f..7291039782e 100644
  
    for (char_ref = e->ref; char_ref; char_ref = char_ref->next)
      {
-@@ -4932,11 +4931,25 @@ gfc_resolve_substring_charlen (gfc_expr *e)
+@@ -4932,11 +4932,25 @@ gfc_resolve_substring_charlen (gfc_expr *e)
        return;
      }
  
@@ -2527,7 +2676,7 @@ index f70747a586f..7291039782e 100644
  
    /* F2008, 6.4.1:  Both the starting point and the ending point shall
       be within the range 1, 2, ..., n unless the starting point exceeds
-@@ -7640,13 +7653,54 @@ resolve_allocate_expr (gfc_expr *e, gfc_code *code, bool *array_alloc_wo_spec)
+@@ -7640,13 +7654,54 @@ resolve_allocate_expr (gfc_expr *e, gfc_code *code, bool *array_alloc_wo_spec)
  
    if (codimension)
      for (i = ar->dimen; i < ar->dimen + ar->codimen; i++)
@@ -2588,7 +2737,7 @@ index f70747a586f..7291039782e 100644
    for (i = 0; i < ar->dimen; i++)
      {
        if (ar->type == AR_ELEMENT || ar->type == AR_FULL)
-@@ -11011,6 +11065,9 @@ deferred_op_assign (gfc_code **code, gfc_namespace *ns)
+@@ -11011,6 +11066,9 @@ deferred_op_assign (gfc_code **code, gfc_namespace *ns)
    if (!gfc_check_dependency ((*code)->expr1, (*code)->expr2, 1))
      return false;
  
@@ -2598,6 +2747,15 @@ index f70747a586f..7291039782e 100644
    tmp_expr = get_temp_from_expr ((*code)->expr1, ns);
    tmp_expr->where = (*code)->loc;
  
+@@ -11647,7 +11705,7 @@ gfc_verify_binding_labels (gfc_symbol *sym)
+ 	  && (gsym->type == GSYM_FUNCTION || gsym->type == GSYM_SUBROUTINE)))
+     {
+       if (!gsym)
+-	gsym = gfc_get_gsymbol (sym->binding_label);
++	gsym = gfc_get_gsymbol (sym->binding_label, true);
+       gsym->where = sym->declared_at;
+       gsym->sym_name = sym->name;
+       gsym->binding_label = sym->binding_label;
 diff --git a/gcc/fortran/simplify.c b/gcc/fortran/simplify.c
 index 0d0f57922ea..65fc19151e7 100644
 --- a/gcc/fortran/simplify.c
@@ -2648,7 +2806,7 @@ index 0d0f57922ea..65fc19151e7 100644
  
    return range_check (result, "STORAGE_SIZE");
 diff --git a/gcc/fortran/symbol.c b/gcc/fortran/symbol.c
-index 4ea66e3f387..ebb57eda9c5 100644
+index 4ea66e3f387..e40e9ac648e 100644
 --- a/gcc/fortran/symbol.c
 +++ b/gcc/fortran/symbol.c
 @@ -522,7 +522,7 @@ check_conflict (symbol_attribute *attr, const char *name, locus *where)
@@ -2670,6 +2828,23 @@ index 4ea66e3f387..ebb57eda9c5 100644
      {
        if (attr->proc == PROC_ST_FUNCTION && t == PROC_INTERNAL
  	  && !gfc_notification_std (GFC_STD_F2008))
+@@ -4352,7 +4353,7 @@ gsym_compare (void *_s1, void *_s2)
+ /* Get a global symbol, creating it if it doesn't exist.  */
+ 
+ gfc_gsymbol *
+-gfc_get_gsymbol (const char *name)
++gfc_get_gsymbol (const char *name, bool bind_c)
+ {
+   gfc_gsymbol *s;
+ 
+@@ -4363,6 +4364,7 @@ gfc_get_gsymbol (const char *name)
+   s = XCNEW (gfc_gsymbol);
+   s->type = GSYM_UNKNOWN;
+   s->name = gfc_get_string ("%s", name);
++  s->bind_c = bind_c;
+ 
+   gfc_insert_bbt (&gfc_gsym_root, s, gsym_compare);
+ 
 diff --git a/gcc/fortran/target-memory.c b/gcc/fortran/target-memory.c
 index 6b9292b5faf..c924cb529d1 100644
 --- a/gcc/fortran/target-memory.c
@@ -2821,10 +2996,42 @@ index 8f25899a92c..0a4316e6641 100644
  
  /* Write a constant expression in binary form to a target buffer.  */
  size_t gfc_encode_character (int, size_t, const gfc_char_t *, unsigned char *,
+diff --git a/gcc/fortran/trans-array.c b/gcc/fortran/trans-array.c
+index 8498dfb656e..6a4dcaffbd8 100644
+--- a/gcc/fortran/trans-array.c
++++ b/gcc/fortran/trans-array.c
+@@ -2652,6 +2652,9 @@ gfc_scalar_elemental_arg_saved_as_reference (gfc_ss_info * ss_info)
+   if (ss_info->type != GFC_SS_REFERENCE)
+     return false;
+ 
++  if (ss_info->data.scalar.needs_temporary)
++    return false;
++
+   /* If the actual argument can be absent (in other words, it can
+      be a NULL reference), don't try to evaluate it; pass instead
+      the reference directly.  */
+@@ -10350,6 +10353,8 @@ gfc_walk_variable_expr (gfc_ss * ss, gfc_expr * expr)
+ {
+   gfc_ref *ref;
+ 
++  gfc_fix_class_refs (expr);
++
+   for (ref = expr->ref; ref; ref = ref->next)
+     if (ref->type == REF_ARRAY && ref->u.ar.type != AR_ELEMENT)
+       break;
 diff --git a/gcc/fortran/trans-decl.c b/gcc/fortran/trans-decl.c
-index 548380a4e86..a2172c3ddeb 100644
+index 548380a4e86..a68223d2040 100644
 --- a/gcc/fortran/trans-decl.c
 +++ b/gcc/fortran/trans-decl.c
+@@ -839,7 +839,7 @@ gfc_get_module_backend_decl (gfc_symbol *sym)
+ 	{
+ 	  if (!gsym)
+ 	    {
+-	      gsym = gfc_get_gsymbol (sym->module);
++	      gsym = gfc_get_gsymbol (sym->module, false);
+ 	      gsym->type = GSYM_MODULE;
+ 	      gsym->ns = gfc_get_namespace (NULL, 0);
+ 	    }
 @@ -1977,7 +1977,7 @@ get_proc_pointer_decl (gfc_symbol *sym)
  /* Get a basic decl for an external function.  */
  
@@ -2834,7 +3041,33 @@ index 548380a4e86..a2172c3ddeb 100644
  {
    tree type;
    tree fndecl;
-@@ -2150,7 +2150,7 @@ module_sym:
+@@ -2002,9 +2002,22 @@ gfc_get_extern_function_decl (gfc_symbol * sym)
+     return get_proc_pointer_decl (sym);
+ 
+   /* See if this is an external procedure from the same file.  If so,
+-     return the backend_decl.  */
+-  gsym =  gfc_find_gsymbol (gfc_gsym_root, sym->binding_label
+-					   ? sym->binding_label : sym->name);
++     return the backend_decl.  If we are looking at a BIND(C)
++     procedure and the symbol is not BIND(C), or vice versa, we
++     haven't found the right procedure.  */
++
++  if (sym->binding_label)
++    {
++      gsym = gfc_find_gsymbol (gfc_gsym_root, sym->binding_label);
++      if (gsym && !gsym->bind_c)
++	gsym = NULL;
++    }
++  else
++    {
++      gsym = gfc_find_gsymbol (gfc_gsym_root, sym->name);
++      if (gsym && gsym->bind_c)
++	gsym = NULL;
++    }
+ 
+   if (gsym && !gsym->defined)
+     gsym = NULL;
+@@ -2150,7 +2163,7 @@ module_sym:
        mangled_name = gfc_sym_mangled_function_id (sym);
      }
  
@@ -2843,7 +3076,7 @@ index 548380a4e86..a2172c3ddeb 100644
    fndecl = build_decl (input_location,
  		       FUNCTION_DECL, name, type);
  
-@@ -5384,6 +5384,33 @@ generate_coarray_sym_init (gfc_symbol *sym)
+@@ -5384,6 +5397,33 @@ generate_coarray_sym_init (gfc_symbol *sym)
    /* Handle "static" initializer.  */
    if (sym->value)
      {
@@ -3236,10 +3469,29 @@ index 0e79e53fb61..dabc5403f28 100644
        offset1 = crtl->outgoing_args_size + get_frame_size ();
  #if !STACK_GROWS_DOWNWARD
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 7d5e65b1a74..c631992f486 100644
+index 7d5e65b1a74..eabac5e7d65 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,285 @@
+@@ -1,3 +1,304 @@
++2019-03-16  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	PR fortran/66089
++	Backport from trunk
++	* gfortran.dg/dependency_53.f90: New test.
++	* gfortran.dg/assumed_type_2.f90: Adapted tree dumps.
++	* gfortran.dg/no_arg_check_2.f90: Likewise.
++
++2019-03-16 Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	PR fortran/66695
++	PR fortran/77746
++	PR fortran/79485
++	Backport from trunk
++	* gfortran.dg/binding_label_tests_30.f90: New test.
++	* gfortran.dg/binding_label_tests_31.f90: New test.
++	* gfortran.dg/binding_label_tests_32.f90: New test.
++	* gfortran.dg/binding_label_tests_33.f90: New test.
++
 +2019-03-15  Richard Biener  <rguenther@suse.de>
 +
 +	Backport from mainline
@@ -4682,6 +4934,152 @@ index 00000000000..9549869a6be
 +  if (i == 10 .and. j == 20) return 1
 +  return
 +end subroutine sub
+diff --git a/gcc/testsuite/gfortran.dg/assumed_type_2.f90 b/gcc/testsuite/gfortran.dg/assumed_type_2.f90
+index acf587386c5..dce5ac6839c 100644
+--- a/gcc/testsuite/gfortran.dg/assumed_type_2.f90
++++ b/gcc/testsuite/gfortran.dg/assumed_type_2.f90
+@@ -157,7 +157,7 @@ end
+ ! { dg-final { scan-tree-dump-times "sub_scalar .\\(struct t1 .\\) array_class_t1_alloc._data.data" 1 "original" } }
+ ! { dg-final { scan-tree-dump-times "sub_scalar .\\(struct t1 .\\) \\(array_class_t1_ptr._data.dat" 1 "original" } }
+ 
+-! { dg-final { scan-tree-dump-times "sub_array_assumed \\(D" 3 "original" } }
++! { dg-final { scan-tree-dump-times "sub_array_assumed \\(D" 4 "original" } }
+ ! { dg-final { scan-tree-dump-times " = _gfortran_internal_pack \\(&parm" 1 "original" } }
+ ! { dg-final { scan-tree-dump-times "sub_array_assumed \\(&array_int\\)" 1 "original" } }
+ ! { dg-final { scan-tree-dump-times "sub_array_assumed \\(\\(real\\(kind=4\\).0:. . restrict\\) array_real_alloc.data" 1 "original" } }
+@@ -166,7 +166,7 @@ end
+ ! { dg-final { scan-tree-dump-times "sub_array_assumed \\(\\(struct t1.0:. .\\) parm" 1 "original" } }
+ ! { dg-final { scan-tree-dump-times "sub_array_assumed \\(\\(struct t2.0:. . restrict\\) array_t2_alloc.data\\);" 1 "original" } }
+ ! { dg-final { scan-tree-dump-times "sub_array_assumed \\(\\(struct t1.0:. . restrict\\) array_class_t1_alloc._data.data\\);" 1 "original" } }
+-! { dg-final { scan-tree-dump-times "sub_array_assumed \\(\\(struct t1.0:. .\\) array_class_t1_ptr._data.data\\);" 1 "original" } }
++! { dg-final { scan-tree-dump-times "sub_array_assumed \\(\\(struct t1.0:. .\\) array_class_t1_ptr._data.data\\);" 0 "original" } }
+ 
+ ! { dg-final { scan-tree-dump-times "sub_array_shape \\(&array_real_alloc," 1 "original" } }
+ ! { dg-final { scan-tree-dump-times "sub_array_shape \\(&array_char_ptr," 1 "original" } }
+diff --git a/gcc/testsuite/gfortran.dg/binding_label_tests_30.f90 b/gcc/testsuite/gfortran.dg/binding_label_tests_30.f90
+new file mode 100644
+index 00000000000..168d4b52f2d
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/binding_label_tests_30.f90
+@@ -0,0 +1,7 @@
++! { dg-do compile }
++! Make sure this error is flagged.
++subroutine foo() ! { dg-error "is already being used as a SUBROUTINE" }
++end subroutine foo
++
++subroutine bar() bind(C,name="foo") ! { dg-error "is already being used as a SUBROUTINE" }
++end subroutine bar
+diff --git a/gcc/testsuite/gfortran.dg/binding_label_tests_31.f90 b/gcc/testsuite/gfortran.dg/binding_label_tests_31.f90
+new file mode 100644
+index 00000000000..e914c66a7b8
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/binding_label_tests_31.f90
+@@ -0,0 +1,19 @@
++! { dg-do compile }
++! PR fortran/66695 - this used to ICE.
++! Original test case by Vladimir Fuka.
++module mod
++  implicit none
++contains
++    integer function F()
++    end function
++end module
++    
++module mod_C
++  use mod
++  implicit none
++contains
++  subroutine s()  bind(C, name="f")
++    integer :: x
++      x = F()
++  end subroutine
++end module
+diff --git a/gcc/testsuite/gfortran.dg/binding_label_tests_32.f90 b/gcc/testsuite/gfortran.dg/binding_label_tests_32.f90
+new file mode 100644
+index 00000000000..f18df66a2cc
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/binding_label_tests_32.f90
+@@ -0,0 +1,35 @@
++! { dg-do run }
++! PR 77746 - this used to crash during execution.
++! Original test case by Vladimir Fuka.
++module first
++  private
++  public execute
++  
++  interface execute
++    module procedure random_name
++  end interface
++  
++contains
++
++  subroutine random_name()
++  end subroutine
++end module
++
++module test
++  use first
++
++  implicit none
++
++contains
++
++  subroutine p_execute(i)  bind(C, name="random_name")
++    integer :: i
++
++    call execute()
++  end subroutine
++  
++end module
++
++  use test
++  call p_execute(1)
++end
+diff --git a/gcc/testsuite/gfortran.dg/binding_label_tests_33.f90 b/gcc/testsuite/gfortran.dg/binding_label_tests_33.f90
+new file mode 100644
+index 00000000000..fdb9a887f60
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/binding_label_tests_33.f90
+@@ -0,0 +1,39 @@
++! { dg-do run }
++! PR 79485 - used to crash because the wrong routine was called.
++module fmod1
++
++  contains
++
++  subroutine foo(i)
++    implicit none
++
++    integer, intent(inout) :: i
++
++    i=i+1
++
++  end subroutine foo
++
++end module fmod1
++
++module fmod2
++  use iso_c_binding
++  use fmod1, only : foo_first => foo
++
++  contains
++
++  subroutine foo(i) bind(c)
++    implicit none
++
++    integer, intent(inout) :: i
++
++    i=i+2
++    call foo_first(i)
++
++  end subroutine foo
++
++end module fmod2
++
++  use fmod2
++  
++  call foo(i)
++end
 diff --git a/gcc/testsuite/gfortran.dg/c_ptr_tests_19.f90 b/gcc/testsuite/gfortran.dg/c_ptr_tests_19.f90
 new file mode 100644
 index 00000000000..2cb0b183c88
@@ -4801,6 +5199,37 @@ index 00000000000..3969d97ffc9
 +   if (any (z .ne. ['abcd', 'bcde'])) stop 1
 +   deallocate (z)
 +end
+diff --git a/gcc/testsuite/gfortran.dg/dependency_53.f90 b/gcc/testsuite/gfortran.dg/dependency_53.f90
+new file mode 100644
+index 00000000000..a45302fb0a3
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/dependency_53.f90
+@@ -0,0 +1,25 @@
++! { dg-do run }
++! PR fortran/66089 - used to ICE and, after that ICE was fixed,
++! gave wrong results.
++  type :: t
++    integer :: c
++  end type t
++
++  class(t), dimension(:), allocatable :: b,c
++
++  allocate (b(5), source=t(7))
++  allocate(c(5), source=t(13))
++  c = plus(c(1), b)
++  if (any(c%c /= 20)) stop 1
++  c = t(13)
++  c = plus(b, c(1))
++  if (any(c%c /= 20)) stop 2
++contains
++
++  elemental function plus(lhs, rhs)
++    class(t), intent(in) :: lhs, rhs
++    type(t)             :: plus
++    plus%c = lhs%c + rhs%c
++  end function plus
++
++end
 diff --git a/gcc/testsuite/gfortran.dg/dtio_34.f90 b/gcc/testsuite/gfortran.dg/dtio_34.f90
 new file mode 100644
 index 00000000000..7cecc8b9141
@@ -4897,6 +5326,26 @@ index 00000000000..f293a0054bd
 +       doesntwork_p8 = 'foo'
 +       return
 +       end
+diff --git a/gcc/testsuite/gfortran.dg/no_arg_check_2.f90 b/gcc/testsuite/gfortran.dg/no_arg_check_2.f90
+index f99a2e8e923..fe334883a3e 100644
+--- a/gcc/testsuite/gfortran.dg/no_arg_check_2.f90
++++ b/gcc/testsuite/gfortran.dg/no_arg_check_2.f90
+@@ -139,7 +139,7 @@ end
+ ! { dg-final { scan-tree-dump-times "sub_scalar .\\(struct t1 .\\) array_class_t1_alloc._data.data" 1 "original" } }
+ ! { dg-final { scan-tree-dump-times "sub_scalar .\\(struct t1 .\\) \\(array_class_t1_ptr._data.dat" 1 "original" } }
+ 
+-! { dg-final { scan-tree-dump-times "sub_array_assumed \\(D" 3 "original" } }
++! { dg-final { scan-tree-dump-times "sub_array_assumed \\(D" 4 "original" } }
+ ! { dg-final { scan-tree-dump-times " = _gfortran_internal_pack \\(&parm" 1 "original" } }
+ ! { dg-final { scan-tree-dump-times "sub_array_assumed \\(&array_int\\)" 1 "original" } }
+ ! { dg-final { scan-tree-dump-times "sub_array_assumed \\(\\(real\\(kind=4\\).0:. . restrict\\) array_real_alloc.data" 1 "original" } }
+@@ -148,5 +148,5 @@ end
+ ! { dg-final { scan-tree-dump-times "sub_array_assumed \\(\\(struct t1.0:. .\\) parm" 1 "original" } }
+ ! { dg-final { scan-tree-dump-times "sub_array_assumed \\(\\(struct t2.0:. . restrict\\) array_t2_alloc.data\\);" 1 "original" } }
+ ! { dg-final { scan-tree-dump-times "sub_array_assumed \\(\\(struct t1.0:. . restrict\\) array_class_t1_alloc._data.data\\);" 1 "original" } }
+-! { dg-final { scan-tree-dump-times "sub_array_assumed \\(\\(struct t1.0:. .\\) array_class_t1_ptr._data.data\\);" 1 "original" } }
++! { dg-final { scan-tree-dump-times "sub_array_assumed \\(\\(struct t1.0:. .\\) array_class_t1_ptr._data.data\\);" 0 "original" } }
+ 
 diff --git a/gcc/testsuite/gfortran.dg/pr77583.f90 b/gcc/testsuite/gfortran.dg/pr77583.f90
 new file mode 100644
 index 00000000000..c2ee0744297
