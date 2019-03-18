@@ -17,7 +17,8 @@ ebotcazou (5):
       PR tree-optimization/89536 	* tree-ssa-dom.c (edge_info::derive_equivalences) <BIT_NOT_EXPR>: Test 	only whether bit #0 of the value is 0 instead of the entire value.
       PR rtl-optimization/89588 	* loop-unroll.c (decide_unroll_constant_iterations): Make guard for 	explicit unrolling factor more robust.
 
-gccadmin (23):
+gccadmin (24):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -45,14 +46,18 @@ gccadmin (23):
 helijia (1):
       Backport from trunk 	2019-02-20  Li Jia He  <helijia@linux.ibm.com>
 
+hjl (1):
+      x32: Add addr32 prefix to VSIB address
+
 jakub (3):
       * BASE-VER: Set to 8.3.1.
       Backported from mainline 	2019-02-18  Jakub Jelinek  <jakub@redhat.com>
       PR c++/89585 	* parser.c (cp_parser_asm_definition): Parse asm qualifiers even 	at toplevel, but diagnose them.
 
-jamborm (2):
+jamborm (3):
       Relax cgraph_node::clone_of_p to also look through former clones
       Zero local estimated benefit for cloning extern inline function
+      Add forgotten requeing in propagate_subaccesses_across_link
 
 jason (10):
       PR c++/88183 - ICE with .* fold-expression.
@@ -87,6 +92,9 @@ marxin (5):
 mpolacek (1):
       PR c++/89212 - ICE converting nullptr to pointer-to-member-function. 	* pt.c (tsubst_copy_and_build) <case CONSTRUCTOR>: Return early for 	null member pointer value.
 
+msebor (1):
+      Backport from mainline:
+
 pault (1):
       2019-02-23  Paul Thomas  <pault@gcc.gnu.org>
 
@@ -101,7 +109,7 @@ rguenth (6):
       2019-03-14  Richard Biener  <rguenther@suse.de>
       2019-03-15  Richard Biener  <rguenther@suse.de>
 
-tkoenig (10):
+tkoenig (11):
       2019-02-22  Thomas Koenig  <tkoenig@gcc.gnu.org>
       2019-02-23  Thomas Koenig  <tkoenig@gcc.gnu.org>
       2019-03-03  Thomas Koenig  <tkoenig@gcc.gnu.org>
@@ -112,6 +120,7 @@ tkoenig (10):
       2019-03-13  Thomas Koenig  <tkoenig@gcc.gnu.org>
       2019-03-16  Thomas Koenig  <tkoenig@gcc.gnu.org>
       2019-03-16  Thomas Koenig  <tkoenig@gcc.gnu.org>
+      2019-03-17  Thomas Koenig  <tkoenig@gcc.gnu.org>
 
 tnfchris (3):
       AArch64: Make every option in options.def one line (GCC-8).
@@ -132,10 +141,51 @@ index 2bf50aaf17a..56b6be4ebb2 100644
 -8.3.0
 +8.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d1fd9f6a7b9..f566e1610c7 100644
+index d1fd9f6a7b9..5dea538dddd 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,308 @@
+@@ -1,3 +1,349 @@
++2019-03-18  Martin Sebor  <msebor@redhat.com>
++
++	PR middle-end/88273
++	* gimple-ssa-warn-restrict.c (builtin_memref::extend_offset_range):
++	Handle anti-ranges the same as no range at all.
++
++2019-03-18  Martin Jambor  <mjambor@suse.cz>
++
++	Backport from mainline
++	2019-03-18  Martin Jambor  <mjambor@suse.cz>
++
++	PR tree-optimization/89546
++	* tree-sra.c (propagate_subaccesses_across_link): Requeue new_acc if
++	any propagation to its children took place.
++
++2019-03-17  H.J. Lu  <hongjiu.lu@intel.com>
++
++	Backport from mainline
++	2019-03-14  H.J. Lu  <hongjiu.lu@intel.com>
++
++	PR target/89523
++	* config/i386/i386.c (ix86_print_operand): Handle 'M' to add
++	addr32 prefix to VSIB address for X32.
++	* config/i386/sse.md (*avx512pf_gatherpf<mode>sf_mask): Prepend
++	"%M2" to opcode.
++	(*avx512pf_gatherpf<mode>df_mask): Likewise.
++	(*avx512pf_scatterpf<mode>sf_mask): Likewise.
++	(*avx512pf_scatterpf<mode>df_mask): Likewise.
++	(*avx2_gathersi<mode>): Prepend "%M3" to opcode.
++	(*avx2_gathersi<mode>_2): Prepend "%M2" to opcode.
++	(*avx2_gatherdi<mode>): Prepend "%M3" to opcode.
++	(*avx2_gatherdi<mode>_2): Prepend "%M2" to opcode.
++	(*avx2_gatherdi<mode>_3): Prepend "%M3" to opcode.
++	(*avx2_gatherdi<mode>_4): Prepend "%M2" to opcode.`
++	(*avx512f_gathersi<mode>): Prepend "%M4" to opcode.
++	(*avx512f_gathersi<mode>_2): Prepend "%M3" to opcode.
++	(*avx512f_gatherdi<mode>): Prepend "%M4" to opcode.
++	(*avx512f_gatherdi<mode>_2): Prepend "%M3" to opcode.
++	(*avx512f_scattersi<mode>): Prepend "%M0" to opcode.
++	(*avx512f_scatterdi<mode>): Likewise.
++
 +2019-03-15  Richard Biener  <rguenther@suse.de>
 +
 +	Backport from mainline
@@ -1092,7 +1142,7 @@ index 2809112f68d..b12ae385802 100644
  /* FPU supports fused-multiply-add operations.  */
  #define TARGET_FMA (bitmap_bit_p (arm_active_target.isa, isa_bit_vfpv4))
 diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
-index 7732f882f78..f1de97f73df 100644
+index 7732f882f78..b5a47dd6682 100644
 --- a/gcc/config/i386/i386.c
 +++ b/gcc/config/i386/i386.c
 @@ -4958,6 +4958,12 @@ ix86_option_override_internal (bool main_args_p,
@@ -1108,7 +1158,42 @@ index 7732f882f78..f1de97f73df 100644
    return true;
  }
  
-@@ -39641,7 +39647,7 @@ ix86_vectorize_builtin_scatter (const_tree vectype,
+@@ -18121,6 +18127,7 @@ print_reg (rtx x, int code, FILE *file)
+    ; -- print a semicolon (after prefixes due to bug in older gas).
+    ~ -- print "i" if TARGET_AVX2, "f" otherwise.
+    ^ -- print addr32 prefix if TARGET_64BIT and Pmode != word_mode
++   M -- print addr32 prefix for TARGET_X32 with VSIB address.
+    ! -- print MPX prefix for jxx/call/ret instructions if required.
+  */
+ 
+@@ -18668,6 +18675,26 @@ ix86_print_operand (FILE *file, rtx x, int code)
+ 	  putc (TARGET_AVX2 ? 'i' : 'f', file);
+ 	  return;
+ 
++	case 'M':
++	  if (TARGET_X32)
++	    {
++	      /* NB: 32-bit indices in VSIB address are sign-extended
++		 to 64 bits. In x32, if 32-bit address 0xf7fa3010 is
++		 sign-extended to 0xfffffffff7fa3010 which is invalid
++		 address.  Add addr32 prefix if there is no base
++		 register nor symbol.  */
++	      bool ok;
++	      struct ix86_address parts;
++	      ok = ix86_decompose_address (x, &parts);
++	      gcc_assert (ok && parts.index == NULL_RTX);
++	      if (parts.base == NULL_RTX
++		  && (parts.disp == NULL_RTX
++		      || !symbolic_operand (parts.disp,
++					    GET_MODE (parts.disp))))
++		fputs ("addr32 ", file);
++	    }
++	  return;
++
+ 	case '^':
+ 	  if (TARGET_64BIT && Pmode != word_mode)
+ 	    fputs ("addr32 ", file);
+@@ -39641,7 +39668,7 @@ ix86_vectorize_builtin_scatter (const_tree vectype,
  static bool
  use_rsqrt_p ()
  {
@@ -1117,7 +1202,7 @@ index 7732f882f78..f1de97f73df 100644
  	  && flag_finite_math_only
  	  && !flag_trapping_math
  	  && flag_unsafe_math_optimizations);
-@@ -50999,7 +51005,7 @@ ix86_float_exceptions_rounding_supported_p (void)
+@@ -50999,7 +51026,7 @@ ix86_float_exceptions_rounding_supported_p (void)
       there is no adddf3 pattern (since x87 floating point only has
       XFmode operations) so the default hook implementation gets this
       wrong.  */
@@ -1126,7 +1211,7 @@ index 7732f882f78..f1de97f73df 100644
  }
  
  /* Implement TARGET_ATOMIC_ASSIGN_EXPAND_FENV.  */
-@@ -51007,7 +51013,7 @@ ix86_float_exceptions_rounding_supported_p (void)
+@@ -51007,7 +51034,7 @@ ix86_float_exceptions_rounding_supported_p (void)
  static void
  ix86_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
  {
@@ -1135,7 +1220,7 @@ index 7732f882f78..f1de97f73df 100644
      return;
    tree exceptions_var = create_tmp_var_raw (integer_type_node);
    if (TARGET_80387)
-@@ -51042,7 +51048,7 @@ ix86_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
+@@ -51042,7 +51069,7 @@ ix86_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
        tree update_fldenv = build_call_expr (fldenv, 1, fenv_addr);
        *update = build2 (COMPOUND_EXPR, void_type_node, *update, update_fldenv);
      }
@@ -1144,7 +1229,7 @@ index 7732f882f78..f1de97f73df 100644
      {
        tree mxcsr_orig_var = create_tmp_var_raw (unsigned_type_node);
        tree mxcsr_mod_var = create_tmp_var_raw (unsigned_type_node);
-@@ -51399,7 +51405,7 @@ ix86_excess_precision (enum excess_precision_type type)
+@@ -51399,7 +51426,7 @@ ix86_excess_precision (enum excess_precision_type type)
  	  return FLT_EVAL_METHOD_PROMOTE_TO_FLOAT;
  	else if (!TARGET_MIX_SSE_I387)
  	  {
@@ -1154,7 +1239,7 @@ index 7732f882f78..f1de97f73df 100644
  	    else if (TARGET_SSE2)
  	      return FLT_EVAL_METHOD_PROMOTE_TO_FLOAT;
 diff --git a/gcc/config/i386/sse.md b/gcc/config/i386/sse.md
-index d5cab80f60f..0a75bd10976 100644
+index d5cab80f60f..b42292e7702 100644
 --- a/gcc/config/i386/sse.md
 +++ b/gcc/config/i386/sse.md
 @@ -1908,7 +1908,7 @@
@@ -1166,6 +1251,172 @@ index d5cab80f60f..0a75bd10976 100644
  {
    ix86_emit_swsqrtsf (operands[0], operands[1], <MODE>mode, true);
    DONE;
+@@ -16271,9 +16271,9 @@
+     case 3:
+       /* %X5 so that we don't emit any *WORD PTR for -masm=intel, as
+ 	 gas changed what it requires incompatibly.  */
+-      return "vgatherpf0<ssemodesuffix>ps\t{%5%{%0%}|%X5%{%0%}}";
++      return "%M2vgatherpf0<ssemodesuffix>ps\t{%5%{%0%}|%X5%{%0%}}";
+     case 2:
+-      return "vgatherpf1<ssemodesuffix>ps\t{%5%{%0%}|%X5%{%0%}}";
++      return "%M2vgatherpf1<ssemodesuffix>ps\t{%5%{%0%}|%X5%{%0%}}";
+     default:
+       gcc_unreachable ();
+     }
+@@ -16318,9 +16318,9 @@
+     case 3:
+       /* %X5 so that we don't emit any *WORD PTR for -masm=intel, as
+ 	 gas changed what it requires incompatibly.  */
+-      return "vgatherpf0<ssemodesuffix>pd\t{%5%{%0%}|%X5%{%0%}}";
++      return "%M2vgatherpf0<ssemodesuffix>pd\t{%5%{%0%}|%X5%{%0%}}";
+     case 2:
+-      return "vgatherpf1<ssemodesuffix>pd\t{%5%{%0%}|%X5%{%0%}}";
++      return "%M2vgatherpf1<ssemodesuffix>pd\t{%5%{%0%}|%X5%{%0%}}";
+     default:
+       gcc_unreachable ();
+     }
+@@ -16366,10 +16366,10 @@
+     case 7:
+       /* %X5 so that we don't emit any *WORD PTR for -masm=intel, as
+ 	 gas changed what it requires incompatibly.  */
+-      return "vscatterpf0<ssemodesuffix>ps\t{%5%{%0%}|%X5%{%0%}}";
++      return "%M2vscatterpf0<ssemodesuffix>ps\t{%5%{%0%}|%X5%{%0%}}";
+     case 2:
+     case 6:
+-      return "vscatterpf1<ssemodesuffix>ps\t{%5%{%0%}|%X5%{%0%}}";
++      return "%M2vscatterpf1<ssemodesuffix>ps\t{%5%{%0%}|%X5%{%0%}}";
+     default:
+       gcc_unreachable ();
+     }
+@@ -16415,10 +16415,10 @@
+     case 7:
+       /* %X5 so that we don't emit any *WORD PTR for -masm=intel, as
+ 	 gas changed what it requires incompatibly.  */
+-      return "vscatterpf0<ssemodesuffix>pd\t{%5%{%0%}|%X5%{%0%}}";
++      return "%M2vscatterpf0<ssemodesuffix>pd\t{%5%{%0%}|%X5%{%0%}}";
+     case 2:
+     case 6:
+-      return "vscatterpf1<ssemodesuffix>pd\t{%5%{%0%}|%X5%{%0%}}";
++      return "%M2vscatterpf1<ssemodesuffix>pd\t{%5%{%0%}|%X5%{%0%}}";
+     default:
+       gcc_unreachable ();
+     }
+@@ -19157,7 +19157,7 @@
+ 	  UNSPEC_GATHER))
+    (clobber (match_scratch:VEC_GATHER_MODE 1 "=&x"))]
+   "TARGET_AVX2"
+-  "v<sseintprefix>gatherd<ssemodesuffix>\t{%1, %7, %0|%0, %7, %1}"
++  "%M3v<sseintprefix>gatherd<ssemodesuffix>\t{%1, %7, %0|%0, %7, %1}"
+   [(set_attr "type" "ssemov")
+    (set_attr "prefix" "vex")
+    (set_attr "mode" "<sseinsnmode>")])
+@@ -19177,7 +19177,7 @@
+ 	  UNSPEC_GATHER))
+    (clobber (match_scratch:VEC_GATHER_MODE 1 "=&x"))]
+   "TARGET_AVX2"
+-  "v<sseintprefix>gatherd<ssemodesuffix>\t{%1, %6, %0|%0, %6, %1}"
++  "%M2v<sseintprefix>gatherd<ssemodesuffix>\t{%1, %6, %0|%0, %6, %1}"
+   [(set_attr "type" "ssemov")
+    (set_attr "prefix" "vex")
+    (set_attr "mode" "<sseinsnmode>")])
+@@ -19218,7 +19218,7 @@
+ 	  UNSPEC_GATHER))
+    (clobber (match_scratch:VEC_GATHER_MODE 1 "=&x"))]
+   "TARGET_AVX2"
+-  "v<sseintprefix>gatherq<ssemodesuffix>\t{%5, %7, %2|%2, %7, %5}"
++  "%M3v<sseintprefix>gatherq<ssemodesuffix>\t{%5, %7, %2|%2, %7, %5}"
+   [(set_attr "type" "ssemov")
+    (set_attr "prefix" "vex")
+    (set_attr "mode" "<sseinsnmode>")])
+@@ -19240,8 +19240,8 @@
+   "TARGET_AVX2"
+ {
+   if (<MODE>mode != <VEC_GATHER_SRCDI>mode)
+-    return "v<sseintprefix>gatherq<ssemodesuffix>\t{%4, %6, %x0|%x0, %6, %4}";
+-  return "v<sseintprefix>gatherq<ssemodesuffix>\t{%4, %6, %0|%0, %6, %4}";
++    return "%M2v<sseintprefix>gatherq<ssemodesuffix>\t{%4, %6, %x0|%x0, %6, %4}";
++  return "%M2v<sseintprefix>gatherq<ssemodesuffix>\t{%4, %6, %0|%0, %6, %4}";
+ }
+   [(set_attr "type" "ssemov")
+    (set_attr "prefix" "vex")
+@@ -19265,7 +19265,7 @@
+ 		     (const_int 2) (const_int 3)])))
+    (clobber (match_scratch:VI4F_256 1 "=&x"))]
+   "TARGET_AVX2"
+-  "v<sseintprefix>gatherq<ssemodesuffix>\t{%5, %7, %0|%0, %7, %5}"
++  "%M3v<sseintprefix>gatherq<ssemodesuffix>\t{%5, %7, %0|%0, %7, %5}"
+   [(set_attr "type" "ssemov")
+    (set_attr "prefix" "vex")
+    (set_attr "mode" "<sseinsnmode>")])
+@@ -19288,7 +19288,7 @@
+ 		     (const_int 2) (const_int 3)])))
+    (clobber (match_scratch:VI4F_256 1 "=&x"))]
+   "TARGET_AVX2"
+-  "v<sseintprefix>gatherq<ssemodesuffix>\t{%4, %6, %0|%0, %6, %4}"
++  "%M2v<sseintprefix>gatherq<ssemodesuffix>\t{%4, %6, %0|%0, %6, %4}"
+   [(set_attr "type" "ssemov")
+    (set_attr "prefix" "vex")
+    (set_attr "mode" "<sseinsnmode>")])
+@@ -19328,7 +19328,7 @@
+   "TARGET_AVX512F"
+ ;; %X6 so that we don't emit any *WORD PTR for -masm=intel, as
+ ;; gas changed what it requires incompatibly.
+-  "v<sseintprefix>gatherd<ssemodesuffix>\t{%6, %0%{%2%}|%0%{%2%}, %X6}"
++  "%M4v<sseintprefix>gatherd<ssemodesuffix>\t{%6, %0%{%2%}|%0%{%2%}, %X6}"
+   [(set_attr "type" "ssemov")
+    (set_attr "prefix" "evex")
+    (set_attr "mode" "<sseinsnmode>")])
+@@ -19349,7 +19349,7 @@
+   "TARGET_AVX512F"
+ ;; %X5 so that we don't emit any *WORD PTR for -masm=intel, as
+ ;; gas changed what it requires incompatibly.
+-  "v<sseintprefix>gatherd<ssemodesuffix>\t{%5, %0%{%1%}|%0%{%1%}, %X5}"
++  "%M3v<sseintprefix>gatherd<ssemodesuffix>\t{%5, %0%{%1%}|%0%{%1%}, %X5}"
+   [(set_attr "type" "ssemov")
+    (set_attr "prefix" "evex")
+    (set_attr "mode" "<sseinsnmode>")])
+@@ -19390,7 +19390,7 @@
+   "TARGET_AVX512F"
+ ;; %X6 so that we don't emit any *WORD PTR for -masm=intel, as
+ ;; gas changed what it requires incompatibly.
+-  "v<sseintprefix>gatherq<ssemodesuffix>\t{%6, %1%{%2%}|%1%{%2%}, %X6}"
++  "%M4v<sseintprefix>gatherq<ssemodesuffix>\t{%6, %1%{%2%}|%1%{%2%}, %X6}"
+   [(set_attr "type" "ssemov")
+    (set_attr "prefix" "evex")
+    (set_attr "mode" "<sseinsnmode>")])
+@@ -19415,11 +19415,11 @@
+   if (<MODE>mode != <VEC_GATHER_SRCDI>mode)
+     {
+       if (<MODE_SIZE> != 64)
+-	return "v<sseintprefix>gatherq<ssemodesuffix>\t{%5, %x0%{%1%}|%x0%{%1%}, %X5}";
++	return "%M3v<sseintprefix>gatherq<ssemodesuffix>\t{%5, %x0%{%1%}|%x0%{%1%}, %X5}";
+       else
+-	return "v<sseintprefix>gatherq<ssemodesuffix>\t{%5, %t0%{%1%}|%t0%{%1%}, %X5}";
++	return "%M3v<sseintprefix>gatherq<ssemodesuffix>\t{%5, %t0%{%1%}|%t0%{%1%}, %X5}";
+     }
+-  return "v<sseintprefix>gatherq<ssemodesuffix>\t{%5, %0%{%1%}|%0%{%1%}, %X5}";
++  return "%M3v<sseintprefix>gatherq<ssemodesuffix>\t{%5, %0%{%1%}|%0%{%1%}, %X5}";
+ }
+   [(set_attr "type" "ssemov")
+    (set_attr "prefix" "evex")
+@@ -19458,7 +19458,7 @@
+   "TARGET_AVX512F"
+ ;; %X5 so that we don't emit any *WORD PTR for -masm=intel, as
+ ;; gas changed what it requires incompatibly.
+-  "v<sseintprefix>scatterd<ssemodesuffix>\t{%3, %5%{%1%}|%X5%{%1%}, %3}"
++  "%M0v<sseintprefix>scatterd<ssemodesuffix>\t{%3, %5%{%1%}|%X5%{%1%}, %3}"
+   [(set_attr "type" "ssemov")
+    (set_attr "prefix" "evex")
+    (set_attr "mode" "<sseinsnmode>")])
+@@ -19496,7 +19496,7 @@
+   "TARGET_AVX512F"
+ ;; %X5 so that we don't emit any *WORD PTR for -masm=intel, as
+ ;; gas changed what it requires incompatibly.
+-  "v<sseintprefix>scatterq<ssemodesuffix>\t{%3, %5%{%1%}|%X5%{%1%}, %3}"
++  "%M0v<sseintprefix>scatterq<ssemodesuffix>\t{%3, %5%{%1%}|%X5%{%1%}, %3}"
+   [(set_attr "type" "ssemov")
+    (set_attr "prefix" "evex")
+    (set_attr "mode" "<sseinsnmode>")])
 diff --git a/gcc/config/rs6000/altivec.h b/gcc/config/rs6000/altivec.h
 index 5a3416235da..6c5757eadf5 100644
 --- a/gcc/config/rs6000/altivec.h
@@ -2150,10 +2401,18 @@ index 36bcc65f14d..af67feb5fbc 100644
        && (code == TRUTH_AND_EXPR
            || code == TRUTH_ANDIF_EXPR
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index 4d2782f1b19..27f7b562bc1 100644
+index 4d2782f1b19..33472c09cb2 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,171 @@
+@@ -1,3 +1,179 @@
++2019-03-17  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	PR fortran/84394
++	Backport from trunk
++	* symbol.c (gfc_add_subroutine): If we are encountering a
++	subrtoutine within a BLOCK DATA and the name starts with an
++	underscore, do not check.
++
 +2019-03-16  Thomas Koenig  <tkoenig@gcc.gnu.org>
 +
 +	PR fortran/66089
@@ -2806,7 +3065,7 @@ index 0d0f57922ea..65fc19151e7 100644
  
    return range_check (result, "STORAGE_SIZE");
 diff --git a/gcc/fortran/symbol.c b/gcc/fortran/symbol.c
-index 4ea66e3f387..e40e9ac648e 100644
+index 4ea66e3f387..6f4abde48cc 100644
 --- a/gcc/fortran/symbol.c
 +++ b/gcc/fortran/symbol.c
 @@ -522,7 +522,7 @@ check_conflict (symbol_attribute *attr, const char *name, locus *where)
@@ -2818,7 +3077,24 @@ index 4ea66e3f387..e40e9ac648e 100644
        && (attr->function || attr->subroutine)
        && gfc_current_state () == COMP_CONTAINS
        && !(gfc_new_block && gfc_new_block->abr_modproc_decl))
-@@ -1801,7 +1801,8 @@ gfc_add_procedure (symbol_attribute *attr, procedure_type t,
+@@ -1685,7 +1685,15 @@ gfc_add_subroutine (symbol_attribute *attr, const char *name, locus *where)
+     return false;
+ 
+   attr->subroutine = 1;
+-  return check_conflict (attr, name, where);
++
++  /* If we are looking at a BLOCK DATA statement and we encounter a
++     name with a leading underscore (which must be
++     compiler-generated), do not check. See PR 84394.  */
++
++  if (name && *name != '_' && gfc_current_state () != COMP_BLOCK_DATA)
++    return check_conflict (attr, name, where);
++  else
++    return true;
+ }
+ 
+ 
+@@ -1801,7 +1809,8 @@ gfc_add_procedure (symbol_attribute *attr, procedure_type t,
    if (where == NULL)
      where = &gfc_current_locus;
  
@@ -2828,7 +3104,7 @@ index 4ea66e3f387..e40e9ac648e 100644
      {
        if (attr->proc == PROC_ST_FUNCTION && t == PROC_INTERNAL
  	  && !gfc_notification_std (GFC_STD_F2008))
-@@ -4352,7 +4353,7 @@ gsym_compare (void *_s1, void *_s2)
+@@ -4352,7 +4361,7 @@ gsym_compare (void *_s1, void *_s2)
  /* Get a global symbol, creating it if it doesn't exist.  */
  
  gfc_gsymbol *
@@ -2837,7 +3113,7 @@ index 4ea66e3f387..e40e9ac648e 100644
  {
    gfc_gsymbol *s;
  
-@@ -4363,6 +4364,7 @@ gfc_get_gsymbol (const char *name)
+@@ -4363,6 +4372,7 @@ gfc_get_gsymbol (const char *name)
    s = XCNEW (gfc_gsymbol);
    s->type = GSYM_UNKNOWN;
    s->name = gfc_get_string ("%s", name);
@@ -3319,6 +3595,25 @@ index d16c15061c6..103ad6787ad 100644
  
  /* Return the decl for a function.  */
  tree gfc_get_function_decl (gfc_symbol *);
+diff --git a/gcc/gimple-ssa-warn-restrict.c b/gcc/gimple-ssa-warn-restrict.c
+index 3d0664da028..8aeefd4077b 100644
+--- a/gcc/gimple-ssa-warn-restrict.c
++++ b/gcc/gimple-ssa-warn-restrict.c
+@@ -314,13 +314,9 @@ builtin_memref::extend_offset_range (tree offset)
+ 	  offrange[0] += offset_int::from (min, SIGNED);
+ 	  offrange[1] += offset_int::from (max, SIGNED);
+ 	}
+-      else if (rng == VR_ANTI_RANGE)
+-	{
+-	  offrange[0] += offset_int::from (max + 1, SIGNED);
+-	  offrange[1] += offset_int::from (min - 1, SIGNED);
+-	}
+       else
+ 	{
++	  /* Handle an anti-range the same as no range at all.  */
+ 	  gimple *stmt = SSA_NAME_DEF_STMT (offset);
+ 	  tree type;
+ 	  if (is_gimple_assign (stmt)
 diff --git a/gcc/input.c b/gcc/input.c
 index b6675768722..26c2bf21d52 100644
 --- a/gcc/input.c
@@ -3469,10 +3764,46 @@ index 0e79e53fb61..dabc5403f28 100644
        offset1 = crtl->outgoing_args_size + get_frame_size ();
  #if !STACK_GROWS_DOWNWARD
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 7d5e65b1a74..eabac5e7d65 100644
+index 7d5e65b1a74..3079d17eb49 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,304 @@
+@@ -1,3 +1,340 @@
++2019-03-18  Martin Sebor  <msebor@redhat.com>
++
++	PR middle-end/88273
++	* gcc.dg/Warray-bounds-38.c: New test.
++
++2019-03-18  Martin Jambor  <mjambor@suse.cz>
++
++	Backport from mainline
++	2019-03-18  Martin Jambor  <mjambor@suse.cz>
++
++	PR tree-optimization/89546
++	* gcc.dg/tree-ssa/pr89546.c: New test.
++
++2019-03-17  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	PR fortran/84394
++	Backport from trunk
++	* gfortran.dg/blockdata_11.f90: New test.
++
++2019-03-17  H.J. Lu  <hongjiu.lu@intel.com>
++
++	Backport from mainline
++	2019-03-14  H.J. Lu  <hongjiu.lu@intel.com>
++
++	PR target/89523
++	* gcc.target/i386/pr89523-1a.c: New test.
++	* gcc.target/i386/pr89523-1b.c: Likewise.
++	* gcc.target/i386/pr89523-2.c: Likewise.
++	* gcc.target/i386/pr89523-3.c: Likewise.
++	* gcc.target/i386/pr89523-4.c: Likewise.
++	* gcc.target/i386/pr89523-5.c: Likewise.
++	* gcc.target/i386/pr89523-6.c: Likewise.
++	* gcc.target/i386/pr89523-7.c: Likewise.
++	* gcc.target/i386/pr89523-8.c: Likewise.
++	* gcc.target/i386/pr89523-9.c: Likewise.
++
 +2019-03-16  Thomas Koenig  <tkoenig@gcc.gnu.org>
 +
 +	PR fortran/66089
@@ -4178,6 +4509,42 @@ index 00000000000..e71f33a279b
 +
 +  return 0;
 +}
+diff --git a/gcc/testsuite/gcc.dg/Warray-bounds-38.c b/gcc/testsuite/gcc.dg/Warray-bounds-38.c
+new file mode 100644
+index 00000000000..c9aa0eb8175
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/Warray-bounds-38.c
+@@ -0,0 +1,30 @@
++/* PR middle-end/88273 - bogus warning: 'memcpy' offset [-527, -529]
++   is out of the bounds [0, 16]
++   { dg-do compile }
++   { dg-options "-O2 -Wall" }  */
++
++typedef __SIZE_TYPE__ size_t;
++
++void *q;
++
++size_t x, y;
++
++inline void f (char *p, int i, size_t j)
++{
++  size_t n = y ? y : j;
++
++  p += x - i;
++
++  __builtin_memcpy (q, p, n);   /* { dg-bogus "bounds" } */
++
++  x = n;
++}
++
++void g (void)
++{
++  struct { char a[16]; } s;
++
++  f (q, 0, sizeof s);
++
++  f (s.a, 33 * sizeof s, 1);
++}
 diff --git a/gcc/testsuite/gcc.dg/ipa/ipcp-5.c b/gcc/testsuite/gcc.dg/ipa/ipcp-5.c
 new file mode 100644
 index 00000000000..6786c514543
@@ -4311,6 +4678,112 @@ index 00000000000..a45ca1f61a1
 +	  g = f + 0;
 +	  f = b + *i + (b - e + 305219) + -b + 3;
 +      }
++}
+diff --git a/gcc/testsuite/gcc.dg/tree-ssa/pr89546.c b/gcc/testsuite/gcc.dg/tree-ssa/pr89546.c
+new file mode 100644
+index 00000000000..c4645ae1858
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/tree-ssa/pr89546.c
+@@ -0,0 +1,100 @@
++/* { dg-do run } */
++/* { dg-options "-O" } */
++
++struct I
++{
++  int i;
++};
++
++struct A
++{
++  struct I i1;
++  struct I i2;
++  struct I i3;
++};
++
++struct B
++{
++  struct I i0;
++  struct A a;
++};
++
++struct C
++{
++  struct I i00;
++  struct B b;
++};
++
++volatile int v;
++
++void __attribute__((noipa))
++consume_i (struct I i)
++{
++  v = i.i;
++}
++
++void __attribute__((noipa))
++consume_a (struct A a)
++{
++  v = a.i1.i;
++}
++
++void __attribute__((noipa))
++consume_b (struct B b)
++{
++  v = b.a.i1.i;
++}
++
++void __attribute__((noipa))
++consume_c (struct C c)
++{
++  v = c.b.a.i1.i;
++}
++
++
++
++
++int __attribute__((noipa))
++foo (struct I input)
++{
++  struct I i1, i2, i3;
++  struct A a1, a2, a3;
++  struct B b1;
++  struct C c;
++
++  i1 = input;
++  a1.i1 = i1;
++  b1.a = a1;
++
++  i2.i = 1;
++  b1.i0 = i2;
++
++  c.b = b1;
++
++  a2 = c.b.a;
++  a3 = a2;
++  i3 = a3.i1;
++
++  int t = c.b.i0.i;
++  a2.i3.i = 4;
++  consume_i (i1);
++  consume_i (i2);
++  consume_b (b1);
++  consume_a (a1);
++  consume_a (a2);
++  consume_a (a3);
++  consume_c (c);
++
++  return i3.i + t;
++}
++
++int
++main (int argc, char *argv[])
++{
++  struct I s;
++  s.i = 1234;
++  int i = foo (s);
++  if (i != 1235)
++    __builtin_abort ();
++  return 0;
 +}
 diff --git a/gcc/testsuite/gcc.dg/tree-ssa/reassoc-43.c b/gcc/testsuite/gcc.dg/tree-ssa/reassoc-43.c
 index ea44f300f94..90e1e86b3cb 100644
@@ -4616,6 +5089,396 @@ index 00000000000..aef78a4b958
 +    }
 +  while (a);
 +  return m + j + k + l;
++}
+diff --git a/gcc/testsuite/gcc.target/i386/pr89523-1a.c b/gcc/testsuite/gcc.target/i386/pr89523-1a.c
+new file mode 100644
+index 00000000000..0d0edab0363
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr89523-1a.c
+@@ -0,0 +1,24 @@
++/* { dg-do compile { target { ! ia32 } } } */
++/* { dg-require-effective-target maybe_x32 } */
++/* { dg-options "-maddress-mode=short -mx32 -Ofast -funroll-loops -march=haswell" } */
++/* { dg-final { scan-assembler-not "\tvgather" } } */
++/* { dg-final { scan-assembler "addr32 vgather" } } */
++
++void foo (void);
++
++extern float *ncost;
++
++float
++bar (int type, int num)
++{
++  int i;
++  float cost;
++
++  cost = 0;
++  for (i = 0; i < num; i++)
++    if (type)
++      cost += ncost[i];
++    else
++      foo ();
++  return (cost);
++}
+diff --git a/gcc/testsuite/gcc.target/i386/pr89523-1b.c b/gcc/testsuite/gcc.target/i386/pr89523-1b.c
+new file mode 100644
+index 00000000000..6a5c1d43625
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr89523-1b.c
+@@ -0,0 +1,7 @@
++/* { dg-do compile { target { ! ia32 } } } */
++/* { dg-require-effective-target maybe_x32 } */
++/* { dg-options "-maddress-mode=long -mx32 -Ofast -funroll-loops -march=haswell" } */
++/* { dg-final { scan-assembler-not "\tvgather" } } */
++/* { dg-final { scan-assembler "addr32 vgather" } } */
++
++#include "pr89523-1a.c"
+diff --git a/gcc/testsuite/gcc.target/i386/pr89523-2.c b/gcc/testsuite/gcc.target/i386/pr89523-2.c
+new file mode 100644
+index 00000000000..2ffbffe5e40
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr89523-2.c
+@@ -0,0 +1,37 @@
++/* { dg-do compile { target { ! ia32 } } } */
++/* { dg-require-effective-target maybe_x32 } */
++/* { dg-options "-mx32 -O2 -march=haswell" } */
++/* { dg-final { scan-assembler "\tvgather" } } */
++/* { dg-final { scan-assembler-not "addr32 vgather" } } */
++
++typedef double __v2df __attribute__ ((__vector_size__ (16)));
++typedef int __v4si __attribute__ ((__vector_size__ (16)));
++typedef long long __v2di __attribute__ ((__vector_size__ (16)));
++
++typedef long long __m128i __attribute__ ((__vector_size__ (16), __may_alias__));
++typedef double __m128d __attribute__ ((__vector_size__ (16), __may_alias__));
++
++extern __inline __m128d
++__attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
++_mm_i32gather_pd (double const *__base, __m128i __index, const int __scale)
++{
++  __v2df __zero = { 0.0, 0.0 };
++  __v2df __mask = __builtin_ia32_cmpeqpd (__zero, __zero);
++  __v2df x = x;
++
++  return (__m128d) __builtin_ia32_gathersiv2df (x,
++						__base,
++						(__v4si)__index,
++						__mask,
++						__scale);
++}
++
++__m128d x;
++double *base;
++__m128i idx;
++
++void extern
++avx2_test (void)
++{
++  x = _mm_i32gather_pd (base, idx, 1);
++}
+diff --git a/gcc/testsuite/gcc.target/i386/pr89523-3.c b/gcc/testsuite/gcc.target/i386/pr89523-3.c
+new file mode 100644
+index 00000000000..fc3631b694b
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr89523-3.c
+@@ -0,0 +1,36 @@
++/* { dg-do compile { target { ! ia32 } } } */
++/* { dg-require-effective-target maybe_x32 } */
++/* { dg-options "-mx32 -O2 -march=haswell" } */
++/* { dg-final { scan-assembler "\tvgather" } } */
++/* { dg-final { scan-assembler-not "addr32 vgather" } } */
++
++typedef double __v2df __attribute__ ((__vector_size__ (16)));
++typedef int __v4si __attribute__ ((__vector_size__ (16)));
++typedef long long __v2di __attribute__ ((__vector_size__ (16)));
++
++typedef long long __m128i __attribute__ ((__vector_size__ (16), __may_alias__));
++typedef double __m128d __attribute__ ((__vector_size__ (16), __may_alias__));
++
++extern __inline __m128d
++__attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
++_mm_i64gather_pd (double const *__base, __m128i __index, const int __scale)
++{
++  __v2df __zero = { 0.0, 0.0 };
++  __v2df __mask = __builtin_ia32_cmpeqpd (__zero, __zero);
++
++  return (__m128d) __builtin_ia32_gatherdiv2df (__zero,
++						__base,
++						(__v2di)__index,
++						__mask,
++						__scale);
++}
++
++__m128d x;
++double *base;
++__m128i idx;
++
++void extern
++avx2_test (void)
++{
++  x = _mm_i64gather_pd (base, idx, 1);
++}
+diff --git a/gcc/testsuite/gcc.target/i386/pr89523-4.c b/gcc/testsuite/gcc.target/i386/pr89523-4.c
+new file mode 100644
+index 00000000000..3436e5dcae3
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr89523-4.c
+@@ -0,0 +1,36 @@
++/* { dg-do compile { target { ! ia32 } } } */
++/* { dg-require-effective-target maybe_x32 } */
++/* { dg-options "-mx32 -O2 -march=haswell" } */
++/* { dg-final { scan-assembler-not "\tvgather" } } */
++/* { dg-final { scan-assembler "addr32 vgather" } } */
++
++typedef double __v2df __attribute__ ((__vector_size__ (16)));
++typedef int __v4si __attribute__ ((__vector_size__ (16)));
++typedef long long __v2di __attribute__ ((__vector_size__ (16)));
++
++typedef long long __m128i __attribute__ ((__vector_size__ (16), __may_alias__));
++typedef double __m128d __attribute__ ((__vector_size__ (16), __may_alias__));
++
++extern __inline __m128d
++__attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
++_mm_i32gather_pd (double const *__base, __m128i __index, const int __scale)
++{
++  __v2df __zero = { 0.0, 0.0 };
++  __v2df __mask = __builtin_ia32_cmpeqpd (__zero, __zero);
++  __v2df x = x;
++
++  return (__m128d) __builtin_ia32_gathersiv2df (x,
++						__base,
++						(__v4si)__index,
++						__mask,
++						__scale);
++}
++
++__m128d x;
++__m128i idx;
++
++void extern
++avx2_test (void)
++{
++  x = _mm_i32gather_pd ((void *) 0, idx, 1);
++}
+diff --git a/gcc/testsuite/gcc.target/i386/pr89523-5.c b/gcc/testsuite/gcc.target/i386/pr89523-5.c
+new file mode 100644
+index 00000000000..6a769c7a249
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr89523-5.c
+@@ -0,0 +1,39 @@
++/* { dg-do compile { target { ! ia32 } } } */
++/* { dg-require-effective-target maybe_x32 } */
++/* { dg-options "-mx32 -O2 -mavx512pf" } */
++/* { dg-final { scan-assembler "\tvgather" } } */
++/* { dg-final { scan-assembler-not "addr32 vgather" } } */
++
++typedef int __v8si __attribute__ ((__vector_size__ (32)));
++typedef long long __m256i __attribute__ ((__vector_size__ (32),
++					  __may_alias__));
++typedef unsigned char  __mmask8;
++
++extern __inline void
++__attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
++_mm512_prefetch_i32gather_pd (__m256i __index, void const *__addr,
++			      int __scale, int __hint)
++{
++  __builtin_ia32_gatherpfdpd ((__mmask8) 0xFF, (__v8si) __index, __addr,
++			      __scale, __hint);
++}
++
++extern __inline void
++__attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
++_mm512_mask_prefetch_i32gather_pd (__m256i __index, __mmask8 __mask,
++				   void const *__addr, int __scale, int __hint)
++{
++  __builtin_ia32_gatherpfdpd (__mask, (__v8si) __index, __addr, __scale,
++			      __hint);
++}
++
++volatile __m256i idx;
++volatile __mmask8 m8;
++void *base;
++
++void extern
++avx512pf_test (void)
++{
++  _mm512_prefetch_i32gather_pd (idx, base, 8, 3);
++  _mm512_mask_prefetch_i32gather_pd (idx, m8, base, 8, 3);
++}
+diff --git a/gcc/testsuite/gcc.target/i386/pr89523-6.c b/gcc/testsuite/gcc.target/i386/pr89523-6.c
+new file mode 100644
+index 00000000000..82f795e085c
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr89523-6.c
+@@ -0,0 +1,38 @@
++/* { dg-do compile { target { ! ia32 } } } */
++/* { dg-require-effective-target maybe_x32 } */
++/* { dg-options "-mx32 -O2 -mavx512pf" } */
++/* { dg-final { scan-assembler-not "\tvgather" } } */
++/* { dg-final { scan-assembler "addr32 vgather" } } */
++
++typedef int __v8si __attribute__ ((__vector_size__ (32)));
++typedef long long __m256i __attribute__ ((__vector_size__ (32),
++					  __may_alias__));
++typedef unsigned char  __mmask8;
++
++extern __inline void
++__attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
++_mm512_prefetch_i32gather_pd (__m256i __index, void const *__addr,
++			      int __scale, int __hint)
++{
++  __builtin_ia32_gatherpfdpd ((__mmask8) 0xFF, (__v8si) __index, __addr,
++			      __scale, __hint);
++}
++
++extern __inline void
++__attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
++_mm512_mask_prefetch_i32gather_pd (__m256i __index, __mmask8 __mask,
++				   void const *__addr, int __scale, int __hint)
++{
++  __builtin_ia32_gatherpfdpd (__mask, (__v8si) __index, __addr, __scale,
++			      __hint);
++}
++
++volatile __m256i idx;
++volatile __mmask8 m8;
++
++void extern
++avx512pf_test (void)
++{
++  _mm512_prefetch_i32gather_pd (idx, (void *) 0, 8, 3);
++  _mm512_mask_prefetch_i32gather_pd (idx, m8, (void *) 0, 8, 3);
++}
+diff --git a/gcc/testsuite/gcc.target/i386/pr89523-7.c b/gcc/testsuite/gcc.target/i386/pr89523-7.c
+new file mode 100644
+index 00000000000..030b00d268a
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr89523-7.c
+@@ -0,0 +1,42 @@
++/* { dg-do compile { target { ! ia32 } } } */
++/* { dg-require-effective-target maybe_x32 } */
++/* { dg-options "-mx32 -O2 -mavx512f" } */
++/* { dg-final { scan-assembler "\tvscatter" } } */
++/* { dg-final { scan-assembler-not "addr32 vscatter" } } */
++
++typedef int __v8si __attribute__ ((__vector_size__ (32)));
++typedef double __v8df __attribute__ ((__vector_size__ (64)));
++typedef long long __m256i __attribute__ ((__vector_size__ (32),
++					  __may_alias__));
++typedef double __m512d __attribute__ ((__vector_size__ (64), __may_alias__));
++typedef unsigned char  __mmask8;
++
++extern __inline void
++__attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
++_mm512_i32scatter_pd (void *__addr, __m256i __index, __m512d __v1,
++		      int __scale)
++{
++  __builtin_ia32_scattersiv8df (__addr, (__mmask8) 0xFF,
++				(__v8si) __index, (__v8df) __v1, __scale);
++}
++
++extern __inline void
++__attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
++_mm512_mask_i32scatter_pd (void *__addr, __mmask8 __mask,
++			   __m256i __index, __m512d __v1, int __scale)
++{
++  __builtin_ia32_scattersiv8df (__addr, __mask, (__v8si) __index,
++				(__v8df) __v1, __scale);
++}
++
++volatile __m512d src;
++volatile __m256i idx;
++volatile __mmask8 m8;
++double *addr;
++
++void extern
++avx512f_test (void)
++{
++  _mm512_i32scatter_pd (addr, idx, src, 8);
++  _mm512_mask_i32scatter_pd (addr, m8, idx, src, 8);
++}
+diff --git a/gcc/testsuite/gcc.target/i386/pr89523-8.c b/gcc/testsuite/gcc.target/i386/pr89523-8.c
+new file mode 100644
+index 00000000000..465c985c2b7
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr89523-8.c
+@@ -0,0 +1,41 @@
++/* { dg-do compile { target { ! ia32 } } } */
++/* { dg-require-effective-target maybe_x32 } */
++/* { dg-options "-mx32 -O2 -mavx512f" } */
++/* { dg-final { scan-assembler "\tvscatter" } } */
++/* { dg-final { scan-assembler-not "addr32 vscatter" } } */
++
++typedef long long __v8di __attribute__ ((__vector_size__ (64)));
++typedef double __v8df __attribute__ ((__vector_size__ (64)));
++typedef long long __m512i __attribute__ ((__vector_size__ (64), __may_alias__));
++typedef double __m512d __attribute__ ((__vector_size__ (64), __may_alias__));
++typedef unsigned char  __mmask8;
++
++extern __inline void
++__attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
++_mm512_i64scatter_pd (void *__addr, __m512i __index, __m512d __v1,
++		      int __scale)
++{
++  __builtin_ia32_scatterdiv8df (__addr, (__mmask8) 0xFF,
++				(__v8di) __index, (__v8df) __v1, __scale);
++}
++
++extern __inline void
++__attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
++_mm512_mask_i64scatter_pd (void *__addr, __mmask8 __mask,
++			   __m512i __index, __m512d __v1, int __scale)
++{
++  __builtin_ia32_scatterdiv8df (__addr, __mask, (__v8di) __index,
++				(__v8df) __v1, __scale);
++}
++
++volatile __m512d src;
++volatile __m512i idx;
++volatile __mmask8 m8;
++double *addr;
++
++void extern
++avx512f_test (void)
++{
++  _mm512_i64scatter_pd (addr, idx, src, 8);
++  _mm512_mask_i64scatter_pd (addr, m8, idx, src, 8);
++}
+diff --git a/gcc/testsuite/gcc.target/i386/pr89523-9.c b/gcc/testsuite/gcc.target/i386/pr89523-9.c
+new file mode 100644
+index 00000000000..e9323126bd6
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr89523-9.c
+@@ -0,0 +1,30 @@
++/* { dg-do compile { target { ! ia32 } } } */
++/* { dg-require-effective-target maybe_x32 } */
++/* { dg-options "-mx32 -O2 -mavx512f" } */
++/* { dg-final { scan-assembler-not "\tvscatter" } } */
++/* { dg-final { scan-assembler "addr32 vscatter" } } */
++
++typedef int __v8si __attribute__ ((__vector_size__ (32)));
++typedef double __v8df __attribute__ ((__vector_size__ (64)));
++typedef long long __m256i __attribute__ ((__vector_size__ (32),
++					  __may_alias__));
++typedef double __m512d __attribute__ ((__vector_size__ (64), __may_alias__));
++typedef unsigned char  __mmask8;
++
++extern __inline void
++__attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
++_mm512_i32scatter_pd (void *__addr, __m256i __index, __m512d __v1,
++		      int __scale)
++{
++  __builtin_ia32_scattersiv8df (__addr, (__mmask8) 0xFF,
++				(__v8si) __index, (__v8df) __v1, __scale);
++}
++
++volatile __m512d src;
++volatile __m256i idx;
++
++void extern
++avx512f_test (void)
++{
++  _mm512_i32scatter_pd ((void *) 0, idx, src, 8);
 +}
 diff --git a/gcc/testsuite/gcc.target/powerpc/crypto-builtin-1.c b/gcc/testsuite/gcc.target/powerpc/crypto-builtin-1.c
 index 234041d5c35..38245ffc370 100644
@@ -5080,6 +5943,45 @@ index 00000000000..fdb9a887f60
 +  
 +  call foo(i)
 +end
+diff --git a/gcc/testsuite/gfortran.dg/blockdata_11.f90 b/gcc/testsuite/gfortran.dg/blockdata_11.f90
+new file mode 100644
+index 00000000000..4aee18b7c7a
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/blockdata_11.f90
+@@ -0,0 +1,33 @@
++! { dg-do run }
++! PR 84394 - this used to complain about private procedures in
++! BLOCK data.
++module mod1
++   implicit none
++   type :: type1
++      integer :: i1
++   end type type1
++end module
++
++module mod2
++   implicit none
++   contains
++      subroutine sub1
++         integer vals
++         common /block1/ vals(5)
++         if (any(vals /= [1, 2, 3, 4, 5])) stop 1
++      end subroutine
++end module
++
++block data blkdat
++  use mod1
++  integer vals
++  common /block1/ vals(5)
++  data vals/1, 2, 3, 4, 5/
++end block data blkdat
++
++program main
++  use mod2, only: sub1
++  implicit none
++  call sub1
++end program
++
 diff --git a/gcc/testsuite/gfortran.dg/c_ptr_tests_19.f90 b/gcc/testsuite/gfortran.dg/c_ptr_tests_19.f90
 new file mode 100644
 index 00000000000..2cb0b183c88
@@ -5785,6 +6687,25 @@ index fefc9de96af..759bc612566 100644
    /* Try harder to check if they are equal.  */
    tree_to_aff_combination_expand (left, type, &aff1, &peeled_chrec_map);
    tree_to_aff_combination_expand (step_val, type, &aff2, &peeled_chrec_map);
+diff --git a/gcc/tree-sra.c b/gcc/tree-sra.c
+index b513676152f..bb373b33b7a 100644
+--- a/gcc/tree-sra.c
++++ b/gcc/tree-sra.c
+@@ -2729,8 +2729,12 @@ propagate_subaccesses_across_link (struct access *lacc, struct access *racc)
+ 
+ 	      rchild->grp_hint = 1;
+ 	      new_acc->grp_hint |= new_acc->grp_read;
+-	      if (rchild->first_child)
+-		ret |= propagate_subaccesses_across_link (new_acc, rchild);
++	      if (rchild->first_child
++		  && propagate_subaccesses_across_link (new_acc, rchild))
++		{
++		  ret = 1;
++		  add_access_to_work_queue (new_acc);
++		}
+ 	    }
+ 	  else
+ 	    {
 diff --git a/gcc/tree-ssa-dom.c b/gcc/tree-ssa-dom.c
 index f60e96cdfbe..0ebcc6d43c7 100644
 --- a/gcc/tree-ssa-dom.c
