@@ -103,13 +103,14 @@ pault (1):
 redi (1):
       PR libstdc++/89446 fix null pointer dereference in char_traits
 
-rguenth (6):
+rguenth (7):
       2019-03-01  Richard Biener  <rguenther@suse.de>
       2019-03-05  Richard Biener  <rguenther@suse.de>
       2019-03-12  Richard Biener  <rguenther@suse.de>
       2019-03-14  Richard Biener  <rguenther@suse.de>
       2019-03-14  Richard Biener  <rguenther@suse.de>
       2019-03-15  Richard Biener  <rguenther@suse.de>
+      2019-03-19  Richard Biener  <rguenther@suse.de>
 
 tkoenig (11):
       2019-02-22  Thomas Koenig  <tkoenig@gcc.gnu.org>
@@ -143,10 +144,15 @@ index 2bf50aaf17a..56b6be4ebb2 100644
 -8.3.0
 +8.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d1fd9f6a7b9..b28b67dff3e 100644
+index d1fd9f6a7b9..b46e6c2cff1 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,355 @@
+@@ -1,3 +1,360 @@
++2019-03-19  Richard Biener  <rguenther@suse.de>
++
++	PR debug/88389
++	* opts.c (finish_options): Disable -gsplit-dwarf when doing LTO.
++
 +2019-03-19  Eric Botcazou  <ebotcazou@adacore.com>
 +
 +	PR rtl-optimization/89753
@@ -3723,6 +3729,25 @@ index 5405c4d2adb..e3adf78e57c 100644
  		    }
  		  /* We should invalidate potential inheritance or
  		     splitting for the current insn usages to the next
+diff --git a/gcc/opts.c b/gcc/opts.c
+index 442f250f3af..28030881e93 100644
+--- a/gcc/opts.c
++++ b/gcc/opts.c
+@@ -922,6 +922,14 @@ finish_options (struct gcc_options *opts, struct gcc_options *opts_set,
+ 		      "linker plugin");
+ 	  opts->x_flag_fat_lto_objects = 1;
+ 	}
++
++      /* -gsplit-dwarf isn't compatible with LTO, see PR88389.  */
++      if (opts->x_dwarf_split_debug_info)
++	{
++	  inform (loc, "%<-gsplit-dwarf%> is not supported with LTO,"
++		  " disabling");
++	  opts->x_dwarf_split_debug_info = 0;
++	}
+     }
+ 
+   /* We initialize opts->x_flag_split_stack to -1 so that targets can set a
 diff --git a/gcc/params.def b/gcc/params.def
 index dad47ec2b00..e3ad05fd182 100644
 --- a/gcc/params.def
