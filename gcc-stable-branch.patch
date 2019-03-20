@@ -18,7 +18,11 @@ ebotcazou (6):
       PR rtl-optimization/89588 	* loop-unroll.c (decide_unroll_constant_iterations): Make guard for 	explicit unrolling factor more robust.
       PR rtl-optimization/89753 	* loop-unroll.c (decide_unroll_constant_iterations): Make guard for 	explicit unrolling factor even more robust.
 
-gccadmin (25):
+fw (1):
+      PR libgcc/60790: x86: Do not assume ELF constructors run before IFUNC resolvers
+
+gccadmin (26):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -6939,6 +6943,104 @@ index 373946f518a..0e69629f879 100644
  	      varinfo_t escaped = get_varinfo (find (escaped_id));
  	      if (bitmap_bit_p (escaped->solution, restrict_var->id))
  		escaped_p = true;
+diff --git a/libatomic/ChangeLog b/libatomic/ChangeLog
+index 6c5e7fb5c11..e2f3a1e69a9 100644
+--- a/libatomic/ChangeLog
++++ b/libatomic/ChangeLog
+@@ -1,3 +1,18 @@
++2019-03-20  Florian Weimer  <fweimer@redhat.com>
++
++	PR libgcc/60790
++	x86: Do not assume ELF constructors run before IFUNC resolvers.
++	* config/x86/host-config.h (libat_feat1_ecx, libat_feat1_edx):
++	Remove declarations.
++	(__libat_feat1, __libat_feat1_init): Declare.
++	(FEAT1_REGISTER): Define.
++	(load_feat1): New function.
++	(IFUNC_COND_1): Adjust.
++	* config/x86/init.c (libat_feat1_ecx, libat_feat1_edx)
++	(init_cpuid): Remove definitions.
++	(__libat_feat1): New variable.
++	(__libat_feat1_init): New function.
++
+ 2019-02-22  Release Manager
+ 
+ 	* GCC 8.3.0 released.
+diff --git a/libatomic/config/x86/host-config.h b/libatomic/config/x86/host-config.h
+index 4a9ab4a6d94..0b6c33862ec 100644
+--- a/libatomic/config/x86/host-config.h
++++ b/libatomic/config/x86/host-config.h
+@@ -25,13 +25,39 @@
+ #if HAVE_IFUNC
+ #include <cpuid.h>
+ 
+-extern unsigned int libat_feat1_ecx HIDDEN;
+-extern unsigned int libat_feat1_edx HIDDEN;
++#ifdef __x86_64__
++# define FEAT1_REGISTER ecx
++#else
++# define FEAT1_REGISTER edx
++#endif
++
++/* Value of the CPUID feature register FEAT1_REGISTER for the cmpxchg
++   bit for IFUNC_COND1 below.  */
++extern unsigned int __libat_feat1 HIDDEN;
++
++/* Initialize libat_feat1 and return its value.  */
++unsigned int __libat_feat1_init (void) HIDDEN;
++
++/* Return the value of the relevant feature register for the relevant
++   cmpxchg bit, or 0 if there is no CPUID support.  */
++static inline unsigned int
++__attribute__ ((const))
++load_feat1 (void)
++{
++  /* See the store in __libat_feat1_init.  */
++  unsigned int feat1 = __atomic_load_n (&__libat_feat1, __ATOMIC_RELAXED);
++  if (feat1 == 0)
++    /* Assume that initialization has not happened yet.  This may get
++       called repeatedly if the CPU does not have any feature bits at
++       all.  */
++    feat1 = __libat_feat1_init ();
++  return feat1;
++}
+ 
+ #ifdef __x86_64__
+-# define IFUNC_COND_1	(libat_feat1_ecx & bit_CMPXCHG16B)
++# define IFUNC_COND_1	(load_feat1 () & bit_CMPXCHG16B)
+ #else
+-# define IFUNC_COND_1	(libat_feat1_edx & bit_CMPXCHG8B)
++# define IFUNC_COND_1	(load_feat1 () & bit_CMPXCHG8B)
+ #endif
+ 
+ #ifdef __x86_64__
+diff --git a/libatomic/config/x86/init.c b/libatomic/config/x86/init.c
+index 8b9ccd3b3de..5a4cf8b0456 100644
+--- a/libatomic/config/x86/init.c
++++ b/libatomic/config/x86/init.c
+@@ -26,13 +26,17 @@
+ 
+ #if HAVE_IFUNC
+ 
+-unsigned int libat_feat1_ecx, libat_feat1_edx;
++unsigned int __libat_feat1;
+ 
+-static void __attribute__((constructor))
+-init_cpuid (void)
++unsigned int
++__libat_feat1_init (void)
+ {
+-  unsigned int eax, ebx;
+-  __get_cpuid (1, &eax, &ebx, &libat_feat1_ecx, &libat_feat1_edx);
++  unsigned int eax, ebx, ecx, edx;
++  FEAT1_REGISTER = 0;
++  __get_cpuid (1, &eax, &ebx, &ecx, &edx);
++  /* See the load in load_feat1.  */
++  __atomic_store_n (&__libat_feat1, FEAT1_REGISTER, __ATOMIC_RELAXED);
++  return FEAT1_REGISTER;
+ }
+ 
+ #endif /* HAVE_IFUNC */
 diff --git a/libcpp/ChangeLog b/libcpp/ChangeLog
 index afc70cfce6c..bc1208a689b 100644
 --- a/libcpp/ChangeLog
