@@ -21,7 +21,8 @@ ebotcazou (6):
 fw (1):
       PR libgcc/60790: x86: Do not assume ELF constructors run before IFUNC resolvers
 
-gccadmin (27):
+gccadmin (28):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -135,11 +136,19 @@ tnfchris (3):
       AArch64: Have empty HWCAPs string ignored during native feature detection.
       AArch64: Fix command line options canonicalization version.
 
+tschwinge (3):
+      [testsuite, Fortran] Consistently set 'DEFAULT_FFLAGS'
+      [testsuite, Fortran] Apply DejaGnu 1.4.4 work-around also to 'gfortran.dg/coarray/caf.exp:dg-compile-aux-modules'
+      [testsuite] Fix 'dg-compile-aux-modules' diagnostic
+
 uros (1):
       PR target/89397 	* config/i386/i386.c (ix86_atomic_assign_expand_fenv): Check 	TARGET_SSE in addition to TARGET_SSE_MATH.
 
 vmakarov (1):
       2019-03-13  Vladimir Makarov  <vmakarov@redhat.com>
+
+wschmidt (1):
+      2019-03-21  Bill Schmidt  <wschmidt@linux.ibm.com>
 
 diff --git a/gcc/BASE-VER b/gcc/BASE-VER
 index 2bf50aaf17a..56b6be4ebb2 100644
@@ -149,10 +158,18 @@ index 2bf50aaf17a..56b6be4ebb2 100644
 -8.3.0
 +8.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d1fd9f6a7b9..b46e6c2cff1 100644
+index d1fd9f6a7b9..f97a6d173c2 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,360 @@
+@@ -1,3 +1,368 @@
++2019-03-21  Bill Schmidt  <wschmidt@linux.ibm.com>
++
++        Backport from mainline
++        2019-03-08  Bill Schmidt  <wschmidt@linux.ibm.com>
++
++        * config/rs6000/rs6000-p8swap.c (rs6000_analyze_swaps): Rebuild
++        ud- and du-chains between phases.
++
 +2019-03-19  Richard Biener  <rguenther@suse.de>
 +
 +	PR debug/88389
@@ -1526,6 +1543,25 @@ index 5abbd3e791b..d2896fce7c3 100644
  BU_CRYPTO_2A (VPMSUMB,		"vpmsumb",	  CONST, crypto_vpmsumb)
  BU_CRYPTO_2A (VPMSUMH,		"vpmsumh",	  CONST, crypto_vpmsumh)
  BU_CRYPTO_2A (VPMSUMW,		"vpmsumw",	  CONST, crypto_vpmsumw)
+diff --git a/gcc/config/rs6000/rs6000-p8swap.c b/gcc/config/rs6000/rs6000-p8swap.c
+index 071bc0c187d..3ba5ebae17f 100644
+--- a/gcc/config/rs6000/rs6000-p8swap.c
++++ b/gcc/config/rs6000/rs6000-p8swap.c
+@@ -2317,7 +2317,14 @@ rs6000_analyze_swaps (function *fun)
+ 
+   /* Pre-pass to recombine lvx and stvx patterns so we don't lose info.  */
+   recombine_lvx_stvx_patterns (fun);
++
++  /* Rebuild ud- and du-chains.  */
++  df_remove_problem (df_chain);
+   df_process_deferred_rescans ();
++  df_set_flags (DF_RD_PRUNE_DEAD_DEFS);
++  df_chain_add_problem (DF_DU_CHAIN | DF_UD_CHAIN);
++  df_analyze ();
++  df_set_flags (DF_DEFER_INSN_RESCAN);
+ 
+   /* Allocate structure to represent webs of insns.  */
+   insn_entry = XCNEWVEC (swap_web_entry, get_max_uid ());
 diff --git a/gcc/config/rs6000/rs6000.c b/gcc/config/rs6000/rs6000.c
 index 22e40f9109f..fee41e171a7 100644
 --- a/gcc/config/rs6000/rs6000.c
@@ -3802,10 +3838,26 @@ index 0e79e53fb61..dabc5403f28 100644
        offset1 = crtl->outgoing_args_size + get_frame_size ();
  #if !STACK_GROWS_DOWNWARD
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 7d5e65b1a74..b09ab29afff 100644
+index 7d5e65b1a74..fb11208d2c8 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,344 @@
+@@ -1,3 +1,360 @@
++2019-03-21  Thomas Schwinge  <thomas@codesourcery.com>
++
++	PR fortran/56408
++	* gcc.target/powerpc/ppc-fortran/ppc-fortran.exp
++	(dg-compile-aux-modules): Fix diagnostic.
++	* gfortran.dg/coarray/caf.exp (dg-compile-aux-modules): Likewise.
++	* gfortran.dg/dg.exp (dg-compile-aux-modules): Likewise.
++
++	PR fortran/56408
++	* gfortran.dg/coarray/caf.exp (dg-compile-aux-modules): Workaround
++	missing nexted dg-test call support in dejaGNU 1.4.4.
++
++	PR fortran/29383
++	* gfortran.dg/ieee/ieee.exp (DEFAULT_FFLAGS): Set the same as in
++	other '*.exp' files.
++
 +2019-03-19  Eric Botcazou  <ebotcazou@adacore.com>
 +
 +	* c-c++-common/unroll-7.c: New test.
@@ -5629,6 +5681,19 @@ index 234041d5c35..38245ffc370 100644
 +/* { dg-final { scan-assembler-times "vsbox "        2 } } */
  /* { dg-final { scan-assembler-times "vshasigmad "   2 } } */
  /* { dg-final { scan-assembler-times "vshasigmaw "   2 } } */
+diff --git a/gcc/testsuite/gcc.target/powerpc/ppc-fortran/ppc-fortran.exp b/gcc/testsuite/gcc.target/powerpc/ppc-fortran/ppc-fortran.exp
+index aa819915382..73138db3005 100644
+--- a/gcc/testsuite/gcc.target/powerpc/ppc-fortran/ppc-fortran.exp
++++ b/gcc/testsuite/gcc.target/powerpc/ppc-fortran/ppc-fortran.exp
+@@ -36,7 +36,7 @@ proc dg-compile-aux-modules { args } {
+     global gfortran_test_path
+     global gfortran_aux_module_flags
+     if { [llength $args] != 2 } {
+-	error "dg-set-target-env-var: needs one argument"
++	error "dg-compile-aux-modules: needs one argument"
+ 	return
+     }
+ 
 diff --git a/gcc/testsuite/gcc.target/powerpc/pr88100.c b/gcc/testsuite/gcc.target/powerpc/pr88100.c
 new file mode 100644
 index 00000000000..4452145ce95
@@ -6103,6 +6168,34 @@ index 00000000000..6b766d8f433
 +    bar = 1
 +  end function bar
 +end module x
+diff --git a/gcc/testsuite/gfortran.dg/coarray/caf.exp b/gcc/testsuite/gfortran.dg/coarray/caf.exp
+index d1a7a56970f..3a9d3e0717e 100644
+--- a/gcc/testsuite/gfortran.dg/coarray/caf.exp
++++ b/gcc/testsuite/gfortran.dg/coarray/caf.exp
+@@ -51,11 +51,21 @@ proc dg-compile-aux-modules { args } {
+     global gfortran_test_path
+     global gfortran_aux_module_flags
+     if { [llength $args] != 2 } {
+-	error "dg-set-target-env-var: needs one argument"
++	error "dg-compile-aux-modules: needs one argument"
+ 	return
+     }
++
++    set level [info level]
++    if { [info procs dg-save-unknown] != [list] } {
++	rename dg-save-unknown dg-save-unknown-level-$level
++    }
++
+     dg-test $gfortran_test_path/[lindex $args 1] "" $gfortran_aux_module_flags
+-    # cleanup-modules isn't intentionally invoked here.
++    # cleanup-modules is intentionally not invoked here.
++
++    if { [info procs dg-save-unknown-level-$level] != [list] } {
++	rename dg-save-unknown-level-$level dg-save-unknown
++    }
+ }
+ 
+ # Add -latomic only where supported.  Assume built-in support elsewhere.
 diff --git a/gcc/testsuite/gfortran.dg/coarray_allocate_11.f90 b/gcc/testsuite/gfortran.dg/coarray_allocate_11.f90
 new file mode 100644
 index 00000000000..0e806f0955b
@@ -6191,6 +6284,19 @@ index 00000000000..a45302fb0a3
 +  end function plus
 +
 +end
+diff --git a/gcc/testsuite/gfortran.dg/dg.exp b/gcc/testsuite/gfortran.dg/dg.exp
+index aa819915382..73138db3005 100644
+--- a/gcc/testsuite/gfortran.dg/dg.exp
++++ b/gcc/testsuite/gfortran.dg/dg.exp
+@@ -36,7 +36,7 @@ proc dg-compile-aux-modules { args } {
+     global gfortran_test_path
+     global gfortran_aux_module_flags
+     if { [llength $args] != 2 } {
+-	error "dg-set-target-env-var: needs one argument"
++	error "dg-compile-aux-modules: needs one argument"
+ 	return
+     }
+ 
 diff --git a/gcc/testsuite/gfortran.dg/dtio_34.f90 b/gcc/testsuite/gfortran.dg/dtio_34.f90
 new file mode 100644
 index 00000000000..7cecc8b9141
@@ -6229,6 +6335,31 @@ index 00000000000..7cecc8b9141
 +   type(t) :: foo
 +   print "(dt)", foo ! { dg-output " Hello World!" }
 +end program
+diff --git a/gcc/testsuite/gfortran.dg/ieee/ieee.exp b/gcc/testsuite/gfortran.dg/ieee/ieee.exp
+index 987ecaf4bcd..2ccf2493dc4 100644
+--- a/gcc/testsuite/gfortran.dg/ieee/ieee.exp
++++ b/gcc/testsuite/gfortran.dg/ieee/ieee.exp
+@@ -22,15 +22,15 @@
+ load_lib gfortran-dg.exp
+ load_lib target-supports.exp
+ 
+-# Initialize `dg'.
+-dg-init
+-
+-# Flags specified in each test
++# If a testcase doesn't have special options, use these.
+ global DEFAULT_FFLAGS
+ if ![info exists DEFAULT_FFLAGS] then {
+-    set DEFAULT_FFLAGS ""
++    set DEFAULT_FFLAGS " -pedantic-errors"
+ }
+ 
++# Initialize `dg'.
++dg-init
++
+ # Flags for finding the IEEE modules
+ if [info exists TOOL_OPTIONS] {
+    set specpath [get_multilibs ${TOOL_OPTIONS}]
 diff --git a/gcc/testsuite/gfortran.dg/lto/20091028-1_0.f90 b/gcc/testsuite/gfortran.dg/lto/20091028-1_0.f90
 index 57c1b1f6028..f33f6c8b946 100644
 --- a/gcc/testsuite/gfortran.dg/lto/20091028-1_0.f90
