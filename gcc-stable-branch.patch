@@ -21,7 +21,8 @@ ebotcazou (6):
 fw (1):
       PR libgcc/60790: x86: Do not assume ELF constructors run before IFUNC resolvers
 
-gccadmin (29):
+gccadmin (30):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -119,7 +120,7 @@ rguenth (7):
       2019-03-15  Richard Biener  <rguenther@suse.de>
       2019-03-19  Richard Biener  <rguenther@suse.de>
 
-tkoenig (11):
+tkoenig (12):
       2019-02-22  Thomas Koenig  <tkoenig@gcc.gnu.org>
       2019-02-23  Thomas Koenig  <tkoenig@gcc.gnu.org>
       2019-03-03  Thomas Koenig  <tkoenig@gcc.gnu.org>
@@ -131,6 +132,7 @@ tkoenig (11):
       2019-03-16  Thomas Koenig  <tkoenig@gcc.gnu.org>
       2019-03-16  Thomas Koenig  <tkoenig@gcc.gnu.org>
       2019-03-17  Thomas Koenig  <tkoenig@gcc.gnu.org>
+      2019-03-23  Thomas Koenig  <tkoeng@gcc.gnu.org>
 
 tnfchris (3):
       AArch64: Make every option in options.def one line (GCC-8).
@@ -2477,10 +2479,18 @@ index 36bcc65f14d..af67feb5fbc 100644
        && (code == TRUTH_AND_EXPR
            || code == TRUTH_ANDIF_EXPR
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index 4d2782f1b19..33472c09cb2 100644
+index 4d2782f1b19..1d35ed72786 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,179 @@
+@@ -1,3 +1,187 @@
++2019-03-23  Thomas Koenig  <tkoeng@gcc.gnu.org>
++
++	PR fortran/68009
++	Backport from trunk
++	* iresolve.c: Include trans.h.
++	(gfc_resolve_fe_runtine_error): Set backend_decl on
++	resolved_sym.
++
 +2019-03-17  Thomas Koenig  <tkoenig@gcc.gnu.org>
 +
 +	PR fortran/84394
@@ -2869,6 +2879,29 @@ index 698d211d74e..dd512d94922 100644
  bool gfc_build_class_symbol (gfc_typespec *, symbol_attribute *,
  			     gfc_array_spec **);
  gfc_symbol *gfc_find_derived_vtab (gfc_symbol *);
+diff --git a/gcc/fortran/iresolve.c b/gcc/fortran/iresolve.c
+index f15b8f2773a..7e70a061acd 100644
+--- a/gcc/fortran/iresolve.c
++++ b/gcc/fortran/iresolve.c
+@@ -35,6 +35,7 @@ along with GCC; see the file COPYING3.  If not see
+ #include "intrinsic.h"
+ #include "constructor.h"
+ #include "arith.h"
++#include "trans.h"
+ 
+ /* Given printf-like arguments, return a stable version of the result string.
+ 
+@@ -2377,6 +2378,10 @@ gfc_resolve_fe_runtime_error (gfc_code *c)
+     a->name = "%VAL";
+ 
+   c->resolved_sym = gfc_get_intrinsic_sub_symbol (name);
++  /* We set the backend_decl here because runtime_error is a
++     variadic function and we would use the wrong calling
++     convention otherwise.  */
++  c->resolved_sym->backend_decl = gfor_fndecl_runtime_error;
+ }
+ 
+ void
 diff --git a/gcc/fortran/match.c b/gcc/fortran/match.c
 index 8185e51d5a9..d0a4b53da6b 100644
 --- a/gcc/fortran/match.c
