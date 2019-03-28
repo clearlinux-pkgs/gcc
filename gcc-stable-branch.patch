@@ -21,7 +21,8 @@ ebotcazou (6):
 fw (1):
       PR libgcc/60790: x86: Do not assume ELF constructors run before IFUNC resolvers
 
-gccadmin (33):
+gccadmin (34):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
