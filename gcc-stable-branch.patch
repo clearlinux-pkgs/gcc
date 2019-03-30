@@ -21,7 +21,8 @@ ebotcazou (6):
 fw (1):
       PR libgcc/60790: x86: Do not assume ELF constructors run before IFUNC resolvers
 
-gccadmin (35):
+gccadmin (36):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -98,6 +99,9 @@ krebbel (3):
       S/390: Fix immediate vector operands for some builtins.
       S/390: Fix PR89775. Stackpointer save/restore instructions removed
 
+kugan (1):
+      2019-03-29  Kugan Vivekanandarajah  <kuganv@linaro.org>
+
 luoxhu (1):
       backport r268834 from mainline to gcc-8-branch
 
@@ -130,7 +134,7 @@ rguenth (7):
       2019-03-15  Richard Biener  <rguenther@suse.de>
       2019-03-19  Richard Biener  <rguenther@suse.de>
 
-tkoenig (12):
+tkoenig (14):
       2019-02-22  Thomas Koenig  <tkoenig@gcc.gnu.org>
       2019-02-23  Thomas Koenig  <tkoenig@gcc.gnu.org>
       2019-03-03  Thomas Koenig  <tkoenig@gcc.gnu.org>
@@ -143,6 +147,8 @@ tkoenig (12):
       2019-03-16  Thomas Koenig  <tkoenig@gcc.gnu.org>
       2019-03-17  Thomas Koenig  <tkoenig@gcc.gnu.org>
       2019-03-23  Thomas Koenig  <tkoeng@gcc.gnu.org>
+      2019-03-30  Thomas Koenig  <tkoenig@gcc.gnu.org>
+      2019-03-30  Thomas Koenig  <tkoenig@gcc.gnu.org>
 
 tnfchris (3):
       AArch64: Make every option in options.def one line (GCC-8).
@@ -174,10 +180,21 @@ index 2bf50aaf17a..56b6be4ebb2 100644
 -8.3.0
 +8.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d1fd9f6a7b9..63fc9cb0d43 100644
+index d1fd9f6a7b9..53462d28f38 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,407 @@
+@@ -1,3 +1,418 @@
++2019-03-29  Kugan Vivekanandarajah  <kuganv@linaro.org>
++
++	Backport from mainline
++	2019-03-29  Kugan Vivekanandarajah  <kuganv@linaro.org>
++		    Eric Botcazou  <ebotcazou@adacore.com>
++
++	PR rtl-optimization/89862
++	* rtl.h (word_register_operation_p): Exclude CONST_INT from operations
++	that operates on the full registers for WORD_REGISTER_OPERATIONS
++	architectures.
++
 +2019-03-28  Uroš Bizjak  <ubizjak@gmail.com>
 +
 +	PR target/89848
@@ -585,7 +602,7 @@ index d1fd9f6a7b9..63fc9cb0d43 100644
  2019-02-22  Release Manager
  
  	* GCC 8.3.0 released.
-@@ -568,7 +972,7 @@
+@@ -568,7 +983,7 @@
  
  	Backport from mainline
  	2018-11-20  Richard Biener  <rguenther@suse.de>
@@ -2619,10 +2636,21 @@ index 36bcc65f14d..af67feb5fbc 100644
        && (code == TRUTH_AND_EXPR
            || code == TRUTH_ANDIF_EXPR
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index 4d2782f1b19..5acbd8e84f4 100644
+index 4d2782f1b19..534061802e9 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,194 @@
+@@ -1,3 +1,205 @@
++2019-03-30  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	PR fortran/78865
++	Backport from trunk
++	* interface.c (compare_actual_formal): Change errors about
++	missing or extra to gfc_error_now to make sure they are issued.
++	Change "spec" to "specifier" in message.
++	* resolve.c (resolve_global_procedure): Also check for mismatching
++	interface with global symbols if the namespace has already been
++	resolved.
++
 +2019-03-24  Janus Weil  <janus@gcc.gnu.org>
 +
 +	PR fortran/71861
@@ -3026,6 +3054,34 @@ index 698d211d74e..dd512d94922 100644
  bool gfc_build_class_symbol (gfc_typespec *, symbol_attribute *,
  			     gfc_array_spec **);
  gfc_symbol *gfc_find_derived_vtab (gfc_symbol *);
+diff --git a/gcc/fortran/interface.c b/gcc/fortran/interface.c
+index 2e8dfd49900..9e06128f7b8 100644
+--- a/gcc/fortran/interface.c
++++ b/gcc/fortran/interface.c
+@@ -2941,17 +2941,19 @@ compare_actual_formal (gfc_actual_arglist **ap, gfc_formal_arglist *formal,
+ 
+       if (f->sym == NULL)
+ 	{
++	  /* These errors have to be issued, otherwise an ICE can occur.
++	     See PR 78865.  */
+ 	  if (where)
+-	    gfc_error ("Missing alternate return spec in subroutine call "
+-		       "at %L", where);
++	    gfc_error_now ("Missing alternate return specifier in subroutine "
++			   "call at %L", where);
+ 	  return false;
+ 	}
+ 
+       if (a->expr == NULL)
+ 	{
+ 	  if (where)
+-	    gfc_error ("Unexpected alternate return spec in subroutine "
+-		       "call at %L", where);
++	    gfc_error_now ("Unexpected alternate return specifier in "
++			   "subroutine call at %L", where);
+ 	  return false;
+ 	}
+ 
 diff --git a/gcc/fortran/iresolve.c b/gcc/fortran/iresolve.c
 index f15b8f2773a..7e70a061acd 100644
 --- a/gcc/fortran/iresolve.c
@@ -3112,7 +3168,7 @@ index 4ce6eb42750..e920c71d569 100644
    if (s->defined || (s->type != GSYM_UNKNOWN && s->type != GSYM_PROGRAM))
      gfc_global_used (s, &gfc_new_block->declared_at);
 diff --git a/gcc/fortran/resolve.c b/gcc/fortran/resolve.c
-index f70747a586f..d2b1d26a5a7 100644
+index f70747a586f..b68c5ffe0b6 100644
 --- a/gcc/fortran/resolve.c
 +++ b/gcc/fortran/resolve.c
 @@ -1045,7 +1045,7 @@ resolve_common_blocks (gfc_symtree *common_root)
@@ -3152,6 +3208,111 @@ index f70747a586f..d2b1d26a5a7 100644
  
    if ((gsym->type != GSYM_UNKNOWN && gsym->type != type))
      gfc_global_used (gsym, where);
+@@ -2494,64 +2493,64 @@ resolve_global_procedure (gfc_symbol *sym, locus *where,
+       && gsym->type != GSYM_UNKNOWN
+       && !gsym->binding_label
+       && gsym->ns
+-      && gsym->ns->resolved != -1
+       && gsym->ns->proc_name
+       && not_in_recursive (sym, gsym->ns)
+       && not_entry_self_reference (sym, gsym->ns))
+     {
+       gfc_symbol *def_sym;
++      def_sym = gsym->ns->proc_name;
+ 
+       /* Resolve the gsymbol namespace if needed.  */
+-      if (!gsym->ns->resolved)
++      if (gsym->ns->resolved != -1)
+ 	{
+-	  gfc_dt_list *old_dt_list;
++	  if (!gsym->ns->resolved)
++	    {
++	      gfc_dt_list *old_dt_list;
+ 
+-	  /* Stash away derived types so that the backend_decls do not
+-	     get mixed up.  */
+-	  old_dt_list = gfc_derived_types;
+-	  gfc_derived_types = NULL;
++	      /* Stash away derived types so that the backend_decls
++	     do not get mixed up.  */
++	      old_dt_list = gfc_derived_types;
++	      gfc_derived_types = NULL;
+ 
+-	  gfc_resolve (gsym->ns);
++	      gfc_resolve (gsym->ns);
+ 
+-	  /* Store the new derived types with the global namespace.  */
+-	  if (gfc_derived_types)
+-	    gsym->ns->derived_types = gfc_derived_types;
++	      /* Store the new derived types with the global namespace.  */
++	      if (gfc_derived_types)
++		gsym->ns->derived_types = gfc_derived_types;
+ 
+-	  /* Restore the derived types of this namespace.  */
+-	  gfc_derived_types = old_dt_list;
+-	}
++	      /* Restore the derived types of this namespace.  */
++	      gfc_derived_types = old_dt_list;
++	    }
+ 
+-      /* Make sure that translation for the gsymbol occurs before
+-	 the procedure currently being resolved.  */
+-      ns = gfc_global_ns_list;
+-      for (; ns && ns != gsym->ns; ns = ns->sibling)
+-	{
+-	  if (ns->sibling == gsym->ns)
++	  /* Make sure that translation for the gsymbol occurs before
++	     the procedure currently being resolved.  */
++	  ns = gfc_global_ns_list;
++	  for (; ns && ns != gsym->ns; ns = ns->sibling)
+ 	    {
+-	      ns->sibling = gsym->ns->sibling;
+-	      gsym->ns->sibling = gfc_global_ns_list;
+-	      gfc_global_ns_list = gsym->ns;
+-	      break;
++	      if (ns->sibling == gsym->ns)
++		{
++		  ns->sibling = gsym->ns->sibling;
++		  gsym->ns->sibling = gfc_global_ns_list;
++		  gfc_global_ns_list = gsym->ns;
++		  break;
++		}
+ 	    }
+-	}
+ 
+-      def_sym = gsym->ns->proc_name;
++	  /* This can happen if a binding name has been specified.  */
++	  if (gsym->binding_label && gsym->sym_name != def_sym->name)
++	    gfc_find_symbol (gsym->sym_name, gsym->ns, 0, &def_sym);
+ 
+-      /* This can happen if a binding name has been specified.  */
+-      if (gsym->binding_label && gsym->sym_name != def_sym->name)
+-	gfc_find_symbol (gsym->sym_name, gsym->ns, 0, &def_sym);
+-
+-      if (def_sym->attr.entry_master)
+-	{
+-	  gfc_entry_list *entry;
+-	  for (entry = gsym->ns->entries; entry; entry = entry->next)
+-	    if (strcmp (entry->sym->name, sym->name) == 0)
+-	      {
+-		def_sym = entry->sym;
+-		break;
+-	      }
++	  if (def_sym->attr.entry_master)
++	    {
++	      gfc_entry_list *entry;
++	      for (entry = gsym->ns->entries; entry; entry = entry->next)
++		if (strcmp (entry->sym->name, sym->name) == 0)
++		  {
++		    def_sym = entry->sym;
++		    break;
++		  }
++	    }
+ 	}
+-
+       if (sym->attr.function && !gfc_compare_types (&sym->ts, &def_sym->ts))
+ 	{
+ 	  gfc_error ("Return type mismatch of function %qs at %L (%s/%s)",
 @@ -4881,6 +4880,7 @@ gfc_resolve_substring_charlen (gfc_expr *e)
    gfc_ref *char_ref;
    gfc_expr *start, *end;
@@ -4027,6 +4188,18 @@ index 65ad690f6d9..a6c118543e6 100644
  
        /* When cleanup_tree_cfg merges consecutive blocks, it may
  	 perform some simplistic propagation when removing single
+diff --git a/gcc/rtl.h b/gcc/rtl.h
+index 51f70cd8c3d..31567126c83 100644
+--- a/gcc/rtl.h
++++ b/gcc/rtl.h
+@@ -4355,6 +4355,7 @@ word_register_operation_p (const_rtx x)
+ {
+   switch (GET_CODE (x))
+     {
++    case CONST_INT:
+     case ROTATE:
+     case ROTATERT:
+     case SIGN_EXTRACT:
 diff --git a/gcc/rtlanal.c b/gcc/rtlanal.c
 index 0e79e53fb61..dabc5403f28 100644
 --- a/gcc/rtlanal.c
@@ -4047,10 +4220,23 @@ index 0e79e53fb61..dabc5403f28 100644
        offset1 = crtl->outgoing_args_size + get_frame_size ();
  #if !STACK_GROWS_DOWNWARD
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 7d5e65b1a74..543c9423c4a 100644
+index 7d5e65b1a74..3bc7d441031 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,391 @@
+@@ -1,3 +1,404 @@
++2019-03-30  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	PR fortran/89866
++	Backport from trunk
++	* gfortran.dg/pointer_intent_8.f90: New test.
++
++2019-03-30  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	PR fortran/78865
++	Backport from trunk
++	* gfortran.dg/altreturn_10.f90: New test.
++	* gfortran.dg/whole_file_3.f90: Change dg-warning to dg-error.
++
 +2019-03-28  Uroš Bizjak  <ubizjak@gmail.com>
 +
 +	PR target/89848
@@ -6256,6 +6442,31 @@ index 00000000000..797edbe7d49
 +type(array_data) :: foo
 +call foo%push(42)
 +end
+diff --git a/gcc/testsuite/gfortran.dg/altreturn_10.f90 b/gcc/testsuite/gfortran.dg/altreturn_10.f90
+new file mode 100644
+index 00000000000..7e5d56977ea
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/altreturn_10.f90
+@@ -0,0 +1,19 @@
++! { dg-do compile }
++! { dg-options -Os }
++! PR 78865 - this used to ICE.
++program p
++   call sub (3)
++end
++subroutine sub (x)
++   integer :: x, i, n
++   do i = 1, x
++      if ( n /= 0 ) stop
++      call sub2
++   end do
++   print *, x, n
++end
++subroutine sub2
++   call sub (*99) ! { dg-error "Unexpected alternate return specifier" }
++   call sub (99.) ! { dg-warning "Type mismatch in argument" }
++99 stop
++end
 diff --git a/gcc/testsuite/gfortran.dg/altreturn_9_0.f90 b/gcc/testsuite/gfortran.dg/altreturn_9_0.f90
 new file mode 100644
 index 00000000000..58715c7db40
@@ -6840,6 +7051,34 @@ index f99a2e8e923..fe334883a3e 100644
 -! { dg-final { scan-tree-dump-times "sub_array_assumed \\(\\(struct t1.0:. .\\) array_class_t1_ptr._data.data\\);" 1 "original" } }
 +! { dg-final { scan-tree-dump-times "sub_array_assumed \\(\\(struct t1.0:. .\\) array_class_t1_ptr._data.data\\);" 0 "original" } }
  
+diff --git a/gcc/testsuite/gfortran.dg/pointer_intent_8.f90 b/gcc/testsuite/gfortran.dg/pointer_intent_8.f90
+new file mode 100644
+index 00000000000..6bfbc5c37cc
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pointer_intent_8.f90
+@@ -0,0 +1,22 @@
++! { dg-do run }
++! PR 85797 - this used to get wrong results.
++
++
++PROGRAM testfortran2
++  IMPLICIT NONE
++
++  INTEGER, DIMENSION(10), TARGET :: i4array
++
++  i4array = (/ 1,2,3,4,5,6,7,8,9,10 /)
++
++  call InRef(i4array)
++
++CONTAINS
++
++  subroutine InRef(v)
++    INTEGER, DIMENSION(:), POINTER, INTENT(in) :: v
++    INTEGER :: i
++    if (any (v /= [(i,i=1,10)])) stop 1
++  END subroutine
++
++END
 diff --git a/gcc/testsuite/gfortran.dg/pr77583.f90 b/gcc/testsuite/gfortran.dg/pr77583.f90
 new file mode 100644
 index 00000000000..c2ee0744297
@@ -7115,6 +7354,21 @@ index 00000000000..3393e07d31e
 +   end select
 +
 +end program proglen
+diff --git a/gcc/testsuite/gfortran.dg/whole_file_3.f90 b/gcc/testsuite/gfortran.dg/whole_file_3.f90
+index 242280ccf53..a46909d3db2 100644
+--- a/gcc/testsuite/gfortran.dg/whole_file_3.f90
++++ b/gcc/testsuite/gfortran.dg/whole_file_3.f90
+@@ -14,8 +14,8 @@
+ 
+       program test
+       EXTERNAL R
+-      call PHLOAD (R, 1) ! { dg-warning "Missing alternate return spec" }
+-      CALL PHLOAD (R, 2) ! { dg-warning "Missing alternate return spec" }
++      call PHLOAD (R, 1) ! { dg-error "Missing alternate return specifier" }
++      CALL PHLOAD (R, 2) ! { dg-error "Missing alternate return specifier" }
+       CALL PHLOAD (R, *999) ! This one is OK
+  999  continue
+       END program test
 diff --git a/gcc/testsuite/gnat.dg/opt77.adb b/gcc/testsuite/gnat.dg/opt77.adb
 new file mode 100644
 index 00000000000..4d0288abfaf
