@@ -1,11 +1,12 @@
 amodra (1):
       [RS6000] Fix <bd>_<mode> and <bd>tf_<mode> splitters
 
-anlauf (4):
+anlauf (5):
       2019-03-02  Harald Anlauf  <anlauf@gmx.de>
       2019-03-03  Harald Anlauf  <anlauf@gmx.de> 	    Steven G. Kargl  <kargl@gcc.gnu.org>
       2019-03-03  Harald Anlauf  <anlauf@gmx.de>
       2019-03-06  Harald Anlauf  <anlauf@gmx.de>
+      2019-03-31  Harald Anlauf  <anlauf@gmx.de>
 
 avieira (1):
       Backport of r269499 and related testism fix r269596.
@@ -21,7 +22,8 @@ ebotcazou (6):
 fw (1):
       PR libgcc/60790: x86: Do not assume ELF constructors run before IFUNC resolvers
 
-gccadmin (37):
+gccadmin (38):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -2637,10 +2639,19 @@ index 36bcc65f14d..af67feb5fbc 100644
        && (code == TRUTH_AND_EXPR
            || code == TRUTH_ANDIF_EXPR
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index 4d2782f1b19..534061802e9 100644
+index 4d2782f1b19..1017a313edd 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,205 @@
+@@ -1,3 +1,214 @@
++2019-03-31  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/83515
++	PR fortran/85797
++	* trans-types.c (gfc_typenode_for_spec): Handle conversion for
++	procedure pointers.
++	* target-memory.c (gfc_element_size): Handle size determination
++	for procedure pointers.
++
 +2019-03-30  Thomas Koenig  <tkoenig@gcc.gnu.org>
 +
 +	PR fortran/78865
@@ -3548,7 +3559,7 @@ index 4ea66e3f387..e783319298c 100644
    gfc_insert_bbt (&gfc_gsym_root, s, gsym_compare);
  
 diff --git a/gcc/fortran/target-memory.c b/gcc/fortran/target-memory.c
-index 6b9292b5faf..c924cb529d1 100644
+index 6b9292b5faf..35a631aa878 100644
 --- a/gcc/fortran/target-memory.c
 +++ b/gcc/fortran/target-memory.c
 @@ -73,26 +73,30 @@ size_character (gfc_charlen_t length, int kind)
@@ -3590,7 +3601,7 @@ index 6b9292b5faf..c924cb529d1 100644
        else if (e->ts.u.cl != NULL && e->ts.u.cl->length != NULL
  	       && e->ts.u.cl->length->expr_type == EXPR_CONSTANT
  	       && e->ts.u.cl->length->ts.type == BT_INTEGER)
-@@ -100,13 +104,18 @@ gfc_element_size (gfc_expr *e)
+@@ -100,17 +104,23 @@ gfc_element_size (gfc_expr *e)
  	  HOST_WIDE_INT length;
  
  	  gfc_extract_hwi (e->ts.u.cl->length, &length);
@@ -3612,7 +3623,12 @@ index 6b9292b5faf..c924cb529d1 100644
      case BT_DERIVED:
      case BT_CLASS:
      case BT_VOID:
-@@ -120,36 +129,43 @@ gfc_element_size (gfc_expr *e)
+     case BT_ASSUMED:
++    case BT_PROCEDURE:
+       {
+ 	/* Determine type size without clobbering the typespec for ISO C
+ 	   binding types.  */
+@@ -120,36 +130,43 @@ gfc_element_size (gfc_expr *e)
  	type = gfc_typenode_for_spec (&ts);
  	size = int_size_in_bytes (type);
  	gcc_assert (size >= 0);
@@ -3663,7 +3679,7 @@ index 6b9292b5faf..c924cb529d1 100644
  }
  
  
-@@ -675,7 +691,7 @@ expr_to_char (gfc_expr *e, locus *loc,
+@@ -675,7 +692,7 @@ expr_to_char (gfc_expr *e, locus *loc,
  
    /* Otherwise, use the target-memory machinery to write a bitwise image, appropriate
       to the target, in a buffer and check off the initialized part of the buffer.  */
@@ -3672,7 +3688,7 @@ index 6b9292b5faf..c924cb529d1 100644
    buffer = (unsigned char*)alloca (len);
    len = gfc_target_encode_expr (e, buffer, len);
  
-@@ -722,7 +738,9 @@ gfc_merge_initializers (gfc_typespec ts, gfc_expr *e, locus *loc,
+@@ -722,7 +739,9 @@ gfc_merge_initializers (gfc_typespec ts, gfc_expr *e, locus *loc,
        for (c = gfc_constructor_first (e->value.constructor);
  	   c; c = gfc_constructor_next (c))
  	{
@@ -3892,7 +3908,7 @@ index 5b2d4e8279d..eb976c70a3a 100644
  	  gfc_free_statements (ini);
  	  gfc_add_expr_to_block (&block, tmp);
 diff --git a/gcc/fortran/trans-types.c b/gcc/fortran/trans-types.c
-index f50eb0a9f01..a3659e65e43 100644
+index f50eb0a9f01..b4daf4b61b1 100644
 --- a/gcc/fortran/trans-types.c
 +++ b/gcc/fortran/trans-types.c
 @@ -1213,7 +1213,8 @@ gfc_typenode_for_spec (gfc_typespec * spec, int codim)
@@ -3905,7 +3921,17 @@ index f50eb0a9f01..a3659e65e43 100644
          }
        break;
      case BT_VOID:
-@@ -2978,7 +2979,8 @@ create_fn_spec (gfc_symbol *sym, tree fntype)
+@@ -1230,6 +1231,9 @@ gfc_typenode_for_spec (gfc_typespec * spec, int codim)
+ 	    basetype = pfunc_type_node;
+ 	}
+        break;
++    case BT_PROCEDURE:
++      basetype = pfunc_type_node;
++      break;
+     default:
+       gcc_unreachable ();
+     }
+@@ -2978,7 +2982,8 @@ create_fn_spec (gfc_symbol *sym, tree fntype)
  		    || f->sym->ts.u.derived->attr.pointer_comp))
  	    || (f->sym->ts.type == BT_CLASS
  		&& (CLASS_DATA (f->sym)->ts.u.derived->attr.proc_pointer_comp
@@ -3915,7 +3941,7 @@ index f50eb0a9f01..a3659e65e43 100644
  	  spec[spec_len++] = '.';
  	else if (f->sym->attr.intent == INTENT_IN)
  	  spec[spec_len++] = 'r';
-@@ -2991,9 +2993,57 @@ create_fn_spec (gfc_symbol *sym, tree fntype)
+@@ -2991,9 +2996,57 @@ create_fn_spec (gfc_symbol *sym, tree fntype)
    return build_type_attribute_variant (fntype, tmp);
  }
  
@@ -3974,7 +4000,7 @@ index f50eb0a9f01..a3659e65e43 100644
  {
    tree type;
    vec<tree, va_gc> *typelist = NULL;
-@@ -3051,6 +3101,10 @@ gfc_get_function_type (gfc_symbol * sym)
+@@ -3051,6 +3104,10 @@ gfc_get_function_type (gfc_symbol * sym)
  	    vec_safe_push (typelist, build_pointer_type(gfc_charlen_type_node));
  	}
      }
@@ -4221,10 +4247,16 @@ index 0e79e53fb61..dabc5403f28 100644
        offset1 = crtl->outgoing_args_size + get_frame_size ();
  #if !STACK_GROWS_DOWNWARD
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 7d5e65b1a74..3bc7d441031 100644
+index 7d5e65b1a74..6245b74e191 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,404 @@
+@@ -1,3 +1,410 @@
++2019-03-31  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/83515
++	PR fortran/85797
++	* gfortran.dg/pr85797.f90: New test.
++
 +2019-03-30  Thomas Koenig  <tkoenig@gcc.gnu.org>
 +
 +	PR fortran/89866
@@ -7095,6 +7127,45 @@ index 00000000000..c2ee0744297
 +contains
 +   pure subroutine s  ! { dg-error "conflicts with DUMMY argument" }
 +   end
++end
+diff --git a/gcc/testsuite/gfortran.dg/pr85797.f90 b/gcc/testsuite/gfortran.dg/pr85797.f90
+new file mode 100644
+index 00000000000..fe6d96d6e30
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr85797.f90
+@@ -0,0 +1,33 @@
++! { dg-do compile }
++! { dg-options "-Wall" }
++! PR fortran/83515 - ICE: Invalid expression in gfc_element_size 
++! PR fortran/85797 - ICE in gfc_element_size, at fortran/target-memory.c:126
++
++subroutine a
++  c = transfer (a, b)           ! { dg-warning "Non-RECURSIVE procedure" }
++end
++
++recursive subroutine d
++  c = transfer (d, b)
++end
++
++recursive subroutine e
++  k = transfer (transfer (e, e), 1)
++end
++
++subroutine f
++  use, intrinsic :: iso_c_binding
++  integer(c_intptr_t) :: b, c
++  c = transfer (transfer (b, a), b)
++end
++
++module m
++contains
++  function f () result (z)      ! { dg-warning "Return value" }
++    class(*), pointer :: z
++  end function f
++  recursive subroutine s (q)
++    procedure(f) :: q
++    call s (q)
++  end subroutine s
 +end
 diff --git a/gcc/testsuite/gfortran.dg/pr88326.f90 b/gcc/testsuite/gfortran.dg/pr88326.f90
 new file mode 100644
