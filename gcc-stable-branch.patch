@@ -22,7 +22,8 @@ ebotcazou (6):
 fw (1):
       PR libgcc/60790: x86: Do not assume ELF constructors run before IFUNC resolvers
 
-gccadmin (41):
+gccadmin (42):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -122,8 +123,9 @@ marxin (6):
 mpolacek (1):
       PR c++/89212 - ICE converting nullptr to pointer-to-member-function. 	* pt.c (tsubst_copy_and_build) <case CONSTRUCTOR>: Return early for 	null member pointer value.
 
-msebor (1):
+msebor (2):
       Backport from mainline:
+      Backport from 9.0.
 
 pault (1):
       2019-02-23  Paul Thomas  <pault@gcc.gnu.org>
@@ -188,10 +190,16 @@ index 2bf50aaf17a..56b6be4ebb2 100644
 -8.3.0
 +8.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d1fd9f6a7b9..512575db54e 100644
+index d1fd9f6a7b9..94efad6a944 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,437 @@
+@@ -1,3 +1,443 @@
++2019-04-04  Martin Sebor  <msebor@redhat.com>
++
++	PR middle-end/89934
++	* gimple-ssa-warn-restrict.c (builtin_access::builtin_access): Bail
++	out if the number of arguments is less than expected.
++
 +2019-04-03  Richard Biener  <rguenther@suse.de>
 +
 +	PR lto/89896
@@ -629,7 +637,7 @@ index d1fd9f6a7b9..512575db54e 100644
  2019-02-22  Release Manager
  
  	* GCC 8.3.0 released.
-@@ -568,7 +1002,7 @@
+@@ -568,7 +1008,7 @@
  
  	Backport from mainline
  	2018-11-20  Richard Biener  <rguenther@suse.de>
@@ -4221,7 +4229,7 @@ index d16c15061c6..103ad6787ad 100644
  /* Return the decl for a function.  */
  tree gfc_get_function_decl (gfc_symbol *);
 diff --git a/gcc/gimple-ssa-warn-restrict.c b/gcc/gimple-ssa-warn-restrict.c
-index 3d0664da028..8aeefd4077b 100644
+index 3d0664da028..722bc6f921f 100644
 --- a/gcc/gimple-ssa-warn-restrict.c
 +++ b/gcc/gimple-ssa-warn-restrict.c
 @@ -314,13 +314,9 @@ builtin_memref::extend_offset_range (tree offset)
@@ -4239,6 +4247,17 @@ index 3d0664da028..8aeefd4077b 100644
  	  gimple *stmt = SSA_NAME_DEF_STMT (offset);
  	  tree type;
  	  if (is_gimple_assign (stmt)
+@@ -702,6 +698,10 @@ builtin_access::builtin_access (gcall *call, builtin_memref &dst,
+   offset_int bounds[2] = { maxobjsize, maxobjsize };
+   if (dstref->strbounded_p)
+     {
++      unsigned nargs = gimple_call_num_args (call);
++      if (nargs <= sizeargno)
++	return;
++
+       tree size = gimple_call_arg (call, sizeargno);
+       tree range[2];
+       if (get_size_range (size, range, true))
 diff --git a/gcc/input.c b/gcc/input.c
 index b6675768722..26c2bf21d52 100644
 --- a/gcc/input.c
@@ -4435,10 +4454,16 @@ index 0e79e53fb61..dabc5403f28 100644
        offset1 = crtl->outgoing_args_size + get_frame_size ();
  #if !STACK_GROWS_DOWNWARD
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 7d5e65b1a74..cde2eb8338f 100644
+index 7d5e65b1a74..9cdc3993b10 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,419 @@
+@@ -1,3 +1,425 @@
++2019-04-04  Martin Sebor  <msebor@redhat.com>
++
++	PR middle-end/89934
++	* gcc.dg/Wrestrict-19.c: New test.
++	* gcc.dg/Wrestrict-5.c: Add comment.  Remove unused code.
++
 +2019-04-02  Uroš Bizjak  <ubizjak@gmail.com>
 +
 +	PR target/89902
@@ -5312,6 +5337,79 @@ index 00000000000..c9aa0eb8175
 +
 +  f (s.a, 33 * sizeof s, 1);
 +}
+diff --git a/gcc/testsuite/gcc.dg/Wrestrict-19.c b/gcc/testsuite/gcc.dg/Wrestrict-19.c
+new file mode 100644
+index 00000000000..ebb4a5efcef
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/Wrestrict-19.c
+@@ -0,0 +1,33 @@
++/* PR middle-end/89934 - ICE on a call with fewer arguments to strncpy
++   declared without prototype
++   { dg-do compile }
++   { dg-options "-O2 -Wall" } */
++
++typedef __SIZE_TYPE__ size_t;
++
++char *strncpy ();
++
++char* f0 (char *s)
++{
++  return strncpy ();
++}
++
++char* f1 (char *s)
++{
++  return strncpy (s);
++}
++
++char* f2 (char *s)
++{
++  return strncpy (s, s + 1);   /* ICE here.  */
++}
++
++void f3 (char *s, size_t n, const char *t)
++{
++  strncpy (s, n, t);
++  strncpy (n, s, t);
++}
++
++/* { dg-prune-output "\\\[-Wbuiltin-declaration-mismatch]" }
++   { dg-prune-output "\\\[-Wint-conversion]" } */
++
+diff --git a/gcc/testsuite/gcc.dg/Wrestrict-5.c b/gcc/testsuite/gcc.dg/Wrestrict-5.c
+index 4912ee5506b..513b4267fa4 100644
+--- a/gcc/testsuite/gcc.dg/Wrestrict-5.c
++++ b/gcc/testsuite/gcc.dg/Wrestrict-5.c
+@@ -1,19 +1,11 @@
+-/* Test to verify that valid calls to common restrict-qualified built-in
++/* PR tree-optimization/83655 - ICE on an invalid call to memcpy declared
++   with no prototype
++   Test to verify that valid calls to common restrict-qualified built-in
+    functions declared with no prototype are checked for overlap, and that
+    invalid calls are ignored.
+   { dg-do compile }
+   { dg-options "-O2 -Wrestrict" }  */
+ 
+-typedef __SIZE_TYPE__ size_t;
+-
+-#if __cplusplus
+-extern "C" {
+-
+-#define NO_PROTO ...
+-#else
+-#define NO_PROTO /* empty */
+-#endif
+-
+ void* memcpy ();
+ char* strncpy ();
+ 
+@@ -41,3 +33,6 @@ void test_strncpy_nowarn (char *d)
+ {
+   strncpy (d + 1, d + 3, "");
+ }
++
++/* { dg-prune-output "\\\[-Wbuiltin-declaration-mismatch]" }
++   { dg-prune-output "\\\[-Wint-conversion]" } */
 diff --git a/gcc/testsuite/gcc.dg/ipa/ipcp-5.c b/gcc/testsuite/gcc.dg/ipa/ipcp-5.c
 new file mode 100644
 index 00000000000..6786c514543
