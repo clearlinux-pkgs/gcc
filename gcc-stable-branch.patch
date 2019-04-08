@@ -11,6 +11,9 @@ anlauf (5):
 avieira (1):
       Backport of r269499 and related testism fix r269596.
 
+claziss (1):
+      Backport ARC patch.
+
 ebotcazou (6):
       PR ada/89349 	Backport from mainline 	2018-05-25  Arnaud Charlet  <charlet@adacore.com>
       * tree-ssa-dom.c (edge_info::derive_equivalences) <BIT_IOR_EXPR>: Fix 	and move around comment. 	<BIT_AND_EXPR>: Likewise. 	<BIT_NOT_EXPR>: Add specific handling for boolean types.
@@ -172,11 +175,12 @@ tschwinge (3):
       [testsuite, Fortran] Apply DejaGnu 1.4.4 work-around also to 'gfortran.dg/coarray/caf.exp:dg-compile-aux-modules'
       [testsuite] Fix 'dg-compile-aux-modules' diagnostic
 
-uros (4):
+uros (5):
       PR target/89397 	* config/i386/i386.c (ix86_atomic_assign_expand_fenv): Check 	TARGET_SSE in addition to TARGET_SSE_MATH.
       PR target/89827 	* config/i386/i386.c (dimode_scalar_chain::convert_reg): 	Also process XEXP (src, 0) of a shift insn.
       PR target/89848 	* config/i386/i386.c (dimode_scalar_chain::make_vector_copies): 	Also process XEXP (src, 0) of a shift insn.
       PR target/89902 	PR target/89903 	* config/i386/i386.c (dimode_scalar_to_vector_candidate_p): 	Return false for variable DImode shifts. 	(dimode_scalar_chain::compute_convert_gain): Do not handle 	register count operand in variable DImode shifts. 	(dimode_scalar_chain::make_vector_copies): Remove support to copy 	count argument of a variable shift instruction to a vector register. 	(dimode_scalar_chain::convert_reg): Remove support to convert 	count argument of a variable shift instruction.
+      PR target/89945 	* config/i386/i386.md (anddi_1 to andsi_1_zext splitter): 	Avoid calling gen_lowpart with SYMBOL_REF and LABEL_REF operand.
 
 vmakarov (1):
       2019-03-13  Vladimir Makarov  <vmakarov@redhat.com>
@@ -193,10 +197,16 @@ index 2bf50aaf17a..56b6be4ebb2 100644
 -8.3.0
 +8.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d1fd9f6a7b9..94efad6a944 100644
+index d1fd9f6a7b9..703b7bbc633 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,443 @@
+@@ -1,3 +1,449 @@
++2019-04-07  Uroš Bizjak  <ubizjak@gmail.com>
++
++	PR target/89945
++	* config/i386/i386.md (anddi_1 to andsi_1_zext splitter):
++	Avoid calling gen_lowpart with SYMBOL_REF and LABEL_REF operand.
++
 +2019-04-04  Martin Sebor  <msebor@redhat.com>
 +
 +	PR middle-end/89934
@@ -640,7 +650,7 @@ index d1fd9f6a7b9..94efad6a944 100644
  2019-02-22  Release Manager
  
  	* GCC 8.3.0 released.
-@@ -568,7 +1008,7 @@
+@@ -568,7 +1014,7 @@
  
  	Backport from mainline
  	2018-11-20  Richard Biener  <rguenther@suse.de>
@@ -1562,6 +1572,28 @@ index 7732f882f78..30a20af8fab 100644
  	      return FLT_EVAL_METHOD_PROMOTE_TO_LONG_DOUBLE;
  	    else if (TARGET_SSE2)
  	      return FLT_EVAL_METHOD_PROMOTE_TO_FLOAT;
+diff --git a/gcc/config/i386/i386.md b/gcc/config/i386/i386.md
+index 7691160c0c4..417b6e61a7e 100644
+--- a/gcc/config/i386/i386.md
++++ b/gcc/config/i386/i386.md
+@@ -8942,7 +8942,16 @@
+   [(parallel [(set (match_dup 0)
+ 		   (zero_extend:DI (and:SI (match_dup 1) (match_dup 2))))
+ 	      (clobber (reg:CC FLAGS_REG))])]
+-  "operands[2] = gen_lowpart (SImode, operands[2]);")
++{
++  if (GET_CODE (operands[2]) == SYMBOL_REF
++      || GET_CODE (operands[2]) == LABEL_REF)
++    {
++      operands[2] = shallow_copy_rtx (operands[2]);
++      PUT_MODE (operands[2], SImode);
++    }
++  else
++    operands[2] = gen_lowpart (SImode, operands[2]);
++})
+ 
+ ;; See comment for addsi_1_zext why we do use nonimmediate_operand
+ (define_insn "*andsi_1_zext"
 diff --git a/gcc/config/i386/sse.md b/gcc/config/i386/sse.md
 index d5cab80f60f..b42292e7702 100644
 --- a/gcc/config/i386/sse.md
@@ -4457,10 +4489,15 @@ index 0e79e53fb61..dabc5403f28 100644
        offset1 = crtl->outgoing_args_size + get_frame_size ();
  #if !STACK_GROWS_DOWNWARD
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 7d5e65b1a74..9cdc3993b10 100644
+index 7d5e65b1a74..7c3a5f81edc 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,425 @@
+@@ -1,3 +1,430 @@
++019-04-07  Uroš Bizjak  <ubizjak@gmail.com>
++
++	PR target/89945
++	* gcc.target/i386/pr89945.c: New test.
++
 +2019-04-04  Martin Sebor  <msebor@redhat.com>
 +
 +	PR middle-end/89934
@@ -6467,6 +6504,33 @@ index 00000000000..03dccacfbb9
 +  d >>= (short) d;
 +  b = d;
 +}
+diff --git a/gcc/testsuite/gcc.target/i386/pr89945.c b/gcc/testsuite/gcc.target/i386/pr89945.c
+new file mode 100644
+index 00000000000..39e864a9d65
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr89945.c
+@@ -0,0 +1,21 @@
++/* PR target/89945 */
++/* { dg-do compile } */
++/* { dg-options "-O2" } */
++
++void
++foo ()
++{
++  void *g[] = {&&a, &&b};
++
++  for (unsigned c = 0x1F;; c >>= 1)
++    {
++      unsigned d = (long)"a";
++      long e = 8;
++
++      while (e)
++        {
++          a: goto *g[c&d];
++          b: e--;
++        }
++    }
++}
 diff --git a/gcc/testsuite/gcc.target/powerpc/crypto-builtin-1.c b/gcc/testsuite/gcc.target/powerpc/crypto-builtin-1.c
 index 234041d5c35..38245ffc370 100644
 --- a/gcc/testsuite/gcc.target/powerpc/crypto-builtin-1.c
@@ -8186,6 +8250,46 @@ index 373946f518a..0e69629f879 100644
  	      varinfo_t escaped = get_varinfo (find (escaped_id));
  	      if (bitmap_bit_p (escaped->solution, restrict_var->id))
  		escaped_p = true;
+diff --git a/include/ChangeLog b/include/ChangeLog
+index 02ab3367193..7456a13e5d8 100644
+--- a/include/ChangeLog
++++ b/include/ChangeLog
+@@ -1,3 +1,11 @@
++2019-04-08  Claudiu Zissulescu  <claziss@synopsys.com>
++
++	backport mainline
++	Vineet Gupta  <vgupta@synopsys.com>
++	PR 89877
++	* longlong.h [__arc__] (add_ssaaaa): Add cc clobber.
++	(sub_ddmmss): Likewise.
++
+ 2019-02-22  Release Manager
+ 
+ 	* GCC 8.3.0 released.
+diff --git a/include/longlong.h b/include/longlong.h
+index 7f3dc17dc0a..8771365b9dc 100644
+--- a/include/longlong.h
++++ b/include/longlong.h
+@@ -199,7 +199,8 @@ extern UDItype __udiv_qrnnd (UDItype *, UDItype, UDItype, UDItype);
+ 	   : "%r" ((USItype) (ah)),					\
+ 	     "rICal" ((USItype) (bh)),					\
+ 	     "%r" ((USItype) (al)),					\
+-	     "rICal" ((USItype) (bl)))
++	     "rICal" ((USItype) (bl))					\
++	   : "cc")
+ #define sub_ddmmss(sh, sl, ah, al, bh, bl) \
+   __asm__ ("sub.f	%1, %4, %5\n\tsbc	%0, %2, %3"		\
+ 	   : "=r" ((USItype) (sh)),					\
+@@ -207,7 +208,8 @@ extern UDItype __udiv_qrnnd (UDItype *, UDItype, UDItype, UDItype);
+ 	   : "r" ((USItype) (ah)),					\
+ 	     "rICal" ((USItype) (bh)),					\
+ 	     "r" ((USItype) (al)),					\
+-	     "rICal" ((USItype) (bl)))
++	     "rICal" ((USItype) (bl))					\
++	   : "cc")
+ 
+ #define __umulsidi3(u,v) ((UDItype)(USItype)u*(USItype)v)
+ #ifdef __ARC_NORM__
 diff --git a/libatomic/ChangeLog b/libatomic/ChangeLog
 index 6c5e7fb5c11..e2f3a1e69a9 100644
 --- a/libatomic/ChangeLog
