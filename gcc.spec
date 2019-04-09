@@ -15,7 +15,7 @@
 
 Name     : gcc
 Version  : 8.3.0
-Release  : 417
+Release  : 418
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://mirrors.kernel.org/gnu/gcc/gcc-8.3.0/gcc-8.3.0.tar.gz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.16.1.tar.bz2
@@ -359,8 +359,26 @@ mkdir -p %{buildroot}//usr/share/gdb/auto-load//usr/lib32
 mv %{buildroot}//usr/lib64/libstdc++.so.%{libstdcxx_full}-gdb.py %{buildroot}//usr/share/gdb/auto-load//usr/lib64/.
 mv %{buildroot}//usr/lib32/libstdc++.so.%{libstdcxx_full}-gdb.py %{buildroot}//usr/share/gdb/auto-load//usr/lib32/.
 
-# clang compat (maxdepth as we don't need/want 32bit compat here for now)
+# merge the two C++ include trees (needed for Clang)
+pushd %{buildroot}/usr/include/c++/x86_64-generic-linux
+find -type f \! -path ./32/\* | while read f; do
+    cmp -s $f 32/$f && continue
+    (
+        echo '#ifdef __LP64__'
+        cat $f
+        echo '#else'
+        cat 32/$f
+        echo '#endif'
+    ) > rpm-tmp-hdr
+    mv rpm-tmp-hdr $f
+done
+rm -rf 32
+ln -s . 32
+popd
+
+# Also clang compat
 (cd %{buildroot}/usr/lib64 && ln -s -t . gcc/x86_64-generic-linux/*/*.[ao])
+(cd %{buildroot}/usr/lib32 && ln -s -t . ../lib64/gcc/x86_64-generic-linux/*/32/*.[ao])
 
 %find_lang cpplib cpp.lang
 %find_lang gcc tmp.lang
@@ -456,6 +474,19 @@ cat *.lang > gcc.lang
 /usr/lib64/libquadmath.so
 
 %files dev32
+/usr/lib32/crtbegin.o
+/usr/lib32/crtbeginS.o
+/usr/lib32/crtbeginT.o
+/usr/lib32/crtend.o
+/usr/lib32/crtendS.o
+/usr/lib32/crtfastmath.o
+/usr/lib32/crtprec32.o
+/usr/lib32/crtprec64.o
+/usr/lib32/crtprec80.o
+/usr/lib32/libcaf_single.a
+/usr/lib32/libgcc.a
+/usr/lib32/libgcc_eh.a
+/usr/lib32/libgcov.a
 /usr/lib32/libstdc++.a
 /usr/lib32/libstdc++.so
 /usr/lib32/libstdc++fs.a
