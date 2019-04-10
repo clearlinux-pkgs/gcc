@@ -14,18 +14,20 @@ avieira (1):
 claziss (1):
       Backport ARC patch.
 
-ebotcazou (6):
+ebotcazou (7):
       PR ada/89349 	Backport from mainline 	2018-05-25  Arnaud Charlet  <charlet@adacore.com>
       * tree-ssa-dom.c (edge_info::derive_equivalences) <BIT_IOR_EXPR>: Fix 	and move around comment. 	<BIT_AND_EXPR>: Likewise. 	<BIT_NOT_EXPR>: Add specific handling for boolean types.
       Backport from mainline 	2019-02-19  Eric Botcazou  <ebotcazou@adacore.com>
       PR tree-optimization/89536 	* tree-ssa-dom.c (edge_info::derive_equivalences) <BIT_NOT_EXPR>: Test 	only whether bit #0 of the value is 0 instead of the entire value.
       PR rtl-optimization/89588 	* loop-unroll.c (decide_unroll_constant_iterations): Make guard for 	explicit unrolling factor more robust.
       PR rtl-optimization/89753 	* loop-unroll.c (decide_unroll_constant_iterations): Make guard for 	explicit unrolling factor even more robust.
+      * c-ada-spec.c (print_destructor): Deal with deleting destructors. 	(dump_ada_declaration) <FUNCTION_DECL>: Likewise.
 
 fw (1):
       PR libgcc/60790: x86: Do not assume ELF constructors run before IFUNC resolvers
 
-gccadmin (46):
+gccadmin (47):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -749,6 +751,45 @@ index 65a87fe4ce3..6c75b521456 100644
 -   --  avoid function calls every time we want to reset the attributes).
 -
  end Osint;
+diff --git a/gcc/c-family/ChangeLog b/gcc/c-family/ChangeLog
+index 43cbc3dd751..58ca7b6c1d3 100644
+--- a/gcc/c-family/ChangeLog
++++ b/gcc/c-family/ChangeLog
+@@ -1,3 +1,8 @@
++2019-04-09  Eric Botcazou  <ebotcazou@adacore.com>
++
++	* c-ada-spec.c (print_destructor): Deal with deleting destructors.
++	(dump_ada_declaration) <FUNCTION_DECL>: Likewise.
++
+ 2019-02-22  Release Manager
+ 
+ 	* GCC 8.3.0 released.
+diff --git a/gcc/c-family/c-ada-spec.c b/gcc/c-family/c-ada-spec.c
+index 30fdb59d55c..f5f558c5a5c 100644
+--- a/gcc/c-family/c-ada-spec.c
++++ b/gcc/c-family/c-ada-spec.c
+@@ -2686,6 +2686,8 @@ print_destructor (pretty_printer *buffer, tree t, tree type)
+   tree decl_name = DECL_NAME (TYPE_NAME (type));
+ 
+   pp_string (buffer, "Delete_");
++  if (strncmp (IDENTIFIER_POINTER (DECL_NAME (t)), "__dt_del", 8) == 0)
++    pp_string (buffer, "And_Free_");
+   pp_ada_tree_identifier (buffer, decl_name, t, 0, false);
+ }
+ 
+@@ -2937,9 +2939,10 @@ dump_ada_declaration (pretty_printer *buffer, tree t, tree type, int spc)
+ 	  if (DECL_ARTIFICIAL (t))
+ 	    return 0;
+ 
+-	  /* Only consider constructors/destructors for complete objects.  */
++	  /* Only consider complete constructors and deleting destructors.  */
+ 	  if (strncmp (IDENTIFIER_POINTER (decl_name), "__ct_comp", 9) != 0
+-	      && strncmp (IDENTIFIER_POINTER (decl_name), "__dt_comp", 9) != 0)
++	      && strncmp (IDENTIFIER_POINTER (decl_name), "__dt_comp", 9) != 0
++	      && strncmp (IDENTIFIER_POINTER (decl_name), "__dt_del", 8) != 0)
+ 	    return 0;
+ 	}
+ 
 diff --git a/gcc/cgraph.c b/gcc/cgraph.c
 index 9f3a2929f6b..8f4019b1fb9 100644
 --- a/gcc/cgraph.c
