@@ -1,12 +1,13 @@
 amodra (1):
       [RS6000] Fix <bd>_<mode> and <bd>tf_<mode> splitters
 
-anlauf (5):
+anlauf (6):
       2019-03-02  Harald Anlauf  <anlauf@gmx.de>
       2019-03-03  Harald Anlauf  <anlauf@gmx.de> 	    Steven G. Kargl  <kargl@gcc.gnu.org>
       2019-03-03  Harald Anlauf  <anlauf@gmx.de>
       2019-03-06  Harald Anlauf  <anlauf@gmx.de>
       2019-03-31  Harald Anlauf  <anlauf@gmx.de>
+      2019-04-10  Harald Anlauf  <anlauf@gmx.de>
 
 avieira (1):
       Backport of r269499 and related testism fix r269596.
@@ -26,7 +27,8 @@ ebotcazou (7):
 fw (1):
       PR libgcc/60790: x86: Do not assume ELF constructors run before IFUNC resolvers
 
-gccadmin (47):
+gccadmin (48):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -129,6 +131,9 @@ marxin (6):
       Subject: Backport r269684
       Backport r265786
 
+matmal01 (1):
+      Backport of r270226 from mainline to gcc-8-branch
+
 mpolacek (1):
       PR c++/89212 - ICE converting nullptr to pointer-to-member-function. 	* pt.c (tsubst_copy_and_build) <case CONSTRUCTOR>: Return early for 	null member pointer value.
 
@@ -200,10 +205,20 @@ index 2bf50aaf17a..56b6be4ebb2 100644
 -8.3.0
 +8.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d1fd9f6a7b9..703b7bbc633 100644
+index d1fd9f6a7b9..62a30dfac22 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,449 @@
+@@ -1,3 +1,459 @@
++2019-04-10  Matthew Malcomson  <matthew.malcomson@arm.com>
++
++	PR target/90024
++	* config/arm/arm.c (neon_valid_immediate): Disallow VOIDmode parameter.
++	* config/arm/constraints.md (Dm, DN, Dn): Split previous Dn constraint
++	into three.
++	* config/arm/neon.md (*neon_mov<mode>): Account for TImode and DImode
++	differences directly.
++	(*smax<mode>3_neon, vashl<mode>3, vashr<mode>3_imm): Use Dm constraint.
++
 +2019-04-07  Uroš Bizjak  <ubizjak@gmail.com>
 +
 +	PR target/89945
@@ -653,7 +668,7 @@ index d1fd9f6a7b9..703b7bbc633 100644
  2019-02-22  Release Manager
  
  	* GCC 8.3.0 released.
-@@ -568,7 +1014,7 @@
+@@ -568,7 +1024,7 @@
  
  	Backport from mainline
  	2018-11-20  Richard Biener  <rguenther@suse.de>
@@ -1335,6 +1350,20 @@ index 4e83c7a7679..c68bdfdc57f 100644
    }
  }
  
+diff --git a/gcc/config/arm/arm.c b/gcc/config/arm/arm.c
+index e45eb525db6..5e8190ec85a 100644
+--- a/gcc/config/arm/arm.c
++++ b/gcc/config/arm/arm.c
+@@ -11930,8 +11930,7 @@ neon_valid_immediate (rtx op, machine_mode mode, int inverse,
+   else
+     {
+       n_elts = 1;
+-      if (mode == VOIDmode)
+-	mode = DImode;
++      gcc_assert (mode != VOIDmode);
+     }
+ 
+   innersize = GET_MODE_UNIT_SIZE (mode);
 diff --git a/gcc/config/arm/arm.h b/gcc/config/arm/arm.h
 index 2809112f68d..b12ae385802 100644
 --- a/gcc/config/arm/arm.h
@@ -1348,6 +1377,179 @@ index 2809112f68d..b12ae385802 100644
  
  /* FPU supports fused-multiply-add operations.  */
  #define TARGET_FMA (bitmap_bit_p (arm_active_target.isa, isa_bit_vfpv4))
+diff --git a/gcc/config/arm/constraints.md b/gcc/config/arm/constraints.md
+index 7576c6fc401..09161620074 100644
+--- a/gcc/config/arm/constraints.md
++++ b/gcc/config/arm/constraints.md
+@@ -31,7 +31,8 @@
+ ;; 'H' was previously used for FPA.
+ 
+ ;; The following multi-letter normal constraints have been used:
+-;; in ARM/Thumb-2 state: Da, Db, Dc, Dd, Dn, Dl, DL, Do, Dv, Dy, Di, Dt, Dp, Dz
++;; in ARM/Thumb-2 state: Da, Db, Dc, Dd, Dn, DN, Dm, Dl, DL, Do, Dv, Dy, Di,
++;;			 Dt, Dp, Dz
+ ;; in Thumb-1 state: Pa, Pb, Pc, Pd, Pe
+ ;; in Thumb-2 state: Pj, PJ, Ps, Pt, Pu, Pv, Pw, Px, Py
+ ;; in all states: Pf
+@@ -294,14 +295,28 @@
+  (and (match_code "const_double,const_int")
+       (match_test "TARGET_32BIT && arm_const_double_by_immediates (op)")))
+ 
+-(define_constraint "Dn"
++(define_constraint "Dm"
+  "@internal
+-  In ARM/Thumb-2 state a const_vector or const_int which can be loaded with a
+-  Neon vmov immediate instruction."
+- (and (match_code "const_vector,const_int")
++  In ARM/Thumb-2 state a const_vector which can be loaded with a Neon vmov
++  immediate instruction."
++ (and (match_code "const_vector")
+       (match_test "TARGET_32BIT
+ 		   && imm_for_neon_mov_operand (op, GET_MODE (op))")))
+ 
++(define_constraint "Dn"
++ "@internal
++  In ARM/Thumb-2 state a DImode const_int which can be loaded with a Neon vmov
++  immediate instruction."
++ (and (match_code "const_int")
++      (match_test "TARGET_32BIT && imm_for_neon_mov_operand (op, DImode)")))
++
++(define_constraint "DN"
++ "@internal
++  In ARM/Thumb-2 state a TImode const_int which can be loaded with a Neon vmov
++  immediate instruction."
++ (and (match_code "const_int")
++      (match_test "TARGET_32BIT && imm_for_neon_mov_operand (op, TImode)")))
++
+ (define_constraint "Dl"
+  "@internal
+   In ARM/Thumb-2 state a const_vector which can be used with a Neon vorr or
+diff --git a/gcc/config/arm/neon.md b/gcc/config/arm/neon.md
+index db53ab0b8bf..dd062225a49 100644
+--- a/gcc/config/arm/neon.md
++++ b/gcc/config/arm/neon.md
+@@ -25,14 +25,14 @@
+ 
+ (define_insn "*neon_mov<mode>"
+   [(set (match_operand:VDX 0 "nonimmediate_operand"
+-	  "=w,Un,w, w,  ?r,?w,?r,?r, ?Us")
++	  "=w,Un,w, w, w,  ?r,?w,?r,?r, ?Us")
+ 	(match_operand:VDX 1 "general_operand"
+-	  " w,w, Dn,Uni, w, r, r, Usi,r"))]
++	  " w,w, Dm,Dn,Uni, w, r, r, Usi,r"))]
+   "TARGET_NEON
+    && (register_operand (operands[0], <MODE>mode)
+        || register_operand (operands[1], <MODE>mode))"
+ {
+-  if (which_alternative == 2)
++  if (which_alternative == 2 || which_alternative == 3)
+     {
+       int width, is_valid;
+       static char templ[40];
+@@ -53,31 +53,32 @@
+   switch (which_alternative)
+     {
+     case 0: return "vmov\t%P0, %P1  @ <mode>";
+-    case 1: case 3: return output_move_neon (operands);
+-    case 2: gcc_unreachable ();
+-    case 4: return "vmov\t%Q0, %R0, %P1  @ <mode>";
+-    case 5: return "vmov\t%P0, %Q1, %R1  @ <mode>";
++    case 1: case 4: return output_move_neon (operands);
++    case 2: case 3: gcc_unreachable ();
++    case 5: return "vmov\t%Q0, %R0, %P1  @ <mode>";
++    case 6: return "vmov\t%P0, %Q1, %R1  @ <mode>";
+     default: return output_move_double (operands, true, NULL);
+     }
+ }
+  [(set_attr "type" "neon_move<q>,neon_store1_1reg,neon_move<q>,\
+-                    neon_load1_1reg, neon_to_gp<q>,neon_from_gp<q>,mov_reg,\
+-                    neon_load1_2reg, neon_store1_2reg")
+-  (set_attr "length" "4,4,4,4,4,4,8,8,8")
+-  (set_attr "arm_pool_range"     "*,*,*,1020,*,*,*,1020,*")
+-  (set_attr "thumb2_pool_range"     "*,*,*,1018,*,*,*,1018,*")
+-  (set_attr "neg_pool_range" "*,*,*,1004,*,*,*,1004,*")])
++                    neon_move<q>,neon_load1_1reg, neon_to_gp<q>,\
++		    neon_from_gp<q>,mov_reg,neon_load1_2reg,\
++		    neon_store1_2reg")
++  (set_attr "length" "4,4,4,4,4,4,4,8,8,8")
++  (set_attr "arm_pool_range"     "*,*,*,*,1020,*,*,*,1020,*")
++  (set_attr "thumb2_pool_range"     "*,*,*,*,1018,*,*,*,1018,*")
++  (set_attr "neg_pool_range" "*,*,*,*,1004,*,*,*,1004,*")])
+ 
+ (define_insn "*neon_mov<mode>"
+   [(set (match_operand:VQXMOV 0 "nonimmediate_operand"
+-  	  "=w,Un,w, w,  ?r,?w,?r,?r,  ?Us")
++	  "=w,Un,w, w, w,  ?r,?w,?r,?r,  ?Us")
+ 	(match_operand:VQXMOV 1 "general_operand"
+-	  " w,w, Dn,Uni, w, r, r, Usi, r"))]
++	  " w,w, Dm,DN,Uni, w, r, r, Usi, r"))]
+   "TARGET_NEON
+    && (register_operand (operands[0], <MODE>mode)
+        || register_operand (operands[1], <MODE>mode))"
+ {
+-  if (which_alternative == 2)
++  if (which_alternative == 2 || which_alternative == 3)
+     {
+       int width, is_valid;
+       static char templ[40];
+@@ -98,20 +99,20 @@
+   switch (which_alternative)
+     {
+     case 0: return "vmov\t%q0, %q1  @ <mode>";
+-    case 1: case 3: return output_move_neon (operands);
+-    case 2: gcc_unreachable ();
+-    case 4: return "vmov\t%Q0, %R0, %e1  @ <mode>\;vmov\t%J0, %K0, %f1";
+-    case 5: return "vmov\t%e0, %Q1, %R1  @ <mode>\;vmov\t%f0, %J1, %K1";
++    case 1: case 4: return output_move_neon (operands);
++    case 2: case 3: gcc_unreachable ();
++    case 5: return "vmov\t%Q0, %R0, %e1  @ <mode>\;vmov\t%J0, %K0, %f1";
++    case 6: return "vmov\t%e0, %Q1, %R1  @ <mode>\;vmov\t%f0, %J1, %K1";
+     default: return output_move_quad (operands);
+     }
+ }
+   [(set_attr "type" "neon_move_q,neon_store2_2reg_q,neon_move_q,\
+-                     neon_load2_2reg_q,neon_to_gp_q,neon_from_gp_q,\
+-                     mov_reg,neon_load1_4reg,neon_store1_4reg")
+-   (set_attr "length" "4,8,4,8,8,8,16,8,16")
+-   (set_attr "arm_pool_range" "*,*,*,1020,*,*,*,1020,*")
+-   (set_attr "thumb2_pool_range" "*,*,*,1018,*,*,*,1018,*")
+-   (set_attr "neg_pool_range" "*,*,*,996,*,*,*,996,*")])
++                     neon_move_q,neon_load2_2reg_q,neon_to_gp_q,\
++                     neon_from_gp_q,mov_reg,neon_load1_4reg,neon_store1_4reg")
++   (set_attr "length" "4,8,4,4,8,8,8,16,8,16")
++   (set_attr "arm_pool_range" "*,*,*,*,1020,*,*,*,1020,*")
++   (set_attr "thumb2_pool_range" "*,*,*,*,1018,*,*,*,1018,*")
++   (set_attr "neg_pool_range" "*,*,*,*,996,*,*,*,996,*")])
+ 
+ /* We define these mov expanders to match the standard mov$a optab to prevent
+    the mid-end from trying to do a subreg for these modes which is the most
+@@ -1033,7 +1034,7 @@
+ (define_insn "vashl<mode>3"
+   [(set (match_operand:VDQIW 0 "s_register_operand" "=w,w")
+ 	(ashift:VDQIW (match_operand:VDQIW 1 "s_register_operand" "w,w")
+-		      (match_operand:VDQIW 2 "imm_lshift_or_reg_neon" "w,Dn")))]
++		      (match_operand:VDQIW 2 "imm_lshift_or_reg_neon" "w,Dm")))]
+   "TARGET_NEON"
+   {
+     switch (which_alternative)
+@@ -1052,7 +1053,7 @@
+ (define_insn "vashr<mode>3_imm"
+   [(set (match_operand:VDQIW 0 "s_register_operand" "=w")
+ 	(ashiftrt:VDQIW (match_operand:VDQIW 1 "s_register_operand" "w")
+-			(match_operand:VDQIW 2 "imm_for_neon_rshift_operand" "Dn")))]
++			(match_operand:VDQIW 2 "imm_for_neon_rshift_operand" "Dm")))]
+   "TARGET_NEON"
+   {
+     return neon_output_shift_immediate ("vshr", 's', &operands[2],
+@@ -1065,7 +1066,7 @@
+ (define_insn "vlshr<mode>3_imm"
+   [(set (match_operand:VDQIW 0 "s_register_operand" "=w")
+ 	(lshiftrt:VDQIW (match_operand:VDQIW 1 "s_register_operand" "w")
+-			(match_operand:VDQIW 2 "imm_for_neon_rshift_operand" "Dn")))]
++			(match_operand:VDQIW 2 "imm_for_neon_rshift_operand" "Dm")))]
+   "TARGET_NEON"
+   {
+     return neon_output_shift_immediate ("vshr", 'u', &operands[2],
 diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
 index 7732f882f78..30a20af8fab 100644
 --- a/gcc/config/i386/i386.c
@@ -2897,10 +3099,17 @@ index 36bcc65f14d..af67feb5fbc 100644
        && (code == TRUTH_AND_EXPR
            || code == TRUTH_ANDIF_EXPR
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index 4d2782f1b19..1017a313edd 100644
+index 4d2782f1b19..c7545e28705 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,214 @@
+@@ -1,3 +1,221 @@
++2019-04-10  Harald Anlauf  <anlauf@gmx.de>
++
++	Backport from trunk
++	PR fortran/89904
++	* check.c (gfc_check_transfer): Reject procedures as actual
++	arguments for SOURCE and MOLD of TRANSFER intrinsic.
++
 +2019-03-31  Harald Anlauf  <anlauf@gmx.de>
 +
 +	PR fortran/83515
@@ -3133,7 +3342,7 @@ index fc9b3f90c65..ef9d67412d6 100644
    if (src_len > result_len)
      {
 diff --git a/gcc/fortran/check.c b/gcc/fortran/check.c
-index f304154ac68..febf77fd3e7 100644
+index f304154ac68..2a24147cfe6 100644
 --- a/gcc/fortran/check.c
 +++ b/gcc/fortran/check.c
 @@ -5413,16 +5413,41 @@ gfc_calculate_transfer_sizes (gfc_expr *source, gfc_expr *mold, gfc_expr *size,
@@ -3183,6 +3392,42 @@ index f304154ac68..febf77fd3e7 100644
      {
        int result_length;
  
+@@ -5452,6 +5477,26 @@ gfc_check_transfer (gfc_expr *source, gfc_expr *mold, gfc_expr *size)
+   size_t source_size;
+   size_t result_size;
+ 
++  /* SOURCE shall be a scalar or array of any type.  */
++  if (source->ts.type == BT_PROCEDURE
++      && source->symtree->n.sym->attr.subroutine == 1)
++    {
++      gfc_error ("%<SOURCE%> argument of %<TRANSFER%> intrinsic at %L "
++                 "must not be a %s", &source->where,
++		 gfc_basic_typename (source->ts.type));
++      return false;
++    }
++
++  /* MOLD shall be a scalar or array of any type.  */
++  if (mold->ts.type == BT_PROCEDURE
++      && mold->symtree->n.sym->attr.subroutine == 1)
++    {
++      gfc_error ("%<MOLD%> argument of %<TRANSFER%> intrinsic at %L "
++                 "must not be a %s", &mold->where,
++		 gfc_basic_typename (mold->ts.type));
++      return false;
++    }
++
+   if (mold->ts.type == BT_HOLLERITH)
+     {
+       gfc_error ("%<MOLD%> argument of %<TRANSFER%> intrinsic at %L must not be"
+@@ -5459,6 +5504,8 @@ gfc_check_transfer (gfc_expr *source, gfc_expr *mold, gfc_expr *size)
+       return false;
+     }
+ 
++  /* SIZE (optional) shall be an integer scalar.  The corresponding actual
++     argument shall not be an optional dummy argument.  */
+   if (size != NULL)
+     {
+       if (!type_check (size, 2, BT_INTEGER))
 diff --git a/gcc/fortran/class.c b/gcc/fortran/class.c
 index 2eae7f0f351..cb9f0d9f23d 100644
 --- a/gcc/fortran/class.c
@@ -4531,10 +4776,21 @@ index 0e79e53fb61..dabc5403f28 100644
        offset1 = crtl->outgoing_args_size + get_frame_size ();
  #if !STACK_GROWS_DOWNWARD
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 7d5e65b1a74..7c3a5f81edc 100644
+index 7d5e65b1a74..29a57b353eb 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,430 @@
+@@ -1,3 +1,441 @@
++2019-04-10  Harald Anlauf  <anlauf@gmx.de>
++
++	Backport from trunk
++	PR fortran/89904
++	* gfortran.dg/pr85797.f90: Adjust testcase.
++
++2019-04-10  Matthew Malcomson  <matthew.malcomson@arm.com>
++
++	PR target/90024
++	* gcc.dg/torture/neon-immediate-timode.c: New test.
++
 +019-04-07  Uroš Bizjak  <ubizjak@gmail.com>
 +
 +	PR target/89945
@@ -5543,6 +5799,22 @@ index 00000000000..6786c514543
 +/* { dg-final { scan-ipa-dump-not "replacing param.*with const" "cp"  } } */
 +
 +
+diff --git a/gcc/testsuite/gcc.dg/torture/neon-immediate-timode.c b/gcc/testsuite/gcc.dg/torture/neon-immediate-timode.c
+new file mode 100644
+index 00000000000..35f7d2cd32c
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/torture/neon-immediate-timode.c
+@@ -0,0 +1,10 @@
++union a {
++  char b;
++  long long c;
++};
++union a d;
++int g(int, union a, union a);
++void e() {
++  union a f[2] = {-1L};
++  g(0, d, f[0]);
++}
 diff --git a/gcc/testsuite/gcc.dg/torture/pr89505.c b/gcc/testsuite/gcc.dg/torture/pr89505.c
 new file mode 100644
 index 00000000000..6fca475ad9d
@@ -7619,36 +7891,34 @@ index 00000000000..c2ee0744297
 +end
 diff --git a/gcc/testsuite/gfortran.dg/pr85797.f90 b/gcc/testsuite/gfortran.dg/pr85797.f90
 new file mode 100644
-index 00000000000..fe6d96d6e30
+index 00000000000..01d8e640621
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/pr85797.f90
-@@ -0,0 +1,33 @@
+@@ -0,0 +1,31 @@
 +! { dg-do compile }
-+! { dg-options "-Wall" }
 +! PR fortran/83515 - ICE: Invalid expression in gfc_element_size 
 +! PR fortran/85797 - ICE in gfc_element_size, at fortran/target-memory.c:126
++! PR fortran/89904 - ICE in gfortran starting with r270045
 +
-+subroutine a
-+  c = transfer (a, b)           ! { dg-warning "Non-RECURSIVE procedure" }
++recursive subroutine a
++  c = transfer (a, b)           ! { dg-error "'SOURCE' argument of 'TRANSFER'" }
 +end
 +
 +recursive subroutine d
-+  c = transfer (d, b)
-+end
-+
-+recursive subroutine e
-+  k = transfer (transfer (e, e), 1)
++  c = transfer (b, d)           ! { dg-error "'MOLD' argument of 'TRANSFER'" }
 +end
 +
 +subroutine f
 +  use, intrinsic :: iso_c_binding
 +  integer(c_intptr_t) :: b, c
++  procedure(), pointer :: a
++  c = transfer (a, b)
 +  c = transfer (transfer (b, a), b)
 +end
 +
 +module m
 +contains
-+  function f () result (z)      ! { dg-warning "Return value" }
++  function f () result (z)
 +    class(*), pointer :: z
 +  end function f
 +  recursive subroutine s (q)
