@@ -27,7 +27,8 @@ ebotcazou (7):
 fw (1):
       PR libgcc/60790: x86: Do not assume ELF constructors run before IFUNC resolvers
 
-gccadmin (48):
+gccadmin (49):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -131,9 +132,10 @@ marxin (6):
       Subject: Backport r269684
       Backport r265786
 
-matmal01 (2):
+matmal01 (3):
       Backport of r270226 from mainline to gcc-8-branch
       [testsuite][arm] Update warning prune regex
+      Revert r270279
 
 mpolacek (1):
       PR c++/89212 - ICE converting nullptr to pointer-to-member-function. 	* pt.c (tsubst_copy_and_build) <case CONSTRUCTOR>: Return early for 	null member pointer value.
@@ -4784,15 +4786,10 @@ index 0e79e53fb61..dabc5403f28 100644
        offset1 = crtl->outgoing_args_size + get_frame_size ();
  #if !STACK_GROWS_DOWNWARD
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 7d5e65b1a74..e73d0fdddcd 100644
+index 7d5e65b1a74..500934c844d 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,451 @@
-+2019-04-11  Matthew Malcomson  <matthew.malcomson@arm.com>
-+
-+	* g++.target/arm/arm.exp: Change format of default prune regex.
-+	* gcc.target/arm/arm.exp: Change format of default prune regex.
-+
+@@ -1,3 +1,446 @@
 +2019-04-11  Richard Biener  <rguenther@suse.de>
 +
 +	PR tree-optimization/90018
@@ -5635,19 +5632,6 @@ index 3de5dbcf688..d8fb2d9ef46 100644
 +/* { dg-final-use-not-autofdo { scan-tree-dump-times "folding virtual function call to virtual unsigned int mozPersonalDictionary::_ZThn16" 1 "tracer" { target { lp64 || llp64 } } } } */
 +/* { dg-final-use-not-autofdo { scan-tree-dump-times "folding virtual function call to virtual unsigned int mozPersonalDictionary::_ZThn8" 1 "tracer" { target ilp32 } } } */
 +/* { dg-final-use-not-autofdo { scan-tree-dump-times "folding virtual function call to virtual unsigned int mozPersonalDictionary::AddRef" 1 "tracer" } } */
-diff --git a/gcc/testsuite/g++.target/arm/arm.exp b/gcc/testsuite/g++.target/arm/arm.exp
-index 1a169d2f220..de788977434 100644
---- a/gcc/testsuite/g++.target/arm/arm.exp
-+++ b/gcc/testsuite/g++.target/arm/arm.exp
-@@ -35,7 +35,7 @@ if ![info exists DEFAULT_CXXFLAGS] then {
- 
- global dg_runtest_extra_prunes
- set dg_runtest_extra_prunes ""
--lappend dg_runtest_extra_prunes "warning: switch -m(cpu|arch)=.* conflicts with -m(cpu|arch)=.* switch"
-+lappend dg_runtest_extra_prunes "warning: switch '-m(cpu|arch)=.*' conflicts with '-m(cpu|arch)=.*' switch"
- 
- # Initialize `dg'.
- dg-init
 diff --git a/gcc/testsuite/gcc.c-torture/execute/20190228-1.c b/gcc/testsuite/gcc.c-torture/execute/20190228-1.c
 new file mode 100644
 index 00000000000..e71f33a279b
@@ -6309,19 +6293,6 @@ index 00000000000..e3c7cdc54ff
 +    on the parent. e.g. rdma turns on simd+fp, but simd+fp does not turn on
 +    rdma since rdma is it's own group.  crypto however turns on aes and sha2
 +    and turning on sha2 and eas should turn on crypto!.  */
-diff --git a/gcc/testsuite/gcc.target/arm/arm.exp b/gcc/testsuite/gcc.target/arm/arm.exp
-index 2f219492419..f4bdff26187 100644
---- a/gcc/testsuite/gcc.target/arm/arm.exp
-+++ b/gcc/testsuite/gcc.target/arm/arm.exp
-@@ -33,7 +33,7 @@ if ![info exists DEFAULT_CFLAGS] then {
- # This variable should only apply to tests called in this exp file.
- global dg_runtest_extra_prunes
- set dg_runtest_extra_prunes ""
--lappend dg_runtest_extra_prunes "warning: switch -m(cpu|arch)=.* conflicts with -m(cpu|arch)=.* switch"
-+lappend dg_runtest_extra_prunes "warning: switch '-m(cpu|arch)=.*' conflicts with '-m(cpu|arch)=.*' switch"
- 
- # Initialize `dg'.
- dg-init
 diff --git a/gcc/testsuite/gcc.target/arm/f16_f64_conv_no_dp.c b/gcc/testsuite/gcc.target/arm/f16_f64_conv_no_dp.c
 new file mode 100644
 index 00000000000..2620e570004
