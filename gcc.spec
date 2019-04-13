@@ -15,7 +15,7 @@
 
 Name     : gcc
 Version  : 8.3.0
-Release  : 422
+Release  : 423
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://mirrors.kernel.org/gnu/gcc/gcc-8.3.0/gcc-8.3.0.tar.gz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.16.1.tar.bz2
@@ -290,7 +290,6 @@ export LIBRARY_PATH=/usr/lib64
     --with-ppl=yes \
     --with-isl \
     --includedir=/usr/include \
-    --with-gxx-include-dir=/usr/include/c++/ \
     --exec-prefix=/usr \
     --with-glibc-version=2.19 \
     --disable-libunwind-exceptions \
@@ -299,6 +298,9 @@ export LIBRARY_PATH=/usr/lib64
     --with-arch=westmere \
     --enable-cet \
     --disable-libmpx
+# For GCC 9, add:
+#  --with-gcc-major-version-only
+#  --enable-default-pie
 
 make %{?_smp_mflags} profiledbootstrap
 
@@ -360,7 +362,7 @@ mv %{buildroot}//usr/lib64/libstdc++.so.%{libstdcxx_full}-gdb.py %{buildroot}//u
 mv %{buildroot}//usr/lib32/libstdc++.so.%{libstdcxx_full}-gdb.py %{buildroot}//usr/share/gdb/auto-load//usr/lib32/.
 
 # merge the two C++ include trees (needed for Clang)
-pushd %{buildroot}/usr/include/c++/x86_64-generic-linux
+pushd %{buildroot}/usr/include/c++/*/x86_64-generic-linux
 find -type f \! -path ./32/\* | while read f; do
     cmp -s $f 32/$f && continue
     (
@@ -463,7 +465,7 @@ cat *.lang > gcc.lang
 /usr/lib64/libstdc++.so
 /usr/lib64/libstdc++.a
 /usr/lib64/libsupc++.a
-/usr/include/c++
+/usr/include/c++/*
 /usr/share/gdb/auto-load//usr/lib64/libstdc++.so.*
 /usr/lib64/libstdc++fs.a
 /usr/bin/gcov-dump
