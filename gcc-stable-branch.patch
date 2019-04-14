@@ -163,7 +163,7 @@ rguenth (9):
       2019-04-03  Richard Biener  <rguenther@suse.de>
       2019-04-11  Richard Biener  <rguenther@suse.de>
 
-tkoenig (14):
+tkoenig (16):
       2019-02-22  Thomas Koenig  <tkoenig@gcc.gnu.org>
       2019-02-23  Thomas Koenig  <tkoenig@gcc.gnu.org>
       2019-03-03  Thomas Koenig  <tkoenig@gcc.gnu.org>
@@ -178,6 +178,8 @@ tkoenig (14):
       2019-03-23  Thomas Koenig  <tkoeng@gcc.gnu.org>
       2019-03-30  Thomas Koenig  <tkoenig@gcc.gnu.org>
       2019-03-30  Thomas Koenig  <tkoenig@gcc.gnu.org>
+      2019-04-14  Thomas Koenig  <tkoenig@gcc.gnu.org>
+      2019-04-14  Thomas Koenig  <tkoenig@gcc.gnu.org>
 
 tnfchris (3):
       AArch64: Make every option in options.def one line (GCC-8).
@@ -3111,10 +3113,25 @@ index 36bcc65f14d..af67feb5fbc 100644
        && (code == TRUTH_AND_EXPR
            || code == TRUTH_ANDIF_EXPR
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index 4d2782f1b19..c7545e28705 100644
+index 4d2782f1b19..7442bda84c0 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,221 @@
+@@ -1,3 +1,236 @@
++2019-04-14  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	Backport from trunk
++	PR fortran/87352
++	* gfortran.h (gfc_component): Add finalized field.
++	* class.c (finalize_component): If the component is already
++	finalized, return early.  Set component->finalized on exit.
++
++2019-04-14  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	Backport from trunk
++	PR fortran/89981
++	* resolve.c (resolve_global_procedure): If the global symbol is an
++	ENTRY, also look up its name among the entries.
++
 +2019-04-10  Harald Anlauf  <anlauf@gmx.de>
 +
 +	Backport from trunk
@@ -3441,7 +3458,7 @@ index f304154ac68..2a24147cfe6 100644
      {
        if (!type_check (size, 2, BT_INTEGER))
 diff --git a/gcc/fortran/class.c b/gcc/fortran/class.c
-index 2eae7f0f351..cb9f0d9f23d 100644
+index 2eae7f0f351..23a0468dedd 100644
 --- a/gcc/fortran/class.c
 +++ b/gcc/fortran/class.c
 @@ -561,7 +561,7 @@ gfc_intrinsic_hash_value (gfc_typespec *ts)
@@ -3468,7 +3485,25 @@ index 2eae7f0f351..cb9f0d9f23d 100644
    return ptr;
  }
  
-@@ -2661,6 +2669,7 @@ find_intrinsic_vtab (gfc_typespec *ts)
+@@ -899,6 +907,9 @@ finalize_component (gfc_expr *expr, gfc_symbol *derived, gfc_component *comp,
+   if (!comp_is_finalizable (comp))
+     return;
+ 
++  if (comp->finalized)
++    return;
++
+   e = gfc_copy_expr (expr);
+   if (!e->ref)
+     e->ref = ref = gfc_get_ref ();
+@@ -1026,6 +1037,7 @@ finalize_component (gfc_expr *expr, gfc_symbol *derived, gfc_component *comp,
+ 			    sub_ns);
+       gfc_free_expr (e);
+     }
++  comp->finalized = true;
+ }
+ 
+ 
+@@ -2661,6 +2673,7 @@ find_intrinsic_vtab (gfc_typespec *ts)
  	      gfc_namespace *sub_ns;
  	      gfc_namespace *contained;
  	      gfc_expr *e;
@@ -3476,7 +3511,7 @@ index 2eae7f0f351..cb9f0d9f23d 100644
  
  	      gfc_get_symbol (name, ns, &vtype);
  	      if (!gfc_add_flavor (&vtype->attr, FL_DERIVED, NULL,
-@@ -2695,11 +2704,13 @@ find_intrinsic_vtab (gfc_typespec *ts)
+@@ -2695,11 +2708,13 @@ find_intrinsic_vtab (gfc_typespec *ts)
  	      e = gfc_get_expr ();
  	      e->ts = *ts;
  	      e->expr_type = EXPR_VARIABLE;
@@ -3552,10 +3587,18 @@ index 6ef4eb864e6..2731a714fca 100644
  			gfc_free_expr (p->ts.u.cl->length);
  
 diff --git a/gcc/fortran/gfortran.h b/gcc/fortran/gfortran.h
-index 698d211d74e..dd512d94922 100644
+index 698d211d74e..ebe6eab558b 100644
 --- a/gcc/fortran/gfortran.h
 +++ b/gcc/fortran/gfortran.h
-@@ -1883,6 +1883,7 @@ typedef struct gfc_gsymbol
+@@ -1080,6 +1080,7 @@ typedef struct gfc_component
+   struct gfc_typebound_proc *tb;
+   /* When allocatable/pointer and in a coarray the associated token.  */
+   tree caf_token;
++  bool finalized;
+ }
+ gfc_component;
+ 
+@@ -1883,6 +1884,7 @@ typedef struct gfc_gsymbol
    enum gfc_symbol_type type;
  
    int defined, used;
@@ -3563,7 +3606,7 @@ index 698d211d74e..dd512d94922 100644
    locus where;
    gfc_namespace *ns;
  }
-@@ -3059,7 +3060,7 @@ void gfc_enforce_clean_symbol_state (void);
+@@ -3059,7 +3061,7 @@ void gfc_enforce_clean_symbol_state (void);
  void gfc_free_dt_list (void);
  
  
@@ -3572,7 +3615,7 @@ index 698d211d74e..dd512d94922 100644
  gfc_gsymbol *gfc_find_gsymbol (gfc_gsymbol *, const char *);
  gfc_gsymbol *gfc_find_case_gsymbol (gfc_gsymbol *, const char *);
  
-@@ -3426,7 +3427,7 @@ bool gfc_is_class_scalar_expr (gfc_expr *);
+@@ -3426,7 +3428,7 @@ bool gfc_is_class_scalar_expr (gfc_expr *);
  bool gfc_is_class_container_ref (gfc_expr *e);
  gfc_expr *gfc_class_initializer (gfc_typespec *, gfc_expr *);
  unsigned int gfc_hash_value (gfc_symbol *);
@@ -3695,7 +3738,7 @@ index 4ce6eb42750..e920c71d569 100644
    if (s->defined || (s->type != GSYM_UNKNOWN && s->type != GSYM_PROGRAM))
      gfc_global_used (s, &gfc_new_block->declared_at);
 diff --git a/gcc/fortran/resolve.c b/gcc/fortran/resolve.c
-index f70747a586f..b68c5ffe0b6 100644
+index f70747a586f..87d5969b3c9 100644
 --- a/gcc/fortran/resolve.c
 +++ b/gcc/fortran/resolve.c
 @@ -1045,7 +1045,7 @@ resolve_common_blocks (gfc_symtree *common_root)
@@ -3825,7 +3868,7 @@ index f70747a586f..b68c5ffe0b6 100644
 -		def_sym = entry->sym;
 -		break;
 -	      }
-+	  if (def_sym->attr.entry_master)
++	  if (def_sym->attr.entry_master || def_sym->attr.entry)
 +	    {
 +	      gfc_entry_list *entry;
 +	      for (entry = gsym->ns->entries; entry; entry = entry->next)
@@ -4788,10 +4831,23 @@ index 0e79e53fb61..dabc5403f28 100644
        offset1 = crtl->outgoing_args_size + get_frame_size ();
  #if !STACK_GROWS_DOWNWARD
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 7d5e65b1a74..500934c844d 100644
+index 7d5e65b1a74..dd8826dc163 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,446 @@
+@@ -1,3 +1,459 @@
++2019-04-14  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	Backport from trunk
++	PR fortran/87352
++	* gfortran.dg/finalize_28.f90: Adjust count of __builtin_free.
++	* gfortran.dg/finalize_34.f90: New test.
++
++2019-04-14  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	Backport from trunk
++	PR fortran/89981
++	* gfortran.dg/entry_22.f90: New test.
++
 +2019-04-11  Richard Biener  <rguenther@suse.de>
 +
 +	PR tree-optimization/90018
@@ -7774,6 +7830,65 @@ index 00000000000..7cecc8b9141
 +   type(t) :: foo
 +   print "(dt)", foo ! { dg-output " Hello World!" }
 +end program
+diff --git a/gcc/testsuite/gfortran.dg/entry_22.f90 b/gcc/testsuite/gfortran.dg/entry_22.f90
+new file mode 100644
+index 00000000000..7753429d65b
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/entry_22.f90
+@@ -0,0 +1,12 @@
++! { dg-do compile }
++! { dg-additional-options "-pedantic" }
++! PR fortran/89981 - this used to give a wrong warning (error with
++! -pedantic)
++program main
++  call bar(i)
++  call baz(i) ! { dg-error "Type mismatch in argument" }
++end program main
++subroutine foo(r)
++  entry bar(i)
++  entry baz(r)
++end subroutine foo
+diff --git a/gcc/testsuite/gfortran.dg/finalize_28.f90 b/gcc/testsuite/gfortran.dg/finalize_28.f90
+index f0c9665252f..597413b2dd3 100644
+--- a/gcc/testsuite/gfortran.dg/finalize_28.f90
++++ b/gcc/testsuite/gfortran.dg/finalize_28.f90
+@@ -21,4 +21,4 @@ contains
+     integer, intent(out) :: edges(:,:)
+   end subroutine coo_dump_edges
+ end module coo_graphs
+-! { dg-final { scan-tree-dump-times "__builtin_free" 6 "original" } }
++! { dg-final { scan-tree-dump-times "__builtin_free" 5 "original" } }
+diff --git a/gcc/testsuite/gfortran.dg/finalize_34.f90 b/gcc/testsuite/gfortran.dg/finalize_34.f90
+new file mode 100644
+index 00000000000..e2f02a5c51c
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/finalize_34.f90
+@@ -0,0 +1,25 @@
++! { dg-do compile }
++! { dg-additional-options "-fdump-tree-original" }
++! PR 87352 - this used to cause an excessive number of deallocations.
++module testmodule
++  implicit none
++  public
++
++  type :: evtlist_type
++     real,  allocatable, dimension(:) :: p1
++     real,  allocatable, dimension(:) :: p2
++     real,  allocatable, dimension(:) :: p3
++     real,  allocatable, dimension(:) :: p4
++  end type evtlist_type
++
++  type :: evtlistlist_type
++     type(evtlist_type)  :: evtlist(1:1)
++  end type evtlistlist_type
++
++end module testmodule 
++
++program main
++  use testmodule
++  type(evtlist_type), dimension(10) :: a
++end program main
++! { dg-final  { scan-tree-dump-times "__builtin_free" 8 "original" } }
 diff --git a/gcc/testsuite/gfortran.dg/ieee/ieee.exp b/gcc/testsuite/gfortran.dg/ieee/ieee.exp
 index 987ecaf4bcd..2ccf2493dc4 100644
 --- a/gcc/testsuite/gfortran.dg/ieee/ieee.exp
