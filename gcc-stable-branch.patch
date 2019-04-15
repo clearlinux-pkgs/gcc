@@ -92,10 +92,11 @@ jakub (3):
       Backported from mainline 	2019-02-18  Jakub Jelinek  <jakub@redhat.com>
       PR c++/89585 	* parser.c (cp_parser_asm_definition): Parse asm qualifiers even 	at toplevel, but diagnose them.
 
-jamborm (3):
+jamborm (4):
       Relax cgraph_node::clone_of_p to also look through former clones
       Zero local estimated benefit for cloning extern inline function
       Add forgotten requeing in propagate_subaccesses_across_link
+      Reorganize cgraph_node::clone_of_p
 
 janus (1):
       fix PR 71861
@@ -127,13 +128,14 @@ kugan (1):
 luoxhu (1):
       backport r268834 from mainline to gcc-8-branch
 
-marxin (6):
+marxin (7):
       Backport r268789
       Backport r268981
       Backport r269492
       Backport r269558
       Subject: Backport r269684
       Backport r265786
+      Backport r268060
 
 matmal01 (3):
       Backport of r270226 from mainline to gcc-8-branch
@@ -214,10 +216,39 @@ index 2bf50aaf17a..56b6be4ebb2 100644
 -8.3.0
 +8.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d1fd9f6a7b9..5df5b720df8 100644
+index d1fd9f6a7b9..377e36c245a 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,465 @@
+@@ -1,3 +1,494 @@
++2019-04-15  Martin Jambor  <mjambor@suse.cz>
++
++	Backport from mainline
++	2019-04-15  Martin Jambor  <mjambor@suse.cz>
++
++	PR ipa/89693
++	* cgraph.c (clone_of_p): Loop over clone chain for each step in
++	the thunk chain.
++
++2019-04-15  Martin Liska  <mliska@suse.cz>
++
++	Backport from mainline
++	2019-01-18  Martin Liska  <mliska@suse.cz>
++		    Richard Biener  <rguenther@suse.de>
++
++	PR middle-end/88587
++	* cgraph.h (create_version_clone_with_body): Add new argument
++	with attributes.
++	* cgraphclones.c (cgraph_node::create_version_clone): Add
++	DECL_ATTRIBUTES to a newly created decl.  And call
++	valid_attribute_p so that proper cl_target_optimization_node
++	is set for the newly created declaration.
++	* multiple_target.c (create_target_clone): Set DECL_ATTRIBUTES
++	for declaration.
++	(expand_target_clones): Do not call valid_attribute_p, it must
++	be already done.
++	* tree-inline.c (copy_decl_for_dup_finish): Reset mode for
++	vector types.
++
 +2019-04-11  Richard Biener  <rguenther@suse.de>
 +
 +	PR tree-optimization/90018
@@ -683,7 +714,7 @@ index d1fd9f6a7b9..5df5b720df8 100644
  2019-02-22  Release Manager
  
  	* GCC 8.3.0 released.
-@@ -568,7 +1030,7 @@
+@@ -568,7 +1059,7 @@
  
  	Backport from mainline
  	2018-11-20  Richard Biener  <rguenther@suse.de>
@@ -821,10 +852,10 @@ index 30fdb59d55c..f5f558c5a5c 100644
  	}
  
 diff --git a/gcc/cgraph.c b/gcc/cgraph.c
-index 9f3a2929f6b..8f4019b1fb9 100644
+index 9f3a2929f6b..74a82129f62 100644
 --- a/gcc/cgraph.c
 +++ b/gcc/cgraph.c
-@@ -3007,7 +3007,9 @@ cgraph_node::collect_callers (void)
+@@ -3007,42 +3007,55 @@ cgraph_node::collect_callers (void)
    return redirect_callers;
  }
  
@@ -835,15 +866,30 @@ index 9f3a2929f6b..8f4019b1fb9 100644
  
  static bool
  clone_of_p (cgraph_node *node, cgraph_node *node2)
-@@ -3019,12 +3021,17 @@ clone_of_p (cgraph_node *node, cgraph_node *node2)
+ {
+-  bool skipped_thunk = false;
+   node = node->ultimate_alias_target ();
+   node2 = node2->ultimate_alias_target ();
+ 
++  if (node2->clone_of == node
++      || node2->former_clone_of == node->decl)
++    return true;
++
++  if (!node->thunk.thunk_p && !node->former_thunk_p ())
++    {
++      while (node2 && node->decl != node2->decl)
++	node2 = node2->clone_of;
++      return node2 != NULL;
++    }
++
    /* There are no virtual clones of thunks so check former_clone_of or if we
       might have skipped thunks because this adjustments are no longer
       necessary.  */
 -  while (node->thunk.thunk_p)
 +  while (node->thunk.thunk_p || node->former_thunk_p ())
      {
-       if (node2->former_clone_of == node->decl)
- 	return true;
+-      if (node2->former_clone_of == node->decl)
+-	return true;
        if (!node->thunk.this_adjusting)
  	return false;
 +      /* In case of instrumented expanded thunks, which can have multiple calls
@@ -852,22 +898,57 @@ index 9f3a2929f6b..8f4019b1fb9 100644
 +      if (node->callees->next_callee)
 +	return true;
        node = node->callees->callee->ultimate_alias_target ();
-       skipped_thunk = true;
-     }
-@@ -3040,7 +3047,7 @@ clone_of_p (cgraph_node *node, cgraph_node *node2)
+-      skipped_thunk = true;
+-    }
+ 
+-  if (skipped_thunk)
+-    {
+       if (!node2->clone.args_to_skip
+ 	  || !bitmap_bit_p (node2->clone.args_to_skip, 0))
  	return false;
+       if (node2->former_clone_of == node->decl)
+ 	return true;
+-      else if (!node2->clone_of)
+-	return false;
++
++      cgraph_node *n2 = node2;
++      while (n2 && node->decl != n2->decl)
++	n2 = n2->clone_of;
++      if (n2)
++	return true;
      }
  
 -  while (node != node2 && node2)
-+  while (node2 && node->decl != node2->decl)
-     node2 = node2->clone_of;
-   return node2 != NULL;
+-    node2 = node2->clone_of;
+-  return node2 != NULL;
++  return false;
  }
+ 
+ /* Verify edge count and frequency.  */
 diff --git a/gcc/cgraph.h b/gcc/cgraph.h
-index afb2745a841..2509cd28881 100644
+index afb2745a841..9495863d8ce 100644
 --- a/gcc/cgraph.h
 +++ b/gcc/cgraph.h
-@@ -1258,6 +1258,9 @@ public:
+@@ -997,12 +997,17 @@ public:
+      If non-NULL BLOCK_TO_COPY determine what basic blocks to copy.
+      If non_NULL NEW_ENTRY determine new entry BB of the clone.
+ 
++     If TARGET_ATTRIBUTES is non-null, when creating a new declaration,
++     add the attributes to DECL_ATTRIBUTES.  And call valid_attribute_p
++     that will promote value of the attribute DECL_FUNCTION_SPECIFIC_TARGET
++     of the declaration.
++
+      Return the new version's cgraph node.  */
+   cgraph_node *create_version_clone_with_body
+     (vec<cgraph_edge *> redirect_callers,
+      vec<ipa_replace_map *, va_gc> *tree_map, bitmap args_to_skip,
+      bool skip_return, bitmap bbs_to_copy, basic_block new_entry_block,
+-     const char *clone_name);
++     const char *clone_name, tree target_attributes = NULL_TREE);
+ 
+   /* Insert a new cgraph_function_version_info node into cgraph_fnver_htab
+      corresponding to cgraph_node.  */
+@@ -1258,6 +1263,9 @@ public:
       Note that at WPA stage, the function body may not be present in memory.  */
    inline bool has_gimple_body_p (void);
  
@@ -877,7 +958,7 @@ index afb2745a841..2509cd28881 100644
    /* Return true if function should be optimized for size.  */
    bool optimize_for_size_p (void);
  
-@@ -2858,6 +2861,16 @@ cgraph_node::has_gimple_body_p (void)
+@@ -2858,6 +2866,16 @@ cgraph_node::has_gimple_body_p (void)
    return definition && !thunk.thunk_p && !alias;
  }
  
@@ -894,6 +975,51 @@ index afb2745a841..2509cd28881 100644
  /* Walk all functions with body defined.  */
  #define FOR_EACH_FUNCTION_WITH_GIMPLE_BODY(node) \
     for ((node) = symtab->first_function_with_gimple_body (); (node); \
+diff --git a/gcc/cgraphclones.c b/gcc/cgraphclones.c
+index 6e84a31c1a5..bdccde1ac35 100644
+--- a/gcc/cgraphclones.c
++++ b/gcc/cgraphclones.c
+@@ -938,6 +938,11 @@ cgraph_node::create_version_clone (tree new_decl,
+    If non-NULL BLOCK_TO_COPY determine what basic blocks to copy.
+    If non_NULL NEW_ENTRY determine new entry BB of the clone.
+ 
++   If TARGET_ATTRIBUTES is non-null, when creating a new declaration,
++   add the attributes to DECL_ATTRIBUTES.  And call valid_attribute_p
++   that will promote value of the attribute DECL_FUNCTION_SPECIFIC_TARGET
++   of the declaration.
++
+    Return the new version's cgraph node.  */
+ 
+ cgraph_node *
+@@ -945,7 +950,7 @@ cgraph_node::create_version_clone_with_body
+   (vec<cgraph_edge *> redirect_callers,
+    vec<ipa_replace_map *, va_gc> *tree_map, bitmap args_to_skip,
+    bool skip_return, bitmap bbs_to_copy, basic_block new_entry_block,
+-   const char *suffix)
++   const char *suffix, tree target_attributes)
+ {
+   tree old_decl = decl;
+   cgraph_node *new_version_node = NULL;
+@@ -968,6 +973,19 @@ cgraph_node::create_version_clone_with_body
+   SET_DECL_ASSEMBLER_NAME (new_decl, DECL_NAME (new_decl));
+   SET_DECL_RTL (new_decl, NULL);
+ 
++  if (target_attributes)
++    {
++      DECL_ATTRIBUTES (new_decl) = target_attributes;
++
++      location_t saved_loc = input_location;
++      tree v = TREE_VALUE (target_attributes);
++      input_location = DECL_SOURCE_LOCATION (new_decl);
++      bool r = targetm.target_option.valid_attribute_p (new_decl, NULL, v, 0);
++      input_location = saved_loc;
++      if (!r)
++	return NULL;
++    }
++
+   /* When the old decl was a con-/destructor make sure the clone isn't.  */
+   DECL_STATIC_CONSTRUCTOR (new_decl) = 0;
+   DECL_STATIC_DESTRUCTOR (new_decl) = 0;
 diff --git a/gcc/common/config/aarch64/aarch64-common.c b/gcc/common/config/aarch64/aarch64-common.c
 index a9fc5f1707e..4bd61e8be1f 100644
 --- a/gcc/common/config/aarch64/aarch64-common.c
@@ -4752,6 +4878,83 @@ index 7a3f93ab2a1..dada53d26d9 100644
  	  for (i = 0; i < nr; ++i)
  	    {
  	      int j = ltrans_priorities[i*2 + 1];
+diff --git a/gcc/multiple_target.c b/gcc/multiple_target.c
+index a1fe09a5983..be15af3142c 100644
+--- a/gcc/multiple_target.c
++++ b/gcc/multiple_target.c
+@@ -294,7 +294,8 @@ create_new_asm_name (char *old_asm_name, char *new_asm_name)
+ /*  Creates target clone of NODE.  */
+ 
+ static cgraph_node *
+-create_target_clone (cgraph_node *node, bool definition, char *name)
++create_target_clone (cgraph_node *node, bool definition, char *name,
++		     tree attributes)
+ {
+   cgraph_node *new_node;
+ 
+@@ -303,13 +304,16 @@ create_target_clone (cgraph_node *node, bool definition, char *name)
+       new_node = node->create_version_clone_with_body (vNULL, NULL,
+     						       NULL, false,
+ 						       NULL, NULL,
+-						       name);
++						       name, attributes);
++      if (new_node == NULL)
++	return NULL;
+       new_node->force_output = true;
+     }
+   else
+     {
+       tree new_decl = copy_node (node->decl);
+       new_node = cgraph_node::get_create (new_decl);
++      DECL_ATTRIBUTES (new_decl) = attributes;
+       /* Generate a new name for the new version.  */
+       symtab->change_decl_assembler_name (new_node->decl,
+ 					  clone_function_name (node->decl,
+@@ -399,22 +403,16 @@ expand_target_clones (struct cgraph_node *node, bool definition)
+ 
+       create_new_asm_name (attr, suffix);
+       /* Create new target clone.  */
+-      cgraph_node *new_node = create_target_clone (node, definition, suffix);
+-      new_node->local.local = false;
+-      XDELETEVEC (suffix);
+-
+-      /* Set new attribute for the clone.  */
+       tree attributes = make_attribute ("target", attr,
+-					DECL_ATTRIBUTES (new_node->decl));
+-      DECL_ATTRIBUTES (new_node->decl) = attributes;
+-      location_t saved_loc = input_location;
+-      input_location = DECL_SOURCE_LOCATION (node->decl);
+-      if (!targetm.target_option.valid_attribute_p (new_node->decl, NULL,
+-						    TREE_VALUE (attributes),
+-						    0))
++					DECL_ATTRIBUTES (node->decl));
++
++      cgraph_node *new_node = create_target_clone (node, definition, suffix,
++						   attributes);
++      if (new_node == NULL)
+ 	return false;
++      new_node->local.local = false;
++      XDELETEVEC (suffix);
+ 
+-      input_location = saved_loc;
+       decl2_v = new_node->function_version ();
+       if (decl2_v != NULL)
+         continue;
+@@ -441,13 +439,7 @@ expand_target_clones (struct cgraph_node *node, bool definition)
+ 				    DECL_ATTRIBUTES (node->decl));
+   DECL_ATTRIBUTES (node->decl) = attributes;
+   node->local.local = false;
+-  location_t saved_loc = input_location;
+-  input_location = DECL_SOURCE_LOCATION (node->decl);
+-  bool ret
+-    = targetm.target_option.valid_attribute_p (node->decl, NULL,
+-					       TREE_VALUE (attributes), 0);
+-  input_location = saved_loc;
+-  return ret;
++  return true;
+ }
+ 
+ static unsigned int
 diff --git a/gcc/opts.c b/gcc/opts.c
 index 442f250f3af..28030881e93 100644
 --- a/gcc/opts.c
@@ -4832,10 +5035,26 @@ index 0e79e53fb61..dabc5403f28 100644
        offset1 = crtl->outgoing_args_size + get_frame_size ();
  #if !STACK_GROWS_DOWNWARD
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 7d5e65b1a74..dd8826dc163 100644
+index 7d5e65b1a74..8084d5e833f 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,459 @@
+@@ -1,3 +1,475 @@
++2019-04-15  Martin Jambor  <mjambor@suse.cz>
++
++	Backport from mainline
++	2019-04-15  Martin Jambor  <mjambor@suse.cz>
++
++	* g++.dg/ipa/pr89693.C: New test.
++
++2019-04-15  Martin Liska  <mliska@suse.cz>
++
++	Backport from mainline
++	2019-01-18  Martin Liska  <mliska@suse.cz>
++
++	PR middle-end/88587
++	* g++.target/i386/pr88587.C: New test.
++	* gcc.target/i386/mvc13.c: New test.
++
 +2019-04-14  Thomas Koenig  <tkoenig@gcc.gnu.org>
 +
 +	Backport from trunk
@@ -5668,6 +5887,64 @@ index 00000000000..29f3252b828
 +    return 1;
 +  }
 +  printf("PASS\n");
++  return 0;
++}
+diff --git a/gcc/testsuite/g++.dg/ipa/pr89693.C b/gcc/testsuite/g++.dg/ipa/pr89693.C
+new file mode 100644
+index 00000000000..4ac83eeeb3a
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/ipa/pr89693.C
+@@ -0,0 +1,52 @@
++// Copyright (C) 2005 Free Software Foundation, Inc.
++// Contributed by Nathan Sidwell 4 Apr 2005 <nathan@codesourcery.com>
++// Re-purposed to check for re-rurgesnce of PR 89693 in 2019.
++
++// { dg-do compile }
++// { dg-options "-O3 -fno-ipa-icf-functions" }
++
++// Origin: yanliu@ca.ibm.com
++//         nathan@codesourcery.com
++
++struct A {
++  virtual void One ();
++};
++struct B  {
++  virtual B *Two ();
++  virtual B &Three ();
++};
++
++struct C : A, B
++{
++  virtual C *Two ();
++  virtual C &Three ();
++};
++void A::One () {}
++B *B::Two()    {return this;}
++B &B::Three()    {return *this;}
++C *C::Two ()   {return 0;}
++C &C::Three ()   {return *(C *)0;}
++
++B *Foo (B *b)
++{
++  return b->Two ();
++}
++
++B &Bar (B *b)
++{
++  return b->Three ();
++}
++
++int main ()
++{
++  C c;
++
++  /* We should not adjust a null pointer.  */
++  if (Foo (&c))
++    return 1;
++  /* But we should adjust a (bogus) null reference.  */
++  if (!&Bar (&c))
++    return 2;
++
 +  return 0;
 +}
 diff --git a/gcc/testsuite/g++.dg/tree-prof/devirt.C b/gcc/testsuite/g++.dg/tree-prof/devirt.C
@@ -8525,6 +8802,21 @@ index 0b33d875365..7b6dbc1ee79 100644
  extern bool fixup_noreturn_call (gimple *stmt);
  
  #endif /* GCC_TREE_CFGCLEANUP_H */
+diff --git a/gcc/tree-inline.c b/gcc/tree-inline.c
+index 324c1682921..f7a3216d792 100644
+--- a/gcc/tree-inline.c
++++ b/gcc/tree-inline.c
+@@ -5539,6 +5539,10 @@ copy_decl_for_dup_finish (copy_body_data *id, tree decl, tree copy)
+   if (CODE_CONTAINS_STRUCT (TREE_CODE (copy), TS_DECL_WRTL)
+       && !TREE_STATIC (copy) && !DECL_EXTERNAL (copy))
+     SET_DECL_RTL (copy, 0);
++  /* For vector typed decls make sure to update DECL_MODE according
++     to the new function context.  */
++  if (VECTOR_TYPE_P (TREE_TYPE (copy)))
++    SET_DECL_MODE (copy, TYPE_MODE (TREE_TYPE (copy)));
+ 
+   /* These args would always appear unused, if not for this.  */
+   TREE_USED (copy) = 1;
 diff --git a/gcc/tree-scalar-evolution.c b/gcc/tree-scalar-evolution.c
 index fefc9de96af..759bc612566 100644
 --- a/gcc/tree-scalar-evolution.c
