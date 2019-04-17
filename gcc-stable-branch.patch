@@ -15,6 +15,9 @@ avieira (1):
 claziss (1):
       Backport ARC patch.
 
+danglin (1):
+      PR libgfortran/79540 	* io/write_float.def (build_float_string): Don't copy digits when 	ndigits is negative.
+
 ebotcazou (7):
       PR ada/89349 	Backport from mainline 	2018-05-25  Arnaud Charlet  <charlet@adacore.com>
       * tree-ssa-dom.c (edge_info::derive_equivalences) <BIT_IOR_EXPR>: Fix 	and move around comment. 	<BIT_AND_EXPR>: Likewise. 	<BIT_NOT_EXPR>: Add specific handling for boolean types.
@@ -27,7 +30,8 @@ ebotcazou (7):
 fw (1):
       PR libgcc/60790: x86: Do not assume ELF constructors run before IFUNC resolvers
 
-gccadmin (53):
+gccadmin (54):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -9303,10 +9307,19 @@ index a84084c99f0..72fe2c0dcec 100644
  	map = linemap_check_ordinary
  	        (const_cast <line_map *>
 diff --git a/libgfortran/ChangeLog b/libgfortran/ChangeLog
-index 2909548317c..c5c76614119 100644
+index 2909548317c..a763d351508 100644
 --- a/libgfortran/ChangeLog
 +++ b/libgfortran/ChangeLog
-@@ -1,3 +1,9 @@
+@@ -1,3 +1,18 @@
++2019-04-16  John David Anglin  <danglin@gcc.gnu.org>
++
++	Backport from mainline
++	2019-03-25  John David Anglin  <danglin@gcc.gnu.org>
++
++	PR libgfortran/79540
++	* io/write_float.def (build_float_string): Don't copy digits when
++	ndigits is negative.
++
 +2019-03-02  Jerry DeLisle  <jvdelisle@gcc.gnu.org>
 +
 +	PR libfortran/89020
@@ -9343,6 +9356,28 @@ index 879bdf4e082..fdf19eeeea0 100644
  	  free (path);
  	}
  #endif
+diff --git a/libgfortran/io/write_float.def b/libgfortran/io/write_float.def
+index 25ea64beb21..a749f64b796 100644
+--- a/libgfortran/io/write_float.def
++++ b/libgfortran/io/write_float.def
+@@ -620,14 +620,15 @@ build_float_string (st_parameter_dt *dtp, const fnode *f, char *buffer,
+     }
+ 
+   /* Set digits after the decimal point, padding with zeros.  */
+-  if (nafter > 0)
++  if (ndigits >= 0 && nafter > 0)
+     {
+       if (nafter > ndigits)
+ 	i = ndigits;
+       else
+ 	i = nafter;
+ 
+-      memcpy (put, digits, i);
++      if (i > 0)
++	memcpy (put, digits, i);
+       while (i < nafter)
+ 	put[i++] = '0';
+ 
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
 index aac255a46f9..45bb87b3342 100644
 --- a/libstdc++-v3/ChangeLog
