@@ -1,10 +1,10 @@
 %define keepstatic 1
 %define gcc_target x86_64-generic-linux
 %define libstdcxx_maj 6
-%define libstdcxx_full 6.0.25
+%define libstdcxx_full 6.0.26
 %define isl_version 0.16.1
-%define gccver 8.3.1
-%define gccpath gcc-8.3.0
+%define gccver 9.0.1
+%define gccpath gcc-9b84abbccc793814889fb8b1641f741939d15c1e
 
 # Highest optimisation ABI we target
 %define mtune haswell
@@ -14,10 +14,10 @@
 %define march westmere
 
 Name     : gcc
-Version  : 8.3.0
-Release  : 433
+Version  : 9.0
+Release  : 450
 URL      : http://www.gnu.org/software/gcc/
-Source0  : https://mirrors.kernel.org/gnu/gcc/gcc-8.3.0/gcc-8.3.0.tar.gz
+Source0  : https://github.com/gcc-mirror/gcc/archive/9b84abbccc793814889fb8b1641f741939d15c1e.tar.gz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.16.1.tar.bz2
 Source2  : DATESTAMP
 Source3  : REVISION
@@ -32,26 +32,17 @@ Patch2   : openmp-vectorize-v2.patch
 Patch3   : fortran-vector-v2.patch
 Patch5   : optimize.patch
 Patch6   : ipa-cp.patch
-Patch7   : max-is-safe-on-x86.patch
 Patch8	 : optimize-at-least-some.patch
 Patch9   : gomp-relax.patch
 Patch11  : memcpy-avx2.patch
 Patch12	 : avx512-when-we-ask-for-it.patch
-Patch13  : hj.patch
 Patch14  : arch-native-override.patch
-
-
-# simplified version of gcc 8 upstream patch
-Patch17  : pow-optimization.patch
 
 
 # zero registers on ret to make ROP harder
 Patch21  : zero-regs-gcc8.patch
 
-Patch30  : hj-patch-round.patch
-
 # cves: 1xx
-Patch0100: CVE-2018-18484.patch
 
 
 BuildRequires : bison
@@ -214,7 +205,7 @@ GNU cc and gcc C compilers.
 
 %prep
 %setup -q -n %{gccpath}
-%patch0 -p1
+#%patch0 -p1
 
 %patch1 -p1
 %patch2 -p1
@@ -226,19 +217,13 @@ GNU cc and gcc C compilers.
 #%patch11 -p1
 
 %patch12 -p1
-%patch13 -p1
 
 %patch14 -p1
 
-%patch17 -p1
 #%patch18 -p1
 #%patch20 -p1
 
-%patch21 -p1
-
-%patch30 -p1
-
-%patch0100 -p1
+#%patch21 -p1
 
 
 %build
@@ -282,6 +267,7 @@ export LIBRARY_PATH=/usr/lib64
     --disable-multiarch\
     --enable-multilib\
     --enable-lto\
+    --disable-werror \
     --enable-linker-build-id \
     --build=%{gcc_target}\
     --target=%{gcc_target}\
@@ -525,6 +511,8 @@ cat *.lang > gcc.lang
 /usr/lib32/libssp.so
 /usr/lib32/libubsan.a
 /usr/lib32/libubsan.so
+/usr/lib64/gcc/x86_64-generic-linux/9.0.1/32/include/ISO_Fortran_binding.h
+
 
 #/usr/lib/libvtv.a
 #/usr/lib/libvtv.so

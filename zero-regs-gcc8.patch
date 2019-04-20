@@ -578,9 +578,9 @@ index d9bd909a885..5b9710580a8 100644
 --- a/gcc/config/i386/i386.opt
 +++ b/gcc/config/i386/i386.opt
 @@ -1055,3 +1055,20 @@ Support MOVDIRI built-in functions and code generation.
- mmovdir64b
- Target Report Mask(ISA_MOVDIR64B) Var(ix86_isa_flags2) Save
- Support MOVDIR64B built-in functions and code generation.
+ mrecord-return
+ Target Report Var(ix86_flag_record_return) Init(0)
+ Generate a __return_loc section pointing to all return instrumentation code.
 +
 +mzero-caller-saved-regs=
 +Target Report RejectNegative Joined Enum(zero_caller_saved_regs) Var(ix86_zero_caller_saved_regs) Init(zero_caller_saved_regs_skip)
@@ -637,20 +637,3 @@ index 8729e35147e..cb458a8bda1 100644
  /* { dg-final { scan-assembler-not "jmp\[ \t\]*__x86_return_thunk_ecx" } } */
  /* { dg-final { scan-assembler "jmp\[ \t\]*\.LIND" } } */
  /* { dg-final { scan-assembler "call\[ \t\]*\.LIND" } } */
-diff --git a/gcc/testsuite/gcc.target/i386/ret-thunk-25.c b/gcc/testsuite/gcc.target/i386/ret-thunk-25.c
-index f73553c9a9f..8de43a18e84 100644
---- a/gcc/testsuite/gcc.target/i386/ret-thunk-25.c
-+++ b/gcc/testsuite/gcc.target/i386/ret-thunk-25.c
-@@ -7,7 +7,7 @@ struct s gs = { 100 + 200i };
- struct s __attribute__((noinline)) foo (void) { return gs; }
- 
- /* { dg-final { scan-assembler-times "popl\[\\t \]*%ecx" 1 } } */
--/* { dg-final { scan-assembler "lea\[l\]?\[\\t \]*4\\(%esp\\), %esp" } } */
-+/* { dg-final { scan-assembler-times "popl\[\\t \]*%edx" 1 } } */
- /* { dg-final { scan-assembler "jmp\[ \t\]*__x86_return_thunk_bnd_ecx" } } */
- /* { dg-final { scan-assembler "jmp\[ \t\]*\.LIND" } } */
- /* { dg-final { scan-assembler "call\[ \t\]*\.LIND" } } */
--- 
-2.17.0
-
-
