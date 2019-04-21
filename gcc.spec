@@ -3,7 +3,7 @@
 %define libstdcxx_maj 6
 %define libstdcxx_full 6.0.26
 %define isl_version 0.16.1
-%define gccver 9.0.1
+%define gccver 9
 %define gccpath gcc-9b84abbccc793814889fb8b1641f741939d15c1e
 
 # Highest optimisation ABI we target
@@ -280,13 +280,12 @@ export LIBRARY_PATH=/usr/lib64
     --with-glibc-version=2.19 \
     --disable-libunwind-exceptions \
     --with-gnu-ld \
-    --with-tune=haswell \
+    --with-tune=skylake \
     --with-arch=westmere \
     --enable-cet \
-    --disable-libmpx
-# For GCC 9, add:
-#  --with-gcc-major-version-only
-#  --enable-default-pie
+    --disable-libmpx \
+    --with-gcc-major-version-only \
+    --enable-default-pie
 
 make %{?_smp_mflags} profiledbootstrap
 
@@ -511,7 +510,7 @@ cat *.lang > gcc.lang
 /usr/lib32/libssp.so
 /usr/lib32/libubsan.a
 /usr/lib32/libubsan.so
-/usr/lib64/gcc/x86_64-generic-linux/9.0.1/32/include/ISO_Fortran_binding.h
+/usr/lib64/gcc/x86_64-generic-linux/*/32/include/ISO_Fortran_binding.h
 
 
 #/usr/lib/libvtv.a
