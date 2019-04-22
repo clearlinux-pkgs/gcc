@@ -5,7 +5,7 @@
      return NULL;
  
 +  if (getenv("GCC_ARCH_NATIVE_OVERRIDE"))
-+	 return concat ("-m", argv[0], "=", getenv("GCC_NO_ARCH_NATIVE"), options, NULL);
++	 return concat ("-m", argv[0], "=", getenv("GCC_ARCH_NATIVE_OVERRIDE"), options, NULL);
 +
    arch = !strcmp (argv[0], "arch");
  
