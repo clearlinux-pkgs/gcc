@@ -474,7 +474,7 @@ index ad9ccf9d1d7..9a675cdacc8 100644
 +   (set_attr "atom_unit" "jeu")
 +   (set_attr "length_immediate" "0")
 +   (set_attr "modrm" "0")
-+   (set_attr "maybe_prefix_bnd" "1")])
++   ])
 +
 +(define_insn "simple_return_internal_1"
 +  [(simple_return)
@@ -498,7 +498,7 @@ index ad9ccf9d1d7..9a675cdacc8 100644
 +   (set_attr "atom_unit" "jeu")
 +   (set_attr "length_immediate" "2")
 +   (set_attr "modrm" "0")
-+   (set_attr "maybe_prefix_bnd" "1")])
++   ])
 +
 +(define_insn "simple_return_pop_internal_1"
 +  [(simple_return)

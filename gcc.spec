@@ -223,7 +223,7 @@ GNU cc and gcc C compilers.
 #%patch18 -p1
 #%patch20 -p1
 
-#%patch21 -p1
+%patch21 -p1
 
 
 %build
