@@ -4,7 +4,7 @@
 %define libstdcxx_full 6.0.26
 %define isl_version 0.16.1
 %define gccver 9
-%define gccpath gcc-9b84abbccc793814889fb8b1641f741939d15c1e
+%define gccpath gcc-9-20190421
 
 # Highest optimisation ABI we target
 %define mtune haswell
@@ -17,7 +17,7 @@ Name     : gcc
 Version  : 9.0
 Release  : 455
 URL      : http://www.gnu.org/software/gcc/
-Source0  : https://github.com/gcc-mirror/gcc/archive/9b84abbccc793814889fb8b1641f741939d15c1e.tar.gz
+Source0  : https://gcc.gnu.org/pub/gcc/snapshots/9-20190421/gcc-9-20190421.tar.xz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.16.1.tar.bz2
 Source2  : DATESTAMP
 Source3  : REVISION
