@@ -30,7 +30,11 @@ ebotcazou (7):
 fw (1):
       PR libgcc/60790: x86: Do not assume ELF constructors run before IFUNC resolvers
 
-gccadmin (59):
+gccadmin (63):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -163,8 +167,9 @@ msebor (2):
       Backport from mainline:
       Backport from 9.0.
 
-pault (1):
+pault (2):
       2019-02-23  Paul Thomas  <pault@gcc.gnu.org>
+      2019-04-24  Paul Thomas  <pault@gcc.gnu.org>
 
 pthaugen (1):
       Backport from mainline: 	2019-04-16  Pat Haugen  <pthaugen@us.ibm.com>
@@ -3486,10 +3491,18 @@ index 36bcc65f14d..af67feb5fbc 100644
        && (code == TRUTH_AND_EXPR
            || code == TRUTH_ANDIF_EXPR
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index 4d2782f1b19..7442bda84c0 100644
+index 4d2782f1b19..41b79383ee6 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,236 @@
+@@ -1,3 +1,244 @@
++2019-04-24  Paul Thomas  <pault@gcc.gnu.org>
++
++	Backport from mainline
++	PR fortran/87127
++	* resolve.c (check_host_association): If an external function
++	is typed but not declared explicitly to be external, change the
++	old symbol from a variable to an external function.
++
 +2019-04-14  Thomas Koenig  <tkoenig@gcc.gnu.org>
 +
 +	Backport from trunk
@@ -4111,7 +4124,7 @@ index 4ce6eb42750..e920c71d569 100644
    if (s->defined || (s->type != GSYM_UNKNOWN && s->type != GSYM_PROGRAM))
      gfc_global_used (s, &gfc_new_block->declared_at);
 diff --git a/gcc/fortran/resolve.c b/gcc/fortran/resolve.c
-index f70747a586f..87d5969b3c9 100644
+index f70747a586f..4c67b57614f 100644
 --- a/gcc/fortran/resolve.c
 +++ b/gcc/fortran/resolve.c
 @@ -1045,7 +1045,7 @@ resolve_common_blocks (gfc_symtree *common_root)
@@ -4222,16 +4235,16 @@ index f70747a586f..87d5969b3c9 100644
 +		}
  	    }
 -	}
- 
+-
 -      def_sym = gsym->ns->proc_name;
-+	  /* This can happen if a binding name has been specified.  */
-+	  if (gsym->binding_label && gsym->sym_name != def_sym->name)
-+	    gfc_find_symbol (gsym->sym_name, gsym->ns, 0, &def_sym);
  
 -      /* This can happen if a binding name has been specified.  */
 -      if (gsym->binding_label && gsym->sym_name != def_sym->name)
 -	gfc_find_symbol (gsym->sym_name, gsym->ns, 0, &def_sym);
--
++	  /* This can happen if a binding name has been specified.  */
++	  if (gsym->binding_label && gsym->sym_name != def_sym->name)
++	    gfc_find_symbol (gsym->sym_name, gsym->ns, 0, &def_sym);
+ 
 -      if (def_sym->attr.entry_master)
 -	{
 -	  gfc_entry_list *entry;
@@ -4295,7 +4308,54 @@ index f70747a586f..87d5969b3c9 100644
  
    /* F2008, 6.4.1:  Both the starting point and the ending point shall
       be within the range 1, 2, ..., n unless the starting point exceeds
-@@ -7640,13 +7654,54 @@ resolve_allocate_expr (gfc_expr *e, gfc_code *code, bool *array_alloc_wo_spec)
+@@ -5615,11 +5629,14 @@ resolve_procedure:
+ 
+ 
+ /* Checks to see that the correct symbol has been host associated.
+-   The only situation where this arises is that in which a twice
+-   contained function is parsed after the host association is made.
+-   Therefore, on detecting this, change the symbol in the expression
+-   and convert the array reference into an actual arglist if the old
+-   symbol is a variable.  */
++   The only situations where this arises are:
++	(i)  That in which a twice contained function is parsed after
++	     the host association is made. On detecting this, change
++	     the symbol in the expression and convert the array reference
++	     into an actual arglist if the old symbol is a variable; or
++	(ii) That in which an external function is typed but not declared
++	     explcitly to be external. Here, the old symbol is changed
++	     from a variable to an external function.  */
+ static bool
+ check_host_association (gfc_expr *e)
+ {
+@@ -5709,6 +5726,26 @@ check_host_association (gfc_expr *e)
+ 	  gfc_resolve_expr (e);
+ 	  sym->refs++;
+ 	}
++      /* This case corresponds to a call, from a block or a contained
++	 procedure, to an external function, which has not been declared
++	 as being external in the main program but has been typed.  */
++      else if (sym && old_sym != sym
++	       && !e->ref
++	       && sym->ts.type == BT_UNKNOWN
++	       && old_sym->ts.type != BT_UNKNOWN
++	       && sym->attr.flavor == FL_PROCEDURE
++	       && old_sym->attr.flavor == FL_VARIABLE
++	       && sym->ns->parent == old_sym->ns
++	       && sym->ns->proc_name
++	       && (sym->ns->proc_name->attr.flavor == FL_LABEL
++		   || sym->ns->proc_name->attr.flavor == FL_PROCEDURE))
++	{
++	  old_sym->attr.flavor = FL_PROCEDURE;
++	  old_sym->attr.external = 1;
++	  old_sym->attr.function = 1;
++	  old_sym->result = old_sym;
++	  gfc_resolve_expr (e);
++	}
+     }
+   /* This might have changed!  */
+   return e->expr_type == EXPR_FUNCTION;
+@@ -7640,13 +7677,54 @@ resolve_allocate_expr (gfc_expr *e, gfc_code *code, bool *array_alloc_wo_spec)
  
    if (codimension)
      for (i = ar->dimen; i < ar->dimen + ar->codimen; i++)
@@ -4312,7 +4372,7 @@ index f70747a586f..87d5969b3c9 100644
 +	    gfc_error ("Coarray specification required in ALLOCATE statement "
 +		       "at %L", &e->where);
 +	    goto failure;
- 
++
 +	  case  DIMEN_RANGE:
 +	    if (ar->start[i] == 0 || ar->end[i] == 0)
 +	      {
@@ -4345,7 +4405,7 @@ index f70747a586f..87d5969b3c9 100644
 +
 +	  case DIMEN_STAR:
 +	    break;
-+
+ 
 +	  default:
 +	    gfc_error ("Bad array specification in ALLOCATE statement at %L",
 +		       &e->where);
@@ -4356,7 +4416,7 @@ index f70747a586f..87d5969b3c9 100644
    for (i = 0; i < ar->dimen; i++)
      {
        if (ar->type == AR_ELEMENT || ar->type == AR_FULL)
-@@ -11011,6 +11066,9 @@ deferred_op_assign (gfc_code **code, gfc_namespace *ns)
+@@ -11011,6 +11089,9 @@ deferred_op_assign (gfc_code **code, gfc_namespace *ns)
    if (!gfc_check_dependency ((*code)->expr1, (*code)->expr2, 1))
      return false;
  
@@ -4366,7 +4426,7 @@ index f70747a586f..87d5969b3c9 100644
    tmp_expr = get_temp_from_expr ((*code)->expr1, ns);
    tmp_expr->where = (*code)->loc;
  
-@@ -11647,7 +11705,7 @@ gfc_verify_binding_labels (gfc_symbol *sym)
+@@ -11647,7 +11728,7 @@ gfc_verify_binding_labels (gfc_symbol *sym)
  	  && (gsym->type == GSYM_FUNCTION || gsym->type == GSYM_SUBROUTINE)))
      {
        if (!gsym)
@@ -5281,10 +5341,16 @@ index 0e79e53fb61..dabc5403f28 100644
        offset1 = crtl->outgoing_args_size + get_frame_size ();
  #if !STACK_GROWS_DOWNWARD
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 7d5e65b1a74..7951d79208a 100644
+index 7d5e65b1a74..47f33ff4780 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,524 @@
+@@ -1,3 +1,530 @@
++2019-04-24  Paul Thomas  <pault@gcc.gnu.org>
++
++	Backport from mainline
++	PR fortran/87127
++	* gfortran.dg/external_procedures_4.f90: New test.
++
 +2019-04-17  Martin Jambor  <mjambor@suse.cz>
 +
 +	Backport from mainline
@@ -12520,6 +12586,40 @@ index 00000000000..7753429d65b
 +  entry bar(i)
 +  entry baz(r)
 +end subroutine foo
+diff --git a/gcc/testsuite/gfortran.dg/external_procedures_4.f90 b/gcc/testsuite/gfortran.dg/external_procedures_4.f90
+new file mode 100644
+index 00000000000..11c4f48ea3e
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/external_procedures_4.f90
+@@ -0,0 +1,28 @@
++! { dg-do run }
++!
++! Test the fix for PR87127 in which the references to exfunc cause
++! the error "‘exfunc’ at (1) is not a function".
++!
++! Contributed by Gerhard Steinmetz  <gscfq@t-online.de>
++!
++function exfunc(i)
++  implicit none
++  integer :: exfunc,i
++  exfunc = 2*i
++end function
++
++! contents of test.f90
++program test
++  implicit none
++  integer :: exfunc,i
++  integer,parameter :: array(2)=[6,7]
++  associate(i=>array(2))            ! Original bug
++    if (exfunc(i) .ne. 2*i) stop 1
++  end associate
++  i = 99
++  call foo
++contains
++  subroutine foo()                  ! Comment #3
++    if (exfunc(i) .ne. 2*i) stop 2
++  end subroutine foo
++end program
 diff --git a/gcc/testsuite/gfortran.dg/finalize_28.f90 b/gcc/testsuite/gfortran.dg/finalize_28.f90
 index f0c9665252f..597413b2dd3 100644
 --- a/gcc/testsuite/gfortran.dg/finalize_28.f90
