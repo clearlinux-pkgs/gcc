@@ -230,6 +230,9 @@ wschmidt (2):
       2019-03-21  Bill Schmidt  <wschmidt@linux.ibm.com>
       [gcc]
 
+zhroma (1):
+      Backport modulo-sched fixes from mainline
+
 diff --git a/gcc/BASE-VER b/gcc/BASE-VER
 index 2bf50aaf17a..56b6be4ebb2 100644
 --- a/gcc/BASE-VER
@@ -238,10 +241,24 @@ index 2bf50aaf17a..56b6be4ebb2 100644
 -8.3.0
 +8.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d1fd9f6a7b9..ecdd9c86ba0 100644
+index d1fd9f6a7b9..0a839840696 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,541 @@
+@@ -1,3 +1,555 @@
++2019-04-26  Roman Zhuykov  <zhroma@ispras.ru>
++
++	Backport from mainline
++	2019-04-23  Roman Zhuykov  <zhroma@ispras.ru>
++
++	PR rtl-optimization/87979
++	* modulo-sched.c (sms_schedule): Start ii value "mii" should
++	not equal zero.
++
++	PR rtl-optimization/84032
++	* modulo-sched.c (ps_insn_find_column): Change condition so that
++	branch will always be the last insn in a row inside partial
++	schedule.
++
 +2019-04-19  Pat Haugen  <pthaugen@us.ibm.com>
 +
 +	Backport from mainline:
@@ -783,7 +800,7 @@ index d1fd9f6a7b9..ecdd9c86ba0 100644
  2019-02-22  Release Manager
  
  	* GCC 8.3.0 released.
-@@ -568,7 +1106,7 @@
+@@ -568,7 +1120,7 @@
  
  	Backport from mainline
  	2018-11-20  Richard Biener  <rguenther@suse.de>
@@ -5184,6 +5201,29 @@ index 7a3f93ab2a1..dada53d26d9 100644
  	  for (i = 0; i < nr; ++i)
  	    {
  	      int j = ltrans_priorities[i*2 + 1];
+diff --git a/gcc/modulo-sched.c b/gcc/modulo-sched.c
+index 9a27365bfbc..0fb3f1bcb60 100644
+--- a/gcc/modulo-sched.c
++++ b/gcc/modulo-sched.c
+@@ -1605,6 +1605,7 @@ sms_schedule (void)
+       mii = 1; /* Need to pass some estimate of mii.  */
+       rec_mii = sms_order_nodes (g, mii, node_order, &max_asap);
+       mii = MAX (res_MII (g), rec_mii);
++      mii = MAX (mii, 1);
+       maxii = MAX (max_asap, MAXII_FACTOR * mii);
+ 
+       if (dump_file)
+@@ -3004,9 +3005,7 @@ ps_insn_find_column (partial_schedule_ptr ps, ps_insn_ptr ps_i,
+             last_must_precede = next_ps_i;
+         }
+       /* The closing branch must be the last in the row.  */
+-      if (must_precede 
+-	  && bitmap_bit_p (must_precede, next_ps_i->id)
+-	  && JUMP_P (ps_rtl_insn (ps, next_ps_i->id)))
++      if (JUMP_P (ps_rtl_insn (ps, next_ps_i->id)))
+ 	return false;
+              
+        last_in_row = next_ps_i;
 diff --git a/gcc/multiple_target.c b/gcc/multiple_target.c
 index a1fe09a5983..be15af3142c 100644
 --- a/gcc/multiple_target.c
@@ -5341,10 +5381,21 @@ index 0e79e53fb61..dabc5403f28 100644
        offset1 = crtl->outgoing_args_size + get_frame_size ();
  #if !STACK_GROWS_DOWNWARD
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 7d5e65b1a74..47f33ff4780 100644
+index 7d5e65b1a74..29ba0b4d464 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,530 @@
+@@ -1,3 +1,540 @@
++2019-04-26  Roman Zhuykov  <zhroma@ispras.ru>
++
++	Backport from mainline
++	2019-04-23  Roman Zhuykov  <zhroma@ispras.ru>
++
++	PR rtl-optimization/87979
++	* gcc.dg/pr87979.c: New test.
++
++	PR rtl-optimization/84032
++	* gcc.dg/pr84032.c: New test.
++
 +2019-04-24  Paul Thomas  <pault@gcc.gnu.org>
 +
 +	Backport from mainline
@@ -5641,8 +5692,7 @@ index 7d5e65b1a74..47f33ff4780 100644
 +	2019-02-18  Richard Biener  <rguenther@suse.de>
 +
 +	PR tree-optimization/89296
-+	* tree-ssa-loop-ch.c (ch_base::copy_headers): Restrict setting
-+	of no-warning flag to cases that might emit the bogus warning.
++	* gcc.dg/uninit-pr89296.c: New testcase.
 +
 +2019-03-13  Andreas Krebbel  <krebbel@linux.ibm.com>
 +
@@ -6559,6 +6609,52 @@ index 00000000000..6786c514543
 +/* { dg-final { scan-ipa-dump-not "replacing param.*with const" "cp"  } } */
 +
 +
+diff --git a/gcc/testsuite/gcc.dg/pr84032.c b/gcc/testsuite/gcc.dg/pr84032.c
+new file mode 100644
+index 00000000000..c295d9a0dae
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/pr84032.c
+@@ -0,0 +1,23 @@
++/* PR rtl-optimization/84032 */
++/* { dg-do compile } */
++/* { dg-options "-O1 -fmodulo-sched" } */
++/* { dg-additional-options "-mcpu=power6" { target { powerpc-*-* } } } */
++
++void
++yr (int cm)
++{
++  int ka = cm;
++
++  for (;;)
++    {
++      short int m0;
++
++      for (m0 = 0; m0 < 6; ++m0)
++        {
++          ka &= 1;
++          cm *= 2;
++        }
++
++      ka = (ka == 0) ? cm : 0;
++    }
++}
+diff --git a/gcc/testsuite/gcc.dg/pr87979.c b/gcc/testsuite/gcc.dg/pr87979.c
+new file mode 100644
+index 00000000000..d3d595f4f81
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/pr87979.c
+@@ -0,0 +1,11 @@
++/* PR rtl-optimization/87979 */
++/* { dg-do compile } */
++/* { dg-options "-Os -fmodulo-sched -fno-tree-loop-im" } */
++/* { dg-additional-options "-march=z196" { target { s390*-*-* } } } */
++
++void foo(void)
++{
++  static int m;
++  for (int i = 0; i < 10; ++i)
++    m++;
++}
 diff --git a/gcc/testsuite/gcc.dg/torture/neon-immediate-timode.c b/gcc/testsuite/gcc.dg/torture/neon-immediate-timode.c
 new file mode 100644
 index 00000000000..35f7d2cd32c
