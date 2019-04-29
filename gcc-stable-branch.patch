@@ -191,6 +191,11 @@ rguenth (9):
       2019-04-03  Richard Biener  <rguenther@suse.de>
       2019-04-11  Richard Biener  <rguenther@suse.de>
 
+rsandifo (3):
+      Fix POLY_INT_CST/CONST_POLY_INT typo (PR 89631)
+      Fix aarch64_evpc_tbl guard (PR 85910)
+      Fix output_constructor_bitfield handling of wide bitfields (PR89037)
+
 tkoenig (16):
       2019-02-22  Thomas Koenig  <tkoenig@gcc.gnu.org>
       2019-02-23  Thomas Koenig  <tkoenig@gcc.gnu.org>
@@ -244,10 +249,37 @@ index 2bf50aaf17a..56b6be4ebb2 100644
 -8.3.0
 +8.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d1fd9f6a7b9..0a839840696 100644
+index d1fd9f6a7b9..986b7a86904 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,555 @@
+@@ -1,3 +1,582 @@
++2019-04-29  Richard Sandiford  <richard.sandiford@arm.com>
++
++	Backport from mainline:
++	2019-01-25  Richard Sandiford  <richard.sandiford@arm.com>
++
++	PR middle-end/89037
++	* varasm.c (output_constructor_bitfield): Use wi::extract_uhwi
++	instead of accessing TREE_INT_CST_ELT directly.
++
++2019-04-29  Richard Sandiford  <richard.sandiford@arm.com>
++
++	Backport from mainline:
++	2018-08-23  Richard Sandiford  <richard.sandiford@arm.com>
++
++	PR target/85910
++	* config/aarch64/aarch64.c (aarch64_expand_vec_perm_const_1): Fix
++	aarch64_evpc_tbl guard.
++
++2019-04-29  Richard Sandiford  <richard.sandiford@arm.com>
++
++	Backport from mainline:
++	2019-03-08  Richard Sandiford  <richard.sandiford@arm.com>
++
++	PR debug/89631
++	* dwarf2cfi.c (dwarf2out_frame_debug_expr): Use CONST_POLY_INT
++	instead of POLY_INT_CST.
++
 +2019-04-26  Roman Zhuykov  <zhroma@ispras.ru>
 +
 +	Backport from mainline
@@ -803,7 +835,7 @@ index d1fd9f6a7b9..0a839840696 100644
  2019-02-22  Release Manager
  
  	* GCC 8.3.0 released.
-@@ -568,7 +1120,7 @@
+@@ -568,7 +1147,7 @@
  
  	Backport from mainline
  	2018-11-20  Richard Biener  <rguenther@suse.de>
@@ -1505,6 +1537,19 @@ index 5fe5e3f7ddd..a575448e406 100644
 +AARCH64_OPT_EXTENSION("sve", AARCH64_FL_SVE, AARCH64_FL_FP | AARCH64_FL_SIMD | AARCH64_FL_F16, 0, false, "sve")
  
  #undef AARCH64_OPT_EXTENSION
+diff --git a/gcc/config/aarch64/aarch64.c b/gcc/config/aarch64/aarch64.c
+index 349ca0c047b..64eab084683 100644
+--- a/gcc/config/aarch64/aarch64.c
++++ b/gcc/config/aarch64/aarch64.c
+@@ -15623,7 +15623,7 @@ aarch64_expand_vec_perm_const_1 (struct expand_vec_perm_d *d)
+ 	return true;
+       if (d->vec_flags == VEC_SVE_DATA)
+ 	return aarch64_evpc_sve_tbl (d);
+-      else if (d->vec_flags == VEC_SVE_DATA)
++      else if (d->vec_flags == VEC_ADVSIMD)
+ 	return aarch64_evpc_tbl (d);
+     }
+   return false;
 diff --git a/gcc/config/aarch64/driver-aarch64.c b/gcc/config/aarch64/driver-aarch64.c
 index 4e83c7a7679..c68bdfdc57f 100644
 --- a/gcc/config/aarch64/driver-aarch64.c
@@ -3370,6 +3415,19 @@ index e5c4e8125aa..de86d7a1e01 100644
  
  It also enables @option{-finline-functions}, causes the compiler to tune for
  code size rather than execution speed, and performs further optimizations
+diff --git a/gcc/dwarf2cfi.c b/gcc/dwarf2cfi.c
+index 07e6a5a2887..bed6c981852 100644
+--- a/gcc/dwarf2cfi.c
++++ b/gcc/dwarf2cfi.c
+@@ -1762,7 +1762,7 @@ dwarf2out_frame_debug_expr (rtx expr)
+ 
+ 	  /* Rule 6 */
+ 	case CONST_INT:
+-	case POLY_INT_CST:
++	case CONST_POLY_INT:
+ 	  cur_trace->cfa_temp.reg = dwf_regno (dest);
+ 	  cur_trace->cfa_temp.offset = rtx_to_poly_int64 (src);
+ 	  break;
 diff --git a/gcc/dwarf2out.c b/gcc/dwarf2out.c
 index 0940959cb54..36884c71fe0 100644
 --- a/gcc/dwarf2out.c
@@ -5384,10 +5442,18 @@ index 0e79e53fb61..dabc5403f28 100644
        offset1 = crtl->outgoing_args_size + get_frame_size ();
  #if !STACK_GROWS_DOWNWARD
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 7d5e65b1a74..29ba0b4d464 100644
+index 7d5e65b1a74..9c1a100b70b 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,540 @@
+@@ -1,3 +1,548 @@
++2019-04-29  Richard Sandiford  <richard.sandiford@arm.com>
++
++	Backport from mainline:
++	2019-01-25  Richard Sandiford  <richard.sandiford@arm.com>
++
++	PR middle-end/89037
++	* gcc.dg/pr89037.c: New test.
++
 +2019-04-26  Roman Zhuykov  <zhroma@ispras.ru>
 +
 +	Backport from mainline
@@ -6657,6 +6723,36 @@ index 00000000000..d3d595f4f81
 +  static int m;
 +  for (int i = 0; i < 10; ++i)
 +    m++;
++}
+diff --git a/gcc/testsuite/gcc.dg/pr89037.c b/gcc/testsuite/gcc.dg/pr89037.c
+new file mode 100644
+index 00000000000..551136741d7
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/pr89037.c
+@@ -0,0 +1,24 @@
++/* { dg-do run { target int128 } } */
++/* { dg-options "" } */
++
++struct s
++{
++  __int128 y : 66;
++};
++typedef struct s T;
++T a[] = { 1, 10000, 0x12345, 0xff000001, 1ULL << 63, (__int128) 1 << 64,
++	  ((__int128) 1 << 64) | 1 };
++
++int
++main (void)
++{
++  if (a[0].y != 1
++      || a[1].y != 10000
++      || a[2].y != 0x12345
++      || a[3].y != 0xff000001
++      || a[4].y != (1ULL << 63)
++      || a[5].y != ((__int128) 1 << 64)
++      || a[6].y != (((__int128) 1 << 64) | 1))
++    __builtin_abort ();
++  return 0;
 +}
 diff --git a/gcc/testsuite/gcc.dg/torture/neon-immediate-timode.c b/gcc/testsuite/gcc.dg/torture/neon-immediate-timode.c
 new file mode 100644
@@ -13786,6 +13882,59 @@ index 68f8027583e..0c04ff1bbb9 100644
  }
  
  /* A subroutine of vect_analyze_data_ref_dependence.  Handle
+diff --git a/gcc/varasm.c b/gcc/varasm.c
+index 2a1eac0f99d..664b5dcd7a8 100644
+--- a/gcc/varasm.c
++++ b/gcc/varasm.c
+@@ -5292,7 +5292,7 @@ output_constructor_bitfield (oc_local_state *local, unsigned int bit_offset)
+     {
+       int this_time;
+       int shift;
+-      HOST_WIDE_INT value;
++      unsigned HOST_WIDE_INT value;
+       HOST_WIDE_INT next_byte = next_offset / BITS_PER_UNIT;
+       HOST_WIDE_INT next_bit = next_offset % BITS_PER_UNIT;
+ 
+@@ -5324,15 +5324,13 @@ output_constructor_bitfield (oc_local_state *local, unsigned int bit_offset)
+ 	      this_time = end - shift + 1;
+ 	    }
+ 
+-	  /* Now get the bits from the appropriate constant word.  */
+-	  value = TREE_INT_CST_ELT (local->val, shift / HOST_BITS_PER_WIDE_INT);
+-	  shift = shift & (HOST_BITS_PER_WIDE_INT - 1);
++	  /* Now get the bits we want to insert.  */
++	  value = wi::extract_uhwi (wi::to_widest (local->val),
++				    shift, this_time);
+ 
+ 	  /* Get the result.  This works only when:
+ 	     1 <= this_time <= HOST_BITS_PER_WIDE_INT.  */
+-	  local->byte |= (((value >> shift)
+-			   & (((HOST_WIDE_INT) 2 << (this_time - 1)) - 1))
+-			  << (BITS_PER_UNIT - this_time - next_bit));
++	  local->byte |= value << (BITS_PER_UNIT - this_time - next_bit);
+ 	}
+       else
+ 	{
+@@ -5349,15 +5347,13 @@ output_constructor_bitfield (oc_local_state *local, unsigned int bit_offset)
+ 	    this_time
+ 	      = HOST_BITS_PER_WIDE_INT - (shift & (HOST_BITS_PER_WIDE_INT - 1));
+ 
+-	  /* Now get the bits from the appropriate constant word.  */
+-	  value = TREE_INT_CST_ELT (local->val, shift / HOST_BITS_PER_WIDE_INT);
+-	  shift = shift & (HOST_BITS_PER_WIDE_INT - 1);
++	  /* Now get the bits we want to insert.  */
++	  value = wi::extract_uhwi (wi::to_widest (local->val),
++				    shift, this_time);
+ 
+ 	  /* Get the result.  This works only when:
+ 	     1 <= this_time <= HOST_BITS_PER_WIDE_INT.  */
+-	  local->byte |= (((value >> shift)
+-			   & (((HOST_WIDE_INT) 2 << (this_time - 1)) - 1))
+-			  << next_bit);
++	  local->byte |= value << next_bit;
+ 	}
+ 
+       next_offset += this_time;
 diff --git a/include/ChangeLog b/include/ChangeLog
 index 02ab3367193..7456a13e5d8 100644
 --- a/include/ChangeLog
