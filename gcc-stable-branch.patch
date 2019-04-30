@@ -178,6 +178,9 @@ pault (2):
 pthaugen (1):
       Backport from mainline: 	2019-04-16  Pat Haugen  <pthaugen@us.ibm.com>
 
+rearnsha (1):
+      PR target/90075 Prefer bsl/bit/bif for copysignf. (backport GCC-8)
+
 redi (1):
       PR libstdc++/89446 fix null pointer dereference in char_traits
 
@@ -250,10 +253,23 @@ index 2bf50aaf17a..56b6be4ebb2 100644
 -8.3.0
 +8.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d1fd9f6a7b9..986b7a86904 100644
+index d1fd9f6a7b9..e62dcd51791 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,582 @@
+@@ -1,3 +1,595 @@
++2019-04-30  Srinath Parvathaneni  <srinath.parvathaneni@arm.com>
++
++	Backport from mainline
++	2018-12-11  Richard Earnshaw  <Richard.Earnshaw@arm.com>
++
++	PR target/37369
++	* config/aarch64/iterators.md (sizem1): Add sizes for
++	SFmode and DFmode.
++	(Vbtype): Add SFmode mapping.
++	* config/aarch64/aarch64.md (copysigndf3, copysignsf3): Delete.
++	(copysign<GPF:mode>3): New expand pattern.
++	(copysign<GPF:mode>3_insn): New insn pattern.
++
 +2019-04-29  Richard Sandiford  <richard.sandiford@arm.com>
 +
 +	Backport from mainline:
@@ -836,7 +852,7 @@ index d1fd9f6a7b9..986b7a86904 100644
  2019-02-22  Release Manager
  
  	* GCC 8.3.0 released.
-@@ -568,7 +1147,7 @@
+@@ -568,7 +1160,7 @@
  
  	Backport from mainline
  	2018-11-20  Richard Biener  <rguenther@suse.de>
@@ -1551,6 +1567,101 @@ index 349ca0c047b..64eab084683 100644
  	return aarch64_evpc_tbl (d);
      }
    return false;
+diff --git a/gcc/config/aarch64/aarch64.md b/gcc/config/aarch64/aarch64.md
+index 32a0e1f3685..11c0ef00dcf 100644
+--- a/gcc/config/aarch64/aarch64.md
++++ b/gcc/config/aarch64/aarch64.md
+@@ -189,6 +189,7 @@
+     UNSPEC_CLASTB
+     UNSPEC_FADDA
+     UNSPEC_REV_SUBREG
++    UNSPEC_COPYSIGN
+ ])
+ 
+ (define_c_enum "unspecv" [
+@@ -5427,49 +5428,48 @@
+ ;;   LDR d2, #(1 << 63)
+ ;;   BSL v2.8b, [y], [x]
+ ;;
+-;; or another, equivalent, sequence using one of BSL/BIT/BIF.
+-;; aarch64_simd_bsldf will select the best suited of these instructions
+-;; to generate based on register allocation, and knows how to partially
+-;; constant fold based on the values of X and Y, so expand through that.
+-
+-(define_expand "copysigndf3"
+-  [(match_operand:DF 0 "register_operand")
+-   (match_operand:DF 1 "register_operand")
+-   (match_operand:DF 2 "register_operand")]
++;; or another, equivalent, sequence using one of BSL/BIT/BIF.  Because
++;; we expect these operations to nearly always operate on
++;; floating-point values, we do not want the operation to be
++;; simplified into a bit-field insert operation that operates on the
++;; integer side, since typically that would involve three inter-bank
++;; register copies.  As we do not expect copysign to be followed by
++;; other logical operations on the result, it seems preferable to keep
++;; this as an unspec operation, rather than exposing the underlying
++;; logic to the compiler.
++
++(define_expand "copysign<GPF:mode>3"
++  [(match_operand:GPF 0 "register_operand")
++   (match_operand:GPF 1 "register_operand")
++   (match_operand:GPF 2 "register_operand")]
+   "TARGET_FLOAT && TARGET_SIMD"
+ {
+-  rtx mask = gen_reg_rtx (DImode);
+-  emit_move_insn (mask, GEN_INT (HOST_WIDE_INT_1U << 63));
+-  emit_insn (gen_aarch64_simd_bsldf (operands[0], mask,
+-				     operands[2], operands[1]));
++  rtx bitmask = gen_reg_rtx (<V_INT_EQUIV>mode);
++  emit_move_insn (bitmask, GEN_INT (HOST_WIDE_INT_M1U
++				    << (GET_MODE_BITSIZE (<MODE>mode) - 1)));
++  emit_insn (gen_copysign<mode>3_insn (operands[0], operands[1], operands[2],
++				       bitmask));
+   DONE;
+ }
+ )
+ 
+-;; As above, but we must first get to a 64-bit value if we wish to use
+-;; aarch64_simd_bslv2sf.
+-
+-(define_expand "copysignsf3"
+-  [(match_operand:SF 0 "register_operand")
+-   (match_operand:SF 1 "register_operand")
+-   (match_operand:SF 2 "register_operand")]
++(define_insn "copysign<GPF:mode>3_insn"
++  [(set (match_operand:GPF 0 "register_operand" "=w,w,w,r")
++	(unspec:GPF [(match_operand:GPF 1 "register_operand" "w,0,w,r")
++		     (match_operand:GPF 2 "register_operand" "w,w,0,0")
++		     (match_operand:<V_INT_EQUIV> 3 "register_operand"
++		      "0,w,w,X")]
++	 UNSPEC_COPYSIGN))]
+   "TARGET_FLOAT && TARGET_SIMD"
+-{
+-  rtx v_bitmask = gen_reg_rtx (V2SImode);
+-
+-  /* Juggle modes to get us in to a vector mode for BSL.  */
+-  rtx op1 = lowpart_subreg (DImode, operands[1], SFmode);
+-  rtx op2 = lowpart_subreg (V2SFmode, operands[2], SFmode);
+-  rtx tmp = gen_reg_rtx (V2SFmode);
+-  emit_move_insn (v_bitmask,
+-		  aarch64_simd_gen_const_vector_dup (V2SImode,
+-						     HOST_WIDE_INT_M1U << 31));
+-  emit_insn (gen_aarch64_simd_bslv2sf (tmp, v_bitmask, op2, op1));
+-  emit_move_insn (operands[0], lowpart_subreg (SFmode, tmp, V2SFmode));
+-  DONE;
+-}
++  "@
++   bsl\\t%0.<Vbtype>, %2.<Vbtype>, %1.<Vbtype>
++   bit\\t%0.<Vbtype>, %2.<Vbtype>, %3.<Vbtype>
++   bif\\t%0.<Vbtype>, %1.<Vbtype>, %3.<Vbtype>
++   bfxil\\t%<w1>0, %<w1>1, #0, <sizem1>"
++  [(set_attr "type" "neon_bsl<q>,neon_bsl<q>,neon_bsl<q>,bfm")]
+ )
+ 
++
+ ;; For xorsign (x, y), we want to generate:
+ ;;
+ ;; LDR   d2, #1<<63
 diff --git a/gcc/config/aarch64/driver-aarch64.c b/gcc/config/aarch64/driver-aarch64.c
 index 4e83c7a7679..c68bdfdc57f 100644
 --- a/gcc/config/aarch64/driver-aarch64.c
@@ -1626,6 +1737,29 @@ index 4e83c7a7679..c68bdfdc57f 100644
    }
  }
  
+diff --git a/gcc/config/aarch64/iterators.md b/gcc/config/aarch64/iterators.md
+index 25991d97836..21d66d36f82 100644
+--- a/gcc/config/aarch64/iterators.md
++++ b/gcc/config/aarch64/iterators.md
+@@ -578,7 +578,8 @@
+ (define_mode_attr sizen [(QI "8") (HI "16") (SI "32") (DI "64")])
+ 
+ ;; Give the ordinal of the MSB in the mode
+-(define_mode_attr sizem1 [(QI "#7") (HI "#15") (SI "#31") (DI "#63")])
++(define_mode_attr sizem1 [(QI "#7") (HI "#15") (SI "#31") (DI "#63")
++			  (HF "#15") (SF "#31") (DF "#63")])
+ 
+ ;; Attribute to describe constants acceptable in logical operations
+ (define_mode_attr lconst [(SI "K") (DI "L")])
+@@ -664,7 +665,7 @@
+ 			  (V8HF "16b") (V2SF  "8b")
+ 			  (V4SF "16b") (V2DF  "16b")
+ 			  (DI   "8b")  (DF    "8b")
+-			  (SI   "8b")])
++			  (SI   "8b")  (SF    "8b")])
+ 
+ ;; Define element mode for each vector mode.
+ (define_mode_attr VEL [(V8QI  "QI") (V16QI "QI") (VNx16QI "QI")
 diff --git a/gcc/config/arm/arm.c b/gcc/config/arm/arm.c
 index e45eb525db6..5e8190ec85a 100644
 --- a/gcc/config/arm/arm.c
@@ -5443,10 +5577,15 @@ index 0e79e53fb61..dabc5403f28 100644
        offset1 = crtl->outgoing_args_size + get_frame_size ();
  #if !STACK_GROWS_DOWNWARD
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 7d5e65b1a74..9c1a100b70b 100644
+index 7d5e65b1a74..a04f01ceca6 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,548 @@
+@@ -1,3 +1,553 @@
++2019-04-30  Srinath Parvathaneni  <srinath.parvathaneni@arm.com>
++
++	PR target/90075
++	* gcc.target/aarch64/pr90075.c: New test.
++
 +2019-04-29  Richard Sandiford  <richard.sandiford@arm.com>
 +
 +	Backport from mainline:
@@ -7234,6 +7373,33 @@ index 00000000000..e3c7cdc54ff
 +    on the parent. e.g. rdma turns on simd+fp, but simd+fp does not turn on
 +    rdma since rdma is it's own group.  crypto however turns on aes and sha2
 +    and turning on sha2 and eas should turn on crypto!.  */
+diff --git a/gcc/testsuite/gcc.target/aarch64/pr90075.c b/gcc/testsuite/gcc.target/aarch64/pr90075.c
+new file mode 100644
+index 00000000000..cae7e618fc0
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/pr90075.c
+@@ -0,0 +1,21 @@
++/* { dg-do compile } */
++/* { dg-additional-options "-O1" } */
++
++typedef struct {
++  float one, two;
++} twofloats;
++
++float
++bug (twofloats tf)
++{
++  float f1, f2;
++  union {
++    twofloats tfloats;
++    float arr[2];
++  } utfloats;
++
++  utfloats.tfloats = tf;
++  f1 = utfloats.arr[1];
++  f2 = __builtin_copysignf (0, f1);
++  return f2;
++}
 diff --git a/gcc/testsuite/gcc.target/arm/f16_f64_conv_no_dp.c b/gcc/testsuite/gcc.target/arm/f16_f64_conv_no_dp.c
 new file mode 100644
 index 00000000000..2620e570004
