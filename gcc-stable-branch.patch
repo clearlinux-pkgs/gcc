@@ -178,6 +178,9 @@ pault (2):
 pthaugen (1):
       Backport from mainline: 	2019-04-16  Pat Haugen  <pthaugen@us.ibm.com>
 
+ramana (1):
+      [Patch AArch64] Add __ARM_FEATURE_ATOMICS
+
 rearnsha (1):
       PR target/90075 Prefer bsl/bit/bif for copysignf. (backport GCC-8)
 
@@ -253,10 +256,18 @@ index 2bf50aaf17a..56b6be4ebb2 100644
 -8.3.0
 +8.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d1fd9f6a7b9..e62dcd51791 100644
+index d1fd9f6a7b9..facb5cbbc6b 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,595 @@
+@@ -1,3 +1,603 @@
++2019-04-30  Ramana Radhakrishnan  <ramana.radhakrishnan@arm.com>
++
++	Backport from mainline.
++	2019-04-30  Ramana Radhakrishnan  <ramana.radhakrishnan@arm.com>
++	PR target/86538
++	* config/aarch64/aarch64-c.c (aarch64_update_cpp_builtins):
++	Define __ARM_FEATURE_ATOMICS
++
 +2019-04-30  Srinath Parvathaneni  <srinath.parvathaneni@arm.com>
 +
 +	Backport from mainline
@@ -852,7 +863,7 @@ index d1fd9f6a7b9..e62dcd51791 100644
  2019-02-22  Release Manager
  
  	* GCC 8.3.0 released.
-@@ -568,7 +1160,7 @@
+@@ -568,7 +1168,7 @@
  
  	Backport from mainline
  	2018-11-20  Richard Biener  <rguenther@suse.de>
@@ -1412,6 +1423,18 @@ index a9fc5f1707e..4bd61e8be1f 100644
 +
  #undef AARCH64_CPU_NAME_LENGTH
  
+diff --git a/gcc/config/aarch64/aarch64-c.c b/gcc/config/aarch64/aarch64-c.c
+index 40c738c7c3b..108c0120394 100644
+--- a/gcc/config/aarch64/aarch64-c.c
++++ b/gcc/config/aarch64/aarch64-c.c
+@@ -146,6 +146,7 @@ aarch64_update_cpp_builtins (cpp_reader *pfile)
+       builtin_define_with_int_value ("__ARM_FEATURE_SVE_BITS", bits);
+     }
+ 
++  aarch64_def_or_undef (TARGET_LSE, "__ARM_FEATURE_ATOMICS", pfile);
+   aarch64_def_or_undef (TARGET_AES, "__ARM_FEATURE_AES", pfile);
+   aarch64_def_or_undef (TARGET_SHA2, "__ARM_FEATURE_SHA2", pfile);
+   aarch64_def_or_undef (TARGET_SHA3, "__ARM_FEATURE_SHA3", pfile);
 diff --git a/gcc/config/aarch64/aarch64-option-extensions.def b/gcc/config/aarch64/aarch64-option-extensions.def
 index 5fe5e3f7ddd..a575448e406 100644
 --- a/gcc/config/aarch64/aarch64-option-extensions.def
