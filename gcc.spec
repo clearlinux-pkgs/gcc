@@ -13,7 +13,7 @@
 %define march westmere
 
 Name     : gcc
-Version  : 9.1
+Version  : 9.1.1
 Release  : 473
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://gcc.gnu.org/pub/gcc/releases/gcc-9.1.0/gcc-9.1.0.tar.xz
@@ -40,6 +40,8 @@ Patch15  : 0001-Ignore-Werror-if-GCC_IGNORE_WERROR-environment-varia.patch
 
 # zero registers on ret to make ROP harder
 Patch21  : zero-regs-gcc8.patch
+
+Patch99  : fixup-9-branch.patch
 
 # cves: 1xx
 
@@ -204,6 +206,7 @@ GNU cc and gcc C compilers.
 
 %prep
 %setup -q -n %{gccpath}
+%patch99 -p1
 %patch0 -p1
 
 %patch1 -p1
