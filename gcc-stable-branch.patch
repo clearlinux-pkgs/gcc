@@ -1,3 +1,6 @@
+ian (1):
+      Backport from trunk:
+
 rguenth (1):
       2019-05-03  Richard Biener  <rguenther@suse.de>
 
@@ -27,3 +30,17 @@ index 7bb2cf1e220..e1c75f8e906 100644
  
    run_rpo_vn (VN_WALK);
  
+diff --git a/libgo/go/os/user/user_test.go b/libgo/go/os/user/user_test.go
+index 2563077eb2e..eeb24dd0e00 100644
+--- a/libgo/go/os/user/user_test.go
++++ b/libgo/go/os/user/user_test.go
+@@ -129,6 +129,9 @@ func TestLookupGroup(t *testing.T) {
+ 
+ func TestGroupIds(t *testing.T) {
+ 	checkGroup(t)
++	if runtime.GOOS == "aix" {
++		t.Skip("skipping GroupIds, see golang.org/issue/30563")
++	}
+ 	if runtime.GOOS == "solaris" {
+ 		t.Skip("skipping GroupIds, see golang.org/issue/14709")
+ 	}
