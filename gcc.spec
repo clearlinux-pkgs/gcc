@@ -514,7 +514,7 @@ cat *.lang > gcc.lang
 /usr/lib32/libssp.so
 /usr/lib32/libubsan.a
 /usr/lib32/libubsan.so
-/usr/lib64/gcc/x86_64-generic-linux/*/32/include/ISO_Fortran_binding.h
+#/usr/lib64/gcc/x86_64-generic-linux/*/32/include/ISO_Fortran_binding.h
 
 
 #/usr/lib/libvtv.a
