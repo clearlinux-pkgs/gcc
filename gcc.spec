@@ -4,7 +4,7 @@
 %define libstdcxx_full 6.0.26
 %define isl_version 0.16.1
 %define gccver 9
-%define gccpath gcc-9.0.1-RC-20190430
+%define gccpath gcc-9.1.0
 # Highest optimisation ABI we target
 %define mtune haswell
 
@@ -13,10 +13,10 @@
 %define march westmere
 
 Name     : gcc
-Version  : 9.0
-Release  : 472
+Version  : 9.1
+Release  : 473
 URL      : http://www.gnu.org/software/gcc/
-Source0  : https://gcc.gnu.org/pub/gcc/snapshots/9.0.1-RC-20190430/gcc-9.0.1-RC-20190430.tar.xz
+Source0  : https://gcc.gnu.org/pub/gcc/releases/gcc-9.1.0/gcc-9.1.0.tar.xz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.16.1.tar.bz2
 Source2  : DATESTAMP
 Source3  : REVISION
