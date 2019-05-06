@@ -15,6 +15,12 @@ meissner (4):
       Delete unintentional file from the wrong branch
       Delete file created on the wrong branch
 
+mpolacek (1):
+      PR c++/90265 - ICE with generic lambda. 	* pt.c (tsubst_copy_and_build): Use a dedicated variable for the last 	element in the vector.
+
+paolo (1):
+      /cp 2019-05-06  Paolo Carlini  <paolo.carlini@oracle.com>
+
 rguenth (1):
       2019-05-03  Richard Biener  <rguenther@suse.de>
 
@@ -99,10 +105,23 @@ index 8a1ffd3769f..5b946e1a32f 100644
    /* For targets using ms ABI enable ms-extensions, if not
       explicit turned off.  For non-ms ABI we turn off this
 diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
-index ad050bfad8c..8d6ee383f5a 100644
+index ad050bfad8c..a2dc643862f 100644
 --- a/gcc/cp/ChangeLog
 +++ b/gcc/cp/ChangeLog
-@@ -1,3 +1,7 @@
+@@ -1,3 +1,20 @@
++2019-05-06  Marek Polacek  <polacek@redhat.com>
++
++	PR c++/90265 - ICE with generic lambda.
++	* pt.c (tsubst_copy_and_build): Use a dedicated variable for the last
++	element in the vector.
++
++2019-05-06  Paolo Carlini  <paolo.carlini@oracle.com>
++
++	PR c++/90173
++	* decl.c (grokdeclarator): Set type to error_mark_node
++	upon error about template placeholder type non followed
++	by a simple declarator-id.
++
 +2019-05-04  Michael Meissner  <meissner@linux.ibm.com>
 +
 +	* ChangeLog.ibm: Delete unintentional commit on the wrong branch.
@@ -110,11 +129,47 @@ index ad050bfad8c..8d6ee383f5a 100644
  2019-05-03  Release Manager
  
  	* GCC 9.1.0 released.
+diff --git a/gcc/cp/decl.c b/gcc/cp/decl.c
+index 01c89cd572d..b57ded813b6 100644
+--- a/gcc/cp/decl.c
++++ b/gcc/cp/decl.c
+@@ -10973,6 +10973,7 @@ grokdeclarator (const cp_declarator *declarator,
+       error_at (typespec_loc, "template placeholder type %qT must be followed "
+ 		"by a simple declarator-id", type);
+       inform (DECL_SOURCE_LOCATION (tmpl), "%qD declared here", tmpl);
++      type = error_mark_node;
+     }
+ 
+   staticp = 0;
+diff --git a/gcc/cp/pt.c b/gcc/cp/pt.c
+index e682b6d51be..f316644d430 100644
+--- a/gcc/cp/pt.c
++++ b/gcc/cp/pt.c
+@@ -18881,7 +18881,8 @@ tsubst_copy_and_build (tree t,
+ 	    if (thisarg)
+ 	      {
+ 		/* Shift the other args over to make room.  */
+-		vec_safe_push (call_args, (*call_args)[nargs-1]);
++		tree last = (*call_args)[nargs - 1];
++		vec_safe_push (call_args, last);
+ 		for (int i = nargs-1; i > 0; --i)
+ 		  (*call_args)[i] = (*call_args)[i-1];
+ 		(*call_args)[0] = thisarg;
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index a6c571a5959..08fc24eeadc 100644
+index a6c571a5959..17828a3a0ad 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,17 @@
+@@ -1,3 +1,27 @@
++2019-05-06  Marek Polacek  <polacek@redhat.com>
++
++	PR c++/90265 - ICE with generic lambda.
++	* g++.dg/cpp1y/lambda-generic-90265.C: New test.
++
++2019-05-06  Paolo Carlini  <paolo.carlini@oracle.com>
++
++	PR c++/90173
++	* g++.dg/cpp1z/class-deduction66.C: New.
++
 +2019-05-06  Martin Liska  <mliska@suse.cz>
 +
 +	Backport from mainline
@@ -132,6 +187,32 @@ index a6c571a5959..08fc24eeadc 100644
  2019-05-03  Release Manager
  
  	* GCC 9.1.0 released.
+diff --git a/gcc/testsuite/g++.dg/cpp1y/lambda-generic-90265.C b/gcc/testsuite/g++.dg/cpp1y/lambda-generic-90265.C
+new file mode 100644
+index 00000000000..d9ab9b7f55f
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp1y/lambda-generic-90265.C
+@@ -0,0 +1,4 @@
++// PR c++/90265
++// { dg-do compile { target c++14 } }
++
++void (*a)(int, int, int, void *) = [](auto, auto, auto, auto) {};
+diff --git a/gcc/testsuite/g++.dg/cpp1z/class-deduction66.C b/gcc/testsuite/g++.dg/cpp1z/class-deduction66.C
+new file mode 100644
+index 00000000000..3a5d8aa60a0
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp1z/class-deduction66.C
+@@ -0,0 +1,10 @@
++// PR c++/90173
++// { dg-do compile { target c++17 } }
++
++template <typename T> struct A { };
++
++A(int) -> A<int>;
++
++namespace decl {
++  A (*fp)() = 0;  // { dg-error "placeholder" }
++}
 diff --git a/gcc/testsuite/gcc.dg/asan/pr87930.c b/gcc/testsuite/gcc.dg/asan/pr87930.c
 index 4f8e6999fde..5a65d3fb030 100644
 --- a/gcc/testsuite/gcc.dg/asan/pr87930.c
