@@ -1,14 +1,16 @@
-gccadmin (2):
+gccadmin (3):
+      Daily bump.
       Daily bump.
       Daily bump.
 
 ian (1):
       Backport from trunk:
 
-meissner (3):
+meissner (4):
       setup branch
       Delete unintentional file from the wrong branch
       Delete unintentional file from the wrong branch
+      Delete file created on the wrong branch
 
 rguenth (1):
       2019-05-03  Richard Biener  <rguenther@suse.de>
@@ -25,16 +27,6 @@ index a90e9c6d2fd..b6204ce56bd 100644
  2019-05-03  Release Manager
  
  	* GCC 9.1.0 released.
-diff --git a/ChangeLog.ibm b/ChangeLog.ibm
-new file mode 100644
-index 00000000000..d44898dd41b
---- /dev/null
-+++ b/ChangeLog.ibm
-@@ -0,0 +1,4 @@
-+2019-05-03   Michael Meissner  <meissner@linux.ibm.com>
-+
-+	Clone branch subversion id 270579
-+
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
 index e9a3fa34129..ddfb3b6d314 100644
 --- a/gcc/ChangeLog
