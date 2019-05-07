@@ -25,6 +25,9 @@ paolo (1):
 rguenth (1):
       2019-05-03  Richard Biener  <rguenther@suse.de>
 
+ro (1):
+      Fix make install-gcc-specs with empty GCC_SPECS_FILES
+
 diff --git a/ChangeLog b/ChangeLog
 index a90e9c6d2fd..b6204ce56bd 100644
 --- a/ChangeLog
@@ -65,6 +68,35 @@ index e9a3fa34129..b1659d3cb12 100644
  2019-05-03  Jakub Jelinek  <jakub@redhat.com>
  
  	* BASE-VER: Set to 9.1.1.
+diff --git a/gcc/ada/ChangeLog b/gcc/ada/ChangeLog
+index bbc327a0905..05d3a4b0dbd 100644
+--- a/gcc/ada/ChangeLog
++++ b/gcc/ada/ChangeLog
+@@ -1,3 +1,8 @@
++2019-05-07  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
++
++	* gcc-interface/Makefile.in (install-gcc-specs): Use foreach.
++	Honor DESTDIR.
++
+ 2019-05-03  Release Manager
+ 
+ 	* GCC 9.1.0 released.
+diff --git a/gcc/ada/gcc-interface/Makefile.in b/gcc/ada/gcc-interface/Makefile.in
+index 4e74252bd74..a0a5bb2415f 100644
+--- a/gcc/ada/gcc-interface/Makefile.in
++++ b/gcc/ada/gcc-interface/Makefile.in
+@@ -505,9 +505,8 @@ gnatlink-re: ../stamp-tools gnatmake-re
+ install-gcc-specs:
+ #	Install all the requested GCC spec files.
+ 
+-	for f in $(GCC_SPEC_FILES); do \
+-	    $(INSTALL_DATA_DATE) $(srcdir)/ada/$$f $(libsubdir)/; \
+-	done
++	$(foreach f,$(GCC_SPEC_FILES), \
++	    $(INSTALL_DATA_DATE) $(srcdir)/ada/$(f) $(DESTDIR)$(libsubdir)/;)
+ 
+ install-gnatlib: ../stamp-gnatlib-$(RTSDIR) install-gcc-specs
+ 	$(RMDIR) $(DESTDIR)$(ADA_RTL_OBJ_DIR)
 diff --git a/gcc/c/ChangeLog b/gcc/c/ChangeLog
 index a1e1381641b..74ea868c861 100644
 --- a/gcc/c/ChangeLog
