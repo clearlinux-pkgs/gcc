@@ -1,0 +1,28 @@
+From e1177f2db7fe3c4533e2968f8240b93df5333a85 Mon Sep 17 00:00:00 2001
+From: Thiago Macieira <thiago.macieira@intel.com>
+Date: Wed, 8 May 2019 18:01:01 -0700
+Subject: [PATCH] Always use -z now when linking with -pie
+
+Patch inspired by Ubuntu.
+
+Signed-off-by: Thiago Macieira <thiago.macieira@intel.com>
+---
+ gcc/gcc.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/gcc/gcc.c b/gcc/gcc.c
+index 4f57765b012..8c4a8818a02 100644
+--- a/gcc/gcc.c
++++ b/gcc/gcc.c
+@@ -931,7 +931,7 @@ proper position among the other output files.  */
+ #ifndef LINK_PIE_SPEC
+ #ifdef HAVE_LD_PIE
+ #ifndef LD_PIE_SPEC
+-#define LD_PIE_SPEC "-pie"
++#define LD_PIE_SPEC "-pie -z now"
+ #endif
+ #else
+ #define LD_PIE_SPEC ""
+-- 
+2.21.0
+
