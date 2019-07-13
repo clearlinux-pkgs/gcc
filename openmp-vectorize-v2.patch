@@ -21,7 +21,7 @@ index 33efcc0d6..35ad4fef4 100644
 +   opts->x_optimize = 3;
 +   opts->x_flag_gcse_after_reload = 1;
 +   opts->x_flag_dse = 1;
-+   opts->x_flag_schedule_insns = 1;
++
 +  }
 +
    if (opts->x_dump_base_name
