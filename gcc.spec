@@ -14,7 +14,7 @@
 
 Name     : gcc
 Version  : 9.1.1
-Release  : 587
+Release  : 588
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://gcc.gnu.org/pub/gcc/releases/gcc-9.1.0/gcc-9.1.0.tar.xz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.16.1.tar.bz2
