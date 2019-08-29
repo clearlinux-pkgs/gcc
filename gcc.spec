@@ -13,7 +13,7 @@
 %define march westmere
 
 Name     : gcc
-Version  : 9.1.1
+Version  : 9.2.1
 Release  : 626
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://gcc.gnu.org/pub/gcc/releases/gcc-9.1.0/gcc-9.1.0.tar.xz
