@@ -4,7 +4,7 @@
 %define libstdcxx_full 6.0.26
 %define isl_version 0.16.1
 %define gccver 9
-%define gccpath gcc-9.1.0
+%define gccpath gcc-9.2.0
 # Highest optimisation ABI we target
 %define mtune haswell
 
@@ -14,9 +14,9 @@
 
 Name     : gcc
 Version  : 9.2.1
-Release  : 627
+Release  : 628
 URL      : http://www.gnu.org/software/gcc/
-Source0  : https://gcc.gnu.org/pub/gcc/releases/gcc-9.1.0/gcc-9.1.0.tar.xz
+Source0  : https://gcc.gnu.org/pub/gcc/releases/gcc-9.2.0/gcc-9.2.0.tar.xz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.16.1.tar.bz2
 Source2  : DATESTAMP
 Source3  : REVISION
@@ -41,8 +41,6 @@ Patch16  : 0001-Always-use-z-now-when-linking-with-pie.patch
 
 # zero registers on ret to make ROP harder
 Patch21  : zero-regs-gcc8.patch
-
-Patch99  : fixup-9-branch.patch
 
 # cves: 1xx
 
@@ -207,7 +205,6 @@ GNU cc and gcc C compilers.
 
 %prep
 %setup -q -n %{gccpath}
-%patch99 -p1
 %patch0 -p1
 
 %patch1 -p1
