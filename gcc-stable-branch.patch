@@ -1,11 +1,14 @@
-ebotcazou (1):
+ebotcazou (2):
       PR rtl-optimization/91347 	* dse.c (scan_insn): Call add_wild_read for non-const/memset tail calls 	before reload if HARD_FRAME_POINTER_IS_ARG_POINTER.
+      PR target/91472 	* config/sparc/sparc.c (sparc_cannot_force_const_mem): Return true 	during LRA/reload in PIC mode if the PIC register hasn't been used yet. 	(sparc_pic_register_p): Test reload_in_progress for consistency's sake.
 
 edlinger (2):
       2019-08-16  Bernd Edlinger  <bernd.edlinger@hotmail.de>
       2019-08-16  Bernd Edlinger  <bernd.edlinger@hotmail.de>
 
-gccadmin (19):
+gccadmin (21):
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -75,17 +78,20 @@ law (1):
 luoxhu (1):
       Backport r274411 from trunk to gcc-9-branch
 
-marxin (3):
+marxin (5):
       Backport r274502
       Backport r274503
       Backport r274504
+      Backport r275291
+      Backport r275292
 
-mpolacek (5):
+mpolacek (6):
       PR c++/81429 - wrong parsing of constructor with C++11 attribute. 	* parser.c (cp_parser_constructor_declarator_p): Handle the scenario 	when a parameter declaration begins with [[attribute]].
       PR c++/87519 - bogus warning with -Wsign-conversion. 	* typeck.c (cp_build_binary_op): Use same_type_p instead of comparing 	the types directly.
       PR c++/90473 - wrong code with nullptr in default argument. 	* call.c (null_ptr_cst_p): Update quote from the standard. 	* decl.c (check_default_argument): Don't return nullptr when the arg 	has side-effects.
       PR c++/90884 - stray note with -Wctor-dtor-privacy. 	* class.c (maybe_warn_about_overly_private_class): Guard the call to 	inform.
       PR c++/91521 - wrong error with operator->. 	* decl.c (grokdeclarator): Return error_mark_node for an invalid 	trailing return type.
+      PR c++/91129 - wrong error with binary op in template argument. 	* typeck.c (warn_for_null_address): Use fold_for_warn instead of 	fold_non_dependent_expr. 	(cp_build_binary_op): Likewise.
 
 msebor (1):
       Backport from mainline
@@ -93,13 +99,14 @@ msebor (1):
 rearnsha (1):
       [aarch64] PR target/91386 Use copy_rtx to avoid modifying original insns in peep2 pattern
 
-redi (6):
+redi (7):
       PR libstdc++/90361 add missing macro definition
       PR c++/91436 fix C++ dialect for std::make_unique fix-it hint
       Implement new serial algorithms from Parallelism TS (P0024R2)
       Fix markdown in Doxygen comments for std::reduce
       Update ABI baselines for x86 and powerpc GNU targets
       PR libstdc++/91067 add more missing exports for directory iterators
+      Update libstdc++ docs for library version bumps
 
 rguenth (5):
       2019-08-12  Richard Biener  <rguenther@suse.de>
@@ -107,6 +114,9 @@ rguenth (5):
       2019-08-28  Richard Biener  <rguenther@suse.de>
       2019-08-29  Richard Biener  <rguenther@suse.de>
       2019-08-30  Richard Biener  <rguenther@suse.de>
+
+ro (1):
+      Update Solaris baselines for GCC 9.3
 
 segher (3):
       Backport from trunk 	2019-08-22  Segher Boessenkool  <segher@kernel.crashing.org>
@@ -357,10 +367,29 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..3ae23dbc01b 100644
+index 7f6557d8018..569691bbb2c 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,264 @@
+@@ -1,3 +1,283 @@
++2019-09-02  Martin Liska  <mliska@suse.cz>
++
++	Backport from mainline
++	2019-09-02  Martin Liska  <mliska@suse.cz>
++
++	PR gcov-profile/91601
++	* gcov.c (path_contains_zero_cycle_arc): Rename to ...
++	(path_contains_zero_or_negative_cycle_arc): ... this and handle
++	also negative edges.
++	(circuit): Handle also negative edges as they can happen
++	in some situations.
++
++2019-09-01  Eric Botcazou  <ebotcazou@adacore.com>
++
++	PR target/91472
++	* config/sparc/sparc.c (sparc_cannot_force_const_mem): Return true
++	during LRA/reload in PIC mode if the PIC register hasn't been used yet.
++	(sparc_pic_register_p): Test reload_in_progress for consistency's sake.
++
 +2019-08-31  Iain Sandoe  <iain@sandoe.co.uk>
 +
 +	Backport from mainline
@@ -625,7 +654,7 @@ index 7f6557d8018..3ae23dbc01b 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +774,7 @@
+@@ -513,7 +793,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -741,10 +770,19 @@ index 1ffb491d785..66c9295ff4a 100644
  
  #endif /* GCC_BUILTINS_H */
 diff --git a/gcc/c-family/ChangeLog b/gcc/c-family/ChangeLog
-index acdfe79894e..8fa6963f186 100644
+index acdfe79894e..7f786dfdfcd 100644
 --- a/gcc/c-family/ChangeLog
 +++ b/gcc/c-family/ChangeLog
-@@ -1,3 +1,12 @@
+@@ -1,3 +1,21 @@
++2019-09-02  Martin Liska  <mliska@suse.cz>
++
++	Backport from mainline
++	2019-09-02  Martin Liska  <mliska@suse.cz>
++
++	PR c++/91155
++	* c-common.c (fname_as_string): Use cxx_printable_name for
++	__PRETTY_FUNCTION__ same as was used before r265711.
++
 +2019-08-31  Iain Sandoe  <iain@sandoe.co.uk>
 +
 +	Backport from mainline
@@ -1499,11 +1537,48 @@ index ad80592765d..401cbfc3fd7 100644
  
  
  (include "sync.md")
+diff --git a/gcc/config/sparc/sparc.c b/gcc/config/sparc/sparc.c
+index 93479ab6bdc..14a4a760499 100644
+--- a/gcc/config/sparc/sparc.c
++++ b/gcc/config/sparc/sparc.c
+@@ -4208,6 +4208,13 @@ eligible_for_sibcall_delay (rtx_insn *trial)
+ static bool
+ sparc_cannot_force_const_mem (machine_mode mode, rtx x)
+ {
++  /* After IRA has run in PIC mode, it is too late to put anything into the
++     constant pool if the PIC register hasn't already been initialized.  */
++  if ((lra_in_progress || reload_in_progress)
++      && flag_pic
++      && !crtl->uses_pic_offset_table)
++    return true;
++
+   switch (GET_CODE (x))
+     {
+     case CONST_INT:
+@@ -4457,7 +4464,7 @@ sparc_pic_register_p (rtx x)
+     return true;
+ 
+   if (!HARD_REGISTER_P (pic_offset_table_rtx)
+-      && (HARD_REGISTER_P (x) || lra_in_progress)
++      && (HARD_REGISTER_P (x) || lra_in_progress || reload_in_progress)
+       && ORIGINAL_REGNO (x) == REGNO (pic_offset_table_rtx))
+     return true;
+ 
 diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
-index c977850d067..da73772c99e 100644
+index c977850d067..fc78b3f24b4 100644
 --- a/gcc/cp/ChangeLog
 +++ b/gcc/cp/ChangeLog
-@@ -1,3 +1,94 @@
+@@ -1,3 +1,104 @@
++2019-09-01  Marek Polacek  <polacek@redhat.com>
++
++	Backported from mainline
++	2019-09-01  Marek Polacek  <polacek@redhat.com>
++
++	PR c++/91129 - wrong error with binary op in template argument.
++	* typeck.c (warn_for_null_address): Use fold_for_warn instead of
++	fold_non_dependent_expr.
++	(cp_build_binary_op): Likewise.
++
 +2019-08-31  Iain Sandoe  <iain@sandoe.co.uk>
 +
 +	Backported from mainline
@@ -1598,7 +1673,7 @@ index c977850d067..da73772c99e 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -16,7 +107,7 @@
+@@ -16,7 +117,7 @@
  
  	Backported from mainline
  	2019-08-02  Marek Polacek  <polacek@redhat.com>
@@ -1790,10 +1865,41 @@ index ff4ce068a83..e15a07392ca 100644
  extern bool function_parameter_pack_p		(const_tree);
  extern bool function_parameter_expanded_from_pack_p (tree, tree);
 diff --git a/gcc/cp/decl.c b/gcc/cp/decl.c
-index b57ded813b6..05ceda89d4c 100644
+index b57ded813b6..e860f26e55d 100644
 --- a/gcc/cp/decl.c
 +++ b/gcc/cp/decl.c
-@@ -5836,8 +5836,9 @@ reshape_init_array_1 (tree elt_type, tree max_index, reshape_iter *d,
+@@ -4474,13 +4474,27 @@ cp_fname_init (const char* name, tree *type_p)
+ static tree
+ cp_make_fname_decl (location_t loc, tree id, int type_dep)
+ {
+-  const char *const name = (type_dep && in_template_function ()
+-			    ? NULL : fname_as_string (type_dep));
++  const char * name = NULL;
++  bool release_name = false;
++  if (!(type_dep && in_template_function ()))
++    {
++      if (current_function_decl == NULL_TREE)
++	name = "top level";
++      else if (type_dep == 1) /* __PRETTY_FUNCTION__ */
++	name = cxx_printable_name (current_function_decl, 2);
++      else if (type_dep == 0) /* __FUNCTION__ */
++	{
++	  name = fname_as_string (type_dep);
++	  release_name = true;
++	}
++      else
++	gcc_unreachable ();
++    }
+   tree type;
+   tree init = cp_fname_init (name, &type);
+   tree decl = build_decl (loc, VAR_DECL, id, type);
+ 
+-  if (name)
++  if (release_name)
+     free (CONST_CAST (char *, name));
+ 
+   /* As we're using pushdecl_with_scope, we must set the context.  */
+@@ -5836,8 +5850,9 @@ reshape_init_array_1 (tree elt_type, tree max_index, reshape_iter *d,
        /* Pointers initialized to strings must be treated as non-zero
  	 even if the string is empty.  */
        tree init_type = TREE_TYPE (elt_init);
@@ -1805,7 +1911,7 @@ index b57ded813b6..05ceda89d4c 100644
  	last_nonzero = index;
  
        /* This can happen with an invalid initializer (c++/54501).  */
-@@ -11435,6 +11436,8 @@ grokdeclarator (const cp_declarator *declarator,
+@@ -11435,6 +11450,8 @@ grokdeclarator (const cp_declarator *declarator,
  		else if (late_return_type
  			 && sfk != sfk_conversion)
  		  {
@@ -1814,7 +1920,7 @@ index b57ded813b6..05ceda89d4c 100644
  		    if (cxx_dialect < cxx11)
  		      /* Not using maybe_warn_cpp0x because this should
  			 always be an error.  */
-@@ -13042,7 +13045,9 @@ check_default_argument (tree decl, tree arg, tsubst_flags_t complain)
+@@ -13042,7 +13059,9 @@ check_default_argument (tree decl, tree arg, tsubst_flags_t complain)
    /* Avoid redundant -Wzero-as-null-pointer-constant warnings at
       the call sites.  */
    if (TYPE_PTR_OR_PTRMEM_P (decl_type)
@@ -2126,10 +2232,66 @@ index a2a986b1db1..b3fe901097c 100644
        tree tparms;
  
 diff --git a/gcc/cp/typeck.c b/gcc/cp/typeck.c
-index 3255af58a25..bc4a7606582 100644
+index 3255af58a25..c815bf3368c 100644
 --- a/gcc/cp/typeck.c
 +++ b/gcc/cp/typeck.c
-@@ -5516,9 +5516,9 @@ cp_build_binary_op (const op_location_t &location,
+@@ -4309,7 +4309,7 @@ warn_for_null_address (location_t location, tree op, tsubst_flags_t complain)
+       || TREE_NO_WARNING (op))
+     return;
+ 
+-  tree cop = fold_non_dependent_expr (op, complain);
++  tree cop = fold_for_warn (op);
+ 
+   if (TREE_CODE (cop) == ADDR_EXPR
+       && decl_with_nonnull_addr_p (TREE_OPERAND (cop, 0))
+@@ -4632,9 +4632,8 @@ cp_build_binary_op (const op_location_t &location,
+ 	      || code1 == COMPLEX_TYPE || code1 == VECTOR_TYPE))
+ 	{
+ 	  enum tree_code tcode0 = code0, tcode1 = code1;
+-	  tree cop1 = fold_non_dependent_expr (op1, complain);
+ 	  doing_div_or_mod = true;
+-	  warn_for_div_by_zero (location, cop1);
++	  warn_for_div_by_zero (location, fold_for_warn (op1));
+ 
+ 	  if (tcode0 == COMPLEX_TYPE || tcode0 == VECTOR_TYPE)
+ 	    tcode0 = TREE_CODE (TREE_TYPE (TREE_TYPE (op0)));
+@@ -4673,11 +4672,8 @@ cp_build_binary_op (const op_location_t &location,
+ 
+     case TRUNC_MOD_EXPR:
+     case FLOOR_MOD_EXPR:
+-      {
+-	tree cop1 = fold_non_dependent_expr (op1, complain);
+-	doing_div_or_mod = true;
+-	warn_for_div_by_zero (location, cop1);
+-      }
++      doing_div_or_mod = true;
++      warn_for_div_by_zero (location, fold_for_warn (op1));
+ 
+       if (code0 == VECTOR_TYPE && code1 == VECTOR_TYPE
+ 	  && TREE_CODE (TREE_TYPE (type0)) == INTEGER_TYPE
+@@ -4770,7 +4766,7 @@ cp_build_binary_op (const op_location_t &location,
+ 	}
+       else if (code0 == INTEGER_TYPE && code1 == INTEGER_TYPE)
+ 	{
+-	  tree const_op1 = fold_non_dependent_expr (op1, complain);
++	  tree const_op1 = fold_for_warn (op1);
+ 	  if (TREE_CODE (const_op1) != INTEGER_CST)
+ 	    const_op1 = op1;
+ 	  result_type = type0;
+@@ -4816,10 +4812,10 @@ cp_build_binary_op (const op_location_t &location,
+ 	}
+       else if (code0 == INTEGER_TYPE && code1 == INTEGER_TYPE)
+ 	{
+-	  tree const_op0 = fold_non_dependent_expr (op0, complain);
++	  tree const_op0 = fold_for_warn (op0);
+ 	  if (TREE_CODE (const_op0) != INTEGER_CST)
+ 	    const_op0 = op0;
+-	  tree const_op1 = fold_non_dependent_expr (op1, complain);
++	  tree const_op1 = fold_for_warn (op1);
+ 	  if (TREE_CODE (const_op1) != INTEGER_CST)
+ 	    const_op1 = op1;
+ 	  result_type = type0;
+@@ -5516,9 +5512,9 @@ cp_build_binary_op (const op_location_t &location,
    if (! converted)
      {
        warning_sentinel w (warn_sign_conversion, short_compare);
@@ -2895,6 +3057,50 @@ index 273c75a422c..6b42d82806b 100644
  
  /* Find the appropriate variant of a math intrinsic.  */
  tree gfc_builtin_decl_for_float_kind (enum built_in_function, int);
+diff --git a/gcc/gcov.c b/gcc/gcov.c
+index b06a6714c2e..7e51c2efb30 100644
+--- a/gcc/gcov.c
++++ b/gcc/gcov.c
+@@ -725,10 +725,10 @@ unblock (const block_info *u, block_vector_t &blocked,
+ /* Return true when PATH contains a zero cycle arc count.  */
+ 
+ static bool
+-path_contains_zero_cycle_arc (arc_vector_t &path)
++path_contains_zero_or_negative_cycle_arc (arc_vector_t &path)
+ {
+   for (unsigned i = 0; i < path.size (); i++)
+-    if (path[i]->cs_count == 0)
++    if (path[i]->cs_count <= 0)
+       return true;
+   return false;
+ }
+@@ -754,7 +754,7 @@ circuit (block_info *v, arc_vector_t &path, block_info *start,
+     {
+       block_info *w = arc->dst;
+       if (w < start
+-	  || arc->cs_count == 0
++	  || arc->cs_count <= 0
+ 	  || !linfo.has_block (w))
+ 	continue;
+ 
+@@ -765,7 +765,7 @@ circuit (block_info *v, arc_vector_t &path, block_info *start,
+ 	  handle_cycle (path, count);
+ 	  loop_found = true;
+ 	}
+-      else if (!path_contains_zero_cycle_arc (path)
++      else if (!path_contains_zero_or_negative_cycle_arc (path)
+ 	       &&  find (blocked.begin (), blocked.end (), w) == blocked.end ())
+ 	loop_found |= circuit (w, path, start, blocked, block_lists, linfo,
+ 			       count);
+@@ -780,7 +780,7 @@ circuit (block_info *v, arc_vector_t &path, block_info *start,
+       {
+ 	block_info *w = arc->dst;
+ 	if (w < start
+-	    || arc->cs_count == 0
++	    || arc->cs_count <= 0
+ 	    || !linfo.has_block (w))
+ 	  continue;
+ 
 diff --git a/gcc/ggc-page.c b/gcc/ggc-page.c
 index 143986be58f..cd531e5b1e6 100644
 --- a/gcc/ggc-page.c
@@ -5036,10 +5242,22 @@ index 29f6cdc4667..33b4be79c0f 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..e0a24b33db4 100644
+index bc11ae4ae0b..5ae06aa8a5a 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,183 @@
+@@ -1,3 +1,195 @@
++2019-09-02  Martin Liska  <mliska@suse.cz>
++
++	Backport from mainline
++	2019-09-02  Martin Liska  <mliska@suse.cz>
++
++	PR c++/91155
++	* g++.dg/torture/pr91155.C: New test.
++
++2019-09-01  Eric Botcazou  <ebotcazou@adacore.com>
++
++	* gcc.c-torture/execute/20190901-1.c: New test.
++
 +2019-08-30  Steven G. Kargl  <kargl@gcc.gnu.org>
 +
 +	PR fortran/91587
@@ -5786,6 +6004,54 @@ index 0a40ebbee0f..6b4ed347eee 100644
  }
  
  int main ()
+diff --git a/gcc/testsuite/g++.dg/cpp1y/nontype1.C b/gcc/testsuite/g++.dg/cpp1y/nontype1.C
+new file mode 100644
+index 00000000000..a37e996a3ff
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp1y/nontype1.C
+@@ -0,0 +1,42 @@
++// PR c++/91129 - wrong error with binary op in template argument.
++// { dg-do compile { target c++14 } }
++
++template<class T, T v>
++struct C
++{
++  constexpr operator T() const { return v; }
++  constexpr auto operator()() const { return v; }
++};
++
++template<class T, int N>
++struct A
++{
++};
++
++template<int N>
++void foo ()
++{
++  A<int, C<int, 6>{}> a0;
++  A<int, !C<int, 6>{}> a1;
++  A<int, N / C<int, 6>{}> a2;
++  A<int, N % C<int, 6>{}> a3;
++  A<int, N * C<int, 6>{}> a4;
++  A<int, N ^ C<int, 6>{}> a5;
++  A<int, N | C<int, 6>{}> a6;
++  A<int, N & C<int, 6>{}> a7;
++  A<int, N + C<int, 6>{}> a8;
++  A<int, N - C<int, 6>{}> a9;
++  A<int, -C<int, 6>{}> a10;
++  A<int, (N >> C<int, 6>{})> a11;
++  A<int, N << C<int, 6>{}> a12;
++  A<int, ~C<int, 6>{}> a13;
++  A<int, N || C<int, 6>{}> a14;
++  A<int, N && C<int, 6>{}> a15;
++  A<int, N == C<int, 6>{}> a16;
++  A<int, N != C<int, 6>{}> a17;
++}
++
++int main()
++{
++  foo<10>();
++}
 diff --git a/gcc/testsuite/g++.dg/cpp2a/nontype-class23.C b/gcc/testsuite/g++.dg/cpp2a/nontype-class23.C
 new file mode 100644
 index 00000000000..ab9e80fd335
@@ -6195,6 +6461,30 @@ index 00000000000..c5ee3eb934a
 +	int pt(foo()->bar());
 +	return pt;
 +}
+diff --git a/gcc/testsuite/g++.dg/torture/pr91155.C b/gcc/testsuite/g++.dg/torture/pr91155.C
+new file mode 100644
+index 00000000000..04e4f7ab41b
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/torture/pr91155.C
+@@ -0,0 +1,18 @@
++/* PR c++/91155.  */
++
++template< char C > struct dummy {};
++
++template< typename T > const char *test()
++{
++  __builtin_printf ("test: %s\n", __PRETTY_FUNCTION__);
++  return __PRETTY_FUNCTION__;
++}
++
++int main()
++{
++    if (__builtin_strcmp ("const char* test() [with T = dummy<\'\\000\'>]", test< dummy< '\0' > > ()) != 0)
++    {};//      __builtin_abort ();
++    if (__builtin_strcmp ("const char* test() [with T = dummy<\'\\\'\'>]", test< dummy< '\'' > > ()) != 0)
++    {};//      __builtin_abort ();
++    return 0;
++}
 diff --git a/gcc/testsuite/g++.dg/warn/Wsign-conversion-5.C b/gcc/testsuite/g++.dg/warn/Wsign-conversion-5.C
 new file mode 100644
 index 00000000000..ff384164901
@@ -6358,6 +6648,48 @@ index 00000000000..6a06eff7571
 +{
 +  struct printf_spec spec;
 +  char *s = pointer_string (0, 0, 0, spec);
++  return 0;
++}
+diff --git a/gcc/testsuite/gcc.c-torture/execute/20190901-1.c b/gcc/testsuite/gcc.c-torture/execute/20190901-1.c
+new file mode 100644
+index 00000000000..c78715ef2c1
+--- /dev/null
++++ b/gcc/testsuite/gcc.c-torture/execute/20190901-1.c
+@@ -0,0 +1,36 @@
++/* PR target/91472 */
++/* Reported by John Paul Adrian Glaubitz <glaubitz@physik.fu-berlin.de> */
++
++typedef unsigned int gmp_uint_least32_t;
++
++union ieee_double_extract
++{
++  struct
++    {
++      gmp_uint_least32_t sig:1;
++      gmp_uint_least32_t exp:11;
++      gmp_uint_least32_t manh:20;
++      gmp_uint_least32_t manl:32;
++    } s;
++  double d;
++};
++
++double __attribute__((noipa))
++tests_infinity_d (void)
++{
++  union ieee_double_extract x;
++  x.s.exp = 2047;
++  x.s.manl = 0;
++  x.s.manh = 0;
++  x.s.sig = 0;
++  return x.d;
++}
++
++int
++main (void)
++{
++  double x = tests_infinity_d ();
++  if (x == 0.0)
++    __builtin_abort ();
 +  return 0;
 +}
 diff --git a/gcc/testsuite/gcc.dg/gomp/pr90637.c b/gcc/testsuite/gcc.dg/gomp/pr90637.c
@@ -7958,10 +8290,28 @@ index b599ebb0ba9..beb1dc9532b 100644
  #  define ASAN_INTERCEPT__UNWIND_SJLJ_RAISEEXCEPTION 1
  # else
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
-index 8ac50251005..26f603bb536 100644
+index 8ac50251005..5a0dd3c953f 100644
 --- a/libstdc++-v3/ChangeLog
 +++ b/libstdc++-v3/ChangeLog
-@@ -1,3 +1,78 @@
+@@ -1,3 +1,96 @@
++2019-09-02  Jonathan Wakely  <jwakely@redhat.com>
++
++	* doc/xml/manual/abi.xml: Document 9.x library versions.
++	* doc/html/*: Regenerate.
++
++2019-09-02  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
++
++	* config/abi/post/i386-solaris2.10/baseline_symbols.txt: Regenerate.
++	* config/abi/post/i386-solaris2.10/amd64/baseline_symbols.txt: Likewise.
++	* config/abi/post/i386-solaris2.11/baseline_symbols.txt: Likewise.
++	* config/abi/post/i386-solaris2.11/amd64/baseline_symbols.txt: Likewise.
++	* config/abi/post/sparc-solaris2.10/baseline_symbols.txt: Likewise.
++	* config/abi/post/sparc-solaris2.10/sparcv9/baseline_symbols.txt:
++	Likewise.
++	* config/abi/post/sparc-solaris2.11/baseline_symbols.txt: Likewise.
++	* config/abi/post/sparc-solaris2.11/sparcv9/baseline_symbols.txt:
++	Likewise.
++
 +2019-08-29  Jonathan Wakely  <jwakely@redhat.com>
 +
 +	PR libstdc++/91067
@@ -9194,6 +9544,210 @@ index dcc61af7410..e488ada5c72 100644
  OBJECT:0:GLIBCXX_3.4.3
  OBJECT:0:GLIBCXX_3.4.4
  OBJECT:0:GLIBCXX_3.4.5
+diff --git a/libstdc++-v3/config/abi/post/i386-solaris2.10/amd64/baseline_symbols.txt b/libstdc++-v3/config/abi/post/i386-solaris2.10/amd64/baseline_symbols.txt
+index 7edc3395008..dc1a34fa9f5 100644
+--- a/libstdc++-v3/config/abi/post/i386-solaris2.10/amd64/baseline_symbols.txt
++++ b/libstdc++-v3/config/abi/post/i386-solaris2.10/amd64/baseline_symbols.txt
+@@ -1804,6 +1804,7 @@ FUNC:_ZNSt10filesystem28recursive_directory_iteratorC2ERKNS_4pathENS_17directory
+ FUNC:_ZNSt10filesystem28recursive_directory_iteratorD1Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem28recursive_directory_iteratorD2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem28recursive_directory_iteratoraSEOS0_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem28recursive_directory_iteratoraSERKS0_@@GLIBCXX_3.4.27
+ FUNC:_ZNSt10filesystem28recursive_directory_iteratorppEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem4copyERKNS_4pathES2_NS_12copy_optionsE@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem4copyERKNS_4pathES2_NS_12copy_optionsERSt10error_code@@GLIBCXX_3.4.26
+@@ -1860,6 +1861,7 @@ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorC2ERKNS0_4pathENS_17
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorD1Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorD2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratoraSEOS1_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratoraSERKS1_@@GLIBCXX_3.4.27
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorppEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx114path14_M_split_cmptsEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx114path14_S_convert_locEPKcS3_RKSt6locale@@GLIBCXX_3.4.26
+@@ -2031,13 +2033,21 @@ FUNC:_ZNSt12__basic_fileIcED1Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt12__basic_fileIcED2Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1EOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2EOS5_@@GLIBCXX_3.4.28
++FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC1EOS4_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC2EOS4_@@GLIBCXX_3.4.28
++FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEaSEOS4_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1EOS6_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2EOS6_@@GLIBCXX_3.4.28
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC1EOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC2EOS5_@@GLIBCXX_3.4.28
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEaSEOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12bad_weak_ptrD0Ev@@GLIBCXX_3.4.15
+ FUNC:_ZNSt12bad_weak_ptrD1Ev@@GLIBCXX_3.4.15
+@@ -4361,6 +4371,8 @@ OBJECT:0:GLIBCXX_3.4.23
+ OBJECT:0:GLIBCXX_3.4.24
+ OBJECT:0:GLIBCXX_3.4.25
+ OBJECT:0:GLIBCXX_3.4.26
++OBJECT:0:GLIBCXX_3.4.27
++OBJECT:0:GLIBCXX_3.4.28
+ OBJECT:0:GLIBCXX_3.4.3
+ OBJECT:0:GLIBCXX_3.4.4
+ OBJECT:0:GLIBCXX_3.4.5
+diff --git a/libstdc++-v3/config/abi/post/i386-solaris2.10/baseline_symbols.txt b/libstdc++-v3/config/abi/post/i386-solaris2.10/baseline_symbols.txt
+index 963b2d4abf1..c097965d4b2 100644
+--- a/libstdc++-v3/config/abi/post/i386-solaris2.10/baseline_symbols.txt
++++ b/libstdc++-v3/config/abi/post/i386-solaris2.10/baseline_symbols.txt
+@@ -1804,6 +1804,7 @@ FUNC:_ZNSt10filesystem28recursive_directory_iteratorC2ERKNS_4pathENS_17directory
+ FUNC:_ZNSt10filesystem28recursive_directory_iteratorD1Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem28recursive_directory_iteratorD2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem28recursive_directory_iteratoraSEOS0_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem28recursive_directory_iteratoraSERKS0_@@GLIBCXX_3.4.27
+ FUNC:_ZNSt10filesystem28recursive_directory_iteratorppEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem4copyERKNS_4pathES2_NS_12copy_optionsE@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem4copyERKNS_4pathES2_NS_12copy_optionsERSt10error_code@@GLIBCXX_3.4.26
+@@ -1860,6 +1861,7 @@ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorC2ERKNS0_4pathENS_17
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorD1Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorD2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratoraSEOS1_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratoraSERKS1_@@GLIBCXX_3.4.27
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorppEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx114path14_M_split_cmptsEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx114path14_S_convert_locEPKcS3_RKSt6locale@@GLIBCXX_3.4.26
+@@ -2031,13 +2033,21 @@ FUNC:_ZNSt12__basic_fileIcED1Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt12__basic_fileIcED2Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1EOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2EOS5_@@GLIBCXX_3.4.28
++FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC1EOS4_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC2EOS4_@@GLIBCXX_3.4.28
++FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEaSEOS4_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1EOS6_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2EOS6_@@GLIBCXX_3.4.28
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC1EOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC2EOS5_@@GLIBCXX_3.4.28
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEaSEOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12bad_weak_ptrD0Ev@@GLIBCXX_3.4.15
+ FUNC:_ZNSt12bad_weak_ptrD1Ev@@GLIBCXX_3.4.15
+@@ -4361,6 +4371,8 @@ OBJECT:0:GLIBCXX_3.4.23
+ OBJECT:0:GLIBCXX_3.4.24
+ OBJECT:0:GLIBCXX_3.4.25
+ OBJECT:0:GLIBCXX_3.4.26
++OBJECT:0:GLIBCXX_3.4.27
++OBJECT:0:GLIBCXX_3.4.28
+ OBJECT:0:GLIBCXX_3.4.3
+ OBJECT:0:GLIBCXX_3.4.4
+ OBJECT:0:GLIBCXX_3.4.5
+diff --git a/libstdc++-v3/config/abi/post/i386-solaris2.11/amd64/baseline_symbols.txt b/libstdc++-v3/config/abi/post/i386-solaris2.11/amd64/baseline_symbols.txt
+index d865017cba6..2a8f88bac7b 100644
+--- a/libstdc++-v3/config/abi/post/i386-solaris2.11/amd64/baseline_symbols.txt
++++ b/libstdc++-v3/config/abi/post/i386-solaris2.11/amd64/baseline_symbols.txt
+@@ -1804,6 +1804,7 @@ FUNC:_ZNSt10filesystem28recursive_directory_iteratorC2ERKNS_4pathENS_17directory
+ FUNC:_ZNSt10filesystem28recursive_directory_iteratorD1Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem28recursive_directory_iteratorD2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem28recursive_directory_iteratoraSEOS0_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem28recursive_directory_iteratoraSERKS0_@@GLIBCXX_3.4.27
+ FUNC:_ZNSt10filesystem28recursive_directory_iteratorppEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem4copyERKNS_4pathES2_NS_12copy_optionsE@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem4copyERKNS_4pathES2_NS_12copy_optionsERSt10error_code@@GLIBCXX_3.4.26
+@@ -1860,6 +1861,7 @@ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorC2ERKNS0_4pathENS_17
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorD1Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorD2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratoraSEOS1_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratoraSERKS1_@@GLIBCXX_3.4.27
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorppEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx114path14_M_split_cmptsEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx114path14_S_convert_locEPKcS3_RKSt6locale@@GLIBCXX_3.4.26
+@@ -2031,13 +2033,21 @@ FUNC:_ZNSt12__basic_fileIcED1Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt12__basic_fileIcED2Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1EOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2EOS5_@@GLIBCXX_3.4.28
++FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC1EOS4_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC2EOS4_@@GLIBCXX_3.4.28
++FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEaSEOS4_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1EOS6_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2EOS6_@@GLIBCXX_3.4.28
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC1EOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC2EOS5_@@GLIBCXX_3.4.28
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEaSEOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12bad_weak_ptrD0Ev@@GLIBCXX_3.4.15
+ FUNC:_ZNSt12bad_weak_ptrD1Ev@@GLIBCXX_3.4.15
+@@ -4363,6 +4373,8 @@ OBJECT:0:GLIBCXX_3.4.23
+ OBJECT:0:GLIBCXX_3.4.24
+ OBJECT:0:GLIBCXX_3.4.25
+ OBJECT:0:GLIBCXX_3.4.26
++OBJECT:0:GLIBCXX_3.4.27
++OBJECT:0:GLIBCXX_3.4.28
+ OBJECT:0:GLIBCXX_3.4.3
+ OBJECT:0:GLIBCXX_3.4.4
+ OBJECT:0:GLIBCXX_3.4.5
+diff --git a/libstdc++-v3/config/abi/post/i386-solaris2.11/baseline_symbols.txt b/libstdc++-v3/config/abi/post/i386-solaris2.11/baseline_symbols.txt
+index d6080893ea2..85796b3689b 100644
+--- a/libstdc++-v3/config/abi/post/i386-solaris2.11/baseline_symbols.txt
++++ b/libstdc++-v3/config/abi/post/i386-solaris2.11/baseline_symbols.txt
+@@ -1804,6 +1804,7 @@ FUNC:_ZNSt10filesystem28recursive_directory_iteratorC2ERKNS_4pathENS_17directory
+ FUNC:_ZNSt10filesystem28recursive_directory_iteratorD1Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem28recursive_directory_iteratorD2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem28recursive_directory_iteratoraSEOS0_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem28recursive_directory_iteratoraSERKS0_@@GLIBCXX_3.4.27
+ FUNC:_ZNSt10filesystem28recursive_directory_iteratorppEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem4copyERKNS_4pathES2_NS_12copy_optionsE@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem4copyERKNS_4pathES2_NS_12copy_optionsERSt10error_code@@GLIBCXX_3.4.26
+@@ -1860,6 +1861,7 @@ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorC2ERKNS0_4pathENS_17
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorD1Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorD2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratoraSEOS1_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratoraSERKS1_@@GLIBCXX_3.4.27
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorppEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx114path14_M_split_cmptsEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx114path14_S_convert_locEPKcS3_RKSt6locale@@GLIBCXX_3.4.26
+@@ -2031,13 +2033,21 @@ FUNC:_ZNSt12__basic_fileIcED1Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt12__basic_fileIcED2Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1EOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2EOS5_@@GLIBCXX_3.4.28
++FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC1EOS4_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC2EOS4_@@GLIBCXX_3.4.28
++FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEaSEOS4_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1EOS6_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2EOS6_@@GLIBCXX_3.4.28
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC1EOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC2EOS5_@@GLIBCXX_3.4.28
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEaSEOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12bad_weak_ptrD0Ev@@GLIBCXX_3.4.15
+ FUNC:_ZNSt12bad_weak_ptrD1Ev@@GLIBCXX_3.4.15
+@@ -4363,6 +4373,8 @@ OBJECT:0:GLIBCXX_3.4.23
+ OBJECT:0:GLIBCXX_3.4.24
+ OBJECT:0:GLIBCXX_3.4.25
+ OBJECT:0:GLIBCXX_3.4.26
++OBJECT:0:GLIBCXX_3.4.27
++OBJECT:0:GLIBCXX_3.4.28
+ OBJECT:0:GLIBCXX_3.4.3
+ OBJECT:0:GLIBCXX_3.4.4
+ OBJECT:0:GLIBCXX_3.4.5
 diff --git a/libstdc++-v3/config/abi/post/i486-linux-gnu/baseline_symbols.txt b/libstdc++-v3/config/abi/post/i486-linux-gnu/baseline_symbols.txt
 index dcc61af7410..e488ada5c72 100644
 --- a/libstdc++-v3/config/abi/post/i486-linux-gnu/baseline_symbols.txt
@@ -9424,6 +9978,210 @@ index c58d963cc65..65ee06d5c2a 100644
  OBJECT:0:GLIBCXX_3.4.3
  OBJECT:0:GLIBCXX_3.4.4
  OBJECT:0:GLIBCXX_3.4.5
+diff --git a/libstdc++-v3/config/abi/post/sparc-solaris2.10/baseline_symbols.txt b/libstdc++-v3/config/abi/post/sparc-solaris2.10/baseline_symbols.txt
+index 0a49a0b0e91..b4b39e3fbae 100644
+--- a/libstdc++-v3/config/abi/post/sparc-solaris2.10/baseline_symbols.txt
++++ b/libstdc++-v3/config/abi/post/sparc-solaris2.10/baseline_symbols.txt
+@@ -1804,6 +1804,7 @@ FUNC:_ZNSt10filesystem28recursive_directory_iteratorC2ERKNS_4pathENS_17directory
+ FUNC:_ZNSt10filesystem28recursive_directory_iteratorD1Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem28recursive_directory_iteratorD2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem28recursive_directory_iteratoraSEOS0_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem28recursive_directory_iteratoraSERKS0_@@GLIBCXX_3.4.27
+ FUNC:_ZNSt10filesystem28recursive_directory_iteratorppEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem4copyERKNS_4pathES2_NS_12copy_optionsE@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem4copyERKNS_4pathES2_NS_12copy_optionsERSt10error_code@@GLIBCXX_3.4.26
+@@ -1860,6 +1861,7 @@ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorC2ERKNS0_4pathENS_17
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorD1Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorD2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratoraSEOS1_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratoraSERKS1_@@GLIBCXX_3.4.27
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorppEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx114path14_M_split_cmptsEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx114path14_S_convert_locEPKcS3_RKSt6locale@@GLIBCXX_3.4.26
+@@ -2031,13 +2033,21 @@ FUNC:_ZNSt12__basic_fileIcED1Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt12__basic_fileIcED2Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1EOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2EOS5_@@GLIBCXX_3.4.28
++FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC1EOS4_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC2EOS4_@@GLIBCXX_3.4.28
++FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEaSEOS4_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1EOS6_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2EOS6_@@GLIBCXX_3.4.28
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC1EOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC2EOS5_@@GLIBCXX_3.4.28
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEaSEOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12bad_weak_ptrD0Ev@@GLIBCXX_3.4.15
+ FUNC:_ZNSt12bad_weak_ptrD1Ev@@GLIBCXX_3.4.15
+@@ -4360,6 +4370,8 @@ OBJECT:0:GLIBCXX_3.4.23
+ OBJECT:0:GLIBCXX_3.4.24
+ OBJECT:0:GLIBCXX_3.4.25
+ OBJECT:0:GLIBCXX_3.4.26
++OBJECT:0:GLIBCXX_3.4.27
++OBJECT:0:GLIBCXX_3.4.28
+ OBJECT:0:GLIBCXX_3.4.3
+ OBJECT:0:GLIBCXX_3.4.4
+ OBJECT:0:GLIBCXX_3.4.5
+diff --git a/libstdc++-v3/config/abi/post/sparc-solaris2.10/sparcv9/baseline_symbols.txt b/libstdc++-v3/config/abi/post/sparc-solaris2.10/sparcv9/baseline_symbols.txt
+index 6df91465a9d..769d83c53bb 100644
+--- a/libstdc++-v3/config/abi/post/sparc-solaris2.10/sparcv9/baseline_symbols.txt
++++ b/libstdc++-v3/config/abi/post/sparc-solaris2.10/sparcv9/baseline_symbols.txt
+@@ -1804,6 +1804,7 @@ FUNC:_ZNSt10filesystem28recursive_directory_iteratorC2ERKNS_4pathENS_17directory
+ FUNC:_ZNSt10filesystem28recursive_directory_iteratorD1Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem28recursive_directory_iteratorD2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem28recursive_directory_iteratoraSEOS0_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem28recursive_directory_iteratoraSERKS0_@@GLIBCXX_3.4.27
+ FUNC:_ZNSt10filesystem28recursive_directory_iteratorppEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem4copyERKNS_4pathES2_NS_12copy_optionsE@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem4copyERKNS_4pathES2_NS_12copy_optionsERSt10error_code@@GLIBCXX_3.4.26
+@@ -1860,6 +1861,7 @@ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorC2ERKNS0_4pathENS_17
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorD1Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorD2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratoraSEOS1_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratoraSERKS1_@@GLIBCXX_3.4.27
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorppEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx114path14_M_split_cmptsEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx114path14_S_convert_locEPKcS3_RKSt6locale@@GLIBCXX_3.4.26
+@@ -2031,13 +2033,21 @@ FUNC:_ZNSt12__basic_fileIcED1Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt12__basic_fileIcED2Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1EOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2EOS5_@@GLIBCXX_3.4.28
++FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC1EOS4_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC2EOS4_@@GLIBCXX_3.4.28
++FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEaSEOS4_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1EOS6_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2EOS6_@@GLIBCXX_3.4.28
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC1EOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC2EOS5_@@GLIBCXX_3.4.28
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEaSEOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12bad_weak_ptrD0Ev@@GLIBCXX_3.4.15
+ FUNC:_ZNSt12bad_weak_ptrD1Ev@@GLIBCXX_3.4.15
+@@ -4360,6 +4370,8 @@ OBJECT:0:GLIBCXX_3.4.23
+ OBJECT:0:GLIBCXX_3.4.24
+ OBJECT:0:GLIBCXX_3.4.25
+ OBJECT:0:GLIBCXX_3.4.26
++OBJECT:0:GLIBCXX_3.4.27
++OBJECT:0:GLIBCXX_3.4.28
+ OBJECT:0:GLIBCXX_3.4.3
+ OBJECT:0:GLIBCXX_3.4.4
+ OBJECT:0:GLIBCXX_3.4.5
+diff --git a/libstdc++-v3/config/abi/post/sparc-solaris2.11/baseline_symbols.txt b/libstdc++-v3/config/abi/post/sparc-solaris2.11/baseline_symbols.txt
+index da16a61f472..ceb8f02d402 100644
+--- a/libstdc++-v3/config/abi/post/sparc-solaris2.11/baseline_symbols.txt
++++ b/libstdc++-v3/config/abi/post/sparc-solaris2.11/baseline_symbols.txt
+@@ -1804,6 +1804,7 @@ FUNC:_ZNSt10filesystem28recursive_directory_iteratorC2ERKNS_4pathENS_17directory
+ FUNC:_ZNSt10filesystem28recursive_directory_iteratorD1Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem28recursive_directory_iteratorD2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem28recursive_directory_iteratoraSEOS0_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem28recursive_directory_iteratoraSERKS0_@@GLIBCXX_3.4.27
+ FUNC:_ZNSt10filesystem28recursive_directory_iteratorppEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem4copyERKNS_4pathES2_NS_12copy_optionsE@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem4copyERKNS_4pathES2_NS_12copy_optionsERSt10error_code@@GLIBCXX_3.4.26
+@@ -1860,6 +1861,7 @@ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorC2ERKNS0_4pathENS_17
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorD1Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorD2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratoraSEOS1_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratoraSERKS1_@@GLIBCXX_3.4.27
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorppEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx114path14_M_split_cmptsEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx114path14_S_convert_locEPKcS3_RKSt6locale@@GLIBCXX_3.4.26
+@@ -2031,13 +2033,21 @@ FUNC:_ZNSt12__basic_fileIcED1Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt12__basic_fileIcED2Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1EOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2EOS5_@@GLIBCXX_3.4.28
++FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC1EOS4_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC2EOS4_@@GLIBCXX_3.4.28
++FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEaSEOS4_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1EOS6_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2EOS6_@@GLIBCXX_3.4.28
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC1EOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC2EOS5_@@GLIBCXX_3.4.28
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEaSEOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12bad_weak_ptrD0Ev@@GLIBCXX_3.4.15
+ FUNC:_ZNSt12bad_weak_ptrD1Ev@@GLIBCXX_3.4.15
+@@ -4362,6 +4372,8 @@ OBJECT:0:GLIBCXX_3.4.23
+ OBJECT:0:GLIBCXX_3.4.24
+ OBJECT:0:GLIBCXX_3.4.25
+ OBJECT:0:GLIBCXX_3.4.26
++OBJECT:0:GLIBCXX_3.4.27
++OBJECT:0:GLIBCXX_3.4.28
+ OBJECT:0:GLIBCXX_3.4.3
+ OBJECT:0:GLIBCXX_3.4.4
+ OBJECT:0:GLIBCXX_3.4.5
+diff --git a/libstdc++-v3/config/abi/post/sparc-solaris2.11/sparcv9/baseline_symbols.txt b/libstdc++-v3/config/abi/post/sparc-solaris2.11/sparcv9/baseline_symbols.txt
+index 1dacb5ae9aa..b8a89bb1ef4 100644
+--- a/libstdc++-v3/config/abi/post/sparc-solaris2.11/sparcv9/baseline_symbols.txt
++++ b/libstdc++-v3/config/abi/post/sparc-solaris2.11/sparcv9/baseline_symbols.txt
+@@ -1804,6 +1804,7 @@ FUNC:_ZNSt10filesystem28recursive_directory_iteratorC2ERKNS_4pathENS_17directory
+ FUNC:_ZNSt10filesystem28recursive_directory_iteratorD1Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem28recursive_directory_iteratorD2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem28recursive_directory_iteratoraSEOS0_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem28recursive_directory_iteratoraSERKS0_@@GLIBCXX_3.4.27
+ FUNC:_ZNSt10filesystem28recursive_directory_iteratorppEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem4copyERKNS_4pathES2_NS_12copy_optionsE@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem4copyERKNS_4pathES2_NS_12copy_optionsERSt10error_code@@GLIBCXX_3.4.26
+@@ -1860,6 +1861,7 @@ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorC2ERKNS0_4pathENS_17
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorD1Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorD2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratoraSEOS1_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratoraSERKS1_@@GLIBCXX_3.4.27
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorppEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx114path14_M_split_cmptsEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx114path14_S_convert_locEPKcS3_RKSt6locale@@GLIBCXX_3.4.26
+@@ -2031,13 +2033,21 @@ FUNC:_ZNSt12__basic_fileIcED1Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt12__basic_fileIcED2Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1EOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2EOS5_@@GLIBCXX_3.4.28
++FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC1EOS4_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC2EOS4_@@GLIBCXX_3.4.28
++FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEaSEOS4_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1EOS6_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2EOS6_@@GLIBCXX_3.4.28
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC1EOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC2EOS5_@@GLIBCXX_3.4.28
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEaSEOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12bad_weak_ptrD0Ev@@GLIBCXX_3.4.15
+ FUNC:_ZNSt12bad_weak_ptrD1Ev@@GLIBCXX_3.4.15
+@@ -4362,6 +4372,8 @@ OBJECT:0:GLIBCXX_3.4.23
+ OBJECT:0:GLIBCXX_3.4.24
+ OBJECT:0:GLIBCXX_3.4.25
+ OBJECT:0:GLIBCXX_3.4.26
++OBJECT:0:GLIBCXX_3.4.27
++OBJECT:0:GLIBCXX_3.4.28
+ OBJECT:0:GLIBCXX_3.4.3
+ OBJECT:0:GLIBCXX_3.4.4
+ OBJECT:0:GLIBCXX_3.4.5
 diff --git a/libstdc++-v3/config/abi/post/x86_64-linux-gnu/32/baseline_symbols.txt b/libstdc++-v3/config/abi/post/x86_64-linux-gnu/32/baseline_symbols.txt
 index dcc61af7410..e488ada5c72 100644
 --- a/libstdc++-v3/config/abi/post/x86_64-linux-gnu/32/baseline_symbols.txt
@@ -9566,6 +10324,34 @@ index 5acf79cba54..1c8b39e6f3b 100755
  
  # Everything parsed; figure out what files and settings to use.
  case $enable_symvers in
+diff --git a/libstdc++-v3/doc/html/manual/abi.html b/libstdc++-v3/doc/html/manual/abi.html
+index 2d6d8f6c984..96383c33112 100644
+--- a/libstdc++-v3/doc/html/manual/abi.html
++++ b/libstdc++-v3/doc/html/manual/abi.html
+@@ -110,7 +110,7 @@ compatible.
+ 	has the same filename and <code class="constant">DT_SONAME</code> as the
+ 	preceding release.
+       </p><p>It is versioned as follows:
+-    </p><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>GCC 3.0.0: libstdc++.so.3.0.0</p></li><li class="listitem"><p>GCC 3.0.1: libstdc++.so.3.0.1</p></li><li class="listitem"><p>GCC 3.0.2: libstdc++.so.3.0.2</p></li><li class="listitem"><p>GCC 3.0.3: libstdc++.so.3.0.2 (See Note 1)</p></li><li class="listitem"><p>GCC 3.0.4: libstdc++.so.3.0.4</p></li><li class="listitem"><p>GCC 3.1.0: libstdc++.so.4.0.0 <span class="emphasis"><em>(Incompatible with previous)</em></span></p></li><li class="listitem"><p>GCC 3.1.1: libstdc++.so.4.0.1</p></li><li class="listitem"><p>GCC 3.2.0: libstdc++.so.5.0.0 <span class="emphasis"><em>(Incompatible with previous)</em></span></p></li><li class="listitem"><p>GCC 3.2.1: libstdc++.so.5.0.1</p></li><li class="listitem"><p>GCC 3.2.2: libstdc++.so.5.0.2</p></li><li class="listitem"><p>GCC 3.2.3: libstdc++.so.5.0.3 (See Note 2)</p></li><li class="listitem"><p>GCC 3.3.0: libstdc++.so.5.0.4</p></li><li class="listitem"><p>GCC 3.3.1: libstdc++.so.5.0.5</p></li><li class="listitem"><p>GCC 3.4.0: libstdc++.so.6.0.0 <span class="emphasis"><em>(Incompatible with previous)</em></span></p></li><li class="listitem"><p>GCC 3.4.1: libstdc++.so.6.0.1</p></li><li class="listitem"><p>GCC 3.4.2: libstdc++.so.6.0.2</p></li><li class="listitem"><p>GCC 3.4.3: libstdc++.so.6.0.3</p></li><li class="listitem"><p>GCC 4.0.0: libstdc++.so.6.0.4</p></li><li class="listitem"><p>GCC 4.0.1: libstdc++.so.6.0.5</p></li><li class="listitem"><p>GCC 4.0.2: libstdc++.so.6.0.6</p></li><li class="listitem"><p>GCC 4.0.3: libstdc++.so.6.0.7</p></li><li class="listitem"><p>GCC 4.1.0: libstdc++.so.6.0.7</p></li><li class="listitem"><p>GCC 4.1.1: libstdc++.so.6.0.8</p></li><li class="listitem"><p>GCC 4.2.0: libstdc++.so.6.0.9</p></li><li class="listitem"><p>GCC 4.2.1: libstdc++.so.6.0.9 (See Note 3)</p></li><li class="listitem"><p>GCC 4.2.2: libstdc++.so.6.0.9</p></li><li class="listitem"><p>GCC 4.3.0: libstdc++.so.6.0.10</p></li><li class="listitem"><p>GCC 4.4.0: libstdc++.so.6.0.11</p></li><li class="listitem"><p>GCC 4.4.1: libstdc++.so.6.0.12</p></li><li class="listitem"><p>GCC 4.4.2: libstdc++.so.6.0.13</p></li><li class="listitem"><p>GCC 4.5.0: libstdc++.so.6.0.14</p></li><li class="listitem"><p>GCC 4.6.0: libstdc++.so.6.0.15</p></li><li class="listitem"><p>GCC 4.6.1: libstdc++.so.6.0.16</p></li><li class="listitem"><p>GCC 4.7.0: libstdc++.so.6.0.17</p></li><li class="listitem"><p>GCC 4.8.0: libstdc++.so.6.0.18</p></li><li class="listitem"><p>GCC 4.8.3: libstdc++.so.6.0.19</p></li><li class="listitem"><p>GCC 4.9.0: libstdc++.so.6.0.20</p></li><li class="listitem"><p>GCC 5.1.0: libstdc++.so.6.0.21</p></li><li class="listitem"><p>GCC 6.1.0: libstdc++.so.6.0.22</p></li><li class="listitem"><p>GCC 7.1.0: libstdc++.so.6.0.23</p></li><li class="listitem"><p>GCC 7.2.0: libstdc++.so.6.0.24</p></li><li class="listitem"><p>GCC 8.0.0: libstdc++.so.6.0.25</p></li><li class="listitem"><p>GCC 9.0.0: libstdc++.so.6.0.26</p></li></ul></div><p>
++    </p><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>GCC 3.0.0: libstdc++.so.3.0.0</p></li><li class="listitem"><p>GCC 3.0.1: libstdc++.so.3.0.1</p></li><li class="listitem"><p>GCC 3.0.2: libstdc++.so.3.0.2</p></li><li class="listitem"><p>GCC 3.0.3: libstdc++.so.3.0.2 (See Note 1)</p></li><li class="listitem"><p>GCC 3.0.4: libstdc++.so.3.0.4</p></li><li class="listitem"><p>GCC 3.1.0: libstdc++.so.4.0.0 <span class="emphasis"><em>(Incompatible with previous)</em></span></p></li><li class="listitem"><p>GCC 3.1.1: libstdc++.so.4.0.1</p></li><li class="listitem"><p>GCC 3.2.0: libstdc++.so.5.0.0 <span class="emphasis"><em>(Incompatible with previous)</em></span></p></li><li class="listitem"><p>GCC 3.2.1: libstdc++.so.5.0.1</p></li><li class="listitem"><p>GCC 3.2.2: libstdc++.so.5.0.2</p></li><li class="listitem"><p>GCC 3.2.3: libstdc++.so.5.0.3 (See Note 2)</p></li><li class="listitem"><p>GCC 3.3.0: libstdc++.so.5.0.4</p></li><li class="listitem"><p>GCC 3.3.1: libstdc++.so.5.0.5</p></li><li class="listitem"><p>GCC 3.4.0: libstdc++.so.6.0.0 <span class="emphasis"><em>(Incompatible with previous)</em></span></p></li><li class="listitem"><p>GCC 3.4.1: libstdc++.so.6.0.1</p></li><li class="listitem"><p>GCC 3.4.2: libstdc++.so.6.0.2</p></li><li class="listitem"><p>GCC 3.4.3: libstdc++.so.6.0.3</p></li><li class="listitem"><p>GCC 4.0.0: libstdc++.so.6.0.4</p></li><li class="listitem"><p>GCC 4.0.1: libstdc++.so.6.0.5</p></li><li class="listitem"><p>GCC 4.0.2: libstdc++.so.6.0.6</p></li><li class="listitem"><p>GCC 4.0.3: libstdc++.so.6.0.7</p></li><li class="listitem"><p>GCC 4.1.0: libstdc++.so.6.0.7</p></li><li class="listitem"><p>GCC 4.1.1: libstdc++.so.6.0.8</p></li><li class="listitem"><p>GCC 4.2.0: libstdc++.so.6.0.9</p></li><li class="listitem"><p>GCC 4.2.1: libstdc++.so.6.0.9 (See Note 3)</p></li><li class="listitem"><p>GCC 4.2.2: libstdc++.so.6.0.9</p></li><li class="listitem"><p>GCC 4.3.0: libstdc++.so.6.0.10</p></li><li class="listitem"><p>GCC 4.4.0: libstdc++.so.6.0.11</p></li><li class="listitem"><p>GCC 4.4.1: libstdc++.so.6.0.12</p></li><li class="listitem"><p>GCC 4.4.2: libstdc++.so.6.0.13</p></li><li class="listitem"><p>GCC 4.5.0: libstdc++.so.6.0.14</p></li><li class="listitem"><p>GCC 4.6.0: libstdc++.so.6.0.15</p></li><li class="listitem"><p>GCC 4.6.1: libstdc++.so.6.0.16</p></li><li class="listitem"><p>GCC 4.7.0: libstdc++.so.6.0.17</p></li><li class="listitem"><p>GCC 4.8.0: libstdc++.so.6.0.18</p></li><li class="listitem"><p>GCC 4.8.3: libstdc++.so.6.0.19</p></li><li class="listitem"><p>GCC 4.9.0: libstdc++.so.6.0.20</p></li><li class="listitem"><p>GCC 5.1.0: libstdc++.so.6.0.21</p></li><li class="listitem"><p>GCC 6.1.0: libstdc++.so.6.0.22</p></li><li class="listitem"><p>GCC 7.1.0: libstdc++.so.6.0.23</p></li><li class="listitem"><p>GCC 7.2.0: libstdc++.so.6.0.24</p></li><li class="listitem"><p>GCC 8.0.0: libstdc++.so.6.0.25</p></li><li class="listitem"><p>GCC 9.1.0: libstdc++.so.6.0.26</p></li><li class="listitem"><p>GCC 9.2.0: libstdc++.so.6.0.27</p></li><li class="listitem"><p>GCC 9.3.0: libstdc++.so.6.0.28</p></li></ul></div><p>
+       Note 1: Error should be libstdc++.so.3.0.3.
+     </p><p>
+       Note 2: Not strictly required.
+diff --git a/libstdc++-v3/doc/xml/manual/abi.xml b/libstdc++-v3/doc/xml/manual/abi.xml
+index d1e6b989a71..969edd7c834 100644
+--- a/libstdc++-v3/doc/xml/manual/abi.xml
++++ b/libstdc++-v3/doc/xml/manual/abi.xml
+@@ -268,7 +268,9 @@ compatible.
+     <listitem><para>GCC 7.1.0: libstdc++.so.6.0.23</para></listitem>
+     <listitem><para>GCC 7.2.0: libstdc++.so.6.0.24</para></listitem>
+     <listitem><para>GCC 8.0.0: libstdc++.so.6.0.25</para></listitem>
+-    <listitem><para>GCC 9.0.0: libstdc++.so.6.0.26</para></listitem>
++    <listitem><para>GCC 9.1.0: libstdc++.so.6.0.26</para></listitem>
++    <listitem><para>GCC 9.2.0: libstdc++.so.6.0.27</para></listitem>
++    <listitem><para>GCC 9.3.0: libstdc++.so.6.0.28</para></listitem>
+     </itemizedlist>
+     <para>
+       Note 1: Error should be libstdc++.so.3.0.3.
 diff --git a/libstdc++-v3/include/bits/algorithmfwd.h b/libstdc++-v3/include/bits/algorithmfwd.h
 index 40e051aa9e3..5e47fffe86e 100644
 --- a/libstdc++-v3/include/bits/algorithmfwd.h
