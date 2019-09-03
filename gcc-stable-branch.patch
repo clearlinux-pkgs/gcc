@@ -6,7 +6,8 @@ edlinger (2):
       2019-08-16  Bernd Edlinger  <bernd.edlinger@hotmail.de>
       2019-08-16  Bernd Edlinger  <bernd.edlinger@hotmail.de>
 
-gccadmin (21):
+gccadmin (22):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -55,7 +56,7 @@ jsm28 (4):
       * es.po: Update.
       * es.po: Update.
 
-kargl (15):
+kargl (16):
       2019-08-01  Steven G. Kargl  <kargl@gcc.gnu.org>
       2019-08-12  Steven G. Kargl  <kargl@gcc.gnu.org>
       2019-08-13  Steven G. Kargl  <kargl@gcc.gnu.org>
@@ -71,6 +72,7 @@ kargl (15):
       2019-08-30  Steven G. Kargl  <kargl@gcc.gnu.org>
       2019-08-30  Steven G. Kargl  <kargl@gcc.gnu.org>
       2019-08-30  Steven G. Kargl  <kargl@gcc.gnu.org>
+      2019-09-02  Steven G. Kargl  <kargl@gc.gnu.org>
 
 law (1):
       * config/mips/mips.md (mips_get_fcsr, *mips_get_fcsr): Use SI         machine mode for unspec_volatile operand.
@@ -2362,10 +2364,16 @@ index 6f6f768f371..4becdcf1cbb 100644
        else
  	/* Every other call, including pure functions, may read any memory
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index e3073787ea9..52fbf853142 100644
+index e3073787ea9..06e13e01d04 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,118 @@
+@@ -1,3 +1,124 @@
++2019-09-02  Steven G. Kargl  <kargl@gc.gnu.org>
++
++	PR fortran/91552
++	* array.c (walk_array_constructor): New function.
++	(gfc_match_array_constructor): Use it.
++
 +2019-08-30  Steven G. Kargl  <kargl@gcc.gnu.org>
 +
 +	PR fortran/91587
@@ -2484,6 +2492,62 @@ index e3073787ea9..52fbf853142 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
+diff --git a/gcc/fortran/array.c b/gcc/fortran/array.c
+index 0aee220e68d..bda08c793b2 100644
+--- a/gcc/fortran/array.c
++++ b/gcc/fortran/array.c
+@@ -1124,6 +1124,31 @@ match_array_cons_element (gfc_constructor_base *result)
+ }
+ 
+ 
++/* Convert components of an array constructor to the type in ts.  */
++
++static match
++walk_array_constructor (gfc_typespec *ts, gfc_constructor_base head)
++{
++  gfc_constructor *c;
++  gfc_expr *e;
++  match m;
++
++  for (c = gfc_constructor_first (head); c; c = gfc_constructor_next (c))
++    {
++      e = c->expr;
++      if (e->expr_type == EXPR_ARRAY && e->ts.type == BT_UNKNOWN
++	  && !e->ref && e->value.constructor)
++	{
++	  m = walk_array_constructor (ts, e->value.constructor);
++	  if (m == MATCH_ERROR)
++	    return m;
++	}
++      else if (!gfc_convert_type (e, ts, 1) && e->ts.type != BT_UNKNOWN)
++	return MATCH_ERROR;
++  }
++  return MATCH_YES;
++}
++
+ /* Match an array constructor.  */
+ 
+ match
+@@ -1253,14 +1278,13 @@ done:
+ 	    }
+ 	}
+ 
+-      /* Walk the constructor and ensure type conversion for numeric types.  */
++      /* Walk the constructor, and if possible, do type conversion for
++	 numeric types.  */
+       if (gfc_numeric_ts (&ts))
+ 	{
+-	  c = gfc_constructor_first (head);
+-	  for (; c; c = gfc_constructor_next (c))
+-	    if (!gfc_convert_type (c->expr, &ts, 1)
+-		&& c->expr->ts.type != BT_UNKNOWN)
+-	      return MATCH_ERROR;
++	  m = walk_array_constructor (&ts, head);
++	  if (m == MATCH_ERROR)
++	    return m;
+ 	}
+     }
+   else
 diff --git a/gcc/fortran/check.c b/gcc/fortran/check.c
 index a04f0d66655..265fb1fda53 100644
 --- a/gcc/fortran/check.c
@@ -5242,10 +5306,15 @@ index 29f6cdc4667..33b4be79c0f 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..5ae06aa8a5a 100644
+index bc11ae4ae0b..7069eec2d85 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,195 @@
+@@ -1,3 +1,200 @@
++2019-09-02  Steven G. Kargl  <kargl@gc.gnu.org>
++
++	PR fortran/91552
++	* gfortran.dg/pr91552.f90: New test.
++
 +2019-09-02  Martin Liska  <mliska@suse.cz>
 +
 +	Backport from mainline
@@ -7348,6 +7417,22 @@ index 00000000000..a6d06877e85
 +         print *, x .x. y
 +      end subroutine print_prod
 +end module gfcbug155
+diff --git a/gcc/testsuite/gfortran.dg/pr91552.f90 b/gcc/testsuite/gfortran.dg/pr91552.f90
+new file mode 100644
+index 00000000000..bb959185cf9
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr91552.f90
+@@ -0,0 +1,10 @@
++! { dg-do run }
++! PR fortran/91552
++! Code contributed by Gerhard Steinmetz.
++program p
++   real :: y(3), z(4)
++   y = 2.0 * [real :: 1, [2], 3]
++   z = 2.0 * [real :: 1, [2, [4]], 3]
++   if (any(y /= [2., 4., 6.])) stop 1
++   if (any(z /= [2., 4., 8., 6.])) stop 2
++end
 diff --git a/gcc/testsuite/gfortran.dg/pr91564.f90 b/gcc/testsuite/gfortran.dg/pr91564.f90
 new file mode 100644
 index 00000000000..57783abe1f8
