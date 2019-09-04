@@ -6,7 +6,8 @@ edlinger (2):
       2019-08-16  Bernd Edlinger  <bernd.edlinger@hotmail.de>
       2019-08-16  Bernd Edlinger  <bernd.edlinger@hotmail.de>
 
-gccadmin (22):
+gccadmin (23):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -36,9 +37,10 @@ iains (4):
       [Darwin, fixincludes] Backport fix for PR83531
       [c-family] Backport fix for PCH / PR61250.
 
-jakub (2):
+jakub (3):
       * BASE-VER: Set to 9.2.1.
       * config/abi/post/aarch64-linux-gnu/baseline_symbols.txt: Update. 	* config/abi/post/s390x-linux-gnu/baseline_symbols.txt: Update.
+      PR tree-optimization/91597 	* tree-vrp.c (extract_range_from_binary_expr): Remove unsafe 	BIT_AND_EXPR optimization for pointers, even if both operand 	ranges don't include NULL, the result can be NULL.
 
 jason (4):
       PR c++/90538 - multiple expansions of capture packs
@@ -137,6 +139,9 @@ uros (3):
       * test_summary: Do not escape "=".
       * config/abi/post/alpha-linux-gnu/baseline_symbols.txt: Update.
       PR target/91533 	Backport from mainline 	2019-06-30  Uroš Bizjak  <ubizjak@gmail.com>
+
+wilco (1):
+      [AArch64] Fix PR81800
 
 diff --git a/contrib/ChangeLog b/contrib/ChangeLog
 index 8565be188d9..c9b9e26ee57 100644
@@ -369,10 +374,26 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..569691bbb2c 100644
+index 7f6557d8018..26d9923808f 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,283 @@
+@@ -1,3 +1,299 @@
++2019-09-04  Wilco Dijkstra  <wdijkstr@arm.com>
++
++	Backport from mainline
++	2019-08-13  Wilco Dijkstra  <wdijkstr@arm.com>
++
++	PR target/81800
++	* gcc/config/aarch64/aarch64.md (lrint): Disable lrint pattern if GPF
++	operand is larger than a long int.
++
++2019-09-03  Jakub Jelinek  <jakub@redhat.com>
++
++	PR tree-optimization/91597
++	* tree-vrp.c (extract_range_from_binary_expr): Remove unsafe
++	BIT_AND_EXPR optimization for pointers, even if both operand
++	ranges don't include NULL, the result can be NULL.
++
 +2019-09-02  Martin Liska  <mliska@suse.cz>
 +
 +	Backport from mainline
@@ -656,7 +677,7 @@ index 7f6557d8018..569691bbb2c 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +793,7 @@
+@@ -513,7 +809,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -955,6 +976,19 @@ index 6b25d9cbfae..82e9b1fbfd8 100644
        gcc_assert (code == UNKNOWN);
      }
  
+diff --git a/gcc/config/aarch64/aarch64.md b/gcc/config/aarch64/aarch64.md
+index 5a1894063a1..f08cd0930b3 100644
+--- a/gcc/config/aarch64/aarch64.md
++++ b/gcc/config/aarch64/aarch64.md
+@@ -6304,7 +6304,7 @@
+   [(match_operand:GPI 0 "register_operand")
+    (match_operand:GPF 1 "register_operand")]
+   "TARGET_FLOAT
+-   && ((GET_MODE_SIZE (<GPF:MODE>mode) <= GET_MODE_SIZE (<GPI:MODE>mode))
++   && ((GET_MODE_BITSIZE (<GPF:MODE>mode) <= LONG_TYPE_SIZE)
+    || !flag_trapping_math || flag_fp_int_builtin_inexact)"
+ {
+   rtx cvt = gen_reg_rtx (<GPF:MODE>mode);
 diff --git a/gcc/config/i386/i386-builtin.def b/gcc/config/i386/i386-builtin.def
 index 6580890edc0..5dedeb2d18b 100644
 --- a/gcc/config/i386/i386-builtin.def
@@ -5306,10 +5340,23 @@ index 29f6cdc4667..33b4be79c0f 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..7069eec2d85 100644
+index bc11ae4ae0b..70387abaa8e 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,200 @@
+@@ -1,3 +1,213 @@
++2019-09-04  Wilco Dijkstra  <wdijkstr@arm.com>
++
++	Backport from mainline
++	2019-08-13  Wilco Dijkstra  <wdijkstr@arm.com>
++
++	PR target/81800
++	* gcc.target/aarch64/no-inline-lrint_3.c: New test.
++
++2019-09-03  Jakub Jelinek  <jakub@redhat.com>
++
++	PR tree-optimization/91597
++	* gcc.c-torture/execute/pr91597.c: New test.
++
 +2019-09-02  Steven G. Kargl  <kargl@gc.gnu.org>
 +
 +	PR fortran/91552
@@ -6761,6 +6808,60 @@ index 00000000000..c78715ef2c1
 +    __builtin_abort ();
 +  return 0;
 +}
+diff --git a/gcc/testsuite/gcc.c-torture/execute/pr91597.c b/gcc/testsuite/gcc.c-torture/execute/pr91597.c
+new file mode 100644
+index 00000000000..6a917cb58af
+--- /dev/null
++++ b/gcc/testsuite/gcc.c-torture/execute/pr91597.c
+@@ -0,0 +1,48 @@
++/* PR tree-optimization/91597 */
++
++enum E { A, B, C };
++struct __attribute__((aligned (4))) S { enum E e; };
++
++enum E
++foo (struct S *o)
++{
++  if (((__UINTPTR_TYPE__) (o) & 1) == 0)
++    return o->e;
++  else
++    return A;
++}
++
++int
++bar (struct S *o)
++{
++  return foo (o) == B || foo (o) == C;
++}
++
++static inline void
++baz (struct S *o, int d)
++{
++  if (__builtin_expect (!bar (o), 0))
++    __builtin_abort ();
++  if (d > 2) return;
++  baz (o, d + 1);
++}
++
++void
++qux (struct S *o)
++{
++  switch (o->e)
++    {
++    case A: return;
++    case B: baz (o, 0); break;
++    case C: baz (o, 0); break;
++    }
++}
++
++struct S s = { C };
++
++int
++main ()
++{
++  qux (&s);
++  return 0;
++}
 diff --git a/gcc/testsuite/gcc.dg/gomp/pr90637.c b/gcc/testsuite/gcc.dg/gomp/pr90637.c
 new file mode 100644
 index 00000000000..983e03e7574
@@ -6849,6 +6950,29 @@ index 00000000000..b578de79cf1
 +/* The second statement is redundant.  */
 +/* { dg-final { scan-tree-dump-times "x = " 1 "fre1" } } */
 +/* { dg-final { scan-tree-dump-times " = \[^;\]*x;" 1 "fre1" } } */
+diff --git a/gcc/testsuite/gcc.target/aarch64/no-inline-lrint_3.c b/gcc/testsuite/gcc.target/aarch64/no-inline-lrint_3.c
+new file mode 100644
+index 00000000000..ca772cb999e
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/no-inline-lrint_3.c
+@@ -0,0 +1,17 @@
++/* { dg-do compile } */
++/* { dg-require-effective-target ilp32 } */
++/* { dg-options "-O3 -fno-math-errno -fno-fp-int-builtin-inexact" } */
++
++#define TEST(name, float_type, int_type, fn) void f_##name (float_type x) \
++{									  \
++  volatile int_type   b = __builtin_##fn (x);				  \
++}
++
++TEST (dld, double, long, lrint)
++TEST (flf, float , long, lrintf)
++
++TEST (did, double, int, lrint)
++TEST (fif, float , int, lrintf)
++
++/* { dg-final { scan-assembler-times "fcvtzs\tw\[0-9\]+, \[d,s\]\[0-9\]+" 2 } } */
++/* { dg-final { scan-assembler-times "bl\tlrint" 2 } } */
 diff --git a/gcc/testsuite/gcc.target/mips/get-fcsr-3.c b/gcc/testsuite/gcc.target/mips/get-fcsr-3.c
 new file mode 100644
 index 00000000000..7bb97b6fbcd
@@ -8065,6 +8189,21 @@ index d5fd4690b1d..148b9a7f215 100644
  /* Return the vectorization factor that should be used for costing
     purposes while vectorizing the loop described by LOOP_VINFO.
     Pick a reasonable estimate if the vectorization factor isn't
+diff --git a/gcc/tree-vrp.c b/gcc/tree-vrp.c
+index 795d7184a65..4c9f8853fac 100644
+--- a/gcc/tree-vrp.c
++++ b/gcc/tree-vrp.c
+@@ -1702,9 +1702,7 @@ extract_range_from_binary_expr (value_range_base *vr,
+ 	{
+ 	  /* For pointer types, we are really only interested in asserting
+ 	     whether the expression evaluates to non-NULL.  */
+-	  if (!range_includes_zero_p (&vr0) && !range_includes_zero_p (&vr1))
+-	    vr->set_nonnull (expr_type);
+-	  else if (range_is_null (&vr0) || range_is_null (&vr1))
++	  if (range_is_null (&vr0) || range_is_null (&vr1))
+ 	    vr->set_null (expr_type);
+ 	  else
+ 	    vr->set_varying ();
 diff --git a/gcc/tree.c b/gcc/tree.c
 index 73102c4e75b..337b95a85e2 100644
 --- a/gcc/tree.c
