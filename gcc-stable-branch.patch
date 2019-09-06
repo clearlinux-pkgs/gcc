@@ -1,3 +1,6 @@
+anlauf (1):
+      2019-09-05  Harald Anlauf  <anlauf@gmx.de>
+
 ebotcazou (2):
       PR rtl-optimization/91347 	* dse.c (scan_insn): Call add_wild_read for non-const/memset tail calls 	before reload if HARD_FRAME_POINTER_IS_ARG_POINTER.
       PR target/91472 	* config/sparc/sparc.c (sparc_cannot_force_const_mem): Return true 	during LRA/reload in PIC mode if the PIC register hasn't been used yet. 	(sparc_pic_register_p): Test reload_in_progress for consistency's sake.
@@ -6,7 +9,8 @@ edlinger (2):
       2019-08-16  Bernd Edlinger  <bernd.edlinger@hotmail.de>
       2019-08-16  Bernd Edlinger  <bernd.edlinger@hotmail.de>
 
-gccadmin (24):
+gccadmin (25):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -59,7 +63,7 @@ jsm28 (4):
       * es.po: Update.
       * es.po: Update.
 
-kargl (16):
+kargl (17):
       2019-08-01  Steven G. Kargl  <kargl@gcc.gnu.org>
       2019-08-12  Steven G. Kargl  <kargl@gcc.gnu.org>
       2019-08-13  Steven G. Kargl  <kargl@gcc.gnu.org>
@@ -76,6 +80,7 @@ kargl (16):
       2019-08-30  Steven G. Kargl  <kargl@gcc.gnu.org>
       2019-08-30  Steven G. Kargl  <kargl@gcc.gnu.org>
       2019-09-02  Steven G. Kargl  <kargl@gc.gnu.org>
+      2019-09-05  Steven G. Kargl  <kargl@gcc.gnu.org>
 
 law (1):
       * config/mips/mips.md (mips_get_fcsr, *mips_get_fcsr): Use SI         machine mode for unspec_volatile operand.
@@ -2399,10 +2404,39 @@ index 6f6f768f371..4becdcf1cbb 100644
        else
  	/* Every other call, including pure functions, may read any memory
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index e3073787ea9..06e13e01d04 100644
+index e3073787ea9..5450a3279b8 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,124 @@
+@@ -1,3 +1,153 @@
++2019-09-05  Harald Anlauf  <anlauf@gmx.de>
++
++	Backport from mainline
++	PR fortran/91496
++	* gfortran.h: Extend struct gfc_iterator for loop annotations.
++	* array.c (gfc_copy_iterator): Copy loop annotations by IVDEP,
++	VECTOR, and NOVECTOR pragmas.
++	* decl.c (gfc_match_gcc_ivdep, gfc_match_gcc_vector)
++	(gfc_match_gcc_novector): New matcher functions handling IVDEP,
++	VECTOR, and NOVECTOR pragmas.
++	* match.h: Declare prototypes of matcher functions handling IVDEP,
++	VECTOR, and NOVECTOR pragmas.
++	* parse.c (decode_gcc_attribute, parse_do_block)
++	(parse_executable): Decode IVDEP, VECTOR, and NOVECTOR pragmas;
++	emit warning for unrecognized pragmas instead of error.
++	* trans-stmt.c (gfc_trans_simple_do, gfc_trans_do): Add code to
++	emit annotations for IVDEP, VECTOR, and NOVECTOR pragmas.
++	* gfortran.texi: Document IVDEP, VECTOR, and NOVECTOR pragmas.
++
++	PR fortran/91496
++	* parse.c (parse_executable): Improve error messages for
++	improperly placed pragmas not preceeding a loop.
++
++2019-09-05  Steven G. Kargl  <kargl@gcc.gnu.org>
++
++	PR fortran/91660
++	* decl.c (gfc_match_decl_type_spec): Improve and restore error
++	message for malformed types-spec.
++
 +2019-09-02  Steven G. Kargl  <kargl@gc.gnu.org>
 +
 +	PR fortran/91552
@@ -2528,7 +2562,7 @@ index e3073787ea9..06e13e01d04 100644
  
  	* GCC 9.2.0 released.
 diff --git a/gcc/fortran/array.c b/gcc/fortran/array.c
-index 0aee220e68d..bda08c793b2 100644
+index 0aee220e68d..c1342c7c844 100644
 --- a/gcc/fortran/array.c
 +++ b/gcc/fortran/array.c
 @@ -1124,6 +1124,31 @@ match_array_cons_element (gfc_constructor_base *result)
@@ -2583,6 +2617,16 @@ index 0aee220e68d..bda08c793b2 100644
  	}
      }
    else
+@@ -2175,6 +2199,9 @@ gfc_copy_iterator (gfc_iterator *src)
+   dest->end = gfc_copy_expr (src->end);
+   dest->step = gfc_copy_expr (src->step);
+   dest->unroll = src->unroll;
++  dest->ivdep = src->ivdep;
++  dest->vector = src->vector;
++  dest->novector = src->novector;
+ 
+   return dest;
+ }
 diff --git a/gcc/fortran/check.c b/gcc/fortran/check.c
 index a04f0d66655..265fb1fda53 100644
 --- a/gcc/fortran/check.c
@@ -2622,10 +2666,22 @@ index a04f0d66655..265fb1fda53 100644
  
    return true;
 diff --git a/gcc/fortran/decl.c b/gcc/fortran/decl.c
-index cf09420cfbe..3513d177e5e 100644
+index cf09420cfbe..3e10dba757e 100644
 --- a/gcc/fortran/decl.c
 +++ b/gcc/fortran/decl.c
-@@ -1335,9 +1335,9 @@ get_proc_name (const char *name, gfc_symbol **result, bool module_fcn_entry)
+@@ -99,6 +99,11 @@ bool gfc_matching_function;
+ /* Set upon parsing a !GCC$ unroll n directive for use in the next loop.  */
+ int directive_unroll = -1;
+ 
++/* Set upon parsing supported !GCC$ pragmas for use in the next loop.  */
++bool directive_ivdep = false;
++bool directive_vector = false;
++bool directive_novector = false;
++
+ /* Map of middle-end built-ins that should be vectorized.  */
+ hash_map<nofree_string_hash, int> *gfc_vectorized_builtins;
+ 
+@@ -1335,9 +1340,9 @@ get_proc_name (const char *name, gfc_symbol **result, bool module_fcn_entry)
  	}
  
        /* Trap declarations of attributes in encompassing scope.  The
@@ -2638,6 +2694,121 @@ index cf09420cfbe..3513d177e5e 100644
  	  && !sym->attr.implicit_type
  	  && sym->attr.proc == 0
  	  && gfc_current_ns->parent != NULL
+@@ -3991,7 +3996,6 @@ gfc_match_decl_type_spec (gfc_typespec *ts, int implicit_flag)
+       return MATCH_YES;
+     }
+ 
+-
+   m = gfc_match (" type (");
+   matched_type = (m == MATCH_YES);
+   if (matched_type)
+@@ -4039,7 +4043,10 @@ gfc_match_decl_type_spec (gfc_typespec *ts, int implicit_flag)
+ 	m = MATCH_YES;
+ 
+       if (matched_type && m == MATCH_YES && gfc_match_char (')') != MATCH_YES)
+-	m = MATCH_ERROR;
++	{
++	  gfc_error ("Malformed type-spec at %C");
++	  return MATCH_ERROR;
++	}
+ 
+       return m;
+     }
+@@ -4062,8 +4069,12 @@ gfc_match_decl_type_spec (gfc_typespec *ts, int implicit_flag)
+ 	  && !gfc_notify_std (GFC_STD_F2008, "TYPE with "
+ 			      "intrinsic-type-spec at %C"))
+ 	return MATCH_ERROR;
++
+       if (matched_type && gfc_match_char (')') != MATCH_YES)
+-	return MATCH_ERROR;
++	{
++	  gfc_error ("Malformed type-spec at %C");
++	  return MATCH_ERROR;
++	}
+ 
+       ts->type = BT_REAL;
+       ts->kind = gfc_default_double_kind;
+@@ -4093,7 +4104,10 @@ gfc_match_decl_type_spec (gfc_typespec *ts, int implicit_flag)
+ 	return MATCH_ERROR;
+ 
+       if (matched_type && gfc_match_char (')') != MATCH_YES)
+-	return MATCH_ERROR;
++	{
++	  gfc_error ("Malformed type-spec at %C");
++	  return MATCH_ERROR;
++	}
+ 
+       ts->type = BT_COMPLEX;
+       ts->kind = gfc_default_double_kind;
+@@ -4114,7 +4128,13 @@ gfc_match_decl_type_spec (gfc_typespec *ts, int implicit_flag)
+       if (m == MATCH_ERROR)
+ 	return m;
+ 
+-    m = gfc_match_char (')');
++      gfc_gobble_whitespace ();
++      if (gfc_peek_ascii_char () != ')')
++	{
++	  gfc_error ("Malformed type-spec at %C");
++	  return MATCH_ERROR;
++	}
++      m = gfc_match_char (')'); /* Burn closing ')'.  */
+     }
+ 
+   if (m != MATCH_YES)
+@@ -11472,3 +11492,53 @@ gfc_match_gcc_builtin (void)
+ 
+   return MATCH_YES;
+ }
++
++/* Match an !GCC$ IVDEP statement.
++   When we come here, we have already matched the !GCC$ IVDEP string.  */
++
++match
++gfc_match_gcc_ivdep (void)
++{
++  if (gfc_match_eos () == MATCH_YES)
++    {
++      directive_ivdep = true;
++      return MATCH_YES;
++    }
++
++  gfc_error ("Syntax error in !GCC$ IVDEP directive at %C");
++  return MATCH_ERROR;
++}
++
++/* Match an !GCC$ VECTOR statement.
++   When we come here, we have already matched the !GCC$ VECTOR string.  */
++
++match
++gfc_match_gcc_vector (void)
++{
++  if (gfc_match_eos () == MATCH_YES)
++    {
++      directive_vector = true;
++      directive_novector = false;
++      return MATCH_YES;
++    }
++
++  gfc_error ("Syntax error in !GCC$ VECTOR directive at %C");
++  return MATCH_ERROR;
++}
++
++/* Match an !GCC$ NOVECTOR statement.
++   When we come here, we have already matched the !GCC$ NOVECTOR string.  */
++
++match
++gfc_match_gcc_novector (void)
++{
++  if (gfc_match_eos () == MATCH_YES)
++    {
++      directive_novector = true;
++      directive_vector = false;
++      return MATCH_YES;
++    }
++
++  gfc_error ("Syntax error in !GCC$ NOVECTOR directive at %C");
++  return MATCH_ERROR;
++}
 diff --git a/gcc/fortran/expr.c b/gcc/fortran/expr.c
 index 2aeea92b8fb..33a332efdff 100644
 --- a/gcc/fortran/expr.c
@@ -2723,6 +2894,97 @@ index d4264dafa6f..08503ea5d1d 100644
  }
  
  /* This selction deals with inlining calls to MATMUL.  */
+diff --git a/gcc/fortran/gfortran.h b/gcc/fortran/gfortran.h
+index 2bb82980e8e..29b962d889c 100644
+--- a/gcc/fortran/gfortran.h
++++ b/gcc/fortran/gfortran.h
+@@ -2407,6 +2407,9 @@ typedef struct
+ {
+   gfc_expr *var, *start, *end, *step;
+   unsigned short unroll;
++  bool ivdep;
++  bool vector;
++  bool novector;
+ }
+ gfc_iterator;
+ 
+@@ -2783,6 +2786,9 @@ gfc_finalizer;
+ bool gfc_in_match_data (void);
+ match gfc_match_char_spec (gfc_typespec *);
+ extern int directive_unroll;
++extern bool directive_ivdep;
++extern bool directive_vector;
++extern bool directive_novector;
+ 
+ /* SIMD clause enum.  */
+ enum gfc_simd_clause
+diff --git a/gcc/fortran/gfortran.texi b/gcc/fortran/gfortran.texi
+index 6a8337a4bbf..733403a129d 100644
+--- a/gcc/fortran/gfortran.texi
++++ b/gcc/fortran/gfortran.texi
+@@ -3542,6 +3542,9 @@ as this requires the new array descriptor.
+ * ATTRIBUTES directive::
+ * UNROLL directive::
+ * BUILTIN directive::
++* IVDEP directive::
++* VECTOR directive::
++* NOVECTOR directive::
+ @end menu
+ 
+ @node ATTRIBUTES directive
+@@ -3653,6 +3656,52 @@ for the built-in that should be vectorized.  Example usage:
+ The purpose of the directive is to provide an API among the GCC compiler and
+ the GNU C Library which would define vector implementations of math routines.
+ 
++
++@node IVDEP directive
++@subsection IVDEP directive
++
++The syntax of the directive is
++
++@code{!GCC$ ivdep}
++
++This directive tells the compiler to ignore vector dependencies in the
++following loop.  It must be placed immediately before a @code{DO} loop
++and applies only to the loop that follows.
++
++Sometimes the compiler may not have sufficient information to decide
++whether a particular loop is vectorizable due to potential
++dependencies between iterations.  The purpose of the directive is to
++tell the compiler that vectorization is safe.
++
++This directive is intended for annotation of existing code.  For new
++code it is recommended to consider OpenMP SIMD directives as potential
++alternative.
++
++
++@node VECTOR directive
++@subsection VECTOR directive
++
++The syntax of the directive is
++
++@code{!GCC$ vector}
++
++This directive tells the compiler to vectorize the following loop.  It
++must be placed immediately before a @code{DO} loop and applies only to
++the loop that follows.
++
++
++@node NOVECTOR directive
++@subsection NOVECTOR directive
++
++The syntax of the directive is
++
++@code{!GCC$ novector}
++
++This directive tells the compiler to not vectorize the following loop.
++It must be placed immediately before a @code{DO} loop and applies only
++to the loop that follows.
++
++
+ @node Non-Fortran Main Program
+ @section Non-Fortran Main Program
+ 
 diff --git a/gcc/fortran/intrinsic.c b/gcc/fortran/intrinsic.c
 index c21fbddd5fb..357a35052eb 100644
 --- a/gcc/fortran/intrinsic.c
@@ -2847,6 +3109,23 @@ index 156d7a05f6b..2d91a2bbace 100644
    sym->value = expr;
  
    if ((gfc_current_state () == COMP_FUNCTION
+diff --git a/gcc/fortran/match.h b/gcc/fortran/match.h
+index ac47d992f4a..29854ee9000 100644
+--- a/gcc/fortran/match.h
++++ b/gcc/fortran/match.h
+@@ -246,8 +246,11 @@ match gfc_match_contiguous (void);
+ match gfc_match_dimension (void);
+ match gfc_match_external (void);
+ match gfc_match_gcc_attributes (void);
+-match gfc_match_gcc_unroll (void);
+ match gfc_match_gcc_builtin (void);
++match gfc_match_gcc_ivdep (void);
++match gfc_match_gcc_novector (void);
++match gfc_match_gcc_unroll (void);
++match gfc_match_gcc_vector (void);
+ match gfc_match_import (void);
+ match gfc_match_intent (void);
+ match gfc_match_intrinsic (void);
 diff --git a/gcc/fortran/misc.c b/gcc/fortran/misc.c
 index ec31fb93cd2..809f2e07674 100644
 --- a/gcc/fortran/misc.c
@@ -2912,6 +3191,73 @@ index 3e1ffedd8ee..dccce4fe0a4 100644
  	  if (use_list->only_flag)
  	    {
  	      if (m != MATCH_YES)
+diff --git a/gcc/fortran/parse.c b/gcc/fortran/parse.c
+index 66d84b4118f..86af947d152 100644
+--- a/gcc/fortran/parse.c
++++ b/gcc/fortran/parse.c
+@@ -1079,12 +1079,20 @@ decode_gcc_attribute (void)
+   match ("attributes", gfc_match_gcc_attributes, ST_ATTR_DECL);
+   match ("unroll", gfc_match_gcc_unroll, ST_NONE);
+   match ("builtin", gfc_match_gcc_builtin, ST_NONE);
++  match ("ivdep", gfc_match_gcc_ivdep, ST_NONE);
++  match ("vector", gfc_match_gcc_vector, ST_NONE);
++  match ("novector", gfc_match_gcc_novector, ST_NONE);
+ 
+   /* All else has failed, so give up.  See if any of the matchers has
+      stored an error message of some sort.  */
+ 
+   if (!gfc_error_check ())
+-    gfc_error_now ("Unclassifiable GCC directive at %C");
++    {
++      if (pedantic)
++	gfc_error_now ("Unclassifiable GCC directive at %C");
++      else
++	gfc_warning_now (0, "Unclassifiable GCC directive at %C, ignored");
++    }
+ 
+   reject_statement ();
+ 
+@@ -4672,6 +4680,21 @@ parse_do_block (void)
+ 	  new_st.ext.iterator->unroll = directive_unroll;
+ 	  directive_unroll = -1;
+ 	}
++      if (directive_ivdep)
++	{
++	  new_st.ext.iterator->ivdep = directive_ivdep;
++	  directive_ivdep = false;
++	}
++      if (directive_vector)
++	{
++	  new_st.ext.iterator->vector = directive_vector;
++	  directive_vector = false;
++	}
++      if (directive_novector)
++	{
++	  new_st.ext.iterator->novector = directive_novector;
++	  directive_novector = false;
++	}
+     }
+   else
+     stree = NULL;
+@@ -5431,7 +5454,17 @@ parse_executable (gfc_statement st)
+ 	}
+ 
+       if (directive_unroll != -1)
+-	gfc_error ("%<GCC unroll%> directive does not commence a loop at %C");
++	gfc_error ("%<GCC unroll%> directive not at the start of a loop at %C");
++
++      if (directive_ivdep)
++	gfc_error ("%<GCC ivdep%> directive not at the start of a loop at %C");
++
++      if (directive_vector)
++	gfc_error ("%<GCC vector%> directive not at the start of a loop at %C");
++
++      if (directive_novector)
++	gfc_error ("%<GCC novector%> "
++		   "directive not at the start of a loop at %C");
+ 
+       st = next_statement ();
+     }
 diff --git a/gcc/fortran/primary.c b/gcc/fortran/primary.c
 index e918372ef85..4af1db5f4bd 100644
 --- a/gcc/fortran/primary.c
@@ -3120,6 +3466,51 @@ index afe08fc2668..4b8794b0f1e 100644
        string_length = rse.string_length;
      }
    else
+diff --git a/gcc/fortran/trans-stmt.c b/gcc/fortran/trans-stmt.c
+index 5fa182bf05a..b839d6c73e1 100644
+--- a/gcc/fortran/trans-stmt.c
++++ b/gcc/fortran/trans-stmt.c
+@@ -2171,6 +2171,19 @@ gfc_trans_simple_do (gfc_code * code, stmtblock_t *pblock, tree dovar,
+ 		build_int_cst (integer_type_node, annot_expr_unroll_kind),
+ 		build_int_cst (integer_type_node, code->ext.iterator->unroll));
+ 
++  if (code->ext.iterator->ivdep && cond != error_mark_node)
++    cond = build3 (ANNOTATE_EXPR, TREE_TYPE (cond), cond,
++		   build_int_cst (integer_type_node, annot_expr_ivdep_kind),
++		   integer_zero_node);
++  if (code->ext.iterator->vector && cond != error_mark_node)
++    cond = build3 (ANNOTATE_EXPR, TREE_TYPE (cond), cond,
++		   build_int_cst (integer_type_node, annot_expr_vector_kind),
++		   integer_zero_node);
++  if (code->ext.iterator->novector && cond != error_mark_node)
++    cond = build3 (ANNOTATE_EXPR, TREE_TYPE (cond), cond,
++		   build_int_cst (integer_type_node, annot_expr_no_vector_kind),
++		   integer_zero_node);
++
+   /* The loop exit.  */
+   tmp = fold_build1_loc (loc, GOTO_EXPR, void_type_node, exit_label);
+   TREE_USED (exit_label) = 1;
+@@ -2501,6 +2514,20 @@ gfc_trans_do (gfc_code * code, tree exit_cond)
+       = build3 (ANNOTATE_EXPR, TREE_TYPE (cond), cond,
+ 		build_int_cst (integer_type_node, annot_expr_unroll_kind),
+ 		build_int_cst (integer_type_node, code->ext.iterator->unroll));
++
++  if (code->ext.iterator->ivdep && cond != error_mark_node)
++    cond = build3 (ANNOTATE_EXPR, TREE_TYPE (cond), cond,
++		   build_int_cst (integer_type_node, annot_expr_ivdep_kind),
++		   integer_zero_node);
++  if (code->ext.iterator->vector && cond != error_mark_node)
++    cond = build3 (ANNOTATE_EXPR, TREE_TYPE (cond), cond,
++		   build_int_cst (integer_type_node, annot_expr_vector_kind),
++		   integer_zero_node);
++  if (code->ext.iterator->novector && cond != error_mark_node)
++    cond = build3 (ANNOTATE_EXPR, TREE_TYPE (cond), cond,
++		   build_int_cst (integer_type_node, annot_expr_no_vector_kind),
++		   integer_zero_node);
++
+   tmp = fold_build1_loc (loc, GOTO_EXPR, void_type_node, exit_label);
+   tmp = fold_build3_loc (loc, COND_EXPR, void_type_node,
+ 			 cond, tmp, build_empty_stmt (loc));
 diff --git a/gcc/fortran/trans.c b/gcc/fortran/trans.c
 index e7844c9bf1f..167fcb2158c 100644
 --- a/gcc/fortran/trans.c
@@ -5341,10 +5732,26 @@ index 29f6cdc4667..33b4be79c0f 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..70387abaa8e 100644
+index bc11ae4ae0b..5e3c22d0630 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,213 @@
+@@ -1,3 +1,229 @@
++2019-09-05  Harald Anlauf  <anlauf@gmx.de>
++
++	Backport from mainline
++	PR fortran/91496
++	* gfortran.dg/pr91496.f90: New testcase.
++
++	PR fortran/91496
++	* gfortran.dg/directive_unroll_5.f90: Adjust error message.
++
++2019-09-05  Steven G. Kargl  <kargl@gcc.gnu.org>
++
++	PR fortran/91660
++	* gfortran.dg/pdt_4.f03: Fix invalid code.
++        * gfortran.dg/pr91660_1.f90: New test.
++	* gfortran.dg/pr91660_2.f90: Ditto.
++
 +2019-09-04  Wilco Dijkstra  <wdijkstr@arm.com>
 +
 +	Backport from mainline
@@ -7091,6 +7498,19 @@ index 00000000000..20408412879
 +   z = z(2)
 +   if (any(z /= 'xy')) stop 1
 +end
+diff --git a/gcc/testsuite/gfortran.dg/directive_unroll_5.f90 b/gcc/testsuite/gfortran.dg/directive_unroll_5.f90
+index b88b4b2c380..33f2fda537f 100644
+--- a/gcc/testsuite/gfortran.dg/directive_unroll_5.f90
++++ b/gcc/testsuite/gfortran.dg/directive_unroll_5.f90
+@@ -31,7 +31,7 @@ subroutine wrong3(a, b, n)
+   integer :: a(n), b(n)
+   integer (kind=4) :: i
+ !GCC$ unroll 8
+-  write (*,*) "wrong"! { dg-error "directive does not commence a loop" }
++  write (*,*) "wrong"! { dg-error "directive not at the start of a loop" }
+   DO i=n, 1, -1
+     call dummy2(a(i), b(i), i)
+   ENDDO
 diff --git a/gcc/testsuite/gfortran.dg/do_subscript_3.f90 b/gcc/testsuite/gfortran.dg/do_subscript_3.f90
 new file mode 100644
 index 00000000000..2f62f58142b
@@ -7162,6 +7582,22 @@ index 00000000000..54a4f1ba51a
 +          endif
 +      enddo
 +end program
+diff --git a/gcc/testsuite/gfortran.dg/pdt_4.f03 b/gcc/testsuite/gfortran.dg/pdt_4.f03
+index 0bb58f91c67..c1af65a5248 100644
+--- a/gcc/testsuite/gfortran.dg/pdt_4.f03
++++ b/gcc/testsuite/gfortran.dg/pdt_4.f03
+@@ -97,9 +97,9 @@ contains
+     type (mytype(4, *)) :: arg      ! OK
+   end subroutine
+   subroutine bar(arg)               ! { dg-error "is neither allocatable nor a pointer" }
+-    type (thytype(8, :, 4) :: arg
++    type (thytype(8, :, 4)) :: arg
+   end subroutine
+   subroutine foobar(arg)            ! OK
+-    type (thytype(8, *, 4) :: arg
++    type (thytype(8, *, 4)) :: arg
+   end subroutine
+ end
 diff --git a/gcc/testsuite/gfortran.dg/pr70754.f90 b/gcc/testsuite/gfortran.dg/pr70754.f90
 index d7e790cc036..593acf917ee 100644
 --- a/gcc/testsuite/gfortran.dg/pr70754.f90
@@ -7542,6 +7978,50 @@ index 00000000000..a6d06877e85
 +         print *, x .x. y
 +      end subroutine print_prod
 +end module gfcbug155
+diff --git a/gcc/testsuite/gfortran.dg/pr91496.f90 b/gcc/testsuite/gfortran.dg/pr91496.f90
+new file mode 100644
+index 00000000000..cb316748f0e
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr91496.f90
+@@ -0,0 +1,38 @@
++! { dg-do compile }
++! { dg-options "-fdump-tree-original" }
++!
++subroutine foo (a, b, c, n)
++  implicit none
++  real a(*), b(*), c(*)
++  integer :: i, n
++  external bar
++!DIR$ unroll (4)
++!GCC$ unroll 4
++  do i = 1, n
++     a(i) = b(i) + c(i)
++  end do
++!DIR$ ivdep
++!GCC$ ivdep
++  do i = 1, n
++     a(i) = b(i) + c(i)
++  end do
++!DIR$ vector
++!GCC$ vector
++  do i = 1, n
++     a(i) = b(i) + c(i)
++  end do
++!DIR$ novector
++!GCC$ novector
++  do i = 1, n
++     a(i) = b(i) + c(i)
++  end do
++!GCC$ ivdep
++!GCC$ vector
++  do i = 1, n
++     a(i) = b(i) + c(i)
++  end do
++!DIR$ noinline
++!GCC$ noinline          ! { dg-warning "Unclassifiable GCC directive" }
++  call bar (a)
++end subroutine foo
++! { dg-final { scan-tree-dump-times "ANNOTATE_EXPR" 6 "original" } }
 diff --git a/gcc/testsuite/gfortran.dg/pr91552.f90 b/gcc/testsuite/gfortran.dg/pr91552.f90
 new file mode 100644
 index 00000000000..bb959185cf9
@@ -7638,6 +8118,36 @@ index 00000000000..c07735df65e
 +subroutine bar       ! An other matcher runs, and gives a different error.
 +   endfile(err=!)    ! { dg-error "Expecting END" }
 +end
+diff --git a/gcc/testsuite/gfortran.dg/pr91660_1.f90 b/gcc/testsuite/gfortran.dg/pr91660_1.f90
+new file mode 100644
+index 00000000000..53a1a808a7b
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr91660_1.f90
+@@ -0,0 +1,9 @@
++! { dg-do compile }
++! PR fortran/91660
++! Code contributed by Gerhard Steinmetz
++program p
++   type t
++   end type
++   type (t x    ! { dg-error "Malformed type-spec" }
++   x = t()      ! { dg-error "Cannot convert" }
++end
+diff --git a/gcc/testsuite/gfortran.dg/pr91660_2.f90 b/gcc/testsuite/gfortran.dg/pr91660_2.f90
+new file mode 100644
+index 00000000000..0072aba1680
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr91660_2.f90
+@@ -0,0 +1,9 @@
++! { dg-do compile }
++! PR fortran/91660
++program foo
++   type(doubleprecision :: x   ! { dg-error "Malformed type-spec" }
++   type(double precision :: y  ! { dg-error "Malformed type-spec" }
++   type(character(len=3) :: a  ! { dg-error "Malformed type-spec" }
++   type(doublecomplex :: b     ! { dg-error "Malformed type-spec" }
++   type(double complex :: c    ! { dg-error "Malformed type-spec" }
++end program foo
 diff --git a/gcc/testsuite/gfortran.dg/unlimited_polymorphic_28.f90 b/gcc/testsuite/gfortran.dg/unlimited_polymorphic_28.f90
 index b474a243233..a9f67273d5e 100644
 --- a/gcc/testsuite/gfortran.dg/unlimited_polymorphic_28.f90
