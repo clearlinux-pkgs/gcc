@@ -9,7 +9,11 @@ edlinger (2):
       2019-08-16  Bernd Edlinger  <bernd.edlinger@hotmail.de>
       2019-08-16  Bernd Edlinger  <bernd.edlinger@hotmail.de>
 
-gccadmin (28):
+emsr (1):
+      2019-09-09  Edward Smith-Rowland  <3dw4rd@verizon.net>
+
+gccadmin (29):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -44,6 +48,10 @@ iains (4):
       [Darwin, PPC] Fix fail of cpp/assert4.c
       [Darwin, fixincludes] Backport fix for PR83531
       [c-family] Backport fix for PCH / PR61250.
+
+ian (2):
+      go/internal/gccgoimporter: support embedded field in pointer loop
+      PR go/91621     mksysinfo: change test == to test =
 
 jakub (5):
       * BASE-VER: Set to 9.2.1.
@@ -9129,6 +9137,253 @@ index 7476439647c..5d81bcba74a 100644
        njumps = 0;
        master_init = true;
      }
+diff --git a/libgo/go/go/internal/gccgoimporter/importer_test.go b/libgo/go/go/internal/gccgoimporter/importer_test.go
+index 58fa8c8cf5c..eb070c137ff 100644
+--- a/libgo/go/go/internal/gccgoimporter/importer_test.go
++++ b/libgo/go/go/internal/gccgoimporter/importer_test.go
+@@ -91,6 +91,7 @@ var importerTests = [...]importerTest{
+ 	{pkgpath: "v1reflect", name: "Type", want: "type Type interface{Align() int; AssignableTo(u Type) bool; Bits() int; ChanDir() ChanDir; Elem() Type; Field(i int) StructField; FieldAlign() int; FieldByIndex(index []int) StructField; FieldByName(name string) (StructField, bool); FieldByNameFunc(match func(string) bool) (StructField, bool); Implements(u Type) bool; In(i int) Type; IsVariadic() bool; Key() Type; Kind() Kind; Len() int; Method(int) Method; MethodByName(string) (Method, bool); Name() string; NumField() int; NumIn() int; NumMethod() int; NumOut() int; Out(i int) Type; PkgPath() string; Size() uintptr; String() string; common() *commonType; rawString() string; runtimeType() *runtimeType; uncommon() *uncommonType}"},
+ 	{pkgpath: "nointerface", name: "I", want: "type I int"},
+ 	{pkgpath: "issue29198", name: "FooServer", want: "type FooServer struct{FooServer *FooServer; user string; ctx context.Context}"},
++	{pkgpath: "issue34182", name: "T1", want: "type T1 struct{f *T2}"},
+ }
+ 
+ func TestGoxImporter(t *testing.T) {
+diff --git a/libgo/go/go/internal/gccgoimporter/parser.go b/libgo/go/go/internal/gccgoimporter/parser.go
+index 42f43a19fb7..ab731cbbfc4 100644
+--- a/libgo/go/go/internal/gccgoimporter/parser.go
++++ b/libgo/go/go/internal/gccgoimporter/parser.go
+@@ -248,7 +248,7 @@ func (p *parser) parseField(pkg *types.Package) (field *types.Var, tag string) {
+ 		case *types.Named:
+ 			name = typ.Obj().Name()
+ 		default:
+-			p.error("anonymous field expected")
++			p.error("embedded field expected")
+ 		}
+ 	}
+ 	field = types.NewField(token.NoPos, pkg, name, typ, anon)
+@@ -451,8 +451,12 @@ func (p *parser) reserve(n int) {
+ 	}
+ }
+ 
+-// update sets the type map entries for the given type numbers nlist to t.
+-func (p *parser) update(t types.Type, nlist []int) {
++// update sets the type map entries for the entries in nlist to t.
++// An entry in nlist can be a type number in p.typeList,
++// used to resolve named types, or it can be a *types.Pointer,
++// used to resolve pointers to named types in case they are referenced
++// by embedded fields.
++func (p *parser) update(t types.Type, nlist []interface{}) {
+ 	if len(nlist) != 0 {
+ 		if t == reserved {
+ 			p.errorf("internal error: update(%v) invoked on reserved", nlist)
+@@ -462,20 +466,34 @@ func (p *parser) update(t types.Type, nlist []int) {
+ 		}
+ 	}
+ 	for _, n := range nlist {
+-		if p.typeList[n] == t {
+-			continue
+-		}
+-		if p.typeList[n] != reserved {
+-			p.errorf("internal error: update(%v): %d not reserved", nlist, n)
++		switch n := n.(type) {
++		case int:
++			if p.typeList[n] == t {
++				continue
++			}
++			if p.typeList[n] != reserved {
++				p.errorf("internal error: update(%v): %d not reserved", nlist, n)
++			}
++			p.typeList[n] = t
++		case *types.Pointer:
++			if *n != (types.Pointer{}) {
++				elem := n.Elem()
++				if elem == t {
++					continue
++				}
++				p.errorf("internal error: update: pointer already set to %v, expected %v", elem, t)
++			}
++			*n = *types.NewPointer(t)
++		default:
++			p.errorf("internal error: %T on nlist", n)
+ 		}
+-		p.typeList[n] = t
+ 	}
+ }
+ 
+ // NamedType = TypeName [ "=" ] Type { Method } .
+ // TypeName  = ExportedName .
+ // Method    = "func" "(" Param ")" Name ParamList ResultList [InlineBody] ";" .
+-func (p *parser) parseNamedType(nlist []int) types.Type {
++func (p *parser) parseNamedType(nlist []interface{}) types.Type {
+ 	pkg, name := p.parseExportedName()
+ 	scope := pkg.Scope()
+ 	obj := scope.Lookup(name)
+@@ -582,7 +600,7 @@ func (p *parser) parseInt() int {
+ }
+ 
+ // ArrayOrSliceType = "[" [ int ] "]" Type .
+-func (p *parser) parseArrayOrSliceType(pkg *types.Package, nlist []int) types.Type {
++func (p *parser) parseArrayOrSliceType(pkg *types.Package, nlist []interface{}) types.Type {
+ 	p.expect('[')
+ 	if p.tok == ']' {
+ 		p.next()
+@@ -605,7 +623,7 @@ func (p *parser) parseArrayOrSliceType(pkg *types.Package, nlist []int) types.Ty
+ }
+ 
+ // MapType = "map" "[" Type "]" Type .
+-func (p *parser) parseMapType(pkg *types.Package, nlist []int) types.Type {
++func (p *parser) parseMapType(pkg *types.Package, nlist []interface{}) types.Type {
+ 	p.expectKeyword("map")
+ 
+ 	t := new(types.Map)
+@@ -621,7 +639,7 @@ func (p *parser) parseMapType(pkg *types.Package, nlist []int) types.Type {
+ }
+ 
+ // ChanType = "chan" ["<-" | "-<"] Type .
+-func (p *parser) parseChanType(pkg *types.Package, nlist []int) types.Type {
++func (p *parser) parseChanType(pkg *types.Package, nlist []interface{}) types.Type {
+ 	p.expectKeyword("chan")
+ 
+ 	t := new(types.Chan)
+@@ -648,7 +666,7 @@ func (p *parser) parseChanType(pkg *types.Package, nlist []int) types.Type {
+ }
+ 
+ // StructType = "struct" "{" { Field } "}" .
+-func (p *parser) parseStructType(pkg *types.Package, nlist []int) types.Type {
++func (p *parser) parseStructType(pkg *types.Package, nlist []interface{}) types.Type {
+ 	p.expectKeyword("struct")
+ 
+ 	t := new(types.Struct)
+@@ -714,7 +732,7 @@ func (p *parser) parseResultList(pkg *types.Package) *types.Tuple {
+ }
+ 
+ // FunctionType = ParamList ResultList .
+-func (p *parser) parseFunctionType(pkg *types.Package, nlist []int) *types.Signature {
++func (p *parser) parseFunctionType(pkg *types.Package, nlist []interface{}) *types.Signature {
+ 	t := new(types.Signature)
+ 	p.update(t, nlist)
+ 
+@@ -740,7 +758,7 @@ func (p *parser) parseFunc(pkg *types.Package) *types.Func {
+ }
+ 
+ // InterfaceType = "interface" "{" { ("?" Type | Func) ";" } "}" .
+-func (p *parser) parseInterfaceType(pkg *types.Package, nlist []int) types.Type {
++func (p *parser) parseInterfaceType(pkg *types.Package, nlist []interface{}) types.Type {
+ 	p.expectKeyword("interface")
+ 
+ 	t := new(types.Interface)
+@@ -767,7 +785,7 @@ func (p *parser) parseInterfaceType(pkg *types.Package, nlist []int) types.Type
+ }
+ 
+ // PointerType = "*" ("any" | Type) .
+-func (p *parser) parsePointerType(pkg *types.Package, nlist []int) types.Type {
++func (p *parser) parsePointerType(pkg *types.Package, nlist []interface{}) types.Type {
+ 	p.expect('*')
+ 	if p.tok == scanner.Ident {
+ 		p.expectKeyword("any")
+@@ -779,13 +797,13 @@ func (p *parser) parsePointerType(pkg *types.Package, nlist []int) types.Type {
+ 	t := new(types.Pointer)
+ 	p.update(t, nlist)
+ 
+-	*t = *types.NewPointer(p.parseType(pkg))
++	*t = *types.NewPointer(p.parseType(pkg, t))
+ 
+ 	return t
+ }
+ 
+ // TypeSpec = NamedType | MapType | ChanType | StructType | InterfaceType | PointerType | ArrayOrSliceType | FunctionType .
+-func (p *parser) parseTypeSpec(pkg *types.Package, nlist []int) types.Type {
++func (p *parser) parseTypeSpec(pkg *types.Package, nlist []interface{}) types.Type {
+ 	switch p.tok {
+ 	case scanner.String:
+ 		return p.parseNamedType(nlist)
+@@ -874,13 +892,13 @@ func lookupBuiltinType(typ int) types.Type {
+ //
+ // parseType updates the type map to t for all type numbers n.
+ //
+-func (p *parser) parseType(pkg *types.Package, n ...int) types.Type {
++func (p *parser) parseType(pkg *types.Package, n ...interface{}) types.Type {
+ 	p.expect('<')
+ 	return p.parseTypeAfterAngle(pkg, n...)
+ }
+ 
+ // (*parser).Type after reading the "<".
+-func (p *parser) parseTypeAfterAngle(pkg *types.Package, n ...int) (t types.Type) {
++func (p *parser) parseTypeAfterAngle(pkg *types.Package, n ...interface{}) (t types.Type) {
+ 	p.expectKeyword("type")
+ 
+ 	switch p.tok {
+@@ -995,12 +1013,12 @@ func (p *parser) parseTypes(pkg *types.Package) {
+ 	}
+ 
+ 	for i := 1; i < int(exportedp1); i++ {
+-		p.parseSavedType(pkg, i, []int{})
++		p.parseSavedType(pkg, i, nil)
+ 	}
+ }
+ 
+ // parseSavedType parses one saved type definition.
+-func (p *parser) parseSavedType(pkg *types.Package, i int, nlist []int) {
++func (p *parser) parseSavedType(pkg *types.Package, i int, nlist []interface{}) {
+ 	defer func(s *scanner.Scanner, tok rune, lit string) {
+ 		p.scanner = s
+ 		p.tok = tok
+diff --git a/libgo/go/go/internal/gccgoimporter/testdata/issue34182.go b/libgo/go/go/internal/gccgoimporter/testdata/issue34182.go
+new file mode 100644
+index 00000000000..2a5c333a057
+--- /dev/null
++++ b/libgo/go/go/internal/gccgoimporter/testdata/issue34182.go
+@@ -0,0 +1,17 @@
++// Copyright 2019 The Go Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style
++// license that can be found in the LICENSE file.
++
++package issue34182
++
++type T1 struct {
++	f *T2
++}
++
++type T2 struct {
++	f T3
++}
++
++type T3 struct {
++	*T2
++}
+diff --git a/libgo/go/go/internal/gccgoimporter/testdata/issue34182.gox b/libgo/go/go/internal/gccgoimporter/testdata/issue34182.gox
+new file mode 100644
+index 00000000000..671a7d62d6f
+--- /dev/null
++++ b/libgo/go/go/internal/gccgoimporter/testdata/issue34182.gox
+@@ -0,0 +1,13 @@
++v3;
++package issue34182
++pkgpath issue34182
++init issue34182 ~go.issue34182
++types 8 4 21 21 21 17 30 45 45
++type 1 "T1" <type 6>
++type 2 "T2" <type 7>
++type 3 "T3" <type 5>
++type 4 *<type 2>
++type 5 struct { ? <type 4>; }
++type 6 struct { .go.issue34182.f <type 4>; }
++type 7 struct { .go.issue34182.f <type 3>; }
++checksum FF02C49BAF44B06C087ED4E573F7CC880C79C208
+diff --git a/libgo/mksysinfo.sh b/libgo/mksysinfo.sh
+index c9dd8d494a9..f086c507e07 100755
+--- a/libgo/mksysinfo.sh
++++ b/libgo/mksysinfo.sh
+@@ -1127,7 +1127,7 @@ grep '^const _FALLOC_' gen-sysinfo.go |
+ # Prefer largefile variant if available.
+ # CentOS 5 does not have f_flags, so pull from f_spare.
+ statfs=`grep '^type _statfs64 ' gen-sysinfo.go || true`
+-if test "$statfs" == ""; then
++if test "$statfs" = ""; then
+   statfs=`grep '^type _statfs ' gen-sysinfo.go || true`
+ fi
+ if ! echo "$statfs" | grep f_flags; then
 diff --git a/libgomp/ChangeLog b/libgomp/ChangeLog
 index 958572a54c0..15d12873e80 100644
 --- a/libgomp/ChangeLog
@@ -9222,10 +9477,15 @@ index b599ebb0ba9..beb1dc9532b 100644
  #  define ASAN_INTERCEPT__UNWIND_SJLJ_RAISEEXCEPTION 1
  # else
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
-index 8ac50251005..5a0dd3c953f 100644
+index 8ac50251005..683f8d7f786 100644
 --- a/libstdc++-v3/ChangeLog
 +++ b/libstdc++-v3/ChangeLog
-@@ -1,3 +1,96 @@
+@@ -1,3 +1,101 @@
++2019-09-09  Edward Smith-Rowland  <3dw4rd@verizon.net>
++
++	Update docs for p858 - Constexpr iterator changes available since 9.1.
++	* doc/xml/manual/status_cxx2020.xml: Update p0858r0 status.
++
 +2019-09-02  Jonathan Wakely  <jwakely@redhat.com>
 +
 +	* doc/xml/manual/abi.xml: Document 9.x library versions.
@@ -11284,6 +11544,29 @@ index d1e6b989a71..969edd7c834 100644
      </itemizedlist>
      <para>
        Note 1: Error should be libstdc++.so.3.0.3.
+diff --git a/libstdc++-v3/doc/xml/manual/status_cxx2020.xml b/libstdc++-v3/doc/xml/manual/status_cxx2020.xml
+index 89e540d018b..ccf38185a6c 100644
+--- a/libstdc++-v3/doc/xml/manual/status_cxx2020.xml
++++ b/libstdc++-v3/doc/xml/manual/status_cxx2020.xml
+@@ -309,15 +309,15 @@ Feature-testing recommendations for C++</link>.
+     </row>
+ 
+     <row>
+-      <?dbhtml bgcolor="#C8B0B0" ?>
+       <entry>  Constexpr iterator requirements </entry>
+       <entry>
+         <link xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0858r0.html">
+ 	P0858R0
+ 	</link>
+       </entry>
+-      <entry align="center"> </entry>
+-      <entry />
++      <entry align="center"> 9.1 </entry>
++      <entry> <code>__cpp_lib_string_view &gt;= 201803L</code>
++      and <code>__cpp_lib_array_constexpr &gt;= 201803L</code> </entry>
+     </row>
+ 
+     <row>
 diff --git a/libstdc++-v3/include/bits/algorithmfwd.h b/libstdc++-v3/include/bits/algorithmfwd.h
 index 40e051aa9e3..5e47fffe86e 100644
 --- a/libstdc++-v3/include/bits/algorithmfwd.h
