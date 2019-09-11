@@ -1,9 +1,10 @@
 anlauf (1):
       2019-09-05  Harald Anlauf  <anlauf@gmx.de>
 
-ebotcazou (2):
+ebotcazou (3):
       PR rtl-optimization/91347 	* dse.c (scan_insn): Call add_wild_read for non-const/memset tail calls 	before reload if HARD_FRAME_POINTER_IS_ARG_POINTER.
       PR target/91472 	* config/sparc/sparc.c (sparc_cannot_force_const_mem): Return true 	during LRA/reload in PIC mode if the PIC register hasn't been used yet. 	(sparc_pic_register_p): Test reload_in_progress for consistency's sake.
+      PR rtl-optimization/89795 	* rtlanal.c (nonzero_bits1) <SUBREG>: Do not propagate results from 	inner REGs to paradoxical SUBREGs if WORD_REGISTER_OPERATIONS is set.
 
 edlinger (2):
       2019-08-16  Bernd Edlinger  <bernd.edlinger@hotmail.de>
@@ -127,7 +128,7 @@ pault (1):
 rearnsha (1):
       [aarch64] PR target/91386 Use copy_rtx to avoid modifying original insns in peep2 pattern
 
-redi (7):
+redi (8):
       PR libstdc++/90361 add missing macro definition
       PR c++/91436 fix C++ dialect for std::make_unique fix-it hint
       Implement new serial algorithms from Parallelism TS (P0024R2)
@@ -135,6 +136,7 @@ redi (7):
       Update ABI baselines for x86 and powerpc GNU targets
       PR libstdc++/91067 add more missing exports for directory iterators
       Update libstdc++ docs for library version bumps
+      Fix Xmethod for shared_ptr::use_count()
 
 rguenth (5):
       2019-08-12  Richard Biener  <rguenther@suse.de>
@@ -398,10 +400,16 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..1d55b05791a 100644
+index 7f6557d8018..95f978d5805 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,310 @@
+@@ -1,3 +1,316 @@
++2019-09-11  Eric Botcazou  <ebotcazou@adacore.com>
++
++	PR rtl-optimization/89795
++	* rtlanal.c (nonzero_bits1) <SUBREG>: Do not propagate results from
++	inner REGs to paradoxical SUBREGs if WORD_REGISTER_OPERATIONS is set.
++
 +2019-09-09  Jakub Jelinek  <jakub@redhat.com>
 +
 +	PR target/87853
@@ -712,7 +720,7 @@ index 7f6557d8018..1d55b05791a 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +820,7 @@
+@@ -513,7 +826,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -5845,6 +5853,19 @@ index 5701d2a5d9e..f18c00a6ddb 100644
  
  #: common.opt:2862
  #, fuzzy, gcc-internal-format
+diff --git a/gcc/rtlanal.c b/gcc/rtlanal.c
+index 268a38799d6..01af063a222 100644
+--- a/gcc/rtlanal.c
++++ b/gcc/rtlanal.c
+@@ -4793,7 +4793,7 @@ nonzero_bits1 (const_rtx x, scalar_int_mode mode, const_rtx known_x,
+ 	       || ((extend_op = load_extend_op (inner_mode)) == SIGN_EXTEND
+ 		   ? val_signbit_known_set_p (inner_mode, nonzero)
+ 		   : extend_op != ZERO_EXTEND)
+-	       || (!MEM_P (SUBREG_REG (x)) && !REG_P (SUBREG_REG (x))))
++	       || !MEM_P (SUBREG_REG (x)))
+ 	      && xmode_width > inner_width)
+ 	    nonzero
+ 	      |= (GET_MODE_MASK (GET_MODE (x)) & ~GET_MODE_MASK (inner_mode));
 diff --git a/gcc/symtab.c b/gcc/symtab.c
 index 29f6cdc4667..33b4be79c0f 100644
 --- a/gcc/symtab.c
@@ -5873,10 +5894,14 @@ index 29f6cdc4667..33b4be79c0f 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..a8480920d91 100644
+index bc11ae4ae0b..9a424e463e4 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,243 @@
+@@ -1,3 +1,247 @@
++2019-09-11  Eric Botcazou  <ebotcazou@adacore.com>
++
++	* gcc.target/sparc/20161111-1.c: XFAIL redundant zero-extension test.
++
 +2019-09-09  Jakub Jelinek  <jakub@redhat.com>
 +
 +	PR target/87853
@@ -6120,7 +6145,7 @@ index bc11ae4ae0b..a8480920d91 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +667,7 @@
+@@ -427,7 +671,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -7700,6 +7725,16 @@ index 00000000000..477901fde70
 +}
 +
 +/* { dg-final { scan-assembler-times {(?n)\mdarn .*,0\M} 4 } } */
+diff --git a/gcc/testsuite/gcc.target/sparc/20161111-1.c b/gcc/testsuite/gcc.target/sparc/20161111-1.c
+index eda8b0a9f12..8195fec8990 100644
+--- a/gcc/testsuite/gcc.target/sparc/20161111-1.c
++++ b/gcc/testsuite/gcc.target/sparc/20161111-1.c
+@@ -14,4 +14,4 @@ unsigned char ee_isdigit2(unsigned int i)
+   return retval;
+ }
+ 
+-/* { dg-final { scan-assembler-not "and\t%" } } */
++/* { dg-final { scan-assembler-not "and\t%" { xfail *-*-* } } } */
 diff --git a/gcc/testsuite/gfortran.dg/allocated_1.f90 b/gcc/testsuite/gfortran.dg/allocated_1.f90
 new file mode 100644
 index 00000000000..43260c24336
@@ -9575,10 +9610,15 @@ index b599ebb0ba9..beb1dc9532b 100644
  #  define ASAN_INTERCEPT__UNWIND_SJLJ_RAISEEXCEPTION 1
  # else
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
-index 8ac50251005..683f8d7f786 100644
+index 8ac50251005..a6253ad59aa 100644
 --- a/libstdc++-v3/ChangeLog
 +++ b/libstdc++-v3/ChangeLog
-@@ -1,3 +1,101 @@
+@@ -1,3 +1,106 @@
++2019-09-11  Jonathan Wakely  <jwakely@redhat.com>
++
++	* python/libstdcxx/v6/xmethods.py (SharedPtrUseCountWorker.__call__):
++	Fix syntax error.
++
 +2019-09-09  Edward Smith-Rowland  <3dw4rd@verizon.net>
 +
 +	Update docs for p858 - Constexpr iterator changes available since 9.1.
@@ -12275,6 +12315,19 @@ index bef823bf526..87a50e572d1 100644
  // Parallel STL algorithms
  # if __PSTL_EXECUTION_POLICIES_DEFINED
  // If <execution> has already been included, pull in implementations
+diff --git a/libstdc++-v3/python/libstdcxx/v6/xmethods.py b/libstdc++-v3/python/libstdcxx/v6/xmethods.py
+index c405d8a25d5..85285ea5096 100644
+--- a/libstdc++-v3/python/libstdcxx/v6/xmethods.py
++++ b/libstdc++-v3/python/libstdcxx/v6/xmethods.py
+@@ -728,7 +728,7 @@ class SharedPtrUseCountWorker(gdb.xmethod.XMethodWorker):
+         return gdb.lookup_type('long')
+ 
+     def __call__(self, obj):
+-        refcounts = ['_M_refcount']['_M_pi']
++        refcounts = obj['_M_refcount']['_M_pi']
+         return refcounts['_M_use_count'] if refcounts else 0
+ 
+ class SharedPtrUniqueWorker(SharedPtrUseCountWorker):
 diff --git a/libstdc++-v3/src/c++17/string-inst.cc b/libstdc++-v3/src/c++17/string-inst.cc
 index c095a90587e..4dc0a9ca449 100644
 --- a/libstdc++-v3/src/c++17/string-inst.cc
