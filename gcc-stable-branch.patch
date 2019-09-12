@@ -13,7 +13,8 @@ edlinger (2):
 emsr (1):
       2019-09-09  Edward Smith-Rowland  <3dw4rd@verizon.net>
 
-gccadmin (30):
+gccadmin (31):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -128,7 +129,7 @@ pault (1):
 rearnsha (1):
       [aarch64] PR target/91386 Use copy_rtx to avoid modifying original insns in peep2 pattern
 
-redi (8):
+redi (9):
       PR libstdc++/90361 add missing macro definition
       PR c++/91436 fix C++ dialect for std::make_unique fix-it hint
       Implement new serial algorithms from Parallelism TS (P0024R2)
@@ -137,6 +138,7 @@ redi (8):
       PR libstdc++/91067 add more missing exports for directory iterators
       Update libstdc++ docs for library version bumps
       Fix Xmethod for shared_ptr::use_count()
+      PR libstdc++/91748 fix std::for_each_n for random access iterators
 
 rguenth (5):
       2019-08-12  Richard Biener  <rguenther@suse.de>
@@ -9610,10 +9612,18 @@ index b599ebb0ba9..beb1dc9532b 100644
  #  define ASAN_INTERCEPT__UNWIND_SJLJ_RAISEEXCEPTION 1
  # else
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
-index 8ac50251005..a6253ad59aa 100644
+index 8ac50251005..33e56ea9c8f 100644
 --- a/libstdc++-v3/ChangeLog
 +++ b/libstdc++-v3/ChangeLog
-@@ -1,3 +1,106 @@
+@@ -1,3 +1,114 @@
++2019-09-12  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/91748
++	* include/bits/stl_algo.h (for_each_n): Fix random access iterator
++	case.
++	* testsuite/25_algorithms/for_each/for_each_n.cc: Test with random
++	access iterators.
++
 +2019-09-11  Jonathan Wakely  <jwakely@redhat.com>
 +
 +	* python/libstdcxx/v6/xmethods.py (SharedPtrUseCountWorker.__call__):
@@ -11719,10 +11729,10 @@ index 40e051aa9e3..5e47fffe86e 100644
     *
     * These algorithms are common set operations performed on sequences
 diff --git a/libstdc++-v3/include/bits/stl_algo.h b/libstdc++-v3/include/bits/stl_algo.h
-index 3411a63b1a3..2d187b9eb9f 100644
+index 3411a63b1a3..4746d91c217 100644
 --- a/libstdc++-v3/include/bits/stl_algo.h
 +++ b/libstdc++-v3/include/bits/stl_algo.h
-@@ -3877,6 +3877,39 @@ _GLIBCXX_BEGIN_NAMESPACE_ALGO
+@@ -3877,6 +3877,43 @@ _GLIBCXX_BEGIN_NAMESPACE_ALGO
        return __f; // N.B. [alg.foreach] says std::move(f) but it's redundant.
      }
  
@@ -11746,7 +11756,11 @@ index 3411a63b1a3..2d187b9eb9f 100644
 +      typename iterator_traits<_InputIterator>::difference_type __n2 = __n;
 +      using _Cat = typename iterator_traits<_InputIterator>::iterator_category;
 +      if constexpr (is_base_of_v<random_access_iterator_tag, _Cat>)
-+	return std::for_each(__first, __first + __n2, __f);
++	{
++	  auto __last = __first + __n2;
++	  std::for_each(__first, __last, std::move(__f));
++	  return __last;
++	}
 +      else
 +	{
 +	  while (__n2-->0)
@@ -12360,10 +12374,10 @@ index 6dc9b137dbf..21d0bbabb43 100644
      return stat(path, buffer);
 diff --git a/libstdc++-v3/testsuite/25_algorithms/for_each/for_each_n.cc b/libstdc++-v3/testsuite/25_algorithms/for_each/for_each_n.cc
 new file mode 100644
-index 00000000000..57c2bbe6d36
+index 00000000000..016ff57cb28
 --- /dev/null
 +++ b/libstdc++-v3/testsuite/25_algorithms/for_each/for_each_n.cc
-@@ -0,0 +1,57 @@
+@@ -0,0 +1,88 @@
 +// { dg-options "-std=gnu++17" }
 +// { dg-do run { target c++17 } }
 +
@@ -12413,13 +12427,44 @@ index 00000000000..57c2bbe6d36
 +  };
 +  auto res = std::for_each_n(con.begin(), Size(con.size()), Func(sum));
 +
-+  VERIFY( res.ptr == con.end().ptr );
++  VERIFY( res == con.end() );
 +  VERIFY( sum == 15 );
++}
++
++void
++test02()
++{
++  using __gnu_test::test_container;
++  using __gnu_test::random_access_iterator_wrapper;
++  int array[5] = { 2, 4, 6, 8, 10 };
++  test_container<int, random_access_iterator_wrapper> con(array);
++
++  int prod = 1;
++  struct Func
++  {
++    Func(int& i) : i(i) { }
++    Func(Func&&) = default;
++    Func& operator=(Func&&) = delete;
++    void operator()(int n) const { i *= n; }
++    int& i;
++  };
++
++  struct Size
++  {
++    Size(short v) : val(v) { }
++    operator short() const { return val; }
++    short val;
++  };
++  auto res = std::for_each_n(con.begin(), Size(con.size()), Func(prod));
++
++  VERIFY( res == con.end() );
++  VERIFY( prod == 3840 );
 +}
 +
 +int main()
 +{
 +  test01();
++  test02();
 +}
 diff --git a/libstdc++-v3/testsuite/26_numerics/exclusive_scan/1.cc b/libstdc++-v3/testsuite/26_numerics/exclusive_scan/1.cc
 new file mode 100644
