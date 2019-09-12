@@ -1,0 +1,91 @@
+From a31397c01518f0e412226d315f0e0ec419c31e3e Mon Sep 17 00:00:00 2001
+From: Thiago Macieira <thiago.macieira@intel.com>
+Date: Thu, 12 Sep 2019 10:17:39 -0700
+Subject: [PATCH] Add detection of Icelake Client and Server
+
+gcc
+        * config/i386/driver-i386.c (host_detect_local_cpu): Handle
+          icelake-client and icelake-server.
+        * testsuite/gcc.target/i386/builtin_target.c (check_intel_cpu_model):
+          Verify icelakes are detected correctly.
+
+libgcc
+        * config/i386/cpuinfo.c (get_intel_cpu): Handle icelake-client
+          and icelake-server.
+---
+ gcc/config/i386/driver-i386.c                  | 11 +++++++++++
+ gcc/testsuite/gcc.target/i386/builtin_target.c | 11 +++++++++++
+ libgcc/config/i386/cpuinfo.c                   | 13 +++++++++++++
+ 3 files changed, 35 insertions(+)
+
+diff --git a/gcc/config/i386/driver-i386.c b/gcc/config/i386/driver-i386.c
+index 8e8b4d21950..996308c7eaa 100644
+--- a/gcc/config/i386/driver-i386.c
++++ b/gcc/config/i386/driver-i386.c
+@@ -855,6 +855,17 @@ const char *host_detect_local_cpu (int argc, const char **argv)
+ 	  /* Cannon Lake.  */
+ 	  cpu = "cannonlake";
+ 	  break;
++	case 0x6a:
++	case 0x6c:
++	  /* Icelake Server. */
++	  cpu = "icelake-server";
++	  break;
++	case 0x7d:
++	case 0x7e:
++	case 0x9d:
++	  /* Icelake Client. */
++	  cpu = "icelake-client";
++	  break;
+ 	case 0x85:
+ 	  /* Knights Mill.  */
+ 	  cpu = "knm";
+diff --git a/gcc/testsuite/gcc.target/i386/builtin_target.c b/gcc/testsuite/gcc.target/i386/builtin_target.c
+index 7a8b6e805ed..ef15d48f84d 100644
+--- a/gcc/testsuite/gcc.target/i386/builtin_target.c
++++ b/gcc/testsuite/gcc.target/i386/builtin_target.c
+@@ -124,6 +124,17 @@ check_intel_cpu_model (unsigned int family, unsigned int model,
+ 	      /* Cannon Lake.  */
+ 	      assert (__builtin_cpu_is ("cannonlake"));
+ 	      break;
++	    case 0x7d:
++	    case 0x7e:
++	    case 0x9d:
++	      /* Icelake Client. */
++	      assert (__builtin_cpu_is ("icelake-client"));
++	      break;
++	    case 0x6a:
++	    case 0x6c:
++	      /* Icelake Server. */
++	      assert (__builtin_cpu_is ("icelake-server"));
++	      break;
+ 	    case 0x17:
+ 	    case 0x1d:
+ 	      /* Penryn.  */
+diff --git a/libgcc/config/i386/cpuinfo.c b/libgcc/config/i386/cpuinfo.c
+index 5659ec89546..cc9c62f053b 100644
+--- a/libgcc/config/i386/cpuinfo.c
++++ b/libgcc/config/i386/cpuinfo.c
+@@ -232,6 +232,19 @@ get_intel_cpu (unsigned int family, unsigned int model, unsigned int brand_id)
+ 	      __cpu_model.__cpu_type = INTEL_COREI7;
+ 	      __cpu_model.__cpu_subtype = INTEL_COREI7_CANNONLAKE;
+ 	      break;
++	    case 0x7d:
++	    case 0x7e:
++	    case 0x9d:
++	      /* Icelake Client. */
++	      __cpu_model.__cpu_type = INTEL_COREI7;
++	      __cpu_model.__cpu_subtype = INTEL_COREI7_ICELAKE_CLIENT;
++	      break;
++	    case 0x6a:
++	    case 0x6c:
++	      /* Icelake Server. */
++	      __cpu_model.__cpu_type = INTEL_COREI7;
++	      __cpu_model.__cpu_subtype = INTEL_COREI7_ICELAKE_SERVER;
++	      break;
+ 	    case 0x17:
+ 	    case 0x1d:
+ 	      /* Penryn.  */
+-- 
+2.23.0
+

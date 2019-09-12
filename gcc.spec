@@ -14,7 +14,7 @@
 
 Name     : gcc
 Version  : 9.2.1
-Release  : 642
+Release  : 643
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://gcc.gnu.org/pub/gcc/releases/gcc-9.2.0/gcc-9.2.0.tar.xz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.16.1.tar.bz2
@@ -38,6 +38,7 @@ Patch12	 : avx512-when-we-ask-for-it.patch
 Patch14  : arch-native-override.patch
 Patch15  : 0001-Ignore-Werror-if-GCC_IGNORE_WERROR-environment-varia.patch
 Patch16  : 0001-Always-use-z-now-when-linking-with-pie.patch
+Patch17  : icelake.patch
 
 # zero registers on ret to make ROP harder
 Patch21  : zero-regs-gcc8.patch
@@ -222,6 +223,7 @@ GNU cc and gcc C compilers.
 
 %patch15 -p1
 %patch16 -p1
+%patch17 -p1
 
 #%patch18 -p1
 #%patch20 -p1
