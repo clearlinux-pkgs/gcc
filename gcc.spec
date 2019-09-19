@@ -449,6 +449,8 @@ cat *.lang > gcc.lang
 /usr/lib64/libssp*.a
 /usr/lib64/libgomp.a
 /usr/lib64/libgomp.spec
+/usr/lib64/libgfortran.so
+/usr/lib64/libgfortran.spec
 # gcc-plugin-dev
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/plugin/gengtype
 
@@ -538,7 +540,7 @@ cat *.lang > gcc.lang
 /usr/lib64/libatomic*.so.*
 /usr/lib64/libitm*.so.*
 /usr/lib64/libquadmath*.so.*
-/usr/lib64/libgfortran*
+/usr/lib64/libgfortran*.so.*
 
 %files libgcc32
 /usr/lib32/libasan.so.5
