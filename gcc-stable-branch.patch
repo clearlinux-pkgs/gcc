@@ -86,7 +86,7 @@ jsm28 (4):
       * es.po: Update.
       * es.po: Update.
 
-kargl (20):
+kargl (21):
       2019-08-01  Steven G. Kargl  <kargl@gcc.gnu.org>
       2019-08-12  Steven G. Kargl  <kargl@gcc.gnu.org>
       2019-08-13  Steven G. Kargl  <kargl@gcc.gnu.org>
@@ -107,6 +107,7 @@ kargl (20):
       2019-09-14  Steven G. Kargl  <kargl@gcc.gnu.org>
       2019-09-14  Steven G. Kargl  <kargl@gcc.gnu.org>
       2019-09-14  Steven G. Kargl  <kargl@gcc.gnu.org>
+      2019-09-19  Steven G. Kargl  <kargl@gcc.gnu.org>
 
 kito (1):
       RISC-V: Fix bad insn splits with paradoxical subregs.
@@ -2611,10 +2612,17 @@ index 6f6f768f371..4becdcf1cbb 100644
        else
  	/* Every other call, including pure functions, may read any memory
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index e3073787ea9..74b86623a2c 100644
+index e3073787ea9..42f3a0755a6 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,197 @@
+@@ -1,3 +1,204 @@
++2019-09-19  Steven G. Kargl  <kargl@gcc.gnu.org>
++
++	PR fortran/91727
++	* resolve.c (conformable_arrays):  If array-spec is NULL, then
++	allocate-object is a scalar.  a conformability check only occurs
++	for an array source-expr.
++
 +2019-09-18  Thomas Koenig  <tkoenig@gcc.gnu.org>
 +
 +	Backport from trunk
@@ -3617,7 +3625,7 @@ index e918372ef85..a69f71acf7e 100644
  
  	break;
 diff --git a/gcc/fortran/resolve.c b/gcc/fortran/resolve.c
-index afa4e5c2ccf..2d2d32e1733 100644
+index afa4e5c2ccf..6bdb5f012a5 100644
 --- a/gcc/fortran/resolve.c
 +++ b/gcc/fortran/resolve.c
 @@ -7059,19 +7059,6 @@ gfc_resolve_iterator (gfc_iterator *iter, bool real_ok, bool own_scope)
@@ -3660,6 +3668,15 @@ index afa4e5c2ccf..2d2d32e1733 100644
    if (iter->start->expr_type == EXPR_CONSTANT
        && iter->end->expr_type == EXPR_CONSTANT
        && iter->step->expr_type == EXPR_CONSTANT)
+@@ -7439,7 +7439,7 @@ conformable_arrays (gfc_expr *e1, gfc_expr *e2)
+   for (tail = e2->ref; tail && tail->next; tail = tail->next);
+ 
+   /* First compare rank.  */
+-  if ((tail && e1->rank != tail->u.ar.as->rank)
++  if ((tail && (!tail->u.ar.as || e1->rank != tail->u.ar.as->rank))
+       || (!tail && e1->rank != e2->rank))
+     {
+       gfc_error ("Source-expr at %L must be scalar or have the "
 @@ -13539,14 +13539,34 @@ resolve_typebound_procedure (gfc_symtree* stree)
      }
    else
@@ -6177,10 +6194,15 @@ index 29f6cdc4667..33b4be79c0f 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..2c6127fa526 100644
+index bc11ae4ae0b..51bb429e6bf 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,285 @@
+@@ -1,3 +1,290 @@
++2019-09-19  Steven G. Kargl  <kargl@gcc.gnu.org>
++
++	PR fortran/91727
++	* gfortran.dg/pr91727.f90: New test.
++
 +2019-09-19  Kito Cheng  <kito.cheng@sifive.com>
 +
 +	Backport from mainline
@@ -6466,7 +6488,7 @@ index bc11ae4ae0b..2c6127fa526 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +709,7 @@
+@@ -427,7 +714,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -8987,6 +9009,21 @@ index 00000000000..0072aba1680
 +   type(doublecomplex :: b     ! { dg-error "Malformed type-spec" }
 +   type(double complex :: c    ! { dg-error "Malformed type-spec" }
 +end program foo
+diff --git a/gcc/testsuite/gfortran.dg/pr91727.f90 b/gcc/testsuite/gfortran.dg/pr91727.f90
+new file mode 100644
+index 00000000000..54276b45d33
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr91727.f90
+@@ -0,0 +1,9 @@
++! { dg-do compile }
++! Code contributed by Gerhard Steinmetz.
++program p
++   type t
++      class(*), allocatable :: a
++   end type
++   type(t) :: x
++   allocate (x%a, source=[1]) ! { dg-error "have the same rank as" }
++end
 diff --git a/gcc/testsuite/gfortran.dg/unlimited_polymorphic_28.f90 b/gcc/testsuite/gfortran.dg/unlimited_polymorphic_28.f90
 index b474a243233..a9f67273d5e 100644
 --- a/gcc/testsuite/gfortran.dg/unlimited_polymorphic_28.f90
