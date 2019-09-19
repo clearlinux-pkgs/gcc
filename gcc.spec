@@ -448,6 +448,7 @@ cat *.lang > gcc.lang
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/include/ssp
 /usr/lib64/libssp*.a
 /usr/lib64/libgomp.a
+/usr/lib64/libgomp.spec
 # gcc-plugin-dev
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/plugin/gengtype
 
@@ -505,12 +506,16 @@ cat *.lang > gcc.lang
 /usr/lib32/libatomic.so
 /usr/lib32/libgfortran.a
 /usr/lib32/libgfortran.so
+/usr/lib32/libgfortran.spec
 /usr/lib32/libgomp.a
 /usr/lib32/libgomp.so
+/usr/lib32/libgomp.spec
 /usr/lib32/libitm.a
 /usr/lib32/libitm.so
+/usr/lib32/libitm.spec
 /usr/lib32/libquadmath.a
 /usr/lib32/libquadmath.so
+/usr/lib32/libsanitizer.spec
 /usr/lib32/libssp.a
 /usr/lib32/libssp.so
 /usr/lib32/libubsan.a
@@ -530,7 +535,6 @@ cat *.lang > gcc.lang
 %files libs-math
 /usr/lib64/libssp.so*
 /usr/lib64/libgomp*so*
-/usr/lib64/libgomp.spec
 /usr/lib64/libatomic*.so.*
 /usr/lib64/libitm*.so.*
 /usr/lib64/libquadmath*.so.*
@@ -549,19 +553,15 @@ cat *.lang > gcc.lang
 /usr/lib32/libgcc_s.so.1
 /usr/lib32/libgfortran.so.5
 /usr/lib32/libgfortran.so.5.0.0
-/usr/lib32/libgfortran.spec
 %exclude /usr/lib32/libgo.*
 %exclude /usr/lib32/libgobegin.a
 %exclude /usr/lib32/libgolibbegin.a
 /usr/lib32/libgomp.so.1
 /usr/lib32/libgomp.so.1.0.0
-/usr/lib32/libgomp.spec
 /usr/lib32/libitm.so.1
 /usr/lib32/libitm.so.1.0.0
-/usr/lib32/libitm.spec
 /usr/lib32/libquadmath.so.0
 /usr/lib32/libquadmath.so.0.0.0
-/usr/lib32/libsanitizer.spec
 /usr/lib32/libssp.so.0
 /usr/lib32/libssp.so.0.0.0
 /usr/lib32/libssp_nonshared.a
