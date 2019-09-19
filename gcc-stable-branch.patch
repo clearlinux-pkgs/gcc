@@ -13,7 +13,13 @@ edlinger (2):
 emsr (1):
       2019-09-09  Edward Smith-Rowland  <3dw4rd@verizon.net>
 
-gccadmin (32):
+gccadmin (38):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -80,7 +86,7 @@ jsm28 (4):
       * es.po: Update.
       * es.po: Update.
 
-kargl (17):
+kargl (20):
       2019-08-01  Steven G. Kargl  <kargl@gcc.gnu.org>
       2019-08-12  Steven G. Kargl  <kargl@gcc.gnu.org>
       2019-08-13  Steven G. Kargl  <kargl@gcc.gnu.org>
@@ -98,6 +104,9 @@ kargl (17):
       2019-08-30  Steven G. Kargl  <kargl@gcc.gnu.org>
       2019-09-02  Steven G. Kargl  <kargl@gc.gnu.org>
       2019-09-05  Steven G. Kargl  <kargl@gcc.gnu.org>
+      2019-09-14  Steven G. Kargl  <kargl@gcc.gnu.org>
+      2019-09-14  Steven G. Kargl  <kargl@gcc.gnu.org>
+      2019-09-14  Steven G. Kargl  <kargl@gcc.gnu.org>
 
 law (1):
       * config/mips/mips.md (mips_get_fcsr, *mips_get_fcsr): Use SI         machine mode for unspec_volatile operand.
@@ -159,10 +168,12 @@ segher (3):
 sje (1):
       2019-08-15  Steve Ellcey  <sellcey@marvell.com>
 
-tkoenig (3):
+tkoenig (5):
       2019-08-13  Thomas Koenig  <tkoenig@gcc.gnu.org>
       2019-08-13  Thomas Koenig  <tkoenig@gcc.gnu.org>
       2013-08-13  Thomas Koenig  <tkoenig@gcc.gnu.org>
+      2019-09-15  Thomas Koenig  <tkoenig@gcc.gnu.org>
+      2019-09-18  Thomas Koenig  <tkoenig@gcc.gnu.org>
 
 uros (3):
       * test_summary: Do not escape "=".
@@ -2506,10 +2517,47 @@ index 6f6f768f371..4becdcf1cbb 100644
        else
  	/* Every other call, including pure functions, may read any memory
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index e3073787ea9..d718706e6e4 100644
+index e3073787ea9..74b86623a2c 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,160 @@
+@@ -1,3 +1,197 @@
++2019-09-18  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	Backport from trunk
++	PR fortran/91550
++	* frontend-passes.c (do_subscript): If step equals
++	zero, a previuos error has been reported; do nothing
++	in this case.
++	* resolve.c (gfc_resolve_iterator): Move error checking
++	after type conversion.
++
++2019-09-15  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	Backport from trunk
++	PR fortran/91557
++	* trans-decl.c (generate_local_decl): Do not warn if the symbol
++	is artificial.
++	* trans-types.c (get_formal_from_actual_arglist): Set artificial
++	attribute on dummy arguments.
++
++2019-09-14  Steven G. Kargl  <kargl@gcc.gnu.org>
++
++	PR fortran/91553
++	* simplify.c (gfc_convert_constant):  During conversion check if the
++	constant is enclosed in parenthesis, and simplify expression.
++
++2019-09-14  Steven G. Kargl  <kargl@gcc.gnu.org>
++
++	PR fortran/91566
++	* simplify.c (gfc_simplify_merge): Need to simplify expression
++	after insertation of parenthesis.
++
++2019-09-14  Steven G. Kargl  <kargl@gcc.gnu.org>
++
++	PR fortran/91642
++	* io.c (gfc_match_inquire): null() cannot be in an iolength inquire
++	list.
++
 +2019-09-07  Paul Thomas  <pault@gcc.gnu.org>
 +
 +	Backport from mainline
@@ -2935,7 +2983,7 @@ index 2aeea92b8fb..33a332efdff 100644
  	return false;
  
 diff --git a/gcc/fortran/frontend-passes.c b/gcc/fortran/frontend-passes.c
-index d4264dafa6f..08503ea5d1d 100644
+index d4264dafa6f..e6786635788 100644
 --- a/gcc/fortran/frontend-passes.c
 +++ b/gcc/fortran/frontend-passes.c
 @@ -2519,7 +2519,12 @@ insert_index (gfc_expr *e, gfc_symbol *sym, mpz_t val, mpz_t ret)
@@ -2964,7 +3012,33 @@ index d4264dafa6f..08503ea5d1d 100644
    for (ref = v->ref; ref; ref = ref->next)
      {
        if (ref->type == REF_ARRAY && ref->u.ar.type == AR_ELEMENT)
-@@ -2609,7 +2620,6 @@ do_subscript (gfc_expr **e)
+@@ -2569,6 +2580,7 @@ do_subscript (gfc_expr **e)
+ 	      bool have_do_start, have_do_end;
+ 	      bool error_not_proven;
+ 	      int warn;
++	      int sgn;
+ 
+ 	      dl = lp->c;
+ 	      if (dl == NULL)
+@@ -2597,7 +2609,16 @@ do_subscript (gfc_expr **e)
+ 		 Do not warn in this case.  */
+ 
+ 	      if (dl->ext.iterator->step->expr_type == EXPR_CONSTANT)
+-		mpz_init_set (do_step, dl->ext.iterator->step->value.integer);
++		{
++		  sgn = mpz_cmp_ui (dl->ext.iterator->step->value.integer, 0);
++		  /* This can happen, but then the error has been
++		     reported previusly.  */
++		  if (sgn == 0)
++		    continue;
++
++		  mpz_init_set (do_step, dl->ext.iterator->step->value.integer);
++		}
++
+ 	      else
+ 		continue;
+ 
+@@ -2609,7 +2630,6 @@ do_subscript (gfc_expr **e)
  	      else
  		have_do_start = false;
  
@@ -2972,16 +3046,15 @@ index d4264dafa6f..08503ea5d1d 100644
  	      if (dl->ext.iterator->end->expr_type == EXPR_CONSTANT)
  		{
  		  have_do_end = true;
-@@ -2621,6 +2631,17 @@ do_subscript (gfc_expr **e)
+@@ -2621,6 +2641,16 @@ do_subscript (gfc_expr **e)
  	      if (!have_do_start && !have_do_end)
  		return 0;
  
 +	      /* No warning inside a zero-trip loop.  */
 +	      if (have_do_start && have_do_end)
 +		{
-+		  int sgn, cmp;
++		  int cmp;
 +
-+		  sgn = mpz_cmp_ui (do_step, 0);
 +		  cmp = mpz_cmp (do_end, do_start);
 +		  if ((sgn > 0 && cmp < 0) || (sgn < 0 && cmp > 0))
 +		    break;
@@ -2990,7 +3063,7 @@ index d4264dafa6f..08503ea5d1d 100644
  	      /* May have to correct the end value if the step does not equal
  		 one.  */
  	      if (have_do_start && have_do_end && mpz_cmp_ui (do_step, 1) != 0)
-@@ -2762,6 +2783,12 @@ static void
+@@ -2762,6 +2792,12 @@ static void
  doloop_warn (gfc_namespace *ns)
  {
    gfc_code_walker (&ns->code, doloop_code, do_function, NULL);
@@ -3158,7 +3231,7 @@ index c21fbddd5fb..357a35052eb 100644
    return false;
  
 diff --git a/gcc/fortran/io.c b/gcc/fortran/io.c
-index 9828897852a..b3d8696c030 100644
+index 9828897852a..9bee9094e7f 100644
 --- a/gcc/fortran/io.c
 +++ b/gcc/fortran/io.c
 @@ -2804,7 +2804,7 @@ match_filepos (gfc_statement st, gfc_exec_op op)
@@ -3170,6 +3243,24 @@ index 9828897852a..b3d8696c030 100644
    if (m == MATCH_NO)
      {
        m = gfc_match_expr (&fp->unit);
+@@ -4583,6 +4583,17 @@ gfc_match_inquire (void)
+       if (m == MATCH_NO)
+ 	goto syntax;
+ 
++      for (gfc_code *c = code; c; c = c->next)
++	if (c->expr1 && c->expr1->expr_type == EXPR_FUNCTION
++	    && c->expr1->symtree && c->expr1->symtree->n.sym->attr.function
++	    && !c->expr1->symtree->n.sym->attr.external
++	    && strcmp (c->expr1->symtree->name, "null") == 0)
++	  {
++	    gfc_error ("NULL() near %L cannot appear in INQUIRE statement",
++		       &c->expr1->where);
++	    goto cleanup;
++	  }
++
+       new_st.op = EXEC_IOLENGTH;
+       new_st.expr1 = inquire->iolength;
+       new_st.ext.inquire = inquire;
 diff --git a/gcc/fortran/match.c b/gcc/fortran/match.c
 index 156d7a05f6b..2d91a2bbace 100644
 --- a/gcc/fortran/match.c
@@ -3432,9 +3523,49 @@ index e918372ef85..a69f71acf7e 100644
  
  	break;
 diff --git a/gcc/fortran/resolve.c b/gcc/fortran/resolve.c
-index afa4e5c2ccf..9647ef2c46a 100644
+index afa4e5c2ccf..2d2d32e1733 100644
 --- a/gcc/fortran/resolve.c
 +++ b/gcc/fortran/resolve.c
+@@ -7059,19 +7059,6 @@ gfc_resolve_iterator (gfc_iterator *iter, bool real_ok, bool own_scope)
+ 				  "Step expression in DO loop"))
+     return false;
+ 
+-  if (iter->step->expr_type == EXPR_CONSTANT)
+-    {
+-      if ((iter->step->ts.type == BT_INTEGER
+-	   && mpz_cmp_ui (iter->step->value.integer, 0) == 0)
+-	  || (iter->step->ts.type == BT_REAL
+-	      && mpfr_sgn (iter->step->value.real) == 0))
+-	{
+-	  gfc_error ("Step expression in DO loop at %L cannot be zero",
+-		     &iter->step->where);
+-	  return false;
+-	}
+-    }
+-
+   /* Convert start, end, and step to the same type as var.  */
+   if (iter->start->ts.kind != iter->var->ts.kind
+       || iter->start->ts.type != iter->var->ts.type)
+@@ -7085,6 +7072,19 @@ gfc_resolve_iterator (gfc_iterator *iter, bool real_ok, bool own_scope)
+       || iter->step->ts.type != iter->var->ts.type)
+     gfc_convert_type (iter->step, &iter->var->ts, 1);
+ 
++  if (iter->step->expr_type == EXPR_CONSTANT)
++    {
++      if ((iter->step->ts.type == BT_INTEGER
++	   && mpz_cmp_ui (iter->step->value.integer, 0) == 0)
++	  || (iter->step->ts.type == BT_REAL
++	      && mpfr_sgn (iter->step->value.real) == 0))
++	{
++	  gfc_error ("Step expression in DO loop at %L cannot be zero",
++		     &iter->step->where);
++	  return false;
++	}
++    }
++
+   if (iter->start->expr_type == EXPR_CONSTANT
+       && iter->end->expr_type == EXPR_CONSTANT
+       && iter->step->expr_type == EXPR_CONSTANT)
 @@ -13539,14 +13539,34 @@ resolve_typebound_procedure (gfc_symtree* stree)
      }
    else
@@ -3521,10 +3652,25 @@ index afa4e5c2ccf..9647ef2c46a 100644
  
    if (e->rank == 0 || has_pointer)
 diff --git a/gcc/fortran/simplify.c b/gcc/fortran/simplify.c
-index 6c1f4bd4fce..ee159b19ee1 100644
+index 6c1f4bd4fce..f8c9a42cdc7 100644
 --- a/gcc/fortran/simplify.c
 +++ b/gcc/fortran/simplify.c
-@@ -6684,6 +6684,9 @@ gfc_simplify_reshape (gfc_expr *source, gfc_expr *shape_exp,
+@@ -4808,8 +4808,12 @@ gfc_simplify_merge (gfc_expr *tsource, gfc_expr *fsource, gfc_expr *mask)
+   gfc_constructor *tsource_ctor, *fsource_ctor, *mask_ctor;
+ 
+   if (mask->expr_type == EXPR_CONSTANT)
+-    return gfc_get_parentheses (gfc_copy_expr (mask->value.logical
+-					       ? tsource : fsource));
++    {
++      result = gfc_copy_expr (mask->value.logical ? tsource : fsource);
++      result = gfc_get_parentheses (result);
++      gfc_simplify_expr (result, 1);
++      return result;
++    }
+ 
+   if (!mask->rank || !is_constant_array_expr (mask)
+       || !is_constant_array_expr (tsource) || !is_constant_array_expr (fsource))
+@@ -6684,6 +6688,9 @@ gfc_simplify_reshape (gfc_expr *source, gfc_expr *shape_exp,
    mpz_init (index);
    rank = 0;
  
@@ -3534,7 +3680,7 @@ index 6c1f4bd4fce..ee159b19ee1 100644
    for (;;)
      {
        e = gfc_constructor_lookup_expr (shape_exp->value.constructor, rank);
-@@ -6708,8 +6711,28 @@ gfc_simplify_reshape (gfc_expr *source, gfc_expr *shape_exp,
+@@ -6708,8 +6715,28 @@ gfc_simplify_reshape (gfc_expr *source, gfc_expr *shape_exp,
      }
    else
      {
@@ -3565,7 +3711,7 @@ index 6c1f4bd4fce..ee159b19ee1 100644
  
        for (i = 0; i < rank; i++)
  	{
-@@ -6720,7 +6743,12 @@ gfc_simplify_reshape (gfc_expr *source, gfc_expr *shape_exp,
+@@ -6720,7 +6747,12 @@ gfc_simplify_reshape (gfc_expr *source, gfc_expr *shape_exp,
  
  	  gcc_assert (order[i] >= 1 && order[i] <= rank);
  	  order[i]--;
@@ -3579,11 +3725,39 @@ index 6c1f4bd4fce..ee159b19ee1 100644
  	  x[order[i]] = 1;
  	}
      }
+@@ -8494,6 +8526,12 @@ gfc_convert_constant (gfc_expr *e, bt type, int kind)
+ 	    {
+ 	      if (c->expr->expr_type == EXPR_ARRAY)
+ 		tmp = gfc_convert_constant (c->expr, type, kind);
++	      else if (c->expr->expr_type == EXPR_OP
++			&& c->expr->value.op.op == INTRINSIC_PARENTHESES)
++		{
++		  gfc_simplify_expr (c->expr, 1);
++		  tmp = f (c->expr, kind);
++		}
+ 	      else
+ 		tmp = f (c->expr, kind);
+ 	    }
 diff --git a/gcc/fortran/trans-decl.c b/gcc/fortran/trans-decl.c
-index 9538dee5733..5d1d1ecb19c 100644
+index 9538dee5733..f5149eed981 100644
 --- a/gcc/fortran/trans-decl.c
 +++ b/gcc/fortran/trans-decl.c
-@@ -6440,6 +6440,20 @@ gfc_generate_return (void)
+@@ -5862,9 +5862,11 @@ generate_local_decl (gfc_symbol * sym)
+ 	    }
+ 	  else if (warn_unused_dummy_argument)
+ 	    {
+-	      gfc_warning (OPT_Wunused_dummy_argument,
+-			   "Unused dummy argument %qs at %L", sym->name,
+-			   &sym->declared_at);
++	      if (!sym->attr.artificial)
++		gfc_warning (OPT_Wunused_dummy_argument,
++			     "Unused dummy argument %qs at %L", sym->name,
++			     &sym->declared_at);
++
+ 	      if (sym->backend_decl != NULL_TREE)
+ 		TREE_NO_WARNING(sym->backend_decl) = 1;
+ 	    }
+@@ -6440,6 +6442,20 @@ gfc_generate_return (void)
  				    TREE_TYPE (result), DECL_RESULT (fndecl),
  				    result);
  	}
@@ -3663,6 +3837,18 @@ index 5fa182bf05a..b839d6c73e1 100644
    tmp = fold_build1_loc (loc, GOTO_EXPR, void_type_node, exit_label);
    tmp = fold_build3_loc (loc, COND_EXPR, void_type_node,
  			 cond, tmp, build_empty_stmt (loc));
+diff --git a/gcc/fortran/trans-types.c b/gcc/fortran/trans-types.c
+index d3b61e78887..3c8188b30c4 100644
+--- a/gcc/fortran/trans-types.c
++++ b/gcc/fortran/trans-types.c
+@@ -3021,6 +3021,7 @@ get_formal_from_actual_arglist (gfc_symbol *sym, gfc_actual_arglist *actual_args
+ 		}
+ 	    }
+ 	  s->attr.dummy = 1;
++	  s->attr.artificial = 1;
+ 	  s->attr.intent = INTENT_UNKNOWN;
+ 	  (*f)->sym = s;
+ 	}
 diff --git a/gcc/fortran/trans.c b/gcc/fortran/trans.c
 index e7844c9bf1f..167fcb2158c 100644
 --- a/gcc/fortran/trans.c
@@ -5897,10 +6083,37 @@ index 29f6cdc4667..33b4be79c0f 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..9a424e463e4 100644
+index bc11ae4ae0b..cd500d0b1c7 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,247 @@
+@@ -1,3 +1,274 @@
++2019-09-18  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	Backport from trunk
++	PR fortran/91550
++	* gfortran.dg/do_subscript_6.f90: New test.
++
++2019-09-15  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	Backport from trunk
++	PR fortran/91557
++	* gfortran.dg/warn_unused_dummy_argument_5.f90: New test.
++
++2019-09-14  Steven G. Kargl  <kargl@gcc.gnu.org>
++
++	PR fortran/91553
++	* gfortran.dg/pr91553.f90: New test.
++
++2019-09-14  Steven G. Kargl  <kargl@gcc.gnu.org>
++
++	PR fortran/91566
++	* gfortran.dg/pr91566.f90: New test.
++
++2019-09-14  Steven G. Kargl  <kargl@gcc.gnu.org>
++
++	PR fortran/91642
++	* gfortran.dg/pr91642.f90: New test.
++
 +2019-09-11  Eric Botcazou  <ebotcazou@adacore.com>
 +
 +	* gcc.target/sparc/20161111-1.c: XFAIL redundant zero-extension test.
@@ -6148,7 +6361,7 @@ index bc11ae4ae0b..9a424e463e4 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +671,7 @@
+@@ -427,7 +698,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -7902,6 +8115,23 @@ index 00000000000..54a4f1ba51a
 +          endif
 +      enddo
 +end program
+diff --git a/gcc/testsuite/gfortran.dg/do_subscript_6.f90 b/gcc/testsuite/gfortran.dg/do_subscript_6.f90
+new file mode 100644
+index 00000000000..d78b9d39056
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/do_subscript_6.f90
+@@ -0,0 +1,11 @@
++! { dg-do compile }
++! { dg-options "-std=legacy" }
++! PR 91550 - this used to cause an ICE
++! Test case by Gerhard Steinmetz
++program p
++   real :: a(3)
++   integer :: i
++   do i = 1, 3, .1 ! { dg-error "cannot be zero" }
++      a(i) = i
++   end do
++end
 diff --git a/gcc/testsuite/gfortran.dg/pdt_4.f03 b/gcc/testsuite/gfortran.dg/pdt_4.f03
 index 0bb58f91c67..c1af65a5248 100644
 --- a/gcc/testsuite/gfortran.dg/pdt_4.f03
@@ -8358,6 +8588,20 @@ index 00000000000..bb959185cf9
 +   if (any(y /= [2., 4., 6.])) stop 1
 +   if (any(z /= [2., 4., 8., 6.])) stop 2
 +end
+diff --git a/gcc/testsuite/gfortran.dg/pr91553.f90 b/gcc/testsuite/gfortran.dg/pr91553.f90
+new file mode 100644
+index 00000000000..2d0b018dded
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr91553.f90
+@@ -0,0 +1,8 @@
++! { dg-do run }
++! Code contributed by Gerhard Steinmetz
++program p
++   complex z(1)
++   z = (1.0, 2.0) * [real :: (3.0 + 4.0)]
++   if (real(z(1)) /= 7.) stop 1
++   if (aimag(z(1)) /= 14.) stop 2
++end
 diff --git a/gcc/testsuite/gfortran.dg/pr91564.f90 b/gcc/testsuite/gfortran.dg/pr91564.f90
 new file mode 100644
 index 00000000000..57783abe1f8
@@ -8402,6 +8646,26 @@ index 00000000000..b43a57acf13
 +subroutine bar
 +   integer, parameter :: a(1,2) = 1                ! { dg-error "\(1\)" }
 +   print *, reshape([1,2,3,4,5,6], [2,3], order=a) ! { dg-error "are different" }
++end
+diff --git a/gcc/testsuite/gfortran.dg/pr91566.f90 b/gcc/testsuite/gfortran.dg/pr91566.f90
+new file mode 100644
+index 00000000000..fdb35b44199
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr91566.f90
+@@ -0,0 +1,14 @@
++! { dg-do compile }
++! Code contributed by Gerhard Steinmetz
++program p
++   call q
++   call r
++end program p
++
++subroutine q
++   print *, -merge([3,4], 0, [.false.,.true.])
++end
++
++subroutine r
++   print *, 2 + merge([3,4], 0, [.false.,.true.])
 +end
 diff --git a/gcc/testsuite/gfortran.dg/pr91568.f b/gcc/testsuite/gfortran.dg/pr91568.f
 new file mode 100644
@@ -8459,6 +8723,31 @@ index 00000000000..d02cb64bfc2
 +   call sub (x%a%a)   ! { dg-error "Syntax error in argument list" }
 +end
 +
+diff --git a/gcc/testsuite/gfortran.dg/pr91642.f90 b/gcc/testsuite/gfortran.dg/pr91642.f90
+new file mode 100644
+index 00000000000..8c41cd2dae0
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr91642.f90
+@@ -0,0 +1,19 @@
++! { dg-do compile }
++! PR fortran/91642
++! Code contributed by Gerhard Steinmetz
++program p
++   integer i
++   integer :: iol
++   integer, external :: null
++   i = 0
++   inquire (iolength=iol) i, null()
++   if (iol == 4) stop 1
++end
++
++subroutine q
++   integer i
++   integer :: iol
++   i = 0
++   inquire (iolength=iol) i, null() ! { dg-error "cannot appear in INQUIRE" }
++   if (iol == 4) stop 1
++end
 diff --git a/gcc/testsuite/gfortran.dg/pr91660_1.f90 b/gcc/testsuite/gfortran.dg/pr91660_1.f90
 new file mode 100644
 index 00000000000..53a1a808a7b
@@ -8554,6 +8843,28 @@ index ad3ab3977c5..b8b49d7a052 100644
 +    USE MOO, ONLY: Z => I, Z => I   ! { dg-error "conflicts with the rename" }
  END SUBROUTINE Z
  
+diff --git a/gcc/testsuite/gfortran.dg/warn_unused_dummy_argument_5.f90 b/gcc/testsuite/gfortran.dg/warn_unused_dummy_argument_5.f90
+new file mode 100644
+index 00000000000..fa93f1d7ff2
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/warn_unused_dummy_argument_5.f90
+@@ -0,0 +1,16 @@
++! { dg-do compile }
++! { dg-additional-options "-Wunused-dummy-argument" }
++! PR 91557 - this used to generate a bogus warning
++! Test case by Gerhard Steinmetz
++program p
++   integer :: a, b
++   a = 1
++   call g
++contains
++   subroutine g
++      integer :: x, y
++      call h (x, y)
++      if ( a > 0 )   y = y - 1
++      b = y - x + 1
++   end
++end
 diff --git a/gcc/tree-ssa-alias.c b/gcc/tree-ssa-alias.c
 index 2be10e199ba..6ed5c8a1d23 100644
 --- a/gcc/tree-ssa-alias.c
