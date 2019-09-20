@@ -1,10 +1,11 @@
 anlauf (1):
       2019-09-05  Harald Anlauf  <anlauf@gmx.de>
 
-ebotcazou (3):
+ebotcazou (4):
       PR rtl-optimization/91347 	* dse.c (scan_insn): Call add_wild_read for non-const/memset tail calls 	before reload if HARD_FRAME_POINTER_IS_ARG_POINTER.
       PR target/91472 	* config/sparc/sparc.c (sparc_cannot_force_const_mem): Return true 	during LRA/reload in PIC mode if the PIC register hasn't been used yet. 	(sparc_pic_register_p): Test reload_in_progress for consistency's sake.
       PR rtl-optimization/89795 	* rtlanal.c (nonzero_bits1) <SUBREG>: Do not propagate results from 	inner REGs to paradoxical SUBREGs if WORD_REGISTER_OPERATIONS is set.
+      PR target/91269 	* config/sparc/sparc.h (HARD_REGNO_CALLER_SAVE_MODE): Define.
 
 edlinger (2):
       2019-08-16  Bernd Edlinger  <bernd.edlinger@hotmail.de>
@@ -110,8 +111,12 @@ kargl (21):
       2019-09-14  Steven G. Kargl  <kargl@gcc.gnu.org>
       2019-09-19  Steven G. Kargl  <kargl@gcc.gnu.org>
 
-kito (1):
+kito (2):
       RISC-V: Fix bad insn splits with paradoxical subregs.
+      RISC-V: Fix more splitters accidentally calling gen_reg_rtx.
+
+krebbel (1):
+      Fix PR88751
 
 law (1):
       * config/mips/mips.md (mips_get_fcsr, *mips_get_fcsr): Use SI         machine mode for unspec_volatile operand.
@@ -419,10 +424,53 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..aa90ce5df7b 100644
+index 7f6557d8018..628a5fe3312 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,329 @@
+@@ -1,3 +1,372 @@
++2019-09-20  Andreas Krebbel  <krebbel@linux.ibm.com>
++
++	Backport from mainline
++	2019-06-06  Andreas Krebbel  <krebbel@linux.ibm.com>
++
++	PR rtl-optimization/88751
++	* ira.c (ira): Use the number of the actually referenced registers
++	when calculating the threshold.
++
++2019-09-20  Kito Cheng  <kito.cheng@sifive.com>
++
++	Backport from mainline
++	2019-09-18  Jim Wilson  <jimw@sifive.com>
++
++	PR target/91683
++	* config/riscv/riscv-protos.h (riscv_split_symbol): New bool parameter.
++	(riscv_move_integer): Likewise.
++	* config/riscv/riscv.c (riscv_split_integer): Pass FALSE for new
++	riscv_move_integer arg.
++	(riscv_legitimize_move): Likewise.
++	(riscv_force_temporary): New parameter in_splitter.  Don't call
++	force_reg if true.
++	(riscv_unspec_offset_high): Pass FALSE for new riscv_force_temporary
++	arg.
++	(riscv_add_offset): Likewise.
++	(riscv_split_symbol): New parameter in_splitter.  Pass to
++	riscv_force_temporary.
++	(riscv_legitimize_address): Pass FALSE for new riscv_split_symbol
++	arg.
++	(riscv_move_integer): New parameter in_splitter.  New local
++	can_create_psuedo.  Don't call riscv_split_integer or force_reg when
++	in_splitter TRUE.
++	(riscv_legitimize_const_move): Pass FALSE for new riscv_move_integer,
++	riscv_split_symbol, and riscv_force_temporary args.
++	* config/riscv/riscv.md (low<mode>+1): Pass TRUE for new
++	riscv_move_integer arg.
++	(low<mode>+2): Pass TRUE for new riscv_split_symbol arg.
++
++2019-09-20  Eric Botcazou  <ebotcazou@adacore.com>
++
++	PR target/91269
++	* config/sparc/sparc.h (HARD_REGNO_CALLER_SAVE_MODE): Define.
++
 +2019-09-19  Kito Cheng  <kito.cheng@sifive.com>
 +
 +	Backport from mainline
@@ -752,7 +800,7 @@ index 7f6557d8018..aa90ce5df7b 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +839,7 @@
+@@ -513,7 +882,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -1156,8 +1204,172 @@ index 2ae1f7e0440..a9b0c86be07 100644
    "TARGET_HARD_FLOAT"
    "cfc1\t%0,$31")
  
+diff --git a/gcc/config/riscv/riscv-protos.h b/gcc/config/riscv/riscv-protos.h
+index 8b510f87df8..5b0bbdd7cb4 100644
+--- a/gcc/config/riscv/riscv-protos.h
++++ b/gcc/config/riscv/riscv-protos.h
+@@ -44,10 +44,10 @@ extern int riscv_const_insns (rtx);
+ extern int riscv_split_const_insns (rtx);
+ extern int riscv_load_store_insns (rtx, rtx_insn *);
+ extern rtx riscv_emit_move (rtx, rtx);
+-extern bool riscv_split_symbol (rtx, rtx, machine_mode, rtx *);
++extern bool riscv_split_symbol (rtx, rtx, machine_mode, rtx *, bool);
+ extern bool riscv_split_symbol_type (enum riscv_symbol_type);
+ extern rtx riscv_unspec_address (rtx, enum riscv_symbol_type);
+-extern void riscv_move_integer (rtx, rtx, HOST_WIDE_INT);
++extern void riscv_move_integer (rtx, rtx, HOST_WIDE_INT, bool);
+ extern bool riscv_legitimize_move (machine_mode, rtx, rtx);
+ extern rtx riscv_subword (rtx, bool);
+ extern bool riscv_split_64bit_move_p (rtx, rtx);
+diff --git a/gcc/config/riscv/riscv.c b/gcc/config/riscv/riscv.c
+index 35219956c80..5cb295d3abb 100644
+--- a/gcc/config/riscv/riscv.c
++++ b/gcc/config/riscv/riscv.c
+@@ -508,8 +508,8 @@ riscv_split_integer (HOST_WIDE_INT val, machine_mode mode)
+   unsigned HOST_WIDE_INT hival = sext_hwi ((val - loval) >> 32, 32);
+   rtx hi = gen_reg_rtx (mode), lo = gen_reg_rtx (mode);
+ 
+-  riscv_move_integer (hi, hi, hival);
+-  riscv_move_integer (lo, lo, loval);
++  riscv_move_integer (hi, hi, hival, FALSE);
++  riscv_move_integer (lo, lo, loval, FALSE);
+ 
+   hi = gen_rtx_fmt_ee (ASHIFT, mode, hi, GEN_INT (32));
+   hi = force_reg (mode, hi);
+@@ -1021,9 +1021,12 @@ riscv_force_binary (machine_mode mode, enum rtx_code code, rtx x, rtx y)
+    are allowed, copy it into a new register, otherwise use DEST.  */
+ 
+ static rtx
+-riscv_force_temporary (rtx dest, rtx value)
++riscv_force_temporary (rtx dest, rtx value, bool in_splitter)
+ {
+-  if (can_create_pseudo_p ())
++  /* We can't call gen_reg_rtx from a splitter, because this might realloc
++     the regno_reg_rtx array, which would invalidate reg rtx pointers in the
++     combine undo buffer.  */
++  if (can_create_pseudo_p () && !in_splitter)
+     return force_reg (Pmode, value);
+   else
+     {
+@@ -1082,7 +1085,7 @@ static rtx
+ riscv_unspec_offset_high (rtx temp, rtx addr, enum riscv_symbol_type symbol_type)
+ {
+   addr = gen_rtx_HIGH (Pmode, riscv_unspec_address (addr, symbol_type));
+-  return riscv_force_temporary (temp, addr);
++  return riscv_force_temporary (temp, addr, FALSE);
+ }
+ 
+ /* Load an entry from the GOT for a TLS GD access.  */
+@@ -1130,7 +1133,8 @@ static rtx riscv_tls_add_tp_le (rtx dest, rtx base, rtx sym)
+    is guaranteed to be a legitimate address for mode MODE.  */
+ 
+ bool
+-riscv_split_symbol (rtx temp, rtx addr, machine_mode mode, rtx *low_out)
++riscv_split_symbol (rtx temp, rtx addr, machine_mode mode, rtx *low_out,
++		    bool in_splitter)
+ {
+   enum riscv_symbol_type symbol_type;
+ 
+@@ -1146,7 +1150,7 @@ riscv_split_symbol (rtx temp, rtx addr, machine_mode mode, rtx *low_out)
+       case SYMBOL_ABSOLUTE:
+ 	{
+ 	  rtx high = gen_rtx_HIGH (Pmode, copy_rtx (addr));
+-	  high = riscv_force_temporary (temp, high);
++	  high = riscv_force_temporary (temp, high, in_splitter);
+ 	  *low_out = gen_rtx_LO_SUM (Pmode, high, addr);
+ 	}
+ 	break;
+@@ -1205,8 +1209,9 @@ riscv_add_offset (rtx temp, rtx reg, HOST_WIDE_INT offset)
+ 	 overflow, so we need to force a sign-extension check.  */
+       high = gen_int_mode (CONST_HIGH_PART (offset), Pmode);
+       offset = CONST_LOW_PART (offset);
+-      high = riscv_force_temporary (temp, high);
+-      reg = riscv_force_temporary (temp, gen_rtx_PLUS (Pmode, high, reg));
++      high = riscv_force_temporary (temp, high, FALSE);
++      reg = riscv_force_temporary (temp, gen_rtx_PLUS (Pmode, high, reg),
++				   FALSE);
+     }
+   return plus_constant (Pmode, reg, offset);
+ }
+@@ -1315,7 +1320,7 @@ riscv_legitimize_address (rtx x, rtx oldx ATTRIBUTE_UNUSED,
+     return riscv_legitimize_tls_address (x);
+ 
+   /* See if the address can split into a high part and a LO_SUM.  */
+-  if (riscv_split_symbol (NULL, x, mode, &addr))
++  if (riscv_split_symbol (NULL, x, mode, &addr, FALSE))
+     return riscv_force_address (addr, mode);
+ 
+   /* Handle BASE + OFFSET using riscv_add_offset.  */
+@@ -1337,17 +1342,23 @@ riscv_legitimize_address (rtx x, rtx oldx ATTRIBUTE_UNUSED,
+ /* Load VALUE into DEST.  TEMP is as for riscv_force_temporary.  */
+ 
+ void
+-riscv_move_integer (rtx temp, rtx dest, HOST_WIDE_INT value)
++riscv_move_integer (rtx temp, rtx dest, HOST_WIDE_INT value,
++		    bool in_splitter)
+ {
+   struct riscv_integer_op codes[RISCV_MAX_INTEGER_OPS];
+   machine_mode mode;
+   int i, num_ops;
+   rtx x;
+ 
++  /* We can't call gen_reg_rtx from a splitter, because this might realloc
++     the regno_reg_rtx array, which would invalidate reg rtx pointers in the
++     combine undo buffer.  */
++  bool can_create_pseudo = can_create_pseudo_p () && ! in_splitter;
++
+   mode = GET_MODE (dest);
+   num_ops = riscv_build_integer (codes, value, mode);
+ 
+-  if (can_create_pseudo_p () && num_ops > 2 /* not a simple constant */
++  if (can_create_pseudo && num_ops > 2 /* not a simple constant */
+       && num_ops >= riscv_split_integer_cost (value))
+     x = riscv_split_integer (value, mode);
+   else
+@@ -1357,7 +1368,7 @@ riscv_move_integer (rtx temp, rtx dest, HOST_WIDE_INT value)
+ 
+       for (i = 1; i < num_ops; i++)
+ 	{
+-	  if (!can_create_pseudo_p ())
++	  if (!can_create_pseudo)
+ 	    x = riscv_emit_set (temp, x);
+ 	  else
+ 	    x = force_reg (mode, x);
+@@ -1381,12 +1392,12 @@ riscv_legitimize_const_move (machine_mode mode, rtx dest, rtx src)
+   /* Split moves of big integers into smaller pieces.  */
+   if (splittable_const_int_operand (src, mode))
+     {
+-      riscv_move_integer (dest, dest, INTVAL (src));
++      riscv_move_integer (dest, dest, INTVAL (src), FALSE);
+       return;
+     }
+ 
+   /* Split moves of symbolic constants into high/low pairs.  */
+-  if (riscv_split_symbol (dest, src, MAX_MACHINE_MODE, &src))
++  if (riscv_split_symbol (dest, src, MAX_MACHINE_MODE, &src, FALSE))
+     {
+       riscv_emit_set (dest, src);
+       return;
+@@ -1407,7 +1418,7 @@ riscv_legitimize_const_move (machine_mode mode, rtx dest, rtx src)
+   if (offset != const0_rtx
+       && (targetm.cannot_force_const_mem (mode, src) || can_create_pseudo_p ()))
+     {
+-      base = riscv_force_temporary (dest, base);
++      base = riscv_force_temporary (dest, base, FALSE);
+       riscv_emit_move (dest, riscv_add_offset (NULL, base, INTVAL (offset)));
+       return;
+     }
+@@ -1416,7 +1427,7 @@ riscv_legitimize_const_move (machine_mode mode, rtx dest, rtx src)
+ 
+   /* When using explicit relocs, constant pool references are sometimes
+      not legitimate addresses.  */
+-  riscv_split_symbol (dest, XEXP (src, 0), mode, &XEXP (src, 0));
++  riscv_split_symbol (dest, XEXP (src, 0), mode, &XEXP (src, 0), FALSE);
+   riscv_emit_move (dest, src);
+ }
+ 
 diff --git a/gcc/config/riscv/riscv.md b/gcc/config/riscv/riscv.md
-index a8bac170e72..7850c41f3c7 100644
+index a8bac170e72..e40535c9e40 100644
 --- a/gcc/config/riscv/riscv.md
 +++ b/gcc/config/riscv/riscv.md
 @@ -1051,7 +1051,9 @@
@@ -1193,6 +1405,29 @@ index a8bac170e72..7850c41f3c7 100644
    [(set (match_dup 0) (ashift:SI (match_dup 1) (match_dup 2)))
     (set (match_dup 0) (ashiftrt:SI (match_dup 0) (match_dup 2)))]
  {
+@@ -1278,7 +1284,7 @@
+   ""
+   [(const_int 0)]
+ {
+-  riscv_move_integer (operands[2], operands[0], INTVAL (operands[1]));
++  riscv_move_integer (operands[2], operands[0], INTVAL (operands[1]), TRUE);
+   DONE;
+ })
+ 
+@@ -1287,11 +1293,11 @@
+   [(set (match_operand:P 0 "register_operand")
+ 	(match_operand:P 1))
+    (clobber (match_operand:P 2 "register_operand"))]
+-  "riscv_split_symbol (operands[2], operands[1], MAX_MACHINE_MODE, NULL)"
++  "riscv_split_symbol (operands[2], operands[1], MAX_MACHINE_MODE, NULL, TRUE)"
+   [(set (match_dup 0) (match_dup 3))]
+ {
+   riscv_split_symbol (operands[2], operands[1],
+-		     MAX_MACHINE_MODE, &operands[3]);
++		      MAX_MACHINE_MODE, &operands[3], TRUE);
+ })
+ 
+ ;; 64-bit integer moves
 @@ -1765,15 +1771,20 @@
  ;; Handle AND with 2^N-1 for N from 12 to XLEN.  This can be split into
  ;; two logical shifts.  Otherwise it requires 3 instructions: lui,
@@ -1790,6 +2025,24 @@ index 93479ab6bdc..14a4a760499 100644
 +      && (HARD_REGISTER_P (x) || lra_in_progress || reload_in_progress)
        && ORIGINAL_REGNO (x) == REGNO (pic_offset_table_rtx))
      return true;
+ 
+diff --git a/gcc/config/sparc/sparc.h b/gcc/config/sparc/sparc.h
+index 015065ffb81..4b09fc86b78 100644
+--- a/gcc/config/sparc/sparc.h
++++ b/gcc/config/sparc/sparc.h
+@@ -736,6 +736,13 @@ along with GCC; see the file COPYING3.  If not see
+    register window instruction in the prologue.  */
+ #define HARD_REGNO_RENAME_OK(FROM, TO) ((FROM) != 1)
+ 
++/* Select a register mode required for caller save of hard regno REGNO.
++   Contrary to what is documented, the default is not the smallest suitable
++   mode but the largest suitable mode for the given (REGNO, NREGS) pair and
++   it quickly creates paradoxical subregs that can be problematic.  */
++#define HARD_REGNO_CALLER_SAVE_MODE(REGNO, NREGS, MODE) \
++  ((MODE) == VOIDmode ? choose_hard_reg_mode (REGNO, NREGS, false) : (MODE))
++
+ /* Specify the registers used for certain standard purposes.
+    The values of these macros are register numbers.  */
  
 diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
 index c977850d067..8bd42b83973 100644
@@ -4064,6 +4317,38 @@ index 143986be58f..cd531e5b1e6 100644
  
    for (i = 0; i < NUM_ORDERS; i++)
      {
+diff --git a/gcc/ira.c b/gcc/ira.c
+index fd481d6e0e2..b330f2a287b 100644
+--- a/gcc/ira.c
++++ b/gcc/ira.c
+@@ -5198,6 +5198,8 @@ ira (FILE *f)
+   int ira_max_point_before_emit;
+   bool saved_flag_caller_saves = flag_caller_saves;
+   enum ira_region saved_flag_ira_region = flag_ira_region;
++  unsigned int i;
++  int num_used_regs = 0;
+ 
+   clear_bb_flags ();
+ 
+@@ -5213,12 +5215,17 @@ ira (FILE *f)
+ 
+   ira_conflicts_p = optimize > 0;
+ 
++  /* Determine the number of pseudos actually requiring coloring.  */
++  for (i = FIRST_PSEUDO_REGISTER; i < DF_REG_SIZE (df); i++)
++    num_used_regs += !!(DF_REG_USE_COUNT (i) + DF_REG_DEF_COUNT (i));
++
+   /* If there are too many pseudos and/or basic blocks (e.g. 10K
+      pseudos and 10K blocks or 100K pseudos and 1K blocks), we will
+      use simplified and faster algorithms in LRA.  */
+   lra_simple_p
+     = (ira_use_lra_p
+-       && max_reg_num () >= (1 << 26) / last_basic_block_for_fn (cfun));
++       && num_used_regs >= (1 << 26) / last_basic_block_for_fn (cfun));
++
+   if (lra_simple_p)
+     {
+       /* It permits to skip live range splitting in LRA.  */
 diff --git a/gcc/lra-int.h b/gcc/lra-int.h
 index d0a8facc50e..253ae1e6cb0 100644
 --- a/gcc/lra-int.h
@@ -6195,10 +6480,14 @@ index 29f6cdc4667..33b4be79c0f 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..51bb429e6bf 100644
+index bc11ae4ae0b..221de2e428c 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,290 @@
+@@ -1,3 +1,294 @@
++2019-09-20  Eric Botcazou  <ebotcazou@adacore.com>
++
++	* gcc.dg/pr91269.c: New test.
++
 +2019-09-19  Steven G. Kargl  <kargl@gcc.gnu.org>
 +
 +	PR fortran/91727
@@ -6489,7 +6778,7 @@ index bc11ae4ae0b..51bb429e6bf 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +714,7 @@
+@@ -427,7 +718,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -7957,6 +8246,82 @@ index 00000000000..983e03e7574
 +#pragma omp for simd if (c) lastprivate (v) schedule (static, 16)
 +  for (i = 0; i < 64; ++i)
 +    v = i;
++}
+diff --git a/gcc/testsuite/gcc.dg/pr91269.c b/gcc/testsuite/gcc.dg/pr91269.c
+new file mode 100644
+index 00000000000..8c03ba8dab2
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/pr91269.c
+@@ -0,0 +1,70 @@
++/* PR target/91269 */
++/* Testcase by Sergei Trofimovich <slyfox@inbox.ru> */
++
++/* { dg-do assemble } */
++/* { dg-options "-O2 -Wno-int-conversion" }  */
++/* { dg-additional-options "-fcall-used-g6 -fPIE -mcpu=niagara4" { target sparc*-*-* } } */
++
++struct m;
++
++enum { a = 2 };
++int b[1];
++int d[2715];
++int e, f, h;
++enum { i = 2 } j;
++inline int c(int k) {
++  char *cp;
++  if (k >= 62 && k <= 247)
++    cp = b[k];
++  if (cp)
++    return 65533;
++  return 2;
++}
++inline int g(int k) {
++  if (k < sizeof(d))
++    return e;
++  return 0;
++}
++
++int u(struct m*, char*, char*);
++
++int l(struct m *k, char n, long o, int *p) {
++  int q, flags = j, r, s, lasttwo = *p;
++  char inptr, outptr;
++  while (inptr) {
++    if (__builtin_expect(h, 0))
++      break;
++    unsigned ch = inptr;
++    if (lasttwo) {
++      long need = lasttwo >> 3;
++      if (__builtin_expect(need > n, 0))
++        break;
++    } else if (s == i) {
++      long t = c(ch);
++      if (t != 65533) {
++        int jch = g(ch);
++        if (jch & 8)
++          continue;
++      }
++    }
++    if (ch <= 5)
++      ;
++    else {
++      long t = c(ch);
++      if (t != 65533)
++        ;
++      else {
++        switch (f >> 8)
++        case 79:
++          q = f == 20308 || f == 20350;
++        if (q)
++          if (j)
++            r = u(k, &inptr, &outptr);
++        s = *p;
++        if (r)
++          if (o && flags & a)
++            break;
++      }
++    }
++  }
 +}
 diff --git a/gcc/testsuite/gcc.dg/torture/pr90278.c b/gcc/testsuite/gcc.dg/torture/pr90278.c
 new file mode 100644
