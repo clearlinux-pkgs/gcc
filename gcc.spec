@@ -14,7 +14,7 @@
 
 Name     : gcc
 Version  : 9.2.1
-Release  : 653
+Release  : 654
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://gcc.gnu.org/pub/gcc/releases/gcc-9.2.0/gcc-9.2.0.tar.xz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.16.1.tar.bz2
@@ -70,6 +70,7 @@ BuildRequires : procps-ng
 BuildRequires : glibc-libc32
 BuildRequires : glibc-dev32
 BuildRequires : docbook-xml docbook-utils doxygen
+BuildRequires : util-linux
 
 
 Requires: gcc-libubsan
@@ -295,6 +296,37 @@ export LIBRARY_PATH=/usr/lib64
 make %{?_smp_mflags} profiledbootstrap
 
 popd
+
+# Work around libstdc++'s use of weak symbols to libpthread in static
+# mode: libpthread doesn't get pulled in and therefore we get crashes
+# due to the calls being resolved to address 0x0.
+# We rebuild the .a without weak symbols.
+# See:
+#  https://sourceware.org/bugzilla/show_bug.cgi?id=5784
+#  https://gcc.gnu.org/bugzilla/show_bug.cgi?id=78017
+#  (and more)
+for dir in ../gcc-build/x86_64-generic-linux/{,32}; do
+    for lib in libgcc libstdc++-v3/libsupc++ libstdc++-v3/src; do
+        pushd $dir/$lib
+        # Save any shared libraries
+        mv .libs saved.libs || :
+        rename lib savedlib lib*.so.* || :
+
+        make clean
+        make %{?_smp_mflags} CPPFLAGS="-D_GLIBCXX_GTHREAD_USE_WEAK=0" \
+             LIBGCC2_DEBUG_CFLAGS="-g -DGTHREAD_USE_WEAK=0"
+
+        # Restore the saved shared libraries (if any)
+        rename saved.lib lib saved.lib* || :
+        if [ -d saved.libs ]; then
+            mv saved.libs/*.so.* .libs || :
+        fi
+
+        # Update timestamps so make install won't recreate
+        find -name '*.so*' | xargs -r touch -r `find -name '*.a' | head -1`
+        popd
+    done
+done
 
 #%check
 #pushd ../gcc-build
