@@ -1,11 +1,15 @@
 anlauf (1):
       2019-09-05  Harald Anlauf  <anlauf@gmx.de>
 
-ebotcazou (4):
+danglin (1):
+      * config/pa/pa.c (pa_trampoline_init): Remove spurious extended 	character.
+
+ebotcazou (5):
       PR rtl-optimization/91347 	* dse.c (scan_insn): Call add_wild_read for non-const/memset tail calls 	before reload if HARD_FRAME_POINTER_IS_ARG_POINTER.
       PR target/91472 	* config/sparc/sparc.c (sparc_cannot_force_const_mem): Return true 	during LRA/reload in PIC mode if the PIC register hasn't been used yet. 	(sparc_pic_register_p): Test reload_in_progress for consistency's sake.
       PR rtl-optimization/89795 	* rtlanal.c (nonzero_bits1) <SUBREG>: Do not propagate results from 	inner REGs to paradoxical SUBREGs if WORD_REGISTER_OPERATIONS is set.
       PR target/91269 	* config/sparc/sparc.h (HARD_REGNO_CALLER_SAVE_MODE): Define.
+      * gcc-interface/trans.c (Attribute_to_gnu): Test Can_Use_Internal_Rep 	on the underlying type of the node. 	(Call_to_gnu): Likewise with the type of the prefix.
 
 edlinger (2):
       2019-08-16  Bernd Edlinger  <bernd.edlinger@hotmail.de>
@@ -14,7 +18,10 @@ edlinger (2):
 emsr (1):
       2019-09-09  Edward Smith-Rowland  <3dw4rd@verizon.net>
 
-gccadmin (39):
+gccadmin (42):
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -55,11 +62,12 @@ gccadmin (39):
       Daily bump.
       Daily bump.
 
-iains (4):
+iains (5):
       Darwin, libsanitizer - remove reference to __cxa_rethrow_primary_exception.
       [Darwin, PPC] Fix fail of cpp/assert4.c
       [Darwin, fixincludes] Backport fix for PR83531
       [c-family] Backport fix for PCH / PR61250.
+      [Darwin, opts processing] Fix missing RejectNegative etc.
 
 ian (2):
       go/internal/gccgoimporter: support embedded field in pointer loop
@@ -81,6 +89,9 @@ jason (4):
 jb (2):
       PR fortran/91414 Improve initialization of PRNG
       PR fortran/91414 Correctly fill master_state from os_seed.
+
+jcmvbkbc (1):
+      xtensa: backport fix for PR target/90922
 
 jsm28 (4):
       * zh_CN.po: Update.
@@ -143,8 +154,9 @@ mpolacek (7):
 msebor (1):
       Backport from mainline
 
-pault (1):
+pault (2):
       2019-09-07  Paul Thomas  <pault@gcc.gnu.org>
+      2019-09-21  Paul Thomas  <pault@gcc.gnu.org>
 
 rearnsha (1):
       [aarch64] PR target/91386 Use copy_rtx to avoid modifying original insns in peep2 pattern
@@ -424,10 +436,38 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..628a5fe3312 100644
+index 7f6557d8018..53726d633fe 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,372 @@
+@@ -1,3 +1,400 @@
++2019-09-23  Max Filippov  <jcmvbkbc@gmail.com>
++
++	Backport from mainline
++	2019-06-18  Max Filippov  <jcmvbkbc@gmail.com>
++
++	* config/xtensa/xtensa.c (xtensa_expand_prologue): Add stack
++	pointer adjustment for the case of no callee-saved registers and
++	stack frame bigger than 128 bytes.
++
++2019-09-22  Iain Sandoe  <iain@sandoe.co.uk>
++
++	Backport from mainline
++	2019-06-16  Iain Sandoe  <iain@sandoe.co.uk>
++
++	* config/darwin.opt (prebind, noprebind, seglinkedit,
++	noseglinkedit): Add RejectNegative.
++
++	Backport from mainline
++	2019-06-14  Iain Sandoe  <iain@sandoe.co.uk>
++
++	* config/darwin.opt: Add RejectNegative where needed, reorder
++	and add minimal functional descriptions.
++
++2019-09-20  John David Anglin  <danglin@gcc.gnu.org>
++
++	* config/pa/pa.c (pa_trampoline_init): Remove spurious extended
++	character.
++
 +2019-09-20  Andreas Krebbel  <krebbel@linux.ibm.com>
 +
 +	Backport from mainline
@@ -800,7 +840,7 @@ index 7f6557d8018..628a5fe3312 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +882,7 @@
+@@ -513,7 +910,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -809,6 +849,88 @@ index 7f6557d8018..628a5fe3312 100644
  	2019-07-06  Richard Sandiford  <richard.sandiford@arm.com>
  
  	* config/i386/sse.md (*andnot<mode>3_bcst): Fix VI/VI48_AVX512VL typo.
+diff --git a/gcc/ada/ChangeLog b/gcc/ada/ChangeLog
+index 22cd00956dc..c897fe2813a 100644
+--- a/gcc/ada/ChangeLog
++++ b/gcc/ada/ChangeLog
+@@ -1,3 +1,9 @@
++2019-09-23  Eric Botcazou  <ebotcazou@adacore.com>
++
++	* gcc-interface/trans.c (Attribute_to_gnu): Test Can_Use_Internal_Rep
++	on the underlying type of the node.
++	(Call_to_gnu): Likewise with the type of the prefix.
++
+ 2019-08-12  Release Manager
+ 
+ 	* GCC 9.2.0 released.
+diff --git a/gcc/ada/gcc-interface/trans.c b/gcc/ada/gcc-interface/trans.c
+index 49fd34656ad..f08f6aac330 100644
+--- a/gcc/ada/gcc-interface/trans.c
++++ b/gcc/ada/gcc-interface/trans.c
+@@ -2248,32 +2248,29 @@ Attribute_to_gnu (Node_Id gnat_node, tree *gnu_result_type_p, int attribute)
+       /* For other address attributes applied to a nested function,
+ 	 find an inner ADDR_EXPR and annotate it so that we can issue
+ 	 a useful warning with -Wtrampolines.  */
+-      else if (FUNC_OR_METHOD_TYPE_P (TREE_TYPE (gnu_prefix)))
++      else if (FUNC_OR_METHOD_TYPE_P (TREE_TYPE (gnu_prefix))
++	       && (gnu_expr = remove_conversions (gnu_result, false))
++	       && TREE_CODE (gnu_expr) == ADDR_EXPR
++	       && decl_function_context (TREE_OPERAND (gnu_expr, 0)))
+ 	{
+-	  gnu_expr = remove_conversions (gnu_result, false);
++	  set_expr_location_from_node (gnu_expr, gnat_node);
+ 
+-	  if (TREE_CODE (gnu_expr) == ADDR_EXPR
+-	      && decl_function_context (TREE_OPERAND (gnu_expr, 0)))
+-	    {
+-	      set_expr_location_from_node (gnu_expr, gnat_node);
+-
+-	      /* Also check the inlining status.  */
+-	      check_inlining_for_nested_subprog (TREE_OPERAND (gnu_expr, 0));
+-
+-	      /* Moreover, for 'Access or 'Unrestricted_Access with non-
+-		 foreign-compatible representation, mark the ADDR_EXPR so
+-		 that we can build a descriptor instead of a trampoline.  */
+-	      if ((attribute == Attr_Access
+-		   || attribute == Attr_Unrestricted_Access)
+-		  && targetm.calls.custom_function_descriptors > 0
+-		  && Can_Use_Internal_Rep (Etype (gnat_node)))
+-		FUNC_ADDR_BY_DESCRIPTOR (gnu_expr) = 1;
+-
+-	      /* Otherwise, we need to check that we are not violating the
+-		 No_Implicit_Dynamic_Code restriction.  */
+-	      else if (targetm.calls.custom_function_descriptors != 0)
+-	        Check_Implicit_Dynamic_Code_Allowed (gnat_node);
+-	    }
++	  /* Also check the inlining status.  */
++	  check_inlining_for_nested_subprog (TREE_OPERAND (gnu_expr, 0));
++
++	  /* Moreover, for 'Access or 'Unrestricted_Access with non-
++	     foreign-compatible representation, mark the ADDR_EXPR so
++	     that we can build a descriptor instead of a trampoline.  */
++	  if ((attribute == Attr_Access
++	       || attribute == Attr_Unrestricted_Access)
++	      && targetm.calls.custom_function_descriptors > 0
++	      && Can_Use_Internal_Rep (Underlying_Type (Etype (gnat_node))))
++	    FUNC_ADDR_BY_DESCRIPTOR (gnu_expr) = 1;
++
++	  /* Otherwise, we need to check that we are not violating the
++	     No_Implicit_Dynamic_Code restriction.  */
++	  else if (targetm.calls.custom_function_descriptors != 0)
++	    Check_Implicit_Dynamic_Code_Allowed (gnat_node);
+ 	}
+       break;
+ 
+@@ -5103,7 +5100,8 @@ Call_to_gnu (Node_Id gnat_node, tree *gnu_result_type_p, tree gnu_target,
+       /* If the access type doesn't require foreign-compatible representation,
+ 	 be prepared for descriptors.  */
+       if (targetm.calls.custom_function_descriptors > 0
+-	  && Can_Use_Internal_Rep (Etype (Prefix (Name (gnat_node)))))
++	  && Can_Use_Internal_Rep
++	     (Underlying_Type (Etype (Prefix (Name (gnat_node))))))
+ 	by_descriptor = true;
+     }
+   else if (Nkind (Name (gnat_node)) == N_Attribute_Reference)
 diff --git a/gcc/builtins.c b/gcc/builtins.c
 index 9bcb310c015..ed11f79ff0b 100644
 --- a/gcc/builtins.c
@@ -1112,6 +1234,552 @@ index 5a1894063a1..f08cd0930b3 100644
     || !flag_trapping_math || flag_fp_int_builtin_inexact)"
  {
    rtx cvt = gen_reg_rtx (<GPF:MODE>mode);
+diff --git a/gcc/config/darwin.opt b/gcc/config/darwin.opt
+index 22667def0a1..3f04375e633 100644
+--- a/gcc/config/darwin.opt
++++ b/gcc/config/darwin.opt
+@@ -18,240 +18,378 @@
+ ; along with GCC; see the file COPYING3.  If not see
+ ; <http://www.gnu.org/licenses/>.
+ 
+-; Various linker options have a -Z added so that they can get to specs
+-; processing without interference.  Note that an option name with a
+-; prefix that matches another option name, that also takes an
+-; argument, being mapped to a -Z linker option, needs to be modified
+-; so the prefix is different, otherwise a '*' after the shorter option
+-; will match with the longer one.
++; We have a lot of Driver options, many of which are obsolete or very very
++; rarely used so, to keep this file easier to manage:
++
++; Please place all Non-driver options first (in alphabetical order), followed
++; by Driver-only options.
++
++; Non-driver options.
++
++dependency-file
++C ObjC C++ ObjC++ Separate Alias(MF) MissingArgError(missing filename after %qs)
++
++fapple-kext
++Target Report C++ Var(flag_apple_kext)
++Generate code for darwin loadable kernel extensions.
++
++iframework
++Target RejectNegative C ObjC C++ ObjC++ Joined Separate
++-iframework <dir>	Add <dir> to the end of the system framework include path.
++
++mconstant-cfstrings
++Target Report Var(darwin_constant_cfstrings) Init(1)
++Generate compile-time CFString objects.
++
++Wnonportable-cfstrings
++Target Report Var(darwin_warn_nonportable_cfstrings) Init(1) Warning
++Warn if constant CFString objects contain non-portable characters.
++
++; Use new-style pic stubs if this is true, x86 only so far.
++matt-stubs
++Target Report Var(darwin_macho_att_stub) Init(1)
++Generate AT&T-style stubs for Mach-O.
++
++mdynamic-no-pic
++Target Common Report Mask(MACHO_DYNAMIC_NO_PIC)
++Generate code suitable for executables (NOT shared libs).
++
++mfix-and-continue
++Target Report Var(darwin_fix_and_continue)
++Generate code suitable for fast turn around debugging.
++
++mkernel
++Target Report Var(flag_mkernel)
++Generate code for the kernel or loadable kernel extensions.
++
++; The Init here is for the convenience of GCC developers, so that cc1
++; and cc1plus don't crash if no -mmacosx-version-min is passed.  The
++; driver will always pass a -mmacosx-version-min, so in normal use the
++; Init is never used.
++mmacosx-version-min=
++Target RejectNegative Joined Report Var(darwin_macosx_version_min) Init(DEF_MIN_OSX_VERSION)
++The earliest MacOS X version on which this program will run.
++
++; Really, only relevant to PowerPC which has a 4 byte bool by default.
++mone-byte-bool
++Target RejectNegative Report Var(darwin_one_byte_bool)
++Set sizeof(bool) to 1.
++
++; Some code-gen may be improved / adjusted if the linker is sufficiently modern.
++mtarget-linker=
++Target RejectNegative Joined Report Alias(mtarget-linker)
++
++mtarget-linker
++Target RejectNegative Joined Separate Report Var(darwin_target_linker) Init(LD64_VERSION)
++The version of ld64 in use for this toolchain.
++
++; Driver options.
+ 
+ all_load
+-Driver Alias(Zall_load)
++Driver RejectNegative Alias(Zall_load)
++Loads all members of archive libraries
+ 
+ allowable_client
+-Driver Separate Alias(Zallowable_client)
++Driver RejectNegative Separate Alias(Zallowable_client)
++-allowable_client <name>	The output dylib is private to the client(s) named
+ 
+ arch
+ Driver RejectNegative Separate
++-arch <name>	Specify that the output file should be generated for architecture  \"name\"
+ 
+ arch_errors_fatal
+-Driver Alias(Zarch_errors_fatal)
++Driver RejectNegative Alias(Zarch_errors_fatal)
++Mismatches between file architecture and the \"-arch\" are errors instead of warnings
+ 
+ asm_macosx_version_min=
+ Driver RejectNegative Joined
++The earliest MacOS X version on which this program will run (formatted for the assembler)
+ 
+ bind_at_load
+-Driver Alias(Zbind_at_load)
++Driver RejectNegative Alias(Zbind_at_load)
++Produce an output file that will bind symbols on load, rather than lazily.
+ 
+ bundle
+-Driver Alias(Zbundle)
++Driver RejectNegative Alias(Zbundle)
++Produce a Mach-O bundle (file type MH_BUNDLE)
+ 
+ bundle_loader
+-Driver Separate Alias(Zbundle_loader)
++Driver RejectNegative Separate Alias(Zbundle_loader)
++-bundle_loader <executable>	Treat \"executable\" (that will be loading this bundle) as if it was one of the dynamic libraries the bundle is linked against for symbol resolution
+ 
+-dead_strip
+-Driver Alias(Zdead_strip)
++client_name
++Driver RejectNegative Separate
++-client_name <name>	Enable the executable being built to link against a private dylib (using allowable_client)
+ 
+-dependency-file
+-C ObjC C++ ObjC++ Separate Alias(MF) MissingArgError(missing filename after %qs)
++compatibility_version
++Driver RejectNegative Separate
++-compatibility_version <number>	Set the minimum version for the client interface.  Clients must record a greater number than this or the binding will fail at runtime
++
++current_version
++Driver RejectNegative Separate
++-current_version <number>	Set the current version for the library.
++
++dead_strip
++Driver RejectNegative Alias(Zdead_strip)
++Remove code and data that is unreachable from any exported symbol (including the entry point)
+ 
+ dylib_file
+ Driver Separate Alias(Zdylib_file)
+ 
+ dylinker
+-Driver
++Driver RejectNegative
++Produce a Mach-O dylinker (file type MH_DYLINKER), only used for building dyld.
++
++dylinker_install_name
++Driver RejectNegative Separate
++-dylinker_install_name <path>	Only used for building dyld.
+ 
+ dynamic
+-Driver Alias(Zdynamic)
++Driver RejectNegative Alias(Zdynamic)
++The default (and opposite of -static), implied by user mode executables, shared libraries and bundles.
+ 
+ dynamiclib
+-Driver Alias(Zdynamiclib)
++Driver RejectNegative Alias(Zdynamiclib)
++Produce a Mach-O shared library (file type MH_DYLIB), synonym for -shared
+ 
+ exported_symbols_list
+-Driver Separate Alias(Zexported_symbols_list)
++Driver RejectNegative Separate Alias(Zexported_symbols_list)
++-exported_symbols_list <filename>	Global symbols in \"filename\" will be exported from the linked output file, any symbols not mentioned will be treated as hidden.
+ 
+ filelist
+ Driver RejectNegative Separate
++Supply a list of objects to be linked from a file, rather than the command line
+ 
+ findirect-virtual-calls
+ Driver RejectNegative
++Used for generating code for some older kernel revisions.
+ 
+ flat_namespace
+ Driver RejectNegative Alias(Zflat_namespace)
++Ignore the normal two-level namespace; resolve symbols in command line order and do not record which library provided the resolved symbol.
+ 
+ force_cpusubtype_ALL
+ Driver RejectNegative Alias(Zforce_cpusubtype_ALL)
++For the assembler (and linker) permit any architecture sub-variant to be used without error.
+ 
+ force_flat_namespace
+ Driver RejectNegative Alias(Zforce_flat_namespace)
++Set the output object such that, on loading, dyld  will ignore any two-level information and resolve symbols in the discovery order for loaded libs.
+ 
+ framework
+ Driver RejectNegative Separate
++-framework <name>	The linker should search for the named framework in the framework search path.
+ 
+ fterminated-vtables
+ Driver RejectNegative
++Used for generating code for some older kernel revisions.
+ 
+ gfull
+ Driver RejectNegative
++Abbreviation for \"-g -fno-eliminate-unused-debug-symbols\"
+ 
+ gused
+ Driver RejectNegative
++Abbreviation for \"-g -feliminate-unused-debug-symbols\"
+ 
+ headerpad_max_install_names
+-Driver
++Driver RejectNegative
++Automatically adds space for longer path names in load commands (up to MAXPATHLEN)
+ 
+ image_base
+-Driver Separate Alias(Zimage_base)
++Driver RejectNegative Separate Alias(Zimage_base)
++-image_base <address>	Choose a base address for a dylib or bundle.
+ 
+ init
+-Driver Separate Alias(Zinit)
++Driver RejectNegative Separate Alias(Zinit)
++-init <symbol_name>	The symbol \"symbol_name\" will be used as the first initialiser for a dylib.
+ 
+ install_name
+-Driver Separate Alias(Zinstall_name)
++Driver RejectNegative Separate Alias(Zinstall_name)
++-install_name <name>	Set the install name for a dylib.
+ 
+ keep_private_externs
+-Driver
+-
+-mconstant-cfstrings
+-Target Report Var(darwin_constant_cfstrings) Init(1)
+-Generate compile-time CFString objects.
++Driver RejectNegative
++Usually \"private extern\" (hidden) symbols are made local when linking, this command suppresses that such that they remain exported.
+ 
+ multi_module
+ Driver RejectNegative Alias(Zmulti_module)
++(Obsolete after 10.4) Multi modules are ignored at runtime since MacOS 10.4
+ 
+ multiply_defined
+ Driver RejectNegative Separate Alias(Zmultiply_defined)
++(Obsolete after 10.4) -multiply_defined <treatment> Provided a mechanism for warning about symbols defined in multiple dylibs.
+ 
+ multiply_defined_unused
+ Driver RejectNegative Separate Alias(Zmultiplydefinedunused)
++(Obsolete after 10.4) -multiply_defined_unused <treatment>	Provided a mechanism for warning about symbols defined in the current executable also being defined in linked dylibs.
+ 
+ no_dead_strip_inits_and_terms
+-Driver Alias(Zno_dead_strip_inits_and_terms)
++Driver RejectNegative Alias(Zno_dead_strip_inits_and_terms)
++(Obsolete) The linker never dead strips these items, so the option is not needed.
+ 
+ nofixprebinding
+-Driver
++Driver RejectNegative
++(Obsolete after 10.3.9) Set MH_NOPREFIXBINDING, in an exectuable.
+ 
+ nomultidefs
+-Driver
++Driver RejectNegative
++(Obsolete after 10.4)	Set MH_NOMULTIDEFS in an umbrella framework.
+ 
+ noprebind
+-Driver
++Driver RejectNegative Negative(prebind)
++(Obsolete) LD_PREBIND is no longer supported.
+ 
+ noseglinkedit
+-Driver
++Driver RejectNegative Negative(seglinkedit)
++(Obsolete) This is the default.
+ 
+ object
+-Driver
++Driver RejectNegative
++
++pagezero_size
++Driver RejectNegative Separate
++-pagezero_size size	Allows setting the page 0 size to 4kb for certain special cases.
+ 
+ prebind
+-Driver
++Driver RejectNegative Negative(noprebind)
++(Obsolete) LD_PREBIND is no longer supported.
+ 
+ prebind_all_twolevel_modules
+-Driver
++Driver RejectNegative
++(Obsolete) LD_PREBIND is no longer supported.
+ 
+ preload
+-Driver
++Driver RejectNegative
++Produces a Mach-O file suitable for embedded/ROM use.
+ 
+ private_bundle
+-Driver
++Driver RejectNegative
++(Obsolete) Allowed linking to proceed with \"-flat_namespace\" when a linked bundle contained a symbol also exported from the main executable.
+ 
+ pthread
+-Driver
++Driver RejectNegative
+ 
+ rdynamic
+-Driver
++Driver RejectNegative
++Synonym for \"-export-dynamic\" for linker versions that support it.
++
++read_only_relocs
++Driver RejectNegative Separate
++-read_only_relocs <treatment>	This will allow relocs in read-only pages (not advisable).
++
++sectalign
++Driver RejectNegative Separate Args(3)
++-sectalign <segname> <sectname> <value>	Set section \"sectname\" in segment \"segname\" to have alignment \"value\" which must be an integral power of two expressed in hexadecimal form.
++
++sectcreate
++Driver RejectNegative Separate Args(3)
++-sectcreate <segname> <sectname> <file>	Create section \"sectname\" in segment \"segname\" from the contents of \"file\".
++
++sectobjectsymbols
++Driver RejectNegative Separate Args(2)
++(Obsolete) -sectobjectsymbols <segname> <sectname>	Setting a local symbol at the start of a section is no longer supported.
++
++sectorder
++Driver RejectNegative Separate Args(3)
++(Obsolete) -sectorder <segname> <sectname> orderfile	Replaced by a more general option \"-order_file\".
+ 
+ seg_addr_table
+-Driver Separate Alias(Zseg_addr_table)
++Driver RejectNegative Separate Alias(Zseg_addr_table)
++-seg_addr_table <file>	Specify the base addresses for dynamic libraries, \"file\" contains a line for each library.
+ 
++; This is only usable by the ld_classic linker.
+ seg_addr_table_filename
+-Driver Separate Alias(Zfn_seg_addr_table_filename)
++Driver RejectNegative Separate Alias(Zfn_seg_addr_table_filename)
++(Obsolete, ld_classic only) -seg_addr_table_filename <path>
++
++seg1addr
++Driver RejectNegative Separate
++Synonym for \"image_base\"
+ 
+ segaddr
+-Driver Separate Args(2) Alias(Zsegaddr)
++Driver RejectNegative Separate Args(2) Alias(Zsegaddr)
++-segaddr <name> <address>	Set the base address of segment \"name\" to \"address\" which must be aligned to a page boundary (currently 4kb).
++
++; This is only usable by the ld_classic linker.
++segcreate
++Driver RejectNegative Separate Args(3)
++(Obsolete, ld_classic only) -sectcreate segname sectname file
+ 
+ seglinkedit
+-Driver
++Driver RejectNegative Negative(noseglinkedit)
++(Obsolete) Object files with LINKEDIT sections are no longer supported.
++
++segprot
++Driver RejectNegative Separate Args(3)
++-segprot <segname> max_prot init_prot	The protection values are \"r\", \"w\", \"x\" or \"-\" the latter meaning \"no access\".
+ 
+ segs_read_only_addr
+-Driver Separate Alias(Zsegs_read_only_addr)
++Driver RejectNegative Separate Alias(Zsegs_read_only_addr)
++-segs_read_only_addr address 	Allows specifying the address of the read only portion of a dylib.
+ 
+ segs_read_write_addr
+-Driver Separate Alias(Zsegs_read_write_addr)
++Driver RejectNegative Separate Alias(Zsegs_read_write_addr)
++-segs_read_write_addr address 	Allows specifying the address of the read/write portion of a dylib.
+ 
+ single_module
+-Driver Alias(Zsingle_module)
++Driver RejectNegative Alias(Zsingle_module)
++(Obsolete)	This is the default.
++
++sub_library
++Driver RejectNegative Separate
++-sub_library <name>	Library named \"name\" will be re-exported (only useful for dylibs).
++
++sub_umbrella
++Driver RejectNegative Separate
++-sub_umbrella <name>	Framework named \"name\" will be re-exported (only useful for dylibs).
+ 
+ twolevel_namespace
+-Driver
++Driver RejectNegative
++This is the default
+ 
+ twolevel_namespace_hints
+-Driver
++Driver RejectNegative
++Specifies content that can speed up dynamic loading when the binaries are unchanged.
+ 
+ umbrella
+-Driver Separate Alias(Zumbrella)
++Driver RejectNegative Separate Alias(Zumbrella)
++-umbrella <framework>	The specified framework will be re-exported.
++
++undefined
++Driver RejectNegative Separate
++-undefined <treatment>	Specify the handling for undefined symbols (default is error).
+ 
+ unexported_symbols_list
+-Driver Separate Alias(Zunexported_symbols_list)
++Driver RejectNegative Separate Alias(Zunexported_symbols_list)
++-unexported_symbols_list <filename>	Don't export global symbols listed in filename.
+ 
+ weak_reference_mismatches
+-Driver Separate Alias(Zweak_reference_mismatches)
++Driver RejectNegative Separate Alias(Zweak_reference_mismatches)
++-weak_reference_mismatches <treatment>	Specifies what to do if a symbol import conflicts between file (weak in one and not in another) the default is to treat the symbol as non-weak.
+ 
+ whatsloaded
+-Driver
++Driver RejectNegative
++Logs the object files the linker loads
+ 
+ whyload
+-Driver
++Driver RejectNegative
++Logs which symbol(s) caused an object to be loaded.
++
++;(Obsolete, ignored)	Strip symbols starting with "L", this is the default.
++X
++Driver RejectNegative
+ 
+ y
+-Driver Joined
++Driver RejectNegative Joined
++(Obsolete, ignored)	Old support similar to whyload.
+ 
+ Mach
+-Driver
+-
+-Wnonportable-cfstrings
+-Target Report Var(darwin_warn_nonportable_cfstrings) Init(1) Warning
+-Warn if constant CFString objects contain non-portable characters.
+-
+-; Use new-style pic stubs if this is true, x86 only so far.
+-matt-stubs
+-Target Report Var(darwin_macho_att_stub) Init(1)
+-Generate AT&T-style stubs for Mach-O.
+-
+-mdynamic-no-pic
+-Target Common Report Mask(MACHO_DYNAMIC_NO_PIC)
+-Generate code suitable for executables (NOT shared libs).
+-
+-mfix-and-continue
+-Target Report Var(darwin_fix_and_continue)
+-Generate code suitable for fast turn around debugging.
+-
+-; The Init here is for the convenience of GCC developers, so that cc1
+-; and cc1plus don't crash if no -mmacosx-version-min is passed.  The
+-; driver will always pass a -mmacosx-version-min, so in normal use the
+-; Init is never used.
+-mmacosx-version-min=
+-Target Joined Report Var(darwin_macosx_version_min) Init(DEF_MIN_OSX_VERSION)
+-The earliest MacOS X version on which this program will run.
+-
+-mone-byte-bool
+-Target RejectNegative Report Var(darwin_one_byte_bool)
+-Set sizeof(bool) to 1.
+-
+-fapple-kext
+-Target Report C++ Var(flag_apple_kext)
+-Generate code for darwin loadable kernel extensions.
+-
+-mkernel
+-Target Report Var(flag_mkernel)
+-Generate code for the kernel or loadable kernel extensions.
+-
+-iframework
+-Target RejectNegative C ObjC C++ ObjC++ Joined Separate 
+--iframework <dir>	Add <dir> to the end of the system framework include path.
++Driver RejectNegative
++(Obsolete and unhandled by ld64, ignored)	ld should produce an executable (only handled by ld_classic).
+ 
+-X
+-Driver
++;; These are not "real" options, but placeholders used to hide the real options
++;; from generic options processing... FIXME: they can be eliminated now.
+ 
+ Zall_load
+ Driver
+@@ -343,62 +481,3 @@ Driver Separate
+ Zweak_reference_mismatches
+ Driver Separate
+ 
+-client_name
+-Driver Separate
+-
+-compatibility_version
+-Driver Separate
+-
+-current_version
+-Driver Separate
+-
+-dylinker_install_name
+-Driver Separate
+-
+-pagezero_size
+-Driver Separate
+-
+-read_only_relocs
+-Driver Separate
+-
+-sectalign
+-Driver Separate Args(3)
+-
+-sectcreate
+-Driver Separate Args(3)
+-
+-sectobjectsymbols
+-Driver Separate Args(2)
+-
+-sectorder
+-Driver Separate Args(3)
+-
+-seg1addr
+-Driver Separate
+-
+-segcreate
+-Driver Separate Args(3)
+-
+-segprot
+-Driver Separate Args(3)
+-
+-segs_read_only_addr
+-Driver Separate
+-
+-segs_read_write_addr
+-Driver Separate
+-
+-sub_library
+-Driver Separate
+-
+-sub_umbrella
+-Driver Separate
+-
+-; Certain aspects of code-gen may be improved / adjusted if the version of ld64
+-; is sufficiently modern.
+-mtarget-linker
+-Target RejectNegative Joined Separate Report Var(darwin_target_linker) Init(LD64_VERSION)
+-The version of ld64 in use for this toolchain.
+-
+-undefined
+-Driver Separate
 diff --git a/gcc/config/i386/avx2intrin.h b/gcc/config/i386/avx2intrin.h
 index 7606efdbf79..372d77f84fe 100644
 --- a/gcc/config/i386/avx2intrin.h
@@ -1204,6 +1872,19 @@ index 2ae1f7e0440..a9b0c86be07 100644
    "TARGET_HARD_FLOAT"
    "cfc1\t%0,$31")
  
+diff --git a/gcc/config/pa/pa.c b/gcc/config/pa/pa.c
+index 707ae5822c3..1e85658a0f7 100644
+--- a/gcc/config/pa/pa.c
++++ b/gcc/config/pa/pa.c
+@@ -10206,7 +10206,7 @@ pa_trampoline_init (rtx m_tramp, tree fndecl, rtx chain_value)
+     }
+ 
+ #ifdef HAVE_ENABLE_EXECUTE_STACK
+-  emit_library_call (gen_rtx_SYMBOL_REF (Pmode, "__enable_execute_stack"),
++  emit_library_call (gen_rtx_SYMBOL_REF (Pmode, "__enable_execute_stack"),
+ 		     LCT_NORMAL, VOIDmode, XEXP (m_tramp, 0), Pmode);
+ #endif
+ }
 diff --git a/gcc/config/riscv/riscv-protos.h b/gcc/config/riscv/riscv-protos.h
 index 8b510f87df8..5b0bbdd7cb4 100644
 --- a/gcc/config/riscv/riscv-protos.h
@@ -2044,6 +2725,20 @@ index 015065ffb81..4b09fc86b78 100644
  /* Specify the registers used for certain standard purposes.
     The values of these macros are register numbers.  */
  
+diff --git a/gcc/config/xtensa/xtensa.c b/gcc/config/xtensa/xtensa.c
+index 19bd616d67f..ee5612441e2 100644
+--- a/gcc/config/xtensa/xtensa.c
++++ b/gcc/config/xtensa/xtensa.c
+@@ -2865,7 +2865,8 @@ xtensa_expand_prologue (void)
+ 			    gen_rtx_SET (mem, reg));
+ 	    }
+ 	}
+-      if (total_size > 1024)
++      if (total_size > 1024
++	  || (!callee_save_size && total_size > 128))
+ 	{
+ 	  rtx tmp_reg = gen_rtx_REG (Pmode, A9_REG);
+ 	  emit_move_insn (tmp_reg, GEN_INT (total_size -
 diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
 index c977850d067..8bd42b83973 100644
 --- a/gcc/cp/ChangeLog
@@ -2866,10 +3561,20 @@ index 6f6f768f371..4becdcf1cbb 100644
        else
  	/* Every other call, including pure functions, may read any memory
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index e3073787ea9..42f3a0755a6 100644
+index e3073787ea9..97b32bb7e25 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,204 @@
+@@ -1,3 +1,214 @@
++2019-09-21  Paul Thomas  <pault@gcc.gnu.org>
++
++	Backport from mainline
++	PR fortran/91588
++	* expr.c (check_inquiry): Remove extended component refs by
++	using symbol pointers. If a function argument is an associate
++	variable with a constant target, copy the target expression in
++	place of the argument expression. Check that the charlen is not
++	NULL before using the string length.
++
 +2019-09-19  Steven G. Kargl  <kargl@gcc.gnu.org>
 +
 +	PR fortran/91727
@@ -3323,7 +4028,7 @@ index cf09420cfbe..3e10dba757e 100644
 +  return MATCH_ERROR;
 +}
 diff --git a/gcc/fortran/expr.c b/gcc/fortran/expr.c
-index 2aeea92b8fb..33a332efdff 100644
+index 2aeea92b8fb..cad0dd36a67 100644
 --- a/gcc/fortran/expr.c
 +++ b/gcc/fortran/expr.c
 @@ -2220,6 +2220,11 @@ gfc_simplify_expr (gfc_expr *p, int type)
@@ -3338,6 +4043,120 @@ index 2aeea92b8fb..33a332efdff 100644
        if (!simplify_constructor (p->value.constructor, type))
  	return false;
  
+@@ -2598,6 +2603,8 @@ check_inquiry (gfc_expr *e, int not_restricted)
+ 
+   int i = 0;
+   gfc_actual_arglist *ap;
++  gfc_symbol *sym;
++  gfc_symbol *asym;
+ 
+   if (!e->value.function.isym
+       || !e->value.function.isym->inquiry)
+@@ -2607,20 +2614,22 @@ check_inquiry (gfc_expr *e, int not_restricted)
+   if (e->symtree == NULL)
+     return MATCH_NO;
+ 
+-  if (e->symtree->n.sym->from_intmod)
++  sym = e->symtree->n.sym;
++
++  if (sym->from_intmod)
+     {
+-      if (e->symtree->n.sym->from_intmod == INTMOD_ISO_FORTRAN_ENV
+-	  && e->symtree->n.sym->intmod_sym_id != ISOFORTRAN_COMPILER_OPTIONS
+-	  && e->symtree->n.sym->intmod_sym_id != ISOFORTRAN_COMPILER_VERSION)
++      if (sym->from_intmod == INTMOD_ISO_FORTRAN_ENV
++	  && sym->intmod_sym_id != ISOFORTRAN_COMPILER_OPTIONS
++	  && sym->intmod_sym_id != ISOFORTRAN_COMPILER_VERSION)
+ 	return MATCH_NO;
+ 
+-      if (e->symtree->n.sym->from_intmod == INTMOD_ISO_C_BINDING
+-	  && e->symtree->n.sym->intmod_sym_id != ISOCBINDING_C_SIZEOF)
++      if (sym->from_intmod == INTMOD_ISO_C_BINDING
++	  && sym->intmod_sym_id != ISOCBINDING_C_SIZEOF)
+ 	return MATCH_NO;
+     }
+   else
+     {
+-      name = e->symtree->n.sym->name;
++      name = sym->name;
+ 
+       functions = inquiry_func_gnu;
+       if (gfc_option.warn_std & GFC_STD_F2003)
+@@ -2645,41 +2654,48 @@ check_inquiry (gfc_expr *e, int not_restricted)
+       if (!ap->expr)
+ 	continue;
+ 
++      asym = ap->expr->symtree ? ap->expr->symtree->n.sym : NULL;
++
+       if (ap->expr->ts.type == BT_UNKNOWN)
+ 	{
+-	  if (ap->expr->symtree->n.sym->ts.type == BT_UNKNOWN
+-	      && !gfc_set_default_type (ap->expr->symtree->n.sym, 0, gfc_current_ns))
++	  if (asym && asym->ts.type == BT_UNKNOWN
++	      && !gfc_set_default_type (asym, 0, gfc_current_ns))
+ 	    return MATCH_NO;
+ 
+-	  ap->expr->ts = ap->expr->symtree->n.sym->ts;
++	  ap->expr->ts = asym->ts;
+ 	}
+ 
+-	/* Assumed character length will not reduce to a constant expression
+-	   with LEN, as required by the standard.  */
+-	if (i == 5 && not_restricted && ap->expr->symtree
+-	    && ap->expr->symtree->n.sym->ts.type == BT_CHARACTER
+-	    && (ap->expr->symtree->n.sym->ts.u.cl->length == NULL
+-		|| ap->expr->symtree->n.sym->ts.deferred))
+-	  {
+-	    gfc_error ("Assumed or deferred character length variable %qs "
+-			"in constant expression at %L",
+-			ap->expr->symtree->n.sym->name,
+-			&ap->expr->where);
+-	      return MATCH_ERROR;
+-	  }
+-	else if (not_restricted && !gfc_check_init_expr (ap->expr))
+-	  return MATCH_ERROR;
++      if (asym && asym->assoc && asym->assoc->target
++	  && asym->assoc->target->expr_type == EXPR_CONSTANT)
++	{
++	  gfc_free_expr (ap->expr);
++	  ap->expr = gfc_copy_expr (asym->assoc->target);
++	}
+ 
+-	if (not_restricted == 0
+-	      && ap->expr->expr_type != EXPR_VARIABLE
+-	      && !check_restricted (ap->expr))
++      /* Assumed character length will not reduce to a constant expression
++	 with LEN, as required by the standard.  */
++      if (i == 5 && not_restricted && asym
++	  && asym->ts.type == BT_CHARACTER
++	  && ((asym->ts.u.cl && asym->ts.u.cl->length == NULL)
++	      || asym->ts.deferred))
++	{
++	  gfc_error ("Assumed or deferred character length variable %qs "
++		     "in constant expression at %L",
++		      asym->name, &ap->expr->where);
+ 	  return MATCH_ERROR;
++	}
++      else if (not_restricted && !gfc_check_init_expr (ap->expr))
++	return MATCH_ERROR;
++
++      if (not_restricted == 0
++	  && ap->expr->expr_type != EXPR_VARIABLE
++	  && !check_restricted (ap->expr))
++	return MATCH_ERROR;
+ 
+-	if (not_restricted == 0
+-	    && ap->expr->expr_type == EXPR_VARIABLE
+-	    && ap->expr->symtree->n.sym->attr.dummy
+-	    && ap->expr->symtree->n.sym->attr.optional)
+-	  return MATCH_NO;
++      if (not_restricted == 0
++	  && ap->expr->expr_type == EXPR_VARIABLE
++	  && asym->attr.dummy && asym->attr.optional)
++	return MATCH_NO;
+     }
+ 
+   return MATCH_YES;
 diff --git a/gcc/fortran/frontend-passes.c b/gcc/fortran/frontend-passes.c
 index d4264dafa6f..e6786635788 100644
 --- a/gcc/fortran/frontend-passes.c
@@ -6480,10 +7299,16 @@ index 29f6cdc4667..33b4be79c0f 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..221de2e428c 100644
+index bc11ae4ae0b..d48010f8921 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,294 @@
+@@ -1,3 +1,300 @@
++2019-09-21  Paul Thomas  <pault@gcc.gnu.org>
++
++	Backport from mainline
++	PR fortran/91588
++	* gfortran.dg/associate_49.f90 : New test.
++
 +2019-09-20  Eric Botcazou  <ebotcazou@adacore.com>
 +
 +	* gcc.dg/pr91269.c: New test.
@@ -6778,7 +7603,7 @@ index bc11ae4ae0b..221de2e428c 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +718,7 @@
+@@ -427,7 +724,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -8611,6 +9436,46 @@ index 00000000000..66748d6142f
 +! Contributed by Gerhard Steinmetz
 +program p
 +   if (allocated()) stop 1 ! { dg-error "requires an array or scalar allocatable" }
++end
+diff --git a/gcc/testsuite/gfortran.dg/associate_49.f90 b/gcc/testsuite/gfortran.dg/associate_49.f90
+new file mode 100644
+index 00000000000..1b205950556
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/associate_49.f90
+@@ -0,0 +1,34 @@
++! { dg-do run }
++!
++! Test the fix for PR91588, in which the declaration of 'a' caused
++! an ICE.
++!
++! Contributed by Gerhardt Steinmetz  <gscfq@t-online.de>
++!
++program p
++   character(4), parameter :: parm = '7890'
++   associate (z => '1234')
++      block
++         integer(len(z)) :: a
++         if (kind(a) .ne. 4) stop 1
++      end block
++   end associate
++   associate (z => '123')
++      block
++         integer(len(z)+1) :: a
++         if (kind(a) .ne. 4) stop 2
++      end block
++   end associate
++   associate (z => 1_8)
++      block
++         integer(kind(z)) :: a
++         if (kind(a) .ne. 8) stop 3
++      end block
++   end associate
++   associate (z => parm)
++      block
++         integer(len(z)) :: a
++         if (kind(a) .ne. 4) stop 4
++      end block
++   end associate
 +end
 diff --git a/gcc/testsuite/gfortran.dg/deferred_character_34.f90 b/gcc/testsuite/gfortran.dg/deferred_character_34.f90
 new file mode 100644
