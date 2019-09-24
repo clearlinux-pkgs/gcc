@@ -14,7 +14,7 @@
 
 Name     : gcc
 Version  : 9.2.1
-Release  : 654
+Release  : 655
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://gcc.gnu.org/pub/gcc/releases/gcc-9.2.0/gcc-9.2.0.tar.xz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.16.1.tar.bz2
@@ -306,7 +306,7 @@ popd
 #  https://gcc.gnu.org/bugzilla/show_bug.cgi?id=78017
 #  (and more)
 for dir in ../gcc-build/x86_64-generic-linux/{,32}; do
-    for lib in libgcc libstdc++-v3/libsupc++ libstdc++-v3/src; do
+    for lib in libstdc++-v3/libsupc++ libstdc++-v3/src; do
         pushd $dir/$lib
         # Save any shared libraries
         mv .libs saved.libs || :
