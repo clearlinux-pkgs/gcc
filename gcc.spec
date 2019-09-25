@@ -14,7 +14,7 @@
 
 Name     : gcc
 Version  : 9.2.1
-Release  : 655
+Release  : 656
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://gcc.gnu.org/pub/gcc/releases/gcc-9.2.0/gcc-9.2.0.tar.xz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.16.1.tar.bz2
@@ -317,13 +317,13 @@ for dir in ../gcc-build/x86_64-generic-linux/{,32}; do
              LIBGCC2_DEBUG_CFLAGS="-g -DGTHREAD_USE_WEAK=0"
 
         # Restore the saved shared libraries (if any)
-        rename saved.lib lib saved.lib* || :
+        rename savedlib lib savedlib* || :
         if [ -d saved.libs ]; then
             mv saved.libs/*.so.* .libs || :
         fi
 
         # Update timestamps so make install won't recreate
-        find -name '*.so*' | xargs -r touch -r `find -name '*.a' | head -1`
+        find -name '*.so*' | xargs -rt touch -r `find -name '*.a' | head -1`
         popd
     done
 done
