@@ -138,8 +138,10 @@ kito (2):
 krebbel (1):
       Fix PR88751
 
-ktkachov (1):
+ktkachov (3):
       [arm] Fix use of CRC32 intrinsics with Armv8-a and hard-float
+      driver: Also prune joined switches with negation
+      [AArch64] Don't split 64-bit constant stores to volatile location
 
 law (1):
       * config/mips/mips.md (mips_get_fcsr, *mips_get_fcsr): Use SI         machine mode for unspec_volatile operand.
@@ -167,9 +169,10 @@ mpolacek (8):
 msebor (1):
       Backport from mainline
 
-olegendo (2):
+olegendo (3):
       gcc/ 2019-09-28  Oleg Endo  <olegendo@gcc.gnu.org>
       gcc/ 2019-09-28  Oleg Endo  <olegendo@gcc.gnu.org>
+      gcc/ 2019-10-01  Oleg Endo  <olegendo@gcc.gnu.org>
 
 pault (2):
       2019-09-07  Paul Thomas  <pault@gcc.gnu.org>
@@ -453,10 +456,41 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..4b0a16e67fe 100644
+index 7f6557d8018..b36097160f4 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,426 @@
+@@ -1,3 +1,457 @@
++2019-10-01  Oleg Endo  <olegendo@gcc.gnu.org>
++
++	Backport from mainline
++
++	2019-10-01  Oleg Endo  <olegendo@gcc.gnu.org>
++
++	PR target/88562
++	* config/sh/sh.c (sh_extending_set_of_reg::use_as_extended_reg): Use
++	sh_check_add_incdec_notes to preserve REG_INC notes when replacing
++	a memory access insn.
++
++
++2019-10-01  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	Backport from mainline
++	2019-09-24  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	* config/aarch64/aarch64.md (mov<mode>): Don't call
++	aarch64_split_dimode_const_store on volatile MEM.
++
++2019-10-01  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	Backport from mainline
++	2019-09-26  Matt Turner  <mattst88@gmail.com>
++
++	PR driver/69471
++	* config/aarch64/aarch64.opt (march=): Add Negative(march=).
++	(mtune=): Add Negative(mtune=).
++	(mcpu=): Add Negative(mcpu=).
++	* config/arm/arm.opt: Likewise.
++
 +2019-09-28  Oleg Endo  <olegendo@gcc.gnu.org>
 +
 +	Backport from mainline
@@ -883,7 +917,7 @@ index 7f6557d8018..4b0a16e67fe 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +936,7 @@
+@@ -513,7 +967,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -1265,9 +1299,20 @@ index 6b25d9cbfae..82e9b1fbfd8 100644
      }
  
 diff --git a/gcc/config/aarch64/aarch64.md b/gcc/config/aarch64/aarch64.md
-index 5a1894063a1..f08cd0930b3 100644
+index 5a1894063a1..cc5a887d404 100644
 --- a/gcc/config/aarch64/aarch64.md
 +++ b/gcc/config/aarch64/aarch64.md
+@@ -1059,8 +1059,8 @@
+ 	(match_operand:GPI 1 "general_operand" ""))]
+   ""
+   "
+-    if (MEM_P (operands[0]) && CONST_INT_P (operands[1])
+-	&& <MODE>mode == DImode
++    if (MEM_P (operands[0]) && !MEM_VOLATILE_P (operands[0])
++	&& CONST_INT_P (operands[1]) && <MODE>mode == DImode
+ 	&& aarch64_split_dimode_const_store (operands[0], operands[1]))
+       DONE;
+ 
 @@ -6304,7 +6304,7 @@
    [(match_operand:GPI 0 "register_operand")
     (match_operand:GPF 1 "register_operand")]
@@ -1277,6 +1322,60 @@ index 5a1894063a1..f08cd0930b3 100644
     || !flag_trapping_math || flag_fp_int_builtin_inexact)"
  {
    rtx cvt = gen_reg_rtx (<GPF:MODE>mode);
+diff --git a/gcc/config/aarch64/aarch64.opt b/gcc/config/aarch64/aarch64.opt
+index 7719c3b6352..3c6d1cc90ad 100644
+--- a/gcc/config/aarch64/aarch64.opt
++++ b/gcc/config/aarch64/aarch64.opt
+@@ -119,15 +119,15 @@ EnumValue
+ Enum(aarch64_tls_size) String(48) Value(48)
+ 
+ march=
+-Target RejectNegative ToLower Joined Var(aarch64_arch_string)
++Target RejectNegative Negative(march=) ToLower Joined Var(aarch64_arch_string)
+ Use features of architecture ARCH.
+ 
+ mcpu=
+-Target RejectNegative ToLower Joined Var(aarch64_cpu_string)
++Target RejectNegative Negative(mcpu=) ToLower Joined Var(aarch64_cpu_string)
+ Use features of and optimize for CPU.
+ 
+ mtune=
+-Target RejectNegative ToLower Joined Var(aarch64_tune_string)
++Target RejectNegative Negative(mtune=) ToLower Joined Var(aarch64_tune_string)
+ Optimize for CPU.
+ 
+ mabi=
+diff --git a/gcc/config/arm/arm.opt b/gcc/config/arm/arm.opt
+index 9067d491b9c..78f3878e037 100644
+--- a/gcc/config/arm/arm.opt
++++ b/gcc/config/arm/arm.opt
+@@ -82,7 +82,7 @@ mapcs-stack-check
+ Target Report Mask(APCS_STACK) Undocumented
+ 
+ march=
+-Target RejectNegative ToLower Joined Var(arm_arch_string)
++Target RejectNegative Negative(march=) ToLower Joined Var(arm_arch_string)
+ Specify the name of the target architecture.
+ 
+ ; Other arm_arch values are loaded from arm-tables.opt
+@@ -107,7 +107,7 @@ Target Report Mask(CALLER_INTERWORKING)
+ Thumb: Assume function pointers may go to non-Thumb aware code.
+ 
+ mcpu=
+-Target RejectNegative ToLower Joined Var(arm_cpu_string)
++Target RejectNegative Negative(mcpu=) ToLower Joined Var(arm_cpu_string)
+ Specify the name of the target CPU.
+ 
+ mfloat-abi=
+@@ -232,7 +232,7 @@ Target Report Mask(TPCS_LEAF_FRAME)
+ Thumb: Generate (leaf) stack frames even if not needed.
+ 
+ mtune=
+-Target RejectNegative ToLower Joined Var(arm_tune_string)
++Target RejectNegative Negative(mtune=) ToLower Joined Var(arm_tune_string)
+ Tune code for the given processor.
+ 
+ mprint-tune-info
 diff --git a/gcc/config/arm/arm_acle.h b/gcc/config/arm/arm_acle.h
 index 2c7acc698ea..6857ab1787d 100644
 --- a/gcc/config/arm/arm_acle.h
@@ -2751,7 +2850,7 @@ index ad80592765d..401cbfc3fd7 100644
  
  (include "sync.md")
 diff --git a/gcc/config/sh/sh.c b/gcc/config/sh/sh.c
-index 8dc79a764df..08c9ffbee4f 100644
+index 8dc79a764df..bd7dff5f3e5 100644
 --- a/gcc/config/sh/sh.c
 +++ b/gcc/config/sh/sh.c
 @@ -664,6 +664,9 @@ static const struct attribute_spec sh_attribute_table[] =
@@ -2773,6 +2872,20 @@ index 8dc79a764df..08c9ffbee4f 100644
  	{
  	  std::string offset_str = tokens[i].substr (strlen ("gbr-offset="));
  	  ret.tcb_gbr_offset = integral_argument (offset_str.c_str ());
+@@ -12087,9 +12090,11 @@ sh_extending_set_of_reg::use_as_extended_reg (rtx_insn* use_at_insn) const
+ 	rtx r = gen_reg_rtx (SImode);
+ 	rtx_insn* i0;
+ 	if (from_mode == QImode)
+-	  i0 = emit_insn_after (gen_extendqisi2 (r, set_src), insn);
++	  i0 = sh_check_add_incdec_notes (
++			emit_insn_after (gen_extendqisi2 (r, set_src), insn));
+ 	else if (from_mode == HImode)
+-	  i0 = emit_insn_after (gen_extendhisi2 (r, set_src), insn);
++	  i0 = sh_check_add_incdec_notes (
++			emit_insn_after (gen_extendhisi2 (r, set_src), insn));
+ 	else
+ 	  gcc_unreachable ();
+ 
 diff --git a/gcc/config/sparc/sparc.c b/gcc/config/sparc/sparc.c
 index 93479ab6bdc..14a4a760499 100644
 --- a/gcc/config/sparc/sparc.c
@@ -7673,10 +7786,17 @@ index 29f6cdc4667..33b4be79c0f 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..71b6ec52fcd 100644
+index bc11ae4ae0b..5cf8feb32a5 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,307 @@
+@@ -1,3 +1,314 @@
++2019-10-01  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	Backport from mainline
++	2019-09-24  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	* gcc.target/aarch64/nosplit-di-const-volatile_1.c: New test.
++
 +2019-09-25  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
 +
 +	Backport from mainline
@@ -7984,7 +8104,7 @@ index bc11ae4ae0b..71b6ec52fcd 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +731,7 @@
+@@ -427,7 +738,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -9643,6 +9763,27 @@ index 00000000000..ca772cb999e
 +
 +/* { dg-final { scan-assembler-times "fcvtzs\tw\[0-9\]+, \[d,s\]\[0-9\]+" 2 } } */
 +/* { dg-final { scan-assembler-times "bl\tlrint" 2 } } */
+diff --git a/gcc/testsuite/gcc.target/aarch64/nosplit-di-const-volatile_1.c b/gcc/testsuite/gcc.target/aarch64/nosplit-di-const-volatile_1.c
+new file mode 100644
+index 00000000000..da5975ad165
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/nosplit-di-const-volatile_1.c
+@@ -0,0 +1,15 @@
++/* Check that storing the 64-bit immediate to a volatile location is done
++   with a single store.  */
++
++/* { dg-do compile } */
++/* { dg-options "-O2" } */
++
++typedef unsigned long long u64;
++
++void bar (u64 *x)
++{
++  *(volatile u64 *)x = 0xabcdef10abcdef10ULL;
++}
++
++/* { dg-final { scan-assembler-times "str\tx..?, .*" 1 } } */
++/* { dg-final { scan-assembler-not "str\tw..?, .*" } } */
 diff --git a/gcc/testsuite/gcc.target/arm/acle/crc_hf_1.c b/gcc/testsuite/gcc.target/arm/acle/crc_hf_1.c
 new file mode 100644
 index 00000000000..e6cbfc0b33e
