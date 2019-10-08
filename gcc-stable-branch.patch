@@ -26,7 +26,8 @@ edlinger (3):
 emsr (1):
       2019-09-09  Edward Smith-Rowland  <3dw4rd@verizon.net>
 
-gccadmin (56):
+gccadmin (57):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -177,7 +178,7 @@ marxin (5):
       Backport r275291
       Backport r275292
 
-mpolacek (8):
+mpolacek (9):
       PR c++/81429 - wrong parsing of constructor with C++11 attribute. 	* parser.c (cp_parser_constructor_declarator_p): Handle the scenario 	when a parameter declaration begins with [[attribute]].
       PR c++/87519 - bogus warning with -Wsign-conversion. 	* typeck.c (cp_build_binary_op): Use same_type_p instead of comparing 	the types directly.
       PR c++/90473 - wrong code with nullptr in default argument. 	* call.c (null_ptr_cst_p): Update quote from the standard. 	* decl.c (check_default_argument): Don't return nullptr when the arg 	has side-effects.
@@ -186,6 +187,7 @@ mpolacek (8):
       PR c++/91129 - wrong error with binary op in template argument. 	* typeck.c (warn_for_null_address): Use fold_for_warn instead of 	fold_non_dependent_expr. 	(cp_build_binary_op): Likewise.
       PR c++/91705 - constexpr evaluation rejects ++/-- on floats. 	* constexpr.c (cxx_eval_increment_expression): Call fold_simple on 	the offset.
       PR c++/91923 - failure-to-SFINAE with class type NTTP in C++17. 	* pt.c (invalid_nontype_parm_type_p): Only emit errors when 	tf_error.
+      PR c++/91740 - ICE with constexpr call and ?: in ARRAY_REF. 	* pt.c (build_non_dependent_expr): Call build_non_dependent_expr for 	the first operand.
 
 msebor (1):
       Backport from mainline
@@ -231,12 +233,13 @@ segher (3):
 sje (1):
       2019-08-15  Steve Ellcey  <sellcey@marvell.com>
 
-tkoenig (5):
+tkoenig (6):
       2019-08-13  Thomas Koenig  <tkoenig@gcc.gnu.org>
       2019-08-13  Thomas Koenig  <tkoenig@gcc.gnu.org>
       2013-08-13  Thomas Koenig  <tkoenig@gcc.gnu.org>
       2019-09-15  Thomas Koenig  <tkoenig@gcc.gnu.org>
       2019-09-18  Thomas Koenig  <tkoenig@gcc.gnu.org>
+      2019-10-07  Thomas Koenig <tkoenig@gcc.gnu.org>
 
 uros (3):
       * test_summary: Do not escape "=".
@@ -245,6 +248,9 @@ uros (3):
 
 wilco (1):
       [AArch64] Fix PR81800
+
+wschmidt (1):
+      [gcc]
 
 diff --git a/contrib/ChangeLog b/contrib/ChangeLog
 index 8565be188d9..c9b9e26ee57 100644
@@ -477,10 +483,19 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..56a11ea465a 100644
+index 7f6557d8018..9a1058f1cf4 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,493 @@
+@@ -1,3 +1,502 @@
++2019-10-07  Bill Schmidt  <wschmidt@linux.ibm.com>
++
++	Backport from mainline
++	2019-10-01  Bill Schmidt  <wschmidt@linux.ibm.com>
++
++	PR target/91275
++	* config/rs6000/rs6000-p8swap.c (rtx_is_swappable_p): Don't swap
++	vpmsumd.
++
 +2019-10-05  Andrea Corallo  <andrea.corallo@arm.com>
 +
 +	Backport from mainline
@@ -974,7 +989,7 @@ index 7f6557d8018..56a11ea465a 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +1003,7 @@
+@@ -513,7 +1012,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -2678,6 +2693,22 @@ index d3a59f42c37..98ecf0ad2fe 100644
        builtin_define ("__NATURAL_ALIGNMENT__");		\
        darwin_cpp_builtins (pfile);			\
      }							\
+diff --git a/gcc/config/rs6000/rs6000-p8swap.c b/gcc/config/rs6000/rs6000-p8swap.c
+index c3b98315503..d30e5dec980 100644
+--- a/gcc/config/rs6000/rs6000-p8swap.c
++++ b/gcc/config/rs6000/rs6000-p8swap.c
+@@ -791,6 +791,11 @@ rtx_is_swappable_p (rtx op, unsigned int *special)
+ 	  case UNSPEC_REDUC_PLUS:
+ 	  case UNSPEC_REDUC:
+ 	    return 1;
++	  case UNSPEC_VPMSUM:
++	    /* vpmsumd is not swappable, but vpmsum[bhw] are.  */
++	    if (GET_MODE (op) == V2DImode)
++	      return 0;
++	    break;
+ 	  }
+       }
+ 
 diff --git a/gcc/config/rs6000/rs6000.md b/gcc/config/rs6000/rs6000.md
 index ad80592765d..401cbfc3fd7 100644
 --- a/gcc/config/rs6000/rs6000.md
@@ -3025,10 +3056,19 @@ index 19bd616d67f..ee5612441e2 100644
  	  rtx tmp_reg = gen_rtx_REG (Pmode, A9_REG);
  	  emit_move_insn (tmp_reg, GEN_INT (total_size -
 diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
-index c977850d067..297eb6f0e9b 100644
+index c977850d067..9a9dc437231 100644
 --- a/gcc/cp/ChangeLog
 +++ b/gcc/cp/ChangeLog
-@@ -1,3 +1,122 @@
+@@ -1,3 +1,131 @@
++2019-10-08  Marek Polacek  <polacek@redhat.com>
++
++	Backported from mainline
++	2019-09-15  Marek Polacek  <polacek@redhat.com>
++
++	PR c++/91740 - ICE with constexpr call and ?: in ARRAY_REF.
++	* pt.c (build_non_dependent_expr): Call build_non_dependent_expr for
++	the first operand.
++
 +2019-09-28  Marek Polacek  <polacek@redhat.com>
 +
 +	Backported from mainline
@@ -3151,7 +3191,7 @@ index c977850d067..297eb6f0e9b 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -16,7 +135,7 @@
+@@ -16,7 +144,7 @@
  
  	Backported from mainline
  	2019-08-02  Marek Polacek  <polacek@redhat.com>
@@ -3550,7 +3590,7 @@ index a7218e752b1..09251bf2135 100644
    cp_lexer_get_preprocessor_token (NULL, first_token);
    if (first_token->type == CPP_STRING)
 diff --git a/gcc/cp/pt.c b/gcc/cp/pt.c
-index a2a986b1db1..34d440c7eb5 100644
+index a2a986b1db1..442e01bfa11 100644
 --- a/gcc/cp/pt.c
 +++ b/gcc/cp/pt.c
 @@ -3875,7 +3875,7 @@ find_parameter_packs_r (tree *tp, int *walk_subtrees, void* data)
@@ -3726,6 +3766,15 @@ index a2a986b1db1..34d440c7eb5 100644
  	  return true;
  	}
        if (dependent_type_p (type))
+@@ -26715,7 +26715,7 @@ build_non_dependent_expr (tree expr)
+   if (TREE_CODE (expr) == COND_EXPR)
+     return build3 (COND_EXPR,
+ 		   TREE_TYPE (expr),
+-		   TREE_OPERAND (expr, 0),
++		   build_non_dependent_expr (TREE_OPERAND (expr, 0)),
+ 		   (TREE_OPERAND (expr, 1)
+ 		    ? build_non_dependent_expr (TREE_OPERAND (expr, 1))
+ 		    : build_non_dependent_expr (TREE_OPERAND (expr, 0))),
 @@ -27615,6 +27615,9 @@ do_auto_deduction (tree type, tree init, tree auto_node,
      }
    else
@@ -3867,10 +3916,17 @@ index 6f6f768f371..4becdcf1cbb 100644
        else
  	/* Every other call, including pure functions, may read any memory
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index e3073787ea9..4c9a1122285 100644
+index e3073787ea9..12c7221335a 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,260 @@
+@@ -1,3 +1,267 @@
++2019-10-07  Thomas Koenig <tkoenig@gcc.gnu.org>
++
++	Backport from trunk
++	PR fortran/84487
++	* trans-decl.c (gfc_get_symbol_decl): For __def_init, set
++	DECL_ARTIFICAL and do not set TREE_READONLY.
++
 +2019-10-05  Steven G. Kargl  <kargl@gcc.gnu.org>
 +
 +	PR fortran/47054
@@ -3895,7 +3951,7 @@ index e3073787ea9..4c9a1122285 100644
 +	PR fortran/91864
 +	* gcc/fortran/io.c (match_io_element): An inquiry parameter cannot be
 +	read into.
-+	* gcc/fortran/match.c (gfc_match_allocate): An inquiry parameter 
++	* gcc/fortran/match.c (gfc_match_allocate): An inquiry parameter
 +	can be neither an allocate-object nor stat variable.
 +	(gfc_match_deallocate): An inquiry parameter cannot be deallocated.
 +
@@ -5539,10 +5595,25 @@ index 583425c516d..9e1f159a696 100644
  	      break;
  
 diff --git a/gcc/fortran/trans-decl.c b/gcc/fortran/trans-decl.c
-index 9538dee5733..f5149eed981 100644
+index 9538dee5733..eb92259f880 100644
 --- a/gcc/fortran/trans-decl.c
 +++ b/gcc/fortran/trans-decl.c
-@@ -5862,9 +5862,11 @@ generate_local_decl (gfc_symbol * sym)
+@@ -1892,9 +1892,13 @@ gfc_get_symbol_decl (gfc_symbol * sym)
+   if (sym->attr.associate_var)
+     GFC_DECL_ASSOCIATE_VAR_P (decl) = 1;
+ 
++  /* We no longer mark __def_init as read-only so it does not take up
++     space in the read-only section and dan go into the BSS instead,
++     see PR 84487.  Marking this as artificial means that OpenMP will
++     treat this as predetermined shared.  */
+   if (sym->attr.vtab
+       || (sym->name[0] == '_' && gfc_str_startswith (sym->name, "__def_init")))
+-    TREE_READONLY (decl) = 1;
++    DECL_ARTIFICIAL (decl) = 1;
+ 
+   return decl;
+ }
+@@ -5862,9 +5866,11 @@ generate_local_decl (gfc_symbol * sym)
  	    }
  	  else if (warn_unused_dummy_argument)
  	    {
@@ -5557,7 +5628,7 @@ index 9538dee5733..f5149eed981 100644
  	      if (sym->backend_decl != NULL_TREE)
  		TREE_NO_WARNING(sym->backend_decl) = 1;
  	    }
-@@ -6440,6 +6442,20 @@ gfc_generate_return (void)
+@@ -6440,6 +6446,20 @@ gfc_generate_return (void)
  				    TREE_TYPE (result), DECL_RESULT (fndecl),
  				    result);
  	}
@@ -8220,10 +8291,24 @@ index 29f6cdc4667..33b4be79c0f 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..1d049689fc9 100644
+index bc11ae4ae0b..a308c86d5d6 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,369 @@
+@@ -1,3 +1,383 @@
++2019-10-07  Thomas Koenig <tkoenig@gcc.gnu.org>
++
++	Backport from trunk
++	PR fortran/84487
++	* gfortran.dg/typebound_call_22.f03: xfail.
++
++2019-10-07  Bill Schmidt  <wschmidt@linux.ibm.com>
++
++	Backport from mainline
++	2019-10-01  Bill Schmidt  <wschmdit@linux.ibm.com>
++
++	PR target/91275
++	* gcc.target/powerpc/pr91275.c: New.
++
 +2019-10-05  Steven G. Kargl  <kargl@gcc.gnu.org>
 +
 +	PR fortran/47054
@@ -8243,7 +8328,7 @@ index bc11ae4ae0b..1d049689fc9 100644
 +
 +2019-10-04  Dragan Mladjenovic <dmladjenovic@wavecomp.com>
 +
-+	Backport from mainline	
++	Backport from mainline
 +	2019-10-03  Dragan Mladjenovic  <dmladjenovic@wavecomp.com>
 +
 +	PR target/91769
@@ -8593,7 +8678,7 @@ index bc11ae4ae0b..1d049689fc9 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +793,7 @@
+@@ -427,7 +807,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -9308,6 +9393,17 @@ index 00000000000..a37e996a3ff
 +{
 +  foo<10>();
 +}
+diff --git a/gcc/testsuite/g++.dg/cpp1y/var-templ63.C b/gcc/testsuite/g++.dg/cpp1y/var-templ63.C
+new file mode 100644
+index 00000000000..a65f53b2963
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp1y/var-templ63.C
+@@ -0,0 +1,5 @@
++// PR c++/91740 - ICE with constexpr call and ?: in ARRAY_REF.
++// { dg-do compile { target c++14 } }
++
++constexpr bool f(const char*) { return true; }
++template<typename T> const char c = "FOO"[f("BAR") ? 1 : 0];
 diff --git a/gcc/testsuite/g++.dg/cpp2a/nontype-class23.C b/gcc/testsuite/g++.dg/cpp2a/nontype-class23.C
 new file mode 100644
 index 00000000000..ab9e80fd335
@@ -10401,6 +10497,33 @@ index 00000000000..477901fde70
 +}
 +
 +/* { dg-final { scan-assembler-times {(?n)\mdarn .*,0\M} 4 } } */
+diff --git a/gcc/testsuite/gcc.target/powerpc/pr91275.c b/gcc/testsuite/gcc.target/powerpc/pr91275.c
+new file mode 100644
+index 00000000000..b23d75be29b
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/powerpc/pr91275.c
+@@ -0,0 +1,21 @@
++/* Test that we generate vpmsumd correctly without a swap error.  */
++
++/* { dg-do run { target { p8vector_hw } } } */
++/* { dg-options "-O2 -std=gnu11" } */
++
++#include <altivec.h>
++
++int main() {
++
++  const unsigned long long r0l = 0x8e7dfceac070e3a0;
++  vector unsigned long long r0 = (vector unsigned long long) {r0l, 0}, v;
++  const vector unsigned long long pd
++    = (vector unsigned long) {0xc2LLU << 56, 0};
++
++  v = __builtin_crypto_vpmsumd ((vector unsigned long long) {r0[0], 0}, pd);
++
++  if (v[0] != 0x4000000000000000 || v[1] != 0x65bd7ab605a4a8ff)
++    __builtin_abort ();
++
++  return 0;
++}
 diff --git a/gcc/testsuite/gcc.target/riscv/shift-shift-4.c b/gcc/testsuite/gcc.target/riscv/shift-shift-4.c
 new file mode 100644
 index 00000000000..72a45ee87ae
@@ -11520,6 +11643,16 @@ index 00000000000..cd237d38660
 +   flush (iostat=i%kind) ! { dg-error "Expecting a variable at" }
 +   rewind (iostat=i%kind) ! { dg-error "Expecting a variable at" }
 +end
+diff --git a/gcc/testsuite/gfortran.dg/typebound_call_22.f03 b/gcc/testsuite/gfortran.dg/typebound_call_22.f03
+index b9f0b712573..30f86937fe2 100644
+--- a/gcc/testsuite/gfortran.dg/typebound_call_22.f03
++++ b/gcc/testsuite/gfortran.dg/typebound_call_22.f03
+@@ -26,4 +26,4 @@ program test
+   call x%bar ()
+ end program
+ 
+-! { dg-final { scan-tree-dump-times "base \\(\\);" 1 "optimized" } }
++! { dg-final { scan-tree-dump-times "base \\(\\);" 1 "optimized" { xfail *-*-* } } }
 diff --git a/gcc/testsuite/gfortran.dg/unlimited_polymorphic_28.f90 b/gcc/testsuite/gfortran.dg/unlimited_polymorphic_28.f90
 index b474a243233..a9f67273d5e 100644
 --- a/gcc/testsuite/gfortran.dg/unlimited_polymorphic_28.f90
