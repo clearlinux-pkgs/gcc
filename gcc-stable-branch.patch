@@ -195,10 +195,11 @@ mpolacek (9):
 msebor (1):
       Backport from mainline
 
-olegendo (3):
+olegendo (4):
       gcc/ 2019-09-28  Oleg Endo  <olegendo@gcc.gnu.org>
       gcc/ 2019-09-28  Oleg Endo  <olegendo@gcc.gnu.org>
       gcc/ 2019-10-01  Oleg Endo  <olegendo@gcc.gnu.org>
+      gcc/ 	Backport from mainline 	2019-10-10  Oleg Endo  <olegendo@gcc.gnu.org>
 
 pault (2):
       2019-09-07  Paul Thomas  <pault@gcc.gnu.org>
@@ -486,10 +487,35 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..f840f0180e9 100644
+index 7f6557d8018..12fecd817f5 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,533 @@
+@@ -1,3 +1,558 @@
++2019-10-10  Oleg Endo  <olegendo@gcc.gnu.org>
++
++	Backport from mainline
++	2019-10-10  Oleg Endo  <olegendo@gcc.gnu.org>
++
++	PR target/88630
++	* config/sh/sh.h (TARGET_FPU_SH4_300): New macro.
++	* config/sh/sh.c (sh_option_override): Enable fsca and fsrra insns
++	also for TARGET_FPU_SH4_300.
++	(sh_emit_mode_set): Check for TARGET_FPU_SH4_300 instead of
++	TARGET_SH4_300.
++	* config/sh/sh.md (toggle_pr): Add TARGET_FPU_SH4_300 condition.
++	(negsf2): Expand to either negsf2_fpscr or negsf2_no_fpscr.
++	(*negsf2_i): Split into ...
++	(negsf2_fpscr, negsf2_no_fpscr): ... these new patterns.
++	(abssf2): Expand to either abssf2_fpsc or abssf2_no_fpsc.
++	(**abssf2_i): Split into ...
++	(abssf2_fpscr, abssf2_no_fpscr): ... these new patterns.
++	(negdf2): Expand to either negdf2_fpscr or negdf2_no_fpscr.
++	(*negdf2_i): Split into ...
++	(negdf2_fpscr, negdf2_no_fpscr): ... these new patterns.
++	(absdf2): Expand to either absdf2_fpscr or absdf2_no_fpsc.
++	(**abssf2_i): Split into ...
++	(absdf2_fpscr, absdf2_no_fpscr): ... these new patterns.
++
 +2019-10-10  Andreas Krebbel  <krebbel@linux.ibm.com>
 +
 +	Backport from mainline
@@ -1023,7 +1049,7 @@ index 7f6557d8018..f840f0180e9 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +1043,7 @@
+@@ -513,7 +1068,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -3818,7 +3844,7 @@ index 3020bc94d3e..5ec3fb4fe58 100644
  (define_insn_and_split "*eltswap<mode>_emu"
    [(set (match_operand:VEC_HW                 0 "nonimmediate_operand" "=vR")
 diff --git a/gcc/config/sh/sh.c b/gcc/config/sh/sh.c
-index 8dc79a764df..bd7dff5f3e5 100644
+index 8dc79a764df..11440988f1a 100644
 --- a/gcc/config/sh/sh.c
 +++ b/gcc/config/sh/sh.c
 @@ -664,6 +664,9 @@ static const struct attribute_spec sh_attribute_table[] =
@@ -3840,7 +3866,23 @@ index 8dc79a764df..bd7dff5f3e5 100644
  	{
  	  std::string offset_str = tokens[i].substr (strlen ("gbr-offset="));
  	  ret.tcb_gbr_offset = integral_argument (offset_str.c_str ());
-@@ -12087,9 +12090,11 @@ sh_extending_set_of_reg::use_as_extended_reg (rtx_insn* use_at_insn) const
+@@ -958,11 +961,13 @@ sh_option_override (void)
+   if (flag_unsafe_math_optimizations)
+     {
+       /* Enable fsca insn for SH4A if not otherwise specified by the user.  */
+-      if (global_options_set.x_TARGET_FSCA == 0 && TARGET_SH4A_FP)
++      if (global_options_set.x_TARGET_FSCA == 0
++	  && (TARGET_SH4A_FP || TARGET_FPU_SH4_300))
+ 	TARGET_FSCA = 1;
+ 
+       /* Enable fsrra insn for SH4A if not otherwise specified by the user.  */
+-      if (global_options_set.x_TARGET_FSRRA == 0 && TARGET_SH4A_FP)
++      if (global_options_set.x_TARGET_FSRRA == 0
++	  && (TARGET_SH4A_FP || TARGET_FPU_SH4_300))
+ 	TARGET_FSRRA = 1;
+     }
+ 
+@@ -12087,9 +12092,11 @@ sh_extending_set_of_reg::use_as_extended_reg (rtx_insn* use_at_insn) const
  	rtx r = gen_reg_rtx (SImode);
  	rtx_insn* i0;
  	if (from_mode == QImode)
@@ -3854,6 +3896,178 @@ index 8dc79a764df..bd7dff5f3e5 100644
  	else
  	  gcc_unreachable ();
  
+@@ -12507,7 +12514,7 @@ static void
+ sh_emit_mode_set (int entity ATTRIBUTE_UNUSED, int mode,
+ 		  int prev_mode, HARD_REG_SET regs_live ATTRIBUTE_UNUSED)
+ {
+-  if ((TARGET_SH4A_FP || TARGET_SH4_300)
++  if ((TARGET_SH4A_FP || TARGET_FPU_SH4_300)
+       && prev_mode != FP_MODE_NONE && prev_mode != mode)
+     {
+       emit_insn (gen_toggle_pr ());
+diff --git a/gcc/config/sh/sh.h b/gcc/config/sh/sh.h
+index 0204872eae7..9372fcfa699 100644
+--- a/gcc/config/sh/sh.h
++++ b/gcc/config/sh/sh.h
+@@ -69,6 +69,8 @@ extern int code_for_indirect_jump_scratch;
+    FPU is disabled (which makes it compatible with SH4al-dsp).  */
+ #define TARGET_SH4A_FP (TARGET_SH4A && TARGET_FPU_ANY)
+ 
++/* True if the FPU is a SH4-300 variant.  */
++#define TARGET_FPU_SH4_300 (TARGET_FPU_ANY && TARGET_SH4_300)
+ 
+ /* This is not used by the SH2E calling convention  */
+ #define TARGET_VARARGS_PRETEND_ARGS(FUN_DECL) \
+diff --git a/gcc/config/sh/sh.md b/gcc/config/sh/sh.md
+index 83543778619..fdb80d5d9d6 100644
+--- a/gcc/config/sh/sh.md
++++ b/gcc/config/sh/sh.md
+@@ -9163,7 +9163,7 @@
+ 	(xor:SI (reg:SI FPSCR_REG) (const_int FPSCR_PR)))
+    (set (reg:SI FPSCR_MODES_REG)
+ 	(unspec_volatile:SI [(const_int 0)] UNSPECV_FPSCR_MODES))]
+-  "TARGET_SH4A_FP"
++  "TARGET_SH4A_FP || TARGET_FPU_SH4_300"
+   "fpchg"
+   [(set_attr "type" "fpscr_toggle")])
+ 
+@@ -9391,15 +9391,31 @@
+ (define_expand "negsf2"
+   [(set (match_operand:SF 0 "fp_arith_reg_operand")
+ 	(neg:SF (match_operand:SF 1 "fp_arith_reg_operand")))]
+-  "TARGET_SH2E")
++  "TARGET_FPU_ANY"
++{
++  if (TARGET_FPU_SH4_300)
++    emit_insn (gen_negsf2_fpscr (operands[0], operands[1]));
++  else
++    emit_insn (gen_negsf2_no_fpscr (operands[0], operands[1]));
++  DONE;
++})
+ 
+-(define_insn "*negsf2_i"
++(define_insn "negsf2_no_fpscr"
+   [(set (match_operand:SF 0 "fp_arith_reg_operand" "=f")
+ 	(neg:SF (match_operand:SF 1 "fp_arith_reg_operand" "0")))]
+-  "TARGET_SH2E"
++  "TARGET_FPU_ANY && !TARGET_FPU_SH4_300"
+   "fneg	%0"
+   [(set_attr "type" "fmove")])
+ 
++(define_insn "negsf2_fpscr"
++  [(set (match_operand:SF 0 "fp_arith_reg_operand" "=f")
++	(neg:SF (match_operand:SF 1 "fp_arith_reg_operand" "0")))
++   (use (reg:SI FPSCR_MODES_REG))]
++  "TARGET_FPU_SH4_300"
++  "fneg	%0"
++  [(set_attr "type" "fmove")
++   (set_attr "fp_mode" "single")])
++
+ (define_expand "sqrtsf2"
+   [(set (match_operand:SF 0 "fp_arith_reg_operand" "")
+ 	(sqrt:SF (match_operand:SF 1 "fp_arith_reg_operand" "")))]
+@@ -9489,15 +9505,31 @@
+ (define_expand "abssf2"
+   [(set (match_operand:SF 0 "fp_arith_reg_operand")
+ 	(abs:SF (match_operand:SF 1 "fp_arith_reg_operand")))]
+-  "TARGET_SH2E")
++  "TARGET_FPU_ANY"
++{
++  if (TARGET_FPU_SH4_300)
++    emit_insn (gen_abssf2_fpscr (operands[0], operands[1]));
++  else
++    emit_insn (gen_abssf2_no_fpscr (operands[0], operands[1]));
++  DONE;
++})
+ 
+-(define_insn "*abssf2_i"
++(define_insn "abssf2_no_fpscr"
+   [(set (match_operand:SF 0 "fp_arith_reg_operand" "=f")
+ 	(abs:SF (match_operand:SF 1 "fp_arith_reg_operand" "0")))]
+-  "TARGET_SH2E"
++  "TARGET_FPU_ANY && !TARGET_FPU_SH4_300"
+   "fabs	%0"
+   [(set_attr "type" "fmove")])
+ 
++(define_insn "abssf2_fpscr"
++  [(set (match_operand:SF 0 "fp_arith_reg_operand" "=f")
++	(abs:SF (match_operand:SF 1 "fp_arith_reg_operand" "0")))
++   (use (reg:SI FPSCR_MODES_REG))]
++  "TARGET_FPU_SH4_300"
++  "fabs	%0"
++  [(set_attr "type" "fmove")
++   (set_attr "fp_mode" "single")])
++
+ (define_expand "adddf3"
+   [(set (match_operand:DF 0 "fp_arith_reg_operand" "")
+ 	(plus:DF (match_operand:DF 1 "fp_arith_reg_operand" "")
+@@ -9673,12 +9705,28 @@
+ (define_expand "negdf2"
+   [(set (match_operand:DF 0 "fp_arith_reg_operand")
+ 	(neg:DF (match_operand:DF 1 "fp_arith_reg_operand")))]
+-  "TARGET_FPU_DOUBLE")
++  "TARGET_FPU_DOUBLE"
++{
++  if (TARGET_FPU_SH4_300)
++    emit_insn (gen_negdf2_fpscr (operands[0], operands[1]));
++  else
++    emit_insn (gen_negdf2_no_fpscr (operands[0], operands[1]));
++  DONE;
++})
+ 
+-(define_insn "*negdf2_i"
++(define_insn "negdf2_fpscr"
++  [(set (match_operand:DF 0 "fp_arith_reg_operand" "=f")
++	(neg:DF (match_operand:DF 1 "fp_arith_reg_operand" "0")))
++   (use (reg:SI FPSCR_MODES_REG))]
++  "TARGET_FPU_SH4_300"
++  "fneg	%0"
++  [(set_attr "type" "fmove")
++   (set_attr "fp_mode" "double")])
++
++(define_insn "negdf2_no_fpscr"
+   [(set (match_operand:DF 0 "fp_arith_reg_operand" "=f")
+ 	(neg:DF (match_operand:DF 1 "fp_arith_reg_operand" "0")))]
+-  "TARGET_FPU_DOUBLE"
++  "TARGET_FPU_DOUBLE && !TARGET_FPU_SH4_300"
+   "fneg	%0"
+   [(set_attr "type" "fmove")])
+ 
+@@ -9704,15 +9752,31 @@
+ (define_expand "absdf2"
+   [(set (match_operand:DF 0 "fp_arith_reg_operand")
+ 	(abs:DF (match_operand:DF 1 "fp_arith_reg_operand")))]
+-  "TARGET_FPU_DOUBLE")
++  "TARGET_FPU_DOUBLE"
++{
++  if (TARGET_FPU_SH4_300)
++    emit_insn (gen_absdf2_fpscr (operands[0], operands[1]));
++  else
++    emit_insn (gen_absdf2_no_fpscr (operands[0], operands[1]));
++  DONE;
++})
+ 
+-(define_insn "*absdf2_i"
++(define_insn "absdf2_no_fpscr"
+   [(set (match_operand:DF 0 "fp_arith_reg_operand" "=f")
+ 	(abs:DF (match_operand:DF 1 "fp_arith_reg_operand" "0")))]
+-  "TARGET_FPU_DOUBLE"
++  "TARGET_FPU_DOUBLE && !TARGET_FPU_SH4_300"
+   "fabs	%0"
+   [(set_attr "type" "fmove")])
+ 
++(define_insn "absdf2_fpscr"
++  [(set (match_operand:DF 0 "fp_arith_reg_operand" "=f")
++	(abs:DF (match_operand:DF 1 "fp_arith_reg_operand" "0")))
++   (use (reg:SI FPSCR_MODES_REG))]
++  "TARGET_FPU_SH4_300"
++  "fabs	%0"
++  [(set_attr "type" "fmove")
++   (set_attr "fp_mode" "double")])
++
+ (define_expand "extendsfdf2"
+   [(set (match_operand:DF 0 "fp_arith_reg_operand" "")
+ 	(float_extend:DF (match_operand:SF 1 "fpul_operand" "")))]
 diff --git a/gcc/config/sparc/sparc.c b/gcc/config/sparc/sparc.c
 index 93479ab6bdc..14a4a760499 100644
 --- a/gcc/config/sparc/sparc.c
