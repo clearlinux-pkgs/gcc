@@ -26,7 +26,8 @@ edlinger (3):
 emsr (1):
       2019-09-09  Edward Smith-Rowland  <3dw4rd@verizon.net>
 
-gccadmin (59):
+gccadmin (60):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -125,7 +126,7 @@ jsm28 (5):
       * es.po: Update.
       * es.po: Update.
 
-kargl (28):
+kargl (29):
       2019-08-01  Steven G. Kargl  <kargl@gcc.gnu.org>
       2019-08-12  Steven G. Kargl  <kargl@gcc.gnu.org>
       2019-08-13  Steven G. Kargl  <kargl@gcc.gnu.org>
@@ -154,6 +155,7 @@ kargl (28):
       2019-10-04  Steven G. Kargl  <kargl@gcc.gnu.org>
       2019-10-04  Steven G. Kargl  <kargl@gcc.gnu.org>
       2019-10-05  Steven G. Kargl  <kargl@gcc.gnu.org>
+      2019-10-10  Steven G. Kargl  <kargl@gcc.gnu.org>
 
 kito (2):
       RISC-V: Fix bad insn splits with paradoxical subregs.
@@ -245,10 +247,11 @@ tkoenig (6):
       2019-09-18  Thomas Koenig  <tkoenig@gcc.gnu.org>
       2019-10-07  Thomas Koenig <tkoenig@gcc.gnu.org>
 
-uros (3):
+uros (4):
       * test_summary: Do not escape "=".
       * config/abi/post/alpha-linux-gnu/baseline_symbols.txt: Update.
       PR target/91533 	Backport from mainline 	2019-06-30  Uroš Bizjak  <ubizjak@gmail.com>
+      PR target/92022 	* config/alpha/alpha.c (alpha_handle_trap_shadows): Skip DEBUG_INSN.
 
 wilco (1):
       [AArch64] Fix PR81800
@@ -487,10 +490,15 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..12fecd817f5 100644
+index 7f6557d8018..684245cf3b7 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,558 @@
+@@ -1,3 +1,563 @@
++2019-10-10  Uroš Bizjak  <ubizjak@gmail.com>
++
++	PR target/92022
++	* config/alpha/alpha.c (alpha_handle_trap_shadows): Skip DEBUG_INSN.
++
 +2019-10-10  Oleg Endo  <olegendo@gcc.gnu.org>
 +
 +	Backport from mainline
@@ -1049,7 +1057,7 @@ index 7f6557d8018..12fecd817f5 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +1068,7 @@
+@@ -513,7 +1073,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -1506,6 +1514,20 @@ index 7719c3b6352..3c6d1cc90ad 100644
  Optimize for CPU.
  
  mabi=
+diff --git a/gcc/config/alpha/alpha.c b/gcc/config/alpha/alpha.c
+index 984540f0b53..524379d3763 100644
+--- a/gcc/config/alpha/alpha.c
++++ b/gcc/config/alpha/alpha.c
+@@ -8839,6 +8839,9 @@ alpha_handle_trap_shadows (void)
+ 		    case CODE_LABEL:
+ 		      goto close_shadow;
+ 
++		    case DEBUG_INSN:
++		      break;
++
+ 		    default:
+ 		      gcc_unreachable ();
+ 		    }
 diff --git a/gcc/config/arm/arm.opt b/gcc/config/arm/arm.opt
 index 9067d491b9c..78f3878e037 100644
 --- a/gcc/config/arm/arm.opt
@@ -4988,10 +5010,16 @@ index 6f6f768f371..4becdcf1cbb 100644
        else
  	/* Every other call, including pure functions, may read any memory
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index e3073787ea9..12c7221335a 100644
+index e3073787ea9..34df830bb20 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,267 @@
+@@ -1,3 +1,273 @@
++2019-10-10  Steven G. Kargl  <kargl@gcc.gnu.org>
++
++	PR fortran/91801
++	* simplify.c (gfc_simplify_reshape): Convert a gcc_assert into a
++	gfc_error as a user can easily hit the condition.
++
 +2019-10-07  Thomas Koenig <tkoenig@gcc.gnu.org>
 +
 +	Backport from trunk
@@ -6551,7 +6579,7 @@ index afa4e5c2ccf..6bdb5f012a5 100644
  
    if (e->rank == 0 || has_pointer)
 diff --git a/gcc/fortran/simplify.c b/gcc/fortran/simplify.c
-index 6c1f4bd4fce..f8c9a42cdc7 100644
+index 6c1f4bd4fce..58b4652b010 100644
 --- a/gcc/fortran/simplify.c
 +++ b/gcc/fortran/simplify.c
 @@ -4808,8 +4808,12 @@ gfc_simplify_merge (gfc_expr *tsource, gfc_expr *fsource, gfc_expr *mask)
@@ -6610,9 +6638,20 @@ index 6c1f4bd4fce..f8c9a42cdc7 100644
  
        for (i = 0; i < rank; i++)
  	{
-@@ -6720,7 +6747,12 @@ gfc_simplify_reshape (gfc_expr *source, gfc_expr *shape_exp,
+@@ -6718,9 +6745,22 @@ gfc_simplify_reshape (gfc_expr *source, gfc_expr *shape_exp,
  
- 	  gcc_assert (order[i] >= 1 && order[i] <= rank);
+ 	  gfc_extract_int (e, &order[i]);
+ 
+-	  gcc_assert (order[i] >= 1 && order[i] <= rank);
++	  if (order[i] < 1 || order[i] > rank)
++	    {
++	      gfc_error ("Element with a value of %d in ORDER at %L must be "
++			 "in the range [1, ..., %d] for the RESHAPE intrinsic "
++			 "near %L", order[i], &order_exp->where, rank,
++			 &shape_exp->where);
++	      return &gfc_bad_expr;
++	    }
++
  	  order[i]--;
 -	  gcc_assert (x[order[i]] == 0);
 +	  if (x[order[i]] != 0)
@@ -6624,7 +6663,7 @@ index 6c1f4bd4fce..f8c9a42cdc7 100644
  	  x[order[i]] = 1;
  	}
      }
-@@ -8494,6 +8526,12 @@ gfc_convert_constant (gfc_expr *e, bt type, int kind)
+@@ -8494,6 +8534,12 @@ gfc_convert_constant (gfc_expr *e, bt type, int kind)
  	    {
  	      if (c->expr->expr_type == EXPR_ARRAY)
  		tmp = gfc_convert_constant (c->expr, type, kind);
@@ -9363,10 +9402,20 @@ index 29f6cdc4667..33b4be79c0f 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..a308c86d5d6 100644
+index bc11ae4ae0b..f63e0a1910c 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,383 @@
+@@ -1,3 +1,393 @@
++2019-10-10  Steven G. Kargl  <kargl@gcc.gnu.org>
++
++	PR fortran/91801
++	* gfortran.dg/pr91801.f90: New test.
++
++2019-10-10  Uroš Bizjak  <ubizjak@gmail.com>
++
++	PR target/92022
++	* g++.dg/pr92022.C: New test.
++
 +2019-10-07  Thomas Koenig <tkoenig@gcc.gnu.org>
 +
 +	Backport from trunk
@@ -9750,7 +9799,7 @@ index bc11ae4ae0b..a308c86d5d6 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +807,7 @@
+@@ -427,7 +817,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -10884,6 +10933,25 @@ index 00000000000..c5ee3eb934a
 +{
 +	int pt(foo()->bar());
 +	return pt;
++}
+diff --git a/gcc/testsuite/g++.dg/pr92022.C b/gcc/testsuite/g++.dg/pr92022.C
+new file mode 100644
+index 00000000000..066d984ffc5
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/pr92022.C
+@@ -0,0 +1,13 @@
++// { dg-do compile { target alpha*-*-* } }
++// { dg-options "-O1 -g -fno-var-tracking -mcpu=ev4 -mieee" }
++
++struct a {
++  a(long);
++};
++long b;
++void c() {
++  a d(1);
++  double e = b;
++  for (; b;)
++    d = e;
 +}
 diff --git a/gcc/testsuite/g++.dg/torture/pr91155.C b/gcc/testsuite/g++.dg/torture/pr91155.C
 new file mode 100644
@@ -12655,6 +12723,19 @@ index 00000000000..fb3d964fc06
 +   complex :: a(*)   ! { dg-error "Assumed size array at" }
 +   real :: b(2)
 +   b = a%im          ! { dg-error "upper bound in the last dimension" }
++end
+diff --git a/gcc/testsuite/gfortran.dg/pr91801.f90 b/gcc/testsuite/gfortran.dg/pr91801.f90
+new file mode 100644
+index 00000000000..d2d82b88464
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr91801.f90
+@@ -0,0 +1,7 @@
++! { dg-do compile }
++! PR fortran/91801
++! Code contributed by Gerhard Steinmetz
++program p
++   integer, parameter :: a(2) = [2,0]              ! { dg-error "Element with a value of" }
++   print *, reshape([1,2,3,4,5,6], [2,3], order=a) ! { dg-error "for the RESHAPE intrinsic near" }
 +end
 diff --git a/gcc/testsuite/gfortran.dg/pr91802.f90 b/gcc/testsuite/gfortran.dg/pr91802.f90
 new file mode 100644
