@@ -11,13 +11,14 @@ draganm (2):
       Backprot fix for uninitialised use in mips_split_move
       Backport fix for PR target/91769
 
-ebotcazou (6):
+ebotcazou (7):
       PR rtl-optimization/91347 	* dse.c (scan_insn): Call add_wild_read for non-const/memset tail calls 	before reload if HARD_FRAME_POINTER_IS_ARG_POINTER.
       PR target/91472 	* config/sparc/sparc.c (sparc_cannot_force_const_mem): Return true 	during LRA/reload in PIC mode if the PIC register hasn't been used yet. 	(sparc_pic_register_p): Test reload_in_progress for consistency's sake.
       PR rtl-optimization/89795 	* rtlanal.c (nonzero_bits1) <SUBREG>: Do not propagate results from 	inner REGs to paradoxical SUBREGs if WORD_REGISTER_OPERATIONS is set.
       PR target/91269 	* config/sparc/sparc.h (HARD_REGNO_CALLER_SAVE_MODE): Define.
       * gcc-interface/trans.c (Attribute_to_gnu): Test Can_Use_Internal_Rep 	on the underlying type of the node. 	(Call_to_gnu): Likewise with the type of the prefix.
       * gcc-interface/decl.c (annotate_value) <INTEGER_CST>: Really test the 	sign of the value when deciding to build a NEGATE_EXPR. 	<PLUS_EXPR>: Remove redundant line. 	<BIT_AND_EXPR>: Do the negation here.
+      PR ada/91995 	* sem_ch8.adb (Chain_Use_Clause): Remove second argument in calls 	to Defining_Entity. 	* sem_elab.adb (Find_Unit_Entity): Likewise.  Deal with N_Subunit 	here in lieu of in Defining_Entity. 	* sem_spark.adb (Check_Callable_Body): Likewise. 	(Check_Package_Body): Likewise. 	* sem_util.ads (Defining_Entity): Remove 2nd and 3th parameters. 	* sem_util.adb (Defining_Entity): Remove 2nd and 3th parameters, 	and adjust accordingly.  Deal with N_Compilation_Unit.
 
 edlinger (3):
       2019-08-16  Bernd Edlinger  <bernd.edlinger@hotmail.de>
@@ -1072,10 +1073,23 @@ index 7f6557d8018..684245cf3b7 100644
  
  	* config/i386/sse.md (*andnot<mode>3_bcst): Fix VI/VI48_AVX512VL typo.
 diff --git a/gcc/ada/ChangeLog b/gcc/ada/ChangeLog
-index 22cd00956dc..f56d13cfb6e 100644
+index 22cd00956dc..64ff4397fd4 100644
 --- a/gcc/ada/ChangeLog
 +++ b/gcc/ada/ChangeLog
-@@ -1,3 +1,16 @@
+@@ -1,3 +1,29 @@
++2019-10-12  Eric Botcazou  <ebotcazou@adacore.com>
++
++	PR ada/91995
++	* sem_ch8.adb (Chain_Use_Clause): Remove second argument in calls
++	to Defining_Entity.
++	* sem_elab.adb (Find_Unit_Entity): Likewise.  Deal with N_Subunit
++	here in lieu of in Defining_Entity.
++	* sem_spark.adb (Check_Callable_Body): Likewise.
++	(Check_Package_Body): Likewise.
++	* sem_util.ads (Defining_Entity): Remove 2nd and 3th parameters.
++	* sem_util.adb (Defining_Entity): Remove 2nd and 3th parameters,
++	and adjust accordingly.  Deal with N_Compilation_Unit.
++
 +2019-10-11  Eric Botcazou  <ebotcazou@adacore.com>
 +
 +	* gcc-interface/decl.c (annotate_value) <INTEGER_CST>: Really test the
@@ -1201,6 +1215,198 @@ index 49fd34656ad..f08f6aac330 100644
  	by_descriptor = true;
      }
    else if (Nkind (Name (gnat_node)) == N_Attribute_Reference)
+diff --git a/gcc/ada/sem_ch8.adb b/gcc/ada/sem_ch8.adb
+index a5e821da1b4..340aa49bd11 100644
+--- a/gcc/ada/sem_ch8.adb
++++ b/gcc/ada/sem_ch8.adb
+@@ -4256,16 +4256,14 @@ package body Sem_Ch8 is
+ 
+       --  Common case for compilation unit
+ 
+-      elsif Defining_Entity (N               => Parent (N),
+-                             Empty_On_Errors => True) = Current_Scope
+-      then
++      elsif Defining_Entity (Parent (N)) = Current_Scope then
+          null;
+ 
+       else
+          --  If declaration appears in some other scope, it must be in some
+          --  parent unit when compiling a child.
+ 
+-         Pack := Defining_Entity (Parent (N), Empty_On_Errors => True);
++         Pack := Defining_Entity (Parent (N));
+ 
+          if not In_Open_Scopes (Pack) then
+             null;
+diff --git a/gcc/ada/sem_elab.adb b/gcc/ada/sem_elab.adb
+index b74f88d0461..ee0c49ba40c 100644
+--- a/gcc/ada/sem_elab.adb
++++ b/gcc/ada/sem_elab.adb
+@@ -5544,13 +5544,23 @@ package body Sem_Elab is
+                                    N_Procedure_Instantiation)
+         and then Nkind (Context) = N_Compilation_Unit
+       then
+-         return
+-           Related_Instance (Defining_Entity (N, Concurrent_Subunit => True));
++         return Related_Instance (Defining_Entity (N));
++
++      --  The unit denotes a concurrent body acting as a subunit. Such bodies
++      --  are generally rewritten into null statements. The proper entity is
++      --  that of the "original node".
++
++      elsif Nkind (N) = N_Subunit
++        and then Nkind (Proper_Body (N)) = N_Null_Statement
++        and then Nkind_In (Original_Node (Proper_Body (N)), N_Protected_Body,
++                                                            N_Task_Body)
++      then
++         return Defining_Entity (Original_Node (Proper_Body (N)));
+ 
+       --  Otherwise the proper entity is the defining entity
+ 
+       else
+-         return Defining_Entity (N, Concurrent_Subunit => True);
++         return Defining_Entity (N);
+       end if;
+    end Find_Unit_Entity;
+ 
+diff --git a/gcc/ada/sem_spark.adb b/gcc/ada/sem_spark.adb
+index cfa6df81854..439d29fe9dc 100644
+--- a/gcc/ada/sem_spark.adb
++++ b/gcc/ada/sem_spark.adb
+@@ -804,7 +804,7 @@ package body Sem_SPARK is
+ 
+       if Present (SPARK_Pragma (Defining_Entity (Body_N))) then
+          if Get_SPARK_Mode_From_Annotation
+-           (SPARK_Pragma (Defining_Entity (Body_N, False))) /= Opt.On
++           (SPARK_Pragma (Defining_Entity (Body_N))) /= Opt.On
+          then
+             return;
+          end if;
+@@ -1914,7 +1914,7 @@ package body Sem_SPARK is
+       CorSp : Node_Id;
+ 
+    begin
+-      if Present (SPARK_Pragma (Defining_Entity (Pack, False))) then
++      if Present (SPARK_Pragma (Defining_Entity (Pack))) then
+          if Get_SPARK_Mode_From_Annotation
+            (SPARK_Pragma (Defining_Entity (Pack))) /= Opt.On
+          then
+diff --git a/gcc/ada/sem_util.adb b/gcc/ada/sem_util.adb
+index 16c671111e4..eedfaf1376e 100644
+--- a/gcc/ada/sem_util.adb
++++ b/gcc/ada/sem_util.adb
+@@ -5827,11 +5827,7 @@ package body Sem_Util is
+    -- Defining_Entity --
+    ---------------------
+ 
+-   function Defining_Entity
+-     (N                  : Node_Id;
+-      Empty_On_Errors    : Boolean := False;
+-      Concurrent_Subunit : Boolean := False) return Entity_Id
+-   is
++   function Defining_Entity (N : Node_Id) return Entity_Id is
+    begin
+       case Nkind (N) is
+          when N_Abstract_Subprogram_Declaration
+@@ -5882,24 +5878,11 @@ package body Sem_Util is
+          =>
+             return Defining_Identifier (N);
+ 
+-         when N_Subunit =>
+-            declare
+-               Bod      : constant Node_Id := Proper_Body (N);
+-               Orig_Bod : constant Node_Id := Original_Node (Bod);
+-
+-            begin
+-               --  Retrieve the entity of the original protected or task body
+-               --  if requested by the caller.
++         when N_Compilation_Unit =>
++            return Defining_Entity (Unit (N));
+ 
+-               if Concurrent_Subunit
+-                 and then Nkind (Bod) = N_Null_Statement
+-                 and then Nkind_In (Orig_Bod, N_Protected_Body, N_Task_Body)
+-               then
+-                  return Defining_Entity (Orig_Bod);
+-               else
+-                  return Defining_Entity (Bod);
+-               end if;
+-            end;
++         when N_Subunit =>
++            return Defining_Entity (Proper_Body (N));
+ 
+          when N_Function_Instantiation
+             | N_Function_Specification
+@@ -5925,14 +5908,10 @@ package body Sem_Util is
+                --  can continue semantic analysis.
+ 
+                elsif Nam = Error then
+-                  if Empty_On_Errors then
+-                     return Empty;
+-                  else
+-                     Err := Make_Temporary (Sloc (N), 'T');
+-                     Set_Defining_Unit_Name (N, Err);
++                  Err := Make_Temporary (Sloc (N), 'T');
++                  Set_Defining_Unit_Name (N, Err);
+ 
+-                     return Err;
+-                  end if;
++                  return Err;
+ 
+                --  If not an entity, get defining identifier
+ 
+@@ -5947,11 +5926,7 @@ package body Sem_Util is
+             return Entity (Identifier (N));
+ 
+          when others =>
+-            if Empty_On_Errors then
+-               return Empty;
+-            else
+-               raise Program_Error;
+-            end if;
++            raise Program_Error;
+       end case;
+    end Defining_Entity;
+ 
+diff --git a/gcc/ada/sem_util.ads b/gcc/ada/sem_util.ads
+index 4e4d4ba8826..f098ea44d97 100644
+--- a/gcc/ada/sem_util.ads
++++ b/gcc/ada/sem_util.ads
+@@ -543,10 +543,7 @@ package Sem_Util is
+    --  in the case of a descendant of a generic formal type (returns Int'Last
+    --  instead of 0).
+ 
+-   function Defining_Entity
+-     (N                  : Node_Id;
+-      Empty_On_Errors    : Boolean := False;
+-      Concurrent_Subunit : Boolean := False) return Entity_Id;
++   function Defining_Entity (N : Node_Id) return Entity_Id;
+    --  Given a declaration N, returns the associated defining entity. If the
+    --  declaration has a specification, the entity is obtained from the
+    --  specification. If the declaration has a defining unit name, then the
+@@ -557,22 +554,6 @@ package Sem_Util is
+    --  local entities declared during loop expansion. These entities need
+    --  debugging information, generated through Qualify_Entity_Names, and
+    --  the loop declaration must be placed in the table Name_Qualify_Units.
+-   --
+-   --  Set flag Empty_On_Error to change the behavior of this routine as
+-   --  follows:
+-   --
+-   --    * True  - A declaration that lacks a defining entity returns Empty.
+-   --      A node that does not allow for a defining entity returns Empty.
+-   --
+-   --    * False - A declaration that lacks a defining entity is given a new
+-   --      internally generated entity which is subsequently returned. A node
+-   --      that does not allow for a defining entity raises Program_Error.
+-   --
+-   --  The former semantics is appropriate for the back end; the latter
+-   --  semantics is appropriate for the front end.
+-   --
+-   --  Set flag Concurrent_Subunit to handle rewritings of concurrent bodies
+-   --  which act as subunits. Such bodies are generally rewritten as null.
+ 
+    function Denotes_Discriminant
+      (N                : Node_Id;
 diff --git a/gcc/builtins.c b/gcc/builtins.c
 index 9bcb310c015..ed11f79ff0b 100644
 --- a/gcc/builtins.c
