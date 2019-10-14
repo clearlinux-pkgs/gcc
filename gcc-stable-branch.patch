@@ -266,6 +266,9 @@ uros (4):
 wilco (1):
       [AArch64] Fix PR81800
 
+willschm (1):
+      Backport from trunk [gcc]
+
 wschmidt (1):
       [gcc]
 
@@ -500,10 +503,24 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..684245cf3b7 100644
+index 7f6557d8018..e89beb41972 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,563 @@
+@@ -1,3 +1,577 @@
++2019-10-14  Will Schmidt  <will_schmidt@vnet.ibm.com>
++
++	Backport from trunk
++	2019-09-26  Will Schmidt <will_schmidt@vnet.ibm.com>
++
++	* config/rs6000/rs6000-builtin.def: (LVSL, LVSR, LVEBX, LVEHX,
++	LVEWX, LVXL, LVXL_V2DF, LVXL_V2DI, LVXL_V4SF, LVXL_V4SI, LVXL_V8HI,
++	LVXL_V16QI, LVX, LVX_V1TI, LVX_V2DF, LVX_V2DI, LVX_V4SF, LVX_V4SI,
++	LVX_V8HI, LVX_V16QI, LVLX, LVLXL, LVRX, LVRXL, LXSDX, LXVD2X_V1TI,
++	LXVD2X_V2DF, LXVD2X_V2DI, LXVDSX, LXVW4X_V4SF, LXVW4X_V4SI,
++	LXVW4X_V8HI, LXVW4X_V16QI, LD_ELEMREV_V1TI, LD_ELEMREV_V2DF,
++	LD_ELEMREV_V2DI, LD_ELEMREV_V4SF, LD_ELEMREV_V4SI, LD_ELEMREV_V8HI,
++	LD_ELEMREV_V16QI): Use the PURE attribute.
++
 +2019-10-10  Uroš Bizjak  <ubizjak@gmail.com>
 +
 +	PR target/92022
@@ -1067,7 +1084,7 @@ index 7f6557d8018..684245cf3b7 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +1073,7 @@
+@@ -513,7 +1087,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -3358,6 +3375,118 @@ index d3a59f42c37..98ecf0ad2fe 100644
        builtin_define ("__NATURAL_ALIGNMENT__");		\
        darwin_cpp_builtins (pfile);			\
      }							\
+diff --git a/gcc/config/rs6000/rs6000-builtin.def b/gcc/config/rs6000/rs6000-builtin.def
+index 0a2bdb79e15..4d4f3b3e746 100644
+--- a/gcc/config/rs6000/rs6000-builtin.def
++++ b/gcc/config/rs6000/rs6000-builtin.def
+@@ -1177,26 +1177,26 @@ BU_ALTIVEC_X (MTVSCR,		"mtvscr",	    MISC)
+ BU_ALTIVEC_X (MFVSCR,		"mfvscr",	    MISC)
+ BU_ALTIVEC_X (DSSALL,		"dssall",	    MISC)
+ BU_ALTIVEC_X (DSS,		"dss",		    MISC)
+-BU_ALTIVEC_X (LVSL,		"lvsl",		    MEM)
+-BU_ALTIVEC_X (LVSR,		"lvsr",		    MEM)
+-BU_ALTIVEC_X (LVEBX,		"lvebx",	    MEM)
+-BU_ALTIVEC_X (LVEHX,		"lvehx",	    MEM)
+-BU_ALTIVEC_X (LVEWX,		"lvewx",	    MEM)
+-BU_ALTIVEC_X (LVXL,		"lvxl",		    MEM)
+-BU_ALTIVEC_X (LVXL_V2DF,	"lvxl_v2df",	    MEM)
+-BU_ALTIVEC_X (LVXL_V2DI,	"lvxl_v2di",	    MEM)
+-BU_ALTIVEC_X (LVXL_V4SF,	"lvxl_v4sf",	    MEM)
+-BU_ALTIVEC_X (LVXL_V4SI,	"lvxl_v4si",	    MEM)
+-BU_ALTIVEC_X (LVXL_V8HI,	"lvxl_v8hi",	    MEM)
+-BU_ALTIVEC_X (LVXL_V16QI,	"lvxl_v16qi",	    MEM)
+-BU_ALTIVEC_X (LVX,		"lvx",		    MEM)
+-BU_ALTIVEC_X (LVX_V1TI,		"lvx_v1ti",	    MEM)
+-BU_ALTIVEC_X (LVX_V2DF,		"lvx_v2df",	    MEM)
+-BU_ALTIVEC_X (LVX_V2DI,		"lvx_v2di",	    MEM)
+-BU_ALTIVEC_X (LVX_V4SF,		"lvx_v4sf",	    MEM)
+-BU_ALTIVEC_X (LVX_V4SI,		"lvx_v4si",	    MEM)
+-BU_ALTIVEC_X (LVX_V8HI,		"lvx_v8hi",	    MEM)
+-BU_ALTIVEC_X (LVX_V16QI,	"lvx_v16qi",	    MEM)
++BU_ALTIVEC_X (LVSL,		"lvsl",		    PURE)
++BU_ALTIVEC_X (LVSR,		"lvsr",		    PURE)
++BU_ALTIVEC_X (LVEBX,		"lvebx",	    PURE)
++BU_ALTIVEC_X (LVEHX,		"lvehx",	    PURE)
++BU_ALTIVEC_X (LVEWX,		"lvewx",	    PURE)
++BU_ALTIVEC_X (LVXL,		"lvxl",		    PURE)
++BU_ALTIVEC_X (LVXL_V2DF,	"lvxl_v2df",	    PURE)
++BU_ALTIVEC_X (LVXL_V2DI,	"lvxl_v2di",	    PURE)
++BU_ALTIVEC_X (LVXL_V4SF,	"lvxl_v4sf",	    PURE)
++BU_ALTIVEC_X (LVXL_V4SI,	"lvxl_v4si",	    PURE)
++BU_ALTIVEC_X (LVXL_V8HI,	"lvxl_v8hi",	    PURE)
++BU_ALTIVEC_X (LVXL_V16QI,	"lvxl_v16qi",	    PURE)
++BU_ALTIVEC_X (LVX,		"lvx",		    PURE)
++BU_ALTIVEC_X (LVX_V1TI,		"lvx_v1ti",	    PURE)
++BU_ALTIVEC_X (LVX_V2DF,		"lvx_v2df",	    PURE)
++BU_ALTIVEC_X (LVX_V2DI,		"lvx_v2di",	    PURE)
++BU_ALTIVEC_X (LVX_V4SF,		"lvx_v4sf",	    PURE)
++BU_ALTIVEC_X (LVX_V4SI,		"lvx_v4si",	    PURE)
++BU_ALTIVEC_X (LVX_V8HI,		"lvx_v8hi",	    PURE)
++BU_ALTIVEC_X (LVX_V16QI,	"lvx_v16qi",	    PURE)
+ BU_ALTIVEC_X (STVX,		"stvx",		    MEM)
+ BU_ALTIVEC_X (STVX_V2DF,	"stvx_v2df",	    MEM)
+ BU_ALTIVEC_X (STVX_V2DI,	"stvx_v2di",	    MEM)
+@@ -1204,10 +1204,10 @@ BU_ALTIVEC_X (STVX_V4SF,	"stvx_v4sf",	    MEM)
+ BU_ALTIVEC_X (STVX_V4SI,	"stvx_v4si",	    MEM)
+ BU_ALTIVEC_X (STVX_V8HI,	"stvx_v8hi",	    MEM)
+ BU_ALTIVEC_X (STVX_V16QI,	"stvx_v16qi",	    MEM)
+-BU_ALTIVEC_C (LVLX,		"lvlx",		    MEM)
+-BU_ALTIVEC_C (LVLXL,		"lvlxl",	    MEM)
+-BU_ALTIVEC_C (LVRX,		"lvrx",		    MEM)
+-BU_ALTIVEC_C (LVRXL,		"lvrxl",	    MEM)
++BU_ALTIVEC_C (LVLX,		"lvlx",		    PURE)
++BU_ALTIVEC_C (LVLXL,		"lvlxl",	    PURE)
++BU_ALTIVEC_C (LVRX,		"lvrx",		    PURE)
++BU_ALTIVEC_C (LVRXL,		"lvrxl",	    PURE)
+ BU_ALTIVEC_X (STVEBX,		"stvebx",	    MEM)
+ BU_ALTIVEC_X (STVEHX,		"stvehx",	    MEM)
+ BU_ALTIVEC_X (STVEWX,		"stvewx",	    MEM)
+@@ -1718,15 +1718,15 @@ BU_VSX_P (XVCMPGEDP_P,	      "xvcmpgedp_p",	CONST,	vector_ge_v2df_p)
+ BU_VSX_P (XVCMPGTDP_P,	      "xvcmpgtdp_p",	CONST,	vector_gt_v2df_p)
+ 
+ /* VSX builtins that are handled as special cases.  */
+-BU_VSX_X (LXSDX,	      "lxsdx",		MEM)
+-BU_VSX_X (LXVD2X_V1TI,	      "lxvd2x_v1ti",	MEM)
+-BU_VSX_X (LXVD2X_V2DF,	      "lxvd2x_v2df",	MEM)
+-BU_VSX_X (LXVD2X_V2DI,	      "lxvd2x_v2di",	MEM)
+-BU_VSX_X (LXVDSX,	      "lxvdsx",		MEM)
+-BU_VSX_X (LXVW4X_V4SF,	      "lxvw4x_v4sf",	MEM)
+-BU_VSX_X (LXVW4X_V4SI,        "lxvw4x_v4si",	MEM)
+-BU_VSX_X (LXVW4X_V8HI,        "lxvw4x_v8hi",	MEM)
+-BU_VSX_X (LXVW4X_V16QI,	      "lxvw4x_v16qi",	MEM)
++BU_VSX_X (LXSDX,	      "lxsdx",		PURE)
++BU_VSX_X (LXVD2X_V1TI,	      "lxvd2x_v1ti",	PURE)
++BU_VSX_X (LXVD2X_V2DF,	      "lxvd2x_v2df",	PURE)
++BU_VSX_X (LXVD2X_V2DI,	      "lxvd2x_v2di",	PURE)
++BU_VSX_X (LXVDSX,	      "lxvdsx",		PURE)
++BU_VSX_X (LXVW4X_V4SF,	      "lxvw4x_v4sf",	PURE)
++BU_VSX_X (LXVW4X_V4SI,	      "lxvw4x_v4si",	PURE)
++BU_VSX_X (LXVW4X_V8HI,	      "lxvw4x_v8hi",	PURE)
++BU_VSX_X (LXVW4X_V16QI,	      "lxvw4x_v16qi",	PURE)
+ BU_VSX_X (STXSDX,	      "stxsdx",		MEM)
+ BU_VSX_X (STXVD2X_V1TI,	      "stxvd2x_v1ti",	MEM)
+ BU_VSX_X (STXVD2X_V2DF,	      "stxvd2x_v2df",	MEM)
+@@ -1735,13 +1735,13 @@ BU_VSX_X (STXVW4X_V4SF,	      "stxvw4x_v4sf",	MEM)
+ BU_VSX_X (STXVW4X_V4SI,	      "stxvw4x_v4si",	MEM)
+ BU_VSX_X (STXVW4X_V8HI,	      "stxvw4x_v8hi",	MEM)
+ BU_VSX_X (STXVW4X_V16QI,      "stxvw4x_v16qi",	MEM)
+-BU_VSX_X (LD_ELEMREV_V1TI,    "ld_elemrev_v1ti",  MEM)
+-BU_VSX_X (LD_ELEMREV_V2DF,    "ld_elemrev_v2df",  MEM)
+-BU_VSX_X (LD_ELEMREV_V2DI,    "ld_elemrev_v2di",  MEM)
+-BU_VSX_X (LD_ELEMREV_V4SF,    "ld_elemrev_v4sf",  MEM)
+-BU_VSX_X (LD_ELEMREV_V4SI,    "ld_elemrev_v4si",  MEM)
+-BU_VSX_X (LD_ELEMREV_V8HI,    "ld_elemrev_v8hi",  MEM)
+-BU_VSX_X (LD_ELEMREV_V16QI,   "ld_elemrev_v16qi", MEM)
++BU_VSX_X (LD_ELEMREV_V1TI,    "ld_elemrev_v1ti",  PURE)
++BU_VSX_X (LD_ELEMREV_V2DF,    "ld_elemrev_v2df",  PURE)
++BU_VSX_X (LD_ELEMREV_V2DI,    "ld_elemrev_v2di",  PURE)
++BU_VSX_X (LD_ELEMREV_V4SF,    "ld_elemrev_v4sf",  PURE)
++BU_VSX_X (LD_ELEMREV_V4SI,    "ld_elemrev_v4si",  PURE)
++BU_VSX_X (LD_ELEMREV_V8HI,    "ld_elemrev_v8hi",  PURE)
++BU_VSX_X (LD_ELEMREV_V16QI,   "ld_elemrev_v16qi", PURE)
+ BU_VSX_X (ST_ELEMREV_V1TI,    "st_elemrev_v1ti",  MEM)
+ BU_VSX_X (ST_ELEMREV_V2DF,    "st_elemrev_v2df",  MEM)
+ BU_VSX_X (ST_ELEMREV_V2DI,    "st_elemrev_v2di",  MEM)
 diff --git a/gcc/config/rs6000/rs6000-p8swap.c b/gcc/config/rs6000/rs6000-p8swap.c
 index c3b98315503..d30e5dec980 100644
 --- a/gcc/config/rs6000/rs6000-p8swap.c
@@ -10274,10 +10403,17 @@ index 29f6cdc4667..33b4be79c0f 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..c766d548c6e 100644
+index bc11ae4ae0b..d05bd15f941 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,405 @@
+@@ -1,3 +1,412 @@
++2019-10-14  Will Schmidt  <will_schmidt@vnet.ibm.com>
++
++	Backport from trunk.
++	2019-09-26  Will Schmidt <will_schmidt@vnet.ibm.com>
++
++	* gcc.target/powerpc/pure-builtin-redundant-load.c:  New.
++
 +2019-10-11  Steven G. Kargl  <kargl@gcc.gnu.org>
 +
 +	PR fortran/91715
@@ -10683,7 +10819,7 @@ index bc11ae4ae0b..c766d548c6e 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +829,7 @@
+@@ -427,7 +836,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -12548,6 +12684,59 @@ index 00000000000..b23d75be29b
 +
 +  return 0;
 +}
+diff --git a/gcc/testsuite/gcc.target/powerpc/pure-builtin-redundant-load.c b/gcc/testsuite/gcc.target/powerpc/pure-builtin-redundant-load.c
+new file mode 100644
+index 00000000000..16ab6abfc3b
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/powerpc/pure-builtin-redundant-load.c
+@@ -0,0 +1,47 @@
++/* { dg-do compile } */
++/* { dg-require-effective-target powerpc_vsx_ok } */
++/* { dg-options "-O2 -fdump-tree-fre-all -mvsx" } */
++
++/* Verify we remove a redundant load that occurs both before and after
++we call a vector load builtin.
++This testcase is introduced as we updated a number of our vector load
++built-ins with the attribute of PURE instead of MEM, to indicate that
++those builtins only read from memory, versus reading from and writing
++to the same.
++This means we can identify the redundant load instructions in an earlier
++pass, and optimize them away.  */
++
++#include <altivec.h>
++
++vector signed short load_data;
++
++vector signed short foo()
++{
++	vector signed short r11,r12,r13;
++	r11 = load_data;
++	r12 = vec_xl (0, &load_data[0]);
++	r13 = load_data;
++	return (r11 + r12 + r13);
++}
++
++vector signed short biz()
++{
++	vector signed short r21,r22,r23;
++	r21 = load_data;
++	r22 = vec_lvehx (0, &load_data[0]);
++	r23 = load_data;
++	return (r21 + r22 + r23);
++}
++
++vector signed short bar()
++{
++	vector signed short r31,r32,r33;
++	r31 = load_data;
++	r32 = vec_lvx (0, &load_data[0]);
++	r33 = load_data;
++	return (r31 + r32 + r33);
++}
++
++/* { dg-final { scan-tree-dump-times "Removing dead stmt r13_. = load_data;" 1 "fre1" } } */
++/* { dg-final { scan-tree-dump-times "Removing dead stmt r23_. = load_data;" 1 "fre1" } } */
++/* { dg-final { scan-tree-dump-times "Removing dead stmt r33_. = load_data;" 1 "fre1" } } */
 diff --git a/gcc/testsuite/gcc.target/riscv/shift-shift-4.c b/gcc/testsuite/gcc.target/riscv/shift-shift-4.c
 new file mode 100644
 index 00000000000..72a45ee87ae
