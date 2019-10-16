@@ -4,10 +4,11 @@ akrl (1):
 anlauf (1):
       2019-09-05  Harald Anlauf  <anlauf@gmx.de>
 
-danglin (3):
+danglin (4):
       * config/pa/pa.c (pa_trampoline_init): Remove spurious extended 	character.
       * config/pa/lib2funcs.S (__gcc_plt_call): Load branch target to %r21. 	Load PIC register after branch target.  Fix white space. 	* config/pa/milli64.S ($$dyncall): Separate LINUX and non LINUX 	implementations.  Load PIC register after branch target.  Don't 	clobber function pointer when it points to function descriptor. 	Use nullification instead of branch in LINUX implementation.
       * config/pa/pa.c (pa_output_call): Load descriptor address to register 	%r22.  Load function address before global pointer. 	(pa_attr_length_indirect_call): Adjust length of inline versions of 	$$dyncall. 	(pa_output_indirect_call): Remove fast inline version of $$dyncall 	before normal cases.  Update inline $$dyncall sequences to preserve 	function descriptor address in register %r22. 	(TRAMPOLINE_CODE_SIZE): Adjust. 	(pa_asm_trampoline_template): Revise 32-bit trampoline.  Don't assume 	register %r22 contains trampoline address. 	(pa_trampoline_init): Adjust offsets. 	(pa_trampoline_adjust_address): Likewise. 	* config/pa/pa.h (TRAMPOLINE_SIZE): Adjust 32-bit size.
+      * config/pa/fptr.c (_dl_read_access_allowed): Change argument to 	unsigned int.  Adjust callers. 	(__canonicalize_funcptr_for_compare): Change plabel type to volatile 	unsigned int *.  Load relocation offset before function pointer. 	Add barrier to ensure ordering.
 
 draganm (2):
       Backprot fix for uninitialised use in mips_split_move
@@ -30,7 +31,8 @@ edlinger (3):
 emsr (1):
       2019-09-09  Edward Smith-Rowland  <3dw4rd@verizon.net>
 
-gccadmin (64):
+gccadmin (65):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -14633,10 +14635,18 @@ index d650511c66f..331edfcb1c3 100644
  extern tree vector_cst_elt (const_tree, unsigned int);
  
 diff --git a/libgcc/ChangeLog b/libgcc/ChangeLog
-index 348c54c0b3e..2ac4376eb2b 100644
+index 348c54c0b3e..bbf9b59926b 100644
 --- a/libgcc/ChangeLog
 +++ b/libgcc/ChangeLog
-@@ -1,3 +1,12 @@
+@@ -1,3 +1,20 @@
++2019-10-15  John David Anglin  <danglin@gcc.gnu.org>
++
++	* config/pa/fptr.c (_dl_read_access_allowed): Change argument to
++	unsigned int.  Adjust callers.
++	(__canonicalize_funcptr_for_compare): Change plabel type to volatile
++	unsigned int *.  Load relocation offset before function pointer.
++	Add barrier to ensure ordering.
++
 +2019-10-12  John David Anglin  <danglin@gcc.gnu.org>
 +
 +	* config/pa/lib2funcs.S (__gcc_plt_call): Load branch target to %r21.
@@ -14649,6 +14659,62 @@ index 348c54c0b3e..2ac4376eb2b 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
+diff --git a/libgcc/config/pa/fptr.c b/libgcc/config/pa/fptr.c
+index 53440051730..5beb0b832e2 100644
+--- a/libgcc/config/pa/fptr.c
++++ b/libgcc/config/pa/fptr.c
+@@ -53,7 +53,7 @@ typedef int (*fixup_t) (struct link_map *, unsigned int);
+ extern unsigned int _GLOBAL_OFFSET_TABLE_;
+ 
+ static inline int
+-_dl_read_access_allowed (unsigned int *addr)
++_dl_read_access_allowed (unsigned int addr)
+ {
+   int result;
+ 
+@@ -76,7 +76,8 @@ __canonicalize_funcptr_for_compare (fptr_t fptr)
+ {
+   static unsigned int fixup_plabel[2] __attribute__((used));
+   fixup_t fixup;
+-  unsigned int *got, *iptr, *plabel;
++  volatile unsigned int *plabel;
++  unsigned int *got, *iptr, reloc_offset;
+   int i;
+ 
+   /* -1 and page 0 are special.  -1 is used in crtend to mark the end of
+@@ -91,17 +92,20 @@ __canonicalize_funcptr_for_compare (fptr_t fptr)
+      to the entry of the PLT stub just before the global offset table.
+      The second word in the plabel contains the relocation offset for the
+      function.  */
+-  plabel = (unsigned int *) ((unsigned int) fptr & ~3);
+-  if (!_dl_read_access_allowed (plabel))
++  plabel = (volatile unsigned int *) ((unsigned int) fptr & ~3);
++  if (!_dl_read_access_allowed ((unsigned int)plabel))
+     return (unsigned int) fptr;
+ 
+   /* Load first word of candidate descriptor.  It should be a pointer
+      with word alignment and point to memory that can be read.  */
+   got = (unsigned int *) plabel[0];
+   if (((unsigned int) got & 3) != 0
+-      || !_dl_read_access_allowed (got))
++      || !_dl_read_access_allowed ((unsigned int)got))
+     return (unsigned int) fptr;
+ 
++  /* We need to load the relocation offset before the function address.  */
++  reloc_offset = plabel[1];
++  __sync_synchronize();
+   got = (unsigned int *) (plabel[0] + GOT_FROM_PLT_STUB);
+ 
+   /* Return the address of the function if the plabel has been resolved.  */
+@@ -137,7 +141,7 @@ __canonicalize_funcptr_for_compare (fptr_t fptr)
+ 
+   /* Call fixup to resolve the function address.  got[1] contains the
+      link_map pointer and plabel[1] the relocation offset.  */
+-  fixup ((struct link_map *) got[1], plabel[1]);
++  fixup ((struct link_map *) got[1], reloc_offset);
+ 
+   return plabel[0];
+ }
 diff --git a/libgcc/config/pa/lib2funcs.S b/libgcc/config/pa/lib2funcs.S
 index b401b6157da..a2db5b3d3ac 100644
 --- a/libgcc/config/pa/lib2funcs.S
