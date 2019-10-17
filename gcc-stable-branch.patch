@@ -31,7 +31,8 @@ edlinger (3):
 emsr (1):
       2019-09-09  Edward Smith-Rowland  <3dw4rd@verizon.net>
 
-gccadmin (65):
+gccadmin (66):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -98,12 +99,14 @@ gccadmin (65):
       Daily bump.
       Daily bump.
 
-iains (5):
+iains (7):
       Darwin, libsanitizer - remove reference to __cxa_rethrow_primary_exception.
       [Darwin, PPC] Fix fail of cpp/assert4.c
       [Darwin, fixincludes] Backport fix for PR83531
       [c-family] Backport fix for PCH / PR61250.
       [Darwin, opts processing] Fix missing RejectNegative etc.
+      [Darwin, specs] Backport fixes for driver handling of PIE options.
+      [Darwin] Pick up SDKROOT as the sysroot fallback.
 
 ian (2):
       go/internal/gccgoimporter: support embedded field in pointer loop
@@ -507,10 +510,46 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..484acf68648 100644
+index 7f6557d8018..77d7fa94140 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,604 @@
+@@ -1,3 +1,640 @@
++2019-10-16  Iain Sandoe  <iain@sandoe.co.uk>
++
++	Backport from mainline
++	2019-10-03  Iain Sandoe  <iain@sandoe.co.uk>
++
++	PR target/87243
++	* config/darwin-driver.c (maybe_get_sysroot_from_sdkroot): New.
++	(darwin_driver_init): Use the sysroot provided by SDKROOT when that
++	is available and the user has not set one on the command line.
++
++2019-10-16  Iain Sandoe  <iain@sandoe.co.uk>
++
++	Backport from mainline
++	2019-07-03  Iain Sandoe  <iain@sandoe.co.uk>
++
++	* config/darwin.h (DRIVER_SELF_SPECS): Remove the linker cases.
++	(RDYNAMIC): Rename to, DARWIN_RDYNAMIC.
++	(DARWIN_PIE_SPEC, DARWIN_NOPIE_SPEC): Adjust to remove the Xlinker
++	clauses.
++	(LINK_COMMAND_SPEC_A): Add DARWIN_RDYNAMIC, DARWIN_PIE_SPEC and
++	DARWIN_NOPIE_SPEC.
++
++	Backport from mainline
++	2019-06-19  Iain Sandoe  <iain@sandoe.co.uk>
++
++	* config/darwin.h (DRIVER_SELF_SPECS): Add RDYNAMIC, DARWIN_PIE_SPEC
++	and DARWIN_NOPIE_SPEC.
++	(RDYNAMIC): New, modified from DARWIN_EXPORT_DYNAMIC.
++	(DARWIN_PIE_SPEC): Collate from darwin.h and darwin9.h.
++	(DARWIN_NOPIE_SPEC): Collate from darwin10.h.
++	(DARWIN_NOCOMPACT_UNWIND): New from darwin10.h
++	(DARWIN_EXPORT_DYNAMIC): Delete.
++	* config/darwin10.h (LINK_GCC_C_SEQUENCE_SPEC): Move no_compact_unwind
++	and pie options processing to  darwin.h.
++	* config/darwin9.h (DARWIN_PIE_SPEC): Move pie processing to darwin.h
++
 +2019-10-16  Richard Biener  <rguenther@suse.de>
 +
 +	Backport from mainline
@@ -1115,7 +1154,7 @@ index 7f6557d8018..484acf68648 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +1114,7 @@
+@@ -513,7 +1150,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -1897,6 +1936,175 @@ index 2c7acc698ea..6857ab1787d 100644
  #pragma GCC pop_options
  
  #ifdef __cplusplus
+diff --git a/gcc/config/darwin-driver.c b/gcc/config/darwin-driver.c
+index 3d85f29cb3d..b3577c416bc 100644
+--- a/gcc/config/darwin-driver.c
++++ b/gcc/config/darwin-driver.c
+@@ -210,6 +210,28 @@ darwin_default_min_version (void)
+   return new_flag;
+ }
+ 
++/* See if we can find the sysroot from the SDKROOT environment variable.  */
++
++static const char *
++maybe_get_sysroot_from_sdkroot ()
++{
++  const char *maybe_sysroot = getenv ("SDKROOT");
++
++  /* We'll use the same rules as the clang driver, for compatibility.
++     1) The path must be absolute
++     2) Ignore "/", that is the default anyway and we do not want the
++	sysroot semantics to be applied to it.
++     3) It must exist (actually, we'll check it's readable too).  */
++
++   if (maybe_sysroot  == NULL
++       || *maybe_sysroot != '/'
++       || strlen (maybe_sysroot) == 1
++       || access (maybe_sysroot, R_OK) == -1)
++    return NULL;
++
++  return xstrndup (maybe_sysroot, strlen (maybe_sysroot));
++}
++
+ /* Translate -filelist and -framework options in *DECODED_OPTIONS
+    (size *DECODED_OPTIONS_COUNT) to use -Xlinker so that they are
+    considered to be linker inputs in the case that no other inputs are
+@@ -234,6 +256,7 @@ darwin_driver_init (unsigned int *decoded_options_count,
+   bool appendM64 = false;
+   const char *vers_string = NULL;
+   bool seen_version_min = false;
++  bool seen_sysroot_p = false;
+ 
+   for (i = 1; i < *decoded_options_count; i++)
+     {
+@@ -314,6 +337,11 @@ darwin_driver_init (unsigned int *decoded_options_count,
+ 	  --*decoded_options_count;
+ 	  break;
+ 
++	case OPT__sysroot_:
++	case OPT_isysroot:
++	  seen_sysroot_p = true;
++	  break;
++
+ 	default:
+ 	  break;
+ 	}
+@@ -375,6 +403,22 @@ darwin_driver_init (unsigned int *decoded_options_count,
+ 		       &(*decoded_options)[*decoded_options_count - 1]);
+     }
+ 
++  if (! seen_sysroot_p)
++    {
++      /* We will pick up an SDKROOT if we didn't specify a sysroot and treat
++	 it as overriding any configure-time --with-sysroot.  */
++       const char *sdkroot = maybe_get_sysroot_from_sdkroot ();
++       if (sdkroot)
++	{
++	  ++*decoded_options_count;
++	  *decoded_options = XRESIZEVEC (struct cl_decoded_option,
++					 *decoded_options,
++					 *decoded_options_count);
++	  generate_option (OPT__sysroot_, sdkroot, 1, CL_DRIVER,
++			   &(*decoded_options)[*decoded_options_count - 1]);
++	}
++    }
++
+   /* We will need to know the OS X version we're trying to build for here
+      so that we can figure out the mechanism and source for the sysroot to
+      be used.  */
+diff --git a/gcc/config/darwin.h b/gcc/config/darwin.h
+index 0e253cb0dfa..e8fe90728e8 100644
+--- a/gcc/config/darwin.h
++++ b/gcc/config/darwin.h
+@@ -126,6 +126,24 @@ extern GTY(()) int darwin_ms_struct;
+   "%{gsplit-dwarf:%ngsplit-dwarf is not supported on this platform} \
+      %<gsplit-dwarf"
+ 
++#if LD64_HAS_EXPORT_DYNAMIC
++#define DARWIN_RDYNAMIC "%{rdynamic:-export_dynamic}"
++#else
++#define DARWIN_RDYNAMIC "%{rdynamic:%nrdynamic is not supported}"
++#endif
++
++/* FIXME: we should check that the linker supports the -pie and -no_pie.
++   options.  */
++#define DARWIN_PIE_SPEC \
++"%{pie|fpie|fPIE:\
++   %{mdynamic-no-pic: \
++     %n'-mdynamic-no-pic' overrides '-pie', '-fpie' or '-fPIE'; \
++     :%:version-compare(>= 10.5 mmacosx-version-min= -pie) }} "
++
++#define DARWIN_NOPIE_SPEC \
++"%{no-pie|fno-pie|fno-PIE: \
++   %:version-compare(>= 10.7 mmacosx-version-min= -no_pie) }"
++
+ #define DARWIN_CC1_SPEC							\
+   "%{findirect-virtual-calls: -fapple-kext} %<findirect-virtual-calls " \
+   "%{fterminated-vtables: -fapple-kext} %<fterminated-vtables "		\
+@@ -156,6 +174,16 @@ extern GTY(()) int darwin_ms_struct;
+ #define CPP_SPEC "%{static:%{!dynamic:-D__STATIC__}}%{!static:-D__DYNAMIC__}" \
+ 	" %{pthread:-D_REENTRANT}"
+ 
++/* This is a fix for PR41260 by passing -no_compact_unwind on darwin10 and
++   later until the assembler, linker and libunwind are able to deal with the
++   output from GCC.
++
++   FIXME: we should check that the linker supports the option.
++*/
++
++#define DARWIN_NOCOMPACT_UNWIND \
++" %:version-compare(>= 10.6 mmacosx-version-min= -no_compact_unwind) "
++
+ /* This is mostly a clone of the standard LINK_COMMAND_SPEC, plus
+    precomp, libtool, and fat build additions.
+ 
+@@ -164,12 +192,6 @@ extern GTY(()) int darwin_ms_struct;
+    specifying the handling of options understood by generic Unix
+    linkers, and for positional arguments like libraries.  */
+ 
+-#if LD64_HAS_EXPORT_DYNAMIC
+-#define DARWIN_EXPORT_DYNAMIC " %{rdynamic:-export_dynamic}"
+-#else
+-#define DARWIN_EXPORT_DYNAMIC " %{rdynamic: %nrdynamic is not supported}"
+-#endif
+-
+ #define LINK_COMMAND_SPEC_A \
+    "%{!fdump=*:%{!fsyntax-only:%{!c:%{!M:%{!MM:%{!E:%{!S:\
+     %(linker)" \
+@@ -190,10 +212,14 @@ extern GTY(()) int darwin_ms_struct;
+       %{%:sanitize(address): -lasan } \
+       %{%:sanitize(undefined): -lubsan } \
+       %(link_ssp) \
+-      " DARWIN_EXPORT_DYNAMIC " %<rdynamic \
+       %(link_gcc_c_sequence) \
+     }}}\
+-    %{!nostdlib:%{!r:%{!nostartfiles:%E}}} %{T*} %{F*} }}}}}}}"
++    %{!nostdlib:%{!r:%{!nostartfiles:%E}}} %{T*} %{F*} "\
++    DARWIN_PIE_SPEC \
++    DARWIN_NOPIE_SPEC \
++    DARWIN_RDYNAMIC \
++    DARWIN_NOCOMPACT_UNWIND \
++    "}}}}}}} %<pie %<no-pie %<rdynamic "
+ 
+ #define DSYMUTIL "\ndsymutil"
+ 
+@@ -230,8 +256,6 @@ extern GTY(()) int darwin_ms_struct;
+ #define STANDARD_STARTFILE_PREFIX_1 ""
+ #define STANDARD_STARTFILE_PREFIX_2 ""
+ 
+-#define DARWIN_PIE_SPEC "%{fpie|pie|fPIE:}"
+-
+ /* Please keep the random linker options in alphabetical order (modulo
+    'Z' and 'no' prefixes). Note that options taking arguments may appear
+    multiple times on a command line with different arguments each time,
+@@ -295,7 +319,6 @@ extern GTY(()) int darwin_ms_struct;
+      %:version-compare(< 10.5 mmacosx-version-min= -multiply_defined) \
+      %:version-compare(< 10.5 mmacosx-version-min= suppress)}} \
+    %{Zmultiplydefinedunused*:-multiply_defined_unused %*} \
+-   " DARWIN_PIE_SPEC " \
+    %{prebind} %{noprebind} %{nofixprebinding} %{prebind_all_twolevel_modules} \
+    %{read_only_relocs} \
+    %{sectcreate*} %{sectorder*} %{seg1addr*} %{segprot*} \
 diff --git a/gcc/config/darwin.opt b/gcc/config/darwin.opt
 index 22667def0a1..3f04375e633 100644
 --- a/gcc/config/darwin.opt
@@ -2443,6 +2651,47 @@ index 22667def0a1..3f04375e633 100644
 -
 -undefined
 -Driver Separate
+diff --git a/gcc/config/darwin10.h b/gcc/config/darwin10.h
+index 07a2b465a04..a6d1eba6ebd 100644
+--- a/gcc/config/darwin10.h
++++ b/gcc/config/darwin10.h
+@@ -18,17 +18,12 @@ You should have received a copy of the GNU General Public License
+ along with GCC; see the file COPYING3.  If not see
+ <http://www.gnu.org/licenses/>.  */
+ 
+-/* Fix PR41260 by passing -no_compact_unwind on darwin10 and later until
+-   unwinder in libSystem is fixed to digest new epilog unwinding notes.
++/* Fix PR47558 by linking against libSystem ahead of libgcc_ext. */
+ 
+-   Fix PR47558 by linking against libSystem ahead of libgcc_ext. */
+ #undef  LINK_GCC_C_SEQUENCE_SPEC
+ #define LINK_GCC_C_SEQUENCE_SPEC \
+-"%:version-compare(>= 10.6 mmacosx-version-min= -no_compact_unwind) \
+- %{!static:%{!static-libgcc: \
++"%{!static:%{!static-libgcc: \
+     %:version-compare(>= 10.6 mmacosx-version-min= -lSystem) } } \
+- %{fno-pic|fno-PIC|fno-pie|fno-PIE|fapple-kext|mkernel|static|mdynamic-no-pic: \
+-   %:version-compare(>= 10.7 mmacosx-version-min= -no_pie) } \
+  %{!nostdlib:%:version-compare(>< 10.6 10.7 mmacosx-version-min= -ld10-uwfef.o)} \
+   %G %{!nolibc:%L}"
+ 
+diff --git a/gcc/config/darwin9.h b/gcc/config/darwin9.h
+index ca5c51718c8..1fd1604aed8 100644
+--- a/gcc/config/darwin9.h
++++ b/gcc/config/darwin9.h
+@@ -35,12 +35,6 @@ along with GCC; see the file COPYING3.  If not see
+ /* Tell collect2 to run dsymutil for us as necessary.  */
+ #define COLLECT_RUN_DSYMUTIL 1
+ 
+-#undef DARWIN_PIE_SPEC
+-#define DARWIN_PIE_SPEC \
+-  "%{fpie|pie|fPIE: \
+-     %{mdynamic-no-pic: %n'-mdynamic-no-pic' overrides '-pie', '-fpie' or '-fPIE'; \
+-      :-pie}}"
+-
+ /* Only ask as for debug data if the debug style is stabs (since as doesn't
+    yet generate dwarf.)  */
+ 
 diff --git a/gcc/config/i386/avx2intrin.h b/gcc/config/i386/avx2intrin.h
 index 7606efdbf79..372d77f84fe 100644
 --- a/gcc/config/i386/avx2intrin.h
