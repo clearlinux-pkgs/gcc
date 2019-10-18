@@ -4,11 +4,12 @@ akrl (1):
 anlauf (1):
       2019-09-05  Harald Anlauf  <anlauf@gmx.de>
 
-danglin (4):
+danglin (5):
       * config/pa/pa.c (pa_trampoline_init): Remove spurious extended 	character.
       * config/pa/lib2funcs.S (__gcc_plt_call): Load branch target to %r21. 	Load PIC register after branch target.  Fix white space. 	* config/pa/milli64.S ($$dyncall): Separate LINUX and non LINUX 	implementations.  Load PIC register after branch target.  Don't 	clobber function pointer when it points to function descriptor. 	Use nullification instead of branch in LINUX implementation.
       * config/pa/pa.c (pa_output_call): Load descriptor address to register 	%r22.  Load function address before global pointer. 	(pa_attr_length_indirect_call): Adjust length of inline versions of 	$$dyncall. 	(pa_output_indirect_call): Remove fast inline version of $$dyncall 	before normal cases.  Update inline $$dyncall sequences to preserve 	function descriptor address in register %r22. 	(TRAMPOLINE_CODE_SIZE): Adjust. 	(pa_asm_trampoline_template): Revise 32-bit trampoline.  Don't assume 	register %r22 contains trampoline address. 	(pa_trampoline_init): Adjust offsets. 	(pa_trampoline_adjust_address): Likewise. 	* config/pa/pa.h (TRAMPOLINE_SIZE): Adjust 32-bit size.
       * config/pa/fptr.c (_dl_read_access_allowed): Change argument to 	unsigned int.  Adjust callers. 	(__canonicalize_funcptr_for_compare): Change plabel type to volatile 	unsigned int *.  Load relocation offset before function pointer. 	Add barrier to ensure ordering.
+      * config/pa/pa.c (pa_output_indirect_call): Fix typos in last change.
 
 draganm (2):
       Backprot fix for uninitialised use in mips_split_move
@@ -31,7 +32,8 @@ edlinger (3):
 emsr (1):
       2019-09-09  Edward Smith-Rowland  <3dw4rd@verizon.net>
 
-gccadmin (66):
+gccadmin (67):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -99,7 +101,11 @@ gccadmin (66):
       Daily bump.
       Daily bump.
 
-iains (7):
+gjl (2):
+      * doc/avr-mmcu.texi: Re-generate because config/avr/avr-devices.c 	was changed in r269487.
+      Backport from 2019-10-18 trunk r277143. 	PR target/86040 	* config/avr/avr.c (avr_out_lpm): Do not shortcut-return.
+
+iains (9):
       Darwin, libsanitizer - remove reference to __cxa_rethrow_primary_exception.
       [Darwin, PPC] Fix fail of cpp/assert4.c
       [Darwin, fixincludes] Backport fix for PR83531
@@ -107,6 +113,8 @@ iains (7):
       [Darwin, opts processing] Fix missing RejectNegative etc.
       [Darwin, specs] Backport fixes for driver handling of PIE options.
       [Darwin] Pick up SDKROOT as the sysroot fallback.
+      [Darwin] Update machopic_legitimize_pic_address.
+      [Darwin] Amend section for constants with relocations.
 
 ian (2):
       go/internal/gccgoimporter: support embedded field in pointer loop
@@ -140,7 +148,7 @@ jsm28 (6):
       * es.po: Update.
       * fi.po: Update.
 
-kargl (31):
+kargl (32):
       2019-08-01  Steven G. Kargl  <kargl@gcc.gnu.org>
       2019-08-12  Steven G. Kargl  <kargl@gcc.gnu.org>
       2019-08-13  Steven G. Kargl  <kargl@gcc.gnu.org>
@@ -172,6 +180,7 @@ kargl (31):
       2019-10-10  Steven G. Kargl  <kargl@gcc.gnu.org>
       2019-10-11  Steven G. Kargl  <kargl@gcc.gnu.org>
       2019-10-11  Steven G. Kargl  <kargl@gcc.gnu.org>
+      2019-10-17  Steven G. Kargl  <kargl@gcc.gnu.org>
 
 kito (2):
       RISC-V: Fix bad insn splits with paradoxical subregs.
@@ -223,8 +232,9 @@ pault (2):
       2019-09-07  Paul Thomas  <pault@gcc.gnu.org>
       2019-09-21  Paul Thomas  <pault@gcc.gnu.org>
 
-rearnsha (1):
+rearnsha (2):
       [aarch64] PR target/91386 Use copy_rtx to avoid modifying original insns in peep2 pattern
+      [arm]  PR target/89400 fix thumb1 unaligned access expansion
 
 redi (9):
       PR libstdc++/90361 add missing macro definition
@@ -276,8 +286,9 @@ wilco (1):
 willschm (1):
       Backport from trunk [gcc]
 
-wschmidt (1):
+wschmidt (2):
       [gcc]
+      2019-10-17  Bill Schmidt  <wschmidt@linux.ibm.com>
 
 diff --git a/contrib/ChangeLog b/contrib/ChangeLog
 index 8565be188d9..c9b9e26ee57 100644
@@ -510,10 +521,53 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..77d7fa94140 100644
+index 7f6557d8018..ca0db0bce34 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,640 @@
+@@ -1,3 +1,683 @@
++2019-10-18  Georg-Johann Lay  <avr@gjlay.de>
++
++	Backport from 2019-10-18 trunk r277143.
++
++	PR target/86040
++	* config/avr/avr.c (avr_out_lpm): Do not shortcut-return.
++
++2019-10-18  Iain Sandoe  <iain@sandoe.co.uk>
++
++	Backport from mainline
++	2019-10-05  Iain Sandoe  <iain@sandoe.co.uk>
++
++	PR target/59888
++	* config/darwin.c (darwin_rodata_section): Add relocation flag,
++	choose const_data section for constants with relocations.
++	(machopic_select_section): Pass relocation flag to
++	darwin_rodata_section ().
++
++2019-10-18  Iain Sandoe  <iain@sandoe.co.uk>
++
++	Backport from mainline
++	2019-09-21  Iain Sandoe  <iain@sandoe.co.uk>
++
++	* config/darwin.c (machopic_legitimize_pic_address): Check
++	for lra, rather than reload.
++
++2019-10-17  John David Anglin  <danglin@gcc.gnu.org>
++
++	* config/pa/pa.c (pa_output_indirect_call): Fix typos in last change.
++
++2019-10-17  Richard Earnshaw  <rearnsha@arm.com>
++
++	Backport from mainline
++	2019-05-03  Richard Earnshaw  <rearnsha@arm.com>
++
++	PR target/89400
++	* config/arm/arm.md (unaligned_loadsi): Add variant for thumb1.
++	Restrict 'all' variant to 32-bit configurations.
++	(unaligned_loadhiu): Likewise.
++	(unaligned_storehi): Likewise.
++	(unaligned_storesi): Likewise.
++	(unaligned_loadhis): Disable when compiling for thumb1.
++
 +2019-10-16  Iain Sandoe  <iain@sandoe.co.uk>
 +
 +	Backport from mainline
@@ -1154,7 +1208,7 @@ index 7f6557d8018..77d7fa94140 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +1150,7 @@
+@@ -513,7 +1193,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -1878,6 +1932,118 @@ index 984540f0b53..524379d3763 100644
  		    default:
  		      gcc_unreachable ();
  		    }
+diff --git a/gcc/config/arm/arm.md b/gcc/config/arm/arm.md
+index 0aecd03891c..ae582172ab9 100644
+--- a/gcc/config/arm/arm.md
++++ b/gcc/config/arm/arm.md
+@@ -4483,62 +4483,78 @@
+ ; ARMv6+ unaligned load/store instructions (used for packed structure accesses).
+ 
+ (define_insn "unaligned_loadsi"
+-  [(set (match_operand:SI 0 "s_register_operand" "=l,r")
+-	(unspec:SI [(match_operand:SI 1 "memory_operand" "Uw,m")]
++  [(set (match_operand:SI 0 "s_register_operand" "=l,l,r")
++	(unspec:SI [(match_operand:SI 1 "memory_operand" "m,Uw,m")]
+ 		   UNSPEC_UNALIGNED_LOAD))]
+   "unaligned_access"
+-  "ldr%?\t%0, %1\t@ unaligned"
+-  [(set_attr "arch" "t2,any")
+-   (set_attr "length" "2,4")
+-   (set_attr "predicable" "yes")
+-   (set_attr "predicable_short_it" "yes,no")
++  "@
++   ldr\t%0, %1\t@ unaligned
++   ldr%?\t%0, %1\t@ unaligned
++   ldr%?\t%0, %1\t@ unaligned"
++  [(set_attr "arch" "t1,t2,32")
++   (set_attr "length" "2,2,4")
++   (set_attr "predicable" "no,yes,yes")
++   (set_attr "predicable_short_it" "no,yes,no")
+    (set_attr "type" "load_4")])
+ 
++;; The 16-bit Thumb1 variant of ldrsh requires two registers in the
++;; address (there's no immediate format).  That's tricky to support
++;; here and we don't really need this pattern for that case, so only
++;; enable for 32-bit ISAs.
+ (define_insn "unaligned_loadhis"
+   [(set (match_operand:SI 0 "s_register_operand" "=r")
+ 	(sign_extend:SI
+ 	  (unspec:HI [(match_operand:HI 1 "memory_operand" "Uh")]
+ 		     UNSPEC_UNALIGNED_LOAD)))]
+-  "unaligned_access"
++  "unaligned_access && TARGET_32BIT"
+   "ldrsh%?\t%0, %1\t@ unaligned"
+   [(set_attr "predicable" "yes")
+    (set_attr "type" "load_byte")])
+ 
+ (define_insn "unaligned_loadhiu"
+-  [(set (match_operand:SI 0 "s_register_operand" "=l,r")
++  [(set (match_operand:SI 0 "s_register_operand" "=l,l,r")
+ 	(zero_extend:SI
+-	  (unspec:HI [(match_operand:HI 1 "memory_operand" "Uw,m")]
++	  (unspec:HI [(match_operand:HI 1 "memory_operand" "m,Uw,m")]
+ 		     UNSPEC_UNALIGNED_LOAD)))]
+   "unaligned_access"
+-  "ldrh%?\t%0, %1\t@ unaligned"
+-  [(set_attr "arch" "t2,any")
+-   (set_attr "length" "2,4")
+-   (set_attr "predicable" "yes")
+-   (set_attr "predicable_short_it" "yes,no")
++  "@
++   ldrh\t%0, %1\t@ unaligned
++   ldrh%?\t%0, %1\t@ unaligned
++   ldrh%?\t%0, %1\t@ unaligned"
++  [(set_attr "arch" "t1,t2,32")
++   (set_attr "length" "2,2,4")
++   (set_attr "predicable" "no,yes,yes")
++   (set_attr "predicable_short_it" "no,yes,no")
+    (set_attr "type" "load_byte")])
+ 
+ (define_insn "unaligned_storesi"
+-  [(set (match_operand:SI 0 "memory_operand" "=Uw,m")
+-	(unspec:SI [(match_operand:SI 1 "s_register_operand" "l,r")]
++  [(set (match_operand:SI 0 "memory_operand" "=m,Uw,m")
++	(unspec:SI [(match_operand:SI 1 "s_register_operand" "l,l,r")]
+ 		   UNSPEC_UNALIGNED_STORE))]
+   "unaligned_access"
+-  "str%?\t%1, %0\t@ unaligned"
+-  [(set_attr "arch" "t2,any")
+-   (set_attr "length" "2,4")
+-   (set_attr "predicable" "yes")
+-   (set_attr "predicable_short_it" "yes,no")
++  "@
++   str\t%1, %0\t@ unaligned
++   str%?\t%1, %0\t@ unaligned
++   str%?\t%1, %0\t@ unaligned"
++  [(set_attr "arch" "t1,t2,32")
++   (set_attr "length" "2,2,4")
++   (set_attr "predicable" "no,yes,yes")
++   (set_attr "predicable_short_it" "no,yes,no")
+    (set_attr "type" "store_4")])
+ 
+ (define_insn "unaligned_storehi"
+-  [(set (match_operand:HI 0 "memory_operand" "=Uw,m")
+-	(unspec:HI [(match_operand:HI 1 "s_register_operand" "l,r")]
++  [(set (match_operand:HI 0 "memory_operand" "=m,Uw,m")
++	(unspec:HI [(match_operand:HI 1 "s_register_operand" "l,l,r")]
+ 		   UNSPEC_UNALIGNED_STORE))]
+   "unaligned_access"
+-  "strh%?\t%1, %0\t@ unaligned"
+-  [(set_attr "arch" "t2,any")
+-   (set_attr "length" "2,4")
+-   (set_attr "predicable" "yes")
+-   (set_attr "predicable_short_it" "yes,no")
++  "@
++   strh\t%1, %0\t@ unaligned
++   strh%?\t%1, %0\t@ unaligned
++   strh%?\t%1, %0\t@ unaligned"
++  [(set_attr "arch" "t1,t2,32")
++   (set_attr "length" "2,2,4")
++   (set_attr "predicable" "no,yes,yes")
++   (set_attr "predicable_short_it" "no,yes,no")
+    (set_attr "type" "store_4")])
+ 
+ 
 diff --git a/gcc/config/arm/arm.opt b/gcc/config/arm/arm.opt
 index 9067d491b9c..78f3878e037 100644
 --- a/gcc/config/arm/arm.opt
@@ -1936,6 +2102,42 @@ index 2c7acc698ea..6857ab1787d 100644
  #pragma GCC pop_options
  
  #ifdef __cplusplus
+diff --git a/gcc/config/avr/avr.c b/gcc/config/avr/avr.c
+index a9f72b314c2..cb4b14ae379 100644
+--- a/gcc/config/avr/avr.c
++++ b/gcc/config/avr/avr.c
+@@ -3797,13 +3797,14 @@ avr_out_lpm (rtx_insn *insn, rtx *op, int *plen)
+           gcc_unreachable();
+ 
+         case 1:
+-          return avr_asm_len ("%4lpm %0,%a2", xop, plen, 1);
++          avr_asm_len ("%4lpm %0,%a2", xop, plen, 1);
++          break;
+ 
+         case 2:
+           if (REGNO (dest) == REG_Z)
+-            return avr_asm_len ("%4lpm %5,%a2+" CR_TAB
+-                                "%4lpm %B0,%a2" CR_TAB
+-                                "mov %A0,%5", xop, plen, 3);
++            avr_asm_len ("%4lpm %5,%a2+" CR_TAB
++                         "%4lpm %B0,%a2" CR_TAB
++                         "mov %A0,%5", xop, plen, 3);
+           else
+             {
+               avr_asm_len ("%4lpm %A0,%a2+" CR_TAB
+@@ -3832,9 +3833,9 @@ avr_out_lpm (rtx_insn *insn, rtx *op, int *plen)
+                        "%4lpm %B0,%a2+", xop, plen, 2);
+ 
+           if (REGNO (dest) == REG_Z - 2)
+-            return avr_asm_len ("%4lpm %5,%a2+" CR_TAB
+-                                "%4lpm %C0,%a2" CR_TAB
+-                                "mov %D0,%5", xop, plen, 3);
++            avr_asm_len ("%4lpm %5,%a2+" CR_TAB
++                         "%4lpm %C0,%a2" CR_TAB
++                         "mov %D0,%5", xop, plen, 3);
+           else
+             {
+               avr_asm_len ("%4lpm %C0,%a2+" CR_TAB
 diff --git a/gcc/config/darwin-driver.c b/gcc/config/darwin-driver.c
 index 3d85f29cb3d..b3577c416bc 100644
 --- a/gcc/config/darwin-driver.c
@@ -2012,6 +2214,71 @@ index 3d85f29cb3d..b3577c416bc 100644
    /* We will need to know the OS X version we're trying to build for here
       so that we can figure out the mechanism and source for the sysroot to
       be used.  */
+diff --git a/gcc/config/darwin.c b/gcc/config/darwin.c
+index b9862353843..55759df79c8 100644
+--- a/gcc/config/darwin.c
++++ b/gcc/config/darwin.c
+@@ -844,7 +844,7 @@ machopic_legitimize_pic_address (rtx orig, machine_mode mode, rtx reg)
+ 	{
+ 	  if (reg == 0)
+ 	    {
+-	      gcc_assert (!reload_in_progress);
++	      gcc_assert (!lra_in_progress);
+ 	      reg = gen_reg_rtx (Pmode);
+ 	    }
+ 
+@@ -928,7 +928,7 @@ machopic_legitimize_pic_address (rtx orig, machine_mode mode, rtx reg)
+ 	      emit_use (gen_rtx_REG (Pmode, PIC_OFFSET_TABLE_REGNUM));
+ #endif
+ 
+-	      if (reload_in_progress)
++	      if (lra_in_progress)
+ 		df_set_regs_ever_live (REGNO (pic), true);
+ 	      pic_ref = gen_rtx_PLUS (Pmode, pic,
+ 				      machopic_gen_offset (XEXP (orig, 0)));
+@@ -952,7 +952,7 @@ machopic_legitimize_pic_address (rtx orig, machine_mode mode, rtx reg)
+ 
+ 	      if (reg == 0)
+ 		{
+-		  gcc_assert (!reload_in_progress);
++		  gcc_assert (!lra_in_progress);
+ 		  reg = gen_reg_rtx (Pmode);
+ 		}
+ 
+@@ -998,7 +998,7 @@ machopic_legitimize_pic_address (rtx orig, machine_mode mode, rtx reg)
+ #if 0
+ 		  emit_use (pic_offset_table_rtx);
+ #endif
+-		  if (reload_in_progress)
++		  if (lra_in_progress)
+ 		    df_set_regs_ever_live (REGNO (pic), true);
+ 		  pic_ref = gen_rtx_PLUS (Pmode,
+ 					  pic,
+@@ -1252,12 +1252,13 @@ darwin_mark_decl_preserved (const char *name)
+ }
+ 
+ static section *
+-darwin_rodata_section (int use_coal, bool zsize)
++darwin_rodata_section (int use_coal, bool zsize, int reloc)
+ {
+   return (use_coal
+ 	  ? darwin_sections[const_coal_section]
+ 	  : (zsize ? darwin_sections[zobj_const_section]
+-		   : darwin_sections[const_section]));
++		   : reloc ? darwin_sections[const_data_section]
++			   : darwin_sections[const_section]));
+ }
+ 
+ static section *
+@@ -1550,7 +1551,7 @@ machopic_select_section (tree decl,
+ 
+     case SECCAT_RODATA:
+     case SECCAT_SRODATA:
+-      base_section = darwin_rodata_section (use_coal, zsize);
++      base_section = darwin_rodata_section (use_coal, zsize, reloc);
+       break;
+ 
+     case SECCAT_RODATA_MERGE_STR:
 diff --git a/gcc/config/darwin.h b/gcc/config/darwin.h
 index 0e253cb0dfa..e8fe90728e8 100644
 --- a/gcc/config/darwin.h
@@ -2807,7 +3074,7 @@ index 2ae1f7e0440..a9b0c86be07 100644
    "cfc1\t%0,$31")
  
 diff --git a/gcc/config/pa/pa.c b/gcc/config/pa/pa.c
-index 707ae5822c3..663ce878fd3 100644
+index 707ae5822c3..5784fc076f5 100644
 --- a/gcc/config/pa/pa.c
 +++ b/gcc/config/pa/pa.c
 @@ -8052,20 +8052,22 @@ pa_output_call (rtx_insn *insn, rtx call_dest, int sibcall)
@@ -2919,12 +3186,12 @@ index 707ae5822c3..663ce878fd3 100644
 -	  if (TARGET_PA_20)
 -	    return "bve,l,n (%%r22),%%r2\n\tnop";
 -	  return "ble 0(%%sr4,%%r22)\n\tcopy %%r31,%%r2";
-+	  output_asm_insn ("bl .+8,%rp\b\t"
-+			   "ldo 20(%r2),%r2\n\t"
-+			   "extru,<> %r22,30,1,%r0\n\t"
-+			   "bv,n %%r0(%r22)\n\t"
++	  output_asm_insn ("bl .+8,%%r2\n\t"
++			   "ldo 20(%%r2),%%r2\n\t"
++			   "extru,<> %%r22,30,1,%%r0\n\t"
++			   "bv,n %%r0(%%r22)\n\t"
 +			   "ldw -2(%%r22),%%r21\n\t"
-+			   "bv %%r0(%r21)\n\t"
++			   "bv %%r0(%%r21)\n\t"
 +			   "ldw 2(%%r22),%%r19", xoperands);
 +	  return "";
  	}
@@ -2932,10 +3199,10 @@ index 707ae5822c3..663ce878fd3 100644
  	{
  	  pa_output_arg_descriptor (insn);
 -	  return "bve,l (%%r22),%%r2\n\tstw %%r2,-24(%%sp)";
-+	  output_asm_insn ("bl .+8,%%r2\b\t"
++	  output_asm_insn ("bl .+8,%%r2\n\t"
 +			   "ldo 24(%%r2),%%r2\n\t"
 +			   "stw %%r2,-24(%%sp)\n\t"
-+			   "extru,<> %r22,30,1,%r0\n\t"
++			   "extru,<> %r22,30,1,%%r0\n\t"
 +			   "bve,n (%%r22)\n\t"
 +			   "ldw -2(%%r22),%%r21\n\t"
 +			   "bve (%%r21)\n\t"
@@ -5936,6 +6203,19 @@ index 3255af58a25..c815bf3368c 100644
  	op1 = cp_convert_and_check (result_type, op1, complain);
  
        if (op0 == error_mark_node || op1 == error_mark_node)
+diff --git a/gcc/doc/avr-mmcu.texi b/gcc/doc/avr-mmcu.texi
+index ea0161ecccb..99cd93cb23b 100644
+--- a/gcc/doc/avr-mmcu.texi
++++ b/gcc/doc/avr-mmcu.texi
+@@ -21,7 +21,7 @@
+ @*@var{mcu}@tie{}= @code{ata5272}, @code{ata6616c}, @code{attiny13}, @code{attiny13a}, @code{attiny2313}, @code{attiny2313a}, @code{attiny24}, @code{attiny24a}, @code{attiny25}, @code{attiny261}, @code{attiny261a}, @code{attiny43u}, @code{attiny4313}, @code{attiny44}, @code{attiny44a}, @code{attiny441}, @code{attiny45}, @code{attiny461}, @code{attiny461a}, @code{attiny48}, @code{attiny828}, @code{attiny84}, @code{attiny84a}, @code{attiny841}, @code{attiny85}, @code{attiny861}, @code{attiny861a}, @code{attiny87}, @code{attiny88}, @code{at86rf401}.
+ 
+ @item avr3
+-``Classic'' devices with 16@tie{}KiB up to 64@tie{}KiB of  program memory.
++``Classic'' devices with 16@tie{}KiB up to 64@tie{}KiB of program memory.
+ @*@var{mcu}@tie{}= @code{at43usb355}, @code{at76c711}.
+ 
+ @item avr31
 diff --git a/gcc/doc/extend.texi b/gcc/doc/extend.texi
 index 91679e8b9ba..5e5e8aa87e5 100644
 --- a/gcc/doc/extend.texi
@@ -6019,10 +6299,21 @@ index 1cec00f2b85..60a986e1c30 100644
  	  /* We get called via the symtab code invoking late_global_decl
  	     for symbols that are optimized out.
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index e3073787ea9..2064cf1314b 100644
+index e3073787ea9..66ff7f143fe 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,284 @@
+@@ -1,3 +1,295 @@
++2019-10-17  Steven G. Kargl  <kargl@gcc.gnu.org>
++
++	PR fortran/83113
++	PR fortran/89943
++	decl.c (gfc_match_function_decl): Ignore duplicate BIND(C) for function
++	declaration in submodule.  Implement at check for F2018 C1550.
++	(gfc_match_entry): Use temporary for locus, which allows removal of
++	one gfc_error_now().
++	(gfc_match_subroutine): Ignore duplicate BIND(C) for subroutine
++	declaration in submodule.  Implement at check for F2018 C1550.
++
 +2019-10-11  Steven G. Kargl  <kargl@gcc.gnu.org>
 +
 +	PR fortran/91715
@@ -6489,7 +6780,7 @@ index a04f0d66655..4ef354f0a6e 100644
  gfc_check_isatty (gfc_expr *unit)
  {
 diff --git a/gcc/fortran/decl.c b/gcc/fortran/decl.c
-index cf09420cfbe..7b87bb88a30 100644
+index cf09420cfbe..24002ed1c6e 100644
 --- a/gcc/fortran/decl.c
 +++ b/gcc/fortran/decl.c
 @@ -99,6 +99,11 @@ bool gfc_matching_function;
@@ -6631,7 +6922,129 @@ index cf09420cfbe..7b87bb88a30 100644
  	}
  
        if (gfc_match ("elemental% ") == MATCH_YES)
-@@ -8420,6 +8448,14 @@ attr_decl1 (void)
+@@ -7202,13 +7230,16 @@ gfc_match_function_decl (void)
+   if (sym->attr.is_bind_c == 1)
+     {
+       sym->attr.is_bind_c = 0;
+-      if (sym->old_symbol != NULL)
+-        gfc_error_now ("BIND(C) attribute at %L can only be used for "
+-                       "variables or common blocks",
+-                       &(sym->old_symbol->declared_at));
+-      else
+-        gfc_error_now ("BIND(C) attribute at %L can only be used for "
+-                       "variables or common blocks", &gfc_current_locus);
++
++      if (gfc_state_stack->previous
++	  && gfc_state_stack->previous->state != COMP_SUBMODULE)
++	{
++	  locus loc;
++	  loc = sym->old_symbol != NULL
++	    ? sym->old_symbol->declared_at : gfc_current_locus;
++	  gfc_error_now ("BIND(C) attribute at %L can only be used for "
++			 "variables or common blocks", &loc);
++	}
+     }
+ 
+   if (found_match != MATCH_YES)
+@@ -7222,6 +7253,24 @@ gfc_match_function_decl (void)
+ 	found_match = suffix_match;
+     }
+ 
++  /* F2018 C1550 (R1526) If MODULE appears in the prefix of a module
++     subprogram and a binding label is specified, it shall be the
++     same as the binding label specified in the corresponding module
++     procedure interface body.  */
++    if (sym->attr.is_bind_c && sym->attr.module_procedure && sym->old_symbol
++  	&& strcmp (sym->name, sym->old_symbol->name) == 0
++	&& strcmp (sym->binding_label, sym->old_symbol->binding_label) != 0)
++      {
++	  const char *null = "NULL", *s1, *s2;
++	  s1 = sym->binding_label;
++	  if (!s1) s1 = null;
++	  s2 = sym->old_symbol->binding_label;
++	  if (!s2) s2 = null;
++          gfc_error ("Mismatch in BIND(C) names (%qs/%qs) at %C", s1, s2);
++	  sym->refs++;	/* Needed to avoid an ICE in gfc_release_symbol */
++	  return MATCH_ERROR;
++      }
++
+   if(found_match != MATCH_YES)
+     m = MATCH_ERROR;
+   else
+@@ -7460,15 +7509,15 @@ gfc_match_entry (void)
+      not allowed for procedures.  */
+   if (entry->attr.is_bind_c == 1)
+     {
++      locus loc;
++
+       entry->attr.is_bind_c = 0;
+-      if (entry->old_symbol != NULL)
+-        gfc_error_now ("BIND(C) attribute at %L can only be used for "
+-                       "variables or common blocks",
+-                       &(entry->old_symbol->declared_at));
+-      else
+-        gfc_error_now ("BIND(C) attribute at %L can only be used for "
+-                       "variables or common blocks", &gfc_current_locus);
+-    }
++
++      loc = entry->old_symbol != NULL
++	? entry->old_symbol->declared_at : gfc_current_locus; 
++      gfc_error_now ("BIND(C) attribute at %L can only be used for "
++		     "variables or common blocks", &loc);
++     }
+ 
+   /* Check what next non-whitespace character is so we can tell if there
+      is the required parens if we have a BIND(C).  */
+@@ -7668,13 +7717,16 @@ gfc_match_subroutine (void)
+   if (sym->attr.is_bind_c == 1)
+     {
+       sym->attr.is_bind_c = 0;
+-      if (sym->old_symbol != NULL)
+-        gfc_error_now ("BIND(C) attribute at %L can only be used for "
+-                       "variables or common blocks",
+-                       &(sym->old_symbol->declared_at));
+-      else
+-        gfc_error_now ("BIND(C) attribute at %L can only be used for "
+-                       "variables or common blocks", &gfc_current_locus);
++
++      if (gfc_state_stack->previous
++	  && gfc_state_stack->previous->state != COMP_SUBMODULE)
++	{
++	  locus loc;
++	  loc = sym->old_symbol != NULL
++	    ? sym->old_symbol->declared_at : gfc_current_locus;
++	  gfc_error_now ("BIND(C) attribute at %L can only be used for "
++			 "variables or common blocks", &loc);
++	}
+     }
+ 
+   /* C binding names are not allowed for internal procedures.  */
+@@ -7716,6 +7768,24 @@ gfc_match_subroutine (void)
+           return MATCH_ERROR;
+         }
+ 
++      /* F2018 C1550 (R1526) If MODULE appears in the prefix of a module
++	 subprogram and a binding label is specified, it shall be the
++	 same as the binding label specified in the corresponding module
++	 procedure interface body.  */
++      if (sym->attr.module_procedure && sym->old_symbol
++  	  && strcmp (sym->name, sym->old_symbol->name) == 0
++	  && strcmp (sym->binding_label, sym->old_symbol->binding_label) != 0)
++	{
++	  const char *null = "NULL", *s1, *s2;
++	  s1 = sym->binding_label;
++	  if (!s1) s1 = null;
++	  s2 = sym->old_symbol->binding_label;
++	  if (!s2) s2 = null;
++          gfc_error ("Mismatch in BIND(C) names (%qs/%qs) at %C", s1, s2);
++	  sym->refs++;	/* Needed to avoid an ICE in gfc_release_symbol */
++	  return MATCH_ERROR;
++	}
++
+       /* Scan the dummy arguments for an alternate return.  */
+       for (arg = sym->formal; arg; arg = arg->next)
+ 	if (!arg->sym)
+@@ -8420,6 +8490,14 @@ attr_decl1 (void)
        goto cleanup;
      }
  
@@ -6646,7 +7059,7 @@ index cf09420cfbe..7b87bb88a30 100644
    if (sym->attr.cray_pointee && sym->as != NULL)
      {
        /* Fix the array spec.  */
-@@ -10161,6 +10197,20 @@ gfc_match_derived_decl (void)
+@@ -10161,6 +10239,20 @@ gfc_match_derived_decl (void)
        return MATCH_ERROR;
      }
  
@@ -6667,7 +7080,7 @@ index cf09420cfbe..7b87bb88a30 100644
    m = gfc_match (" %n ", name);
    if (m != MATCH_YES)
      return m;
-@@ -10168,7 +10218,7 @@ gfc_match_derived_decl (void)
+@@ -10168,7 +10260,7 @@ gfc_match_derived_decl (void)
    /* Make sure that we don't identify TYPE IS (...) as a parameterized
       derived type named 'is'.
       TODO Expand the check, when 'name' = "is" by matching " (tname) "
@@ -6676,7 +7089,7 @@ index cf09420cfbe..7b87bb88a30 100644
       misplaced TYPE IS statements such as in select_type_1.f03.  */
    if (gfc_peek_ascii_char () == '(')
      {
-@@ -11472,3 +11522,53 @@ gfc_match_gcc_builtin (void)
+@@ -11472,3 +11564,53 @@ gfc_match_gcc_builtin (void)
  
    return MATCH_YES;
  }
@@ -10729,10 +11142,27 @@ index 29f6cdc4667..33b4be79c0f 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..ab2f9044bfe 100644
+index bc11ae4ae0b..4de50acd482 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,425 @@
+@@ -1,3 +1,442 @@
++2019-10-17  Steven G. Kargl  <kargl@gcc.gnu.org>
++
++	PR fortran/83113
++	PR fortran/89943
++	* gfortran.dg/pr89943_1.f90: New test.
++	* gfortran.dg/pr89943_2.f90: Ditto.
++	* gfortran.dg/pr89943_3.f90: Ditto.
++	* gfortran.dg/pr89943_4.f90: Ditto.
++
++2019-10-17  Bill Schmidt  <wschmidt@linux.ibm.com>
++
++	Backport from mainline
++	2019-10-15  Bill Schmidt  <wschmidt@linux.ibm.com>
++
++	PR target/92093
++	* gcc.target/powerpc/pr91275.c: Fix type and endian issues.
++
 +2019-10-16  Richard Biener  <rguenther@suse.de>
 +
 +	Backport from mainline
@@ -11158,7 +11588,7 @@ index bc11ae4ae0b..ab2f9044bfe 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +849,7 @@
+@@ -427,7 +866,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -13145,10 +13575,10 @@ index 00000000000..477901fde70
 +/* { dg-final { scan-assembler-times {(?n)\mdarn .*,0\M} 4 } } */
 diff --git a/gcc/testsuite/gcc.target/powerpc/pr91275.c b/gcc/testsuite/gcc.target/powerpc/pr91275.c
 new file mode 100644
-index 00000000000..b23d75be29b
+index 00000000000..cd461158af7
 --- /dev/null
 +++ b/gcc/testsuite/gcc.target/powerpc/pr91275.c
-@@ -0,0 +1,21 @@
+@@ -0,0 +1,26 @@
 +/* Test that we generate vpmsumd correctly without a swap error.  */
 +
 +/* { dg-do run { target { p8vector_hw } } } */
@@ -13161,12 +13591,17 @@ index 00000000000..b23d75be29b
 +  const unsigned long long r0l = 0x8e7dfceac070e3a0;
 +  vector unsigned long long r0 = (vector unsigned long long) {r0l, 0}, v;
 +  const vector unsigned long long pd
-+    = (vector unsigned long) {0xc2LLU << 56, 0};
++    = (vector unsigned long long) {0xc2LLU << 56, 0};
 +
 +  v = __builtin_crypto_vpmsumd ((vector unsigned long long) {r0[0], 0}, pd);
 +
++#if __LITTLE_ENDIAN__
 +  if (v[0] != 0x4000000000000000 || v[1] != 0x65bd7ab605a4a8ff)
 +    __builtin_abort ();
++#else
++  if (v[1] != 0x4000000000000000 || v[0] != 0x65bd7ab605a4a8ff)
++    __builtin_abort ();
++#endif
 +
 +  return 0;
 +}
@@ -13897,6 +14332,151 @@ index 00000000000..1d4dc2d0582
 +      END TYPE t_extension
 +    END SUBROUTINE s
 +  END MODULE m2
+diff --git a/gcc/testsuite/gfortran.dg/pr89943_1.f90 b/gcc/testsuite/gfortran.dg/pr89943_1.f90
+new file mode 100644
+index 00000000000..3aa9c36d628
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr89943_1.f90
+@@ -0,0 +1,31 @@
++! { dg-do compile }
++! PR fortran/89943
++! Code contributed by Alberto Luaces  <aluaces at udc dot se>
++module Foo_mod
++
++   implicit none
++
++   interface
++      module subroutine runFoo4C(ndim) bind(C, name="runFoo")
++         use, intrinsic :: iso_c_binding
++         implicit none
++         integer(c_int32_t) , intent(in) :: ndim
++      end subroutine runFoo4C
++   end interface
++
++   contains
++
++end module Foo_mod
++
++submodule(Foo_mod) Foo_smod
++
++   contains
++
++      module subroutine runFoo4C(ndim) bind(C, name="runFoo")
++         use, intrinsic :: iso_c_binding
++         implicit none
++         integer(c_int32_t) , intent(in) :: ndim
++      end subroutine runFoo4C
++
++end submodule Foo_smod
++
+diff --git a/gcc/testsuite/gfortran.dg/pr89943_2.f90 b/gcc/testsuite/gfortran.dg/pr89943_2.f90
+new file mode 100644
+index 00000000000..ac69ec3af56
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr89943_2.f90
+@@ -0,0 +1,33 @@
++! { dg-do compile }
++! PR fortran/89943
++! Code contributed by Alberto Luaces  <aluaces at udc dot se>
++module Foo_mod
++
++   implicit none
++
++   interface
++      module function runFoo4C(ndim) bind(C, name="runFoo")
++         use, intrinsic :: iso_c_binding
++         implicit none
++         integer runFoo4c
++         integer(c_int32_t) , intent(in) :: ndim
++      end function runFoo4C
++   end interface
++
++   contains
++
++end module Foo_mod
++
++submodule(Foo_mod) Foo_smod
++
++   contains
++
++      module function runFoo4C(ndim) bind(C, name="runFoo")
++         use, intrinsic :: iso_c_binding
++         implicit none
++         integer runFoo4c
++         integer(c_int32_t) , intent(in) :: ndim
++      end function runFoo4C
++
++end submodule Foo_smod
++
+diff --git a/gcc/testsuite/gfortran.dg/pr89943_3.f90 b/gcc/testsuite/gfortran.dg/pr89943_3.f90
+new file mode 100644
+index 00000000000..38b723e2458
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr89943_3.f90
+@@ -0,0 +1,28 @@
++! { dg-do compile }
++module Foo_mod
++
++   implicit none
++
++   interface
++      module subroutine runFoo4C(ndim) bind(C, name="runFoo")
++         use, intrinsic :: iso_c_binding
++         implicit none
++         integer(c_int32_t) , intent(in) :: ndim
++      end subroutine runFoo4C
++   end interface
++
++   contains
++
++end module Foo_mod
++
++submodule(Foo_mod) Foo_smod
++
++   contains
++
++      module subroutine runFoo4C(ndim) bind(C, name="runFu")   ! { dg-error "Mismatch in BIND" }
++         use, intrinsic :: iso_c_binding                 ! { dg-error "Unexpected USE statement" }
++         implicit none                                   ! { dg-error "Unexpected IMPLICIT NONE statement" }
++         integer(c_int32_t) , intent(in) :: ndim         ! { dg-error "Unexpected data declaration" }
++      end subroutine runFoo4C                            ! { dg-error " Expecting END SUBMODULE" }
++
++end submodule Foo_smod
+diff --git a/gcc/testsuite/gfortran.dg/pr89943_4.f90 b/gcc/testsuite/gfortran.dg/pr89943_4.f90
+new file mode 100644
+index 00000000000..8eba2eda171
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr89943_4.f90
+@@ -0,0 +1,29 @@
++! { dg-do compile }
++module Foo_mod
++
++   implicit none
++
++   interface
++      module function runFoo4C(ndim) bind(C, name="runFoo")
++         use, intrinsic :: iso_c_binding
++         implicit none
++         integer runFoo4c
++         integer(c_int32_t) , intent(in) :: ndim
++      end function runFoo4C
++   end interface
++
++   contains
++
++end module Foo_mod
++
++submodule(Foo_mod) Foo_smod
++
++   contains
++
++      module function runFoo4C(ndim) bind(C, name="runFu")  ! { dg-error "Mismatch in BIND" }
++         use, intrinsic :: iso_c_binding     ! { dg-error "Unexpected USE statement in" }
++         implicit none                       ! { dg-error "Unexpected IMPLICIT NONE statement" }
++         integer(c_int32_t) , intent(in) :: ndim   ! { dg-error "Unexpected data declaration" }
++      end function runFoo4C                  ! { dg-error "Expecting END SUBMODULE" }
++
++end submodule Foo_smod
 diff --git a/gcc/testsuite/gfortran.dg/pr91359_1.f b/gcc/testsuite/gfortran.dg/pr91359_1.f
 new file mode 100644
 index 00000000000..82423142e98
