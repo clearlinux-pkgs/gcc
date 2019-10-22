@@ -173,7 +173,7 @@ jsm28 (6):
       * es.po: Update.
       * fi.po: Update.
 
-kargl (33):
+kargl (34):
       2019-08-01  Steven G. Kargl  <kargl@gcc.gnu.org>
       2019-08-12  Steven G. Kargl  <kargl@gcc.gnu.org>
       2019-08-13  Steven G. Kargl  <kargl@gcc.gnu.org>
@@ -207,6 +207,7 @@ kargl (33):
       2019-10-11  Steven G. Kargl  <kargl@gcc.gnu.org>
       2019-10-17  Steven G. Kargl  <kargl@gcc.gnu.org>
       2019-10-18  Steven G. Kargl  <kargl@gcc.gnu.org>
+      2019-10-22  Steven G. Kargl  <kargl@gcc.gnu.org>
 
 kito (2):
       RISC-V: Fix bad insn splits with paradoxical subregs.
@@ -234,7 +235,7 @@ marxin (5):
       Backport r275291
       Backport r275292
 
-mpolacek (9):
+mpolacek (11):
       PR c++/81429 - wrong parsing of constructor with C++11 attribute. 	* parser.c (cp_parser_constructor_declarator_p): Handle the scenario 	when a parameter declaration begins with [[attribute]].
       PR c++/87519 - bogus warning with -Wsign-conversion. 	* typeck.c (cp_build_binary_op): Use same_type_p instead of comparing 	the types directly.
       PR c++/90473 - wrong code with nullptr in default argument. 	* call.c (null_ptr_cst_p): Update quote from the standard. 	* decl.c (check_default_argument): Don't return nullptr when the arg 	has side-effects.
@@ -244,6 +245,8 @@ mpolacek (9):
       PR c++/91705 - constexpr evaluation rejects ++/-- on floats. 	* constexpr.c (cxx_eval_increment_expression): Call fold_simple on 	the offset.
       PR c++/91923 - failure-to-SFINAE with class type NTTP in C++17. 	* pt.c (invalid_nontype_parm_type_p): Only emit errors when 	tf_error.
       PR c++/91740 - ICE with constexpr call and ?: in ARRAY_REF. 	* pt.c (build_non_dependent_expr): Call build_non_dependent_expr for 	the first operand.
+      PR c++/92106 - ICE with structured bindings and -Wreturn-local-addr.
+      PR c++/92062 - ODR-use ignored for static member of class template.
 
 msebor (1):
       Backport from mainline
@@ -5837,10 +5840,22 @@ index 19bd616d67f..ee5612441e2 100644
  	  rtx tmp_reg = gen_rtx_REG (Pmode, A9_REG);
  	  emit_move_insn (tmp_reg, GEN_INT (total_size -
 diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
-index c977850d067..6b9f0930871 100644
+index c977850d067..e8a17c7edc4 100644
 --- a/gcc/cp/ChangeLog
 +++ b/gcc/cp/ChangeLog
-@@ -1,3 +1,169 @@
+@@ -1,3 +1,181 @@
++2019-10-22  Marek Polacek  <polacek@redhat.com>
++
++	Backported from mainline
++	2019-10-21  Marek Polacek  <polacek@redhat.com>
++
++	PR c++/92106 - ICE with structured bindings and -Wreturn-local-addr.
++	* typeck.c (maybe_warn_about_returning_address_of_local): Avoid
++	recursing on null initializer and return false instead.
++
++	PR c++/92062 - ODR-use ignored for static member of class template.
++	* pt.c (has_value_dependent_address): Strip location wrappers.
++
 +2019-10-21  Jakub Jelinek  <jakub@redhat.com>
 +
 +	Backported from mainline
@@ -6010,7 +6025,7 @@ index c977850d067..6b9f0930871 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -16,7 +182,7 @@
+@@ -16,7 +194,7 @@
  
  	Backported from mainline
  	2019-08-02  Marek Polacek  <polacek@redhat.com>
@@ -6486,7 +6501,7 @@ index a7218e752b1..3fac495d293 100644
    cp_lexer_get_preprocessor_token (NULL, first_token);
    if (first_token->type == CPP_STRING)
 diff --git a/gcc/cp/pt.c b/gcc/cp/pt.c
-index a2a986b1db1..442e01bfa11 100644
+index a2a986b1db1..48d8dbb6ad2 100644
 --- a/gcc/cp/pt.c
 +++ b/gcc/cp/pt.c
 @@ -3875,7 +3875,7 @@ find_parameter_packs_r (tree *tp, int *walk_subtrees, void* data)
@@ -6507,7 +6522,16 @@ index a2a986b1db1..442e01bfa11 100644
  }
  
  /* Turn ARG, which may be an expression, type, or a TREE_LIST
-@@ -11757,10 +11757,6 @@ gen_elem_of_pack_expansion_instantiation (tree pattern,
+@@ -6353,6 +6353,8 @@ check_valid_ptrmem_cst_expr (tree type, tree expr,
+ static bool
+ has_value_dependent_address (tree op)
+ {
++  STRIP_ANY_LOCATION_WRAPPER (op);
++
+   /* We could use get_inner_reference here, but there's no need;
+      this is only relevant for template non-type arguments, which
+      can only be expressed as &id-expression.  */
+@@ -11757,10 +11759,6 @@ gen_elem_of_pack_expansion_instantiation (tree pattern,
        ARGUMENT_PACK_SELECT_INDEX (aps) = index;
      }
  
@@ -6518,7 +6542,7 @@ index a2a986b1db1..442e01bfa11 100644
    /* Substitute into the PATTERN with the (possibly altered)
       arguments.  */
    if (pattern == in_decl)
-@@ -15130,24 +15126,12 @@ tsubst (tree t, tree args, tsubst_flags_t complain, tree in_decl)
+@@ -15130,24 +15128,12 @@ tsubst (tree t, tree args, tsubst_flags_t complain, tree in_decl)
  				      /*function_p*/false,
  				      /*integral_constant_expression*/false);
  
@@ -6544,7 +6568,7 @@ index a2a986b1db1..442e01bfa11 100644
  					    DECLTYPE_FOR_REF_CAPTURE (t));
  	else if (DECLTYPE_FOR_LAMBDA_PROXY (t))
  	  type = lambda_proxy_type (type);
-@@ -18014,6 +17998,33 @@ tsubst_non_call_postfix_expression (tree t, tree args,
+@@ -18014,6 +18000,33 @@ tsubst_non_call_postfix_expression (tree t, tree args,
    return t;
  }
  
@@ -6578,7 +6602,7 @@ index a2a986b1db1..442e01bfa11 100644
  /* T is a LAMBDA_EXPR.  Generate a new LAMBDA_EXPR for the current
     instantiation context.  Instantiating a pack expansion containing a lambda
     might result in multiple lambdas all based on the same lambda in the
-@@ -18025,17 +18036,8 @@ tsubst_lambda_expr (tree t, tree args, tsubst_flags_t complain, tree in_decl)
+@@ -18025,17 +18038,8 @@ tsubst_lambda_expr (tree t, tree args, tsubst_flags_t complain, tree in_decl)
    tree oldfn = lambda_function (t);
    in_decl = oldfn;
  
@@ -6596,7 +6620,7 @@ index a2a986b1db1..442e01bfa11 100644
    LAMBDA_EXPR_LOCATION (r)
      = LAMBDA_EXPR_LOCATION (t);
    LAMBDA_EXPR_DEFAULT_CAPTURE_MODE (r)
-@@ -18088,15 +18090,15 @@ tsubst_lambda_expr (tree t, tree args, tsubst_flags_t complain, tree in_decl)
+@@ -18088,15 +18092,15 @@ tsubst_lambda_expr (tree t, tree args, tsubst_flags_t complain, tree in_decl)
  	  gcc_assert (TREE_CODE (init) == TREE_VEC
  		      && TREE_VEC_LENGTH (init) == len);
  	  for (int i = 0; i < len; ++i)
@@ -6618,7 +6642,7 @@ index a2a986b1db1..442e01bfa11 100644
  
  	  if (id_equal (DECL_NAME (field), "__this"))
  	    LAMBDA_EXPR_THIS_CAPTURE (r) = field;
-@@ -24321,12 +24323,11 @@ maybe_instantiate_noexcept (tree fn, tsubst_flags_t complain)
+@@ -24321,12 +24325,11 @@ maybe_instantiate_noexcept (tree fn, tsubst_flags_t complain)
  	}
        else if (push_tinst_level (fn))
  	{
@@ -6632,7 +6656,7 @@ index a2a986b1db1..442e01bfa11 100644
  	  /* If needed, set current_class_ptr for the benefit of
  	     tsubst_copy/PARM_DECL.  */
  	  tree tdecl = DECL_TEMPLATE_RESULT (DECL_TI_TEMPLATE (fn));
-@@ -24352,9 +24353,6 @@ maybe_instantiate_noexcept (tree fn, tsubst_flags_t complain)
+@@ -24352,9 +24355,6 @@ maybe_instantiate_noexcept (tree fn, tsubst_flags_t complain)
  					/*function_p=*/false,
  					/*i_c_e_p=*/true);
  
@@ -6642,7 +6666,7 @@ index a2a986b1db1..442e01bfa11 100644
  	  /* Build up the noexcept-specification.  */
  	  spec = build_noexcept_spec (noex, tf_warning_or_error);
  
-@@ -24364,6 +24362,7 @@ maybe_instantiate_noexcept (tree fn, tsubst_flags_t complain)
+@@ -24364,6 +24364,7 @@ maybe_instantiate_noexcept (tree fn, tsubst_flags_t complain)
  	  pop_deferring_access_checks ();
  	  pop_access_scope (fn);
  	  pop_tinst_level ();
@@ -6650,7 +6674,7 @@ index a2a986b1db1..442e01bfa11 100644
  	}
        else
  	spec = noexcept_false_spec;
-@@ -25232,8 +25231,9 @@ invalid_nontype_parm_type_p (tree type, tsubst_flags_t complain)
+@@ -25232,8 +25233,9 @@ invalid_nontype_parm_type_p (tree type, tsubst_flags_t complain)
      {
        if (cxx_dialect < cxx2a)
  	{
@@ -6662,7 +6686,7 @@ index a2a986b1db1..442e01bfa11 100644
  	  return true;
  	}
        if (dependent_type_p (type))
-@@ -26715,7 +26715,7 @@ build_non_dependent_expr (tree expr)
+@@ -26715,7 +26717,7 @@ build_non_dependent_expr (tree expr)
    if (TREE_CODE (expr) == COND_EXPR)
      return build3 (COND_EXPR,
  		   TREE_TYPE (expr),
@@ -6671,7 +6695,7 @@ index a2a986b1db1..442e01bfa11 100644
  		   (TREE_OPERAND (expr, 1)
  		    ? build_non_dependent_expr (TREE_OPERAND (expr, 1))
  		    : build_non_dependent_expr (TREE_OPERAND (expr, 0))),
-@@ -27615,6 +27615,9 @@ do_auto_deduction (tree type, tree init, tree auto_node,
+@@ -27615,6 +27617,9 @@ do_auto_deduction (tree type, tree init, tree auto_node,
      }
    else
      {
@@ -6700,7 +6724,7 @@ index 6d40b145fcb..ebfdf9a47b0 100644
  		  && OMP_CLAUSE_CODE (c) == OMP_CLAUSE_FIRSTPRIVATE
  		  && TREE_STATIC (t)
 diff --git a/gcc/cp/typeck.c b/gcc/cp/typeck.c
-index 3255af58a25..c815bf3368c 100644
+index 3255af58a25..2169f8c4efd 100644
 --- a/gcc/cp/typeck.c
 +++ b/gcc/cp/typeck.c
 @@ -4309,7 +4309,7 @@ warn_for_null_address (location_t location, tree op, tsubst_flags_t complain)
@@ -6771,6 +6795,19 @@ index 3255af58a25..c815bf3368c 100644
  	op1 = cp_convert_and_check (result_type, op1, complain);
  
        if (op0 == error_mark_node || op1 == error_mark_node)
+@@ -9296,8 +9292,10 @@ maybe_warn_about_returning_address_of_local (tree retval)
+ 	  tree base = DECL_DECOMP_BASE (whats_returned);
+ 	  if (TYPE_REF_P (TREE_TYPE (base)))
+ 	    {
+-	      tree init = DECL_INITIAL (base);
+-	      return maybe_warn_about_returning_address_of_local (init);
++	      if (tree init = DECL_INITIAL (base))
++		return maybe_warn_about_returning_address_of_local (init);
++	      else
++		return false;
+ 	    }
+ 	}
+       bool w = false;
 diff --git a/gcc/doc/avr-mmcu.texi b/gcc/doc/avr-mmcu.texi
 index ea0161ecccb..99cd93cb23b 100644
 --- a/gcc/doc/avr-mmcu.texi
@@ -6903,10 +6940,16 @@ index f0e43b5fda2..9feaea9fde5 100644
    low = fold_convert_loc (loc, etype, low);
    exp = fold_convert_loc (loc, etype, exp);
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index e3073787ea9..6c23d995ef8 100644
+index e3073787ea9..4113fc89751 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,310 @@
+@@ -1,3 +1,316 @@
++2019-10-22  Steven G. Kargl  <kargl@gcc.gnu.org>
++
++	PR fortran/92174
++	* decl.c (attr_decl1): Move check for F2018:C822 from here ...
++	* array.c (gfc_set_array_spec): ... to here. 
++
 +2019-10-18  Steven G. Kargl  <kargl@gcc.gnu.org>
 +
 +	PR fortran/69455
@@ -7218,10 +7261,45 @@ index e3073787ea9..6c23d995ef8 100644
  
  	* GCC 9.2.0 released.
 diff --git a/gcc/fortran/array.c b/gcc/fortran/array.c
-index 0aee220e68d..c1342c7c844 100644
+index 0aee220e68d..6d20cbb9d36 100644
 --- a/gcc/fortran/array.c
 +++ b/gcc/fortran/array.c
-@@ -1124,6 +1124,31 @@ match_array_cons_element (gfc_constructor_base *result)
+@@ -843,6 +843,10 @@ gfc_set_array_spec (gfc_symbol *sym, gfc_array_spec *as, locus *error_loc)
+ 
+       sym->as->cotype = as->cotype;
+       sym->as->corank = as->corank;
++      /* Check F2018:C822.  */
++      if (sym->as->rank + sym->as->corank > GFC_MAX_DIMENSIONS)
++	goto too_many;
++
+       for (i = 0; i < as->corank; i++)
+ 	{
+ 	  sym->as->lower[sym->as->rank + i] = as->lower[i];
+@@ -861,6 +865,10 @@ gfc_set_array_spec (gfc_symbol *sym, gfc_array_spec *as, locus *error_loc)
+       sym->as->cray_pointee = as->cray_pointee;
+       sym->as->cp_was_assumed = as->cp_was_assumed;
+ 
++      /* Check F2018:C822.  */
++      if (sym->as->rank + sym->as->corank > GFC_MAX_DIMENSIONS)
++	goto too_many;
++
+       for (i = 0; i < sym->as->corank; i++)
+ 	{
+ 	  sym->as->lower[as->rank + i] = sym->as->lower[i];
+@@ -875,6 +883,12 @@ gfc_set_array_spec (gfc_symbol *sym, gfc_array_spec *as, locus *error_loc)
+ 
+   free (as);
+   return true;
++
++too_many:
++
++  gfc_error ("rank + corank of %qs exceeds %d at %C", sym->name,
++	     GFC_MAX_DIMENSIONS);
++  return false;
+ }
+ 
+ 
+@@ -1124,6 +1138,31 @@ match_array_cons_element (gfc_constructor_base *result)
  }
  
  
@@ -7253,7 +7331,7 @@ index 0aee220e68d..c1342c7c844 100644
  /* Match an array constructor.  */
  
  match
-@@ -1253,14 +1278,13 @@ done:
+@@ -1253,14 +1292,13 @@ done:
  	    }
  	}
  
@@ -7273,7 +7351,7 @@ index 0aee220e68d..c1342c7c844 100644
  	}
      }
    else
-@@ -2175,6 +2199,9 @@ gfc_copy_iterator (gfc_iterator *src)
+@@ -2175,6 +2213,9 @@ gfc_copy_iterator (gfc_iterator *src)
    dest->end = gfc_copy_expr (src->end);
    dest->step = gfc_copy_expr (src->step);
    dest->unroll = src->unroll;
@@ -7413,7 +7491,7 @@ index 8a1f43f116c..9117121e5fe 100644
    if ((derived->attr.use_assoc || derived->attr.used_in_submodule)
         && !derived->attr.vtype && !derived->attr.is_class)
 diff --git a/gcc/fortran/decl.c b/gcc/fortran/decl.c
-index cf09420cfbe..24002ed1c6e 100644
+index cf09420cfbe..52a98cd44ed 100644
 --- a/gcc/fortran/decl.c
 +++ b/gcc/fortran/decl.c
 @@ -99,6 +99,11 @@ bool gfc_matching_function;
@@ -7677,22 +7755,7 @@ index cf09420cfbe..24002ed1c6e 100644
        /* Scan the dummy arguments for an alternate return.  */
        for (arg = sym->formal; arg; arg = arg->next)
  	if (!arg->sym)
-@@ -8420,6 +8490,14 @@ attr_decl1 (void)
-       goto cleanup;
-     }
- 
-+  /* Check F2018:C822.  */
-+  if (sym->attr.dimension && sym->attr.codimension
-+      && sym->as && sym->as->rank + sym->as->corank > 15)
-+    {
-+      gfc_error ("rank + corank of %qs exceeds 15 at %C", sym->name);
-+      return MATCH_ERROR;
-+    }
-+
-   if (sym->attr.cray_pointee && sym->as != NULL)
-     {
-       /* Fix the array spec.  */
-@@ -10161,6 +10239,20 @@ gfc_match_derived_decl (void)
+@@ -10161,6 +10231,20 @@ gfc_match_derived_decl (void)
        return MATCH_ERROR;
      }
  
@@ -7713,7 +7776,7 @@ index cf09420cfbe..24002ed1c6e 100644
    m = gfc_match (" %n ", name);
    if (m != MATCH_YES)
      return m;
-@@ -10168,7 +10260,7 @@ gfc_match_derived_decl (void)
+@@ -10168,7 +10252,7 @@ gfc_match_derived_decl (void)
    /* Make sure that we don't identify TYPE IS (...) as a parameterized
       derived type named 'is'.
       TODO Expand the check, when 'name' = "is" by matching " (tname) "
@@ -7722,7 +7785,7 @@ index cf09420cfbe..24002ed1c6e 100644
       misplaced TYPE IS statements such as in select_type_1.f03.  */
    if (gfc_peek_ascii_char () == '(')
      {
-@@ -11472,3 +11564,53 @@ gfc_match_gcc_builtin (void)
+@@ -11472,3 +11556,53 @@ gfc_match_gcc_builtin (void)
  
    return MATCH_YES;
  }
@@ -13213,6 +13276,56 @@ index 00000000000..7df74dc110b
 +  A a;
 +  decltype (bar (a)) p;
 +};
+diff --git a/gcc/testsuite/g++.dg/cpp0x/constexpr-odr1.C b/gcc/testsuite/g++.dg/cpp0x/constexpr-odr1.C
+new file mode 100644
+index 00000000000..cf3f95f0565
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp0x/constexpr-odr1.C
+@@ -0,0 +1,19 @@
++// PR c++/92062 - ODR-use ignored for static member of class template.
++// { dg-do run { target c++11 } }
++
++template<int> struct A {
++  static const bool x;
++  static_assert(&x, ""); // odr-uses A<...>::x
++};
++
++int g;
++
++template<int I>
++const bool A<I>::x = (g = 42, false);
++
++void f(A<0>) {}        // A<0> must be complete, so is instantiated
++int main()
++{
++  if (g != 42)
++    __builtin_abort ();
++}
+diff --git a/gcc/testsuite/g++.dg/cpp0x/constexpr-odr2.C b/gcc/testsuite/g++.dg/cpp0x/constexpr-odr2.C
+new file mode 100644
+index 00000000000..0927488e569
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp0x/constexpr-odr2.C
+@@ -0,0 +1,19 @@
++// PR c++/92062 - ODR-use ignored for static member of class template.
++// { dg-do run { target c++11 } }
++
++template<int> struct A {
++  static const bool x;
++  enum { force_instantiation =! &x}; // odr-uses A<...>::x
++};
++
++int g;
++
++template<int I>
++const bool A<I>::x = (g = 42, false);
++
++void f(A<0>) {}        // A<0> must be complete, so is instantiated
++int main()
++{
++  if (g != 42)
++    __builtin_abort ();
++}
 diff --git a/gcc/testsuite/g++.dg/cpp0x/gen-attrs-68.C b/gcc/testsuite/g++.dg/cpp0x/gen-attrs-68.C
 new file mode 100644
 index 00000000000..6bede0659db
@@ -13575,6 +13688,63 @@ index 00000000000..a65f53b2963
 +
 +constexpr bool f(const char*) { return true; }
 +template<typename T> const char c = "FOO"[f("BAR") ? 1 : 0];
+diff --git a/gcc/testsuite/g++.dg/cpp1z/decomp50.C b/gcc/testsuite/g++.dg/cpp1z/decomp50.C
+new file mode 100644
+index 00000000000..5400a826948
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp1z/decomp50.C
+@@ -0,0 +1,51 @@
++// PR c++/92106 - ICE with structured bindings and -Wreturn-local-addr. 
++// { dg-do compile { target c++17 } }
++
++template <typename> struct B;
++template <typename _Tp> struct B<_Tp *> { typedef _Tp& reference; };
++struct C {
++  template <typename _Up> using rebind = _Up *;
++};
++template <typename _Iterator, typename> class D {
++public:
++  typename B<_Iterator>::reference operator*();
++  void operator++();
++};
++
++template <typename _Iterator, typename _Container>
++bool operator!=(D<_Iterator, _Container>, D<_Iterator, _Container>);
++template <typename _Tp> class F {
++public:
++  typedef _Tp value_type;
++};
++
++template <typename _Alloc> struct G {
++  template <typename _Tp> struct H { using type = C::rebind<_Tp>; };
++  using const_pointer = typename H<typename _Alloc::value_type>::type;
++};
++template <typename _Tp, typename _Alloc = F<_Tp>> class I {
++  typedef D<typename G<_Alloc>::const_pointer, int> const_iterator;
++
++public:
++  const_iterator begin();
++  const_iterator end();
++};
++
++struct A {
++  struct J {
++    int name;
++    int value;
++  };
++  I<J> members;
++  template <typename Key> const int *find(Key) {
++    for (const auto &[name, value] : members)
++      // See <https://gcc.gnu.org/ml/gcc-patches/2019-10/msg01107.html>
++      // for why we don't warn here.
++      return &value; // { dg-bogus "address of local variable" }
++    return nullptr;
++  }
++};
++int main() {
++  A a;
++  a.find("");
++}
 diff --git a/gcc/testsuite/g++.dg/cpp1z/eval-order5.C b/gcc/testsuite/g++.dg/cpp1z/eval-order5.C
 new file mode 100644
 index 00000000000..a8f06ed421a
