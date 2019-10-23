@@ -18,7 +18,7 @@ draganm (2):
       Backprot fix for uninitialised use in mips_split_move
       Backport fix for PR target/91769
 
-ebotcazou (7):
+ebotcazou (8):
       PR rtl-optimization/91347 	* dse.c (scan_insn): Call add_wild_read for non-const/memset tail calls 	before reload if HARD_FRAME_POINTER_IS_ARG_POINTER.
       PR target/91472 	* config/sparc/sparc.c (sparc_cannot_force_const_mem): Return true 	during LRA/reload in PIC mode if the PIC register hasn't been used yet. 	(sparc_pic_register_p): Test reload_in_progress for consistency's sake.
       PR rtl-optimization/89795 	* rtlanal.c (nonzero_bits1) <SUBREG>: Do not propagate results from 	inner REGs to paradoxical SUBREGs if WORD_REGISTER_OPERATIONS is set.
@@ -26,6 +26,7 @@ ebotcazou (7):
       * gcc-interface/trans.c (Attribute_to_gnu): Test Can_Use_Internal_Rep 	on the underlying type of the node. 	(Call_to_gnu): Likewise with the type of the prefix.
       * gcc-interface/decl.c (annotate_value) <INTEGER_CST>: Really test the 	sign of the value when deciding to build a NEGATE_EXPR. 	<PLUS_EXPR>: Remove redundant line. 	<BIT_AND_EXPR>: Do the negation here.
       PR ada/91995 	* sem_ch8.adb (Chain_Use_Clause): Remove second argument in calls 	to Defining_Entity. 	* sem_elab.adb (Find_Unit_Entity): Likewise.  Deal with N_Subunit 	here in lieu of in Defining_Entity. 	* sem_spark.adb (Check_Callable_Body): Likewise. 	(Check_Package_Body): Likewise. 	* sem_util.ads (Defining_Entity): Remove 2nd and 3th parameters. 	* sem_util.adb (Defining_Entity): Remove 2nd and 3th parameters, 	and adjust accordingly.  Deal with N_Compilation_Unit.
+      PR tree-optimization/92131 	* tree-vrp.c (extract_range_from_plus_minus_expr): If the resulting 	range would be symbolic, drop to varying for any explicit overflow 	in the constant part or if neither range is a singleton.
 
 edlinger (3):
       2019-08-16  Bernd Edlinger  <bernd.edlinger@hotmail.de>
@@ -229,12 +230,14 @@ law (1):
 luoxhu (1):
       Backport r274411 from trunk to gcc-9-branch
 
-marxin (5):
+marxin (7):
       Backport r274502
       Backport r274503
       Backport r274504
       Backport r275291
       Backport r275292
+      Backport r276141
+      Backport r276178
 
 mpolacek (11):
       PR c++/81429 - wrong parsing of constructor with C++11 attribute. 	* parser.c (cp_parser_constructor_declarator_p): Handle the scenario 	when a parameter declaration begins with [[attribute]].
@@ -277,13 +280,14 @@ redi (9):
       Fix Xmethod for shared_ptr::use_count()
       PR libstdc++/91748 fix std::for_each_n for random access iterators
 
-rguenth (6):
+rguenth (7):
       2019-08-12  Richard Biener  <rguenther@suse.de>
       2019-08-15  Richard Biener  <rguenther@suse.de>
       2019-08-28  Richard Biener  <rguenther@suse.de>
       2019-08-29  Richard Biener  <rguenther@suse.de>
       2019-08-30  Richard Biener  <rguenther@suse.de>
       2019-10-16  Richard Biener  <rguenther@suse.de>
+      2019-10-23  Richard Biener  <rguenther@suse.de>
 
 ro (1):
       Update Solaris baselines for GCC 9.3
@@ -551,10 +555,36 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..d213669fdb4 100644
+index 7f6557d8018..274c1ae399a 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,783 @@
+@@ -1,3 +1,809 @@
++2019-10-23  Martin Liska  <mliska@suse.cz>
++
++	Backport from mainline
++	2019-09-26  Martin Liska  <mliska@suse.cz>
++
++	PR tree-optimization/91885
++	* tree-vectorizer.c (try_vectorize_loop_1):
++	Add TODO_update_ssa_only_virtuals similarly to what slp
++	pass does.
++
++2019-10-23  Eric Botcazou  <ebotcazou@adacore.com>
++
++	PR tree-optimization/92131
++	* tree-vrp.c (extract_range_from_plus_minus_expr): If the resulting
++	range would be symbolic, drop to varying for any explicit overflow
++	in the constant part or if neither range is a singleton.
++
++2019-10-23  Richard Biener  <rguenther@suse.de>
++
++	Backport from mainline
++	2019-10-17  Richard Biener  <rguenther@suse.de>
++
++	PR debug/91887
++	* dwarf2out.c (gen_formal_parameter_die): Also try to match
++	context_die against a DW_TAG_GNU_formal_parameter_pack parent.
++
 +2019-10-21  Jakub Jelinek  <jakub@redhat.com>
 +
 +	Backported from mainline
@@ -1338,7 +1368,7 @@ index 7f6557d8018..d213669fdb4 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +1293,7 @@
+@@ -513,7 +1319,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -6881,10 +6911,41 @@ index 6f6f768f371..4becdcf1cbb 100644
        else
  	/* Every other call, including pure functions, may read any memory
 diff --git a/gcc/dwarf2out.c b/gcc/dwarf2out.c
-index 1cec00f2b85..60a986e1c30 100644
+index 1cec00f2b85..55a73e12cc2 100644
 --- a/gcc/dwarf2out.c
 +++ b/gcc/dwarf2out.c
-@@ -26647,16 +26647,12 @@ dwarf2out_late_global_decl (tree decl)
+@@ -22284,19 +22284,18 @@ gen_formal_parameter_die (tree node, tree origin, bool emit_name_p,
+       /* If the contexts differ, we may not be talking about the same
+ 	 thing.
+ 	 ???  When in LTO the DIE parent is the "abstract" copy and the
+-	 context_die is the specification "copy".  But this whole block
+-	 should eventually be no longer needed.  */
+-      if (parm_die && parm_die->die_parent != context_die && !in_lto_p)
++	 context_die is the specification "copy".  */
++      if (parm_die
++	  && parm_die->die_parent != context_die
++	  && (parm_die->die_parent->die_tag != DW_TAG_GNU_formal_parameter_pack
++	      || parm_die->die_parent->die_parent != context_die)
++	  && !in_lto_p)
+ 	{
+-	  if (!DECL_ABSTRACT_P (node))
+-	    {
+-	      /* This can happen when creating an inlined instance, in
+-		 which case we need to create a new DIE that will get
+-		 annotated with DW_AT_abstract_origin.  */
+-	      parm_die = NULL;
+-	    }
+-	  else
+-	    gcc_unreachable ();
++	  gcc_assert (!DECL_ABSTRACT_P (node));
++	  /* This can happen when creating a concrete instance, in
++	     which case we need to create a new DIE that will get
++	     annotated with DW_AT_abstract_origin.  */
++	  parm_die = NULL;
+ 	}
+ 
+       if (parm_die && parm_die->die_parent == NULL)
+@@ -26647,16 +26646,12 @@ dwarf2out_late_global_decl (tree decl)
      {
        dw_die_ref die = lookup_decl_die (decl);
  
@@ -12114,10 +12175,39 @@ index 29f6cdc4667..33b4be79c0f 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..54707bd1e06 100644
+index bc11ae4ae0b..8e62740d260 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,540 @@
+@@ -1,3 +1,569 @@
++2019-10-23  Martin Liska  <mliska@suse.cz>
++
++	Backport from mainline
++	2019-09-27  Jakub Jelinek  <jakub@redhat.com>
++
++	PR tree-optimization/91885
++	* gcc.dg/pr91885.c (__int64_t): Change from long to long long.
++	(__uint64_t): Change from unsigned long to unsigned long long.
++
++2019-10-23  Martin Liska  <mliska@suse.cz>
++
++	Backport from mainline
++	2019-09-26  Martin Liska  <mliska@suse.cz>
++
++	PR tree-optimization/91885
++	* gcc.dg/pr91885.c: New test.
++
++2019-10-23  Eric Botcazou  <ebotcazou@adacore.com>
++
++	* gcc.c-torture/execute/20191023-1.c: New test.
++
++2019-10-23  Richard Biener  <rguenther@suse.de>
++
++	Backport from mainline
++	2019-10-17  Richard Biener  <rguenther@suse.de>
++
++	PR debug/91887
++	* g++.dg/debug/dwarf2/pr91887.C: New testcase.
++
 +2019-10-21  Jakub Jelinek  <jakub@redhat.com>
 +
 +	Backported from mainline
@@ -12658,7 +12748,7 @@ index bc11ae4ae0b..54707bd1e06 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +964,7 @@
+@@ -427,7 +993,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -14036,6 +14126,24 @@ index 00000000000..dcaca3e4070
 +}
 +
 +static_assert("test"_udl == 1);
+diff --git a/gcc/testsuite/g++.dg/debug/dwarf2/pr91887.C b/gcc/testsuite/g++.dg/debug/dwarf2/pr91887.C
+new file mode 100644
+index 00000000000..6cd99cc9bb8
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/debug/dwarf2/pr91887.C
+@@ -0,0 +1,12 @@
++// { dg-do compile }
++// { dg-require-effective-target c++11 }
++// { dg-options "-g -fdebug-types-section" }
++class A {
++public:
++  A();
++  template <typename U> A(U);
++};
++template <class> struct B { typedef A type; };
++template <class R, typename... Args>
++int Bind(R(Args...), typename B<Args>::type...) { return 0; }
++void KeepBufferRefs(A, A) { A a, b(Bind(KeepBufferRefs, a, b)); }
 diff --git a/gcc/testsuite/g++.dg/expr/cond15.C b/gcc/testsuite/g++.dg/expr/cond15.C
 new file mode 100644
 index 00000000000..4a9d057a757
@@ -14680,6 +14788,85 @@ index 00000000000..c78715ef2c1
 +    __builtin_abort ();
 +  return 0;
 +}
+diff --git a/gcc/testsuite/gcc.c-torture/execute/20191023-1.c b/gcc/testsuite/gcc.c-torture/execute/20191023-1.c
+new file mode 100644
+index 00000000000..3811ebca151
+--- /dev/null
++++ b/gcc/testsuite/gcc.c-torture/execute/20191023-1.c
+@@ -0,0 +1,73 @@
++/* PR tree-optimization/92131 */
++/* Testcase by Armin Rigo <arigo@tunes.org> */
++
++long b, c, d, e, f, i;
++char g, h, j, k;
++int *aa;
++
++static void error (void) __attribute__((noipa));
++static void error (void) { __builtin_abort(); }
++
++static void see_me_here (void) __attribute__((noipa));
++static void see_me_here (void) {}
++
++static void aaa (void) __attribute__((noipa));
++static void aaa (void) {}
++
++static void a (void) __attribute__((noipa));
++static void a (void) {
++  long am, ao;
++  if (aa == 0) {
++    aaa();
++    if (j)
++      goto ay;
++  }
++  return;
++ay:
++  aaa();
++  if (k) {
++    aaa();
++    goto az;
++  }
++  return;
++az:
++  if (i)
++    if (g)
++      if (h)
++        if (e)
++          goto bd;
++  return;
++bd:
++  am = 0;
++  while (am < e) {
++    switch (c) {
++    case 8:
++      goto bh;
++    case 4:
++      return;
++    }
++  bh:
++    if (am >= 0)
++      b = -am;
++    ao = am + b;
++    f = ao & 7;
++    if (f == 0)
++      see_me_here();
++    if (ao >= 0)
++      am++;
++    else
++      error();
++  }
++}
++
++int main (void)
++{
++    j++;
++    k++;
++    i++;
++    g++;
++    h++;
++    e = 1;
++    a();
++    return 0;
++}
 diff --git a/gcc/testsuite/gcc.c-torture/execute/pr91597.c b/gcc/testsuite/gcc.c-torture/execute/pr91597.c
 new file mode 100644
 index 00000000000..6a917cb58af
@@ -15117,6 +15304,59 @@ index 00000000000..1cc3e40ccbc
 +  if (f10 (0x1.002004p+0f))
 +    __builtin_abort ();
 +  return 0;
++}
+diff --git a/gcc/testsuite/gcc.dg/pr91885.c b/gcc/testsuite/gcc.dg/pr91885.c
+new file mode 100644
+index 00000000000..35be32be559
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/pr91885.c
+@@ -0,0 +1,47 @@
++/* { dg-do compile } */
++/* { dg-options "-O3 -fprofile-generate" } */
++/* { dg-require-profiling "-fprofile-generate" } */
++
++typedef signed long long int __int64_t;
++typedef unsigned long long int __uint64_t;
++typedef __int64_t int64_t;
++typedef __uint64_t uint64_t;
++inline void
++BLI_endian_switch_int64 (int64_t *val)
++{
++  uint64_t tval = *val;
++  *val = ((tval >> 56)) | ((tval << 40) & 0x00ff000000000000ll)
++	 | ((tval << 24) & 0x0000ff0000000000ll)
++	 | ((tval << 8) & 0x000000ff00000000ll)
++	 | ((tval >> 8) & 0x00000000ff000000ll)
++	 | ((tval >> 24) & 0x0000000000ff0000ll)
++	 | ((tval >> 40) & 0x000000000000ff00ll) | ((tval << 56));
++}
++typedef struct anim_index_entry
++{
++  unsigned long long seek_pos_dts;
++  unsigned long long pts;
++} anim_index_entry;
++extern struct anim_index_entry *
++MEM_callocN (int);
++struct anim_index
++{
++  int num_entries;
++  struct anim_index_entry *entries;
++};
++struct anim_index *
++IMB_indexer_open (const char *name)
++{
++  char header[13];
++  struct anim_index *idx;
++  int i;
++  idx->entries = MEM_callocN (8);
++  if (((1 == 0) != (header[8] == 'V')))
++    {
++      for (i = 0; i < idx->num_entries; i++)
++	{
++	  BLI_endian_switch_int64 ((int64_t *) &idx->entries[i].seek_pos_dts);
++	  BLI_endian_switch_int64 ((int64_t *) &idx->entries[i].pts);
++	}
++    }
 +}
 diff --git a/gcc/testsuite/gcc.dg/torture/pr90278.c b/gcc/testsuite/gcc.dg/torture/pr90278.c
 new file mode 100644
@@ -17673,6 +17913,19 @@ index 17769c88b6a..8263889cbe4 100644
  				    alignment_support_scheme, NULL_TREE,
  				    &at_loop);
        if (alignment_support_scheme == dr_explicit_realign_optimized)
+diff --git a/gcc/tree-vectorizer.c b/gcc/tree-vectorizer.c
+index d27104933a9..d89ec3b7c76 100644
+--- a/gcc/tree-vectorizer.c
++++ b/gcc/tree-vectorizer.c
+@@ -941,7 +941,7 @@ try_vectorize_loop_1 (hash_table<simduid_to_vf> *&simduid_to_vf_htab,
+ 	      fold_loop_internal_call (loop_vectorized_call,
+ 				       boolean_true_node);
+ 	      loop_vectorized_call = NULL;
+-	      ret |= TODO_cleanup_cfg;
++	      ret |= TODO_cleanup_cfg | TODO_update_ssa_only_virtuals;
+ 	    }
+ 	}
+       /* If outer loop vectorization fails for LOOP_VECTORIZED guarded
 diff --git a/gcc/tree-vectorizer.h b/gcc/tree-vectorizer.h
 index d5fd4690b1d..148b9a7f215 100644
 --- a/gcc/tree-vectorizer.h
@@ -17720,7 +17973,7 @@ index d5fd4690b1d..148b9a7f215 100644
     purposes while vectorizing the loop described by LOOP_VINFO.
     Pick a reasonable estimate if the vectorization factor isn't
 diff --git a/gcc/tree-vrp.c b/gcc/tree-vrp.c
-index 795d7184a65..4c9f8853fac 100644
+index 795d7184a65..2140101d7d2 100644
 --- a/gcc/tree-vrp.c
 +++ b/gcc/tree-vrp.c
 @@ -1702,9 +1702,7 @@ extract_range_from_binary_expr (value_range_base *vr,
@@ -17734,6 +17987,32 @@ index 795d7184a65..4c9f8853fac 100644
  	    vr->set_null (expr_type);
  	  else
  	    vr->set_varying ();
+@@ -1772,18 +1770,19 @@ extract_range_from_binary_expr (value_range_base *vr,
+ 	  combine_bound (code, wmin, min_ovf, expr_type, min_op0, min_op1);
+ 	  combine_bound (code, wmax, max_ovf, expr_type, max_op0, max_op1);
+ 
+-	  /* If we have overflow for the constant part and the resulting
+-	     range will be symbolic, drop to VR_VARYING.  */
+-	  if (((bool)min_ovf && sym_min_op0 != sym_min_op1)
+-	      || ((bool)max_ovf && sym_max_op0 != sym_max_op1))
++	  /* If the resulting range will be symbolic, we need to eliminate any
++	     explicit or implicit overflow introduced in the above computation
++	     because compare_values could make an incorrect use of it.  That's
++	     why we require one of the ranges to be a singleton.  */
++	  if ((sym_min_op0 != sym_min_op1 || sym_max_op0 != sym_max_op1)
++	      && ((bool)min_ovf || (bool)max_ovf
++		  || (min_op0 != max_op0 && min_op1 != max_op1)))
+ 	    {
+ 	      vr->set_varying ();
+ 	      return;
+ 	    }
+ 
+ 	  /* Adjust the range for possible overflow.  */
+-	  min = NULL_TREE;
+-	  max = NULL_TREE;
+ 	  set_value_range_with_overflow (type, min, max, expr_type,
+ 					 wmin, wmax, min_ovf, max_ovf);
+ 	  if (type == VR_VARYING)
 diff --git a/gcc/tree.c b/gcc/tree.c
 index 73102c4e75b..b20781ce00b 100644
 --- a/gcc/tree.c
