@@ -4,6 +4,9 @@ akrl (1):
 anlauf (1):
       2019-09-05  Harald Anlauf  <anlauf@gmx.de>
 
+avieira (1):
+      [arm] Backport -- Fix multilibs for Armv7-R
+
 bergner (1):
       Backport from mainline 	2019-10-08  Tulio Magno Quites Machado Filho  <tuliom@linux.ibm.com>
 
@@ -244,7 +247,7 @@ marxin (7):
       Backport r276141
       Backport r276178
 
-mpolacek (11):
+mpolacek (12):
       PR c++/81429 - wrong parsing of constructor with C++11 attribute. 	* parser.c (cp_parser_constructor_declarator_p): Handle the scenario 	when a parameter declaration begins with [[attribute]].
       PR c++/87519 - bogus warning with -Wsign-conversion. 	* typeck.c (cp_build_binary_op): Use same_type_p instead of comparing 	the types directly.
       PR c++/90473 - wrong code with nullptr in default argument. 	* call.c (null_ptr_cst_p): Update quote from the standard. 	* decl.c (check_default_argument): Don't return nullptr when the arg 	has side-effects.
@@ -256,6 +259,7 @@ mpolacek (11):
       PR c++/91740 - ICE with constexpr call and ?: in ARRAY_REF. 	* pt.c (build_non_dependent_expr): Call build_non_dependent_expr for 	the first operand.
       PR c++/92106 - ICE with structured bindings and -Wreturn-local-addr.
       PR c++/92062 - ODR-use ignored for static member of class template.
+      * decl.c (reshape_init_r): Add missing space.
 
 msebor (1):
       Backport from mainline
@@ -578,10 +582,18 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..78fb07342cf 100644
+index 7f6557d8018..e98c5994b38 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,823 @@
+@@ -1,3 +1,831 @@
++2019-10-24  Mihail Ionescu  <mihail.ionescu@arm.com>
++
++	Backport from mainline
++	2019-10-18  Andre Vieira  <andre.simoesdiasvieira@arm.com>
++
++	* config/arm/t-multilib: Add new multilib variants and new
++	mappings.
++
 +2019-10-24  Iain Sandoe  <iain@sandoe.co.uk>
 +
 +	* config/rs6000/darwin.h (ASM_OUTPUT_MAX_SKIP_ALIGN): Guard
@@ -1405,7 +1417,7 @@ index 7f6557d8018..78fb07342cf 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +1333,7 @@
+@@ -513,7 +1341,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -2659,6 +2671,85 @@ index 2c7acc698ea..6857ab1787d 100644
  #pragma GCC pop_options
  
  #ifdef __cplusplus
+diff --git a/gcc/config/arm/t-multilib b/gcc/config/arm/t-multilib
+index 08526302283..dc97c8f09fb 100644
+--- a/gcc/config/arm/t-multilib
++++ b/gcc/config/arm/t-multilib
+@@ -24,6 +24,8 @@
+ # values during the configure step.  We enforce this during the
+ # top-level configury.
+ 
++s-mlib: $(srcdir)/config/arm/t-multilib $(srcdir)/config/arm/t-aprofile $(srcdir)/config/arm/t-rmprofile
++
+ MULTILIB_OPTIONS     =
+ MULTILIB_DIRNAMES    =
+ MULTILIB_EXCEPTIONS  =
+@@ -63,6 +65,8 @@ all_early_arch		:= armv5tej armv6 armv6j armv6k armv6z armv6kz \
+ v7_a_arch_variants	:= $(call all_feat_combs, mp sec)
+ v7_a_nosimd_variants	:= +fp +vfpv3 +vfpv3-d16-fp16 +vfpv3-fp16 +vfpv4-d16 +vfpv4
+ v7_a_simd_variants	:= +simd +neon-fp16 +neon-vfpv4
++v7_r_sp_variants	:= +fp.sp +fp.sp+idiv +vfpv3xd-fp16 +vfpv3xd-fp16+idiv
++v7_r_dp_variants	:= +fp +fp+idiv +vfpv3-d16-fp16 +vfpv3-d16-fp16+idiv
+ v7ve_nosimd_variants	:= +vfpv3-d16 +vfpv3 +vfpv3-d16-fp16 +vfpv3-fp16 +fp +vfpv4
+ v7ve_vfpv3_simd_variants := +neon +neon-fp16
+ v7ve_vfpv4_simd_variants := +simd
+@@ -86,8 +90,8 @@ SEP := $(and $(HAS_APROFILE),$(HAS_RMPROFILE),/)
+ MULTILIB_OPTIONS	+= marm/mthumb
+ MULTILIB_DIRNAMES	+= arm thumb
+ 
+-MULTILIB_OPTIONS	+= march=armv5te+fp/march=armv7/march=armv7+fp/$(MULTI_ARCH_OPTS_A)$(SEP)$(MULTI_ARCH_OPTS_RM)
+-MULTILIB_DIRNAMES	+= v5te v7 v7+fp $(MULTI_ARCH_DIRS_A) $(MULTI_ARCH_DIRS_RM)
++MULTILIB_OPTIONS	+= march=armv5te+fp/march=armv7/march=armv7+fp/march=armv7-r+fp.sp/$(MULTI_ARCH_OPTS_A)$(SEP)$(MULTI_ARCH_OPTS_RM)
++MULTILIB_DIRNAMES	+= v5te v7 v7+fp v7-r+fp.sp $(MULTI_ARCH_DIRS_A) $(MULTI_ARCH_DIRS_RM)
+ 
+ MULTILIB_OPTIONS	+= mfloat-abi=soft/mfloat-abi=softfp/mfloat-abi=hard
+ MULTILIB_DIRNAMES	+= nofp softfp hard
+@@ -100,22 +104,31 @@ MULTILIB_REQUIRED	+= mthumb/march=armv7/mfloat-abi=soft
+ MULTILIB_REQUIRED	+= mthumb/march=armv7+fp/mfloat-abi=softfp
+ MULTILIB_REQUIRED	+= mthumb/march=armv7+fp/mfloat-abi=hard
+ 
+-# Map v7-r down onto common v7 code.
++MULTILIB_REQUIRED	+= mthumb/march=armv7-r+fp.sp/mfloat-abi=softfp
++MULTILIB_REQUIRED	+= mthumb/march=armv7-r+fp.sp/mfloat-abi=hard
++
++# Map v7-r with double precision down onto common v7 code.
+ MULTILIB_MATCHES	+= march?armv7=march?armv7-r
+ MULTILIB_MATCHES	+= march?armv7=march?armv7-r+idiv
+-MULTILIB_MATCHES	+= march?armv7+fp=march?armv7-r+fp
+-MULTILIB_MATCHES	+= march?armv7+fp=march?armv7-r+fp+idiv
++MULTILIB_MATCHES	+= $(foreach ARCH, $(v7_r_dp_variants), \
++			     march?armv7+fp=march?armv7-r$(ARCH))
++
++# Map v7-r single precision variants to v7-r with single precision.
++MULTILIB_MATCHES	+= $(foreach ARCH, \
++			     $(filter-out +fp.sp, $(v7_r_sp_variants)), \
++			     march?armv7-r+fp.sp=march?armv7-r$(ARCH))
+ 
+ MULTILIB_MATCHES	+= $(foreach ARCH, $(all_early_arch), \
+ 			     march?armv5te+fp=march?$(ARCH)+fp)
+-# Map v8-r down onto common v7 code.
++# Map v8-r down onto common v7 code or v7-r sp.
+ MULTILIB_MATCHES	+= march?armv7=march?armv8-r
+ MULTILIB_MATCHES	+= $(foreach ARCH, $(v8_r_nosimd_variants), \
+ 			     march?armv7=march?armv8-r$(ARCH))
+ MULTILIB_MATCHES	+= $(foreach ARCH,+simd +crypto, \
+ 			     march?armv7+fp=march?armv8-r$(ARCH) \
+ 			     march?armv7+fp=march?armv8-r+crc$(ARCH))
+-
++MULTILIB_MATCHES	+= march?armv7-r+fp.sp=march?armv8-r+fp.sp
++MULTILIB_MATCHES	+= march?armv7-r+fp.sp=march?armv8-r+crc+fp.sp
+ 
+ ifeq (,$(HAS_APROFILE))
+ # Map all v7-a
+@@ -177,7 +190,7 @@ MULTILIB_MATCHES	+= $(foreach ARCH, $(v8_5_a_simd_variants), \
+ MULTILIB_REUSE		+= mthumb/march.armv7/mfloat-abi.soft=marm/march.armv7/mfloat-abi.soft
+ 
+ MULTILIB_REUSE		+= $(foreach ABI, hard softfp, \
+-			     $(foreach ARCH, armv7+fp, \
++			     $(foreach ARCH, armv7+fp armv7-r+fp\.sp, \
+ 			       mthumb/march.$(ARCH)/mfloat-abi.$(ABI)=marm/march.$(ARCH)/mfloat-abi.$(ABI)))
+ 
+ # Softfp but no FP, use the soft-float libraries.
 diff --git a/gcc/config/avr/avr.c b/gcc/config/avr/avr.c
 index a9f72b314c2..cb4b14ae379 100644
 --- a/gcc/config/avr/avr.c
@@ -5949,10 +6040,14 @@ index 19bd616d67f..ee5612441e2 100644
  	  rtx tmp_reg = gen_rtx_REG (Pmode, A9_REG);
  	  emit_move_insn (tmp_reg, GEN_INT (total_size -
 diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
-index c977850d067..e8a17c7edc4 100644
+index c977850d067..8f801de7560 100644
 --- a/gcc/cp/ChangeLog
 +++ b/gcc/cp/ChangeLog
-@@ -1,3 +1,181 @@
+@@ -1,3 +1,185 @@
++2019-10-24  Marek Polacek  <polacek@redhat.com>
++
++	* decl.c (reshape_init_r): Add missing space.
++
 +2019-10-22  Marek Polacek  <polacek@redhat.com>
 +
 +	Backported from mainline
@@ -6134,7 +6229,7 @@ index c977850d067..e8a17c7edc4 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -16,7 +194,7 @@
+@@ -16,7 +198,7 @@
  
  	Backported from mainline
  	2019-08-02  Marek Polacek  <polacek@redhat.com>
@@ -6377,7 +6472,7 @@ index ff4ce068a83..e15a07392ca 100644
  extern bool function_parameter_pack_p		(const_tree);
  extern bool function_parameter_expanded_from_pack_p (tree, tree);
 diff --git a/gcc/cp/decl.c b/gcc/cp/decl.c
-index b57ded813b6..2b207e4759b 100644
+index b57ded813b6..9769c1cb15d 100644
 --- a/gcc/cp/decl.c
 +++ b/gcc/cp/decl.c
 @@ -4474,13 +4474,27 @@ cp_fname_init (const char* name, tree *type_p)
@@ -6423,6 +6518,15 @@ index b57ded813b6..2b207e4759b 100644
  	last_nonzero = index;
  
        /* This can happen with an invalid initializer (c++/54501).  */
+@@ -6114,7 +6129,7 @@ reshape_init_r (tree type, reshape_iter *d, bool first_initializer_p,
+ 			       (CONSTRUCTOR_ELT (stripped_init,0)->value))))
+ 		{
+ 		  if (complain & tf_error)
+-		    error ("too many braces around scalar initializer"
++		    error ("too many braces around scalar initializer "
+ 		           "for type %qT", type);
+ 		  init = error_mark_node;
+ 		}
 @@ -9539,10 +9554,12 @@ build_ptrmemfunc_type (tree type)
    TYPE_PTRMEMFUNC_FLAG (t) = 1;
  
@@ -12253,10 +12357,17 @@ index 29f6cdc4667..33b4be79c0f 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..8e62740d260 100644
+index bc11ae4ae0b..84c4c6b9c06 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,569 @@
+@@ -1,3 +1,576 @@
++2019-10-24  Mihail Ionescu  <mihail.ionescu@arm.com>
++
++	Backport from mainline
++	2019-10-18  Andre Vieira  <andre.simoesdiasvieira@arm.com>
++
++	* gcc.target/arm/multilib.exp: Add extra tests.
++
 +2019-10-23  Martin Liska  <mliska@suse.cz>
 +
 +	Backport from mainline
@@ -12826,7 +12937,7 @@ index bc11ae4ae0b..8e62740d260 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +993,7 @@
+@@ -427,7 +1000,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -15644,6 +15755,39 @@ index 00000000000..e6cbfc0b33e
 +{
 +  return __crc32cw (a, b);
 +}
+diff --git a/gcc/testsuite/gcc.target/arm/multilib.exp b/gcc/testsuite/gcc.target/arm/multilib.exp
+index d82306ed630..dcea829965e 100644
+--- a/gcc/testsuite/gcc.target/arm/multilib.exp
++++ b/gcc/testsuite/gcc.target/arm/multilib.exp
+@@ -753,6 +753,28 @@ if {[multilib_config "rmprofile"] } {
+ 	{-march=armv8-m.main+fp.dp -mfpu=fpv5-d16 -mfloat-abi=softfp} "thumb/v8-m.main+dp/softfp"
+ 	{-march=armv8-m.main+fp+dsp -mfpu=fpv5-d16 -mfloat-abi=softfp} "thumb/v8-m.main+dp/softfp"
+ 	{-march=armv8-m.main+fp.dp+dsp -mfpu=fpv5-d16 -mfloat-abi=softfp} "thumb/v8-m.main+dp/softfp"
++	{-march=armv7-r+fp -mfpu=auto -mfloat-abi=softfp} "thumb/v7+fp/softfp"
++	{-march=armv7-r+fp -mfpu=auto -mfloat-abi=hard} "thumb/v7+fp/hard"
++	{-march=armv7-r+fp+idiv -mfpu=auto -mfloat-abi=softfp} "thumb/v7+fp/softfp"
++	{-march=armv7-r+fp+idiv -mfpu=auto -mfloat-abi=hard} "thumb/v7+fp/hard"
++	{-march=armv7-r+vfpv3-d16-fp16 -mfpu=auto -mfloat-abi=softfp} "thumb/v7+fp/softfp"
++	{-march=armv7-r+vfpv3-d16-fp16 -mfpu=auto -mfloat-abi=hard} "thumb/v7+fp/hard"
++	{-march=armv7-r+vfpv3-d16-fp16+idiv -mfpu=auto -mfloat-abi=softfp} "thumb/v7+fp/softfp"
++	{-march=armv7-r+vfpv3-d16-fp16+idiv -mfpu=auto -mfloat-abi=hard} "thumb/v7+fp/hard"
++	{-march=armv7-r+fp.sp -mfpu=auto -mfloat-abi=softfp} "thumb/v7-r+fp.sp/softfp"
++	{-march=armv7-r+fp.sp -mfpu=auto -mfloat-abi=hard} "thumb/v7-r+fp.sp/hard"
++	{-march=armv7-r+fp.sp+idiv -mfpu=auto -mfloat-abi=softfp} "thumb/v7-r+fp.sp/softfp"
++	{-march=armv7-r+fp.sp+idiv -mfpu=auto -mfloat-abi=hard} "thumb/v7-r+fp.sp/hard"
++	{-march=armv7-r+vfpv3xd -mfpu=auto -mfloat-abi=softfp} "thumb/v7-r+fp.sp/softfp"
++	{-march=armv7-r+vfpv3xd -mfpu=auto -mfloat-abi=hard} "thumb/v7-r+fp.sp/hard"
++	{-march=armv7-r+vfpv3xd+idiv -mfpu=auto -mfloat-abi=softfp} "thumb/v7-r+fp.sp/softfp"
++	{-march=armv7-r+vfpv3xd+idiv -mfpu=auto -mfloat-abi=hard} "thumb/v7-r+fp.sp/hard"
++	{-march=armv7-r+vfpv3xd-fp16+idiv -mfpu=auto -mfloat-abi=softfp} "thumb/v7-r+fp.sp/softfp"
++	{-march=armv7-r+vfpv3xd-fp16+idiv -mfpu=auto -mfloat-abi=hard} "thumb/v7-r+fp.sp/hard"
++	{-march=armv8-r+fp.sp -mfpu=auto -mfloat-abi=softfp} "thumb/v7-r+fp.sp/softfp"
++	{-march=armv8-r+fp.sp -mfpu=auto -mfloat-abi=hard} "thumb/v7-r+fp.sp/hard"
++	{-march=armv8-r+crc+fp.sp -mfpu=auto -mfloat-abi=softfp} "thumb/v7-r+fp.sp/softfp"
++	{-march=armv8-r+crc+fp.sp -mfpu=auto -mfloat-abi=hard} "thumb/v7-r+fp.sp/hard"
+     } {
+ 	check_multi_dir $opts $dir
+     }
 diff --git a/gcc/testsuite/gcc.target/i386/pr87853.c b/gcc/testsuite/gcc.target/i386/pr87853.c
 new file mode 100644
 index 00000000000..9a288879679
