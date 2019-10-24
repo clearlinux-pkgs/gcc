@@ -118,7 +118,7 @@ gjl (2):
       * doc/avr-mmcu.texi: Re-generate because config/avr/avr-devices.c 	was changed in r269487.
       Backport from 2019-10-18 trunk r277143. 	PR target/86040 	* config/avr/avr.c (avr_out_lpm): Do not shortcut-return.
 
-iains (9):
+iains (10):
       Darwin, libsanitizer - remove reference to __cxa_rethrow_primary_exception.
       [Darwin, PPC] Fix fail of cpp/assert4.c
       [Darwin, fixincludes] Backport fix for PR83531
@@ -128,6 +128,7 @@ iains (9):
       [Darwin] Pick up SDKROOT as the sysroot fallback.
       [Darwin] Update machopic_legitimize_pic_address.
       [Darwin] Amend section for constants with relocations.
+      [Darwin, PPC] Check for out of range asm values.
 
 ian (2):
       go/internal/gccgoimporter: support embedded field in pointer loop
@@ -577,10 +578,15 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..302d392e144 100644
+index 7f6557d8018..78fb07342cf 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,818 @@
+@@ -1,3 +1,823 @@
++2019-10-24  Iain Sandoe  <iain@sandoe.co.uk>
++
++	* config/rs6000/darwin.h (ASM_OUTPUT_MAX_SKIP_ALIGN): Guard
++	against out of range max skip or log values.
++
 +2019-10-23  Peter Bergner  <bergner@linux.ibm.com>
 +
 +	Backport from mainline
@@ -1399,7 +1405,7 @@ index 7f6557d8018..302d392e144 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +1328,7 @@
+@@ -513,7 +1333,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -4442,7 +4448,7 @@ index 4a1150e0994..8d535acd428 100644
    [(parallel [(set (reg:CCFP CR6_REGNO)
  		   (compare:CCFP
 diff --git a/gcc/config/rs6000/darwin.h b/gcc/config/rs6000/darwin.h
-index d3a59f42c37..98ecf0ad2fe 100644
+index d3a59f42c37..6f750c69e0e 100644
 --- a/gcc/config/rs6000/darwin.h
 +++ b/gcc/config/rs6000/darwin.h
 @@ -53,11 +53,23 @@
@@ -4473,6 +4479,18 @@ index d3a59f42c37..98ecf0ad2fe 100644
        builtin_define ("__NATURAL_ALIGNMENT__");		\
        darwin_cpp_builtins (pfile);			\
      }							\
+@@ -279,9 +291,9 @@ extern int darwin_emit_branch_islands;
+ /* This is supported in cctools 465 and later.  The macro test
+    above prevents using it in earlier build environments.  */
+ #define ASM_OUTPUT_MAX_SKIP_ALIGN(FILE,LOG,MAX_SKIP)          \
+-  if ((LOG) != 0)                                             \
++  if ((LOG) > 0)                                             \
+     {                                                         \
+-      if ((MAX_SKIP) == 0)                                    \
++      if ((MAX_SKIP) <= 0)                                    \
+         fprintf ((FILE), "\t.p2align %d\n", (LOG));           \
+       else                                                    \
+         fprintf ((FILE), "\t.p2align %d,,%d\n", (LOG), (MAX_SKIP)); \
 diff --git a/gcc/config/rs6000/rs6000-builtin.def b/gcc/config/rs6000/rs6000-builtin.def
 index 0a2bdb79e15..4d4f3b3e746 100644
 --- a/gcc/config/rs6000/rs6000-builtin.def
