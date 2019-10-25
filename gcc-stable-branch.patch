@@ -122,6 +122,10 @@ gjl (2):
       * doc/avr-mmcu.texi: Re-generate because config/avr/avr-devices.c 	was changed in r269487.
       Backport from 2019-10-18 trunk r277143. 	PR target/86040 	* config/avr/avr.c (avr_out_lpm): Do not shortcut-return.
 
+hubicka (2):
+      Backport ggc_trim 	Backport from mainline
+      free summary vectors. 	Backport from mainline 	2019-10-24  Jan Hubicka  <hubicka@ucw.cz> 	* symbols-summary.h (fast_function_summary<T *, V>::release, 	fast_call_summary<T *, V>::release): Free m_vector.
+
 iains (10):
       Darwin, libsanitizer - remove reference to __cxa_rethrow_primary_exception.
       [Darwin, PPC] Fix fail of cpp/assert4.c
@@ -583,10 +587,33 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..e98c5994b38 100644
+index 7f6557d8018..5fb404aefc4 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,831 @@
+@@ -1,3 +1,854 @@
++2019-10-25  Jan Hubicka  <hubicka@ucw.cz>
++
++	Backport from mainline
++	2019-10-24  Jan Hubicka  <hubicka@ucw.cz>
++	* symbols-summary.h (fast_function_summary<T *, V>::release,
++	fast_call_summary<T *, V>::release): Free m_vector.
++
++2019-10-25  Jan Hubicka  <hubicka@ucw.cz>
++
++	Backport from mainline
++
++	2019-10-18  Jakub Jelinek  <jakub@redhat.com>
++	PR middle-end/92153
++	* ggc-page.c (release_pages): Read g->alloc_size before free rather
++	than after it.
++
++	2019-10-11  Jan Hubicka  <hubicka@ucw.cz>
++	* ggc-page.c (release_pages): Output statistics when !quiet_flag.
++	(ggc_collect): Dump later to not interfere with release_page dump.
++	(ggc_trim): New function.
++	* ggc-none.c (ggc_trim): New.
++	* ggc.h (ggc_trim): Declare.
++
 +2019-10-24  Mihail Ionescu  <mihail.ionescu@arm.com>
 +
 +	Backport from mainline
@@ -1418,7 +1445,7 @@ index 7f6557d8018..e98c5994b38 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +1341,7 @@
+@@ -513,7 +1364,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -9405,11 +9432,133 @@ index a46f375017b..3478cf59f91 100644
  #include "stor-layout.h"
  #include "tree-dfa.h"
  #include "builtins.h"
+diff --git a/gcc/ggc-none.c b/gcc/ggc-none.c
+index 6edec27868c..737429f9e49 100644
+--- a/gcc/ggc-none.c
++++ b/gcc/ggc-none.c
+@@ -72,3 +72,8 @@ void
+ ggc_grow (void)
+ {
+ }
++
++void
++ggc_trim (void)
++{
++}
 diff --git a/gcc/ggc-page.c b/gcc/ggc-page.c
-index 143986be58f..cd531e5b1e6 100644
+index 143986be58f..3c9636d0fe7 100644
 --- a/gcc/ggc-page.c
 +++ b/gcc/ggc-page.c
-@@ -2556,6 +2556,9 @@ ggc_pch_read (FILE *f, void *addr)
+@@ -1016,6 +1016,8 @@ free_page (page_entry *entry)
+ static void
+ release_pages (void)
+ {
++  size_t n1 = 0;
++  size_t n2 = 0;
+ #ifdef USING_MADVISE
+   page_entry *p, *start_p;
+   char *start;
+@@ -1061,6 +1063,7 @@ release_pages (void)
+           else
+             G.free_pages = p;
+           G.bytes_mapped -= mapped_len;
++	  n1 += len;
+ 	  continue;
+         }
+       prev = newprev;
+@@ -1092,6 +1095,7 @@ release_pages (void)
+       /* Don't count those pages as mapped to not touch the garbage collector
+          unnecessarily. */
+       G.bytes_mapped -= len;
++      n2 += len;
+       while (start_p != p)
+         {
+           start_p->discarded = true;
+@@ -1124,6 +1128,7 @@ release_pages (void)
+ 	}
+ 
+       munmap (start, len);
++      n1 += len;
+       G.bytes_mapped -= len;
+     }
+ 
+@@ -1151,11 +1156,21 @@ release_pages (void)
+       {
+ 	*gp = g->next;
+ 	G.bytes_mapped -= g->alloc_size;
++	n1 += g->alloc_size;
+ 	free (g->allocation);
+       }
+     else
+       gp = &g->next;
+ #endif
++  if (!quiet_flag && (n1 || n2))
++    {
++      fprintf (stderr, " {GC");
++      if (n1)
++	fprintf (stderr, " released %luk", (unsigned long)(n1 / 1024));
++      if (n2)
++	fprintf (stderr, " madv_dontneed %luk", (unsigned long)(n2 / 1024));
++      fprintf (stderr, "}");
++    }
+ }
+ 
+ /* This table provides a fast way to determine ceil(log_2(size)) for
+@@ -2178,19 +2193,22 @@ ggc_collect (void)
+     return;
+ 
+   timevar_push (TV_GC);
+-  if (!quiet_flag)
+-    fprintf (stderr, " {GC %luk -> ", (unsigned long) G.allocated / 1024);
+   if (GGC_DEBUG_LEVEL >= 2)
+     fprintf (G.debug_file, "BEGIN COLLECTING\n");
+ 
+   /* Zero the total allocated bytes.  This will be recalculated in the
+      sweep phase.  */
++  size_t allocated = G.allocated;
+   G.allocated = 0;
+ 
+   /* Release the pages we freed the last time we collected, but didn't
+      reuse in the interim.  */
+   release_pages ();
+ 
++  /* Output this later so we do not interfere with release_pages.  */
++  if (!quiet_flag)
++    fprintf (stderr, " {GC %luk -> ", (unsigned long) allocated / 1024);
++
+   /* Indicate that we've seen collections at this context depth.  */
+   G.context_depth_collections = ((unsigned long)1 << (G.context_depth + 1)) - 1;
+ 
+@@ -2221,9 +2239,25 @@ ggc_collect (void)
+     fprintf (G.debug_file, "END COLLECTING\n");
+ }
+ 
+-/* Assume that all GGC memory is reachable and grow the limits for next collection.
+-   With checking, trigger GGC so -Q compilation outputs how much of memory really is
+-   reachable.  */
++/* Return free pages to the system.  */
++
++void
++ggc_trim ()
++{
++  timevar_push (TV_GC);
++  G.allocated = 0;
++  sweep_pages ();
++  release_pages ();
++  if (!quiet_flag)
++    fprintf (stderr, " {GC trimmed to %luk, %luk mapped}",
++	     (unsigned long) G.allocated / 1024,
++	     (unsigned long) G.bytes_mapped / 1024);
++  timevar_pop (TV_GC);
++}
++
++/* Assume that all GGC memory is reachable and grow the limits for next
++   collection.  With checking, trigger GGC so -Q compilation outputs how much
++   of memory really is reachable.  */
+ 
+ void
+ ggc_grow (void)
+@@ -2556,6 +2590,9 @@ ggc_pch_read (FILE *f, void *addr)
  
    count_old_page_tables = G.by_depth_in_use;
  
@@ -9419,7 +9568,7 @@ index 143986be58f..cd531e5b1e6 100644
    /* We've just read in a PCH file.  So, every object that used to be
       allocated is now free.  */
    clear_marks ();
-@@ -2584,8 +2587,6 @@ ggc_pch_read (FILE *f, void *addr)
+@@ -2584,8 +2621,6 @@ ggc_pch_read (FILE *f, void *addr)
  
    /* Allocate the appropriate page-table entries for the pages read from
       the PCH file.  */
@@ -9428,6 +9577,20 @@ index 143986be58f..cd531e5b1e6 100644
  
    for (i = 0; i < NUM_ORDERS; i++)
      {
+diff --git a/gcc/ggc.h b/gcc/ggc.h
+index 60273f2e57d..31606dc843f 100644
+--- a/gcc/ggc.h
++++ b/gcc/ggc.h
+@@ -243,6 +243,9 @@ extern const char *ggc_alloc_string (const char *contents, int length
+    function is called, not during allocations.  */
+ extern void ggc_collect	(void);
+ 
++/* Return unused memory pages to the system.  */
++extern void ggc_trim (void);
++
+ /* Assume that all GGC memory is reachable and grow the limits for next collection. */
+ extern void ggc_grow (void);
+ 
 diff --git a/gcc/gimplify.c b/gcc/gimplify.c
 index 98408b981dc..28e13a71021 100644
 --- a/gcc/gimplify.c
@@ -9664,6 +9827,33 @@ index ac971494054..10bd7c9becb 100644
  					&decoded_options,
  					&decoded_options_count);
  
+diff --git a/gcc/lto/ChangeLog b/gcc/lto/ChangeLog
+index eb2653be616..e99eb1520fe 100644
+--- a/gcc/lto/ChangeLog
++++ b/gcc/lto/ChangeLog
+@@ -1,3 +1,9 @@
++2019-10-25  Jan Hubicka  <hubicka@ucw.cz>
++
++	Backport from mainline
++	* lto-partition.c (add_symbol_to_partition_1): Update.
++	(undo_parittion): Update.
++
+ 2019-08-12  Release Manager
+ 
+ 	* GCC 9.2.0 released.
+diff --git a/gcc/lto/lto.c b/gcc/lto/lto.c
+index 4367928a515..be6942fce07 100644
+--- a/gcc/lto/lto.c
++++ b/gcc/lto/lto.c
+@@ -2446,6 +2446,8 @@ lto_wpa_write_files (void)
+ 
+   timevar_push (TV_WHOPR_WPA_IO);
+ 
++  ggc_trim ();
++
+   /* Generate a prefix for the LTRANS unit files.  */
+   blen = strlen (ltrans_output_list);
+   temp_filename = (char *) xmalloc (blen + sizeof ("2147483648.o"));
 diff --git a/gcc/match.pd b/gcc/match.pd
 index 039ddacfed1..bd3e3bf1ae9 100644
 --- a/gcc/match.pd
@@ -12330,6 +12520,28 @@ index 268a38799d6..01af063a222 100644
  	      && xmode_width > inner_width)
  	    nonzero
  	      |= (GET_MODE_MASK (GET_MODE (x)) & ~GET_MODE_MASK (inner_mode));
+diff --git a/gcc/symbol-summary.h b/gcc/symbol-summary.h
+index 0219f3a81ea..74544fbf879 100644
+--- a/gcc/symbol-summary.h
++++ b/gcc/symbol-summary.h
+@@ -461,6 +461,8 @@ fast_function_summary<T *, V>::release ()
+     if ((*m_vector)[i] != NULL)
+       this->release ((*m_vector)[i]);
+ 
++  vec_free (m_vector);
++
+   this->m_released = true;
+ }
+ 
+@@ -926,6 +928,8 @@ fast_call_summary<T *, V>::release ()
+     if ((*m_vector)[i] != NULL)
+       this->release ((*m_vector)[i]);
+ 
++  vec_free (m_vector);
++
+   this->m_released = true;
+ }
+ 
 diff --git a/gcc/symtab.c b/gcc/symtab.c
 index 29f6cdc4667..33b4be79c0f 100644
 --- a/gcc/symtab.c
