@@ -279,9 +279,10 @@ pault (2):
       2019-09-07  Paul Thomas  <pault@gcc.gnu.org>
       2019-09-21  Paul Thomas  <pault@gcc.gnu.org>
 
-rearnsha (2):
+rearnsha (3):
       [aarch64] PR target/91386 Use copy_rtx to avoid modifying original insns in peep2 pattern
       [arm]  PR target/89400 fix thumb1 unaligned access expansion
+      [arm][PR88167] Fix __builtin_return_address returns invalid address
 
 redi (27):
       PR libstdc++/90361 add missing macro definition
@@ -587,10 +588,32 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..5fb404aefc4 100644
+index 7f6557d8018..cd06ab2b24e 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,854 @@
+@@ -1,3 +1,876 @@
++2019-10-25  Richard Earnshaw  <rearnsha@arm.com>
++
++	Backport from mainline
++	2019-05-08  Mihail Ionescu  <mihail.ionescu@arm.com>
++	    Richard Earnshaw  <rearnsha@arm.com>
++	PR target/88167
++	* config/arm/arm.c (thumb1_prologue_unused_call_clobbered_lo_regs): New
++	function.
++	(thumb1_epilogue_unused_call_clobbered_lo_regs): New function.
++	(thumb1_compute_save_core_reg_mask): Don't force a spare work
++	register if both the epilogue and prologue can use call-clobbered
++	regs.
++	(thumb1_unexpanded_epilogue): Use
++	thumb1_epilogue_unused_call_clobbered_lo_regs.  Reverse the logic for
++	picking temporaries for restoring high regs to match that of the
++	prologue where possible.
++	(thumb1_expand_prologue): Add any usable call-clobbered low registers to
++	the list of work registers.  Detect if the return address is still live
++	at the end of the prologue and avoid using it for a work register if so.
++	If the return address is not live, add LR to the list of pushable regs
++	after the first pass.
++
 +2019-10-25  Jan Hubicka  <hubicka@ucw.cz>
 +
 +	Backport from mainline
@@ -1445,7 +1468,7 @@ index 7f6557d8018..5fb404aefc4 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +1364,7 @@
+@@ -513,7 +1386,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -2529,6 +2552,163 @@ index 984540f0b53..524379d3763 100644
  		    default:
  		      gcc_unreachable ();
  		    }
+diff --git a/gcc/config/arm/arm.c b/gcc/config/arm/arm.c
+index 45abcd89963..91bb65130b8 100644
+--- a/gcc/config/arm/arm.c
++++ b/gcc/config/arm/arm.c
+@@ -19670,6 +19670,35 @@ arm_compute_save_core_reg_mask (void)
+   return save_reg_mask;
+ }
+ 
++/* Return a mask for the call-clobbered low registers that are unused
++   at the end of the prologue.  */
++static unsigned long
++thumb1_prologue_unused_call_clobbered_lo_regs (void)
++{
++  unsigned long mask = 0;
++
++  for (int reg = 0; reg <= LAST_LO_REGNUM; reg++)
++    if (!callee_saved_reg_p (reg)
++	&& !REGNO_REG_SET_P (df_get_live_out (ENTRY_BLOCK_PTR_FOR_FN (cfun)),
++			     reg))
++      mask |= 1 << reg;
++  return mask;
++}
++
++/* Similarly for the start of the epilogue.  */
++static unsigned long
++thumb1_epilogue_unused_call_clobbered_lo_regs (void)
++{
++  unsigned long mask = 0;
++
++  for (int reg = 0; reg <= LAST_LO_REGNUM; reg++)
++    if (!callee_saved_reg_p (reg)
++	&& !REGNO_REG_SET_P (df_get_live_in (EXIT_BLOCK_PTR_FOR_FN (cfun)),
++			     reg))
++      mask |= 1 << reg;
++  return mask;
++}
++
+ /* Compute a bit mask of which core registers need to be
+    saved on the stack for the current function.  */
+ static unsigned long
+@@ -19701,10 +19730,19 @@ thumb1_compute_save_core_reg_mask (void)
+   if (mask & 0xff || thumb_force_lr_save ())
+     mask |= (1 << LR_REGNUM);
+ 
+-  /* Make sure we have a low work register if we need one.
+-     We will need one if we are going to push a high register,
+-     but we are not currently intending to push a low register.  */
++  bool call_clobbered_scratch
++    = (thumb1_prologue_unused_call_clobbered_lo_regs ()
++       && thumb1_epilogue_unused_call_clobbered_lo_regs ());
++
++  /* Make sure we have a low work register if we need one.  We will
++     need one if we are going to push a high register, but we are not
++     currently intending to push a low register.  However if both the
++     prologue and epilogue have a spare call-clobbered low register,
++     then we won't need to find an additional work register.  It does
++     not need to be the same register in the prologue and
++     epilogue.  */
+   if ((mask & 0xff) == 0
++      && !call_clobbered_scratch
+       && ((mask & 0x0f00) || TARGET_BACKTRACE))
+     {
+       /* Use thumb_find_work_register to choose which register
+@@ -24930,12 +24968,7 @@ thumb1_unexpanded_epilogue (void)
+       unsigned long mask = live_regs_mask & 0xff;
+       int next_hi_reg;
+ 
+-      /* The available low registers depend on the size of the value we are
+-         returning.  */
+-      if (size <= 12)
+-	mask |=  1 << 3;
+-      if (size <= 8)
+-	mask |= 1 << 2;
++      mask |= thumb1_epilogue_unused_call_clobbered_lo_regs ();
+ 
+       if (mask == 0)
+ 	/* Oh dear!  We have no low registers into which we can pop
+@@ -24943,7 +24976,7 @@ thumb1_unexpanded_epilogue (void)
+ 	internal_error
+ 	  ("no low registers available for popping high registers");
+ 
+-      for (next_hi_reg = 8; next_hi_reg < 13; next_hi_reg++)
++      for (next_hi_reg = 12; next_hi_reg > LAST_LO_REGNUM; next_hi_reg--)
+ 	if (live_regs_mask & (1 << next_hi_reg))
+ 	  break;
+ 
+@@ -24951,7 +24984,7 @@ thumb1_unexpanded_epilogue (void)
+ 	{
+ 	  /* Find lo register(s) into which the high register(s) can
+              be popped.  */
+-	  for (regno = 0; regno <= LAST_LO_REGNUM; regno++)
++	  for (regno = LAST_LO_REGNUM; regno >= 0; regno--)
+ 	    {
+ 	      if (mask & (1 << regno))
+ 		high_regs_pushed--;
+@@ -24959,20 +24992,22 @@ thumb1_unexpanded_epilogue (void)
+ 		break;
+ 	    }
+ 
+-	  mask &= (2 << regno) - 1;	/* A noop if regno == 8 */
++	  if (high_regs_pushed == 0 && regno >= 0)
++	    mask &= ~((1 << regno) - 1);
+ 
+ 	  /* Pop the values into the low register(s).  */
+ 	  thumb_pop (asm_out_file, mask);
+ 
+ 	  /* Move the value(s) into the high registers.  */
+-	  for (regno = 0; regno <= LAST_LO_REGNUM; regno++)
++	  for (regno = LAST_LO_REGNUM; regno >= 0; regno--)
+ 	    {
+ 	      if (mask & (1 << regno))
+ 		{
+ 		  asm_fprintf (asm_out_file, "\tmov\t%r, %r\n", next_hi_reg,
+ 			       regno);
+ 
+-		  for (next_hi_reg++; next_hi_reg < 13; next_hi_reg++)
++		  for (next_hi_reg--; next_hi_reg > LAST_LO_REGNUM;
++		       next_hi_reg--)
+ 		    if (live_regs_mask & (1 << next_hi_reg))
+ 		      break;
+ 		}
+@@ -25354,10 +25389,20 @@ thumb1_expand_prologue (void)
+ 	  break;
+ 
+       /* Here we need to mask out registers used for passing arguments
+-	 even if they can be pushed.  This is to avoid using them to stash the high
+-	 registers.  Such kind of stash may clobber the use of arguments.  */
++	 even if they can be pushed.  This is to avoid using them to
++	 stash the high registers.  Such kind of stash may clobber the
++	 use of arguments.  */
+       pushable_regs = l_mask & (~arg_regs_mask);
+-      if (lr_needs_saving)
++      pushable_regs |= thumb1_prologue_unused_call_clobbered_lo_regs ();
++
++      /* Normally, LR can be used as a scratch register once it has been
++	 saved; but if the function examines its own return address then
++	 the value is still live and we need to avoid using it.  */
++      bool return_addr_live
++	= REGNO_REG_SET_P (df_get_live_out (ENTRY_BLOCK_PTR_FOR_FN (cfun)),
++			   LR_REGNUM);
++
++      if (lr_needs_saving || return_addr_live)
+ 	pushable_regs &= ~(1 << LR_REGNUM);
+ 
+       if (pushable_regs == 0)
+@@ -25398,6 +25443,11 @@ thumb1_expand_prologue (void)
+ 	      push_mask |= 1 << LR_REGNUM;
+ 	      real_regs_mask |= 1 << LR_REGNUM;
+ 	      lr_needs_saving = false;
++	      /* If the return address is not live at this point, we
++		 can add LR to the list of registers that we can use
++		 for pushes.  */
++	      if (!return_addr_live)
++		pushable_regs |= 1 << LR_REGNUM;
+ 	    }
+ 
+ 	  insn = thumb1_emit_multi_reg_push (push_mask, real_regs_mask);
 diff --git a/gcc/config/arm/arm.md b/gcc/config/arm/arm.md
 index 0aecd03891c..ae582172ab9 100644
 --- a/gcc/config/arm/arm.md
@@ -12570,10 +12750,19 @@ index 29f6cdc4667..33b4be79c0f 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..84c4c6b9c06 100644
+index bc11ae4ae0b..05472344f5a 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,576 @@
+@@ -1,3 +1,585 @@
++2019-10-25  Richard Earnshaw  <rearnsha@arm.com>
++
++	Backport from mainline
++	2019-05-08  Mihail Ionescu  <mihail.ionescu@arm.com>
++	   Richard Earnshaw  <rearnsha@arm.com>
++	PR target/88167
++	* gcc.target/arm/pr88167-1.c: New test.
++	* gcc.target/arm/pr88167-2.c: New test.
++
 +2019-10-24  Mihail Ionescu  <mihail.ionescu@arm.com>
 +
 +	Backport from mainline
@@ -13150,7 +13339,7 @@ index bc11ae4ae0b..84c4c6b9c06 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +1000,7 @@
+@@ -427,7 +1009,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -16001,6 +16190,51 @@ index d82306ed630..dcea829965e 100644
      } {
  	check_multi_dir $opts $dir
      }
+diff --git a/gcc/testsuite/gcc.target/arm/pr88167-1.c b/gcc/testsuite/gcc.target/arm/pr88167-1.c
+new file mode 100644
+index 00000000000..517a86d6e4b
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/arm/pr88167-1.c
+@@ -0,0 +1,15 @@
++/* { dg-do compile } */
++/* { dg-require-effective-target arm_thumb1_ok } */
++/* { dg-options "-O2 -mthumb" }  */
++
++void *retaddr;
++
++void foo (void) {
++  retaddr = __builtin_return_address (0);
++
++  /* Used for enforcing registers stacking.  */
++  asm volatile ("" : : : "r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7",
++			 "r8", "r9", "r10", "r11", "r12");
++}
++
++/* { dg-final { scan-assembler-not "mov\tlr," } } */
+diff --git a/gcc/testsuite/gcc.target/arm/pr88167-2.c b/gcc/testsuite/gcc.target/arm/pr88167-2.c
+new file mode 100644
+index 00000000000..6a303345eb9
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/arm/pr88167-2.c
+@@ -0,0 +1,18 @@
++/* { dg-do run } */
++/* { dg-options "-O2" }  */
++/* { dg-skip-if "" { ! { arm_thumb1 } } } */
++
++int __attribute__((noclone, noinline))
++foo (int a, long long b) {
++  /* Used for enforcing registers stacking.  */
++  asm volatile ("" : : : "r0", "r1", "r2", "r3",
++			 "r8", "r9", "r10", "r11", "r12");
++  return (int) b;
++}
++
++int main ()
++{
++  if (foo (1, 0x1000000000000003LL) != 3)
++    __builtin_abort ();
++  __builtin_exit (0);
++}
 diff --git a/gcc/testsuite/gcc.target/i386/pr87853.c b/gcc/testsuite/gcc.target/i386/pr87853.c
 new file mode 100644
 index 00000000000..9a288879679
