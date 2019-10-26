@@ -42,7 +42,8 @@ edlinger (3):
 emsr (1):
       2019-09-09  Edward Smith-Rowland  <3dw4rd@verizon.net>
 
-gccadmin (74):
+gccadmin (75):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -138,9 +139,10 @@ iains (10):
       [Darwin] Amend section for constants with relocations.
       [Darwin, PPC] Check for out of range asm values.
 
-ian (2):
+ian (3):
       go/internal/gccgoimporter: support embedded field in pointer loop
       PR go/91621     mksysinfo: change test == to test =
+      compiler: don't inline integer expressions with named types
 
 jakub (23):
       * BASE-VER: Set to 9.2.1.
@@ -9784,6 +9786,49 @@ index 98408b981dc..28e13a71021 100644
  
    switch (default_kind)
      {
+diff --git a/gcc/go/gofrontend/expressions.cc b/gcc/go/gofrontend/expressions.cc
+index 6f9775dd5a2..859c1ece5da 100644
+--- a/gcc/go/gofrontend/expressions.cc
++++ b/gcc/go/gofrontend/expressions.cc
+@@ -2036,7 +2036,11 @@ class Integer_expression : public Expression
+ 
+   int
+   do_inlining_cost() const
+-  { return 1; }
++  {
++    if (this->type_ != NULL && this->type_->named_type() != NULL)
++      return 0x100000;
++    return 1; 
++  }
+ 
+   void
+   do_export(Export_function_body*) const;
+@@ -2451,7 +2455,11 @@ class Float_expression : public Expression
+ 
+   int
+   do_inlining_cost() const
+-  { return 1; }
++  {
++    if (this->type_ != NULL && this->type_->named_type() != NULL)
++      return 0x100000;
++    return 1;
++  }
+ 
+   void
+   do_export(Export_function_body*) const;
+@@ -2664,7 +2672,11 @@ class Complex_expression : public Expression
+ 
+   int
+   do_inlining_cost() const
+-  { return 2; }
++  {
++    if (this->type_ != NULL && this->type_->named_type() != NULL)
++      return 0x100000;
++    return 2;
++  }
+ 
+   void
+   do_export(Export_function_body*) const;
 diff --git a/gcc/ipa-cp.c b/gcc/ipa-cp.c
 index 32b352328a9..d414632e602 100644
 --- a/gcc/ipa-cp.c
