@@ -42,7 +42,8 @@ edlinger (3):
 emsr (1):
       2019-09-09  Edward Smith-Rowland  <3dw4rd@verizon.net>
 
-gccadmin (75):
+gccadmin (76):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -123,9 +124,10 @@ gjl (2):
       * doc/avr-mmcu.texi: Re-generate because config/avr/avr-devices.c 	was changed in r269487.
       Backport from 2019-10-18 trunk r277143. 	PR target/86040 	* config/avr/avr.c (avr_out_lpm): Do not shortcut-return.
 
-hubicka (2):
+hubicka (3):
       Backport ggc_trim 	Backport from mainline
       free summary vectors. 	Backport from mainline 	2019-10-24  Jan Hubicka  <hubicka@ucw.cz> 	* symbols-summary.h (fast_function_summary<T *, V>::release, 	fast_call_summary<T *, V>::release): Free m_vector.
+      Avoid gimple body modifications while streaming. 	Backport from mainline 	2019-10-11  Jan Hubicka  <hubicka@ucw.cz> 	* gimple-streamer-out.c (output_gimple_stmt): Add explicit function 	parameter. 	* lto-streamer-out.c: Include tree-dfa.h. 	(output_cfg): Do not use cfun. 	(lto_prepare_function_for_streaming): New. 	(output_function): Do not push cfun; do not initialize loop optimizer. 	* lto-streamer.h (lto_prepare_function_for_streaming): Declare. 	* passes.c (ipa_write_summaries): Use it. 	(ipa_write_optimization_summaries): Do not modify bodies. 	* tree-dfa.c (renumber_gimple_stmt_uids): Add function parameter. 	* tree.dfa.h (renumber_gimple_stmt_uids): Update prototype. 	* tree-ssa-dse.c (pass_dse::execute): Update use of 	renumber_gimple_stmt_uids. 	* tree-ssa-math-opts.c (pass_optimize_widening_mul::execute): Likewise.
 
 iains (10):
       Darwin, libsanitizer - remove reference to __cxa_rethrow_primary_exception.
@@ -348,6 +350,9 @@ uros (4):
       * config/abi/post/alpha-linux-gnu/baseline_symbols.txt: Update.
       PR target/91533 	Backport from mainline 	2019-06-30  Uroš Bizjak  <ubizjak@gmail.com>
       PR target/92022 	* config/alpha/alpha.c (alpha_handle_trap_shadows): Skip DEBUG_INSN.
+
+ville (1):
+      PR c++/85254
 
 wilco (1):
       [AArch64] Fix PR81800
@@ -590,10 +595,34 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..cd06ab2b24e 100644
+index 7f6557d8018..22157fe4704 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,876 @@
+@@ -1,3 +1,900 @@
++2019-10-25  Jan Hubicka  <hubicka@ucw.cz>
++
++	Backport from mainline
++	2019-10-11  Jan Hubicka  <hubicka@ucw.cz>
++	* gimple-streamer-out.c (output_gimple_stmt): Add explicit function
++	parameter.
++	* lto-streamer-out.c: Include tree-dfa.h.
++	(output_cfg): Do not use cfun.
++	(lto_prepare_function_for_streaming): New.
++	(output_function): Do not push cfun; do not initialize loop optimizer.
++	* lto-streamer.h (lto_prepare_function_for_streaming): Declare.
++	* passes.c (ipa_write_summaries): Use it.
++	(ipa_write_optimization_summaries): Do not modify bodies.
++	* tree-dfa.c (renumber_gimple_stmt_uids): Add function parameter.
++	* tree.dfa.h (renumber_gimple_stmt_uids): Update prototype.
++	* tree-ssa-dse.c (pass_dse::execute): Update use of
++	renumber_gimple_stmt_uids.
++	* tree-ssa-math-opts.c (pass_optimize_widening_mul::execute): Likewise.
++
++	2019-10-12  Jan Hubicka  <hubicka@ucw.cz>
++	* lto-streamer-out.c (collect_block_tree_leafs): Renumber statements
++	so non-virutal are before virutals.
++	(output_function): Avoid body modifications.
++
 +2019-10-25  Richard Earnshaw  <rearnsha@arm.com>
 +
 +	Backport from mainline
@@ -1470,7 +1499,7 @@ index 7f6557d8018..cd06ab2b24e 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +1386,7 @@
+@@ -513,7 +1410,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -6250,10 +6279,19 @@ index 19bd616d67f..ee5612441e2 100644
  	  rtx tmp_reg = gen_rtx_REG (Pmode, A9_REG);
  	  emit_move_insn (tmp_reg, GEN_INT (total_size -
 diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
-index c977850d067..8f801de7560 100644
+index c977850d067..e0224a0c421 100644
 --- a/gcc/cp/ChangeLog
 +++ b/gcc/cp/ChangeLog
-@@ -1,3 +1,185 @@
+@@ -1,3 +1,194 @@
++2018-10-26  Ville Voutilainen  <ville.voutilainen@gmail.com>
++
++	Backport from mainline
++
++	2019-06-01  Ville Voutilainen  <ville.voutilainen@gmail.com>
++
++	PR c++/85254
++	* class.c (fixup_type_variants): Handle CLASSTYPE_FINAL.
++
 +2019-10-24  Marek Polacek  <polacek@redhat.com>
 +
 +	* decl.c (reshape_init_r): Add missing space.
@@ -6439,7 +6477,7 @@ index c977850d067..8f801de7560 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -16,7 +198,7 @@
+@@ -16,7 +207,7 @@
  
  	Backported from mainline
  	2019-08-02  Marek Polacek  <polacek@redhat.com>
@@ -6576,10 +6614,18 @@ index 9e22a146a16..14ddc98f301 100644
  
    /* If the ARG2 and ARG3 are the same and don't have side-effects,
 diff --git a/gcc/cp/class.c b/gcc/cp/class.c
-index a47777cdd9e..b3b06eca374 100644
+index a47777cdd9e..f7059fb7341 100644
 --- a/gcc/cp/class.c
 +++ b/gcc/cp/class.c
-@@ -2149,10 +2149,10 @@ maybe_warn_about_overly_private_class (tree t)
+@@ -1907,6 +1907,7 @@ fixup_type_variants (tree t)
+ 	= TYPE_HAS_NONTRIVIAL_DESTRUCTOR (t);
+ 
+       TYPE_POLYMORPHIC_P (variants) = TYPE_POLYMORPHIC_P (t);
++      CLASSTYPE_FINAL (variants) = CLASSTYPE_FINAL (t);
+ 
+       TYPE_BINFO (variants) = TYPE_BINFO (t);
+ 
+@@ -2149,10 +2150,10 @@ maybe_warn_about_overly_private_class (tree t)
  
        if (!nonprivate_ctor)
  	{
@@ -9773,6 +9819,55 @@ index 60273f2e57d..31606dc843f 100644
  /* Assume that all GGC memory is reachable and grow the limits for next collection. */
  extern void ggc_grow (void);
  
+diff --git a/gcc/gimple-streamer-out.c b/gcc/gimple-streamer-out.c
+index 34b8d6fda7d..7185c07f36b 100644
+--- a/gcc/gimple-streamer-out.c
++++ b/gcc/gimple-streamer-out.c
+@@ -57,7 +57,7 @@ output_phi (struct output_block *ob, gphi *phi)
+ /* Emit statement STMT on the main stream of output block OB.  */
+ 
+ static void
+-output_gimple_stmt (struct output_block *ob, gimple *stmt)
++output_gimple_stmt (struct output_block *ob, struct function *fn, gimple *stmt)
+ {
+   unsigned i;
+   enum gimple_code code;
+@@ -80,7 +80,7 @@ output_gimple_stmt (struct output_block *ob, gimple *stmt)
+ 		     as_a <gassign *> (stmt)),
+ 		   1);
+   bp_pack_value (&bp, gimple_has_volatile_ops (stmt), 1);
+-  hist = gimple_histogram_value (cfun, stmt);
++  hist = gimple_histogram_value (fn, stmt);
+   bp_pack_value (&bp, hist != NULL, 1);
+   bp_pack_var_len_unsigned (&bp, stmt->subcode);
+ 
+@@ -139,7 +139,7 @@ output_gimple_stmt (struct output_block *ob, gimple *stmt)
+ 	     so that we do not have to deal with type mismatches on
+ 	     merged symbols during IL read in.  The first operand
+ 	     of GIMPLE_DEBUG must be a decl, not MEM_REF, though.  */
+-	  if (op && (i || !is_gimple_debug (stmt)))
++	  if (!flag_wpa && op && (i || !is_gimple_debug (stmt)))
+ 	    {
+ 	      basep = &op;
+ 	      if (TREE_CODE (*basep) == ADDR_EXPR)
+@@ -147,7 +147,7 @@ output_gimple_stmt (struct output_block *ob, gimple *stmt)
+ 	      while (handled_component_p (*basep))
+ 		basep = &TREE_OPERAND (*basep, 0);
+ 	      if (VAR_P (*basep)
+-		  && !auto_var_in_fn_p (*basep, current_function_decl)
++		  && !auto_var_in_fn_p (*basep, fn->decl)
+ 		  && !DECL_REGISTER (*basep))
+ 		{
+ 		  bool volatilep = TREE_THIS_VOLATILE (*basep);
+@@ -228,7 +228,7 @@ output_bb (struct output_block *ob, basic_block bb, struct function *fn)
+ 	      print_gimple_stmt (streamer_dump_file, stmt, 0, TDF_SLIM);
+ 	    }
+ 
+-	  output_gimple_stmt (ob, stmt);
++	  output_gimple_stmt (ob, fn, stmt);
+ 
+ 	  /* Emit the EH region holding STMT.  */
+ 	  region = lookup_stmt_eh_lp_fn (fn, stmt);
 diff --git a/gcc/gimplify.c b/gcc/gimplify.c
 index 98408b981dc..28e13a71021 100644
 --- a/gcc/gimplify.c
@@ -9990,10 +10085,176 @@ index bef2f676a78..1d2578f8c12 100644
        lra_spill ();
        /* Assignment of stack slots changes elimination offsets for
 diff --git a/gcc/lto-streamer-out.c b/gcc/lto-streamer-out.c
-index b6e395b53fd..e07085770a5 100644
+index b6e395b53fd..42f382ecf21 100644
 --- a/gcc/lto-streamer-out.c
 +++ b/gcc/lto-streamer-out.c
-@@ -2617,12 +2617,6 @@ write_symbol (struct streamer_tree_cache_d *cache,
+@@ -43,6 +43,7 @@ along with GCC; see the file COPYING3.  If not see
+ #include "debug.h"
+ #include "omp-offload.h"
+ #include "print-tree.h"
++#include "tree-dfa.h"
+ 
+ 
+ static void lto_write_tree (struct output_block*, tree, bool);
+@@ -1891,7 +1892,7 @@ output_cfg (struct output_block *ob, struct function *fn)
+ 
+   streamer_write_hwi (ob, -1);
+ 
+-  bb = ENTRY_BLOCK_PTR_FOR_FN (cfun);
++  bb = ENTRY_BLOCK_PTR_FOR_FN (fn);
+   while (bb->next_bb)
+     {
+       streamer_write_hwi (ob, bb->next_bb->index);
+@@ -1900,9 +1901,6 @@ output_cfg (struct output_block *ob, struct function *fn)
+ 
+   streamer_write_hwi (ob, -1);
+ 
+-  /* ???  The cfgloop interface is tied to cfun.  */
+-  gcc_assert (cfun == fn);
+-
+   /* Output the number of loops.  */
+   streamer_write_uhwi (ob, number_of_loops (fn));
+ 
+@@ -2063,6 +2061,62 @@ collect_block_tree_leafs (tree root, vec<tree> &leafs)
+       collect_block_tree_leafs (BLOCK_SUBBLOCKS (root), leafs);
+ }
+ 
++/* This performs function body modifications that are needed for streaming
++   to work.  */
++
++void
++lto_prepare_function_for_streaming (struct cgraph_node *node)
++{
++  struct function *fn = DECL_STRUCT_FUNCTION (node->decl);
++  basic_block bb;
++
++  if (number_of_loops (fn))
++    {
++      push_cfun (fn);
++      loop_optimizer_init (AVOID_CFG_MODIFICATIONS);
++      loop_optimizer_finalize ();
++      pop_cfun ();
++    }
++  /* We will renumber the statements.  The code that does this uses
++     the same ordering that we use for serializing them so we can use
++     the same code on the other end and not have to write out the
++     statement numbers.  We do not assign UIDs to PHIs here because
++     virtual PHIs get re-computed on-the-fly which would make numbers
++     inconsistent.  */
++  set_gimple_stmt_max_uid (fn, 0);
++  FOR_ALL_BB_FN (bb, fn)
++    {
++      for (gphi_iterator gsi = gsi_start_phis (bb); !gsi_end_p (gsi);
++	   gsi_next (&gsi))
++	{
++	  gphi *stmt = gsi.phi ();
++
++	  /* Virtual PHIs are not going to be streamed.  */
++	  if (!virtual_operand_p (gimple_phi_result (stmt)))
++	    gimple_set_uid (stmt, inc_gimple_stmt_max_uid (fn));
++	}
++      for (gimple_stmt_iterator gsi = gsi_start_bb (bb); !gsi_end_p (gsi);
++	   gsi_next (&gsi))
++	{
++	  gimple *stmt = gsi_stmt (gsi);
++	  gimple_set_uid (stmt, inc_gimple_stmt_max_uid (fn));
++	}
++    }
++  /* To avoid keeping duplicate gimple IDs in the statements, renumber
++     virtual phis now.  */
++  FOR_ALL_BB_FN (bb, fn)
++    {
++      for (gphi_iterator gsi = gsi_start_phis (bb); !gsi_end_p (gsi);
++	   gsi_next (&gsi))
++	{
++	  gphi *stmt = gsi.phi ();
++	  if (virtual_operand_p (gimple_phi_result (stmt)))
++	    gimple_set_uid (stmt, inc_gimple_stmt_max_uid (fn));
++	}
++    }
++
++}
++
+ /* Output the body of function NODE->DECL.  */
+ 
+ static void
+@@ -2086,9 +2140,6 @@ output_function (struct cgraph_node *node)
+ 
+   gcc_assert (current_function_decl == NULL_TREE && cfun == NULL);
+ 
+-  /* Set current_function_decl and cfun.  */
+-  push_cfun (fn);
+-
+   /* Make string 0 be a NULL string.  */
+   streamer_write_char_stream (ob->string_stream, 0);
+ 
+@@ -2125,9 +2176,6 @@ output_function (struct cgraph_node *node)
+      debug info.  */
+   if (gimple_has_body_p (function))
+     {
+-      /* Fixup loops if required to match discovery done in the reader.  */
+-      loop_optimizer_init (AVOID_CFG_MODIFICATIONS);
+-
+       streamer_write_uhwi (ob, 1);
+       output_struct_function_base (ob, fn);
+ 
+@@ -2137,45 +2185,6 @@ output_function (struct cgraph_node *node)
+       /* Output any exception handling regions.  */
+       output_eh_regions (ob, fn);
+ 
+-
+-      /* We will renumber the statements.  The code that does this uses
+-	 the same ordering that we use for serializing them so we can use
+-	 the same code on the other end and not have to write out the
+-	 statement numbers.  We do not assign UIDs to PHIs here because
+-	 virtual PHIs get re-computed on-the-fly which would make numbers
+-	 inconsistent.  */
+-      set_gimple_stmt_max_uid (cfun, 0);
+-      FOR_ALL_BB_FN (bb, cfun)
+-	{
+-	  for (gphi_iterator gsi = gsi_start_phis (bb); !gsi_end_p (gsi);
+-	       gsi_next (&gsi))
+-	    {
+-	      gphi *stmt = gsi.phi ();
+-
+-	      /* Virtual PHIs are not going to be streamed.  */
+-	      if (!virtual_operand_p (gimple_phi_result (stmt)))
+-	        gimple_set_uid (stmt, inc_gimple_stmt_max_uid (cfun));
+-	    }
+-	  for (gimple_stmt_iterator gsi = gsi_start_bb (bb); !gsi_end_p (gsi);
+-	       gsi_next (&gsi))
+-	    {
+-	      gimple *stmt = gsi_stmt (gsi);
+-	      gimple_set_uid (stmt, inc_gimple_stmt_max_uid (cfun));
+-	    }
+-	}
+-      /* To avoid keeping duplicate gimple IDs in the statements, renumber
+-	 virtual phis now.  */
+-      FOR_ALL_BB_FN (bb, cfun)
+-	{
+-	  for (gphi_iterator gsi = gsi_start_phis (bb); !gsi_end_p (gsi);
+-	       gsi_next (&gsi))
+-	    {
+-	      gphi *stmt = gsi.phi ();
+-	      if (virtual_operand_p (gimple_phi_result (stmt)))
+-	        gimple_set_uid (stmt, inc_gimple_stmt_max_uid (cfun));
+-	    }
+-	}
+-
+       /* Output the code for the function.  */
+       FOR_ALL_BB_FN (bb, fn)
+ 	output_bb (ob, bb, fn);
+@@ -2184,9 +2193,6 @@ output_function (struct cgraph_node *node)
+       streamer_write_record_start (ob, LTO_null);
+ 
+       output_cfg (ob, fn);
+-
+-      loop_optimizer_finalize ();
+-      pop_cfun ();
+    }
+   else
+     streamer_write_uhwi (ob, 0);
+@@ -2617,12 +2623,6 @@ write_symbol (struct streamer_tree_cache_d *cache,
    const char *comdat;
    unsigned char c;
  
@@ -10006,6 +10267,18 @@ index b6e395b53fd..e07085770a5 100644
    gcc_assert (VAR_OR_FUNCTION_DECL_P (t));
  
    name = IDENTIFIER_POINTER (DECL_ASSEMBLER_NAME (t));
+diff --git a/gcc/lto-streamer.h b/gcc/lto-streamer.h
+index 04b79dbce3b..ac3ecc9e5ed 100644
+--- a/gcc/lto-streamer.h
++++ b/gcc/lto-streamer.h
+@@ -879,6 +879,7 @@ void lto_output_decl_state_refs (struct output_block *,
+ 			         struct lto_out_decl_state *);
+ void lto_output_location (struct output_block *, struct bitpack_d *, location_t);
+ void lto_output_init_mode_table (void);
++void lto_prepare_function_for_streaming (cgraph_node *);
+ 
+ 
+ /* In lto-cgraph.c  */
 diff --git a/gcc/lto-wrapper.c b/gcc/lto-wrapper.c
 index ac971494054..10bd7c9becb 100644
 --- a/gcc/lto-wrapper.c
@@ -10053,10 +10326,20 @@ index ac971494054..10bd7c9becb 100644
  					&decoded_options_count);
  
 diff --git a/gcc/lto/ChangeLog b/gcc/lto/ChangeLog
-index eb2653be616..e99eb1520fe 100644
+index eb2653be616..c78f9c92a86 100644
 --- a/gcc/lto/ChangeLog
 +++ b/gcc/lto/ChangeLog
-@@ -1,3 +1,9 @@
+@@ -1,3 +1,19 @@
++2019-10-26  Jan Hubicka  <hubicka@ucw.cz>
++
++	Backport from mainline
++
++	2019-10-12  Jan Hubicka  <hubicka@ucw.cz>
++	* lto.c (lto_wpa_write_files): Do not update bodies of clones.
++
++	2019-10-11  Jan Hubicka  <hubicka@ucw.cz>
++	* lto.c (lto_wpa_write_files): Prepare all bodies for streaming.
++
 +2019-10-25  Jan Hubicka  <hubicka@ucw.cz>
 +
 +	Backport from mainline
@@ -10067,14 +10350,21 @@ index eb2653be616..e99eb1520fe 100644
  
  	* GCC 9.2.0 released.
 diff --git a/gcc/lto/lto.c b/gcc/lto/lto.c
-index 4367928a515..be6942fce07 100644
+index 4367928a515..4dde8c001e1 100644
 --- a/gcc/lto/lto.c
 +++ b/gcc/lto/lto.c
-@@ -2446,6 +2446,8 @@ lto_wpa_write_files (void)
+@@ -2446,6 +2446,15 @@ lto_wpa_write_files (void)
  
    timevar_push (TV_WHOPR_WPA_IO);
  
 +  ggc_trim ();
++
++  cgraph_node *node;
++  /* Do body modifications needed for streaming before we fork out
++     worker processes.  */
++  FOR_EACH_FUNCTION_WITH_GIMPLE_BODY (node)
++    if (!node->clone_of && gimple_has_body_p (node->decl))
++      lto_prepare_function_for_streaming (node);
 +
    /* Generate a prefix for the LTRANS unit files.  */
    blen = strlen (ltrans_output_list);
@@ -10342,7 +10632,7 @@ index 74096bc5462..cf1c3689eff 100644
  }
  
 diff --git a/gcc/passes.c b/gcc/passes.c
-index d8d479a1c17..092dafbd488 100644
+index d8d479a1c17..e071a878301 100644
 --- a/gcc/passes.c
 +++ b/gcc/passes.c
 @@ -1646,24 +1646,39 @@ do_per_function (void (*callback) (function *, void *data), void *data)
@@ -10377,8 +10667,8 @@ index d8d479a1c17..092dafbd488 100644
 +{
 +  hash_set<cgraph_node *> *removed_nodes = (hash_set<cgraph_node *> *)data;
 +  removed_nodes->remove (node);
- }
- 
++}
++
 +/* Hook called when NODE is duplicated and therefore should be
 +   excluded from removed_nodes.  DATA is a hash set with removed nodes.  */
 +
@@ -10389,8 +10679,8 @@ index d8d479a1c17..092dafbd488 100644
 +  hash_set<cgraph_node *> *removed_nodes = (hash_set<cgraph_node *> *)data;
 +  gcc_checking_assert (!removed_nodes->contains (node));
 +  removed_nodes->remove (node2);
-+}
-+
+ }
+ 
 +
  /* If we are in IPA mode (i.e., current_function_decl is NULL), call
     function CALLBACK for every function in the call graph.  Otherwise,
@@ -10452,7 +10742,64 @@ index d8d479a1c17..092dafbd488 100644
  }
  
  /* Helper function to perform function body dump.  */
-@@ -3060,5 +3080,3 @@ function_called_by_processed_nodes_p (void)
+@@ -2699,20 +2719,12 @@ ipa_write_summaries (void)
+     {
+       struct cgraph_node *node = order[i];
+ 
+-      if (gimple_has_body_p (node->decl))
++      if (node->definition && node->need_lto_streaming)
+ 	{
+-	  /* When streaming out references to statements as part of some IPA
+-	     pass summary, the statements need to have uids assigned and the
+-	     following does that for all the IPA passes here. Naturally, this
+-	     ordering then matches the one IPA-passes get in their stmt_fixup
+-	     hooks.  */
+-
+-	  push_cfun (DECL_STRUCT_FUNCTION (node->decl));
+-	  renumber_gimple_stmt_uids ();
+-	  pop_cfun ();
++	  if (gimple_has_body_p (node->decl))
++	    lto_prepare_function_for_streaming (node);
++	  lto_set_symtab_encoder_in_partition (encoder, node);
+ 	}
+-      if (node->definition && node->need_lto_streaming)
+-        lto_set_symtab_encoder_in_partition (encoder, node);
+     }
+ 
+   FOR_EACH_DEFINED_FUNCTION (node)
+@@ -2780,28 +2792,13 @@ void
+ ipa_write_optimization_summaries (lto_symtab_encoder_t encoder)
+ {
+   struct lto_out_decl_state *state = lto_new_out_decl_state ();
+-  lto_symtab_encoder_iterator lsei;
+   state->symtab_node_encoder = encoder;
+ 
+   lto_output_init_mode_table ();
+   lto_push_out_decl_state (state);
+-  for (lsei = lsei_start_function_in_partition (encoder);
+-       !lsei_end_p (lsei); lsei_next_function_in_partition (&lsei))
+-    {
+-      struct cgraph_node *node = lsei_cgraph_node (lsei);
+-      /* When streaming out references to statements as part of some IPA
+-	 pass summary, the statements need to have uids assigned.
+-
+-	 For functions newly born at WPA stage we need to initialize
+-	 the uids here.  */
+-      if (node->definition
+-	  && gimple_has_body_p (node->decl))
+-	{
+-	  push_cfun (DECL_STRUCT_FUNCTION (node->decl));
+-	  renumber_gimple_stmt_uids ();
+-	  pop_cfun ();
+-	}
+-    }
++
++  /* Be sure that we did not forget to renumber stmt uids.  */
++  gcc_checking_assert (flag_wpa);
+ 
+   gcc_assert (flag_wpa);
+   pass_manager *passes = g->get_passes ();
+@@ -3060,5 +3057,3 @@ function_called_by_processed_nodes_p (void)
      }
    return e != NULL;
  }
@@ -14830,6 +15177,28 @@ index 00000000000..796828b25c0
 +  if (c != d)
 +    __builtin_abort();
 +}
+diff --git a/gcc/testsuite/g++.dg/ext/is_final.C b/gcc/testsuite/g++.dg/ext/is_final.C
+index b3875ad04ae..20e5d629ff5 100644
+--- a/gcc/testsuite/g++.dg/ext/is_final.C
++++ b/gcc/testsuite/g++.dg/ext/is_final.C
+@@ -43,3 +43,17 @@ static_assert( __is_final (Ff<int>), "Ff<int> is final" );
+ static_assert( __is_final (Ff<A>),   "Ff<A> is final" );
+ static_assert( __is_final (Ff<Af>),  "Ff<Af> is final" );
+ 
++// PR 85254
++
++template <class T> struct final_trait_wrap{ typedef T type; };
++
++template <class T> struct my_is_final
++{
++  static const bool value = __is_final(typename final_trait_wrap<T>::type);
++};
++
++struct final1 final {};
++template <typename T> struct final2 final {};
++
++static_assert( my_is_final<final1>::value, "final1 is final" );
++static_assert( my_is_final<final2<int>>::value, "final2<int> is final" );
 diff --git a/gcc/testsuite/g++.dg/init/array53.C b/gcc/testsuite/g++.dg/init/array53.C
 new file mode 100644
 index 00000000000..2bf480561fe
@@ -18045,6 +18414,52 @@ index 183b491ab1d..4bac38ab00c 100644
        generate_range_test (bb, index, low, high, &lhs, &rhs);
        cond = gimple_build_cond (LE_EXPR, lhs, rhs, NULL_TREE, NULL_TREE);
      }
+diff --git a/gcc/tree-dfa.c b/gcc/tree-dfa.c
+index 9ba627c90b5..64991ba92fa 100644
+--- a/gcc/tree-dfa.c
++++ b/gcc/tree-dfa.c
+@@ -61,23 +61,23 @@ static void collect_dfa_stats (struct dfa_stats_d *);
+ /* Renumber all of the gimple stmt uids.  */
+ 
+ void
+-renumber_gimple_stmt_uids (void)
++renumber_gimple_stmt_uids (struct function *fun)
+ {
+   basic_block bb;
+ 
+-  set_gimple_stmt_max_uid (cfun, 0);
+-  FOR_ALL_BB_FN (bb, cfun)
++  set_gimple_stmt_max_uid (fun, 0);
++  FOR_ALL_BB_FN (bb, fun)
+     {
+       gimple_stmt_iterator bsi;
+       for (bsi = gsi_start_phis (bb); !gsi_end_p (bsi); gsi_next (&bsi))
+ 	{
+ 	  gimple *stmt = gsi_stmt (bsi);
+-	  gimple_set_uid (stmt, inc_gimple_stmt_max_uid (cfun));
++	  gimple_set_uid (stmt, inc_gimple_stmt_max_uid (fun));
+ 	}
+       for (bsi = gsi_start_bb (bb); !gsi_end_p (bsi); gsi_next (&bsi))
+ 	{
+ 	  gimple *stmt = gsi_stmt (bsi);
+-	  gimple_set_uid (stmt, inc_gimple_stmt_max_uid (cfun));
++	  gimple_set_uid (stmt, inc_gimple_stmt_max_uid (fun));
+ 	}
+     }
+ }
+diff --git a/gcc/tree-dfa.h b/gcc/tree-dfa.h
+index 98810080c65..aa4ab7eb946 100644
+--- a/gcc/tree-dfa.h
++++ b/gcc/tree-dfa.h
+@@ -20,7 +20,7 @@ along with GCC; see the file COPYING3.  If not see
+ #ifndef GCC_TREE_DFA_H
+ #define GCC_TREE_DFA_H
+ 
+-extern void renumber_gimple_stmt_uids (void);
++extern void renumber_gimple_stmt_uids (struct function *);
+ extern void renumber_gimple_stmt_uids_in_blocks (basic_block *, int);
+ extern void dump_variable (FILE *, tree);
+ extern void debug_variable (tree);
 diff --git a/gcc/tree-object-size.c b/gcc/tree-object-size.c
 index f9ad7e83943..25c5ced57b7 100644
 --- a/gcc/tree-object-size.c
@@ -18156,6 +18571,19 @@ index cee844973d9..ddd28ec3c75 100644
  				     void *(*)(ao_ref *, tree, void *),
  				     void *(*)(ao_ref *, tree, void *, bool *),
  				     tree (*)(tree), unsigned &, void *);
+diff --git a/gcc/tree-ssa-dse.c b/gcc/tree-ssa-dse.c
+index aa998f416c7..efe5b31cc0a 100644
+--- a/gcc/tree-ssa-dse.c
++++ b/gcc/tree-ssa-dse.c
+@@ -984,7 +984,7 @@ pass_dse::execute (function *fun)
+ {
+   need_eh_cleanup = BITMAP_ALLOC (NULL);
+ 
+-  renumber_gimple_stmt_uids ();
++  renumber_gimple_stmt_uids (cfun);
+ 
+   /* We might consider making this a property of each pass so that it
+      can be [re]computed on an as-needed basis.  Particularly since
 diff --git a/gcc/tree-ssa-forwprop.c b/gcc/tree-ssa-forwprop.c
 index eeb6281c652..bbfa1bc6fae 100644
 --- a/gcc/tree-ssa-forwprop.c
@@ -18169,6 +18597,19 @@ index eeb6281c652..bbfa1bc6fae 100644
  		    if (did_something == 2)
  		      cfg_changed = true;
  		    changed = did_something != 0;
+diff --git a/gcc/tree-ssa-math-opts.c b/gcc/tree-ssa-math-opts.c
+index b7bbde4e402..bf9466b417f 100644
+--- a/gcc/tree-ssa-math-opts.c
++++ b/gcc/tree-ssa-math-opts.c
+@@ -3840,7 +3840,7 @@ pass_optimize_widening_mul::execute (function *fun)
+ 
+   memset (&widen_mul_stats, 0, sizeof (widen_mul_stats));
+   calculate_dominance_info (CDI_DOMINATORS);
+-  renumber_gimple_stmt_uids ();
++  renumber_gimple_stmt_uids (cfun);
+ 
+   math_opts_dom_walker (&cfg_changed).walk (ENTRY_BLOCK_PTR_FOR_FN (cfun));
+ 
 diff --git a/gcc/tree-ssa-phiprop.c b/gcc/tree-ssa-phiprop.c
 index d710582a915..e90ae6a89cb 100644
 --- a/gcc/tree-ssa-phiprop.c
