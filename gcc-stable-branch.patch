@@ -10,15 +10,17 @@ avieira (1):
 bergner (1):
       Backport from mainline 	2019-10-08  Tulio Magno Quites Machado Filho  <tuliom@linux.ibm.com>
 
-burnus (1):
+burnus (2):
       Fortran] PR91586 Fix ICE on invalid code with CLASS
+      Fortran] PR91863 - fix call to bind(C) with array descriptor
 
-danglin (5):
+danglin (6):
       * config/pa/pa.c (pa_trampoline_init): Remove spurious extended 	character.
       * config/pa/lib2funcs.S (__gcc_plt_call): Load branch target to %r21. 	Load PIC register after branch target.  Fix white space. 	* config/pa/milli64.S ($$dyncall): Separate LINUX and non LINUX 	implementations.  Load PIC register after branch target.  Don't 	clobber function pointer when it points to function descriptor. 	Use nullification instead of branch in LINUX implementation.
       * config/pa/pa.c (pa_output_call): Load descriptor address to register 	%r22.  Load function address before global pointer. 	(pa_attr_length_indirect_call): Adjust length of inline versions of 	$$dyncall. 	(pa_output_indirect_call): Remove fast inline version of $$dyncall 	before normal cases.  Update inline $$dyncall sequences to preserve 	function descriptor address in register %r22. 	(TRAMPOLINE_CODE_SIZE): Adjust. 	(pa_asm_trampoline_template): Revise 32-bit trampoline.  Don't assume 	register %r22 contains trampoline address. 	(pa_trampoline_init): Adjust offsets. 	(pa_trampoline_adjust_address): Likewise. 	* config/pa/pa.h (TRAMPOLINE_SIZE): Adjust 32-bit size.
       * config/pa/fptr.c (_dl_read_access_allowed): Change argument to 	unsigned int.  Adjust callers. 	(__canonicalize_funcptr_for_compare): Change plabel type to volatile 	unsigned int *.  Load relocation offset before function pointer. 	Add barrier to ensure ordering.
       * config/pa/pa.c (pa_output_indirect_call): Fix typos in last change.
+      * config/abi/post/hppa-linux-gnu/baseline_symbols.txt: Update.
 
 draganm (2):
       Backprot fix for uninitialised use in mips_split_move
@@ -42,7 +44,8 @@ edlinger (3):
 emsr (1):
       2019-09-09  Edward Smith-Rowland  <3dw4rd@verizon.net>
 
-gccadmin (76):
+gccadmin (77):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -124,12 +127,15 @@ gjl (2):
       * doc/avr-mmcu.texi: Re-generate because config/avr/avr-devices.c 	was changed in r269487.
       Backport from 2019-10-18 trunk r277143. 	PR target/86040 	* config/avr/avr.c (avr_out_lpm): Do not shortcut-return.
 
+guojiufu (1):
+      [rs6000] PR70010, avoid no-vsx function to be inlined to vsx function
+
 hubicka (3):
       Backport ggc_trim 	Backport from mainline
       free summary vectors. 	Backport from mainline 	2019-10-24  Jan Hubicka  <hubicka@ucw.cz> 	* symbols-summary.h (fast_function_summary<T *, V>::release, 	fast_call_summary<T *, V>::release): Free m_vector.
       Avoid gimple body modifications while streaming. 	Backport from mainline 	2019-10-11  Jan Hubicka  <hubicka@ucw.cz> 	* gimple-streamer-out.c (output_gimple_stmt): Add explicit function 	parameter. 	* lto-streamer-out.c: Include tree-dfa.h. 	(output_cfg): Do not use cfun. 	(lto_prepare_function_for_streaming): New. 	(output_function): Do not push cfun; do not initialize loop optimizer. 	* lto-streamer.h (lto_prepare_function_for_streaming): Declare. 	* passes.c (ipa_write_summaries): Use it. 	(ipa_write_optimization_summaries): Do not modify bodies. 	* tree-dfa.c (renumber_gimple_stmt_uids): Add function parameter. 	* tree.dfa.h (renumber_gimple_stmt_uids): Update prototype. 	* tree-ssa-dse.c (pass_dse::execute): Update use of 	renumber_gimple_stmt_uids. 	* tree-ssa-math-opts.c (pass_optimize_widening_mul::execute): Likewise.
 
-iains (10):
+iains (13):
       Darwin, libsanitizer - remove reference to __cxa_rethrow_primary_exception.
       [Darwin, PPC] Fix fail of cpp/assert4.c
       [Darwin, fixincludes] Backport fix for PR83531
@@ -140,11 +146,17 @@ iains (10):
       [Darwin] Update machopic_legitimize_pic_address.
       [Darwin] Amend section for constants with relocations.
       [Darwin, PPC] Check for out of range asm values.
+      [Darwin, machopic] Preparatory patches.
+      [Darwin, machopic] Fix for 67183
+      [Darwin, PPC] Fix PR 65342.
 
 ian (3):
       go/internal/gccgoimporter: support embedded field in pointer loop
       PR go/91621     mksysinfo: change test == to test =
       compiler: don't inline integer expressions with named types
+
+iii (1):
+      Move jump threading before reload
 
 jakub (23):
       * BASE-VER: Set to 9.2.1.
@@ -279,9 +291,10 @@ olegendo (4):
       gcc/ 2019-10-01  Oleg Endo  <olegendo@gcc.gnu.org>
       gcc/ 	Backport from mainline 	2019-10-10  Oleg Endo  <olegendo@gcc.gnu.org>
 
-pault (2):
+pault (3):
       2019-09-07  Paul Thomas  <pault@gcc.gnu.org>
       2019-09-21  Paul Thomas  <pault@gcc.gnu.org>
+      2019-10-27  Paul Thomas  <pault@gcc.gnu.org>
 
 rearnsha (3):
       [aarch64] PR target/91386 Use copy_rtx to avoid modifying original insns in peep2 pattern
@@ -595,10 +608,123 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..22157fe4704 100644
+index 7f6557d8018..2adcf84ad59 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,900 @@
+@@ -1,3 +1,1015 @@
++2019-10-28  Ilya Leoshkevich  <iii@linux.ibm.com>
++
++	Backport from mainline
++	PR rtl-optimization/92007
++	* cfgcleanup.c (thread_jump): Add an assertion that we don't
++	call it after reload if hot/cold partitioning has been done.
++	(class pass_postreload_jump): Rename to
++	pass_jump_after_combine.
++	(make_pass_postreload_jump): Rename to
++	make_pass_jump_after_combine.
++	* passes.def(pass_postreload_jump): Move before reload, rename
++	to pass_jump_after_combine.
++	* tree-pass.h (make_pass_postreload_jump): Rename to
++	make_pass_jump_after_combine.
++
++2019-10-28  Peter Bergner <bergner@linux.ibm.com>
++	    Jiufu Guo  <guojiufu@linux.ibm.com>
++
++	PR target/70010
++	* config/rs6000/rs6000.c (rs6000_can_inline_p): Prohibit inlining if
++	the callee explicitly disables some isa_flags the caller is using.
++
++2019-10-27  Iain Sandoe  <iain@sandoe.co.uk>
++
++	Backport from mainline
++	2019-10-17  Iain Sandoe  <iain@sandoe.co.uk>
++
++	PR target/65342
++	* config/rs6000/darwin.md (movdi_low, movsi_low_st): Delete.
++	(movdi_low_st): Delete.
++	* config/rs6000/rs6000.c
++	(darwin_rs6000_legitimate_lo_sum_const_p): New.
++	(mem_operand_gpr): Validate Mach-O LO_SUM cases separately.
++	* config/rs6000/rs6000.md (movsi_low): Delete.
++
++2019-10-27  Iain Sandoe  <iain@sandoe.co.uk>
++
++	Backport from mainline
++	2019-10-12  Iain Sandoe  <iain@sandoe.co.uk>
++
++	PR target/67183
++	* config/darwin.c (machopic_indirection): New field to flag
++	non-lazy-symbol-pointers in the data section.
++	(machopic_indirection_name): Compute if an indirection should
++	appear in the data section.
++	(machopic_output_data_section_indirection): New callback split
++	from machopic_output_indirection.
++	(machopic_output_stub_indirection): Likewise.
++	(machopic_output_indirection): Retain the code for non-lazy
++	symbol pointers in their regular section.
++	(machopic_finish): Use the new callbacks to order the indirection
++	output.
++
++2019-10-27  Iain Sandoe  <iain@sandoe.co.uk>
++
++	Backport from mainline
++	2019-10-12  Iain Sandoe  <iain@sandoe.co.uk>
++
++	* config/darwin-protos.h (machopic_finish): Delete.
++	* config/darwin.c (machopic_finish): Make static.
++
++	Backport from mainline
++	2019-10-09  Iain Sandoe  <iain@sandoe.co.uk>
++
++	* config/darwin.c (machopic_indirect_data_reference): Set flag to
++	indicate that the new symbol is an indirection.
++	(machopic_indirect_call_target): Likewise.
++	* config/darwin.h (MACHO_SYMBOL_FLAG_INDIRECTION): New.
++	(MACHO_SYMBOL_INDIRECTION_P): New.
++	(MACHO_SYMBOL_FLAG_STATIC): Adjust bit number.
++
++	Backport from mainline
++	2019-10-08  Iain Sandoe  <iain@sandoe.co.uk>
++
++	* config/darwin.c (machopic_indirect_data_reference): Check for
++	required indirections before making direct access to defined
++	values.
++	(machopic_output_indirection): Place the indirected pointes for
++	required indirections into the non-lazy symbol pointers section.
++	(darwin_encode_section_info):
++	* config/darwin.h (MACHO_SYMBOL_FLAG_MUST_INDIRECT): New.
++	(MACHO_SYMBOL_MUST_INDIRECT_P): New.
++
++	Backport from mainline
++	2019-10-07  Iain Sandoe  <iain@sandoe.co.uk>
++
++	* config/darwin.c (machopic_output_indirection): Don't put
++	hidden symbol indirections into the .data section, use the
++	non-lazy symbol pointers section as normal.
++	(darwin_encode_section_info): Record if a symbol is hidden.
++	* config/darwin.h (MACHO_SYMBOL_FLAG_HIDDEN_VIS): New.
++	(MACHO_SYMBOL_HIDDEN_VIS_P): New.
++
++	Backport from mainline
++	2019-10-07  Iain Sandoe  <iain@sandoe.co.uk>
++
++	* config/darwin.c (machopic_symbol_defined_p): Use symbol flag
++	predicates instead of accessing bits directly.
++	(machopic_indirect_call_target): Likewise.
++	(machopic_output_indirection): Likewise.
++	(darwin_encode_section_info): Improve description.  Use renamed
++	symbol flags.  Use predicate macros for variables and functions.
++	* config/darwin.h:
++	Rename MACHO_SYMBOL_VARIABLE to MACHO_SYMBOL_FLAG_VARIABLE.
++	Rename MACHO_SYMBOL_DEFINED to MACHO_SYMBOL_FLAG_DEFINED.
++	Rename MACHO_SYMBOL_STATIC to MACHO_SYMBOL_FLAG_STATIC.
++	(MACHO_SYMBOL_VARIABLE_P): New.
++	(MACHO_SYMBOL_DEFINED_P):New.
++	(MACHO_SYMBOL_STATIC_P): New.
++	* config/i386/darwin.h (MACHO_SYMBOL_FLAG_VARIABLE): Delete.
++	(SYMBOL_FLAG_SUBT_DEP): New.
++	* config/rs6000/darwin.h (SYMBOL_FLAG_SUBT_DEP): New.
++
 +2019-10-25  Jan Hubicka  <hubicka@ucw.cz>
 +
 +	Backport from mainline
@@ -678,6 +804,8 @@ index 7f6557d8018..22157fe4704 100644
 +
 +2019-10-24  Iain Sandoe  <iain@sandoe.co.uk>
 +
++	Backport from mainline
++	2019-10-23  Iain Sandoe  <iain@sandoe.co.uk>
 +	* config/rs6000/darwin.h (ASM_OUTPUT_MAX_SKIP_ALIGN): Guard
 +	against out of range max skip or log values.
 +
@@ -1499,7 +1627,7 @@ index 7f6557d8018..22157fe4704 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +1410,7 @@
+@@ -513,7 +1525,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -2362,6 +2490,72 @@ index c8a42680041..56795995650 100644
  	  else if (nregs > 0)
  	    use_regs (call_fusage, REGNO (reg), nregs);
  	}
+diff --git a/gcc/cfgcleanup.c b/gcc/cfgcleanup.c
+index 992912ce195..4c3fc8dbfb0 100644
+--- a/gcc/cfgcleanup.c
++++ b/gcc/cfgcleanup.c
+@@ -257,6 +257,10 @@ thread_jump (edge e, basic_block b)
+   bool failed = false;
+   reg_set_iterator rsi;
+ 
++  /* Jump threading may cause fixup_partitions to introduce new crossing edges,
++     which is not allowed after reload.  */
++  gcc_checking_assert (!reload_completed || !crtl->has_bb_partition);
++
+   if (b->flags & BB_NONTHREADABLE_BLOCK)
+     return NULL;
+ 
+@@ -3269,10 +3273,10 @@ make_pass_jump (gcc::context *ctxt)
+ 
+ namespace {
+ 
+-const pass_data pass_data_postreload_jump =
++const pass_data pass_data_jump_after_combine =
+ {
+   RTL_PASS, /* type */
+-  "postreload_jump", /* name */
++  "jump_after_combine", /* name */
+   OPTGROUP_NONE, /* optinfo_flags */
+   TV_JUMP, /* tv_id */
+   0, /* properties_required */
+@@ -3282,20 +3286,20 @@ const pass_data pass_data_postreload_jump =
+   0, /* todo_flags_finish */
+ };
+ 
+-class pass_postreload_jump : public rtl_opt_pass
++class pass_jump_after_combine : public rtl_opt_pass
+ {
+ public:
+-  pass_postreload_jump (gcc::context *ctxt)
+-    : rtl_opt_pass (pass_data_postreload_jump, ctxt)
++  pass_jump_after_combine (gcc::context *ctxt)
++    : rtl_opt_pass (pass_data_jump_after_combine, ctxt)
+   {}
+ 
+   /* opt_pass methods: */
+   virtual unsigned int execute (function *);
+ 
+-}; // class pass_postreload_jump
++}; // class pass_jump_after_combine
+ 
+ unsigned int
+-pass_postreload_jump::execute (function *)
++pass_jump_after_combine::execute (function *)
+ {
+   cleanup_cfg (flag_thread_jumps ? CLEANUP_THREADING : 0);
+   return 0;
+@@ -3304,9 +3308,9 @@ pass_postreload_jump::execute (function *)
+ } // anon namespace
+ 
+ rtl_opt_pass *
+-make_pass_postreload_jump (gcc::context *ctxt)
++make_pass_jump_after_combine (gcc::context *ctxt)
+ {
+-  return new pass_postreload_jump (ctxt);
++  return new pass_jump_after_combine (ctxt);
+ }
+ 
+ namespace {
 diff --git a/gcc/cgraph.c b/gcc/cgraph.c
 index db4c9c747b9..1febb6369a0 100644
 --- a/gcc/cgraph.c
@@ -3101,11 +3295,119 @@ index 3d85f29cb3d..b3577c416bc 100644
    /* We will need to know the OS X version we're trying to build for here
       so that we can figure out the mechanism and source for the sysroot to
       be used.  */
+diff --git a/gcc/config/darwin-protos.h b/gcc/config/darwin-protos.h
+index e5614b627d7..afeca81f807 100644
+--- a/gcc/config/darwin-protos.h
++++ b/gcc/config/darwin-protos.h
+@@ -53,8 +53,6 @@ extern void darwin_set_default_type_attributes (tree);
+ 
+ #endif /* TREE_CODE */
+ 
+-extern void machopic_finish (FILE *);
+-
+ extern int machopic_reloc_rw_mask (void);
+ extern section *machopic_select_section (tree, int, unsigned HOST_WIDE_INT);
+ 
 diff --git a/gcc/config/darwin.c b/gcc/config/darwin.c
-index b9862353843..55759df79c8 100644
+index b9862353843..0d21d86b98a 100644
 --- a/gcc/config/darwin.c
 +++ b/gcc/config/darwin.c
-@@ -844,7 +844,7 @@ machopic_legitimize_pic_address (rtx orig, machine_mode mode, rtx reg)
+@@ -75,7 +75,7 @@ along with GCC; see the file COPYING3.  If not see
+    setting the second word in the .non_lazy_symbol_pointer data
+    structure to symbol.  See indirect_data for the code that handles
+    the extra indirection, and machopic_output_indirection and its use
+-   of MACHO_SYMBOL_STATIC for the code that handles @code{static}
++   of MACHO_SYMBOL_FLAG_STATIC for the code that handles @code{static}
+    symbol indirection.  */
+ 
+ /* For darwin >= 9  (OSX 10.5) the linker is capable of making the necessary
+@@ -250,7 +250,7 @@ name_needs_quotes (const char *name)
+ int
+ machopic_symbol_defined_p (rtx sym_ref)
+ {
+-  if (SYMBOL_REF_FLAGS (sym_ref) & MACHO_SYMBOL_FLAG_DEFINED)
++  if (MACHO_SYMBOL_DEFINED_P (sym_ref))
+     return true;
+ 
+   /* If a symbol references local and is not an extern to this
+@@ -259,7 +259,7 @@ machopic_symbol_defined_p (rtx sym_ref)
+     {
+       /* If the symbol references a variable and the variable is a
+ 	 common symbol, then this symbol is not defined.  */
+-      if (SYMBOL_REF_FLAGS (sym_ref) & MACHO_SYMBOL_FLAG_VARIABLE)
++      if (MACHO_SYMBOL_VARIABLE_P (sym_ref))
+ 	{
+ 	  tree decl = SYMBOL_REF_DECL (sym_ref);
+ 	  if (!decl)
+@@ -455,6 +455,13 @@ typedef struct GTY ((for_user)) machopic_indirection
+   bool stub_p;
+   /* True iff this stub or pointer has been referenced.  */
+   bool used;
++  /* True iff a non-lazy symbol pointer should be emitted into the .data
++     section, rather than the non-lazy symbol pointers section.  The cases
++     for which this occurred seem to have been unintentional, and later
++     toolchains emit all of the indirections to the 'usual' section.  We
++     are keeping this in case it is necessary to preserve compatibility with
++     older toolchains.  */
++  bool nlsp_in_data_section;
+ } machopic_indirection;
+ 
+ struct indirection_hasher : ggc_ptr_hash<machopic_indirection>
+@@ -591,6 +598,18 @@ machopic_indirection_name (rtx sym_ref, bool stub_p)
+       p->ptr_name = xstrdup (buffer);
+       p->stub_p = stub_p;
+       p->used = false;
++      /* Here we are undoing a number of causes that placed some indirections
++	 (apparently erroneously) into the .data section.  Specifically, some
++	 symbols that are ABI mandated indirections and some hidden symbols
++	 were being placed there - which cause difficulties with later
++	 versions of ld64.
++      */
++      p->nlsp_in_data_section =
++	   ! MACHO_SYMBOL_MUST_INDIRECT_P (sym_ref)
++	&& ! MACHO_SYMBOL_HIDDEN_VIS_P (sym_ref)
++	&& (machopic_symbol_defined_p (sym_ref)
++	    || SYMBOL_REF_LOCAL_P (sym_ref))
++	&& ! indirect_data (sym_ref);
+       *slot = p;
+     }
+ 
+@@ -666,7 +685,7 @@ machopic_indirect_data_reference (rtx orig, rtx reg)
+ 	   /* some other cpu -- writeme!  */
+ 	   gcc_unreachable ();
+ 	}
+-      else if (defined)
++      else if (defined && ! MACHO_SYMBOL_MUST_INDIRECT_P (orig))
+ 	{
+ 	  rtx offset = NULL;
+ 	  if (DARWIN_PPC || HAVE_lo_sum)
+@@ -708,6 +727,7 @@ machopic_indirect_data_reference (rtx orig, rtx reg)
+ 		  machopic_indirection_name (orig, /*stub_p=*/false)));
+ 
+       SYMBOL_REF_DATA (ptr_ref) = SYMBOL_REF_DATA (orig);
++      SYMBOL_REF_FLAGS (ptr_ref) |= MACHO_SYMBOL_FLAG_INDIRECTION;
+ 
+       ptr_ref = gen_const_mem (Pmode, ptr_ref);
+       machopic_define_symbol (ptr_ref);
+@@ -798,8 +818,7 @@ machopic_indirect_call_target (rtx target)
+ 
+   if (MACHOPIC_INDIRECT
+       && GET_CODE (XEXP (target, 0)) == SYMBOL_REF
+-      && !(SYMBOL_REF_FLAGS (XEXP (target, 0))
+-	   & MACHO_SYMBOL_FLAG_DEFINED))
++      && ! MACHO_SYMBOL_DEFINED_P (XEXP (target, 0)))
+     {
+       rtx sym_ref = XEXP (target, 0);
+       const char *stub_name = machopic_indirection_name (sym_ref,
+@@ -808,6 +827,7 @@ machopic_indirect_call_target (rtx target)
+ 
+       XEXP (target, 0) = gen_rtx_SYMBOL_REF (mode, stub_name);
+       SYMBOL_REF_DATA (XEXP (target, 0)) = SYMBOL_REF_DATA (sym_ref);
++      SYMBOL_REF_FLAGS (XEXP (target, 0)) |= MACHO_SYMBOL_FLAG_INDIRECTION;
+       MEM_READONLY_P (target) = 1;
+       MEM_NOTRAP_P (target) = 1;
+     }
+@@ -844,7 +864,7 @@ machopic_legitimize_pic_address (rtx orig, machine_mode mode, rtx reg)
  	{
  	  if (reg == 0)
  	    {
@@ -3114,7 +3416,7 @@ index b9862353843..55759df79c8 100644
  	      reg = gen_reg_rtx (Pmode);
  	    }
  
-@@ -928,7 +928,7 @@ machopic_legitimize_pic_address (rtx orig, machine_mode mode, rtx reg)
+@@ -928,7 +948,7 @@ machopic_legitimize_pic_address (rtx orig, machine_mode mode, rtx reg)
  	      emit_use (gen_rtx_REG (Pmode, PIC_OFFSET_TABLE_REGNUM));
  #endif
  
@@ -3123,7 +3425,7 @@ index b9862353843..55759df79c8 100644
  		df_set_regs_ever_live (REGNO (pic), true);
  	      pic_ref = gen_rtx_PLUS (Pmode, pic,
  				      machopic_gen_offset (XEXP (orig, 0)));
-@@ -952,7 +952,7 @@ machopic_legitimize_pic_address (rtx orig, machine_mode mode, rtx reg)
+@@ -952,7 +972,7 @@ machopic_legitimize_pic_address (rtx orig, machine_mode mode, rtx reg)
  
  	      if (reg == 0)
  		{
@@ -3132,7 +3434,7 @@ index b9862353843..55759df79c8 100644
  		  reg = gen_reg_rtx (Pmode);
  		}
  
-@@ -998,7 +998,7 @@ machopic_legitimize_pic_address (rtx orig, machine_mode mode, rtx reg)
+@@ -998,7 +1018,7 @@ machopic_legitimize_pic_address (rtx orig, machine_mode mode, rtx reg)
  #if 0
  		  emit_use (pic_offset_table_rtx);
  #endif
@@ -3141,7 +3443,336 @@ index b9862353843..55759df79c8 100644
  		    df_set_regs_ever_live (REGNO (pic), true);
  		  pic_ref = gen_rtx_PLUS (Pmode,
  					  pic,
-@@ -1252,12 +1252,13 @@ darwin_mark_decl_preserved (const char *name)
+@@ -1069,129 +1089,160 @@ machopic_legitimize_pic_address (rtx orig, machine_mode mode, rtx reg)
+   return pic_ref;
+ }
+ 
+-/* Output the stub or non-lazy pointer in *SLOT, if it has been used.
+-   DATA is the FILE* for assembly output.  Called from
+-   htab_traverse.  */
++/* Callbacks to output the stub or non-lazy pointers.
++   Each works on the item in *SLOT,if it has been used.
++   DATA is the FILE* for assembly output.
++   Called from htab_traverses, invoked from machopic_finish().  */
+ 
+ int
+-machopic_output_indirection (machopic_indirection **slot, FILE *asm_out_file)
++machopic_output_data_section_indirection (machopic_indirection **slot,
++					  FILE *asm_out_file)
+ {
+   machopic_indirection *p = *slot;
+-  rtx symbol;
+-  const char *sym_name;
+-  const char *ptr_name;
+ 
+-  if (!p->used)
++  if (!p->used || !p->nlsp_in_data_section)
+     return 1;
+ 
+-  symbol = p->symbol;
+-  sym_name = XSTR (symbol, 0);
+-  ptr_name = p->ptr_name;
++  rtx symbol = p->symbol;
++  /* The original symbol name.  */
++  const char *sym_name = XSTR (symbol, 0);
++  /* The name of the indirection symbol.  */
++  const char *ptr_name = p->ptr_name;
+ 
+-  if (p->stub_p)
+-    {
+-      char *sym;
+-      char *stub;
+-      tree id;
++  switch_to_section (data_section);
++  assemble_align (GET_MODE_ALIGNMENT (Pmode));
++  assemble_label (asm_out_file, ptr_name);
++  assemble_integer (gen_rtx_SYMBOL_REF (Pmode, sym_name),
++		    GET_MODE_SIZE (Pmode),
++		    GET_MODE_ALIGNMENT (Pmode), 1);
+ 
+-      id = maybe_get_identifier (sym_name);
+-      if (id)
+-	{
+-	  tree id_orig = id;
++  return 1;
++}
+ 
+-	  while (IDENTIFIER_TRANSPARENT_ALIAS (id))
+-	    id = TREE_CHAIN (id);
+-	  if (id != id_orig)
+-	    sym_name = IDENTIFIER_POINTER (id);
+-	}
++int
++machopic_output_stub_indirection (machopic_indirection **slot,
++				  FILE *asm_out_file)
++{
++  machopic_indirection *p = *slot;
+ 
+-      sym = XALLOCAVEC (char, strlen (sym_name) + 2);
+-      if (sym_name[0] == '*' || sym_name[0] == '&')
+-	strcpy (sym, sym_name + 1);
+-      else if (sym_name[0] == '-' || sym_name[0] == '+')
+-	strcpy (sym, sym_name);
+-      else
+-	sprintf (sym, "%s%s", user_label_prefix, sym_name);
++  if (!p->used || !p->stub_p)
++    return 1;
+ 
+-      stub = XALLOCAVEC (char, strlen (ptr_name) + 2);
+-      if (ptr_name[0] == '*' || ptr_name[0] == '&')
+-	strcpy (stub, ptr_name + 1);
+-      else
+-	sprintf (stub, "%s%s", user_label_prefix, ptr_name);
++  rtx symbol = p->symbol;
++  /* The original symbol name.  */
++  const char *sym_name = XSTR (symbol, 0);
++  /* The name of the stub symbol.  */
++  const char *ptr_name = p->ptr_name;
+ 
+-      machopic_output_stub (asm_out_file, sym, stub);
+-    }
+-  else if (! indirect_data (symbol)
+-	   && (machopic_symbol_defined_p (symbol)
+-	       || SYMBOL_REF_LOCAL_P (symbol)))
++  tree id = maybe_get_identifier (sym_name);
++  if (id)
+     {
+-      switch_to_section (data_section);
+-      assemble_align (GET_MODE_ALIGNMENT (Pmode));
+-      assemble_label (asm_out_file, ptr_name);
+-      assemble_integer (gen_rtx_SYMBOL_REF (Pmode, sym_name),
+-			GET_MODE_SIZE (Pmode),
+-			GET_MODE_ALIGNMENT (Pmode), 1);
++      tree id_orig = id;
++
++      while (IDENTIFIER_TRANSPARENT_ALIAS (id))
++	id = TREE_CHAIN (id);
++      if (id != id_orig)
++	sym_name = IDENTIFIER_POINTER (id);
+     }
++
++  char *sym = XALLOCAVEC (char, strlen (sym_name) + 2);
++  if (sym_name[0] == '*' || sym_name[0] == '&')
++    strcpy (sym, sym_name + 1);
++  else if (sym_name[0] == '-' || sym_name[0] == '+')
++    strcpy (sym, sym_name);
+   else
+-    {
+-      rtx init = const0_rtx;
++    sprintf (sym, "%s%s", user_label_prefix, sym_name);
++
++  char *stub = XALLOCAVEC (char, strlen (ptr_name) + 2);
++  if (ptr_name[0] == '*' || ptr_name[0] == '&')
++    strcpy (stub, ptr_name + 1);
++  else
++    sprintf (stub, "%s%s", user_label_prefix, ptr_name);
++
++  machopic_output_stub (asm_out_file, sym, stub);
++
++  return 1;
++}
++
++int
++machopic_output_indirection (machopic_indirection **slot, FILE *asm_out_file)
++{
++  machopic_indirection *p = *slot;
++
++  if (!p->used || p->stub_p || p->nlsp_in_data_section)
++    return 1;
+ 
+-      switch_to_section (darwin_sections[machopic_nl_symbol_ptr_section]);
++  rtx symbol = p->symbol;
++  /* The original symbol name.  */
++  const char *sym_name = XSTR (symbol, 0);
++  /* The nonlazy-stub symbol name.  */
++  const char *ptr_name = p->ptr_name;
+ 
+-      /* Mach-O symbols are passed around in code through indirect
+-	 references and the original symbol_ref hasn't passed through
+-	 the generic handling and reference-catching in
+-	 output_operand, so we need to manually mark weak references
+-	 as such.  */
+-      if (SYMBOL_REF_WEAK (symbol))
++  switch_to_section (darwin_sections[machopic_nl_symbol_ptr_section]);
++
++  /* Mach-O symbols are passed around in code through indirect references and
++     the original symbol_ref hasn't passed through the generic handling and
++     reference-catching in output_operand, so we need to manually mark weak
++     references as such.  */
++
++  if (SYMBOL_REF_WEAK (symbol))
++    {
++      tree decl = SYMBOL_REF_DECL (symbol);
++      gcc_checking_assert (DECL_P (decl));
++
++      if (decl != NULL_TREE
++	  && DECL_EXTERNAL (decl) && TREE_PUBLIC (decl)
++	  /* Handle only actual external-only definitions, not
++	     e.g. extern inline code or variables for which
++	     storage has been allocated.  */
++	  && !TREE_STATIC (decl))
+ 	{
+-	  tree decl = SYMBOL_REF_DECL (symbol);
+-	  gcc_assert (DECL_P (decl));
+-
+-	  if (decl != NULL_TREE
+-	      && DECL_EXTERNAL (decl) && TREE_PUBLIC (decl)
+-	      /* Handle only actual external-only definitions, not
+-		 e.g. extern inline code or variables for which
+-		 storage has been allocated.  */
+-	      && !TREE_STATIC (decl))
+-	    {
+-	      fputs ("\t.weak_reference ", asm_out_file);
+-	      assemble_name (asm_out_file, sym_name);
+-	      fputc ('\n', asm_out_file);
+-	    }
++	  fputs ("\t.weak_reference ", asm_out_file);
++	  assemble_name (asm_out_file, sym_name);
++	  fputc ('\n', asm_out_file);
+ 	}
++    }
+ 
+-      assemble_name (asm_out_file, ptr_name);
+-      fprintf (asm_out_file, ":\n");
++  assemble_name (asm_out_file, ptr_name);
++  fprintf (asm_out_file, ":\n");
+ 
+-      fprintf (asm_out_file, "\t.indirect_symbol ");
+-      assemble_name (asm_out_file, sym_name);
+-      fprintf (asm_out_file, "\n");
++  fprintf (asm_out_file, "\t.indirect_symbol ");
++  assemble_name (asm_out_file, sym_name);
++  fprintf (asm_out_file, "\n");
+ 
+-      /* Variables that are marked with MACHO_SYMBOL_STATIC need to
+-	 have their symbol name instead of 0 in the second entry of
+-	 the non-lazy symbol pointer data structure when they are
+-	 defined.  This allows the runtime to rebind newer instances
+-	 of the translation unit with the original instance of the
+-	 symbol.  */
++  /* Variables that are marked with MACHO_SYMBOL_FLAG_STATIC need to
++     have their symbol name instead of 0 in the second entry of
++     the non-lazy symbol pointer data structure when they are
++     defined.  This allows the runtime to rebind newer instances
++     of the translation unit with the original instance of the
++     symbol.  */
+ 
+-      if ((SYMBOL_REF_FLAGS (symbol) & MACHO_SYMBOL_STATIC)
+-	  && machopic_symbol_defined_p (symbol))
+-	init = gen_rtx_SYMBOL_REF (Pmode, sym_name);
++  rtx init = const0_rtx;
++  if (MACHO_SYMBOL_STATIC_P (symbol) && machopic_symbol_defined_p (symbol))
++    init = gen_rtx_SYMBOL_REF (Pmode, sym_name);
+ 
+-      assemble_integer (init, GET_MODE_SIZE (Pmode),
+-			GET_MODE_ALIGNMENT (Pmode), 1);
+-    }
++  assemble_integer (init, GET_MODE_SIZE (Pmode),
++		    GET_MODE_ALIGNMENT (Pmode), 1);
+ 
+   return 1;
+ }
+ 
+-void
++static void
+ machopic_finish (FILE *asm_out_file)
+ {
+-  if (machopic_indirections)
+-    machopic_indirections
+-      ->traverse_noresize<FILE *, machopic_output_indirection> (asm_out_file);
++  if (!machopic_indirections)
++    return;
++
++  /* First output an symbol indirections that have been placed into .data
++     (we don't expect these now).  */
++  machopic_indirections->traverse_noresize
++    <FILE *, machopic_output_data_section_indirection> (asm_out_file);
++
++  machopic_indirections->traverse_noresize
++    <FILE *, machopic_output_stub_indirection> (asm_out_file);
++
++  machopic_indirections->traverse_noresize
++    <FILE *, machopic_output_indirection> (asm_out_file);
+ }
+ 
+ int
+@@ -1206,25 +1257,51 @@ machopic_operand_p (rtx op)
+ 	    && XINT (XEXP (op, 0), 1) == UNSPEC_MACHOPIC_OFFSET);
+ }
+ 
+-/* This function records whether a given name corresponds to a defined
+-   or undefined function or variable, for machopic_classify_ident to
+-   use later.  */
++/* This function:
++   computes and caches a series of flags that characterise the symbol's
++   properties that affect Mach-O code gen (including accidental cases
++   from older toolchains).
++
++   TODO:
++   Here we also need to do enough analysis to determine if a symbol's
++   name needs to be made linker-visible.  This is more tricky - since
++   it depends on whether we've previously seen a global weak definition
++   in the same section.
++   */
+ 
+ void
+-darwin_encode_section_info (tree decl, rtx rtl, int first ATTRIBUTE_UNUSED)
++darwin_encode_section_info (tree decl, rtx rtl, int first)
+ {
+-  rtx sym_ref;
++  /* Careful not to prod global register variables.  */
++  if (!MEM_P (rtl))
++    return;
+ 
+-  /* Do the standard encoding things first.  */
++  /* Do the standard encoding things first; this sets:
++     SYMBOL_FLAG_FUNCTION,
++     SYMBOL_FLAG_LOCAL, (binds_local_p)
++     TLS_MODEL, SYMBOL_FLAG_SMALL
++     SYMBOL_FLAG_EXTERNAL.  */
+   default_encode_section_info (decl, rtl, first);
+ 
+-  if (TREE_CODE (decl) != FUNCTION_DECL && TREE_CODE (decl) != VAR_DECL)
++  if (! VAR_OR_FUNCTION_DECL_P (decl))
+     return;
+ 
+-  sym_ref = XEXP (rtl, 0);
+-  if (TREE_CODE (decl) == VAR_DECL)
++  rtx sym_ref = XEXP (rtl, 0);
++  if (VAR_P (decl))
+     SYMBOL_REF_FLAGS (sym_ref) |= MACHO_SYMBOL_FLAG_VARIABLE;
+ 
++  /* Only really common if there's no initialiser.  */
++  bool really_common_p = (DECL_COMMON (decl)
++			  && (DECL_INITIAL (decl) == NULL
++			      || (!in_lto_p
++				  && DECL_INITIAL (decl) == error_mark_node)));
++
++  /* For Darwin, if we have specified visibility and it's not the default
++     that's counted 'hidden'.  */
++  if (DECL_VISIBILITY_SPECIFIED (decl)
++      && DECL_VISIBILITY (decl) != VISIBILITY_DEFAULT)
++    SYMBOL_REF_FLAGS (sym_ref) |= MACHO_SYMBOL_FLAG_HIDDEN_VIS;
++
+   if (!DECL_EXTERNAL (decl)
+       && (!TREE_PUBLIC (decl) || !DECL_WEAK (decl))
+       && ! lookup_attribute ("weakref", DECL_ATTRIBUTES (decl))
+@@ -1235,7 +1312,13 @@ darwin_encode_section_info (tree decl, rtx rtl, int first ATTRIBUTE_UNUSED)
+     SYMBOL_REF_FLAGS (sym_ref) |= MACHO_SYMBOL_FLAG_DEFINED;
+ 
+   if (! TREE_PUBLIC (decl))
+-    SYMBOL_REF_FLAGS (sym_ref) |= MACHO_SYMBOL_STATIC;
++    SYMBOL_REF_FLAGS (sym_ref) |= MACHO_SYMBOL_FLAG_STATIC;
++
++  /* Short cut check for Darwin 'must indirect' rules.  */
++  if (really_common_p
++      || (DECL_WEAK (decl) && ! MACHO_SYMBOL_HIDDEN_VIS_P (sym_ref))
++      || lookup_attribute ("weakref", DECL_ATTRIBUTES (decl)))
++     SYMBOL_REF_FLAGS (sym_ref) |= MACHO_SYMBOL_FLAG_MUST_INDIRECT;
+ }
+ 
+ void
+@@ -1252,12 +1335,13 @@ darwin_mark_decl_preserved (const char *name)
  }
  
  static section *
@@ -3157,7 +3788,7 @@ index b9862353843..55759df79c8 100644
  }
  
  static section *
-@@ -1550,7 +1551,7 @@ machopic_select_section (tree decl,
+@@ -1550,7 +1634,7 @@ machopic_select_section (tree decl,
  
      case SECCAT_RODATA:
      case SECCAT_SRODATA:
@@ -3167,7 +3798,7 @@ index b9862353843..55759df79c8 100644
  
      case SECCAT_RODATA_MERGE_STR:
 diff --git a/gcc/config/darwin.h b/gcc/config/darwin.h
-index 0e253cb0dfa..e8fe90728e8 100644
+index 0e253cb0dfa..4f1268494b1 100644
 --- a/gcc/config/darwin.h
 +++ b/gcc/config/darwin.h
 @@ -126,6 +126,24 @@ extern GTY(()) int darwin_ms_struct;
@@ -3259,6 +3890,67 @@ index 0e253cb0dfa..e8fe90728e8 100644
     %{prebind} %{noprebind} %{nofixprebinding} %{prebind_all_twolevel_modules} \
     %{read_only_relocs} \
     %{sectcreate*} %{sectorder*} %{seg1addr*} %{segprot*} \
+@@ -762,21 +785,52 @@ extern GTY(()) section * darwin_sections[NUM_DARWIN_SECTIONS];
+ #undef TARGET_ASM_MARK_DECL_PRESERVED
+ #define TARGET_ASM_MARK_DECL_PRESERVED darwin_mark_decl_preserved
+ 
+-/* Set on a symbol with SYMBOL_FLAG_FUNCTION or
+-   MACHO_SYMBOL_FLAG_VARIABLE to indicate that the function or
+-   variable has been defined in this translation unit.
+-   When porting Mach-O to new architectures you need to make
+-   sure these aren't clobbered by the backend.  */
++/* Any port using this header needs to define the first available
++   subtarget symbol bit: SYMBOL_FLAG_SUBT_DEP.  */
++
++/* Is a variable. */
++#define MACHO_SYMBOL_FLAG_VARIABLE (SYMBOL_FLAG_SUBT_DEP)
++#define MACHO_SYMBOL_VARIABLE_P(RTX) \
++  ((SYMBOL_REF_FLAGS (RTX) & MACHO_SYMBOL_FLAG_VARIABLE) != 0)
++
++/* Set on a symbol that must be indirected, even when there is a
++   definition in the TU.  The ABI mandates that common symbols are so
++   indirected, as are weak.  If 'fix-and-continue' is operational then
++   data symbols might also be.  */
++
++#define MACHO_SYMBOL_FLAG_MUST_INDIRECT ((SYMBOL_FLAG_SUBT_DEP) << 1)
++#define MACHO_SYMBOL_MUST_INDIRECT_P(RTX) \
++  ((SYMBOL_REF_FLAGS (RTX) & MACHO_SYMBOL_FLAG_MUST_INDIRECT) != 0)
++
++/* Set on a symbol with SYMBOL_FLAG_FUNCTION or MACHO_SYMBOL_FLAG_VARIABLE
++   to indicate that the function or variable is considered defined in this
++   translation unit.  */
++
++#define MACHO_SYMBOL_FLAG_DEFINED ((SYMBOL_FLAG_SUBT_DEP) << 2)
++#define MACHO_SYMBOL_DEFINED_P(RTX) \
++  ((SYMBOL_REF_FLAGS (RTX) & MACHO_SYMBOL_FLAG_DEFINED) != 0)
++
++/* Set on a symbol that has specified non-default visibility.  */
++
++#define MACHO_SYMBOL_FLAG_HIDDEN_VIS ((SYMBOL_FLAG_SUBT_DEP) << 3)
++#define MACHO_SYMBOL_HIDDEN_VIS_P(RTX) \
++  ((SYMBOL_REF_FLAGS (RTX) & MACHO_SYMBOL_FLAG_HIDDEN_VIS) != 0)
++
++/* Set on a symbol that is a pic stub or symbol indirection (i.e. the
++   L_xxxxx${stub,non_lazy_ptr,lazy_ptr}.  */
+ 
+-#define MACHO_SYMBOL_FLAG_VARIABLE (SYMBOL_FLAG_MACH_DEP)
+-#define MACHO_SYMBOL_FLAG_DEFINED ((SYMBOL_FLAG_MACH_DEP) << 1)
++#define MACHO_SYMBOL_FLAG_INDIRECTION ((SYMBOL_FLAG_SUBT_DEP) << 5)
++#define MACHO_SYMBOL_INDIRECTION_P(RTX) \
++  ((SYMBOL_REF_FLAGS (RTX) & MACHO_SYMBOL_FLAG_INDIRECTION) != 0)
+ 
+ /* Set on a symbol to indicate when fix-and-continue style code
+    generation is being used and the symbol refers to a static symbol
+    that should be rebound from new instances of a translation unit to
+    the original instance of the data.  */
+ 
+-#define MACHO_SYMBOL_STATIC ((SYMBOL_FLAG_MACH_DEP) << 2)
++#define MACHO_SYMBOL_FLAG_STATIC ((SYMBOL_FLAG_SUBT_DEP) << 6)
++#define MACHO_SYMBOL_STATIC_P(RTX) \
++  ((SYMBOL_REF_FLAGS (RTX) & MACHO_SYMBOL_FLAG_STATIC) != 0)
+ 
+ /* Symbolic names for various things we might know about a symbol.  */
+ 
 diff --git a/gcc/config/darwin.opt b/gcc/config/darwin.opt
 index 22667def0a1..3f04375e633 100644
 --- a/gcc/config/darwin.opt
@@ -3871,6 +4563,23 @@ index 29115a11a0d..3301451e4de 100644
  typedef unsigned char __v32qu __attribute__ ((__vector_size__ (32)));
  
  /* The Intel API is flexible enough that we must allow aliasing with other
+diff --git a/gcc/config/i386/darwin.h b/gcc/config/i386/darwin.h
+index 1e96350fa71..3284af2fb20 100644
+--- a/gcc/config/i386/darwin.h
++++ b/gcc/config/i386/darwin.h
+@@ -326,10 +326,8 @@ extern int darwin_emit_branch_islands;
+         }								\
+     }
+ 
+-/* This needs to move since i386 uses the first flag and other flags are
+-   used in Mach-O.  */
+-#undef MACHO_SYMBOL_FLAG_VARIABLE
+-#define MACHO_SYMBOL_FLAG_VARIABLE ((SYMBOL_FLAG_MACH_DEP) << 3)
++/* First available SYMBOL flag bit for use by subtargets.  */
++#define SYMBOL_FLAG_SUBT_DEP (SYMBOL_FLAG_MACH_DEP << 5)
+ 
+ #undef MACHOPIC_NL_SYMBOL_PTR_SECTION
+ #define MACHOPIC_NL_SYMBOL_PTR_SECTION \
 diff --git a/gcc/config/i386/emmintrin.h b/gcc/config/i386/emmintrin.h
 index f9e7b33b0dd..1683d842c65 100644
 --- a/gcc/config/i386/emmintrin.h
@@ -4778,7 +5487,7 @@ index 4a1150e0994..8d535acd428 100644
    [(parallel [(set (reg:CCFP CR6_REGNO)
  		   (compare:CCFP
 diff --git a/gcc/config/rs6000/darwin.h b/gcc/config/rs6000/darwin.h
-index d3a59f42c37..6f750c69e0e 100644
+index d3a59f42c37..9fab84fd82e 100644
 --- a/gcc/config/rs6000/darwin.h
 +++ b/gcc/config/rs6000/darwin.h
 @@ -53,11 +53,23 @@
@@ -4821,6 +5530,54 @@ index d3a59f42c37..6f750c69e0e 100644
          fprintf ((FILE), "\t.p2align %d\n", (LOG));           \
        else                                                    \
          fprintf ((FILE), "\t.p2align %d,,%d\n", (LOG), (MAX_SKIP)); \
+@@ -456,6 +468,9 @@ do {									\
+    this will need to be modified similar to the x86 case.  */
+ #define TARGET_FOLD_BUILTIN SUBTARGET_FOLD_BUILTIN
+ 
++/* First available SYMBOL flag bit for use by subtargets.  */
++#define SYMBOL_FLAG_SUBT_DEP (SYMBOL_FLAG_MACH_DEP)
++
+ /* Use standard DWARF numbering for DWARF debugging information.  */
+ #define RS6000_USE_DWARF_NUMBERING
+ 
+diff --git a/gcc/config/rs6000/darwin.md b/gcc/config/rs6000/darwin.md
+index 471058dd417..a1a46a9e7ea 100644
+--- a/gcc/config/rs6000/darwin.md
++++ b/gcc/config/rs6000/darwin.md
+@@ -122,33 +122,6 @@ You should have received a copy of the GNU General Public License
+   [(set_attr "type" "store")])
+ 
+ ;; 64-bit MachO load/store support
+-(define_insn "movdi_low"
+-  [(set (match_operand:DI 0 "gpc_reg_operand" "=r,*!d")
+-        (mem:DI (lo_sum:DI (match_operand:DI 1 "gpc_reg_operand" "b,b")
+-                           (match_operand 2 "" ""))))]
+-  "TARGET_MACHO && TARGET_64BIT"
+-  "@
+-   ld %0,lo16(%2)(%1)
+-   lfd %0,lo16(%2)(%1)"
+-  [(set_attr "type" "load")])
+-
+-(define_insn "movsi_low_st"
+-  [(set (mem:SI (lo_sum:SI (match_operand:SI 1 "gpc_reg_operand" "b")
+-                           (match_operand 2 "" "")))
+-	(match_operand:SI 0 "gpc_reg_operand" "r"))]
+-  "TARGET_MACHO && ! TARGET_64BIT"
+-  "stw %0,lo16(%2)(%1)"
+-  [(set_attr "type" "store")])
+-
+-(define_insn "movdi_low_st"
+-  [(set (mem:DI (lo_sum:DI (match_operand:DI 1 "gpc_reg_operand" "b,b")
+-                           (match_operand 2 "" "")))
+-	(match_operand:DI 0 "gpc_reg_operand" "r,*!d"))]
+-  "TARGET_MACHO && TARGET_64BIT"
+-  "@
+-   std %0,lo16(%2)(%1)
+-   stfd %0,lo16(%2)(%1)"
+-  [(set_attr "type" "store")])
+ 
+ ;; Mach-O PIC trickery.
+ (define_expand "macho_high"
 diff --git a/gcc/config/rs6000/rs6000-builtin.def b/gcc/config/rs6000/rs6000-builtin.def
 index 0a2bdb79e15..4d4f3b3e746 100644
 --- a/gcc/config/rs6000/rs6000-builtin.def
@@ -4949,8 +5706,176 @@ index c3b98315503..d30e5dec980 100644
  	  }
        }
  
+diff --git a/gcc/config/rs6000/rs6000.c b/gcc/config/rs6000/rs6000.c
+index cb8d737976b..6523dd2dabc 100644
+--- a/gcc/config/rs6000/rs6000.c
++++ b/gcc/config/rs6000/rs6000.c
+@@ -7671,6 +7671,104 @@ address_offset (rtx op)
+   return NULL_RTX;
+ }
+ 
++/* This tests that a lo_sum {constant, symbol, symbol+offset} is valid for
++   the mode.  If we can't find (or don't know) the alignment of the symbol
++   we assume (optimistically) that it's sufficiently aligned [??? maybe we
++   should be pessimistic].  Offsets are validated in the same way as for
++   reg + offset.  */
++static bool
++darwin_rs6000_legitimate_lo_sum_const_p (rtx x, machine_mode mode)
++{
++  /* We should not get here with this.  */
++  gcc_checking_assert (! mode_supports_dq_form (mode));
++
++  if (GET_CODE (x) == CONST)
++    x = XEXP (x, 0);
++
++  if (GET_CODE (x) == UNSPEC && XINT (x, 1) == UNSPEC_MACHOPIC_OFFSET)
++    x =  XVECEXP (x, 0, 0);
++
++  rtx sym = NULL_RTX;
++  unsigned HOST_WIDE_INT offset = 0;
++
++  if (GET_CODE (x) == PLUS)
++    {
++      sym = XEXP (x, 0);
++      if (! SYMBOL_REF_P (sym))
++	return false;
++      if (!CONST_INT_P (XEXP (x, 1)))
++	return false;
++      offset = INTVAL (XEXP (x, 1));
++    }
++  else if (SYMBOL_REF_P (x))
++    sym = x;
++  else if (CONST_INT_P (x))
++    offset = INTVAL (x);
++  else if (GET_CODE (x) == LABEL_REF)
++    offset = 0; // We assume code labels are Pmode aligned
++  else
++    return false; // not sure what we have here.
++
++  /* If we don't know the alignment of the thing to which the symbol refers,
++     we assume optimistically it is "enough".
++     ??? maybe we should be pessimistic instead.  */
++  unsigned align = 0;
++
++  if (sym)
++    {
++      tree decl = SYMBOL_REF_DECL (sym);
++#if TARGET_MACHO
++      if (MACHO_SYMBOL_INDIRECTION_P (sym))
++      /* The decl in an indirection symbol is the original one, which might
++	 be less aligned than the indirection.  Our indirections are always
++	 pointer-aligned.  */
++	;
++      else
++#endif
++      if (decl && DECL_ALIGN (decl))
++	align = DECL_ALIGN_UNIT (decl);
++   }
++
++  unsigned int extra = 0;
++  switch (mode)
++    {
++    case E_DFmode:
++    case E_DDmode:
++    case E_DImode:
++      /* If we are using VSX scalar loads, restrict ourselves to reg+reg
++	 addressing.  */
++      if (VECTOR_MEM_VSX_P (mode))
++	return false;
++
++      if (!TARGET_POWERPC64)
++	extra = 4;
++      else if ((offset & 3) || (align & 3))
++	return false;
++      break;
++
++    case E_TFmode:
++    case E_IFmode:
++    case E_KFmode:
++    case E_TDmode:
++    case E_TImode:
++    case E_PTImode:
++      extra = 8;
++      if (!TARGET_POWERPC64)
++	extra = 12;
++      else if ((offset & 3) || (align & 3))
++	return false;
++      break;
++
++    default:
++      break;
++    }
++
++  /* We only care if the access(es) would cause a change to the high part.  */
++  offset = ((offset & 0xffff) ^ 0x8000) - 0x8000;
++  return IN_RANGE (offset, -(HOST_WIDE_INT_1 << 15),
++                            (HOST_WIDE_INT_1 << 15) - 1 - extra);
++}
++
+ /* Return true if the MEM operand is a memory operand suitable for use
+    with a (full width, possibly multiple) gpr load/store.  On
+    powerpc64 this means the offset must be divisible by 4.
+@@ -7705,7 +7803,13 @@ mem_operand_gpr (rtx op, machine_mode mode)
+       && legitimate_indirect_address_p (XEXP (addr, 0), false))
+     return true;
+ 
+-  /* Don't allow non-offsettable addresses.  See PRs 83969 and 84279.  */
++  /* We need to look through Mach-O PIC unspecs to determine if a lo_sum is
++     really OK.  Doing this early avoids teaching all the other machinery
++     about them.  */
++  if (TARGET_MACHO && GET_CODE (addr) == LO_SUM)
++    return darwin_rs6000_legitimate_lo_sum_const_p (XEXP (addr, 1), mode);
++
++  /* Only allow offsettable addresses.  See PRs 83969 and 84279.  */
+   if (!rs6000_offsettable_memref_p (op, mode, false))
+     return false;
+ 
+@@ -37762,25 +37866,31 @@ rs6000_can_inline_p (tree caller, tree callee)
+   tree caller_tree = DECL_FUNCTION_SPECIFIC_TARGET (caller);
+   tree callee_tree = DECL_FUNCTION_SPECIFIC_TARGET (callee);
+ 
+-  /* If callee has no option attributes, then it is ok to inline.  */
++  /* If the callee has no option attributes, then it is ok to inline.  */
+   if (!callee_tree)
+     ret = true;
+ 
+-  /* If caller has no option attributes, but callee does then it is not ok to
+-     inline.  */
+-  else if (!caller_tree)
+-    ret = false;
+-
+   else
+     {
+-      struct cl_target_option *caller_opts = TREE_TARGET_OPTION (caller_tree);
++      HOST_WIDE_INT caller_isa;
+       struct cl_target_option *callee_opts = TREE_TARGET_OPTION (callee_tree);
++      HOST_WIDE_INT callee_isa = callee_opts->x_rs6000_isa_flags;
++      HOST_WIDE_INT explicit_isa = callee_opts->x_rs6000_isa_flags_explicit;
+ 
+-      /* Callee's options should a subset of the caller's, i.e. a vsx function
+-	 can inline an altivec function but a non-vsx function can't inline a
+-	 vsx function.  */
+-      if ((caller_opts->x_rs6000_isa_flags & callee_opts->x_rs6000_isa_flags)
+-	  == callee_opts->x_rs6000_isa_flags)
++      /* If the caller has option attributes, then use them.
++	 Otherwise, use the command line options.  */
++      if (caller_tree)
++	caller_isa = TREE_TARGET_OPTION (caller_tree)->x_rs6000_isa_flags;
++      else
++	caller_isa = rs6000_isa_flags;
++
++      /* The callee's options must be a subset of the caller's options, i.e.
++	 a vsx function may inline an altivec function, but a no-vsx function
++	 must not inline a vsx function.  However, for those options that the
++	 callee has explicitly enabled or disabled, then we must enforce that
++	 the callee's and caller's options match exactly; see PR70010.  */
++      if (((caller_isa & callee_isa) == callee_isa)
++	  && (caller_isa & explicit_isa) == (callee_isa & explicit_isa))
+ 	ret = true;
+     }
+ 
 diff --git a/gcc/config/rs6000/rs6000.md b/gcc/config/rs6000/rs6000.md
-index ad80592765d..401cbfc3fd7 100644
+index ad80592765d..b3469a17f27 100644
 --- a/gcc/config/rs6000/rs6000.md
 +++ b/gcc/config/rs6000/rs6000.md
 @@ -137,6 +137,9 @@
@@ -4973,7 +5898,21 @@ index ad80592765d..401cbfc3fd7 100644
     UNSPECV_NLGR			; non-local goto receiver
     UNSPECV_MFFS			; Move from FPSCR
     UNSPECV_MFFSL		; Move from FPSCR light instruction version
-@@ -14322,7 +14328,225 @@
+@@ -6818,13 +6824,6 @@
+ ;; do the load 16-bits at a time.  We could do this by loading from memory,
+ ;; and this is even supposed to be faster, but it is simpler not to get
+ ;; integers in the TOC.
+-(define_insn "movsi_low"
+-  [(set (match_operand:SI 0 "gpc_reg_operand" "=r")
+-        (mem:SI (lo_sum:SI (match_operand:SI 1 "gpc_reg_operand" "b")
+-                           (match_operand 2 "" ""))))]
+-  "TARGET_MACHO && ! TARGET_64BIT"
+-  "lwz %0,lo16(%2)(%1)"
+-  [(set_attr "type" "load")])
+ 
+ ;;		MR           LA           LWZ          LFIWZX       LXSIWZX
+ ;;		STW          STFIWX       STXSIWX      LI           LIS
+@@ -14322,7 +14321,225 @@
     "xscmpuqp %0,%1,%2"
    [(set_attr "type" "veccmp")
     (set_attr "size" "128")])
@@ -4986,7 +5925,7 @@ index ad80592765d..401cbfc3fd7 100644
 +  "TARGET_P9_MISC"
 +  "darn %0,0"
 +  [(set_attr "type" "integer")])
-+
+ 
 +(define_insn "darn_raw"
 +  [(set (match_operand:DI 0 "register_operand" "=r")
 +        (unspec_volatile:DI [(const_int 0)] UNSPECV_DARN_RAW))]
@@ -5072,7 +6011,7 @@ index ad80592765d..401cbfc3fd7 100644
 +  "TARGET_P9_MISC"
 +  "setb %0,%1"
 +  [(set_attr "type" "logical")])
- 
++
 +(define_insn "setb_unsigned"
 +   [(set (match_operand:SI 0 "gpc_reg_operand" "=r")
 +	 (if_then_else:SI (ltu (match_operand:CCUNS 1 "cc_reg_operand" "y")
@@ -7440,15 +8379,39 @@ index f0e43b5fda2..9feaea9fde5 100644
    low = fold_convert_loc (loc, etype, low);
    exp = fold_convert_loc (loc, etype, exp);
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index e3073787ea9..4113fc89751 100644
+index e3073787ea9..444a2d9a9bd 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,316 @@
+@@ -1,3 +1,340 @@
++2019-10-28  Tobias Burnus  <tobias@codesourcery.com>
++
++	Backport from mainline
++	2019-10-28  Tobias Burnus  <tobias@codesourcery.com>
++
++	PR fortran/91863
++	* trans-expr.c (gfc_conv_gfc_desc_to_cfi_desc): Don't free data
++	memory as that's done on the Fortran side.
++	(gfc_conv_procedure_call): Handle void* pointers from
++	gfc_conv_gfc_desc_to_cfi_desc.
++
++2019-10-27  Paul Thomas  <pault@gcc.gnu.org>
++
++	Backport from mainline
++	PR fortran/86248
++	* resolve.c (flag_fn_result_spec): Correct a typo before the
++	function declaration.
++	* trans-decl.c (gfc_sym_identifier): Boost the length of 'name'
++	to allow for all variants. Simplify the code by using a pointer
++	to the symbol's proc_name and taking the return out of each of
++	the conditional branches. Allow symbols with fn_result_spec set
++	that do not come from a procedure namespace and have a module
++	name to go through the non-fn_result_spec branch.
++
 +2019-10-22  Steven G. Kargl  <kargl@gcc.gnu.org>
 +
 +	PR fortran/92174
 +	* decl.c (attr_decl1): Move check for F2018:C822 from here ...
-+	* array.c (gfc_set_array_spec): ... to here. 
++	* array.c (gfc_set_array_spec): ... to here.
 +
 +2019-10-18  Steven G. Kargl  <kargl@gcc.gnu.org>
 +
@@ -9148,9 +10111,18 @@ index e918372ef85..8408e9c3d0d 100644
  
  	break;
 diff --git a/gcc/fortran/resolve.c b/gcc/fortran/resolve.c
-index afa4e5c2ccf..6bdb5f012a5 100644
+index afa4e5c2ccf..b3807576653 100644
 --- a/gcc/fortran/resolve.c
 +++ b/gcc/fortran/resolve.c
+@@ -1866,7 +1866,7 @@ resolve_procedure_expression (gfc_expr* expr)
+ 
+ 
+ /* Check that name is not a derived type.  */
+- 
++
+ static bool
+ is_dt_name (const char *name)
+ {
 @@ -7059,19 +7059,6 @@ gfc_resolve_iterator (gfc_iterator *iter, bool real_ok, bool own_scope)
  				  "Step expression in DO loop"))
      return false;
@@ -9204,7 +10176,7 @@ index afa4e5c2ccf..6bdb5f012a5 100644
      }
    else
      {
-+      /* If proc has not been resolved at this point, proc->name may 
++      /* If proc has not been resolved at this point, proc->name may
 +	 actually be a USE associated entity. See PR fortran/89647. */
 +      if (!proc->resolved
 +	  && proc->attr.function == 0 && proc->attr.subroutine == 0)
@@ -9285,6 +10257,17 @@ index afa4e5c2ccf..6bdb5f012a5 100644
      }
  
    if (e->rank == 0 || has_pointer)
+@@ -16525,8 +16554,8 @@ resolve_equivalence (gfc_equiv *eq)
+ }
+ 
+ 
+-/* Function called by resolve_fntype to flag other symbol used in the
+-   length type parameter specification of function resuls.  */
++/* Function called by resolve_fntype to flag other symbols used in the
++   length type parameter specification of function results.  */
+ 
+ static bool
+ flag_fn_result_spec (gfc_expr *expr,
 diff --git a/gcc/fortran/simplify.c b/gcc/fortran/simplify.c
 index 6c1f4bd4fce..58b4652b010 100644
 --- a/gcc/fortran/simplify.c
@@ -9413,10 +10396,68 @@ index 583425c516d..9e1f159a696 100644
  	      break;
  
 diff --git a/gcc/fortran/trans-decl.c b/gcc/fortran/trans-decl.c
-index 9538dee5733..6ac7a9a7057 100644
+index 9538dee5733..d1a6172063e 100644
 --- a/gcc/fortran/trans-decl.c
 +++ b/gcc/fortran/trans-decl.c
-@@ -1892,9 +1892,13 @@ gfc_get_symbol_decl (gfc_symbol * sym)
+@@ -369,44 +369,37 @@ gfc_sym_identifier (gfc_symbol * sym)
+ static const char *
+ mangled_identifier (gfc_symbol *sym)
+ {
+-  static char name[GFC_MAX_MANGLED_SYMBOL_LEN + 1];
++  gfc_symbol *proc = sym->ns->proc_name;
++  static char name[3*GFC_MAX_MANGLED_SYMBOL_LEN + 14];
+   /* Prevent the mangling of identifiers that have an assigned
+      binding label (mainly those that are bind(c)).  */
+ 
+   if (sym->attr.is_bind_c == 1 && sym->binding_label)
+     return sym->binding_label;
+ 
+-  if (!sym->fn_result_spec)
++  if (!sym->fn_result_spec
++      || (sym->module && !(proc && proc->attr.flavor == FL_PROCEDURE)))
+     {
+       if (sym->module == NULL)
+ 	return sym_identifier (sym);
+       else
+-	{
+-	  snprintf (name, sizeof name, "__%s_MOD_%s", sym->module, sym->name);
+-	  return name;
+-	}
++	snprintf (name, sizeof name, "__%s_MOD_%s", sym->module, sym->name);
+     }
+   else
+     {
+       /* This is an entity that is actually local to a module procedure
+ 	 that appears in the result specification expression.  Since
+ 	 sym->module will be a zero length string, we use ns->proc_name
+-	 instead. */
+-      if (sym->ns->proc_name && sym->ns->proc_name->module)
+-	{
+-	  snprintf (name, sizeof name, "__%s_MOD__%s_PROC_%s",
+-		    sym->ns->proc_name->module,
+-		    sym->ns->proc_name->name,
+-		    sym->name);
+-	  return name;
+-	}
++	 to provide the module name instead. */
++      if (proc && proc->module)
++	snprintf (name, sizeof name, "__%s_MOD__%s_PROC_%s",
++		  proc->module, proc->name, sym->name);
+       else
+-	{
+-	  snprintf (name, sizeof name, "__%s_PROC_%s",
+-		    sym->ns->proc_name->name, sym->name);
+-	  return name;
+-	}
++	snprintf (name, sizeof name, "__%s_PROC_%s",
++		  proc->name, sym->name);
+     }
++
++  return name;
+ }
+ 
+ /* Get mangled identifier, adding the symbol to the global table if
+@@ -1892,9 +1885,13 @@ gfc_get_symbol_decl (gfc_symbol * sym)
    if (sym->attr.associate_var)
      GFC_DECL_ASSOCIATE_VAR_P (decl) = 1;
  
@@ -9431,7 +10472,7 @@ index 9538dee5733..6ac7a9a7057 100644
  
    return decl;
  }
-@@ -5862,9 +5866,11 @@ generate_local_decl (gfc_symbol * sym)
+@@ -5862,9 +5859,11 @@ generate_local_decl (gfc_symbol * sym)
  	    }
  	  else if (warn_unused_dummy_argument)
  	    {
@@ -9446,7 +10487,7 @@ index 9538dee5733..6ac7a9a7057 100644
  	      if (sym->backend_decl != NULL_TREE)
  		TREE_NO_WARNING(sym->backend_decl) = 1;
  	    }
-@@ -5956,7 +5962,14 @@ generate_local_decl (gfc_symbol * sym)
+@@ -5956,7 +5955,14 @@ generate_local_decl (gfc_symbol * sym)
  
        if (sym->ns && sym->ns->construct_entities)
  	{
@@ -9462,7 +10503,7 @@ index 9538dee5733..6ac7a9a7057 100644
  	    gfc_get_symbol_decl (sym);
  	  sym->mark = 1;
  	}
-@@ -6440,6 +6453,20 @@ gfc_generate_return (void)
+@@ -6440,6 +6446,20 @@ gfc_generate_return (void)
  				    TREE_TYPE (result), DECL_RESULT (fndecl),
  				    result);
  	}
@@ -9484,10 +10525,54 @@ index 9538dee5733..6ac7a9a7057 100644
  
    return build1_v (RETURN_EXPR, result);
 diff --git a/gcc/fortran/trans-expr.c b/gcc/fortran/trans-expr.c
-index afe08fc2668..4b8794b0f1e 100644
+index afe08fc2668..18f389eeaa3 100644
 --- a/gcc/fortran/trans-expr.c
 +++ b/gcc/fortran/trans-expr.c
-@@ -10603,7 +10603,8 @@ gfc_trans_assignment_1 (gfc_expr * expr1, gfc_expr * expr2, bool init_flag,
+@@ -4991,7 +4991,6 @@ gfc_conv_gfc_desc_to_cfi_desc (gfc_se *parmse, gfc_expr *e, gfc_symbol *fsym)
+   tree cond;
+   int attribute;
+   symbol_attribute attr = gfc_expr_attr (e);
+-  stmtblock_t block;
+ 
+   /* If this is a full array or a scalar, the allocatable and pointer
+      attributes can be passed. Otherwise it is 'CFI_attribute_other'*/
+@@ -5095,18 +5094,6 @@ gfc_conv_gfc_desc_to_cfi_desc (gfc_se *parmse, gfc_expr *e, gfc_symbol *fsym)
+   /* The CFI descriptor is passed to the bind_C procedure.  */
+   parmse->expr = cfi_desc_ptr;
+ 
+-  /* Free the CFI descriptor.  */
+-  gfc_init_block (&block);
+-  cond = fold_build2_loc (input_location, NE_EXPR,
+-			  logical_type_node, cfi_desc_ptr,
+-			  build_int_cst (TREE_TYPE (cfi_desc_ptr), 0));
+-  tmp = gfc_call_free (cfi_desc_ptr);
+-  gfc_add_expr_to_block (&block, tmp);
+-  tmp = build3_v (COND_EXPR, cond,
+-		  gfc_finish_block (&block),
+-		  build_empty_stmt (input_location));
+-  gfc_prepend_expr_to_block (&parmse->post, tmp);
+-
+   /* Transfer values back to gfc descriptor.  */
+   tmp = gfc_build_addr_expr (NULL_TREE, parmse->expr);
+   tmp = build_call_expr_loc (input_location,
+@@ -6001,8 +5988,14 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
+ 		      gfc_add_expr_to_block (&se->pre, tmp);
+ 		  }
+ 
+-		  tmp = build_fold_indirect_ref_loc (input_location,
+-						     parmse.expr);
++		  tmp = parmse.expr;
++		  /* With bind(C), the actual argument is replaced by a bind-C
++		     descriptor; in this case, the data component arrives here,
++		     which shall not be dereferenced, but still freed and
++		     nullified.  */
++		  if  (TREE_TYPE(tmp) != pvoid_type_node)
++		    tmp = build_fold_indirect_ref_loc (input_location,
++						       parmse.expr);
+ 		  if (GFC_DESCRIPTOR_TYPE_P (TREE_TYPE (tmp)))
+ 		    tmp = gfc_conv_descriptor_data_get (tmp);
+ 		  tmp = gfc_deallocate_with_status (tmp, NULL_TREE, NULL_TREE,
+@@ -10603,7 +10596,8 @@ gfc_trans_assignment_1 (gfc_expr * expr1, gfc_expr * expr2, bool init_flag,
        if (expr1->ts.deferred
  	  && gfc_expr_attr (expr1).allocatable
  	  && gfc_check_dependency (expr1, expr2, true))
@@ -10805,6 +11890,26 @@ index d8d479a1c17..e071a878301 100644
  }
 -
 -#include "gt-passes.h"
+diff --git a/gcc/passes.def b/gcc/passes.def
+index bc147c4444d..9a859070b26 100644
+--- a/gcc/passes.def
++++ b/gcc/passes.def
+@@ -434,6 +434,7 @@ along with GCC; see the file COPYING3.  If not see
+       NEXT_PASS (pass_ud_rtl_dce);
+       NEXT_PASS (pass_combine);
+       NEXT_PASS (pass_if_after_combine);
++      NEXT_PASS (pass_jump_after_combine);
+       NEXT_PASS (pass_partition_blocks);
+       NEXT_PASS (pass_outof_cfg_layout_mode);
+       NEXT_PASS (pass_split_all_insns);
+@@ -450,7 +451,6 @@ along with GCC; see the file COPYING3.  If not see
+       NEXT_PASS (pass_reload);
+       NEXT_PASS (pass_postreload);
+       PUSH_INSERT_PASSES_WITHIN (pass_postreload)
+-	  NEXT_PASS (pass_postreload_jump);
+ 	  NEXT_PASS (pass_postreload_cse);
+ 	  NEXT_PASS (pass_gcse2);
+ 	  NEXT_PASS (pass_split_after_reload);
 diff --git a/gcc/po/ChangeLog b/gcc/po/ChangeLog
 index e0186084236..bf3dc9c10ef 100644
 --- a/gcc/po/ChangeLog
@@ -13142,10 +14247,41 @@ index 29f6cdc4667..33b4be79c0f 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..05472344f5a 100644
+index bc11ae4ae0b..de155503d99 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,585 @@
+@@ -1,3 +1,616 @@
++2019-10-28  Ilya Leoshkevich  <iii@linux.ibm.com>
++
++	Backport from mainline
++	PR rtl-optimization/92007
++	* g++.dg/opt/pr92007.C: New test (from Arseny Solokha).
++
++2019-10-28  Peter Bergner <bergner@linux.ibm.com>
++	    Jiufu Guo  <guojiufu@linux.ibm.com>
++
++	PR target/70010
++	* gcc.target/powerpc/pr70010.c: New test.
++	* gcc.target/powerpc/pr70010-1.c: New test.
++	* gcc.target/powerpc/pr70010-2.c: New test.
++	* gcc.target/powerpc/pr70010-3.c: New test.
++	* gcc.target/powerpc/pr70010-4.c: New test.
++
++2019-10-28  Tobias Burnus  <tobias@codesourcery.com>
++
++	Backport from mainline
++	2019-10-28  Tobias Burnus  <tobias@codesourcery.com>
++
++	PR fortran/91863
++	* gfortran.dg/bind-c-intent-out.f90: New.
++
++2019-10-27  Paul Thomas  <pault@gcc.gnu.org>
++
++	Backport from mainline
++	PR fortran/86248
++	* gfortran.dg/char_result_19.f90 : New test.
++	* gfortran.dg/char_result_mod_19.f90 : Module for the new test.
++
 +2019-10-25  Richard Earnshaw  <rearnsha@arm.com>
 +
 +	Backport from mainline
@@ -13731,7 +14867,7 @@ index bc11ae4ae0b..05472344f5a 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +1009,7 @@
+@@ -427,7 +1040,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -15348,6 +16484,44 @@ index 00000000000..f793a2f1b11
 +{
 +  baz (e3);
 +}
+diff --git a/gcc/testsuite/g++.dg/opt/pr92007.C b/gcc/testsuite/g++.dg/opt/pr92007.C
+new file mode 100644
+index 00000000000..9434cc929dd
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/opt/pr92007.C
+@@ -0,0 +1,32 @@
++// PR rtl-optimization/92007
++// { dg-do compile }
++// { dg-options "-O2 -fno-tree-dominator-opts -fno-tree-forwprop --param max-cse-insns=0 -Wno-return-type -std=gnu++98 -freorder-blocks-and-partition" }
++
++void
++sb (int *);
++
++class d4 {
++public:
++  ~d4();
++  void gb ();
++  int op () { return no; }
++  int wl () { return tf; }
++  bool ee () try { gb (); } catch (...) { return false; }
++  bool b1 () { return (tf == no) ? false : ee (); }
++
++private:
++  int no, tf;
++};
++
++void
++hs (int *v9)
++{
++  d4 p6;
++
++  p6.gb ();
++  if (p6.op () > p6.wl ())
++    {
++      p6.b1 ();
++      sb (v9);
++    }
++}
 diff --git a/gcc/testsuite/g++.dg/parse/operator8.C b/gcc/testsuite/g++.dg/parse/operator8.C
 new file mode 100644
 index 00000000000..c5ee3eb934a
@@ -16795,6 +17969,123 @@ index 00000000000..477901fde70
 +}
 +
 +/* { dg-final { scan-assembler-times {(?n)\mdarn .*,0\M} 4 } } */
+diff --git a/gcc/testsuite/gcc.target/powerpc/pr70010-1.c b/gcc/testsuite/gcc.target/powerpc/pr70010-1.c
+new file mode 100644
+index 00000000000..78870dbd886
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/powerpc/pr70010-1.c
+@@ -0,0 +1,17 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -flto -mvsx" } */
++
++vector int c, a, b;
++
++static inline void __attribute__ ((__always_inline__, target ("no-vsx")))
++foo () /* { dg-error "inlining failed in call to .* target specific option mismatch" } */
++{
++  c = a + b;
++}
++
++int
++main ()
++{
++  foo (); /* { dg-message "called from here" } */
++  c = a + b;
++}
+diff --git a/gcc/testsuite/gcc.target/powerpc/pr70010-2.c b/gcc/testsuite/gcc.target/powerpc/pr70010-2.c
+new file mode 100644
+index 00000000000..4c09b216689
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/powerpc/pr70010-2.c
+@@ -0,0 +1,17 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -flto -mno-vsx" } */
++
++vector int c, a, b;
++
++static inline void __attribute__ ((__always_inline__, target ("no-vsx")))
++foo ()
++{
++  c = a + b;
++}
++
++int
++main ()
++{
++  foo ();
++  c = a + b;
++}
+diff --git a/gcc/testsuite/gcc.target/powerpc/pr70010-3.c b/gcc/testsuite/gcc.target/powerpc/pr70010-3.c
+new file mode 100644
+index 00000000000..bca31875632
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/powerpc/pr70010-3.c
+@@ -0,0 +1,17 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mno-vsx" } */
++
++vector int c, a, b;
++
++static inline void __attribute__ ((__always_inline__, target ("no-vsx")))
++foo ()
++{
++  c = a + b;
++}
++
++int
++main ()
++{
++  foo ();
++  c = a + b;
++}
+diff --git a/gcc/testsuite/gcc.target/powerpc/pr70010-4.c b/gcc/testsuite/gcc.target/powerpc/pr70010-4.c
+new file mode 100644
+index 00000000000..c575cff1b52
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/powerpc/pr70010-4.c
+@@ -0,0 +1,17 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mvsx" } */
++
++vector int c, a, b;
++
++static inline void __attribute__ ((__always_inline__, target ("no-vsx")))
++foo () /* { dg-error "inlining failed in call to .* target specific option mismatch" } */
++{
++  c = a + b;
++}
++
++int
++main ()
++{
++  foo (); /* { dg-message "called from here" } */
++  c = a + b;
++}
+diff --git a/gcc/testsuite/gcc.target/powerpc/pr70010.c b/gcc/testsuite/gcc.target/powerpc/pr70010.c
+new file mode 100644
+index 00000000000..257ac297a8a
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/powerpc/pr70010.c
+@@ -0,0 +1,19 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -finline-functions" } */
++/* { dg-final { scan-assembler {\mbl vadd_no_vsx\M} } } */
++
++typedef int vec_t __attribute__((vector_size(16)));
++
++static vec_t
++__attribute__((__target__("no-vsx")))
++vadd_no_vsx (vec_t a, vec_t b)
++{
++  return a + b;
++}
++
++vec_t
++__attribute__((__target__("vsx")))
++call_vadd_no_vsx (vec_t x, vec_t y, vec_t z)
++{
++  return vadd_no_vsx (x, y) - z;
++}
 diff --git a/gcc/testsuite/gcc.target/powerpc/pr91275.c b/gcc/testsuite/gcc.target/powerpc/pr91275.c
 new file mode 100644
 index 00000000000..cd461158af7
@@ -17035,6 +18326,107 @@ index 00000000000..1b205950556
 +      end block
 +   end associate
 +end
+diff --git a/gcc/testsuite/gfortran.dg/bind-c-intent-out.f90 b/gcc/testsuite/gfortran.dg/bind-c-intent-out.f90
+new file mode 100644
+index 00000000000..493e546d45d
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/bind-c-intent-out.f90
+@@ -0,0 +1,41 @@
++! { dg-do compile }
++! { dg-options "-fdump-tree-original" }
++!
++! PR fortran/91863
++!
++! Contributed by G. Steinmetz
++!
++
++subroutine sub(x) bind(c)
++  implicit none (type, external)
++  integer, allocatable, intent(out) :: x(:)
++
++  allocate(x(3:5))
++  x(:) = [1, 2, 3]
++end subroutine sub
++
++
++program p
++  implicit none (type, external)
++  interface
++    subroutine sub(x) bind(c)
++      integer, allocatable, intent(out) :: x(:)
++    end
++  end interface
++  integer, allocatable :: a(:)
++
++  call sub(a)
++  if (.not.allocated(a)) stop 1
++  if (any(shape(a) /= [3])) stop 2
++  if (lbound(a,1) /= 3 .or. ubound(a,1) /= 5) stop 3
++  if (any(a /= [1, 2, 3])) stop 4
++end program p
++
++! "cfi" only appears in context of "a" -> bind-C descriptor
++! the intent(out) implies freeing in the callee (!), hence the "free"
++! It is the only 'free' as 'a' is part of the main program and, hence, implicitly has the SAVE attribute.
++! The  'cfi = 0' appears before the call due to the deallocate and when preparing the C descriptor
++
++! { dg-final { scan-tree-dump-times "__builtin_free" 1 "original" } }
++! { dg-final { scan-tree-dump-times "__builtin_free \\(cfi\\.\[0-9\]+\\);" 1 "original" } }
++! { dg-final { scan-tree-dump-times "cfi\\.\[0-9\]+ = 0B;" 2 "original" } }
+diff --git a/gcc/testsuite/gfortran.dg/char_result_19.f90 b/gcc/testsuite/gfortran.dg/char_result_19.f90
+new file mode 100644
+index 00000000000..e66ebdcda53
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/char_result_19.f90
+@@ -0,0 +1,24 @@
++! { dg-do preprocess }
++! { dg-additional-options "-cpp" }
++!
++! Test the fix for PR86248
++!
++! Contributed by Bill Long  <longb@cray.com>
++!
++program test
++  use test_module
++  implicit none
++  integer :: i
++  character(:), allocatable :: chr
++  do i = 0, 2
++    chr = func_1 (i)
++    select case (i)
++      case (0)
++        if (chr .ne. 'el0') stop i
++      case (1)
++        if (chr .ne. 'el11') stop i
++      case (2)
++        if (chr .ne. 'el2') stop i
++    end select
++  end do
++end program test
+diff --git a/gcc/testsuite/gfortran.dg/char_result_mod_19.f90 b/gcc/testsuite/gfortran.dg/char_result_mod_19.f90
+new file mode 100644
+index 00000000000..a2b5e94f1b6
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/char_result_mod_19.f90
+@@ -0,0 +1,18 @@
++! { dg-do  run }
++! { dg-additional-sources char_result_19.f90 }
++!
++! Module for char_result_19.f90
++! Tests fix for PR86248
++!
++module test_module
++  implicit none
++  public :: func_1
++  private
++  character(len=*),dimension(0:2),parameter :: darray = (/"el0 ","el11","el2 "/)
++contains
++  function func_1 (func_1_input) result(f)
++    integer, intent(in) :: func_1_input
++    character(len = len_trim (darray(func_1_input))) :: f
++    f = darray(func_1_input)
++  end function func_1
++end module test_module
 diff --git a/gcc/testsuite/gfortran.dg/class_71.f90 b/gcc/testsuite/gfortran.dg/class_71.f90
 new file mode 100644
 index 00000000000..bc0ffcd2305
@@ -18474,6 +19866,26 @@ index f9ad7e83943..25c5ced57b7 100644
    if (TREE_CODE (else_) == SSA_NAME)
      reexamine |= merge_object_sizes (osi, var, else_, 0);
    else
+diff --git a/gcc/tree-pass.h b/gcc/tree-pass.h
+index b27dbdd0cb7..f6c230b169c 100644
+--- a/gcc/tree-pass.h
++++ b/gcc/tree-pass.h
+@@ -562,6 +562,7 @@ extern rtl_opt_pass *make_pass_stack_ptr_mod (gcc::context *ctxt);
+ extern rtl_opt_pass *make_pass_initialize_regs (gcc::context *ctxt);
+ extern rtl_opt_pass *make_pass_combine (gcc::context *ctxt);
+ extern rtl_opt_pass *make_pass_if_after_combine (gcc::context *ctxt);
++extern rtl_opt_pass *make_pass_jump_after_combine (gcc::context *ctxt);
+ extern rtl_opt_pass *make_pass_ree (gcc::context *ctxt);
+ extern rtl_opt_pass *make_pass_partition_blocks (gcc::context *ctxt);
+ extern rtl_opt_pass *make_pass_match_asm_constraints (gcc::context *ctxt);
+@@ -579,7 +580,6 @@ extern rtl_opt_pass *make_pass_clean_state (gcc::context *ctxt);
+ extern rtl_opt_pass *make_pass_branch_prob (gcc::context *ctxt);
+ extern rtl_opt_pass *make_pass_value_profile_transformations (gcc::context
+ 							      *ctxt);
+-extern rtl_opt_pass *make_pass_postreload_jump (gcc::context *ctxt);
+ extern rtl_opt_pass *make_pass_postreload_cse (gcc::context *ctxt);
+ extern rtl_opt_pass *make_pass_gcse2 (gcc::context *ctxt);
+ extern rtl_opt_pass *make_pass_split_after_reload (gcc::context *ctxt);
 diff --git a/gcc/tree-ssa-alias.c b/gcc/tree-ssa-alias.c
 index 2be10e199ba..6ed5c8a1d23 100644
 --- a/gcc/tree-ssa-alias.c
@@ -19956,10 +21368,14 @@ index b599ebb0ba9..beb1dc9532b 100644
  #  define ASAN_INTERCEPT__UNWIND_SJLJ_RAISEEXCEPTION 1
  # else
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
-index 8ac50251005..2cc882f2da3 100644
+index 8ac50251005..ef28457065c 100644
 --- a/libstdc++-v3/ChangeLog
 +++ b/libstdc++-v3/ChangeLog
-@@ -1,3 +1,328 @@
+@@ -1,3 +1,332 @@
++2019-10-28  John David Anglin  <danglin@gcc.gnu.org>
++
++	* config/abi/post/hppa-linux-gnu/baseline_symbols.txt: Update.
++
 +2019-10-24  Jonathan Wakely  <jwakely@redhat.com>
 +
 +	Backport from mainline
@@ -21396,6 +22812,1054 @@ index 9d070517326..65ee06d5c2a 100644
  OBJECT:8:_ZNSt7codecvtIDsc11__mbstate_tE2idE@@GLIBCXX_3.4.21
  OBJECT:8:_ZNSt7codecvtIcc11__mbstate_tE2idE@@GLIBCXX_3.4
  OBJECT:8:_ZNSt7codecvtIwc11__mbstate_tE2idE@@GLIBCXX_3.4
+diff --git a/libstdc++-v3/config/abi/post/hppa-linux-gnu/baseline_symbols.txt b/libstdc++-v3/config/abi/post/hppa-linux-gnu/baseline_symbols.txt
+index 18879a8a0be..159e0100b5f 100644
+--- a/libstdc++-v3/config/abi/post/hppa-linux-gnu/baseline_symbols.txt
++++ b/libstdc++-v3/config/abi/post/hppa-linux-gnu/baseline_symbols.txt
+@@ -112,6 +112,7 @@ FUNC:_ZN11__gnu_debug19_Safe_sequence_base13_M_detach_allEv@@GLIBCXX_3.4
+ FUNC:_ZN11__gnu_debug19_Safe_sequence_base18_M_detach_singularEv@@GLIBCXX_3.4
+ FUNC:_ZN11__gnu_debug19_Safe_sequence_base22_M_revalidate_singularEv@@GLIBCXX_3.4
+ FUNC:_ZN11__gnu_debug19_Safe_sequence_base7_M_swapERS0_@@GLIBCXX_3.4
++FUNC:_ZN11__gnu_debug25_Safe_local_iterator_base16_M_attach_singleEPNS_19_Safe_sequence_baseEb@@GLIBCXX_3.4.26
+ FUNC:_ZN11__gnu_debug25_Safe_local_iterator_base9_M_attachEPNS_19_Safe_sequence_baseEb@@GLIBCXX_3.4.17
+ FUNC:_ZN11__gnu_debug25_Safe_local_iterator_base9_M_detachEv@@GLIBCXX_3.4.17
+ FUNC:_ZN11__gnu_debug30_Safe_unordered_container_base13_M_detach_allEv@@GLIBCXX_3.4.17
+@@ -261,6 +262,7 @@ FUNC:_ZNKSbIwSt11char_traitsIwESaIwEE8_M_limitEjj@@GLIBCXX_3.4
+ FUNC:_ZNKSbIwSt11char_traitsIwESaIwEE8capacityEv@@GLIBCXX_3.4
+ FUNC:_ZNKSbIwSt11char_traitsIwESaIwEE8max_sizeEv@@GLIBCXX_3.4
+ FUNC:_ZNKSbIwSt11char_traitsIwESaIwEE9_M_ibeginEv@@GLIBCXX_3.4
++FUNC:_ZNKSbIwSt11char_traitsIwESaIwEEcvSt17basic_string_viewIwS0_EEv@@GLIBCXX_3.4.26
+ FUNC:_ZNKSbIwSt11char_traitsIwESaIwEEixEj@@GLIBCXX_3.4
+ FUNC:_ZNKSi6gcountEv@@GLIBCXX_3.4
+ FUNC:_ZNKSi6sentrycvbEv@@GLIBCXX_3.4
+@@ -328,9 +330,66 @@ FUNC:_ZNKSs8_M_limitEjj@@GLIBCXX_3.4
+ FUNC:_ZNKSs8capacityEv@@GLIBCXX_3.4
+ FUNC:_ZNKSs8max_sizeEv@@GLIBCXX_3.4
+ FUNC:_ZNKSs9_M_ibeginEv@@GLIBCXX_3.4
++FUNC:_ZNKSscvSt17basic_string_viewIcSt11char_traitsIcEEEv@@GLIBCXX_3.4.26
+ FUNC:_ZNKSsixEj@@GLIBCXX_3.4
+ FUNC:_ZNKSt10bad_typeid4whatEv@@GLIBCXX_3.4.9
+ FUNC:_ZNKSt10error_code23default_error_conditionEv@@GLIBCXX_3.4.11
++FUNC:_ZNKSt10filesystem16filesystem_error4whatEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem16filesystem_error5path1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem16filesystem_error5path2Ev@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem18directory_iteratordeEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem28recursive_directory_iterator17recursion_pendingEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem28recursive_directory_iterator5depthEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem28recursive_directory_iterator7optionsEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem28recursive_directory_iteratordeEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem4path11parent_pathEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem4path12has_filenameEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem4path13has_root_nameEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem4path13has_root_pathEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem4path13relative_pathEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem4path14root_directoryEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem4path15has_parent_pathEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem4path16lexically_normalEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem4path17_M_find_extensionEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem4path17has_relative_pathEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem4path18has_root_directoryEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem4path18lexically_relativeERKS0_@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem4path19lexically_proximateERKS0_@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem4path5_List13_Impl_deleterclEPNS1_5_ImplE@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem4path5_List3endEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem4path5_List5beginEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem4path7compareERKS0_@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem4path7compareESt17basic_string_viewIcSt11char_traitsIcEE@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem4path9root_nameEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem4path9root_pathEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem7__cxx1116filesystem_error4whatEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem7__cxx1116filesystem_error5path1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem7__cxx1116filesystem_error5path2Ev@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem7__cxx1118directory_iteratordeEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem7__cxx1128recursive_directory_iterator17recursion_pendingEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem7__cxx1128recursive_directory_iterator5depthEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem7__cxx1128recursive_directory_iterator7optionsEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem7__cxx1128recursive_directory_iteratordeEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem7__cxx114path11parent_pathEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem7__cxx114path12has_filenameEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem7__cxx114path13has_root_nameEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem7__cxx114path13has_root_pathEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem7__cxx114path13relative_pathEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem7__cxx114path14root_directoryEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem7__cxx114path15has_parent_pathEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem7__cxx114path16lexically_normalEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem7__cxx114path17_M_find_extensionEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem7__cxx114path17has_relative_pathEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem7__cxx114path18has_root_directoryEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem7__cxx114path18lexically_relativeERKS1_@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem7__cxx114path19lexically_proximateERKS1_@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem7__cxx114path5_List13_Impl_deleterclEPNS2_5_ImplE@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem7__cxx114path5_List3endEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem7__cxx114path5_List5beginEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem7__cxx114path7compareERKS1_@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem7__cxx114path7compareESt17basic_string_viewIcSt11char_traitsIcEE@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem7__cxx114path9root_nameEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem7__cxx114path9root_pathEv@@GLIBCXX_3.4.26
+ FUNC:_ZNKSt10istrstream5rdbufEv@@GLIBCXX_3.4
+ FUNC:_ZNKSt10lock_error4whatEv@@GLIBCXX_3.4.11
+ FUNC:_ZNKSt10moneypunctIcLb0EE10neg_formatEv@@GLIBCXX_3.4
+@@ -734,6 +793,7 @@ FUNC:_ZNKSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE8_M_checkEjPKc@@GLIBC
+ FUNC:_ZNKSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE8_M_limitEjj@@GLIBCXX_3.4.21
+ FUNC:_ZNKSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE8capacityEv@@GLIBCXX_3.4.21
+ FUNC:_ZNKSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE8max_sizeEv@@GLIBCXX_3.4.21
++FUNC:_ZNKSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEcvSt17basic_string_viewIcS2_EEv@@GLIBCXX_3.4.26
+ FUNC:_ZNKSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEixEj@@GLIBCXX_3.4.21
+ FUNC:_ZNKSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEE11_M_disjunctEPKw@@GLIBCXX_3.4.21
+ FUNC:_ZNKSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEE11_M_is_localEv@@GLIBCXX_3.4.21
+@@ -794,6 +854,7 @@ FUNC:_ZNKSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEE8_M_checkEjPKc@@GLIBC
+ FUNC:_ZNKSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEE8_M_limitEjj@@GLIBCXX_3.4.21
+ FUNC:_ZNKSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEE8capacityEv@@GLIBCXX_3.4.21
+ FUNC:_ZNKSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEE8max_sizeEv@@GLIBCXX_3.4.21
++FUNC:_ZNKSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEEcvSt17basic_string_viewIwS2_EEv@@GLIBCXX_3.4.26
+ FUNC:_ZNKSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEEixEj@@GLIBCXX_3.4.21
+ FUNC:_ZNKSt7__cxx1115basic_stringbufIcSt11char_traitsIcESaIcEE3strEv@@GLIBCXX_3.4.21
+ FUNC:_ZNKSt7__cxx1115basic_stringbufIwSt11char_traitsIwESaIwEE3strEv@@GLIBCXX_3.4.21
+@@ -925,6 +986,13 @@ FUNC:_ZNKSt7__cxx119money_putIwSt19ostreambuf_iteratorIwSt11char_traitsIwEEE6do_
+ FUNC:_ZNKSt7__cxx119money_putIwSt19ostreambuf_iteratorIwSt11char_traitsIwEEE6do_putES4_bRSt8ios_basewe@@GLIBCXX_3.4.21
+ FUNC:_ZNKSt7__cxx119money_putIwSt19ostreambuf_iteratorIwSt11char_traitsIwEEE9_M_insertILb0EEES4_S4_RSt8ios_basewRKNS_12basic_stringIwS3_SaIwEEE@@GLIBCXX_3.4.21
+ FUNC:_ZNKSt7__cxx119money_putIwSt19ostreambuf_iteratorIwSt11char_traitsIwEEE9_M_insertILb1EEES4_S4_RSt8ios_basewRKNS_12basic_stringIwS3_SaIwEEE@@GLIBCXX_3.4.21
++FUNC:_ZNKSt7codecvtIDiDu11__mbstate_tE10do_unshiftERS0_PDuS3_RS3_@@GLIBCXX_3.4.26
++FUNC:_ZNKSt7codecvtIDiDu11__mbstate_tE11do_encodingEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt7codecvtIDiDu11__mbstate_tE13do_max_lengthEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt7codecvtIDiDu11__mbstate_tE16do_always_noconvEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt7codecvtIDiDu11__mbstate_tE5do_inERS0_PKDuS4_RS4_PDiS6_RS6_@@GLIBCXX_3.4.26
++FUNC:_ZNKSt7codecvtIDiDu11__mbstate_tE6do_outERS0_PKDiS4_RS4_PDuS6_RS6_@@GLIBCXX_3.4.26
++FUNC:_ZNKSt7codecvtIDiDu11__mbstate_tE9do_lengthERS0_PKDuS4_j@@GLIBCXX_3.4.26
+ FUNC:_ZNKSt7codecvtIDic11__mbstate_tE10do_unshiftERS0_PcS3_RS3_@@GLIBCXX_3.4.21
+ FUNC:_ZNKSt7codecvtIDic11__mbstate_tE11do_encodingEv@@GLIBCXX_3.4.21
+ FUNC:_ZNKSt7codecvtIDic11__mbstate_tE13do_max_lengthEv@@GLIBCXX_3.4.21
+@@ -932,6 +1000,13 @@ FUNC:_ZNKSt7codecvtIDic11__mbstate_tE16do_always_noconvEv@@GLIBCXX_3.4.21
+ FUNC:_ZNKSt7codecvtIDic11__mbstate_tE5do_inERS0_PKcS4_RS4_PDiS6_RS6_@@GLIBCXX_3.4.21
+ FUNC:_ZNKSt7codecvtIDic11__mbstate_tE6do_outERS0_PKDiS4_RS4_PcS6_RS6_@@GLIBCXX_3.4.21
+ FUNC:_ZNKSt7codecvtIDic11__mbstate_tE9do_lengthERS0_PKcS4_j@@GLIBCXX_3.4.21
++FUNC:_ZNKSt7codecvtIDsDu11__mbstate_tE10do_unshiftERS0_PDuS3_RS3_@@GLIBCXX_3.4.26
++FUNC:_ZNKSt7codecvtIDsDu11__mbstate_tE11do_encodingEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt7codecvtIDsDu11__mbstate_tE13do_max_lengthEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt7codecvtIDsDu11__mbstate_tE16do_always_noconvEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt7codecvtIDsDu11__mbstate_tE5do_inERS0_PKDuS4_RS4_PDsS6_RS6_@@GLIBCXX_3.4.26
++FUNC:_ZNKSt7codecvtIDsDu11__mbstate_tE6do_outERS0_PKDsS4_RS4_PDuS6_RS6_@@GLIBCXX_3.4.26
++FUNC:_ZNKSt7codecvtIDsDu11__mbstate_tE9do_lengthERS0_PKDuS4_j@@GLIBCXX_3.4.26
+ FUNC:_ZNKSt7codecvtIDsc11__mbstate_tE10do_unshiftERS0_PcS3_RS3_@@GLIBCXX_3.4.21
+ FUNC:_ZNKSt7codecvtIDsc11__mbstate_tE11do_encodingEv@@GLIBCXX_3.4.21
+ FUNC:_ZNKSt7codecvtIDsc11__mbstate_tE13do_max_lengthEv@@GLIBCXX_3.4.21
+@@ -1134,6 +1209,7 @@ FUNC:_ZNKSt8time_getIcSt19istreambuf_iteratorIcSt11char_traitsIcEEE16do_get_mont
+ FUNC:_ZNKSt8time_getIcSt19istreambuf_iteratorIcSt11char_traitsIcEEE21_M_extract_via_formatES3_S3_RSt8ios_baseRSt12_Ios_IostateP2tmPKc@@GLIBCXX_3.4
+ FUNC:_ZNKSt8time_getIcSt19istreambuf_iteratorIcSt11char_traitsIcEEE24_M_extract_wday_or_monthES3_S3_RiPPKcjRSt8ios_baseRSt12_Ios_Iostate@@GLIBCXX_3.4.14
+ FUNC:_ZNKSt8time_getIcSt19istreambuf_iteratorIcSt11char_traitsIcEEE3getES3_S3_RSt8ios_baseRSt12_Ios_IostateP2tmPKcSC_@@GLIBCXX_3.4.21
++FUNC:_ZNKSt8time_getIcSt19istreambuf_iteratorIcSt11char_traitsIcEEE3getES3_S3_RSt8ios_baseRSt12_Ios_IostateP2tmcc@@GLIBCXX_3.4.26
+ FUNC:_ZNKSt8time_getIcSt19istreambuf_iteratorIcSt11char_traitsIcEEE6do_getES3_S3_RSt8ios_baseRSt12_Ios_IostateP2tmcc@@GLIBCXX_3.4.21
+ FUNC:_ZNKSt8time_getIcSt19istreambuf_iteratorIcSt11char_traitsIcEEE8get_dateES3_S3_RSt8ios_baseRSt12_Ios_IostateP2tm@@GLIBCXX_3.4
+ FUNC:_ZNKSt8time_getIcSt19istreambuf_iteratorIcSt11char_traitsIcEEE8get_timeES3_S3_RSt8ios_baseRSt12_Ios_IostateP2tm@@GLIBCXX_3.4
+@@ -1152,6 +1228,7 @@ FUNC:_ZNKSt8time_getIwSt19istreambuf_iteratorIwSt11char_traitsIwEEE16do_get_mont
+ FUNC:_ZNKSt8time_getIwSt19istreambuf_iteratorIwSt11char_traitsIwEEE21_M_extract_via_formatES3_S3_RSt8ios_baseRSt12_Ios_IostateP2tmPKw@@GLIBCXX_3.4
+ FUNC:_ZNKSt8time_getIwSt19istreambuf_iteratorIwSt11char_traitsIwEEE24_M_extract_wday_or_monthES3_S3_RiPPKwjRSt8ios_baseRSt12_Ios_Iostate@@GLIBCXX_3.4.14
+ FUNC:_ZNKSt8time_getIwSt19istreambuf_iteratorIwSt11char_traitsIwEEE3getES3_S3_RSt8ios_baseRSt12_Ios_IostateP2tmPKwSC_@@GLIBCXX_3.4.21
++FUNC:_ZNKSt8time_getIwSt19istreambuf_iteratorIwSt11char_traitsIwEEE3getES3_S3_RSt8ios_baseRSt12_Ios_IostateP2tmcc@@GLIBCXX_3.4.26
+ FUNC:_ZNKSt8time_getIwSt19istreambuf_iteratorIwSt11char_traitsIwEEE6do_getES3_S3_RSt8ios_baseRSt12_Ios_IostateP2tmcc@@GLIBCXX_3.4.21
+ FUNC:_ZNKSt8time_getIwSt19istreambuf_iteratorIwSt11char_traitsIwEEE8get_dateES3_S3_RSt8ios_baseRSt12_Ios_IostateP2tm@@GLIBCXX_3.4
+ FUNC:_ZNKSt8time_getIwSt19istreambuf_iteratorIwSt11char_traitsIwEEE8get_timeES3_S3_RSt8ios_baseRSt12_Ios_IostateP2tm@@GLIBCXX_3.4
+@@ -1244,6 +1321,8 @@ FUNC:_ZNSbIwSt11char_traitsIwESaIwEE12_S_constructIN9__gnu_cxx17__normal_iterato
+ FUNC:_ZNSbIwSt11char_traitsIwESaIwEE12_S_constructIPKwEEPwT_S7_RKS1_St20forward_iterator_tag@@GLIBCXX_3.4.14
+ FUNC:_ZNSbIwSt11char_traitsIwESaIwEE12_S_constructIPwEES4_T_S5_RKS1_St20forward_iterator_tag@@GLIBCXX_3.4.14
+ FUNC:_ZNSbIwSt11char_traitsIwESaIwEE12_S_empty_repEv@@GLIBCXX_3.4
++FUNC:_ZNSbIwSt11char_traitsIwESaIwEE12__sv_wrapperC1ESt17basic_string_viewIwS0_E@@GLIBCXX_3.4.26
++FUNC:_ZNSbIwSt11char_traitsIwESaIwEE12__sv_wrapperC2ESt17basic_string_viewIwS0_E@@GLIBCXX_3.4.26
+ FUNC:_ZNSbIwSt11char_traitsIwESaIwEE13_S_copy_charsEPwN9__gnu_cxx17__normal_iteratorIPKwS2_EES8_@@GLIBCXX_3.4
+ FUNC:_ZNSbIwSt11char_traitsIwESaIwEE13_S_copy_charsEPwN9__gnu_cxx17__normal_iteratorIS3_S2_EES6_@@GLIBCXX_3.4
+ FUNC:_ZNSbIwSt11char_traitsIwESaIwEE13_S_copy_charsEPwPKwS5_@@GLIBCXX_3.4
+@@ -1251,6 +1330,7 @@ FUNC:_ZNSbIwSt11char_traitsIwESaIwEE13_S_copy_charsEPwS3_S3_@@GLIBCXX_3.4
+ FUNC:_ZNSbIwSt11char_traitsIwESaIwEE13shrink_to_fitEv@@GLIBCXX_3.4.14
+ FUNC:_ZNSbIwSt11char_traitsIwESaIwEE14_M_replace_auxEjjjw@@GLIBCXX_3.4
+ FUNC:_ZNSbIwSt11char_traitsIwESaIwEE15_M_replace_safeEjjPKwj@@GLIBCXX_3.4
++FUNC:_ZNSbIwSt11char_traitsIwESaIwEE17_S_to_string_viewESt17basic_string_viewIwS0_E@@GLIBCXX_3.4.26
+ FUNC:_ZNSbIwSt11char_traitsIwESaIwEE18_S_construct_aux_2EjwRKS1_@@GLIBCXX_3.4.14
+ FUNC:_ZNSbIwSt11char_traitsIwESaIwEE2atEj@@GLIBCXX_3.4
+ FUNC:_ZNSbIwSt11char_traitsIwESaIwEE3endEv@@GLIBCXX_3.4
+@@ -1267,6 +1347,7 @@ FUNC:_ZNSbIwSt11char_traitsIwESaIwEE4_Rep7_M_grabERKS1_S5_@@GLIBCXX_3.4
+ FUNC:_ZNSbIwSt11char_traitsIwESaIwEE4_Rep8_M_cloneERKS1_j@@GLIBCXX_3.4
+ FUNC:_ZNSbIwSt11char_traitsIwESaIwEE4_Rep9_S_createEjjRKS1_@@GLIBCXX_3.4
+ FUNC:_ZNSbIwSt11char_traitsIwESaIwEE4backEv@@GLIBCXX_3.4.15
++FUNC:_ZNSbIwSt11char_traitsIwESaIwEE4dataEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSbIwSt11char_traitsIwESaIwEE4rendEv@@GLIBCXX_3.4
+ FUNC:_ZNSbIwSt11char_traitsIwESaIwEE4swapERS2_@@GLIBCXX_3.4
+ FUNC:_ZNSbIwSt11char_traitsIwESaIwEE5beginEv@@GLIBCXX_3.4
+@@ -1325,11 +1406,14 @@ FUNC:_ZNSbIwSt11char_traitsIwESaIwEE9_M_assignEPwjw@@GLIBCXX_3.4.5
+ FUNC:_ZNSbIwSt11char_traitsIwESaIwEE9_M_assignEPwjw@GLIBCXX_3.4
+ FUNC:_ZNSbIwSt11char_traitsIwESaIwEE9_M_mutateEjjj@@GLIBCXX_3.4
+ FUNC:_ZNSbIwSt11char_traitsIwESaIwEE9push_backEw@@GLIBCXX_3.4
++FUNC:_ZNSbIwSt11char_traitsIwESaIwEEC1ENS2_12__sv_wrapperERKS1_@@GLIBCXX_3.4.26
+ FUNC:_ZNSbIwSt11char_traitsIwESaIwEEC1EOS2_@@GLIBCXX_3.4.14
++FUNC:_ZNSbIwSt11char_traitsIwESaIwEEC1EOS2_RKS1_@@GLIBCXX_3.4.26
+ FUNC:_ZNSbIwSt11char_traitsIwESaIwEEC1EPKwRKS1_@@GLIBCXX_3.4
+ FUNC:_ZNSbIwSt11char_traitsIwESaIwEEC1EPKwjRKS1_@@GLIBCXX_3.4
+ FUNC:_ZNSbIwSt11char_traitsIwESaIwEEC1ERKS1_@@GLIBCXX_3.4
+ FUNC:_ZNSbIwSt11char_traitsIwESaIwEEC1ERKS2_@@GLIBCXX_3.4
++FUNC:_ZNSbIwSt11char_traitsIwESaIwEEC1ERKS2_RKS1_@@GLIBCXX_3.4.26
+ FUNC:_ZNSbIwSt11char_traitsIwESaIwEEC1ERKS2_jRKS1_@@GLIBCXX_3.4.24
+ FUNC:_ZNSbIwSt11char_traitsIwESaIwEEC1ERKS2_jj@@GLIBCXX_3.4
+ FUNC:_ZNSbIwSt11char_traitsIwESaIwEEC1ERKS2_jjRKS1_@@GLIBCXX_3.4
+@@ -1339,11 +1423,14 @@ FUNC:_ZNSbIwSt11char_traitsIwESaIwEEC1Ev@@GLIBCXX_3.4
+ FUNC:_ZNSbIwSt11char_traitsIwESaIwEEC1IN9__gnu_cxx17__normal_iteratorIPwS2_EEEET_S8_RKS1_@@GLIBCXX_3.4
+ FUNC:_ZNSbIwSt11char_traitsIwESaIwEEC1IPKwEET_S6_RKS1_@@GLIBCXX_3.4
+ FUNC:_ZNSbIwSt11char_traitsIwESaIwEEC1IPwEET_S5_RKS1_@@GLIBCXX_3.4
++FUNC:_ZNSbIwSt11char_traitsIwESaIwEEC2ENS2_12__sv_wrapperERKS1_@@GLIBCXX_3.4.26
+ FUNC:_ZNSbIwSt11char_traitsIwESaIwEEC2EOS2_@@GLIBCXX_3.4.15
++FUNC:_ZNSbIwSt11char_traitsIwESaIwEEC2EOS2_RKS1_@@GLIBCXX_3.4.26
+ FUNC:_ZNSbIwSt11char_traitsIwESaIwEEC2EPKwRKS1_@@GLIBCXX_3.4
+ FUNC:_ZNSbIwSt11char_traitsIwESaIwEEC2EPKwjRKS1_@@GLIBCXX_3.4
+ FUNC:_ZNSbIwSt11char_traitsIwESaIwEEC2ERKS1_@@GLIBCXX_3.4
+ FUNC:_ZNSbIwSt11char_traitsIwESaIwEEC2ERKS2_@@GLIBCXX_3.4
++FUNC:_ZNSbIwSt11char_traitsIwESaIwEEC2ERKS2_RKS1_@@GLIBCXX_3.4.26
+ FUNC:_ZNSbIwSt11char_traitsIwESaIwEEC2ERKS2_jRKS1_@@GLIBCXX_3.4.24
+ FUNC:_ZNSbIwSt11char_traitsIwESaIwEEC2ERKS2_jj@@GLIBCXX_3.4
+ FUNC:_ZNSbIwSt11char_traitsIwESaIwEEC2ERKS2_jjRKS1_@@GLIBCXX_3.4
+@@ -1471,6 +1558,7 @@ FUNC:_ZNSoD0Ev@@GLIBCXX_3.4
+ FUNC:_ZNSoD1Ev@@GLIBCXX_3.4
+ FUNC:_ZNSoD2Ev@@GLIBCXX_3.4
+ FUNC:_ZNSoaSEOSo@@GLIBCXX_3.4.21
++FUNC:_ZNSolsEDn@@GLIBCXX_3.4.26
+ FUNC:_ZNSolsEPFRSoS_E@@GLIBCXX_3.4
+ FUNC:_ZNSolsEPFRSt8ios_baseS0_E@@GLIBCXX_3.4
+ FUNC:_ZNSolsEPFRSt9basic_iosIcSt11char_traitsIcEES3_E@@GLIBCXX_3.4
+@@ -1497,6 +1585,8 @@ FUNC:_ZNSs12_S_constructIN9__gnu_cxx17__normal_iteratorIPcSsEEEES2_T_S4_RKSaIcES
+ FUNC:_ZNSs12_S_constructIPKcEEPcT_S3_RKSaIcESt20forward_iterator_tag@@GLIBCXX_3.4.14
+ FUNC:_ZNSs12_S_constructIPcEES0_T_S1_RKSaIcESt20forward_iterator_tag@@GLIBCXX_3.4.14
+ FUNC:_ZNSs12_S_empty_repEv@@GLIBCXX_3.4
++FUNC:_ZNSs12__sv_wrapperC1ESt17basic_string_viewIcSt11char_traitsIcEE@@GLIBCXX_3.4.26
++FUNC:_ZNSs12__sv_wrapperC2ESt17basic_string_viewIcSt11char_traitsIcEE@@GLIBCXX_3.4.26
+ FUNC:_ZNSs13_S_copy_charsEPcN9__gnu_cxx17__normal_iteratorIPKcSsEES4_@@GLIBCXX_3.4
+ FUNC:_ZNSs13_S_copy_charsEPcN9__gnu_cxx17__normal_iteratorIS_SsEES2_@@GLIBCXX_3.4
+ FUNC:_ZNSs13_S_copy_charsEPcPKcS1_@@GLIBCXX_3.4
+@@ -1504,6 +1594,7 @@ FUNC:_ZNSs13_S_copy_charsEPcS_S_@@GLIBCXX_3.4
+ FUNC:_ZNSs13shrink_to_fitEv@@GLIBCXX_3.4.14
+ FUNC:_ZNSs14_M_replace_auxEjjjc@@GLIBCXX_3.4
+ FUNC:_ZNSs15_M_replace_safeEjjPKcj@@GLIBCXX_3.4
++FUNC:_ZNSs17_S_to_string_viewESt17basic_string_viewIcSt11char_traitsIcEE@@GLIBCXX_3.4.26
+ FUNC:_ZNSs18_S_construct_aux_2EjcRKSaIcE@@GLIBCXX_3.4.14
+ FUNC:_ZNSs2atEj@@GLIBCXX_3.4
+ FUNC:_ZNSs3endEv@@GLIBCXX_3.4
+@@ -1520,6 +1611,7 @@ FUNC:_ZNSs4_Rep7_M_grabERKSaIcES2_@@GLIBCXX_3.4
+ FUNC:_ZNSs4_Rep8_M_cloneERKSaIcEj@@GLIBCXX_3.4
+ FUNC:_ZNSs4_Rep9_S_createEjjRKSaIcE@@GLIBCXX_3.4
+ FUNC:_ZNSs4backEv@@GLIBCXX_3.4.15
++FUNC:_ZNSs4dataEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSs4rendEv@@GLIBCXX_3.4
+ FUNC:_ZNSs4swapERSs@@GLIBCXX_3.4
+ FUNC:_ZNSs5beginEv@@GLIBCXX_3.4
+@@ -1578,11 +1670,14 @@ FUNC:_ZNSs9_M_assignEPcjc@@GLIBCXX_3.4.5
+ FUNC:_ZNSs9_M_assignEPcjc@GLIBCXX_3.4
+ FUNC:_ZNSs9_M_mutateEjjj@@GLIBCXX_3.4
+ FUNC:_ZNSs9push_backEc@@GLIBCXX_3.4
++FUNC:_ZNSsC1ENSs12__sv_wrapperERKSaIcE@@GLIBCXX_3.4.26
+ FUNC:_ZNSsC1EOSs@@GLIBCXX_3.4.14
++FUNC:_ZNSsC1EOSsRKSaIcE@@GLIBCXX_3.4.26
+ FUNC:_ZNSsC1EPKcRKSaIcE@@GLIBCXX_3.4
+ FUNC:_ZNSsC1EPKcjRKSaIcE@@GLIBCXX_3.4
+ FUNC:_ZNSsC1ERKSaIcE@@GLIBCXX_3.4
+ FUNC:_ZNSsC1ERKSs@@GLIBCXX_3.4
++FUNC:_ZNSsC1ERKSsRKSaIcE@@GLIBCXX_3.4.26
+ FUNC:_ZNSsC1ERKSsjRKSaIcE@@GLIBCXX_3.4.23
+ FUNC:_ZNSsC1ERKSsjj@@GLIBCXX_3.4
+ FUNC:_ZNSsC1ERKSsjjRKSaIcE@@GLIBCXX_3.4
+@@ -1592,11 +1687,14 @@ FUNC:_ZNSsC1Ev@@GLIBCXX_3.4
+ FUNC:_ZNSsC1IN9__gnu_cxx17__normal_iteratorIPcSsEEEET_S4_RKSaIcE@@GLIBCXX_3.4
+ FUNC:_ZNSsC1IPKcEET_S2_RKSaIcE@@GLIBCXX_3.4
+ FUNC:_ZNSsC1IPcEET_S1_RKSaIcE@@GLIBCXX_3.4
++FUNC:_ZNSsC2ENSs12__sv_wrapperERKSaIcE@@GLIBCXX_3.4.26
+ FUNC:_ZNSsC2EOSs@@GLIBCXX_3.4.15
++FUNC:_ZNSsC2EOSsRKSaIcE@@GLIBCXX_3.4.26
+ FUNC:_ZNSsC2EPKcRKSaIcE@@GLIBCXX_3.4
+ FUNC:_ZNSsC2EPKcjRKSaIcE@@GLIBCXX_3.4
+ FUNC:_ZNSsC2ERKSaIcE@@GLIBCXX_3.4
+ FUNC:_ZNSsC2ERKSs@@GLIBCXX_3.4
++FUNC:_ZNSsC2ERKSsRKSaIcE@@GLIBCXX_3.4.26
+ FUNC:_ZNSsC2ERKSsjRKSaIcE@@GLIBCXX_3.4.23
+ FUNC:_ZNSsC2ERKSsjj@@GLIBCXX_3.4
+ FUNC:_ZNSsC2ERKSsjjRKSaIcE@@GLIBCXX_3.4
+@@ -1628,6 +1726,208 @@ FUNC:_ZNSt10__num_base15_S_format_floatERKSt8ios_basePcc@@GLIBCXX_3.4
+ FUNC:_ZNSt10bad_typeidD0Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt10bad_typeidD1Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt10bad_typeidD2Ev@@GLIBCXX_3.4
++FUNC:_ZNSt10filesystem10equivalentERKNS_4pathES2_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem10equivalentERKNS_4pathES2_RSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem10equivalentERKNS_7__cxx114pathES3_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem10equivalentERKNS_7__cxx114pathES3_RSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem10hash_valueERKNS_4pathE@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem10remove_allERKNS_4pathE@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem10remove_allERKNS_4pathERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem10remove_allERKNS_7__cxx114pathE@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem10remove_allERKNS_7__cxx114pathERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem11permissionsERKNS_4pathENS_5permsENS_12perm_optionsE@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem11permissionsERKNS_4pathENS_5permsENS_12perm_optionsERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem11permissionsERKNS_7__cxx114pathENS_5permsENS_12perm_optionsE@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem11permissionsERKNS_7__cxx114pathENS_5permsENS_12perm_optionsERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem11resize_fileERKNS_4pathEy@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem11resize_fileERKNS_4pathEyRSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem11resize_fileERKNS_7__cxx114pathEy@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem11resize_fileERKNS_7__cxx114pathEyRSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem12copy_symlinkERKNS_4pathES2_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem12copy_symlinkERKNS_4pathES2_RSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem12copy_symlinkERKNS_7__cxx114pathES3_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem12copy_symlinkERKNS_7__cxx114pathES3_RSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem12current_pathB5cxx11ERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem12current_pathB5cxx11Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem12current_pathERKNS_4pathE@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem12current_pathERKNS_4pathERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem12current_pathERKNS_7__cxx114pathE@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem12current_pathERKNS_7__cxx114pathERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem12current_pathERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem12current_pathEv@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem12read_symlinkERKNS_4pathE@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem12read_symlinkERKNS_4pathERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem12read_symlinkERKNS_7__cxx114pathE@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem12read_symlinkERKNS_7__cxx114pathERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem14create_symlinkERKNS_4pathES2_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem14create_symlinkERKNS_4pathES2_RSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem14create_symlinkERKNS_7__cxx114pathES3_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem14create_symlinkERKNS_7__cxx114pathES3_RSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem14symlink_statusERKNS_4pathE@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem14symlink_statusERKNS_4pathERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem14symlink_statusERKNS_7__cxx114pathE@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem14symlink_statusERKNS_7__cxx114pathERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem15hard_link_countERKNS_4pathE@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem15hard_link_countERKNS_4pathERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem15hard_link_countERKNS_7__cxx114pathE@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem15hard_link_countERKNS_7__cxx114pathERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem15last_write_timeERKNS_4pathE@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem15last_write_timeERKNS_4pathENSt6chrono10time_pointINS_12__file_clockENS3_8durationIxSt5ratioILx1ELx1000000000EEEEEE@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem15last_write_timeERKNS_4pathENSt6chrono10time_pointINS_12__file_clockENS3_8durationIxSt5ratioILx1ELx1000000000EEEEEERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem15last_write_timeERKNS_4pathERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem15last_write_timeERKNS_7__cxx114pathE@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem15last_write_timeERKNS_7__cxx114pathENSt6chrono10time_pointINS_12__file_clockENS4_8durationIxSt5ratioILx1ELx1000000000EEEEEE@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem15last_write_timeERKNS_7__cxx114pathENSt6chrono10time_pointINS_12__file_clockENS4_8durationIxSt5ratioILx1ELx1000000000EEEEEERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem15last_write_timeERKNS_7__cxx114pathERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem16create_directoryERKNS_4pathE@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem16create_directoryERKNS_4pathERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem16create_directoryERKNS_4pathES2_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem16create_directoryERKNS_4pathES2_RSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem16create_directoryERKNS_7__cxx114pathE@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem16create_directoryERKNS_7__cxx114pathERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem16create_directoryERKNS_7__cxx114pathES3_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem16create_directoryERKNS_7__cxx114pathES3_RSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem16create_hard_linkERKNS_4pathES2_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem16create_hard_linkERKNS_4pathES2_RSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem16create_hard_linkERKNS_7__cxx114pathES3_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem16create_hard_linkERKNS_7__cxx114pathES3_RSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem16filesystem_errorC1ERKSsRKNS_4pathES5_St10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem16filesystem_errorC1ERKSsRKNS_4pathESt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem16filesystem_errorC1ERKSsSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem16filesystem_errorC2ERKSsRKNS_4pathES5_St10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem16filesystem_errorC2ERKSsRKNS_4pathESt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem16filesystem_errorC2ERKSsSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem16filesystem_errorD0Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem16filesystem_errorD1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem16filesystem_errorD2Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem16weakly_canonicalERKNS_4pathE@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem16weakly_canonicalERKNS_4pathERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem16weakly_canonicalERKNS_7__cxx114pathE@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem16weakly_canonicalERKNS_7__cxx114pathERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem18create_directoriesERKNS_4pathE@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem18create_directoriesERKNS_4pathERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem18create_directoriesERKNS_7__cxx114pathE@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem18create_directoriesERKNS_7__cxx114pathERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem18directory_iterator9incrementERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem18directory_iteratorC1ERKNS_4pathENS_17directory_optionsEPSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem18directory_iteratorC2ERKNS_4pathENS_17directory_optionsEPSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem18directory_iteratorppEv@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem19temp_directory_pathB5cxx11ERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem19temp_directory_pathB5cxx11Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem19temp_directory_pathERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem19temp_directory_pathEv@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem24create_directory_symlinkERKNS_4pathES2_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem24create_directory_symlinkERKNS_4pathES2_RSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem24create_directory_symlinkERKNS_7__cxx114pathES3_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem24create_directory_symlinkERKNS_7__cxx114pathES3_RSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem28recursive_directory_iterator25disable_recursion_pendingEv@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem28recursive_directory_iterator3popERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem28recursive_directory_iterator3popEv@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem28recursive_directory_iterator9incrementERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem28recursive_directory_iteratorC1ERKNS_4pathENS_17directory_optionsEPSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem28recursive_directory_iteratorC2ERKNS_4pathENS_17directory_optionsEPSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem28recursive_directory_iteratorD1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem28recursive_directory_iteratorD2Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem28recursive_directory_iteratoraSEOS0_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem28recursive_directory_iteratoraSERKS0_@@GLIBCXX_3.4.27
++FUNC:_ZNSt10filesystem28recursive_directory_iteratorppEv@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem4copyERKNS_4pathES2_NS_12copy_optionsE@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem4copyERKNS_4pathES2_NS_12copy_optionsERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem4copyERKNS_7__cxx114pathES3_NS_12copy_optionsE@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem4copyERKNS_7__cxx114pathES3_NS_12copy_optionsERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem4path14_M_split_cmptsEv@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem4path14_S_convert_locEPKcS2_RKSt6locale@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem4path15remove_filenameEv@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem4path16replace_filenameERKS0_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem4path17replace_extensionERKS0_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem4path5_ListC1ERKS1_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem4path5_ListC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem4path9_M_appendESt17basic_string_viewIcSt11char_traitsIcEE@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem4path9_M_concatESt17basic_string_viewIcSt11char_traitsIcEE@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem4pathaSERKS0_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem4pathdVERKS0_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem4pathpLERKS0_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem5spaceERKNS_4pathE@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem5spaceERKNS_4pathERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem5spaceERKNS_7__cxx114pathE@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem5spaceERKNS_7__cxx114pathERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem6removeERKNS_4pathE@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem6removeERKNS_4pathERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem6removeERKNS_7__cxx114pathE@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem6removeERKNS_7__cxx114pathERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem6renameERKNS_4pathES2_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem6renameERKNS_4pathES2_RSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem6renameERKNS_7__cxx114pathES3_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem6renameERKNS_7__cxx114pathES3_RSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem6statusERKNS_4pathE@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem6statusERKNS_4pathERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem6statusERKNS_7__cxx114pathE@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem6statusERKNS_7__cxx114pathERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx1110hash_valueERKNS0_4pathE@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx1116filesystem_errorC1ERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEERKNS0_4pathESC_St10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx1116filesystem_errorC1ERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEERKNS0_4pathESt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx1116filesystem_errorC1ERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx1116filesystem_errorC2ERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEERKNS0_4pathESC_St10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx1116filesystem_errorC2ERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEERKNS0_4pathESt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx1116filesystem_errorC2ERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx1116filesystem_errorD0Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx1116filesystem_errorD1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx1116filesystem_errorD2Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx1118directory_iterator9incrementERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx1118directory_iteratorC1ERKNS0_4pathENS_17directory_optionsEPSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx1118directory_iteratorC2ERKNS0_4pathENS_17directory_optionsEPSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx1118directory_iteratorppEv@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iterator25disable_recursion_pendingEv@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iterator3popERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iterator3popEv@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iterator9incrementERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorC1ERKNS0_4pathENS_17directory_optionsEPSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorC2ERKNS0_4pathENS_17directory_optionsEPSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorD1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorD2Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratoraSEOS1_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratoraSERKS1_@@GLIBCXX_3.4.27
++FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorppEv@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx114path14_M_split_cmptsEv@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx114path14_S_convert_locEPKcS3_RKSt6locale@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx114path15remove_filenameEv@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx114path16replace_filenameERKS1_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx114path17replace_extensionERKS1_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx114path5_ListC1ERKS2_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx114path5_ListC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx114path9_M_appendESt17basic_string_viewIcSt11char_traitsIcEE@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx114path9_M_concatESt17basic_string_viewIcSt11char_traitsIcEE@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx114pathaSERKS1_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx114pathdVERKS1_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx114pathpLERKS1_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem8absoluteERKNS_4pathE@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem8absoluteERKNS_4pathERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem8absoluteERKNS_7__cxx114pathE@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem8absoluteERKNS_7__cxx114pathERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem8is_emptyERKNS_4pathE@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem8is_emptyERKNS_4pathERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem8is_emptyERKNS_7__cxx114pathE@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem8is_emptyERKNS_7__cxx114pathERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem8relativeERKNS_4pathES2_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem8relativeERKNS_4pathES2_RSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem8relativeERKNS_7__cxx114pathES3_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem8relativeERKNS_7__cxx114pathES3_RSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem9canonicalERKNS_4pathE@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem9canonicalERKNS_4pathERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem9canonicalERKNS_7__cxx114pathE@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem9canonicalERKNS_7__cxx114pathERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem9copy_fileERKNS_4pathES2_NS_12copy_optionsE@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem9copy_fileERKNS_4pathES2_NS_12copy_optionsERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem9copy_fileERKNS_7__cxx114pathES3_NS_12copy_optionsE@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem9copy_fileERKNS_7__cxx114pathES3_NS_12copy_optionsERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem9file_sizeERKNS_4pathE@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem9file_sizeERKNS_4pathERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem9file_sizeERKNS_7__cxx114pathE@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem9file_sizeERKNS_7__cxx114pathERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem9proximateERKNS_4pathES2_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem9proximateERKNS_4pathES2_RSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem9proximateERKNS_7__cxx114pathES3_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem9proximateERKNS_7__cxx114pathES3_RSt10error_code@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10istrstream3strEv@@GLIBCXX_3.4
+ FUNC:_ZNSt10istrstreamC1EPKc@@GLIBCXX_3.4
+ FUNC:_ZNSt10istrstreamC1EPKci@@GLIBCXX_3.4
+@@ -1714,10 +2014,12 @@ FUNC:_ZNSt11char_traitsIcE2eqERKcS2_@@GLIBCXX_3.4.5
+ FUNC:_ZNSt11char_traitsIcE2eqERKcS2_@GLIBCXX_3.4
+ FUNC:_ZNSt11char_traitsIwE2eqERKwS2_@@GLIBCXX_3.4.5
+ FUNC:_ZNSt11char_traitsIwE2eqERKwS2_@GLIBCXX_3.4
++FUNC:_ZNSt11logic_errorC1EOS_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt11logic_errorC1EPKc@@GLIBCXX_3.4.21
+ FUNC:_ZNSt11logic_errorC1ERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE@@GLIBCXX_3.4.21
+ FUNC:_ZNSt11logic_errorC1ERKS_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt11logic_errorC1ERKSs@@GLIBCXX_3.4
++FUNC:_ZNSt11logic_errorC2EOS_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt11logic_errorC2EPKc@@GLIBCXX_3.4.21
+ FUNC:_ZNSt11logic_errorC2ERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE@@GLIBCXX_3.4.21
+ FUNC:_ZNSt11logic_errorC2ERKS_@@GLIBCXX_3.4.21
+@@ -1725,6 +2027,7 @@ FUNC:_ZNSt11logic_errorC2ERKSs@@GLIBCXX_3.4
+ FUNC:_ZNSt11logic_errorD0Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt11logic_errorD1Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt11logic_errorD2Ev@@GLIBCXX_3.4
++FUNC:_ZNSt11logic_erroraSEOS_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt11logic_erroraSERKS_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt11range_errorC1EPKc@@GLIBCXX_3.4.21
+ FUNC:_ZNSt11range_errorC1ERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE@@GLIBCXX_3.4.21
+@@ -1757,6 +2060,24 @@ FUNC:_ZNSt12__basic_fileIcEC1EP15pthread_mutex_t@@GLIBCXX_3.4
+ FUNC:_ZNSt12__basic_fileIcEC2EP15pthread_mutex_t@@GLIBCXX_3.4
+ FUNC:_ZNSt12__basic_fileIcED1Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt12__basic_fileIcED2Ev@@GLIBCXX_3.4
++FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1EOS5_@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2EOS5_@@GLIBCXX_3.4.28
++FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
++FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC1EOS4_@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC2EOS4_@@GLIBCXX_3.4.28
++FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
++FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEaSEOS4_@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1EOS6_@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2EOS6_@@GLIBCXX_3.4.28
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC1EOS5_@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC2EOS5_@@GLIBCXX_3.4.28
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEaSEOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12bad_weak_ptrD0Ev@@GLIBCXX_3.4.15
+ FUNC:_ZNSt12bad_weak_ptrD1Ev@@GLIBCXX_3.4.15
+ FUNC:_ZNSt12bad_weak_ptrD2Ev@@GLIBCXX_3.4.15
+@@ -2057,6 +2378,7 @@ FUNC:_ZNSt13basic_ostreamIwSt11char_traitsIwEED0Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt13basic_ostreamIwSt11char_traitsIwEED1Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt13basic_ostreamIwSt11char_traitsIwEED2Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt13basic_ostreamIwSt11char_traitsIwEEaSEOS2_@@GLIBCXX_3.4.21
++FUNC:_ZNSt13basic_ostreamIwSt11char_traitsIwEElsEDn@@GLIBCXX_3.4.26
+ FUNC:_ZNSt13basic_ostreamIwSt11char_traitsIwEElsEPFRS2_S3_E@@GLIBCXX_3.4
+ FUNC:_ZNSt13basic_ostreamIwSt11char_traitsIwEElsEPFRSt8ios_baseS4_E@@GLIBCXX_3.4
+ FUNC:_ZNSt13basic_ostreamIwSt11char_traitsIwEElsEPFRSt9basic_iosIwS1_ES5_E@@GLIBCXX_3.4
+@@ -2081,10 +2403,12 @@ FUNC:_ZNSt13random_device7_M_finiEv@@GLIBCXX_3.4.18
+ FUNC:_ZNSt13random_device7_M_initERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE@@GLIBCXX_3.4.21
+ FUNC:_ZNSt13random_device7_M_initERKSs@@GLIBCXX_3.4.18
+ FUNC:_ZNSt13random_device9_M_getvalEv@@GLIBCXX_3.4.18
++FUNC:_ZNSt13runtime_errorC1EOS_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt13runtime_errorC1EPKc@@GLIBCXX_3.4.21
+ FUNC:_ZNSt13runtime_errorC1ERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE@@GLIBCXX_3.4.21
+ FUNC:_ZNSt13runtime_errorC1ERKS_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt13runtime_errorC1ERKSs@@GLIBCXX_3.4
++FUNC:_ZNSt13runtime_errorC2EOS_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt13runtime_errorC2EPKc@@GLIBCXX_3.4.21
+ FUNC:_ZNSt13runtime_errorC2ERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE@@GLIBCXX_3.4.21
+ FUNC:_ZNSt13runtime_errorC2ERKS_@@GLIBCXX_3.4.21
+@@ -2092,6 +2416,7 @@ FUNC:_ZNSt13runtime_errorC2ERKSs@@GLIBCXX_3.4
+ FUNC:_ZNSt13runtime_errorD0Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt13runtime_errorD1Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt13runtime_errorD2Ev@@GLIBCXX_3.4
++FUNC:_ZNSt13runtime_erroraSEOS_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt13runtime_erroraSERKS_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt14basic_ifstreamIcSt11char_traitsIcEE4openEPKcSt13_Ios_Openmode@@GLIBCXX_3.4
+ FUNC:_ZNSt14basic_ifstreamIcSt11char_traitsIcEE4openERKNSt7__cxx1112basic_stringIcS1_SaIcEEESt13_Ios_Openmode@@GLIBCXX_3.4.21
+@@ -2203,12 +2528,16 @@ FUNC:_ZNSt14codecvt_bynameIwc11__mbstate_tED0Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt14codecvt_bynameIwc11__mbstate_tED1Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt14codecvt_bynameIwc11__mbstate_tED2Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt14collate_bynameIcEC1EPKcj@@GLIBCXX_3.4
++FUNC:_ZNSt14collate_bynameIcEC1ERKSsj@@GLIBCXX_3.4.26
+ FUNC:_ZNSt14collate_bynameIcEC2EPKcj@@GLIBCXX_3.4
++FUNC:_ZNSt14collate_bynameIcEC2ERKSsj@@GLIBCXX_3.4.26
+ FUNC:_ZNSt14collate_bynameIcED0Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt14collate_bynameIcED1Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt14collate_bynameIcED2Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt14collate_bynameIwEC1EPKcj@@GLIBCXX_3.4
++FUNC:_ZNSt14collate_bynameIwEC1ERKSsj@@GLIBCXX_3.4.26
+ FUNC:_ZNSt14collate_bynameIwEC2EPKcj@@GLIBCXX_3.4
++FUNC:_ZNSt14collate_bynameIwEC2ERKSsj@@GLIBCXX_3.4.26
+ FUNC:_ZNSt14collate_bynameIwED0Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt14collate_bynameIwED1Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt14collate_bynameIwED2Ev@@GLIBCXX_3.4
+@@ -2348,9 +2677,11 @@ FUNC:_ZNSt15basic_stringbufIcSt11char_traitsIcESaIcEE9underflowEv@@GLIBCXX_3.4
+ FUNC:_ZNSt15basic_stringbufIcSt11char_traitsIcESaIcEEC1EOS3_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt15basic_stringbufIcSt11char_traitsIcESaIcEEC1ERKSsSt13_Ios_Openmode@@GLIBCXX_3.4
+ FUNC:_ZNSt15basic_stringbufIcSt11char_traitsIcESaIcEEC1ESt13_Ios_Openmode@@GLIBCXX_3.4
++FUNC:_ZNSt15basic_stringbufIcSt11char_traitsIcESaIcEEC1Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt15basic_stringbufIcSt11char_traitsIcESaIcEEC2EOS3_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt15basic_stringbufIcSt11char_traitsIcESaIcEEC2ERKSsSt13_Ios_Openmode@@GLIBCXX_3.4
+ FUNC:_ZNSt15basic_stringbufIcSt11char_traitsIcESaIcEEC2ESt13_Ios_Openmode@@GLIBCXX_3.4
++FUNC:_ZNSt15basic_stringbufIcSt11char_traitsIcESaIcEEC2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt15basic_stringbufIcSt11char_traitsIcESaIcEED0Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt15basic_stringbufIcSt11char_traitsIcESaIcEED1Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt15basic_stringbufIcSt11char_traitsIcESaIcEEaSEOS3_@@GLIBCXX_3.4.21
+@@ -2370,9 +2701,11 @@ FUNC:_ZNSt15basic_stringbufIwSt11char_traitsIwESaIwEE9underflowEv@@GLIBCXX_3.4
+ FUNC:_ZNSt15basic_stringbufIwSt11char_traitsIwESaIwEEC1EOS3_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt15basic_stringbufIwSt11char_traitsIwESaIwEEC1ERKSbIwS1_S2_ESt13_Ios_Openmode@@GLIBCXX_3.4
+ FUNC:_ZNSt15basic_stringbufIwSt11char_traitsIwESaIwEEC1ESt13_Ios_Openmode@@GLIBCXX_3.4
++FUNC:_ZNSt15basic_stringbufIwSt11char_traitsIwESaIwEEC1Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt15basic_stringbufIwSt11char_traitsIwESaIwEEC2EOS3_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt15basic_stringbufIwSt11char_traitsIwESaIwEEC2ERKSbIwS1_S2_ESt13_Ios_Openmode@@GLIBCXX_3.4
+ FUNC:_ZNSt15basic_stringbufIwSt11char_traitsIwESaIwEEC2ESt13_Ios_Openmode@@GLIBCXX_3.4
++FUNC:_ZNSt15basic_stringbufIwSt11char_traitsIwESaIwEEC2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt15basic_stringbufIwSt11char_traitsIwESaIwEED0Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt15basic_stringbufIwSt11char_traitsIwESaIwEED1Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt15basic_stringbufIwSt11char_traitsIwESaIwEEaSEOS3_@@GLIBCXX_3.4.21
+@@ -2540,9 +2873,11 @@ FUNC:_ZNSt18basic_stringstreamIcSt11char_traitsIcESaIcEE4swapERS3_@@GLIBCXX_3.4.
+ FUNC:_ZNSt18basic_stringstreamIcSt11char_traitsIcESaIcEEC1EOS3_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt18basic_stringstreamIcSt11char_traitsIcESaIcEEC1ERKSsSt13_Ios_Openmode@@GLIBCXX_3.4
+ FUNC:_ZNSt18basic_stringstreamIcSt11char_traitsIcESaIcEEC1ESt13_Ios_Openmode@@GLIBCXX_3.4
++FUNC:_ZNSt18basic_stringstreamIcSt11char_traitsIcESaIcEEC1Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt18basic_stringstreamIcSt11char_traitsIcESaIcEEC2EOS3_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt18basic_stringstreamIcSt11char_traitsIcESaIcEEC2ERKSsSt13_Ios_Openmode@@GLIBCXX_3.4
+ FUNC:_ZNSt18basic_stringstreamIcSt11char_traitsIcESaIcEEC2ESt13_Ios_Openmode@@GLIBCXX_3.4
++FUNC:_ZNSt18basic_stringstreamIcSt11char_traitsIcESaIcEEC2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt18basic_stringstreamIcSt11char_traitsIcESaIcEED0Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt18basic_stringstreamIcSt11char_traitsIcESaIcEED1Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt18basic_stringstreamIcSt11char_traitsIcESaIcEED2Ev@@GLIBCXX_3.4
+@@ -2552,9 +2887,11 @@ FUNC:_ZNSt18basic_stringstreamIwSt11char_traitsIwESaIwEE4swapERS3_@@GLIBCXX_3.4.
+ FUNC:_ZNSt18basic_stringstreamIwSt11char_traitsIwESaIwEEC1EOS3_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt18basic_stringstreamIwSt11char_traitsIwESaIwEEC1ERKSbIwS1_S2_ESt13_Ios_Openmode@@GLIBCXX_3.4
+ FUNC:_ZNSt18basic_stringstreamIwSt11char_traitsIwESaIwEEC1ESt13_Ios_Openmode@@GLIBCXX_3.4
++FUNC:_ZNSt18basic_stringstreamIwSt11char_traitsIwESaIwEEC1Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt18basic_stringstreamIwSt11char_traitsIwESaIwEEC2EOS3_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt18basic_stringstreamIwSt11char_traitsIwESaIwEEC2ERKSbIwS1_S2_ESt13_Ios_Openmode@@GLIBCXX_3.4
+ FUNC:_ZNSt18basic_stringstreamIwSt11char_traitsIwESaIwEEC2ESt13_Ios_Openmode@@GLIBCXX_3.4
++FUNC:_ZNSt18basic_stringstreamIwSt11char_traitsIwESaIwEEC2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt18basic_stringstreamIwSt11char_traitsIwESaIwEED0Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt18basic_stringstreamIwSt11char_traitsIwESaIwEED1Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt18basic_stringstreamIwSt11char_traitsIwESaIwEED2Ev@@GLIBCXX_3.4
+@@ -2566,6 +2903,7 @@ FUNC:_ZNSt18condition_variableC1Ev@@GLIBCXX_3.4.11
+ FUNC:_ZNSt18condition_variableC2Ev@@GLIBCXX_3.4.11
+ FUNC:_ZNSt18condition_variableD1Ev@@GLIBCXX_3.4.11
+ FUNC:_ZNSt18condition_variableD2Ev@@GLIBCXX_3.4.11
++FUNC:_ZNSt19_Sp_make_shared_tag5_S_eqERKSt9type_info@@GLIBCXX_3.4.26
+ FUNC:_ZNSt19__codecvt_utf8_baseIDiED0Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt19__codecvt_utf8_baseIDiED1Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt19__codecvt_utf8_baseIDiED2Ev@@GLIBCXX_3.4.21
+@@ -2580,9 +2918,11 @@ FUNC:_ZNSt19basic_istringstreamIcSt11char_traitsIcESaIcEE4swapERS3_@@GLIBCXX_3.4
+ FUNC:_ZNSt19basic_istringstreamIcSt11char_traitsIcESaIcEEC1EOS3_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt19basic_istringstreamIcSt11char_traitsIcESaIcEEC1ERKSsSt13_Ios_Openmode@@GLIBCXX_3.4
+ FUNC:_ZNSt19basic_istringstreamIcSt11char_traitsIcESaIcEEC1ESt13_Ios_Openmode@@GLIBCXX_3.4
++FUNC:_ZNSt19basic_istringstreamIcSt11char_traitsIcESaIcEEC1Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt19basic_istringstreamIcSt11char_traitsIcESaIcEEC2EOS3_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt19basic_istringstreamIcSt11char_traitsIcESaIcEEC2ERKSsSt13_Ios_Openmode@@GLIBCXX_3.4
+ FUNC:_ZNSt19basic_istringstreamIcSt11char_traitsIcESaIcEEC2ESt13_Ios_Openmode@@GLIBCXX_3.4
++FUNC:_ZNSt19basic_istringstreamIcSt11char_traitsIcESaIcEEC2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt19basic_istringstreamIcSt11char_traitsIcESaIcEED0Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt19basic_istringstreamIcSt11char_traitsIcESaIcEED1Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt19basic_istringstreamIcSt11char_traitsIcESaIcEED2Ev@@GLIBCXX_3.4
+@@ -2592,9 +2932,11 @@ FUNC:_ZNSt19basic_istringstreamIwSt11char_traitsIwESaIwEE4swapERS3_@@GLIBCXX_3.4
+ FUNC:_ZNSt19basic_istringstreamIwSt11char_traitsIwESaIwEEC1EOS3_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt19basic_istringstreamIwSt11char_traitsIwESaIwEEC1ERKSbIwS1_S2_ESt13_Ios_Openmode@@GLIBCXX_3.4
+ FUNC:_ZNSt19basic_istringstreamIwSt11char_traitsIwESaIwEEC1ESt13_Ios_Openmode@@GLIBCXX_3.4
++FUNC:_ZNSt19basic_istringstreamIwSt11char_traitsIwESaIwEEC1Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt19basic_istringstreamIwSt11char_traitsIwESaIwEEC2EOS3_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt19basic_istringstreamIwSt11char_traitsIwESaIwEEC2ERKSbIwS1_S2_ESt13_Ios_Openmode@@GLIBCXX_3.4
+ FUNC:_ZNSt19basic_istringstreamIwSt11char_traitsIwESaIwEEC2ESt13_Ios_Openmode@@GLIBCXX_3.4
++FUNC:_ZNSt19basic_istringstreamIwSt11char_traitsIwESaIwEEC2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt19basic_istringstreamIwSt11char_traitsIwESaIwEED0Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt19basic_istringstreamIwSt11char_traitsIwESaIwEED1Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt19basic_istringstreamIwSt11char_traitsIwESaIwEED2Ev@@GLIBCXX_3.4
+@@ -2604,9 +2946,11 @@ FUNC:_ZNSt19basic_ostringstreamIcSt11char_traitsIcESaIcEE4swapERS3_@@GLIBCXX_3.4
+ FUNC:_ZNSt19basic_ostringstreamIcSt11char_traitsIcESaIcEEC1EOS3_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt19basic_ostringstreamIcSt11char_traitsIcESaIcEEC1ERKSsSt13_Ios_Openmode@@GLIBCXX_3.4
+ FUNC:_ZNSt19basic_ostringstreamIcSt11char_traitsIcESaIcEEC1ESt13_Ios_Openmode@@GLIBCXX_3.4
++FUNC:_ZNSt19basic_ostringstreamIcSt11char_traitsIcESaIcEEC1Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt19basic_ostringstreamIcSt11char_traitsIcESaIcEEC2EOS3_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt19basic_ostringstreamIcSt11char_traitsIcESaIcEEC2ERKSsSt13_Ios_Openmode@@GLIBCXX_3.4
+ FUNC:_ZNSt19basic_ostringstreamIcSt11char_traitsIcESaIcEEC2ESt13_Ios_Openmode@@GLIBCXX_3.4
++FUNC:_ZNSt19basic_ostringstreamIcSt11char_traitsIcESaIcEEC2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt19basic_ostringstreamIcSt11char_traitsIcESaIcEED0Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt19basic_ostringstreamIcSt11char_traitsIcESaIcEED1Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt19basic_ostringstreamIcSt11char_traitsIcESaIcEED2Ev@@GLIBCXX_3.4
+@@ -2616,9 +2960,11 @@ FUNC:_ZNSt19basic_ostringstreamIwSt11char_traitsIwESaIwEE4swapERS3_@@GLIBCXX_3.4
+ FUNC:_ZNSt19basic_ostringstreamIwSt11char_traitsIwESaIwEEC1EOS3_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt19basic_ostringstreamIwSt11char_traitsIwESaIwEEC1ERKSbIwS1_S2_ESt13_Ios_Openmode@@GLIBCXX_3.4
+ FUNC:_ZNSt19basic_ostringstreamIwSt11char_traitsIwESaIwEEC1ESt13_Ios_Openmode@@GLIBCXX_3.4
++FUNC:_ZNSt19basic_ostringstreamIwSt11char_traitsIwESaIwEEC1Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt19basic_ostringstreamIwSt11char_traitsIwESaIwEEC2EOS3_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt19basic_ostringstreamIwSt11char_traitsIwESaIwEEC2ERKSbIwS1_S2_ESt13_Ios_Openmode@@GLIBCXX_3.4
+ FUNC:_ZNSt19basic_ostringstreamIwSt11char_traitsIwESaIwEEC2ESt13_Ios_Openmode@@GLIBCXX_3.4
++FUNC:_ZNSt19basic_ostringstreamIwSt11char_traitsIwESaIwEEC2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt19basic_ostringstreamIwSt11char_traitsIwESaIwEED0Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt19basic_ostringstreamIwSt11char_traitsIwESaIwEED1Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt19basic_ostringstreamIwSt11char_traitsIwESaIwEED2Ev@@GLIBCXX_3.4
+@@ -2659,6 +3005,26 @@ FUNC:_ZNSt3_V214error_categoryD1Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V214error_categoryD2Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V215system_categoryEv@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V216generic_categoryEv@@GLIBCXX_3.4.21
++FUNC:_ZNSt3pmr19new_delete_resourceEv@@GLIBCXX_3.4.26
++FUNC:_ZNSt3pmr20get_default_resourceEv@@GLIBCXX_3.4.26
++FUNC:_ZNSt3pmr20null_memory_resourceEv@@GLIBCXX_3.4.26
++FUNC:_ZNSt3pmr20set_default_resourceEPNS_15memory_resourceE@@GLIBCXX_3.4.26
++FUNC:_ZNSt3pmr25monotonic_buffer_resource13_M_new_bufferEjj@@GLIBCXX_3.4.26
++FUNC:_ZNSt3pmr25monotonic_buffer_resource18_M_release_buffersEv@@GLIBCXX_3.4.26
++FUNC:_ZNSt3pmr26synchronized_pool_resource11do_allocateEjj@@GLIBCXX_3.4.26
++FUNC:_ZNSt3pmr26synchronized_pool_resource13do_deallocateEPvjj@@GLIBCXX_3.4.26
++FUNC:_ZNSt3pmr26synchronized_pool_resource7releaseEv@@GLIBCXX_3.4.26
++FUNC:_ZNSt3pmr26synchronized_pool_resourceC1ERKNS_12pool_optionsEPNS_15memory_resourceE@@GLIBCXX_3.4.26
++FUNC:_ZNSt3pmr26synchronized_pool_resourceC2ERKNS_12pool_optionsEPNS_15memory_resourceE@@GLIBCXX_3.4.26
++FUNC:_ZNSt3pmr26synchronized_pool_resourceD1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt3pmr26synchronized_pool_resourceD2Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt3pmr28unsynchronized_pool_resource11do_allocateEjj@@GLIBCXX_3.4.26
++FUNC:_ZNSt3pmr28unsynchronized_pool_resource13do_deallocateEPvjj@@GLIBCXX_3.4.26
++FUNC:_ZNSt3pmr28unsynchronized_pool_resource7releaseEv@@GLIBCXX_3.4.26
++FUNC:_ZNSt3pmr28unsynchronized_pool_resourceC1ERKNS_12pool_optionsEPNS_15memory_resourceE@@GLIBCXX_3.4.26
++FUNC:_ZNSt3pmr28unsynchronized_pool_resourceC2ERKNS_12pool_optionsEPNS_15memory_resourceE@@GLIBCXX_3.4.26
++FUNC:_ZNSt3pmr28unsynchronized_pool_resourceD1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt3pmr28unsynchronized_pool_resourceD2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt5ctypeIcE13classic_tableEv@@GLIBCXX_3.4
+ FUNC:_ZNSt5ctypeIcEC1EP15__locale_structPKtbj@@GLIBCXX_3.4
+ FUNC:_ZNSt5ctypeIcEC1EPKtbj@@GLIBCXX_3.4
+@@ -2792,6 +3158,8 @@ FUNC:_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE12_M_constructIN9__gnu
+ FUNC:_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE12_M_constructIN9__gnu_cxx17__normal_iteratorIPcS4_EEEEvT_SA_St20forward_iterator_tag@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE12_M_constructIPKcEEvT_S8_St20forward_iterator_tag@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE12_M_constructIPcEEvT_S7_St20forward_iterator_tag@@GLIBCXX_3.4.21
++FUNC:_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE12__sv_wrapperC1ESt17basic_string_viewIcS2_E@@GLIBCXX_3.4.26
++FUNC:_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE12__sv_wrapperC2ESt17basic_string_viewIcS2_E@@GLIBCXX_3.4.26
+ FUNC:_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE13_M_local_dataEv@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE13_M_set_lengthEj@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE13_S_copy_charsEPcN9__gnu_cxx17__normal_iteratorIPKcS4_EESA_@@GLIBCXX_3.4.21
+@@ -2801,10 +3169,12 @@ FUNC:_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE13_S_copy_charsEPcS5_S
+ FUNC:_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE13shrink_to_fitEv@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE14_M_replace_auxEjjjc@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE16_M_get_allocatorEv@@GLIBCXX_3.4.21
++FUNC:_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE17_S_to_string_viewESt17basic_string_viewIcS2_E@@GLIBCXX_3.4.26
+ FUNC:_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE18_M_construct_aux_2Ejc@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE2atEj@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE3endEv@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE4backEv@@GLIBCXX_3.4.21
++FUNC:_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE4dataEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE4rendEv@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE4swapERS4_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE5beginEv@@GLIBCXX_3.4.21
+@@ -2828,6 +3198,7 @@ FUNC:_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE6assignERKS4_@@GLIBCXX
+ FUNC:_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE6assignERKS4_jj@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE6assignESt16initializer_listIcE@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE6assignEjc@@GLIBCXX_3.4.21
++FUNC:_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE6insertEN9__gnu_cxx17__normal_iteratorIPKcS4_EESt16initializer_listIcE@@GLIBCXX_3.4.26
+ FUNC:_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE6insertEN9__gnu_cxx17__normal_iteratorIPKcS4_EEc@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE6insertEN9__gnu_cxx17__normal_iteratorIPKcS4_EEjc@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE6insertEN9__gnu_cxx17__normal_iteratorIPcS4_EESt16initializer_listIcE@@GLIBCXX_3.4.21
+@@ -2877,6 +3248,7 @@ FUNC:_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE9_M_lengthEj@@GLIBCXX_
+ FUNC:_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE9_M_mutateEjjPKcj@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE9_S_assignEPcjc@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE9push_backEc@@GLIBCXX_3.4.21
++FUNC:_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEC1ENS4_12__sv_wrapperERKS3_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEC1EOS4_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEC1EOS4_RKS3_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEC1EPKcRKS3_@@GLIBCXX_3.4.21
+@@ -2893,6 +3265,7 @@ FUNC:_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEC1Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEC1IN9__gnu_cxx17__normal_iteratorIPcS4_EEvEET_SA_RKS3_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEC1IPKcvEET_S8_RKS3_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEC1IPcvEET_S7_RKS3_@@GLIBCXX_3.4.21
++FUNC:_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEC2ENS4_12__sv_wrapperERKS3_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEC2EOS4_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEC2EOS4_RKS3_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEC2EPKcRKS3_@@GLIBCXX_3.4.21
+@@ -2935,6 +3308,8 @@ FUNC:_ZNSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEE12_M_constructIN9__gnu
+ FUNC:_ZNSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEE12_M_constructIN9__gnu_cxx17__normal_iteratorIPwS4_EEEEvT_SA_St20forward_iterator_tag@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEE12_M_constructIPKwEEvT_S8_St20forward_iterator_tag@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEE12_M_constructIPwEEvT_S7_St20forward_iterator_tag@@GLIBCXX_3.4.21
++FUNC:_ZNSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEE12__sv_wrapperC1ESt17basic_string_viewIwS2_E@@GLIBCXX_3.4.26
++FUNC:_ZNSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEE12__sv_wrapperC2ESt17basic_string_viewIwS2_E@@GLIBCXX_3.4.26
+ FUNC:_ZNSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEE13_M_local_dataEv@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEE13_M_set_lengthEj@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEE13_S_copy_charsEPwN9__gnu_cxx17__normal_iteratorIPKwS4_EESA_@@GLIBCXX_3.4.21
+@@ -2944,10 +3319,12 @@ FUNC:_ZNSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEE13_S_copy_charsEPwS5_S
+ FUNC:_ZNSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEE13shrink_to_fitEv@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEE14_M_replace_auxEjjjw@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEE16_M_get_allocatorEv@@GLIBCXX_3.4.21
++FUNC:_ZNSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEE17_S_to_string_viewESt17basic_string_viewIwS2_E@@GLIBCXX_3.4.26
+ FUNC:_ZNSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEE18_M_construct_aux_2Ejw@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEE2atEj@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEE3endEv@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEE4backEv@@GLIBCXX_3.4.21
++FUNC:_ZNSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEE4dataEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEE4rendEv@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEE4swapERS4_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEE5beginEv@@GLIBCXX_3.4.21
+@@ -2971,6 +3348,7 @@ FUNC:_ZNSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEE6assignERKS4_@@GLIBCXX
+ FUNC:_ZNSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEE6assignERKS4_jj@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEE6assignESt16initializer_listIwE@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEE6assignEjw@@GLIBCXX_3.4.21
++FUNC:_ZNSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEE6insertEN9__gnu_cxx17__normal_iteratorIPKwS4_EESt16initializer_listIwE@@GLIBCXX_3.4.26
+ FUNC:_ZNSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEE6insertEN9__gnu_cxx17__normal_iteratorIPKwS4_EEjw@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEE6insertEN9__gnu_cxx17__normal_iteratorIPKwS4_EEw@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEE6insertEN9__gnu_cxx17__normal_iteratorIPwS4_EESt16initializer_listIwE@@GLIBCXX_3.4.21
+@@ -3020,6 +3398,7 @@ FUNC:_ZNSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEE9_M_lengthEj@@GLIBCXX_
+ FUNC:_ZNSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEE9_M_mutateEjjPKwj@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEE9_S_assignEPwjw@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEE9push_backEw@@GLIBCXX_3.4.21
++FUNC:_ZNSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEEC1ENS4_12__sv_wrapperERKS3_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEEC1EOS4_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEEC1EOS4_RKS3_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEEC1EPKwRKS3_@@GLIBCXX_3.4.21
+@@ -3036,6 +3415,7 @@ FUNC:_ZNSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEEC1Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEEC1IN9__gnu_cxx17__normal_iteratorIPwS4_EEvEET_SA_RKS3_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEEC1IPKwvEET_S8_RKS3_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEEC1IPwvEET_S7_RKS3_@@GLIBCXX_3.4.21
++FUNC:_ZNSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEEC2ENS4_12__sv_wrapperERKS3_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEEC2EOS4_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEEC2EOS4_RKS3_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1112basic_stringIwSt11char_traitsIwESaIwEEC2EPKwRKS3_@@GLIBCXX_3.4.21
+@@ -3099,10 +3479,12 @@ FUNC:_ZNSt7__cxx1115basic_stringbufIcSt11char_traitsIcESaIcEEC1EOS4_@@GLIBCXX_3.
+ FUNC:_ZNSt7__cxx1115basic_stringbufIcSt11char_traitsIcESaIcEEC1EOS4_ONS4_14__xfer_bufptrsE@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1115basic_stringbufIcSt11char_traitsIcESaIcEEC1ERKNS_12basic_stringIcS2_S3_EESt13_Ios_Openmode@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1115basic_stringbufIcSt11char_traitsIcESaIcEEC1ESt13_Ios_Openmode@@GLIBCXX_3.4.21
++FUNC:_ZNSt7__cxx1115basic_stringbufIcSt11char_traitsIcESaIcEEC1Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt7__cxx1115basic_stringbufIcSt11char_traitsIcESaIcEEC2EOS4_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1115basic_stringbufIcSt11char_traitsIcESaIcEEC2EOS4_ONS4_14__xfer_bufptrsE@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1115basic_stringbufIcSt11char_traitsIcESaIcEEC2ERKNS_12basic_stringIcS2_S3_EESt13_Ios_Openmode@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1115basic_stringbufIcSt11char_traitsIcESaIcEEC2ESt13_Ios_Openmode@@GLIBCXX_3.4.21
++FUNC:_ZNSt7__cxx1115basic_stringbufIcSt11char_traitsIcESaIcEEC2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt7__cxx1115basic_stringbufIcSt11char_traitsIcESaIcEED0Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1115basic_stringbufIcSt11char_traitsIcESaIcEED1Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1115basic_stringbufIcSt11char_traitsIcESaIcEED2Ev@@GLIBCXX_3.4.21
+@@ -3128,10 +3510,12 @@ FUNC:_ZNSt7__cxx1115basic_stringbufIwSt11char_traitsIwESaIwEEC1EOS4_@@GLIBCXX_3.
+ FUNC:_ZNSt7__cxx1115basic_stringbufIwSt11char_traitsIwESaIwEEC1EOS4_ONS4_14__xfer_bufptrsE@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1115basic_stringbufIwSt11char_traitsIwESaIwEEC1ERKNS_12basic_stringIwS2_S3_EESt13_Ios_Openmode@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1115basic_stringbufIwSt11char_traitsIwESaIwEEC1ESt13_Ios_Openmode@@GLIBCXX_3.4.21
++FUNC:_ZNSt7__cxx1115basic_stringbufIwSt11char_traitsIwESaIwEEC1Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt7__cxx1115basic_stringbufIwSt11char_traitsIwESaIwEEC2EOS4_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1115basic_stringbufIwSt11char_traitsIwESaIwEEC2EOS4_ONS4_14__xfer_bufptrsE@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1115basic_stringbufIwSt11char_traitsIwESaIwEEC2ERKNS_12basic_stringIwS2_S3_EESt13_Ios_Openmode@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1115basic_stringbufIwSt11char_traitsIwESaIwEEC2ESt13_Ios_Openmode@@GLIBCXX_3.4.21
++FUNC:_ZNSt7__cxx1115basic_stringbufIwSt11char_traitsIwESaIwEEC2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt7__cxx1115basic_stringbufIwSt11char_traitsIwESaIwEED0Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1115basic_stringbufIwSt11char_traitsIwESaIwEED1Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1115basic_stringbufIwSt11char_traitsIwESaIwEED2Ev@@GLIBCXX_3.4.21
+@@ -3211,9 +3595,11 @@ FUNC:_ZNSt7__cxx1118basic_stringstreamIcSt11char_traitsIcESaIcEE4swapERS4_@@GLIB
+ FUNC:_ZNSt7__cxx1118basic_stringstreamIcSt11char_traitsIcESaIcEEC1EOS4_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1118basic_stringstreamIcSt11char_traitsIcESaIcEEC1ERKNS_12basic_stringIcS2_S3_EESt13_Ios_Openmode@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1118basic_stringstreamIcSt11char_traitsIcESaIcEEC1ESt13_Ios_Openmode@@GLIBCXX_3.4.21
++FUNC:_ZNSt7__cxx1118basic_stringstreamIcSt11char_traitsIcESaIcEEC1Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt7__cxx1118basic_stringstreamIcSt11char_traitsIcESaIcEEC2EOS4_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1118basic_stringstreamIcSt11char_traitsIcESaIcEEC2ERKNS_12basic_stringIcS2_S3_EESt13_Ios_Openmode@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1118basic_stringstreamIcSt11char_traitsIcESaIcEEC2ESt13_Ios_Openmode@@GLIBCXX_3.4.21
++FUNC:_ZNSt7__cxx1118basic_stringstreamIcSt11char_traitsIcESaIcEEC2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt7__cxx1118basic_stringstreamIcSt11char_traitsIcESaIcEED0Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1118basic_stringstreamIcSt11char_traitsIcESaIcEED1Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1118basic_stringstreamIcSt11char_traitsIcESaIcEED2Ev@@GLIBCXX_3.4.21
+@@ -3223,9 +3609,11 @@ FUNC:_ZNSt7__cxx1118basic_stringstreamIwSt11char_traitsIwESaIwEE4swapERS4_@@GLIB
+ FUNC:_ZNSt7__cxx1118basic_stringstreamIwSt11char_traitsIwESaIwEEC1EOS4_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1118basic_stringstreamIwSt11char_traitsIwESaIwEEC1ERKNS_12basic_stringIwS2_S3_EESt13_Ios_Openmode@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1118basic_stringstreamIwSt11char_traitsIwESaIwEEC1ESt13_Ios_Openmode@@GLIBCXX_3.4.21
++FUNC:_ZNSt7__cxx1118basic_stringstreamIwSt11char_traitsIwESaIwEEC1Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt7__cxx1118basic_stringstreamIwSt11char_traitsIwESaIwEEC2EOS4_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1118basic_stringstreamIwSt11char_traitsIwESaIwEEC2ERKNS_12basic_stringIwS2_S3_EESt13_Ios_Openmode@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1118basic_stringstreamIwSt11char_traitsIwESaIwEEC2ESt13_Ios_Openmode@@GLIBCXX_3.4.21
++FUNC:_ZNSt7__cxx1118basic_stringstreamIwSt11char_traitsIwESaIwEEC2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt7__cxx1118basic_stringstreamIwSt11char_traitsIwESaIwEED0Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1118basic_stringstreamIwSt11char_traitsIwESaIwEED1Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1118basic_stringstreamIwSt11char_traitsIwESaIwEED2Ev@@GLIBCXX_3.4.21
+@@ -3235,9 +3623,11 @@ FUNC:_ZNSt7__cxx1119basic_istringstreamIcSt11char_traitsIcESaIcEE4swapERS4_@@GLI
+ FUNC:_ZNSt7__cxx1119basic_istringstreamIcSt11char_traitsIcESaIcEEC1EOS4_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1119basic_istringstreamIcSt11char_traitsIcESaIcEEC1ERKNS_12basic_stringIcS2_S3_EESt13_Ios_Openmode@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1119basic_istringstreamIcSt11char_traitsIcESaIcEEC1ESt13_Ios_Openmode@@GLIBCXX_3.4.21
++FUNC:_ZNSt7__cxx1119basic_istringstreamIcSt11char_traitsIcESaIcEEC1Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt7__cxx1119basic_istringstreamIcSt11char_traitsIcESaIcEEC2EOS4_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1119basic_istringstreamIcSt11char_traitsIcESaIcEEC2ERKNS_12basic_stringIcS2_S3_EESt13_Ios_Openmode@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1119basic_istringstreamIcSt11char_traitsIcESaIcEEC2ESt13_Ios_Openmode@@GLIBCXX_3.4.21
++FUNC:_ZNSt7__cxx1119basic_istringstreamIcSt11char_traitsIcESaIcEEC2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt7__cxx1119basic_istringstreamIcSt11char_traitsIcESaIcEED0Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1119basic_istringstreamIcSt11char_traitsIcESaIcEED1Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1119basic_istringstreamIcSt11char_traitsIcESaIcEED2Ev@@GLIBCXX_3.4.21
+@@ -3247,9 +3637,11 @@ FUNC:_ZNSt7__cxx1119basic_istringstreamIwSt11char_traitsIwESaIwEE4swapERS4_@@GLI
+ FUNC:_ZNSt7__cxx1119basic_istringstreamIwSt11char_traitsIwESaIwEEC1EOS4_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1119basic_istringstreamIwSt11char_traitsIwESaIwEEC1ERKNS_12basic_stringIwS2_S3_EESt13_Ios_Openmode@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1119basic_istringstreamIwSt11char_traitsIwESaIwEEC1ESt13_Ios_Openmode@@GLIBCXX_3.4.21
++FUNC:_ZNSt7__cxx1119basic_istringstreamIwSt11char_traitsIwESaIwEEC1Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt7__cxx1119basic_istringstreamIwSt11char_traitsIwESaIwEEC2EOS4_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1119basic_istringstreamIwSt11char_traitsIwESaIwEEC2ERKNS_12basic_stringIwS2_S3_EESt13_Ios_Openmode@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1119basic_istringstreamIwSt11char_traitsIwESaIwEEC2ESt13_Ios_Openmode@@GLIBCXX_3.4.21
++FUNC:_ZNSt7__cxx1119basic_istringstreamIwSt11char_traitsIwESaIwEEC2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt7__cxx1119basic_istringstreamIwSt11char_traitsIwESaIwEED0Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1119basic_istringstreamIwSt11char_traitsIwESaIwEED1Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1119basic_istringstreamIwSt11char_traitsIwESaIwEED2Ev@@GLIBCXX_3.4.21
+@@ -3259,9 +3651,11 @@ FUNC:_ZNSt7__cxx1119basic_ostringstreamIcSt11char_traitsIcESaIcEE4swapERS4_@@GLI
+ FUNC:_ZNSt7__cxx1119basic_ostringstreamIcSt11char_traitsIcESaIcEEC1EOS4_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1119basic_ostringstreamIcSt11char_traitsIcESaIcEEC1ERKNS_12basic_stringIcS2_S3_EESt13_Ios_Openmode@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1119basic_ostringstreamIcSt11char_traitsIcESaIcEEC1ESt13_Ios_Openmode@@GLIBCXX_3.4.21
++FUNC:_ZNSt7__cxx1119basic_ostringstreamIcSt11char_traitsIcESaIcEEC1Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt7__cxx1119basic_ostringstreamIcSt11char_traitsIcESaIcEEC2EOS4_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1119basic_ostringstreamIcSt11char_traitsIcESaIcEEC2ERKNS_12basic_stringIcS2_S3_EESt13_Ios_Openmode@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1119basic_ostringstreamIcSt11char_traitsIcESaIcEEC2ESt13_Ios_Openmode@@GLIBCXX_3.4.21
++FUNC:_ZNSt7__cxx1119basic_ostringstreamIcSt11char_traitsIcESaIcEEC2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt7__cxx1119basic_ostringstreamIcSt11char_traitsIcESaIcEED0Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1119basic_ostringstreamIcSt11char_traitsIcESaIcEED1Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1119basic_ostringstreamIcSt11char_traitsIcESaIcEED2Ev@@GLIBCXX_3.4.21
+@@ -3271,9 +3665,11 @@ FUNC:_ZNSt7__cxx1119basic_ostringstreamIwSt11char_traitsIwESaIwEE4swapERS4_@@GLI
+ FUNC:_ZNSt7__cxx1119basic_ostringstreamIwSt11char_traitsIwESaIwEEC1EOS4_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1119basic_ostringstreamIwSt11char_traitsIwESaIwEEC1ERKNS_12basic_stringIwS2_S3_EESt13_Ios_Openmode@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1119basic_ostringstreamIwSt11char_traitsIwESaIwEEC1ESt13_Ios_Openmode@@GLIBCXX_3.4.21
++FUNC:_ZNSt7__cxx1119basic_ostringstreamIwSt11char_traitsIwESaIwEEC1Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt7__cxx1119basic_ostringstreamIwSt11char_traitsIwESaIwEEC2EOS4_@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1119basic_ostringstreamIwSt11char_traitsIwESaIwEEC2ERKNS_12basic_stringIwS2_S3_EESt13_Ios_Openmode@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1119basic_ostringstreamIwSt11char_traitsIwESaIwEEC2ESt13_Ios_Openmode@@GLIBCXX_3.4.21
++FUNC:_ZNSt7__cxx1119basic_ostringstreamIwSt11char_traitsIwESaIwEEC2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt7__cxx1119basic_ostringstreamIwSt11char_traitsIwESaIwEED0Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1119basic_ostringstreamIwSt11char_traitsIwESaIwEED1Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx1119basic_ostringstreamIwSt11char_traitsIwESaIwEED2Ev@@GLIBCXX_3.4.21
+@@ -3356,9 +3752,15 @@ FUNC:_ZNSt7__cxx119money_putIwSt19ostreambuf_iteratorIwSt11char_traitsIwEEEC2Ej@
+ FUNC:_ZNSt7__cxx119money_putIwSt19ostreambuf_iteratorIwSt11char_traitsIwEEED0Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx119money_putIwSt19ostreambuf_iteratorIwSt11char_traitsIwEEED1Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx119money_putIwSt19ostreambuf_iteratorIwSt11char_traitsIwEEED2Ev@@GLIBCXX_3.4.21
++FUNC:_ZNSt7codecvtIDiDu11__mbstate_tED0Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt7codecvtIDiDu11__mbstate_tED1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt7codecvtIDiDu11__mbstate_tED2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt7codecvtIDic11__mbstate_tED0Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7codecvtIDic11__mbstate_tED1Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7codecvtIDic11__mbstate_tED2Ev@@GLIBCXX_3.4.21
++FUNC:_ZNSt7codecvtIDsDu11__mbstate_tED0Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt7codecvtIDsDu11__mbstate_tED1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt7codecvtIDsDu11__mbstate_tED2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt7codecvtIDsc11__mbstate_tED0Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7codecvtIDsc11__mbstate_tED1Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7codecvtIDsc11__mbstate_tED2Ev@@GLIBCXX_3.4.21
+@@ -3640,6 +4042,7 @@ FUNC:_ZSt18_Rb_tree_incrementPSt18_Rb_tree_node_base@@GLIBCXX_3.4
+ FUNC:_ZSt18__throw_bad_typeidv@@GLIBCXX_3.4
+ FUNC:_ZSt18uncaught_exceptionv@@GLIBCXX_3.4
+ FUNC:_ZSt19__throw_ios_failurePKc@@GLIBCXX_3.4
++FUNC:_ZSt19__throw_ios_failurePKci@@GLIBCXX_3.4.26
+ FUNC:_ZSt19__throw_logic_errorPKc@@GLIBCXX_3.4
+ FUNC:_ZSt19__throw_range_errorPKc@@GLIBCXX_3.4
+ FUNC:_ZSt19__throw_regex_errorNSt15regex_constants10error_typeE@@GLIBCXX_3.4.15
+@@ -4000,6 +4403,7 @@ OBJECT:0:CXXABI_1.3
+ OBJECT:0:CXXABI_1.3.1
+ OBJECT:0:CXXABI_1.3.10
+ OBJECT:0:CXXABI_1.3.11
++OBJECT:0:CXXABI_1.3.12
+ OBJECT:0:CXXABI_1.3.2
+ OBJECT:0:CXXABI_1.3.3
+ OBJECT:0:CXXABI_1.3.4
+@@ -4028,6 +4432,9 @@ OBJECT:0:GLIBCXX_3.4.22
+ OBJECT:0:GLIBCXX_3.4.23
+ OBJECT:0:GLIBCXX_3.4.24
+ OBJECT:0:GLIBCXX_3.4.25
++OBJECT:0:GLIBCXX_3.4.26
++OBJECT:0:GLIBCXX_3.4.27
++OBJECT:0:GLIBCXX_3.4.28
+ OBJECT:0:GLIBCXX_3.4.3
+ OBJECT:0:GLIBCXX_3.4.4
+ OBJECT:0:GLIBCXX_3.4.5
+@@ -4051,7 +4458,11 @@ OBJECT:12:_ZTIN9__gnu_cxx13stdio_filebufIcSt11char_traitsIcEEE@@GLIBCXX_3.4
+ OBJECT:12:_ZTIN9__gnu_cxx13stdio_filebufIwSt11char_traitsIwEEE@@GLIBCXX_3.4
+ OBJECT:12:_ZTIN9__gnu_cxx18stdio_sync_filebufIcSt11char_traitsIcEEE@@GLIBCXX_3.4
+ OBJECT:12:_ZTIN9__gnu_cxx18stdio_sync_filebufIwSt11char_traitsIwEEE@@GLIBCXX_3.4
++OBJECT:12:_ZTINSt10filesystem16filesystem_errorE@@GLIBCXX_3.4.26
++OBJECT:12:_ZTINSt10filesystem7__cxx1116filesystem_errorE@@GLIBCXX_3.4.26
+ OBJECT:12:_ZTINSt13__future_base19_Async_state_commonE@@GLIBCXX_3.4.17
++OBJECT:12:_ZTINSt3pmr26synchronized_pool_resourceE@@GLIBCXX_3.4.26
++OBJECT:12:_ZTINSt3pmr28unsynchronized_pool_resourceE@@GLIBCXX_3.4.26
+ OBJECT:12:_ZTINSt7__cxx1114collate_bynameIcEE@@GLIBCXX_3.4.21
+ OBJECT:12:_ZTINSt7__cxx1114collate_bynameIwEE@@GLIBCXX_3.4.21
+ OBJECT:12:_ZTINSt7__cxx1115basic_stringbufIcSt11char_traitsIcESaIcEEE@@GLIBCXX_3.4.21
+@@ -4150,7 +4561,9 @@ OBJECT:12:_ZTISt25__codecvt_utf8_utf16_baseIDiE@@GLIBCXX_3.4.21
+ OBJECT:12:_ZTISt25__codecvt_utf8_utf16_baseIDsE@@GLIBCXX_3.4.21
+ OBJECT:12:_ZTISt25__codecvt_utf8_utf16_baseIwE@@GLIBCXX_3.4.21
+ OBJECT:12:_ZTISt5ctypeIwE@@GLIBCXX_3.4
++OBJECT:12:_ZTISt7codecvtIDiDu11__mbstate_tE@@GLIBCXX_3.4.26
+ OBJECT:12:_ZTISt7codecvtIDic11__mbstate_tE@@GLIBCXX_3.4.21
++OBJECT:12:_ZTISt7codecvtIDsDu11__mbstate_tE@@GLIBCXX_3.4.26
+ OBJECT:12:_ZTISt7codecvtIDsc11__mbstate_tE@@GLIBCXX_3.4.21
+ OBJECT:12:_ZTISt7codecvtIcc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:12:_ZTISt7codecvtIwc11__mbstate_tE@@GLIBCXX_3.4
+@@ -4210,12 +4623,14 @@ OBJECT:16:_ZTIPDf@@CXXABI_1.3.4
+ OBJECT:16:_ZTIPDi@@CXXABI_1.3.3
+ OBJECT:16:_ZTIPDn@@CXXABI_1.3.5
+ OBJECT:16:_ZTIPDs@@CXXABI_1.3.3
++OBJECT:16:_ZTIPDu@@CXXABI_1.3.12
+ OBJECT:16:_ZTIPKDd@@CXXABI_1.3.4
+ OBJECT:16:_ZTIPKDe@@CXXABI_1.3.4
+ OBJECT:16:_ZTIPKDf@@CXXABI_1.3.4
+ OBJECT:16:_ZTIPKDi@@CXXABI_1.3.3
+ OBJECT:16:_ZTIPKDn@@CXXABI_1.3.5
+ OBJECT:16:_ZTIPKDs@@CXXABI_1.3.3
++OBJECT:16:_ZTIPKDu@@CXXABI_1.3.12
+ OBJECT:16:_ZTIPKa@@CXXABI_1.3
+ OBJECT:16:_ZTIPKb@@CXXABI_1.3
+ OBJECT:16:_ZTIPKc@@CXXABI_1.3
+@@ -4349,6 +4764,19 @@ OBJECT:1:_ZNSt14numeric_limitsIDsE8is_exactE@@GLIBCXX_3.4.11
+ OBJECT:1:_ZNSt14numeric_limitsIDsE9is_iec559E@@GLIBCXX_3.4.11
+ OBJECT:1:_ZNSt14numeric_limitsIDsE9is_moduloE@@GLIBCXX_3.4.11
+ OBJECT:1:_ZNSt14numeric_limitsIDsE9is_signedE@@GLIBCXX_3.4.11
++OBJECT:1:_ZNSt14numeric_limitsIDuE10is_boundedE@@GLIBCXX_3.4.26
++OBJECT:1:_ZNSt14numeric_limitsIDuE10is_integerE@@GLIBCXX_3.4.26
++OBJECT:1:_ZNSt14numeric_limitsIDuE12has_infinityE@@GLIBCXX_3.4.26
++OBJECT:1:_ZNSt14numeric_limitsIDuE13has_quiet_NaNE@@GLIBCXX_3.4.26
++OBJECT:1:_ZNSt14numeric_limitsIDuE14is_specializedE@@GLIBCXX_3.4.26
++OBJECT:1:_ZNSt14numeric_limitsIDuE15has_denorm_lossE@@GLIBCXX_3.4.26
++OBJECT:1:_ZNSt14numeric_limitsIDuE15tinyness_beforeE@@GLIBCXX_3.4.26
++OBJECT:1:_ZNSt14numeric_limitsIDuE17has_signaling_NaNE@@GLIBCXX_3.4.26
++OBJECT:1:_ZNSt14numeric_limitsIDuE5trapsE@@GLIBCXX_3.4.26
++OBJECT:1:_ZNSt14numeric_limitsIDuE8is_exactE@@GLIBCXX_3.4.26
++OBJECT:1:_ZNSt14numeric_limitsIDuE9is_iec559E@@GLIBCXX_3.4.26
++OBJECT:1:_ZNSt14numeric_limitsIDuE9is_moduloE@@GLIBCXX_3.4.26
++OBJECT:1:_ZNSt14numeric_limitsIDuE9is_signedE@@GLIBCXX_3.4.26
+ OBJECT:1:_ZNSt14numeric_limitsIaE10is_boundedE@@GLIBCXX_3.4
+ OBJECT:1:_ZNSt14numeric_limitsIaE10is_integerE@@GLIBCXX_3.4
+ OBJECT:1:_ZNSt14numeric_limitsIaE12has_infinityE@@GLIBCXX_3.4
+@@ -4592,6 +5020,8 @@ OBJECT:1:_ZSt7nothrow@@GLIBCXX_3.4
+ OBJECT:20:_ZTSSt12ctype_bynameIcE@@GLIBCXX_3.4
+ OBJECT:20:_ZTSSt12ctype_bynameIwE@@GLIBCXX_3.4
+ OBJECT:20:_ZTSSt15underflow_error@@GLIBCXX_3.4
++OBJECT:20:_ZTVNSt10filesystem16filesystem_errorE@@GLIBCXX_3.4.26
++OBJECT:20:_ZTVNSt10filesystem7__cxx1116filesystem_errorE@@GLIBCXX_3.4.26
+ OBJECT:20:_ZTVNSt13__future_base11_State_baseE@@GLIBCXX_3.4.15
+ OBJECT:20:_ZTVNSt13__future_base12_Result_baseE@@GLIBCXX_3.4.15
+ OBJECT:20:_ZTVNSt13__future_base19_Async_state_commonE@@GLIBCXX_3.4.17
+@@ -4720,6 +5150,8 @@ OBJECT:2:_ZTSv@@CXXABI_1.3
+ OBJECT:2:_ZTSw@@CXXABI_1.3
+ OBJECT:2:_ZTSx@@CXXABI_1.3
+ OBJECT:2:_ZTSy@@CXXABI_1.3
++OBJECT:30:_ZTSSt7codecvtIDiDu11__mbstate_tE@@GLIBCXX_3.4.26
++OBJECT:30:_ZTSSt7codecvtIDsDu11__mbstate_tE@@GLIBCXX_3.4.26
+ OBJECT:32:_ZTINSt7__cxx1110moneypunctIcLb0EEE@@GLIBCXX_3.4.21
+ OBJECT:32:_ZTINSt7__cxx1110moneypunctIcLb1EEE@@GLIBCXX_3.4.21
+ OBJECT:32:_ZTINSt7__cxx1110moneypunctIwLb0EEE@@GLIBCXX_3.4.21
+@@ -4874,7 +5306,9 @@ OBJECT:44:_ZTVSt23__codecvt_abstract_baseIwc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:44:_ZTVSt25__codecvt_utf8_utf16_baseIDiE@@GLIBCXX_3.4.21
+ OBJECT:44:_ZTVSt25__codecvt_utf8_utf16_baseIDsE@@GLIBCXX_3.4.21
+ OBJECT:44:_ZTVSt25__codecvt_utf8_utf16_baseIwE@@GLIBCXX_3.4.21
++OBJECT:44:_ZTVSt7codecvtIDiDu11__mbstate_tE@@GLIBCXX_3.4.26
+ OBJECT:44:_ZTVSt7codecvtIDic11__mbstate_tE@@GLIBCXX_3.4.21
++OBJECT:44:_ZTVSt7codecvtIDsDu11__mbstate_tE@@GLIBCXX_3.4.26
+ OBJECT:44:_ZTVSt7codecvtIDsc11__mbstate_tE@@GLIBCXX_3.4.21
+ OBJECT:44:_ZTVSt7codecvtIcc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:44:_ZTVSt7codecvtIwc11__mbstate_tE@@GLIBCXX_3.4
+@@ -4926,6 +5360,15 @@ OBJECT:4:_ZNSt14numeric_limitsIDsE14min_exponent10E@@GLIBCXX_3.4.11
+ OBJECT:4:_ZNSt14numeric_limitsIDsE5radixE@@GLIBCXX_3.4.11
+ OBJECT:4:_ZNSt14numeric_limitsIDsE6digitsE@@GLIBCXX_3.4.11
+ OBJECT:4:_ZNSt14numeric_limitsIDsE8digits10E@@GLIBCXX_3.4.11
++OBJECT:4:_ZNSt14numeric_limitsIDuE10has_denormE@@GLIBCXX_3.4.26
++OBJECT:4:_ZNSt14numeric_limitsIDuE11round_styleE@@GLIBCXX_3.4.26
++OBJECT:4:_ZNSt14numeric_limitsIDuE12max_exponentE@@GLIBCXX_3.4.26
++OBJECT:4:_ZNSt14numeric_limitsIDuE12min_exponentE@@GLIBCXX_3.4.26
++OBJECT:4:_ZNSt14numeric_limitsIDuE14max_exponent10E@@GLIBCXX_3.4.26
++OBJECT:4:_ZNSt14numeric_limitsIDuE14min_exponent10E@@GLIBCXX_3.4.26
++OBJECT:4:_ZNSt14numeric_limitsIDuE5radixE@@GLIBCXX_3.4.26
++OBJECT:4:_ZNSt14numeric_limitsIDuE6digitsE@@GLIBCXX_3.4.26
++OBJECT:4:_ZNSt14numeric_limitsIDuE8digits10E@@GLIBCXX_3.4.26
+ OBJECT:4:_ZNSt14numeric_limitsIaE10has_denormE@@GLIBCXX_3.4
+ OBJECT:4:_ZNSt14numeric_limitsIaE11round_styleE@@GLIBCXX_3.4
+ OBJECT:4:_ZNSt14numeric_limitsIaE12max_digits10E@@GLIBCXX_3.4.14
+@@ -5125,7 +5568,9 @@ OBJECT:4:_ZNSt7__cxx119money_getIcSt19istreambuf_iteratorIcSt11char_traitsIcEEE2
+ OBJECT:4:_ZNSt7__cxx119money_getIwSt19istreambuf_iteratorIwSt11char_traitsIwEEE2idE@@GLIBCXX_3.4.21
+ OBJECT:4:_ZNSt7__cxx119money_putIcSt19ostreambuf_iteratorIcSt11char_traitsIcEEE2idE@@GLIBCXX_3.4.21
+ OBJECT:4:_ZNSt7__cxx119money_putIwSt19ostreambuf_iteratorIwSt11char_traitsIwEEE2idE@@GLIBCXX_3.4.21
++OBJECT:4:_ZNSt7codecvtIDiDu11__mbstate_tE2idE@@GLIBCXX_3.4.26
+ OBJECT:4:_ZNSt7codecvtIDic11__mbstate_tE2idE@@GLIBCXX_3.4.21
++OBJECT:4:_ZNSt7codecvtIDsDu11__mbstate_tE2idE@@GLIBCXX_3.4.26
+ OBJECT:4:_ZNSt7codecvtIDsc11__mbstate_tE2idE@@GLIBCXX_3.4.21
+ OBJECT:4:_ZNSt7codecvtIcc11__mbstate_tE2idE@@GLIBCXX_3.4
+ OBJECT:4:_ZNSt7codecvtIwc11__mbstate_tE2idE@@GLIBCXX_3.4
+@@ -5324,6 +5769,7 @@ OBJECT:8:_ZTIDf@@CXXABI_1.3.4
+ OBJECT:8:_ZTIDi@@CXXABI_1.3.3
+ OBJECT:8:_ZTIDn@@CXXABI_1.3.5
+ OBJECT:8:_ZTIDs@@CXXABI_1.3.3
++OBJECT:8:_ZTIDu@@CXXABI_1.3.12
+ OBJECT:8:_ZTIN10__cxxabiv115__forced_unwindE@@CXXABI_1.3.2
+ OBJECT:8:_ZTIN10__cxxabiv119__foreign_exceptionE@@CXXABI_1.3.2
+ OBJECT:8:_ZTINSt13__future_base11_State_baseE@@GLIBCXX_3.4.15
 diff --git a/libstdc++-v3/config/abi/post/i386-linux-gnu/baseline_symbols.txt b/libstdc++-v3/config/abi/post/i386-linux-gnu/baseline_symbols.txt
 index dcc61af7410..e488ada5c72 100644
 --- a/libstdc++-v3/config/abi/post/i386-linux-gnu/baseline_symbols.txt
