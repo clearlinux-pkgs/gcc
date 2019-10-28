@@ -292,10 +292,11 @@ olegendo (4):
       gcc/ 2019-10-01  Oleg Endo  <olegendo@gcc.gnu.org>
       gcc/ 	Backport from mainline 	2019-10-10  Oleg Endo  <olegendo@gcc.gnu.org>
 
-pault (3):
+pault (4):
       2019-09-07  Paul Thomas  <pault@gcc.gnu.org>
       2019-09-21  Paul Thomas  <pault@gcc.gnu.org>
       2019-10-27  Paul Thomas  <pault@gcc.gnu.org>
+      2019-10-28  Paul Thomas  <pault@gcc.gnu.org>
 
 rearnsha (3):
       [aarch64] PR target/91386 Use copy_rtx to avoid modifying original insns in peep2 pattern
@@ -8396,10 +8397,20 @@ index f0e43b5fda2..9feaea9fde5 100644
    low = fold_convert_loc (loc, etype, low);
    exp = fold_convert_loc (loc, etype, exp);
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index e3073787ea9..444a2d9a9bd 100644
+index e3073787ea9..759390f5832 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,340 @@
+@@ -1,3 +1,350 @@
++2019-10-28  Paul Thomas  <pault@gcc.gnu.org>
++
++	Backport from trunk
++	PR fortran/91926
++	* trans-expr.c (gfc_conv_gfc_desc_to_cfi_desc): Correct the
++	assignment of the attribute field to account correctly for an
++	assumed shape dummy. Assign separately to the gfc and cfi
++	descriptors since the atribute can be different. Add branch to
++	correctly handle missing optional dummies.
++
 +2019-10-28  Tobias Burnus  <tobias@codesourcery.com>
 +
 +	Backport from mainline
@@ -10542,18 +10553,70 @@ index 9538dee5733..d1a6172063e 100644
  
    return build1_v (RETURN_EXPR, result);
 diff --git a/gcc/fortran/trans-expr.c b/gcc/fortran/trans-expr.c
-index afe08fc2668..18f389eeaa3 100644
+index afe08fc2668..71f29883173 100644
 --- a/gcc/fortran/trans-expr.c
 +++ b/gcc/fortran/trans-expr.c
-@@ -4991,7 +4991,6 @@ gfc_conv_gfc_desc_to_cfi_desc (gfc_se *parmse, gfc_expr *e, gfc_symbol *fsym)
+@@ -4989,21 +4989,30 @@ gfc_conv_gfc_desc_to_cfi_desc (gfc_se *parmse, gfc_expr *e, gfc_symbol *fsym)
+   tree gfc_desc_ptr;
+   tree type;
    tree cond;
++  tree desc_attr;
    int attribute;
++  int cfi_attribute;
    symbol_attribute attr = gfc_expr_attr (e);
 -  stmtblock_t block;
  
    /* If this is a full array or a scalar, the allocatable and pointer
       attributes can be passed. Otherwise it is 'CFI_attribute_other'*/
-@@ -5095,18 +5094,6 @@ gfc_conv_gfc_desc_to_cfi_desc (gfc_se *parmse, gfc_expr *e, gfc_symbol *fsym)
+   attribute = 2;
+   if (!e->rank || gfc_get_full_arrayspec_from_expr (e))
+     {
+-      if (fsym->attr.pointer)
++      if (attr.pointer)
+ 	attribute = 0;
+-      else if (fsym->attr.allocatable)
++      else if (attr.allocatable)
+ 	attribute = 1;
+     }
+ 
++  /* If the formal argument is assumed shape and neither a pointer nor
++     allocatable, it is unconditionally CFI_attribute_other.  */
++  if (fsym->as->type == AS_ASSUMED_SHAPE
++      && !fsym->attr.pointer && !fsym->attr.allocatable)
++   cfi_attribute = 2;
++  else
++   cfi_attribute = attribute;
++
+   if (e->rank != 0)
+     {
+       parmse->force_no_tmp = 1;
+@@ -5070,11 +5079,12 @@ gfc_conv_gfc_desc_to_cfi_desc (gfc_se *parmse, gfc_expr *e, gfc_symbol *fsym)
+ 						    parmse->expr, attr);
+     }
+ 
+-  /* Set the CFI attribute field.  */
+-  tmp = gfc_conv_descriptor_attribute (parmse->expr);
++  /* Set the CFI attribute field through a temporary value for the
++     gfc attribute.  */
++  desc_attr = gfc_conv_descriptor_attribute (parmse->expr);
+   tmp = fold_build2_loc (input_location, MODIFY_EXPR,
+-			 void_type_node, tmp,
+-			 build_int_cst (TREE_TYPE (tmp), attribute));
++			 void_type_node, desc_attr,
++			 build_int_cst (TREE_TYPE (desc_attr), cfi_attribute));
+   gfc_add_expr_to_block (&parmse->pre, tmp);
+ 
+   /* Now pass the gfc_descriptor by reference.  */
+@@ -5092,26 +5102,39 @@ gfc_conv_gfc_desc_to_cfi_desc (gfc_se *parmse, gfc_expr *e, gfc_symbol *fsym)
+ 			     gfor_fndecl_gfc_to_cfi, 2, tmp, gfc_desc_ptr);
+   gfc_add_expr_to_block (&parmse->pre, tmp);
+ 
++  /* Now set the gfc descriptor attribute.  */
++  tmp = fold_build2_loc (input_location, MODIFY_EXPR,
++			 void_type_node, desc_attr,
++			 build_int_cst (TREE_TYPE (desc_attr), attribute));
++  gfc_add_expr_to_block (&parmse->pre, tmp);
++
    /* The CFI descriptor is passed to the bind_C procedure.  */
    parmse->expr = cfi_desc_ptr;
  
@@ -10572,7 +10635,31 @@ index afe08fc2668..18f389eeaa3 100644
    /* Transfer values back to gfc descriptor.  */
    tmp = gfc_build_addr_expr (NULL_TREE, parmse->expr);
    tmp = build_call_expr_loc (input_location,
-@@ -6001,8 +5988,14 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
+ 			     gfor_fndecl_cfi_to_gfc, 2, gfc_desc_ptr, tmp);
+   gfc_prepend_expr_to_block (&parmse->post, tmp);
++
++  /* Deal with an optional dummy being passed to an optional formal arg
++     by finishing the pre and post blocks and making their execution
++     conditional on the dummy being present.  */
++  if (fsym->attr.optional && e->expr_type == EXPR_VARIABLE
++      && e->symtree->n.sym->attr.optional)
++    {
++      cond = gfc_conv_expr_present (e->symtree->n.sym);
++      tmp = fold_build2 (MODIFY_EXPR, void_type_node,
++			 cfi_desc_ptr,
++			 build_int_cst (pvoid_type_node, 0));
++      tmp = build3_v (COND_EXPR, cond,
++		      gfc_finish_block (&parmse->pre), tmp);
++      gfc_add_expr_to_block (&parmse->pre, tmp);
++      tmp = build3_v (COND_EXPR, cond,
++		      gfc_finish_block (&parmse->post),
++		      build_empty_stmt (input_location));
++      gfc_add_expr_to_block (&parmse->post, tmp);
++    }
+ }
+ 
+ 
+@@ -6001,8 +6024,14 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
  		      gfc_add_expr_to_block (&se->pre, tmp);
  		  }
  
@@ -10589,7 +10676,7 @@ index afe08fc2668..18f389eeaa3 100644
  		  if (GFC_DESCRIPTOR_TYPE_P (TREE_TYPE (tmp)))
  		    tmp = gfc_conv_descriptor_data_get (tmp);
  		  tmp = gfc_deallocate_with_status (tmp, NULL_TREE, NULL_TREE,
-@@ -10603,7 +10596,8 @@ gfc_trans_assignment_1 (gfc_expr * expr1, gfc_expr * expr2, bool init_flag,
+@@ -10603,7 +10632,8 @@ gfc_trans_assignment_1 (gfc_expr * expr1, gfc_expr * expr2, bool init_flag,
        if (expr1->ts.deferred
  	  && gfc_expr_attr (expr1).allocatable
  	  && gfc_check_dependency (expr1, expr2, true))
@@ -14264,10 +14351,18 @@ index 29f6cdc4667..33b4be79c0f 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..8b54b545741 100644
+index bc11ae4ae0b..c6b50a7bd9e 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,629 @@
+@@ -1,3 +1,637 @@
++2019-10-28  Paul Thomas  <pault@gcc.gnu.org>
++
++	Backport from trunk
++	PR fortran/91926
++	* gfortran.dg/ISO_Fortran_binding_13.f90 : New test.
++	* gfortran.dg/ISO_Fortran_binding_13.c : Additional source.
++	* gfortran.dg/ISO_Fortran_binding_14.f90 : New test.
++
 +2019-10-28  Jiufu Guo  <guojiufu@linux.ibm.com>
 +
 +	Backport from mainline
@@ -14897,7 +14992,7 @@ index bc11ae4ae0b..8b54b545741 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +1053,7 @@
+@@ -427,7 +1061,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -18279,6 +18374,116 @@ index eda8b0a9f12..8195fec8990 100644
  
 -/* { dg-final { scan-assembler-not "and\t%" } } */
 +/* { dg-final { scan-assembler-not "and\t%" { xfail *-*-* } } } */
+diff --git a/gcc/testsuite/gfortran.dg/ISO_Fortran_binding_13.c b/gcc/testsuite/gfortran.dg/ISO_Fortran_binding_13.c
+new file mode 100644
+index 00000000000..1ac9fc89eb1
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/ISO_Fortran_binding_13.c
+@@ -0,0 +1,12 @@
++/* Test the fix for PR91926.  */
++
++/* Contributed by José Rui Faustino de Sousa  <jrfsousa@hotmail.com> */
++
++#include <stdlib.h>
++
++int ifb_echo(void*);
++
++int ifb_echo(void *this)
++{
++  return this == NULL ? 1 : 2;
++}
+diff --git a/gcc/testsuite/gfortran.dg/ISO_Fortran_binding_13.f90 b/gcc/testsuite/gfortran.dg/ISO_Fortran_binding_13.f90
+new file mode 100644
+index 00000000000..132a97cd4c4
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/ISO_Fortran_binding_13.f90
+@@ -0,0 +1,39 @@
++! { dg-do run { target c99_runtime } }
++! { dg-additional-sources ISO_Fortran_binding_13.c }
++!
++! Test the fix for PR91926. The additional source is the main program.
++!
++! Contributed by José Rui Faustino de Sousa  <jrfsousa@hotmail.com>
++!
++program ifb_p
++
++  implicit none
++
++  integer :: i = 42
++
++  interface
++    integer function ifb_echo_aux(this) bind(c, name="ifb_echo")
++      implicit none
++      type(*), dimension(..), & ! removing assumed rank solves segmentation fault
++        optional, intent(in) :: this
++    end function ifb_echo_aux
++  end interface
++
++  if (ifb_echo_aux() .ne. 1) STOP 1  ! worked
++  if (ifb_echo() .ne. 1) stop 2      ! segmentation fault
++  if (ifb_echo_aux(i) .ne. 2) stop 3 ! worked
++  if (ifb_echo(i) .ne. 2) stop 4     ! worked
++
++  stop
++
++contains
++
++  integer function ifb_echo(this)
++    type(*), dimension(..), &
++      optional, intent(in) :: this
++
++    ifb_echo = ifb_echo_aux(this)
++    return
++  end function ifb_echo
++
++end program ifb_p
+diff --git a/gcc/testsuite/gfortran.dg/ISO_Fortran_binding_14.f90 b/gcc/testsuite/gfortran.dg/ISO_Fortran_binding_14.f90
+new file mode 100644
+index 00000000000..388c5438252
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/ISO_Fortran_binding_14.f90
+@@ -0,0 +1,41 @@
++! { dg-do run }
++!
++! Correct an error in the eveluation of the CFI descriptor attribute for
++! the case where the bind_C formal argument is not an assumed shape array
++! and not allocatable or pointer.
++!
++! Contributed by Gilles Gouaillardet  <gilles@rist.or.jp>
++!
++MODULE FOO
++INTERFACE
++SUBROUTINE dummy(buf) BIND(C, name="sync")
++type(*), dimension(..) :: buf
++END SUBROUTINE
++END INTERFACE
++END MODULE
++
++PROGRAM main
++    USE FOO
++    IMPLICIT NONE
++    integer(8) :: before, after
++
++    INTEGER, parameter :: n = 1
++
++    INTEGER, ALLOCATABLE :: buf(:)
++    INTEGER :: buf2(n)
++    INTEGER :: i
++
++    ALLOCATE(buf(n))
++    before = LOC(buf(1))
++    CALL dummy (buf)
++    after = LOC(buf(1))
++
++    if (before .NE. after) stop 1
++
++    before = LOC(buf2(1))
++    CALL dummy (buf)
++    after = LOC(buf2(1))
++
++    if (before .NE. after) stop 2
++
++END PROGRAM
 diff --git a/gcc/testsuite/gfortran.dg/allocated_1.f90 b/gcc/testsuite/gfortran.dg/allocated_1.f90
 new file mode 100644
 index 00000000000..43260c24336
