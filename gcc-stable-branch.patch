@@ -363,8 +363,9 @@ tkoenig (6):
       2019-09-18  Thomas Koenig  <tkoenig@gcc.gnu.org>
       2019-10-07  Thomas Koenig <tkoenig@gcc.gnu.org>
 
-tschwinge (1):
+tschwinge (2):
       Avoid '-Wmaybe-uninitialized' diagnostic in 'gcc/dwarf2out.c'
+      [LIBPHOBOS] Fix multi-lib RUNTESTFLAGS handling
 
 uros (5):
       * test_summary: Do not escape "=".
@@ -21643,6 +21644,53 @@ index f58a95fe670..1009f4a81e5 100644
    integer :: i
  
    do i = 1, N
+diff --git a/libphobos/ChangeLog b/libphobos/ChangeLog
+index 24de0ab9bd8..becd8b1ec86 100644
+--- a/libphobos/ChangeLog
++++ b/libphobos/ChangeLog
+@@ -1,3 +1,12 @@
++2019-10-30  Thomas Schwinge  <thomas@codesourcery.com>
++
++	Backport from trunk:
++
++	2019-09-03  Bernd Edlinger  <bernd.edlinger@hotmail.de>
++
++	* testsuite/lib/libphobos.exp (libphobos_init): Add multi-lib libgcc
++	dirs to the ld_library_path var.
++
+ 2019-08-12  Release Manager
+ 
+ 	* GCC 9.2.0 released.
+diff --git a/libphobos/testsuite/lib/libphobos.exp b/libphobos/testsuite/lib/libphobos.exp
+index d3fe75358c8..056e8f1d444 100644
+--- a/libphobos/testsuite/lib/libphobos.exp
++++ b/libphobos/testsuite/lib/libphobos.exp
+@@ -170,6 +170,25 @@ proc libphobos_init { args } {
+ 	append ld_library_path ":${blddir}/src/.libs"
+     }
+ 
++    # Compute what needs to be added to the existing LD_LIBRARY_PATH.
++    if {$gccdir != ""} {
++	set compiler ${gccdir}/gdc
++
++	if { [is_remote host] == 0 && [which $compiler] != 0 } {
++	  foreach i "[exec $compiler --print-multi-lib]" {
++	    set mldir ""
++	    regexp -- "\[a-z0-9=_/\.-\]*;" $i mldir
++	    set mldir [string trimright $mldir "\;@"]
++	    if { "$mldir" == "." } {
++	      continue
++	    }
++	    if { [llength [glob -nocomplain ${gccdir}/${mldir}/libgcc_s*.so.*]] >= 1 } {
++	      append ld_library_path ":${gccdir}/${mldir}"
++	    }
++	  }
++	}
++    }
++
+     set_ld_library_path_env_vars
+ 
+     libphobos_maybe_build_wrapper "${objdir}/testglue.o"
 diff --git a/libquadmath/ChangeLog b/libquadmath/ChangeLog
 index 15f371b36f0..b8f71d6520b 100644
 --- a/libquadmath/ChangeLog
