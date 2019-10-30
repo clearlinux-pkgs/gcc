@@ -22,9 +22,10 @@ danglin (6):
       * config/pa/pa.c (pa_output_indirect_call): Fix typos in last change.
       * config/abi/post/hppa-linux-gnu/baseline_symbols.txt: Update.
 
-draganm (2):
+draganm (3):
       Backprot fix for uninitialised use in mips_split_move
       Backport fix for PR target/91769
+      Backport fix for PR89245
 
 ebotcazou (8):
       PR rtl-optimization/91347 	* dse.c (scan_insn): Call add_wild_read for non-const/memset tail calls 	before reload if HARD_FRAME_POINTER_IS_ARG_POINTER.
@@ -618,10 +619,18 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..ce4630ba078 100644
+index 7f6557d8018..8cd677e55f7 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,1029 @@
+@@ -1,3 +1,1037 @@
++2019-10-30  Dragan Mladjenovic  <dmladjenovic@wavecomp.com>
++
++	Backport from mainline
++	2019-07-09  Dragan Mladjenovic  <dmladjenovic@wavecomp.com>
++
++	* cfgcleanup.c (old_insns_match_p): Check if used hard regs set is equal
++	for both call instructions.
++
 +2019-10-30  Thomas Schwinge  <thomas@codesourcery.com>
 +
 +	Backport from trunk:
@@ -1651,7 +1660,7 @@ index 7f6557d8018..ce4630ba078 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +1539,7 @@
+@@ -513,7 +1547,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -2515,10 +2524,18 @@ index c8a42680041..56795995650 100644
  	    use_regs (call_fusage, REGNO (reg), nregs);
  	}
 diff --git a/gcc/cfgcleanup.c b/gcc/cfgcleanup.c
-index 992912ce195..4c3fc8dbfb0 100644
+index 992912ce195..e90cc43e1f0 100644
 --- a/gcc/cfgcleanup.c
 +++ b/gcc/cfgcleanup.c
-@@ -257,6 +257,10 @@ thread_jump (edge e, basic_block b)
+@@ -53,6 +53,7 @@ along with GCC; see the file COPYING3.  If not see
+ #include "dce.h"
+ #include "dbgcnt.h"
+ #include "rtl-iter.h"
++#include "regs.h"
+ 
+ #define FORWARDER_BLOCK_P(BB) ((BB)->flags & BB_FORWARDER_BLOCK)
+ 
+@@ -257,6 +258,10 @@ thread_jump (edge e, basic_block b)
    bool failed = false;
    reg_set_iterator rsi;
  
@@ -2529,7 +2546,22 @@ index 992912ce195..4c3fc8dbfb0 100644
    if (b->flags & BB_NONTHREADABLE_BLOCK)
      return NULL;
  
-@@ -3269,10 +3273,10 @@ make_pass_jump (gcc::context *ctxt)
+@@ -1224,6 +1229,14 @@ old_insns_match_p (int mode ATTRIBUTE_UNUSED, rtx_insn *i1, rtx_insn *i2)
+ 		}
+ 	    }
+ 	}
++
++      HARD_REG_SET i1_used, i2_used;
++
++      get_call_reg_set_usage (i1, &i1_used, call_used_reg_set);
++      get_call_reg_set_usage (i2, &i2_used, call_used_reg_set);
++
++      if (!hard_reg_set_equal_p (i1_used, i2_used))
++        return dir_none;
+     }
+ 
+   /* If both i1 and i2 are frame related, verify all the CFA notes
+@@ -3269,10 +3282,10 @@ make_pass_jump (gcc::context *ctxt)
  
  namespace {
  
@@ -2542,7 +2574,7 @@ index 992912ce195..4c3fc8dbfb0 100644
    OPTGROUP_NONE, /* optinfo_flags */
    TV_JUMP, /* tv_id */
    0, /* properties_required */
-@@ -3282,20 +3286,20 @@ const pass_data pass_data_postreload_jump =
+@@ -3282,20 +3295,20 @@ const pass_data pass_data_postreload_jump =
    0, /* todo_flags_finish */
  };
  
@@ -2568,7 +2600,7 @@ index 992912ce195..4c3fc8dbfb0 100644
  {
    cleanup_cfg (flag_thread_jumps ? CLEANUP_THREADING : 0);
    return 0;
-@@ -3304,9 +3308,9 @@ pass_postreload_jump::execute (function *)
+@@ -3304,9 +3317,9 @@ pass_postreload_jump::execute (function *)
  } // anon namespace
  
  rtl_opt_pass *
@@ -14387,10 +14419,19 @@ index 29f6cdc4667..33b4be79c0f 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..cf84d9b77b7 100644
+index bc11ae4ae0b..19272a43775 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,642 @@
+@@ -1,3 +1,651 @@
++2019-10-30  Dragan Mladjenovic  <dmladjenovic@wavecomp.com>
++
++	Backport from mainline
++	2019-07-09  Dragan Mladjenovic  <dmladjenovic@wavecomp.com>
++
++	* gcc.target/mips/cfgcleanup-jalr1.c: New test.
++	* gcc.target/mips/cfgcleanup-jalr2.c: New test.
++	* gcc.target/mips/cfgcleanup-jalr3.c: New test.
++
 +2019-10-29  Jakub Jelinek  <jakub@redhat.com>
 +
 +	PR c++/92201
@@ -15033,7 +15074,7 @@ index bc11ae4ae0b..cf84d9b77b7 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +1066,7 @@
+@@ -427,7 +1075,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -15042,7 +15083,7 @@ index bc11ae4ae0b..cf84d9b77b7 100644
  	(check_effective_target_powerpc_p8vector_ok): No support for Darwin.
  	(check_effective_target_powerpc_p9vector_ok): Likewise.
  	(check_effective_target_powerpc_float128_sw_ok): Likewise.
-@@ -720,7 +1359,7 @@
+@@ -720,7 +1368,7 @@
  
  	Backport from mainline
  	PR fortran/91077
@@ -15051,7 +15092,7 @@ index bc11ae4ae0b..cf84d9b77b7 100644
  
  2019-07-05  Szabolcs Nagy  <szabolcs.nagy@arm.com>
  
-@@ -969,7 +1608,7 @@
+@@ -969,7 +1617,7 @@
         * gcc.target/i386/pr82699-6.c: Likewise
         * gcc.target/i386/returninst1.c: Likewise
         * gcc.target/i386/returninst2.c: Likewise
@@ -15060,7 +15101,7 @@ index bc11ae4ae0b..cf84d9b77b7 100644
  
  2019-05-30  Iain Sandoe  <iain@sandoe.co.uk>
  
-@@ -1131,7 +1770,7 @@
+@@ -1131,7 +1779,7 @@
  
  	Backport from trunk
  	PR fortran/90498
@@ -15069,7 +15110,7 @@ index bc11ae4ae0b..cf84d9b77b7 100644
  
  2019-05-17  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -3801,21 +4440,21 @@
+@@ -3801,21 +4449,21 @@
  2019-02-23  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88117
@@ -15098,7 +15139,7 @@ index bc11ae4ae0b..cf84d9b77b7 100644
  
  2019-02-22  David Malcolm  <dmalcolm@redhat.com>
  
-@@ -4444,7 +5083,7 @@
+@@ -4444,7 +5092,7 @@
  2019-02-09  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/89200
@@ -15107,7 +15148,7 @@ index bc11ae4ae0b..cf84d9b77b7 100644
  
  2019-02-09  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -4704,17 +5343,17 @@
+@@ -4704,17 +5352,17 @@
  2019-02-02  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88393
@@ -18197,6 +18238,89 @@ index 00000000000..b1232195b45
 +      d = b[e];
 +  a (d);
 +}
+diff --git a/gcc/testsuite/gcc.target/mips/cfgcleanup-jalr1.c b/gcc/testsuite/gcc.target/mips/cfgcleanup-jalr1.c
+new file mode 100644
+index 00000000000..24c18262b1a
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/mips/cfgcleanup-jalr1.c
+@@ -0,0 +1,19 @@
++/* { dg-do compile } */
++/* { dg-options "-mabicalls -fpic -mno-mips16 -mno-micromips" } */
++/* { dg-skip-if "needs codesize optimization" { *-*-* } { "-O0" "-O1" "-O2" "-O3" } { "" } } */
++
++extern void foo (void*);
++
++extern void bar (void*);
++
++void
++test (void* p)
++{
++   if (!p)
++	foo(p);
++   else
++	bar(p);
++}
++
++/* { dg-final { scan-assembler-not "\\\.reloc\t1f,R_MIPS_JALR,foo" } } */
++/* { dg-final { scan-assembler-not "\\\.reloc\t1f,R_MIPS_JALR,bar" } } */
+diff --git a/gcc/testsuite/gcc.target/mips/cfgcleanup-jalr2.c b/gcc/testsuite/gcc.target/mips/cfgcleanup-jalr2.c
+new file mode 100644
+index 00000000000..9fd75c98773
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/mips/cfgcleanup-jalr2.c
+@@ -0,0 +1,23 @@
++/* { dg-do compile } */
++/* { dg-options "-mabicalls -fpic -mno-mips16 -mno-micromips" } */
++/* { dg-additional-options "-fno-inline -fipa-ra -mcompact-branches=never" } */
++/* { dg-skip-if "needs codesize optimization" { *-*-* } { "-O0" "-O1" "-O2" "-O3" } { "" } } */
++
++static int foo (void* p) { __asm__ (""::"r"(p):"$t0"); return 0; }
++
++static int bar (void* p) { return 1; }
++
++int
++test (void* p)
++{
++  int res = !p ? foo(p) : bar(p);
++
++  register int tmp __asm__("$t0") = -1;
++  __asm__ (""::"r"(tmp));
++
++  return res;
++}
++
++/* { dg-final { scan-assembler "\\\.reloc\t1f,R_MIPS_JALR,foo" } } */
++/* { dg-final { scan-assembler "\\\.reloc\t1f,R_MIPS_JALR,bar" } } */
++/* { dg-final { scan-assembler-not "\\.set\tnomacro\n\tjalr\t\\\$25" } } */
+diff --git a/gcc/testsuite/gcc.target/mips/cfgcleanup-jalr3.c b/gcc/testsuite/gcc.target/mips/cfgcleanup-jalr3.c
+new file mode 100644
+index 00000000000..580c6ec069d
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/mips/cfgcleanup-jalr3.c
+@@ -0,0 +1,23 @@
++/* { dg-do compile } */
++/* { dg-options "-mabicalls -fpic -mno-mips16 -mno-micromips" } */
++/* { dg-additional-options "-fno-inline -fipa-ra -mcompact-branches=never" } */
++/* { dg-skip-if "needs codesize optimization" { *-*-* } { "-O0" "-O1" "-O2" "-O3" } { "" } } */
++
++static int foo (void* p) { return 0; }
++
++static int bar (void* p) { return 1; }
++
++int
++test (void* p)
++{
++  int res = !p ? foo(p) : bar(p);
++
++  register int tmp __asm__("$t0") = -1;
++  __asm__ (""::"r"(tmp));
++
++  return res;
++}
++
++/* { dg-final { scan-assembler-not "\\\.reloc\t1f,R_MIPS_JALR,foo" } } */
++/* { dg-final { scan-assembler-not "\\\.reloc\t1f,R_MIPS_JALR,bar" } } */
++/* { dg-final { scan-assembler "\\.set\tnomacro\n\tjalr\t\\\$25" } } */
 diff --git a/gcc/testsuite/gcc.target/mips/get-fcsr-3.c b/gcc/testsuite/gcc.target/mips/get-fcsr-3.c
 new file mode 100644
 index 00000000000..7bb97b6fbcd
