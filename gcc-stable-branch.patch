@@ -139,7 +139,7 @@ hubicka (3):
       free summary vectors. 	Backport from mainline 	2019-10-24  Jan Hubicka  <hubicka@ucw.cz> 	* symbols-summary.h (fast_function_summary<T *, V>::release, 	fast_call_summary<T *, V>::release): Free m_vector.
       Avoid gimple body modifications while streaming. 	Backport from mainline 	2019-10-11  Jan Hubicka  <hubicka@ucw.cz> 	* gimple-streamer-out.c (output_gimple_stmt): Add explicit function 	parameter. 	* lto-streamer-out.c: Include tree-dfa.h. 	(output_cfg): Do not use cfun. 	(lto_prepare_function_for_streaming): New. 	(output_function): Do not push cfun; do not initialize loop optimizer. 	* lto-streamer.h (lto_prepare_function_for_streaming): Declare. 	* passes.c (ipa_write_summaries): Use it. 	(ipa_write_optimization_summaries): Do not modify bodies. 	* tree-dfa.c (renumber_gimple_stmt_uids): Add function parameter. 	* tree.dfa.h (renumber_gimple_stmt_uids): Update prototype. 	* tree-ssa-dse.c (pass_dse::execute): Update use of 	renumber_gimple_stmt_uids. 	* tree-ssa-math-opts.c (pass_optimize_widening_mul::execute): Likewise.
 
-iains (13):
+iains (21):
       Darwin, libsanitizer - remove reference to __cxa_rethrow_primary_exception.
       [Darwin, PPC] Fix fail of cpp/assert4.c
       [Darwin, fixincludes] Backport fix for PR83531
@@ -153,6 +153,14 @@ iains (13):
       [Darwin, machopic] Preparatory patches.
       [Darwin, machopic] Fix for 67183
       [Darwin, PPC] Fix PR 65342.
+      [Darwin] Use of symbol stubs should depend on the linker in use.
+      [Darwin] The need for FDE symbols is dependent on linker used, not OS rev.
+      [Darwin, PPC] Move the out of line register save/restore to an endfile.
+      [Darwin, PPC] Move the out of line register save/restore to an endfile.
+      [Darwin] Some TLC for older Darwin versions.
+      [Darwin] Fix Objective-C NeXT ABI version check diagnostics.
+      [Darwin, machopic] Back out part of PR71767 fix.
+      [testsuite] Make the Wnonnull test independent of system headers.
 
 ian (3):
       go/internal/gccgoimporter: support embedded field in pointer loop
@@ -619,10 +627,105 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..8cd677e55f7 100644
+index 7f6557d8018..37a7432c3e8 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,1037 @@
+@@ -1,3 +1,1132 @@
++2019-10-30  Iain Sandoe  <iain@sandoe.co.uk>
++
++	Backport from mainline
++	2019-10-13  Iain Sandoe  <iain@sandoe.co.uk>
++
++	* config/darwin.c (machopic_indirection_name): Rework the
++	function to emit linker-visible symbols only for indirections
++	in the data section.  Clean up the code and update comments.
++
++2019-10-30  Iain Sandoe  <iain@sandoe.co.uk>
++
++	Backport from mainline
++	2019-10-09  Iain Sandoe  <iain@sandoe.co.uk>
++
++	* config/darwin.c (darwin_override_options): Make the check for
++	Objective-C ABI version more specific for 64bit code.
++
++	Backport from mainline
++	2019-10-06  Iain Sandoe  <iain@sandoe.co.uk>
++
++	* config/darwin.c (darwin_override_options): Adjust objective-c
++	ABI version error messages to avoid punctuation and contracted
++	negations.
++
++2019-10-30  Iain Sandoe  <iain@sandoe.co.uk>
++
++	Backport from mainline
++	2019-07-03  Iain Sandoe  <iain@sandoe.co.uk>
++
++	* config/darwin.h (REAL_LIBGCC_SPEC): Adjust for earlier Darwin.
++	(STARTFILE_SPEC): Split crt3 into a separate spec.
++	(DARWIN_EXTRA_SPECS): Add crt2 and crt3 spec.
++	(DARWIN_CRT2_SPEC): New.
++	(DARWIN_CRT3_SPEC): New.
++	(MIN_LD64_OMIT_STUBS): Revise to 62.1.
++	* config/rs6000/darwin.h (DARWIN_CRT2_SPEC): Revise conditions.
++	(DARWIN_CRT3_SPEC): New.
++
++2019-10-30  Iain Sandoe  <iain@sandoe.co.uk>
++
++	Backport from mainline
++	2019-06-27  Iain Sandoe  <iain@sandoe.co.uk>
++
++	* config/rs6000/darwin.h (ENDFILE_SPEC): Correct whitespace in the
++	spec.
++
++	Backport from mainline
++	2019-06-25  Iain Sandoe  <iain@sandoe.co.uk>
++
++	* config/rs6000/darwin.h (ENDFILE_SPEC): New.
++
++2019-10-30  Iain Sandoe  <iain@sandoe.co.uk>
++
++	Backport from mainline
++	2019-06-18  Iain Sandoe  <iain@sandoe.co.uk>
++
++	* config/darwin.c (darwin_emit_unwind_label): New.
++	(darwin_override_options): Set darwin_emit_unwind_label as needed.
++
++2019-10-30  Iain Sandoe  <iain@sandoe.co.uk>
++
++	Backport from mainline
++	2019-08-13 Iain Sandoe <iain@sandoe.co.uk>
++
++	* config/darwin.c (machopic_indirect_call_target): Rename symbol stub
++	flag.
++	(darwin_override_options): Likewise.
++	* config/darwin.h: Likewise.
++	* config/darwin.opt: Likewise.
++	* config/i386/i386.c (output_pic_addr_const): Likewise.
++	* config/rs6000/darwin.h: Likewise.
++	* config/rs6000/rs6000.c (rs6000_call_darwin_1): Likewise.
++	* config/i386/darwin.h (TARGET_MACHO_PICSYM_STUBS): Rename to ...
++	... this TARGET_MACHO_SYMBOL_STUBS.
++	(FUNCTION_PROFILER):Likewise.
++	* config/i386/i386.h: Likewise.
++
++	Backport from mainline
++	2019-06-16  Iain Sandoe  <iain@sandoe.co.uk>
++
++	* config/darwin.c (machopic_indirect_call_target): Use renamed
++	darwin_picsymbol_stubs to decide on output.
++	(darwin_override_options): Handle darwin_picsymbol_stubs.
++	* config/darwin.h (MIN_LD64_OMIT_STUBS): New.
++	(LD64_VERSION): Revise default.
++	* config/darwin.opt: (mpic-symbol-stubs): New option.
++	(darwin_picsymbol_stubs): New variable.
++	* config/i386/darwin.h (TARGET_MACHO_BRANCH_ISLANDS):
++	rename to TARGET_MACHO_PICSYM_STUBS.
++	* config/i386/i386.c (output_pic_addr_const): Likewise.
++	* config/i386/i386.h Likewise.
++	* config/rs6000/darwin.h: Likewise.
++	* config/rs6000/rs6000.c (rs6000_call_darwin_1): Use renamed
++	darwin_picsymbol_stubs.
++
 +2019-10-30  Dragan Mladjenovic  <dmladjenovic@wavecomp.com>
 +
 +	Backport from mainline
@@ -1660,7 +1763,7 @@ index 7f6557d8018..8cd677e55f7 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +1547,7 @@
+@@ -513,7 +1642,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -3365,10 +3468,10 @@ index e5614b627d7..afeca81f807 100644
  extern section *machopic_select_section (tree, int, unsigned HOST_WIDE_INT);
  
 diff --git a/gcc/config/darwin.c b/gcc/config/darwin.c
-index b9862353843..0d21d86b98a 100644
+index b9862353843..a7610829f75 100644
 --- a/gcc/config/darwin.c
 +++ b/gcc/config/darwin.c
-@@ -75,7 +75,7 @@ along with GCC; see the file COPYING3.  If not see
+@@ -75,15 +75,9 @@ along with GCC; see the file COPYING3.  If not see
     setting the second word in the .non_lazy_symbol_pointer data
     structure to symbol.  See indirect_data for the code that handles
     the extra indirection, and machopic_output_indirection and its use
@@ -3376,8 +3479,27 @@ index b9862353843..0d21d86b98a 100644
 +   of MACHO_SYMBOL_FLAG_STATIC for the code that handles @code{static}
     symbol indirection.  */
  
- /* For darwin >= 9  (OSX 10.5) the linker is capable of making the necessary
-@@ -250,7 +250,7 @@ name_needs_quotes (const char *name)
+-/* For darwin >= 9  (OSX 10.5) the linker is capable of making the necessary
+-   branch islands and we no longer need to emit darwin stubs.
+-   However, if we are generating code for earlier systems (or for use in the 
+-   kernel) the stubs might still be required, and this will be set true.  */
+-int darwin_emit_branch_islands = false;
+-
+ typedef struct GTY(()) cdtor_record {
+   rtx symbol;
+   int priority;		/* [con/de]structor priority */
+@@ -105,6 +99,10 @@ int generating_for_darwin_version ;
+    for weak or single-definition items.  */
+ static bool ld_uses_coal_sects = false;
+ 
++/* Very old (ld_classic) linkers need a symbol to mark the start of
++   each FDE.  */
++static bool ld_needs_eh_markers = false;
++
+ /* Section names.  */
+ section * darwin_sections[NUM_DARWIN_SECTIONS];
+ 
+@@ -250,7 +248,7 @@ name_needs_quotes (const char *name)
  int
  machopic_symbol_defined_p (rtx sym_ref)
  {
@@ -3386,7 +3508,7 @@ index b9862353843..0d21d86b98a 100644
      return true;
  
    /* If a symbol references local and is not an extern to this
-@@ -259,7 +259,7 @@ machopic_symbol_defined_p (rtx sym_ref)
+@@ -259,7 +257,7 @@ machopic_symbol_defined_p (rtx sym_ref)
      {
        /* If the symbol references a variable and the variable is a
  	 common symbol, then this symbol is not defined.  */
@@ -3395,7 +3517,7 @@ index b9862353843..0d21d86b98a 100644
  	{
  	  tree decl = SYMBOL_REF_DECL (sym_ref);
  	  if (!decl)
-@@ -455,6 +455,13 @@ typedef struct GTY ((for_user)) machopic_indirection
+@@ -455,6 +453,13 @@ typedef struct GTY ((for_user)) machopic_indirection
    bool stub_p;
    /* True iff this stub or pointer has been referenced.  */
    bool used;
@@ -3409,26 +3531,157 @@ index b9862353843..0d21d86b98a 100644
  } machopic_indirection;
  
  struct indirection_hasher : ggc_ptr_hash<machopic_indirection>
-@@ -591,6 +598,18 @@ machopic_indirection_name (rtx sym_ref, bool stub_p)
+@@ -489,7 +494,7 @@ indirection_hasher::equal (machopic_indirection *s, const char *k)
+ /* Return the name of the non-lazy pointer (if STUB_P is false) or
+    stub (if STUB_B is true) corresponding to the given name.
+ 
+-  If we have a situation like:
++  PR71767 - If we have a situation like:
+ 
+ global_weak_symbol:
+   ....
+@@ -498,36 +503,22 @@ Lnon_weak_local:
+ 
+   ld64 will be unable to split this into two atoms (because the "L" makes
+   the second symbol 'invisible').  This means that legitimate direct accesses
+-  to the second symbol will appear to be non-allowed direct accesses to an
+-  atom of type weak, global which are not allowed.
+-
+-  To avoid this, we make the indirections have a leading 'l' (lower-case L)
+-  which has a special meaning: linker can see this and use it to determine
+-  atoms, but it is not placed into the final symbol table.
++  to the second symbol will appear to be direct accesses to an atom of type
++  weak, global which are not allowed.
+ 
+-  The implementation here is somewhat heavy-handed in that it will also mark
+-  indirections to the __IMPORT,__pointers section the same way which is
+-  really unnecessary, since ld64 _can_ split those into atoms as they are
+-  fixed size.  FIXME: determine if this is a penalty worth extra code to
+-  fix.
++  To avoid this, we make any data-section indirections have a leading 'l'
++  (lower-case L) which has a special meaning: linker can see this and use
++  it to determine  atoms, but it is not placed into the final symbol table.
+ 
++  Symbols in the non-lazy symbol pointers section (or stubs) do not have this
++  problem because ld64 already knows the size of each entry.
+ */
+ 
+ const char *
+ machopic_indirection_name (rtx sym_ref, bool stub_p)
+ {
+-  char *buffer;
+   const char *name = XSTR (sym_ref, 0);
+-  size_t namelen = strlen (name);
+-  machopic_indirection *p;
+-  bool needs_quotes;
+-  const char *suffix;
+-  char L_or_l = 'L';
+-  const char *prefix = user_label_prefix;
+-  const char *quote = "";
+-  tree id;
+-
+-  id = maybe_get_identifier (name);
++  tree id = maybe_get_identifier (name);
+   if (id)
+     {
+       tree id_orig = id;
+@@ -535,43 +526,47 @@ machopic_indirection_name (rtx sym_ref, bool stub_p)
+       while (IDENTIFIER_TRANSPARENT_ALIAS (id))
+ 	id = TREE_CHAIN (id);
+       if (id != id_orig)
+-	{
+-	  name = IDENTIFIER_POINTER (id);
+-	  namelen = strlen (name);
+-	}
++	name = IDENTIFIER_POINTER (id);
+     }
+ 
++  const char *prefix = user_label_prefix;
++  /* If we are emitting the label 'verbatim' then omit the U_L_P and count
++     the name without the leading '*'.  */
+   if (name[0] == '*')
+     {
+       prefix = "";
+       ++name;
+-      --namelen;
+-    }
+-
+-  needs_quotes = name_needs_quotes (name);
+-  if (needs_quotes)
+-    {
+-      quote = "\"";
+     }
+ 
+-  if (stub_p)
+-    suffix = STUB_SUFFIX;
+-  else
+-    {
+-      suffix = NON_LAZY_POINTER_SUFFIX;
+-      /* Let the linker see this.  */
+-      L_or_l = 'l';
+-    }
+-
+-  buffer = XALLOCAVEC (char, 2  /* strlen ("&L") or ("&l") */
+-		   + strlen (prefix)
+-		   + namelen
+-		   + strlen (suffix)
+-		   + 2 * strlen (quote)
+-		   + 1 /* '\0' */);
++  /* Here we are undoing a number of causes that placed some indirections
++     (apparently erroneously) into the .data section.  Specifically, some
++     symbols that are ABI mandated indirections and some hidden symbols
++     were being placed there - which cause difficulties with later
++     versions of ld64.  Iff (after these checks) some symbol still gets an
++     indirection in the data section, we want to adjust the indirection
++     name to be linker visible to deal with PR71767 (notes above).  */
++  bool nlsp_in_data_section =
++       ! MACHO_SYMBOL_MUST_INDIRECT_P (sym_ref)
++    && ! MACHO_SYMBOL_HIDDEN_VIS_P (sym_ref)
++    && (machopic_symbol_defined_p (sym_ref) || SYMBOL_REF_LOCAL_P (sym_ref))
++    && ! indirect_data (sym_ref);
++
++  const char *suffix = stub_p ? STUB_SUFFIX : NON_LAZY_POINTER_SUFFIX;
++  /* If the indirection is in the data section, let the linker see it.  */
++  char L_or_l = (!stub_p && nlsp_in_data_section) ? 'l' : 'L';
++  /* We have mangled symbols with spaces and punctuation which typically
++     need surrounding in quotes for the assembler to consume them.  */
++  const char *quote = name_needs_quotes (name) ? "\"" : "";
++  char *buffer = XALLOCAVEC (char, 2  /* strlen ("&L") or ("&l") */
++			     + strlen (prefix)
++			     + strlen (name)
++			     + strlen (suffix)
++			     + 2 * strlen (quote)
++			     + 1 /* '\0' */);
+ 
+   /* Construct the name of the non-lazy pointer or stub.  */
+-  sprintf (buffer, "&%s%c%s%s%s%s", quote, L_or_l, prefix, name, suffix, quote);
++  sprintf (buffer, "&%s%c%s%s%s%s", quote, L_or_l, prefix, name,
++	   suffix, quote);
+ 
+   if (!machopic_indirections)
+     machopic_indirections = hash_table<indirection_hasher>::create_ggc (37);
+@@ -580,10 +575,9 @@ machopic_indirection_name (rtx sym_ref, bool stub_p)
+     = machopic_indirections->find_slot_with_hash (buffer,
+ 						  htab_hash_string (buffer),
+ 						  INSERT);
++  machopic_indirection *p;
+   if (*slot)
+-    {
+-      p = *slot;
+-    }
++    p = *slot;
+   else
+     {
+       p = ggc_alloc<machopic_indirection> ();
+@@ -591,6 +585,7 @@ machopic_indirection_name (rtx sym_ref, bool stub_p)
        p->ptr_name = xstrdup (buffer);
        p->stub_p = stub_p;
        p->used = false;
-+      /* Here we are undoing a number of causes that placed some indirections
-+	 (apparently erroneously) into the .data section.  Specifically, some
-+	 symbols that are ABI mandated indirections and some hidden symbols
-+	 were being placed there - which cause difficulties with later
-+	 versions of ld64.
-+      */
-+      p->nlsp_in_data_section =
-+	   ! MACHO_SYMBOL_MUST_INDIRECT_P (sym_ref)
-+	&& ! MACHO_SYMBOL_HIDDEN_VIS_P (sym_ref)
-+	&& (machopic_symbol_defined_p (sym_ref)
-+	    || SYMBOL_REF_LOCAL_P (sym_ref))
-+	&& ! indirect_data (sym_ref);
++      p->nlsp_in_data_section = nlsp_in_data_section;
        *slot = p;
      }
  
-@@ -666,7 +685,7 @@ machopic_indirect_data_reference (rtx orig, rtx reg)
+@@ -666,7 +661,7 @@ machopic_indirect_data_reference (rtx orig, rtx reg)
  	   /* some other cpu -- writeme!  */
  	   gcc_unreachable ();
  	}
@@ -3437,7 +3690,7 @@ index b9862353843..0d21d86b98a 100644
  	{
  	  rtx offset = NULL;
  	  if (DARWIN_PPC || HAVE_lo_sum)
-@@ -708,6 +727,7 @@ machopic_indirect_data_reference (rtx orig, rtx reg)
+@@ -708,6 +703,7 @@ machopic_indirect_data_reference (rtx orig, rtx reg)
  		  machopic_indirection_name (orig, /*stub_p=*/false)));
  
        SYMBOL_REF_DATA (ptr_ref) = SYMBOL_REF_DATA (orig);
@@ -3445,7 +3698,16 @@ index b9862353843..0d21d86b98a 100644
  
        ptr_ref = gen_const_mem (Pmode, ptr_ref);
        machopic_define_symbol (ptr_ref);
-@@ -798,8 +818,7 @@ machopic_indirect_call_target (rtx target)
+@@ -790,7 +786,7 @@ machopic_indirect_data_reference (rtx orig, rtx reg)
+ rtx
+ machopic_indirect_call_target (rtx target)
+ {
+-  if (! darwin_emit_branch_islands)
++  if (! darwin_symbol_stubs)
+     return target;
+ 
+   if (GET_CODE (target) != MEM)
+@@ -798,8 +794,7 @@ machopic_indirect_call_target (rtx target)
  
    if (MACHOPIC_INDIRECT
        && GET_CODE (XEXP (target, 0)) == SYMBOL_REF
@@ -3455,7 +3717,7 @@ index b9862353843..0d21d86b98a 100644
      {
        rtx sym_ref = XEXP (target, 0);
        const char *stub_name = machopic_indirection_name (sym_ref,
-@@ -808,6 +827,7 @@ machopic_indirect_call_target (rtx target)
+@@ -808,6 +803,7 @@ machopic_indirect_call_target (rtx target)
  
        XEXP (target, 0) = gen_rtx_SYMBOL_REF (mode, stub_name);
        SYMBOL_REF_DATA (XEXP (target, 0)) = SYMBOL_REF_DATA (sym_ref);
@@ -3463,7 +3725,7 @@ index b9862353843..0d21d86b98a 100644
        MEM_READONLY_P (target) = 1;
        MEM_NOTRAP_P (target) = 1;
      }
-@@ -844,7 +864,7 @@ machopic_legitimize_pic_address (rtx orig, machine_mode mode, rtx reg)
+@@ -844,7 +840,7 @@ machopic_legitimize_pic_address (rtx orig, machine_mode mode, rtx reg)
  	{
  	  if (reg == 0)
  	    {
@@ -3472,7 +3734,7 @@ index b9862353843..0d21d86b98a 100644
  	      reg = gen_reg_rtx (Pmode);
  	    }
  
-@@ -928,7 +948,7 @@ machopic_legitimize_pic_address (rtx orig, machine_mode mode, rtx reg)
+@@ -928,7 +924,7 @@ machopic_legitimize_pic_address (rtx orig, machine_mode mode, rtx reg)
  	      emit_use (gen_rtx_REG (Pmode, PIC_OFFSET_TABLE_REGNUM));
  #endif
  
@@ -3481,7 +3743,7 @@ index b9862353843..0d21d86b98a 100644
  		df_set_regs_ever_live (REGNO (pic), true);
  	      pic_ref = gen_rtx_PLUS (Pmode, pic,
  				      machopic_gen_offset (XEXP (orig, 0)));
-@@ -952,7 +972,7 @@ machopic_legitimize_pic_address (rtx orig, machine_mode mode, rtx reg)
+@@ -952,7 +948,7 @@ machopic_legitimize_pic_address (rtx orig, machine_mode mode, rtx reg)
  
  	      if (reg == 0)
  		{
@@ -3490,7 +3752,7 @@ index b9862353843..0d21d86b98a 100644
  		  reg = gen_reg_rtx (Pmode);
  		}
  
-@@ -998,7 +1018,7 @@ machopic_legitimize_pic_address (rtx orig, machine_mode mode, rtx reg)
+@@ -998,7 +994,7 @@ machopic_legitimize_pic_address (rtx orig, machine_mode mode, rtx reg)
  #if 0
  		  emit_use (pic_offset_table_rtx);
  #endif
@@ -3499,7 +3761,7 @@ index b9862353843..0d21d86b98a 100644
  		    df_set_regs_ever_live (REGNO (pic), true);
  		  pic_ref = gen_rtx_PLUS (Pmode,
  					  pic,
-@@ -1069,129 +1089,160 @@ machopic_legitimize_pic_address (rtx orig, machine_mode mode, rtx reg)
+@@ -1069,129 +1065,160 @@ machopic_legitimize_pic_address (rtx orig, machine_mode mode, rtx reg)
    return pic_ref;
  }
  
@@ -3622,9 +3884,16 @@ index b9862353843..0d21d86b98a 100644
 +    strcpy (stub, ptr_name + 1);
 +  else
 +    sprintf (stub, "%s%s", user_label_prefix, ptr_name);
-+
+ 
+-      switch_to_section (darwin_sections[machopic_nl_symbol_ptr_section]);
 +  machopic_output_stub (asm_out_file, sym, stub);
-+
+ 
+-      /* Mach-O symbols are passed around in code through indirect
+-	 references and the original symbol_ref hasn't passed through
+-	 the generic handling and reference-catching in
+-	 output_operand, so we need to manually mark weak references
+-	 as such.  */
+-      if (SYMBOL_REF_WEAK (symbol))
 +  return 1;
 +}
 +
@@ -3635,20 +3904,13 @@ index b9862353843..0d21d86b98a 100644
 +
 +  if (!p->used || p->stub_p || p->nlsp_in_data_section)
 +    return 1;
- 
--      switch_to_section (darwin_sections[machopic_nl_symbol_ptr_section]);
++
 +  rtx symbol = p->symbol;
 +  /* The original symbol name.  */
 +  const char *sym_name = XSTR (symbol, 0);
 +  /* The nonlazy-stub symbol name.  */
 +  const char *ptr_name = p->ptr_name;
- 
--      /* Mach-O symbols are passed around in code through indirect
--	 references and the original symbol_ref hasn't passed through
--	 the generic handling and reference-catching in
--	 output_operand, so we need to manually mark weak references
--	 as such.  */
--      if (SYMBOL_REF_WEAK (symbol))
++
 +  switch_to_section (darwin_sections[machopic_nl_symbol_ptr_section]);
 +
 +  /* Mach-O symbols are passed around in code through indirect references and
@@ -3752,7 +4014,7 @@ index b9862353843..0d21d86b98a 100644
  }
  
  int
-@@ -1206,25 +1257,51 @@ machopic_operand_p (rtx op)
+@@ -1206,25 +1233,51 @@ machopic_operand_p (rtx op)
  	    && XINT (XEXP (op, 0), 1) == UNSPEC_MACHOPIC_OFFSET);
  }
  
@@ -3813,7 +4075,7 @@ index b9862353843..0d21d86b98a 100644
    if (!DECL_EXTERNAL (decl)
        && (!TREE_PUBLIC (decl) || !DECL_WEAK (decl))
        && ! lookup_attribute ("weakref", DECL_ATTRIBUTES (decl))
-@@ -1235,7 +1312,13 @@ darwin_encode_section_info (tree decl, rtx rtl, int first ATTRIBUTE_UNUSED)
+@@ -1235,7 +1288,13 @@ darwin_encode_section_info (tree decl, rtx rtl, int first ATTRIBUTE_UNUSED)
      SYMBOL_REF_FLAGS (sym_ref) |= MACHO_SYMBOL_FLAG_DEFINED;
  
    if (! TREE_PUBLIC (decl))
@@ -3828,7 +4090,7 @@ index b9862353843..0d21d86b98a 100644
  }
  
  void
-@@ -1252,12 +1335,13 @@ darwin_mark_decl_preserved (const char *name)
+@@ -1252,12 +1311,13 @@ darwin_mark_decl_preserved (const char *name)
  }
  
  static section *
@@ -3844,7 +4106,7 @@ index b9862353843..0d21d86b98a 100644
  }
  
  static section *
-@@ -1550,7 +1634,7 @@ machopic_select_section (tree decl,
+@@ -1550,7 +1610,7 @@ machopic_select_section (tree decl,
  
      case SECCAT_RODATA:
      case SECCAT_SRODATA:
@@ -3853,8 +4115,102 @@ index b9862353843..0d21d86b98a 100644
        break;
  
      case SECCAT_RODATA_MERGE_STR:
+@@ -2086,11 +2146,11 @@ darwin_emit_unwind_label (FILE *file, tree decl, int for_eh, int empty)
+   static int invok_count = 0;
+   static tree last_fun_decl = NULL_TREE;
+   
+-  /* We use the linker to emit the .eh labels for Darwin 9 and above.  */
+-  if (! for_eh || generating_for_darwin_version >= 9)
++  /* Modern linkers can produce distinct FDEs without compiler support.  */
++  if (! for_eh || ! ld_needs_eh_markers)
+     return;
+ 
+-  /* FIXME: This only works when the eh for all sections of a function is 
++  /* FIXME: This only works when the eh for all sections of a function are
+      emitted at the same time.  If that changes, we would need to use a lookup
+      table of some form to determine what to do.  Also, we should emit the
+      unadorned label for the partition containing the public label for a
+@@ -3148,17 +3208,19 @@ darwin_override_options (void)
+ 				: (generating_for_darwin_version >= 9) ? 1
+ 								       : 0);
+ 
+-  /* Objective-C family ABI 2 is only valid for next/m64 at present.  */
+   if (global_options_set.x_flag_objc_abi && flag_next_runtime)
+     {
+-      if (TARGET_64BIT && global_options.x_flag_objc_abi < 2)
+-	error_at (UNKNOWN_LOCATION, "%<-fobjc-abi-version%> >= 2 must be"
+-				    " used for %<-m64%> targets with"
+-				    " %<-fnext-runtime%>");
+-      if (!TARGET_64BIT && global_options.x_flag_objc_abi >= 2)
+-	error_at (UNKNOWN_LOCATION, "%<-fobjc-abi-version%> >= 2 is not"
+-				    " supported on %<-m32%> targets with"
+-				    " %<-fnext-runtime%>");
++      if (TARGET_64BIT && global_options.x_flag_objc_abi != 2)
++	/* The Objective-C family ABI 2 is the only valid version NeXT/m64.  */
++	error_at (UNKNOWN_LOCATION,
++		  "%<-fobjc-abi-version%> 2 must be used for 64 bit targets"
++		  " with %<-fnext-runtime%>");
++      else if (!TARGET_64BIT && global_options.x_flag_objc_abi >= 2)
++	/* ABI versions 0 and 1 are the only valid versions NeXT/m32.  */
++	error_at (UNKNOWN_LOCATION,
++		  "%<-fobjc-abi-version%> %d is not supported for 32 bit"
++		  " targets with %<-fnext-runtime%>",
++		  global_options.x_flag_objc_abi);
+     }
+ 
+   /* Don't emit DWARF3/4 unless specifically selected.  This is a 
+@@ -3261,11 +3323,44 @@ darwin_override_options (void)
+       flag_pic = 2;
+     }
+ 
+-  /* It is assumed that branch island stubs are needed for earlier systems.  */
+-  if (generating_for_darwin_version < 9)
+-    darwin_emit_branch_islands = true;
+-  else
+-    emit_aligned_common = true; /* Later systems can support aligned common.  */
++  /* Linkers >= ld64-62.1 (at least) are capable of making the necessary PIC
++     indirections and we no longer need to emit pic symbol stubs.
++     However, if we are generating code for earlier ones (or for use in the
++     kernel) the stubs might still be required, and this will be set true.
++     If the user sets it on or off - then that takes precedence.
++
++     Linkers that don't need stubs, don't need the EH symbol markers either.
++  */
++
++  if (!global_options_set.x_darwin_symbol_stubs)
++    {
++      if (darwin_target_linker)
++	{
++	  if (strverscmp (darwin_target_linker, MIN_LD64_OMIT_STUBS) < 0)
++	    {
++	      darwin_symbol_stubs = true;
++	      ld_needs_eh_markers = true;
++	    }
++	}
++      else if (generating_for_darwin_version < 9)
++	{
++	  /* If we don't know the linker version and we're targeting an old
++	     system, we know no better than to assume the use of an earlier
++	     linker.  */
++	  darwin_symbol_stubs = true;
++	  ld_needs_eh_markers = true;
++	}
++    }
++  else if (DARWIN_X86 && darwin_symbol_stubs && TARGET_64BIT)
++    {
++      inform (input_location,
++	      "%<-msymbol-stubs%> is not required for 64b code (ignored)");
++      darwin_symbol_stubs = false;
++    }
++
++  if (generating_for_darwin_version >= 9)
++    /* Later systems can support aligned common.  */
++    emit_aligned_common = true;
+ 
+   /* The c_dialect...() macros are not available to us here.  */
+   darwin_running_cxx = (strstr (lang_hooks.name, "C++") != 0);
 diff --git a/gcc/config/darwin.h b/gcc/config/darwin.h
-index 0e253cb0dfa..4f1268494b1 100644
+index 0e253cb0dfa..be261e73a7b 100644
 --- a/gcc/config/darwin.h
 +++ b/gcc/config/darwin.h
 @@ -126,6 +126,24 @@ extern GTY(()) int darwin_ms_struct;
@@ -3882,10 +4238,12 @@ index 0e253cb0dfa..4f1268494b1 100644
  #define DARWIN_CC1_SPEC							\
    "%{findirect-virtual-calls: -fapple-kext} %<findirect-virtual-calls " \
    "%{fterminated-vtables: -fapple-kext} %<fterminated-vtables "		\
-@@ -156,6 +174,16 @@ extern GTY(()) int darwin_ms_struct;
+@@ -156,20 +174,31 @@ extern GTY(()) int darwin_ms_struct;
  #define CPP_SPEC "%{static:%{!dynamic:-D__STATIC__}}%{!static:-D__DYNAMIC__}" \
  	" %{pthread:-D_REENTRANT}"
  
+-/* This is mostly a clone of the standard LINK_COMMAND_SPEC, plus
+-   precomp, libtool, and fat build additions.
 +/* This is a fix for PR41260 by passing -no_compact_unwind on darwin10 and
 +   later until the assembler, linker and libunwind are able to deal with the
 +   output from GCC.
@@ -3896,10 +4254,18 @@ index 0e253cb0dfa..4f1268494b1 100644
 +#define DARWIN_NOCOMPACT_UNWIND \
 +" %:version-compare(>= 10.6 mmacosx-version-min= -no_compact_unwind) "
 +
- /* This is mostly a clone of the standard LINK_COMMAND_SPEC, plus
-    precomp, libtool, and fat build additions.
++/* In Darwin linker specs we can put -lcrt0.o and ld will search the library
++   path for crt0.o or -lcrtx.a and it will search for for libcrtx.a.  As for
++   other ports, we can also put xxx.{o,a}%s and get the appropriate complete
++   startfile absolute directory.  This latter point is important when we want
++   to override ld's rule of .dylib being found ahead of .a and the user wants
++   the convenience library to be linked.  */
++
++/* The LINK_COMMAND spec is mostly a clone of the standard LINK_COMMAND_SPEC,
++   plus precomp, libtool, and fat build additions.
  
-@@ -164,12 +192,6 @@ extern GTY(()) int darwin_ms_struct;
+    In general, random Darwin linker flags should go into LINK_SPEC
+    instead of LINK_COMMAND_SPEC.  The command spec is better for
     specifying the handling of options understood by generic Unix
     linkers, and for positional arguments like libraries.  */
  
@@ -3912,7 +4278,7 @@ index 0e253cb0dfa..4f1268494b1 100644
  #define LINK_COMMAND_SPEC_A \
     "%{!fdump=*:%{!fsyntax-only:%{!c:%{!M:%{!MM:%{!E:%{!S:\
      %(linker)" \
-@@ -190,10 +212,14 @@ extern GTY(()) int darwin_ms_struct;
+@@ -190,10 +219,14 @@ extern GTY(()) int darwin_ms_struct;
        %{%:sanitize(address): -lasan } \
        %{%:sanitize(undefined): -lubsan } \
        %(link_ssp) \
@@ -3929,7 +4295,7 @@ index 0e253cb0dfa..4f1268494b1 100644
  
  #define DSYMUTIL "\ndsymutil"
  
-@@ -230,8 +256,6 @@ extern GTY(()) int darwin_ms_struct;
+@@ -230,8 +263,6 @@ extern GTY(()) int darwin_ms_struct;
  #define STANDARD_STARTFILE_PREFIX_1 ""
  #define STANDARD_STARTFILE_PREFIX_2 ""
  
@@ -3938,7 +4304,7 @@ index 0e253cb0dfa..4f1268494b1 100644
  /* Please keep the random linker options in alphabetical order (modulo
     'Z' and 'no' prefixes). Note that options taking arguments may appear
     multiple times on a command line with different arguments each time,
-@@ -295,7 +319,6 @@ extern GTY(()) int darwin_ms_struct;
+@@ -295,7 +326,6 @@ extern GTY(()) int darwin_ms_struct;
       %:version-compare(< 10.5 mmacosx-version-min= -multiply_defined) \
       %:version-compare(< 10.5 mmacosx-version-min= suppress)}} \
     %{Zmultiplydefinedunused*:-multiply_defined_unused %*} \
@@ -3946,7 +4312,114 @@ index 0e253cb0dfa..4f1268494b1 100644
     %{prebind} %{noprebind} %{nofixprebinding} %{prebind_all_twolevel_modules} \
     %{read_only_relocs} \
     %{sectcreate*} %{sectorder*} %{seg1addr*} %{segprot*} \
-@@ -762,21 +785,52 @@ extern GTY(()) section * darwin_sections[NUM_DARWIN_SECTIONS];
+@@ -327,43 +357,42 @@ extern GTY(()) int darwin_ms_struct;
+ 
+ /* Support -mmacosx-version-min by supplying different (stub) libgcc_s.dylib
+    libraries to link against, and by not linking against libgcc_s on
+-   earlier-than-10.3.9.
++   earlier-than-10.3.9.  If we need exceptions, prior to 10.3.9, then we have
++   to link the static eh lib, since there's no shared version on the system.
+ 
+-   Note that by default, -lgcc_eh is not linked against!  This is
+-   because in a future version of Darwin the EH frame information may
+-   be in a new format, or the fallback routine might be changed; if
+-   you want to explicitly link against the static version of those
+-   routines, because you know you don't need to unwind through system
+-   libraries, you need to explicitly say -static-libgcc.
++   Note that by default, except as above, -lgcc_eh is not linked against.
++   This is because,in general, we need to unwind through system libraries that
++   are linked with the shared unwinder in libunwind (or libgcc_s for 10.4/5).
+ 
+-   If it is linked against, it has to be before -lgcc, because it may
++   The static version of the current libgcc unwinder (which differs from the
++   implementation in libunwind.dylib on systems Darwin10 [10.6]+) can be used
++   by specifying -static-libgcc.
++
++   If libgcc_eh is linked against, it has to be before -lgcc, because it might
+    need symbols from -lgcc.  */
++
+ #undef REAL_LIBGCC_SPEC
+ #define REAL_LIBGCC_SPEC						   \
+    "%{static-libgcc|static: -lgcc_eh -lgcc;				   \
+-      shared-libgcc|fexceptions|fgnu-runtime:				   \
+-       %:version-compare(!> 10.5 mmacosx-version-min= -lgcc_s.10.4)	   \
++      shared-libgcc|fexceptions|fobjc-exceptions|fgnu-runtime:		   \
++       %:version-compare(!> 10.3.9 mmacosx-version-min= -lgcc_eh)	   \
++       %:version-compare(>< 10.3.9 10.5 mmacosx-version-min= -lgcc_s.10.4) \
+        %:version-compare(>< 10.5 10.6 mmacosx-version-min= -lgcc_s.10.5)   \
+-       %:version-compare(!> 10.5 mmacosx-version-min= -lgcc_ext.10.4)	   \
++       %:version-compare(>< 10.3.9 10.5 mmacosx-version-min= -lgcc_ext.10.4) \
+        %:version-compare(>= 10.5 mmacosx-version-min= -lgcc_ext.10.5)	   \
+        -lgcc ;								   \
+       :%:version-compare(>< 10.3.9 10.5 mmacosx-version-min= -lgcc_s.10.4) \
+        %:version-compare(>< 10.5 10.6 mmacosx-version-min= -lgcc_s.10.5)   \
+-       %:version-compare(!> 10.5 mmacosx-version-min= -lgcc_ext.10.4)	   \
++       %:version-compare(>< 10.3.9 10.5 mmacosx-version-min= -lgcc_ext.10.4) \
+        %:version-compare(>= 10.5 mmacosx-version-min= -lgcc_ext.10.5)	   \
+        -lgcc }"
+ 
+-/* We specify crt0.o as -lcrt0.o so that ld will search the library path.
+-
+-   crt3.o provides __cxa_atexit on systems that don't have it.  Since
+-   it's only used with C++, which requires passing -shared-libgcc, key
+-   off that to avoid unnecessarily adding a destructor to every
+-   powerpc program built.  */
++/* We specify crt0.o as -lcrt0.o so that ld will search the library path.  */
+ 
+ #undef  STARTFILE_SPEC
+ #define STARTFILE_SPEC							    \
+-  "%{Zdynamiclib: %(darwin_dylib1) %{fgnu-tm: -lcrttms.o}}		    \
+-   %{!Zdynamiclib:%{Zbundle:%{!static:					    \
++"%{Zdynamiclib: %(darwin_dylib1) %{fgnu-tm: -lcrttms.o}}		    \
++ %{!Zdynamiclib:%{Zbundle:%{!static:					    \
+ 	%:version-compare(< 10.6 mmacosx-version-min= -lbundle1.o)	    \
+ 	%{fgnu-tm: -lcrttms.o}}}					    \
+      %{!Zbundle:%{pg:%{static:-lgcrt0.o}				    \
+@@ -377,7 +406,7 @@ extern GTY(()) int darwin_ms_struct;
+                                 %{!object:%{preload:-lcrt0.o}		    \
+                                   %{!preload: %(darwin_crt1)		    \
+ 					      %(darwin_crt2)}}}}}}	    \
+-  %{shared-libgcc:%:version-compare(< 10.5 mmacosx-version-min= crt3.o%s)}"
++ %(darwin_crt3)"
+ 
+ /* We want a destructor last in the list.  */
+ #define TM_DESTRUCTOR "%{fgnu-tm: -lcrttme.o}"
+@@ -385,18 +414,30 @@ extern GTY(()) int darwin_ms_struct;
+ 
+ #define DARWIN_EXTRA_SPECS						\
+   { "darwin_crt1", DARWIN_CRT1_SPEC },					\
++  { "darwin_crt2", DARWIN_CRT2_SPEC },					\
++  { "darwin_crt3", DARWIN_CRT3_SPEC },					\
+   { "darwin_dylib1", DARWIN_DYLIB1_SPEC },
+ 
+-#define DARWIN_DYLIB1_SPEC						\
+-  "%:version-compare(!> 10.5 mmacosx-version-min= -ldylib1.o)		\
+-   %:version-compare(>< 10.5 10.6 mmacosx-version-min= -ldylib1.10.5.o)"
+-
+ #define DARWIN_CRT1_SPEC						\
+   "%:version-compare(!> 10.5 mmacosx-version-min= -lcrt1.o)		\
+    %:version-compare(>< 10.5 10.6 mmacosx-version-min= -lcrt1.10.5.o)	\
+    %:version-compare(>< 10.6 10.8 mmacosx-version-min= -lcrt1.10.6.o)	\
+    %{fgnu-tm: -lcrttms.o}"
+ 
++#define DARWIN_CRT2_SPEC ""
++
++/* crt3.o provides __cxa_atexit on systems that don't have it (and a fix
++   up for faulty versions on 10.4).  Since it's only used with C++, which
++   requires passing -shared-libgcc, key off that to avoid unnecessarily
++   adding a destructor to every program built for 10.4 or earlier.  */
++
++#define DARWIN_CRT3_SPEC \
++"%{shared-libgcc:%:version-compare(< 10.5 mmacosx-version-min= crt3.o%s)}"
++
++#define DARWIN_DYLIB1_SPEC						\
++  "%:version-compare(!> 10.5 mmacosx-version-min= -ldylib1.o)		\
++   %:version-compare(>< 10.5 10.6 mmacosx-version-min= -ldylib1.10.5.o)"
++
+ #ifdef HAVE_AS_MMACOSX_VERSION_MIN_OPTION
+ /* Emit macosx version (but only major).  */
+ #define ASM_MMACOSX_VERSION_MIN_SPEC \
+@@ -762,21 +803,52 @@ extern GTY(()) section * darwin_sections[NUM_DARWIN_SECTIONS];
  #undef TARGET_ASM_MARK_DECL_PRESERVED
  #define TARGET_ASM_MARK_DECL_PRESERVED darwin_mark_decl_preserved
  
@@ -3957,7 +4430,9 @@ index 0e253cb0dfa..4f1268494b1 100644
 -   sure these aren't clobbered by the backend.  */
 +/* Any port using this header needs to define the first available
 +   subtarget symbol bit: SYMBOL_FLAG_SUBT_DEP.  */
-+
+ 
+-#define MACHO_SYMBOL_FLAG_VARIABLE (SYMBOL_FLAG_MACH_DEP)
+-#define MACHO_SYMBOL_FLAG_DEFINED ((SYMBOL_FLAG_MACH_DEP) << 1)
 +/* Is a variable. */
 +#define MACHO_SYMBOL_FLAG_VARIABLE (SYMBOL_FLAG_SUBT_DEP)
 +#define MACHO_SYMBOL_VARIABLE_P(RTX) \
@@ -3988,9 +4463,7 @@ index 0e253cb0dfa..4f1268494b1 100644
 +
 +/* Set on a symbol that is a pic stub or symbol indirection (i.e. the
 +   L_xxxxx${stub,non_lazy_ptr,lazy_ptr}.  */
- 
--#define MACHO_SYMBOL_FLAG_VARIABLE (SYMBOL_FLAG_MACH_DEP)
--#define MACHO_SYMBOL_FLAG_DEFINED ((SYMBOL_FLAG_MACH_DEP) << 1)
++
 +#define MACHO_SYMBOL_FLAG_INDIRECTION ((SYMBOL_FLAG_SUBT_DEP) << 5)
 +#define MACHO_SYMBOL_INDIRECTION_P(RTX) \
 +  ((SYMBOL_REF_FLAGS (RTX) & MACHO_SYMBOL_FLAG_INDIRECTION) != 0)
@@ -4007,11 +4480,25 @@ index 0e253cb0dfa..4f1268494b1 100644
  
  /* Symbolic names for various things we might know about a symbol.  */
  
+@@ -969,8 +1041,12 @@ extern void darwin_driver_init (unsigned int *,struct cl_decoded_option **);
+    _tested_ version known to support this so far.  */
+ #define MIN_LD64_NO_COAL_SECTS "236.4"
+ 
++/* From at least version 62.1, ld64 can build symbol indirection stubs as
++   needed, and there is no need for the compiler to emit them.  */
++#define MIN_LD64_OMIT_STUBS "85.2"
++
+ #ifndef LD64_VERSION
+-#define LD64_VERSION "85.2"
++#define LD64_VERSION "62.1"
+ #else
+ #define DEF_LD64 LD64_VERSION
+ #endif
 diff --git a/gcc/config/darwin.opt b/gcc/config/darwin.opt
-index 22667def0a1..3f04375e633 100644
+index 22667def0a1..7f5616cbe07 100644
 --- a/gcc/config/darwin.opt
 +++ b/gcc/config/darwin.opt
-@@ -18,240 +18,378 @@
+@@ -18,240 +18,382 @@
  ; along with GCC; see the file COPYING3.  If not see
  ; <http://www.gnu.org/licenses/>.
  
@@ -4077,6 +4564,10 @@ index 22667def0a1..3f04375e633 100644
 +mone-byte-bool
 +Target RejectNegative Report Var(darwin_one_byte_bool)
 +Set sizeof(bool) to 1.
++
++msymbol-stubs
++Target Report Var(darwin_symbol_stubs) Init(0)
++Force generation of external symbol indirection stubs.
 +
 +; Some code-gen may be improved / adjusted if the linker is sufficiently modern.
 +mtarget-linker=
@@ -4490,7 +4981,7 @@ index 22667def0a1..3f04375e633 100644
  
  Zall_load
  Driver
-@@ -343,62 +481,3 @@ Driver Separate
+@@ -343,62 +485,3 @@ Driver Separate
  Zweak_reference_mismatches
  Driver Separate
  
@@ -4620,10 +5111,38 @@ index 29115a11a0d..3301451e4de 100644
  
  /* The Intel API is flexible enough that we must allow aliasing with other
 diff --git a/gcc/config/i386/darwin.h b/gcc/config/i386/darwin.h
-index 1e96350fa71..3284af2fb20 100644
+index 1e96350fa71..bdb36f00959 100644
 --- a/gcc/config/i386/darwin.h
 +++ b/gcc/config/i386/darwin.h
-@@ -326,10 +326,8 @@ extern int darwin_emit_branch_islands;
+@@ -90,14 +90,12 @@ along with GCC; see the file COPYING3.  If not see
+ #undef WCHAR_TYPE_SIZE
+ #define WCHAR_TYPE_SIZE 32
+ 
+-/* Generate branch islands stubs if this is true.  */
+-extern int darwin_emit_branch_islands;
+-
+-#undef TARGET_MACHO_BRANCH_ISLANDS
+-#define TARGET_MACHO_BRANCH_ISLANDS darwin_emit_branch_islands
++/* Generate pic symbol indirection stubs if this is true.  */
++#undef TARGET_MACHO_SYMBOL_STUBS
++#define TARGET_MACHO_SYMBOL_STUBS (darwin_symbol_stubs)
+ 
+ /* For compatibility with OSX system tools, use the new style of pic stub
+-   if this is set.  */
++   if this is set (default).  */
+ #undef  MACHOPIC_ATT_STUB
+ #define MACHOPIC_ATT_STUB (darwin_macho_att_stub)
+ 
+@@ -245,7 +243,7 @@ extern int darwin_emit_branch_islands;
+ #undef FUNCTION_PROFILER
+ #define FUNCTION_PROFILER(FILE, LABELNO)				\
+   do {									\
+-    if (TARGET_MACHO_BRANCH_ISLANDS 					\
++    if (TARGET_MACHO_SYMBOL_STUBS 					\
+ 	&& MACHOPIC_INDIRECT && !TARGET_64BIT)				\
+       {									\
+ 	const char *name = machopic_mcount_stub_name ();		\
+@@ -326,10 +324,8 @@ extern int darwin_emit_branch_islands;
          }								\
      }
  
@@ -4668,6 +5187,32 @@ index 6580890edc0..5dedeb2d18b 100644
  
  BDESC (OPTION_MASK_ISA_SSSE3, 0, CODE_FOR_ssse3_phaddwv8hi3, "__builtin_ia32_phaddw128", IX86_BUILTIN_PHADDW128, UNKNOWN, (int) V8HI_FTYPE_V8HI_V8HI)
  BDESC (OPTION_MASK_ISA_SSSE3 | OPTION_MASK_ISA_MMX, 0, CODE_FOR_ssse3_phaddwv4hi3, "__builtin_ia32_phaddw", IX86_BUILTIN_PHADDW, UNKNOWN, (int) V4HI_FTYPE_V4HI_V4HI)
+diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
+index 2b37296e537..73a3ef364b3 100644
+--- a/gcc/config/i386/i386.c
++++ b/gcc/config/i386/i386.c
+@@ -16960,7 +16960,7 @@ output_pic_addr_const (FILE *file, rtx x, int code)
+       break;
+ 
+     case SYMBOL_REF:
+-      if (TARGET_64BIT || ! TARGET_MACHO_BRANCH_ISLANDS)
++      if (TARGET_64BIT || ! TARGET_MACHO_SYMBOL_STUBS)
+ 	output_addr_const (file, x);
+       else
+ 	{
+diff --git a/gcc/config/i386/i386.h b/gcc/config/i386/i386.h
+index 2cb16d9fbf6..170bbdd7fbf 100644
+--- a/gcc/config/i386/i386.h
++++ b/gcc/config/i386/i386.h
+@@ -640,7 +640,7 @@ extern tree x86_mfence;
+ /* Replace MACH-O, ifdefs by in-line tests, where possible. 
+    (a) Macros defined in config/i386/darwin.h  */
+ #define TARGET_MACHO 0
+-#define TARGET_MACHO_BRANCH_ISLANDS 0
++#define TARGET_MACHO_SYMBOL_STUBS 0
+ #define MACHOPIC_ATT_STUB 0
+ /* (b) Macros defined in config/darwin.h  */
+ #define MACHO_DYNAMIC_NO_PIC_P 0
 diff --git a/gcc/config/i386/sse.md b/gcc/config/i386/sse.md
 index 46ec4602eb7..c1b7ce99125 100644
 --- a/gcc/config/i386/sse.md
@@ -5552,10 +6097,10 @@ index 4a1150e0994..8d535acd428 100644
    [(parallel [(set (reg:CCFP CR6_REGNO)
  		   (compare:CCFP
 diff --git a/gcc/config/rs6000/darwin.h b/gcc/config/rs6000/darwin.h
-index d3a59f42c37..9fab84fd82e 100644
+index d3a59f42c37..e36de59ca25 100644
 --- a/gcc/config/rs6000/darwin.h
 +++ b/gcc/config/rs6000/darwin.h
-@@ -53,11 +53,23 @@
+@@ -53,19 +53,28 @@
  #define TARGET_OS_CPP_BUILTINS()			\
    do							\
      {							\
@@ -5583,7 +6128,48 @@ index d3a59f42c37..9fab84fd82e 100644
        builtin_define ("__NATURAL_ALIGNMENT__");		\
        darwin_cpp_builtins (pfile);			\
      }							\
-@@ -279,9 +291,9 @@ extern int darwin_emit_branch_islands;
+   while (0)
+ 
+-/* Generate branch islands stubs if this is true.  */
+-extern int darwin_emit_branch_islands;
+-
+ #define SUBTARGET_OVERRIDE_OPTIONS darwin_rs6000_override_options ()
+ 
+ #define C_COMMON_OVERRIDE_OPTIONS do {					\
+@@ -127,9 +136,30 @@ extern int darwin_emit_branch_islands;
+    %:version-compare(>< 10.5 10.7 mmacosx-version-min= -lcrt1.10.5.o)	\
+    %{fgnu-tm: -lcrttms.o}"
+ 
+-/* crt2.o is at least partially required for 10.3.x and earlier.  */
++/* crt2.o is at least partially required for 10.3.x and earlier.
++   It deals with registration of the unwind frames, where this is not
++   automatically provided by the system.  So we need it for any case that
++   might use exceptions.  */
++#undef DARWIN_CRT2_SPEC
+ #define DARWIN_CRT2_SPEC \
+-  "%{!m64:%:version-compare(!> 10.4 mmacosx-version-min= crt2.o%s)}"
++"%{!m64:%{shared-libgcc|static-libstdc++|fexceptions|fobjc-exceptions|fgnu-runtime: \
++   %:version-compare(!> 10.4 mmacosx-version-min= crt2.o%s) \
++  }}"
++
++/* crt3 deals with providing cxa_atexit on earlier systems (or fixing it up,
++   for broken versions).  It's only needed for c++ code, so we can make it
++   conditional on shared-libgcc since that's forced on for c++.  */
++#undef DARWIN_CRT3_SPEC
++#define DARWIN_CRT3_SPEC \
++"%{!m64:%{shared-libgcc|static-libstdc++:							\
++   %:version-compare(>< 10.4 10.5 mmacosx-version-min= crt3.o%s) \
++   %:version-compare(!> 10.4 mmacosx-version-min= crt3_2.o%s) \
++  }}"
++
++/* The PPC regs save/restore functions are leaves and could, conceivably
++   be used by the tm destructor.  */
++#undef ENDFILE_SPEC
++#define ENDFILE_SPEC TM_DESTRUCTOR " -lef_ppc"
+ 
+ #undef SUBTARGET_EXTRA_SPECS
+ #define SUBTARGET_EXTRA_SPECS			\
+@@ -279,9 +309,9 @@ extern int darwin_emit_branch_islands;
  /* This is supported in cctools 465 and later.  The macro test
     above prevents using it in earlier build environments.  */
  #define ASM_OUTPUT_MAX_SKIP_ALIGN(FILE,LOG,MAX_SKIP)          \
@@ -5595,7 +6181,7 @@ index d3a59f42c37..9fab84fd82e 100644
          fprintf ((FILE), "\t.p2align %d\n", (LOG));           \
        else                                                    \
          fprintf ((FILE), "\t.p2align %d,,%d\n", (LOG), (MAX_SKIP)); \
-@@ -456,6 +468,9 @@ do {									\
+@@ -456,6 +486,9 @@ do {									\
     this will need to be modified similar to the x86 case.  */
  #define TARGET_FOLD_BUILTIN SUBTARGET_FOLD_BUILTIN
  
@@ -5772,7 +6358,7 @@ index c3b98315503..d30e5dec980 100644
        }
  
 diff --git a/gcc/config/rs6000/rs6000.c b/gcc/config/rs6000/rs6000.c
-index cb8d737976b..6523dd2dabc 100644
+index cb8d737976b..2a8932d80aa 100644
 --- a/gcc/config/rs6000/rs6000.c
 +++ b/gcc/config/rs6000/rs6000.c
 @@ -7671,6 +7671,104 @@ address_offset (rtx op)
@@ -5895,6 +6481,15 @@ index cb8d737976b..6523dd2dabc 100644
    if (!rs6000_offsettable_memref_p (op, mode, false))
      return false;
  
+@@ -21330,7 +21434,7 @@ print_operand (FILE *file, rtx x, int code)
+ 	{
+ 	  const char *name = XSTR (x, 0);
+ #if TARGET_MACHO
+-	  if (darwin_emit_branch_islands
++	  if (darwin_symbol_stubs
+ 	      && MACHOPIC_INDIRECT
+ 	      && machopic_classify_symbol (x) == MACHOPIC_UNDEFINED_FUNCTION)
+ 	    name = machopic_indirection_name (x, /*stub_p=*/true);
 @@ -37762,25 +37866,31 @@ rs6000_can_inline_p (tree caller, tree callee)
    tree caller_tree = DECL_FUNCTION_SPECIFIC_TARGET (caller);
    tree callee_tree = DECL_FUNCTION_SPECIFIC_TARGET (callee);
@@ -5939,6 +6534,16 @@ index cb8d737976b..6523dd2dabc 100644
  	ret = true;
      }
  
+@@ -38273,7 +38383,8 @@ rs6000_call_darwin_1 (rtx value, rtx func_desc, rtx tlsarg,
+   if ((cookie_val & CALL_LONG) != 0
+       && GET_CODE (func_desc) == SYMBOL_REF)
+     {
+-      if (darwin_emit_branch_islands && TARGET_32BIT)
++      /* FIXME: the longcall opt should not hang off picsymbol stubs.  */
++      if (darwin_symbol_stubs && TARGET_32BIT)
+ 	make_island = true; /* Do nothing yet, retain the CALL_LONG flag.  */
+       else
+ 	{
 diff --git a/gcc/config/rs6000/rs6000.md b/gcc/config/rs6000/rs6000.md
 index ad80592765d..b3469a17f27 100644
 --- a/gcc/config/rs6000/rs6000.md
@@ -14419,10 +15024,67 @@ index 29f6cdc4667..33b4be79c0f 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..19272a43775 100644
+index bc11ae4ae0b..b21af8bcab5 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,651 @@
+@@ -1,3 +1,708 @@
++2019-10-30  Iain Sandoe  <iain@sandoe.co.uk>
++
++	Backport from mainline.
++	2019-10-22  Iain Sandoe  <iain@sandoe.co.uk>
++
++	* gcc.dg/Wnonnull.c: Provide prototypes for strlen and memcpy.
++	Use __SIZE_TYPE__ instead of size_t.
++
++	Backport from mainline.
++	2019-10-19  Iain Sandoe  <iain@sandoe.co.uk>
++
++	* gcc.dg/Wnonnull.c: Add attributed function declarations for
++	memcpy and strlen for Darwin.
++
++2019-10-30  Iain Sandoe  <iain@sandoe.co.uk>
++
++	Backport from mainline.
++	2019-10-13  Iain Sandoe  <iain@sandoe.co.uk>
++
++	* gcc.target/i386/indirect-thunk-1.c: Allow 'l' or 'L' in
++	indirection label prefix, for Darwin.
++	* gcc.target/i386/indirect-thunk-2.c: Likewise.
++	* gcc.target/i386/indirect-thunk-3.c: Likewise.
++	* gcc.target/i386/indirect-thunk-4.c: Likewise.
++	* gcc.target/i386/indirect-thunk-attr-1.c: Likewise.
++	* gcc.target/i386/indirect-thunk-attr-2.c: Likewise.
++	* gcc.target/i386/indirect-thunk-attr-3.c: Likewise.
++	* gcc.target/i386/indirect-thunk-attr-4.c: Likewise.
++	* gcc.target/i386/indirect-thunk-attr-5.c: Likewise.
++	* gcc.target/i386/indirect-thunk-attr-6.c: Likewise.
++	* gcc.target/i386/indirect-thunk-extern-1.c: Likewise.
++	* gcc.target/i386/indirect-thunk-extern-2.c: Likewise.
++	* gcc.target/i386/indirect-thunk-extern-3.c: Likewise.
++	* gcc.target/i386/indirect-thunk-extern-4.c: Likewise.
++	* gcc.target/i386/indirect-thunk-inline-1.c: Likewise.
++	* gcc.target/i386/indirect-thunk-inline-2.c: Likewise.
++	* gcc.target/i386/indirect-thunk-inline-3.c: Likewise.
++	* gcc.target/i386/indirect-thunk-inline-4.c: Likewise.
++	* gcc.target/i386/pr32219-2.c: Likewise.
++	* gcc.target/i386/pr32219-3.c: Likewise.
++	* gcc.target/i386/pr32219-4.c: Likewise.
++	* gcc.target/i386/pr32219-7.c: Likewise.
++	* gcc.target/i386/pr32219-8.c: Likewise.
++	* gcc.target/i386/ret-thunk-14.c: Likewise.
++	* gcc.target/i386/ret-thunk-15.c: Likewise.
++	* gcc.target/i386/ret-thunk-9.c: Likewise.
++
++2019-10-30  Iain Sandoe  <iain@sandoe.co.uk>
++
++	Backport from mainline.
++	2019-08-13  Iain Sandoe  <iain@sandoe.co.uk>
++
++	* obj-c++.dg/stubify-1.mm: Rename symbol stub option.
++	* obj-c++.dg/stubify-2.mm: Likewise.
++	* objc.dg/stubify-1.m: Likewise.
++	* objc.dg/stubify-2.m: Likewise.
++
 +2019-10-30  Dragan Mladjenovic  <dmladjenovic@wavecomp.com>
 +
 +	Backport from mainline
@@ -15074,7 +15736,7 @@ index bc11ae4ae0b..19272a43775 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +1075,7 @@
+@@ -427,7 +1132,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -15083,7 +15745,7 @@ index bc11ae4ae0b..19272a43775 100644
  	(check_effective_target_powerpc_p8vector_ok): No support for Darwin.
  	(check_effective_target_powerpc_p9vector_ok): Likewise.
  	(check_effective_target_powerpc_float128_sw_ok): Likewise.
-@@ -720,7 +1368,7 @@
+@@ -720,7 +1425,7 @@
  
  	Backport from mainline
  	PR fortran/91077
@@ -15092,7 +15754,7 @@ index bc11ae4ae0b..19272a43775 100644
  
  2019-07-05  Szabolcs Nagy  <szabolcs.nagy@arm.com>
  
-@@ -969,7 +1617,7 @@
+@@ -969,7 +1674,7 @@
         * gcc.target/i386/pr82699-6.c: Likewise
         * gcc.target/i386/returninst1.c: Likewise
         * gcc.target/i386/returninst2.c: Likewise
@@ -15101,7 +15763,7 @@ index bc11ae4ae0b..19272a43775 100644
  
  2019-05-30  Iain Sandoe  <iain@sandoe.co.uk>
  
-@@ -1131,7 +1779,7 @@
+@@ -1131,7 +1836,7 @@
  
  	Backport from trunk
  	PR fortran/90498
@@ -15110,7 +15772,7 @@ index bc11ae4ae0b..19272a43775 100644
  
  2019-05-17  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -3801,21 +4449,21 @@
+@@ -3801,21 +4506,21 @@
  2019-02-23  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88117
@@ -15139,7 +15801,7 @@ index bc11ae4ae0b..19272a43775 100644
  
  2019-02-22  David Malcolm  <dmalcolm@redhat.com>
  
-@@ -4444,7 +5092,7 @@
+@@ -4444,7 +5149,7 @@
  2019-02-09  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/89200
@@ -15148,7 +15810,7 @@ index bc11ae4ae0b..19272a43775 100644
  
  2019-02-09  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -4704,17 +5352,17 @@
+@@ -4704,17 +5409,17 @@
  2019-02-02  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88393
@@ -17505,6 +18167,34 @@ index 00000000000..878a491fc36
 +#endif
 +  return 0;
 +}
+diff --git a/gcc/testsuite/gcc.dg/Wnonnull.c b/gcc/testsuite/gcc.dg/Wnonnull.c
+index be89a5a755c..0ed06aabe68 100644
+--- a/gcc/testsuite/gcc.dg/Wnonnull.c
++++ b/gcc/testsuite/gcc.dg/Wnonnull.c
+@@ -2,7 +2,10 @@
+    { dg-do compile }
+    { dg-options "-O2 -Wall" } */
+ 
+-#include <string.h>
++extern __SIZE_TYPE__ strlen (const char *__s)
++			     __attribute ((pure)) __attribute ((nonnull (1)));
++extern void *memcpy (void *__restrict __dest, const void *__restrict __src,
++		     __SIZE_TYPE__ __n) __attribute ((nonnull (1, 2)));
+ 
+ char buf[100];
+ 
+@@ -14,9 +17,9 @@ struct Test
+ 
+ __attribute ((nonnull (1, 2)))
+ inline char*
+-my_strcpy (char *restrict dst, const char *restrict src, size_t size)
++my_strcpy (char *restrict dst, const char *restrict src, __SIZE_TYPE__ size)
+ {
+-  size_t len = strlen (src);        /* { dg-warning "argument 1 null where non-null expected" } */
++  __SIZE_TYPE__ len = strlen (src); /* { dg-warning "argument 1 null where non-null expected" } */
+   if (len < size)
+     memcpy (dst, src, len + 1);     /* { dg-warning "argument 2 null where non-null expected" } */
+   else
 diff --git a/gcc/testsuite/gcc.dg/gomp/pr90637.c b/gcc/testsuite/gcc.dg/gomp/pr90637.c
 new file mode 100644
 index 00000000000..983e03e7574
@@ -18129,6 +18819,290 @@ index 00000000000..6a303345eb9
 +    __builtin_abort ();
 +  __builtin_exit (0);
 +}
+diff --git a/gcc/testsuite/gcc.target/i386/indirect-thunk-1.c b/gcc/testsuite/gcc.target/i386/indirect-thunk-1.c
+index 052d24dabdf..e2914a8333c 100644
+--- a/gcc/testsuite/gcc.target/i386/indirect-thunk-1.c
++++ b/gcc/testsuite/gcc.target/i386/indirect-thunk-1.c
+@@ -14,7 +14,7 @@ male_indirect_jump (long offset)
+ 
+ /* { dg-final { scan-assembler "mov(?:l|q)\[ \t\]*dispatch" { target *-*-linux* } } } */
+ /* { dg-final { scan-assembler {movq[ \t]*_dispatch} { target { lp64 && *-*-darwin* } } } } */
+-/* { dg-final { scan-assembler {movl[ \t]*l_dispatch\$non_lazy_ptr-L[0-9]+\$pb} { target { ia32 && *-*-darwin* } } } } */
++/* { dg-final { scan-assembler {movl[ \t]*[Ll]_dispatch\$non_lazy_ptr-L[0-9]+\$pb} { target { ia32 && *-*-darwin* } } } } */
+ /* { dg-final { scan-assembler "jmp\[ \t\]*_?__x86_indirect_thunk_(r|e)ax" } } */
+ /* { dg-final { scan-assembler {jmp[ \t]*\.?LIND} } } */
+ /* { dg-final { scan-assembler {call[ \t]*\.?LIND} } } */
+diff --git a/gcc/testsuite/gcc.target/i386/indirect-thunk-2.c b/gcc/testsuite/gcc.target/i386/indirect-thunk-2.c
+index 2cfbd728b4b..d2b7c74b143 100644
+--- a/gcc/testsuite/gcc.target/i386/indirect-thunk-2.c
++++ b/gcc/testsuite/gcc.target/i386/indirect-thunk-2.c
+@@ -14,7 +14,7 @@ male_indirect_jump (long offset)
+ 
+ /* { dg-final { scan-assembler "mov(?:l|q)\[ \t\]*dispatch" { target *-*-linux* } } } */
+ /* { dg-final { scan-assembler {movq[ \t]*_dispatch} { target { lp64 && *-*-darwin* } } } } */
+-/* { dg-final { scan-assembler {movl[ \t]*l_dispatch\$non_lazy_ptr-L[0-9]+\$pb} { target { ia32 && *-*-darwin* } } } } */
++/* { dg-final { scan-assembler {movl[ \t]*[Ll]_dispatch\$non_lazy_ptr-L[0-9]+\$pb} { target { ia32 && *-*-darwin* } } } } */
+ /* { dg-final { scan-assembler "jmp\[ \t\]*_?__x86_indirect_thunk_(r|e)ax" } } */
+ /* { dg-final { scan-assembler {jmp[ \t]*\.?LIND} } } */
+ /* { dg-final { scan-assembler {call[ \t]*\.?LIND} } } */
+diff --git a/gcc/testsuite/gcc.target/i386/indirect-thunk-3.c b/gcc/testsuite/gcc.target/i386/indirect-thunk-3.c
+index 59bb08613b7..129fb2125f0 100644
+--- a/gcc/testsuite/gcc.target/i386/indirect-thunk-3.c
++++ b/gcc/testsuite/gcc.target/i386/indirect-thunk-3.c
+@@ -15,7 +15,7 @@ male_indirect_jump (long offset)
+ 
+ /* { dg-final { scan-assembler "mov(?:l|q)\[ \t\]*dispatch" { target *-*-linux* } } } */
+ /* { dg-final { scan-assembler {movq[ \t]*_dispatch} { target { lp64 && *-*-darwin* } } } } */
+-/* { dg-final { scan-assembler {movl[ \t]*l_dispatch\$non_lazy_ptr-L[0-9]+\$pb} { target { ia32 && *-*-darwin* } } } } */
++/* { dg-final { scan-assembler {movl[ \t]*[Ll]_dispatch\$non_lazy_ptr-L[0-9]+\$pb} { target { ia32 && *-*-darwin* } } } } */
+ /* { dg-final { scan-assembler "call\[ \t\]*_?__x86_indirect_thunk_(r|e)ax" } } */
+ /* { dg-final { scan-assembler {jmp[ \t]*\.?LIND} } } */
+ /* { dg-final { scan-assembler {call[ \t]*\.?LIND} } } */
+diff --git a/gcc/testsuite/gcc.target/i386/indirect-thunk-4.c b/gcc/testsuite/gcc.target/i386/indirect-thunk-4.c
+index 59640fab8f1..01996fb029f 100644
+--- a/gcc/testsuite/gcc.target/i386/indirect-thunk-4.c
++++ b/gcc/testsuite/gcc.target/i386/indirect-thunk-4.c
+@@ -15,7 +15,7 @@ male_indirect_jump (long offset)
+ 
+ /* { dg-final { scan-assembler "mov(?:l|q)\[ \t\]*dispatch" { target *-*-linux* } } } */
+ /* { dg-final { scan-assembler {movq[ \t]*_dispatch} { target { lp64 && *-*-darwin* } } } } */
+-/* { dg-final { scan-assembler {movl[ \t]*l_dispatch\$non_lazy_ptr-L[0-9]+\$pb} { target { ia32 && *-*-darwin* } } } } */
++/* { dg-final { scan-assembler {movl[ \t]*[Ll]_dispatch\$non_lazy_ptr-L[0-9]+\$pb} { target { ia32 && *-*-darwin* } } } } */
+ /* { dg-final { scan-assembler "call\[ \t\]*_?__x86_indirect_thunk_(r|e)ax" } } */
+ /* { dg-final { scan-assembler {jmp[ \t]*\.?LIND} } } */
+ /* { dg-final { scan-assembler {call[ \t]*\.?LIND} } } */
+diff --git a/gcc/testsuite/gcc.target/i386/indirect-thunk-attr-1.c b/gcc/testsuite/gcc.target/i386/indirect-thunk-attr-1.c
+index 8620bf1d836..1493e18243b 100644
+--- a/gcc/testsuite/gcc.target/i386/indirect-thunk-attr-1.c
++++ b/gcc/testsuite/gcc.target/i386/indirect-thunk-attr-1.c
+@@ -17,7 +17,7 @@ male_indirect_jump (long offset)
+ 
+ /* { dg-final { scan-assembler "mov(?:l|q)\[ \t\]*dispatch" { target *-*-linux* } } } */
+ /* { dg-final { scan-assembler {movq[ \t]*_dispatch} { target { lp64 && *-*-darwin* } } } } */
+-/* { dg-final { scan-assembler {movl[ \t]*l_dispatch\$non_lazy_ptr-L[0-9]+\$pb} { target { ia32 && *-*-darwin* } } } } */
++/* { dg-final { scan-assembler {movl[ \t]*[Ll]_dispatch\$non_lazy_ptr-L[0-9]+\$pb} { target { ia32 && *-*-darwin* } } } } */
+ /* { dg-final { scan-assembler "jmp\[ \t\]*_?__x86_indirect_thunk_(r|e)ax" } } */
+ /* { dg-final { scan-assembler {jmp[ \t]*\.?LIND} } } */
+ /* { dg-final { scan-assembler {call[ \t]*\.?LIND} } } */
+diff --git a/gcc/testsuite/gcc.target/i386/indirect-thunk-attr-2.c b/gcc/testsuite/gcc.target/i386/indirect-thunk-attr-2.c
+index 42e83416965..3ddd4980b69 100644
+--- a/gcc/testsuite/gcc.target/i386/indirect-thunk-attr-2.c
++++ b/gcc/testsuite/gcc.target/i386/indirect-thunk-attr-2.c
+@@ -15,7 +15,7 @@ male_indirect_jump (long offset)
+ 
+ /* { dg-final { scan-assembler "mov(?:l|q)\[ \t\]*dispatch" { target *-*-linux* } } } */
+ /* { dg-final { scan-assembler {movq[ \t]*_dispatch} { target { lp64 && *-*-darwin* } } } } */
+-/* { dg-final { scan-assembler {movl[ \t]*l_dispatch\$non_lazy_ptr-L[0-9]+\$pb} { target { ia32 && *-*-darwin* } } } } */
++/* { dg-final { scan-assembler {movl[ \t]*[Ll]_dispatch\$non_lazy_ptr-L[0-9]+\$pb} { target { ia32 && *-*-darwin* } } } } */
+ /* { dg-final { scan-assembler "jmp\[ \t\]*_?__x86_indirect_thunk_(r|e)ax" } } */
+ /* { dg-final { scan-assembler {jmp[ \t]*\.?LIND} } } */
+ /* { dg-final { scan-assembler {call[ \t]*\.?LIND} } } */
+diff --git a/gcc/testsuite/gcc.target/i386/indirect-thunk-attr-3.c b/gcc/testsuite/gcc.target/i386/indirect-thunk-attr-3.c
+index 6a9c51337d9..43d5f95b4fb 100644
+--- a/gcc/testsuite/gcc.target/i386/indirect-thunk-attr-3.c
++++ b/gcc/testsuite/gcc.target/i386/indirect-thunk-attr-3.c
+@@ -17,7 +17,7 @@ male_indirect_jump (long offset)
+ 
+ /* { dg-final { scan-assembler "mov(?:l|q)\[ \t\]*dispatch" { target *-*-linux* } } } */
+ /* { dg-final { scan-assembler {movq[ \t]*_dispatch} { target { lp64 && *-*-darwin* } } } } */
+-/* { dg-final { scan-assembler {movl[ \t]*l_dispatch\$non_lazy_ptr-L[0-9]+\$pb} { target { ia32 && *-*-darwin* } } } } */
++/* { dg-final { scan-assembler {movl[ \t]*[Ll]_dispatch\$non_lazy_ptr-L[0-9]+\$pb} { target { ia32 && *-*-darwin* } } } } */
+ /* { dg-final { scan-assembler-times {jmp[ \t]*\.?LIND} 2 } } */
+ /* { dg-final { scan-assembler-times {call[ \t]*\.?LIND} 2 } } */
+ /* { dg-final { scan-assembler {\tpause} } } */
+diff --git a/gcc/testsuite/gcc.target/i386/indirect-thunk-attr-4.c b/gcc/testsuite/gcc.target/i386/indirect-thunk-attr-4.c
+index 85ec57b5a8d..bf62636c63c 100644
+--- a/gcc/testsuite/gcc.target/i386/indirect-thunk-attr-4.c
++++ b/gcc/testsuite/gcc.target/i386/indirect-thunk-attr-4.c
+@@ -16,7 +16,7 @@ male_indirect_jump (long offset)
+ 
+ /* { dg-final { scan-assembler "mov(?:l|q)\[ \t\]*dispatch" { target *-*-linux* } } } */
+ /* { dg-final { scan-assembler {movq[ \t]*_dispatch} { target { lp64 && *-*-darwin* } } } } */
+-/* { dg-final { scan-assembler {movl[ \t]*l_dispatch\$non_lazy_ptr-L[0-9]+\$pb} { target { ia32 && *-*-darwin* } } } } */
++/* { dg-final { scan-assembler {movl[ \t]*[Ll]_dispatch\$non_lazy_ptr-L[0-9]+\$pb} { target { ia32 && *-*-darwin* } } } } */
+ /* { dg-final { scan-assembler-times {jmp[ \t]*\.?LIND} 2 } } */
+ /* { dg-final { scan-assembler-times {call[ \t]*\.?LIND} 2 } } */
+ /* { dg-final { scan-assembler {\tpause} } } */
+diff --git a/gcc/testsuite/gcc.target/i386/indirect-thunk-attr-5.c b/gcc/testsuite/gcc.target/i386/indirect-thunk-attr-5.c
+index db1d8fb9979..27ba82932e4 100644
+--- a/gcc/testsuite/gcc.target/i386/indirect-thunk-attr-5.c
++++ b/gcc/testsuite/gcc.target/i386/indirect-thunk-attr-5.c
+@@ -17,7 +17,7 @@ male_indirect_jump (long offset)
+ 
+ /* { dg-final { scan-assembler "mov(?:l|q)\[ \t\]*dispatch" { target *-*-linux* } } } */
+ /* { dg-final { scan-assembler {movq[ \t]*_dispatch} { target { lp64 && *-*-darwin* } } } } */
+-/* { dg-final { scan-assembler {movl[ \t]*l_dispatch\$non_lazy_ptr-L[0-9]+\$pb} { target { ia32 && *-*-darwin* } } } } */
++/* { dg-final { scan-assembler {movl[ \t]*[Ll]_dispatch\$non_lazy_ptr-L[0-9]+\$pb} { target { ia32 && *-*-darwin* } } } } */
+ /* { dg-final { scan-assembler "call\[ \t\]*_?__x86_indirect_thunk_(r|e)ax" } } */
+ /* { dg-final { scan-assembler-not {\t(lfence|pause)} } } */
+ /* { dg-final { scan-assembler-not {jmp[ \t]*\.?LIND} } } */
+diff --git a/gcc/testsuite/gcc.target/i386/indirect-thunk-attr-6.c b/gcc/testsuite/gcc.target/i386/indirect-thunk-attr-6.c
+index 24fc43b3ba5..bdf15d36bac 100644
+--- a/gcc/testsuite/gcc.target/i386/indirect-thunk-attr-6.c
++++ b/gcc/testsuite/gcc.target/i386/indirect-thunk-attr-6.c
+@@ -16,7 +16,7 @@ male_indirect_jump (long offset)
+ 
+ /* { dg-final { scan-assembler "mov(?:l|q)\[ \t\]*dispatch" { target *-*-linux* } } } */
+ /* { dg-final { scan-assembler {movq[ \t]*_dispatch} { target { lp64 && *-*-darwin* } } } } */
+-/* { dg-final { scan-assembler {movl[ \t]*l_dispatch\$non_lazy_ptr-L[0-9]+\$pb} { target { ia32 && *-*-darwin* } } } } */
++/* { dg-final { scan-assembler {movl[ \t]*[Ll]_dispatch\$non_lazy_ptr-L[0-9]+\$pb} { target { ia32 && *-*-darwin* } } } } */
+ /* { dg-final { scan-assembler "call\[ \t\]*_?__x86_indirect_thunk_(r|e)ax" } } */
+ /* { dg-final { scan-assembler-not {\t(lfence|pause)} } } */
+ /* { dg-final { scan-assembler-not {jmp[ \t]*\.?LIND} } } */
+diff --git a/gcc/testsuite/gcc.target/i386/indirect-thunk-extern-1.c b/gcc/testsuite/gcc.target/i386/indirect-thunk-extern-1.c
+index 3dc02f80ff5..c30c331c23b 100644
+--- a/gcc/testsuite/gcc.target/i386/indirect-thunk-extern-1.c
++++ b/gcc/testsuite/gcc.target/i386/indirect-thunk-extern-1.c
+@@ -14,7 +14,7 @@ male_indirect_jump (long offset)
+ 
+ /* { dg-final { scan-assembler "mov(?:l|q)\[ \t\]*dispatch" { target *-*-linux* } } } */
+ /* { dg-final { scan-assembler {movq[ \t]*_dispatch} { target { lp64 && *-*-darwin* } } } } */
+-/* { dg-final { scan-assembler {movl[ \t]*l_dispatch\$non_lazy_ptr-L[0-9]+\$pb} { target { ia32 && *-*-darwin* } } } } */
++/* { dg-final { scan-assembler {movl[ \t]*[Ll]_dispatch\$non_lazy_ptr-L[0-9]+\$pb} { target { ia32 && *-*-darwin* } } } } */
+ /* { dg-final { scan-assembler "jmp\[ \t\]*_?__x86_indirect_thunk_(r|e)ax" } } */
+ /* { dg-final { scan-assembler-not {\t(lfence|pause)} } } */
+ /* { dg-final { scan-assembler-not {jmp[ \t]*\.?LIND} } } */
+diff --git a/gcc/testsuite/gcc.target/i386/indirect-thunk-extern-2.c b/gcc/testsuite/gcc.target/i386/indirect-thunk-extern-2.c
+index c4adae23dd3..7edd7313027 100644
+--- a/gcc/testsuite/gcc.target/i386/indirect-thunk-extern-2.c
++++ b/gcc/testsuite/gcc.target/i386/indirect-thunk-extern-2.c
+@@ -14,7 +14,7 @@ male_indirect_jump (long offset)
+ 
+ /* { dg-final { scan-assembler "mov(?:l|q)\[ \t\]*dispatch" { target *-*-linux* } } } */
+ /* { dg-final { scan-assembler {movq[ \t]*_dispatch} { target { lp64 && *-*-darwin* } } } } */
+-/* { dg-final { scan-assembler {movl[ \t]*l_dispatch\$non_lazy_ptr-L[0-9]+\$pb} { target { ia32 && *-*-darwin* } } } } */
++/* { dg-final { scan-assembler {movl[ \t]*[Ll]_dispatch\$non_lazy_ptr-L[0-9]+\$pb} { target { ia32 && *-*-darwin* } } } } */
+ /* { dg-final { scan-assembler "jmp\[ \t\]*_?__x86_indirect_thunk_(r|e)ax" } } */
+ /* { dg-final { scan-assembler-not {\t(lfence|pause)} } } */
+ /* { dg-final { scan-assembler-not {jmp[ \t]*\.?LIND} } } */
+diff --git a/gcc/testsuite/gcc.target/i386/indirect-thunk-extern-3.c b/gcc/testsuite/gcc.target/i386/indirect-thunk-extern-3.c
+index b800b40b055..8e391797c5e 100644
+--- a/gcc/testsuite/gcc.target/i386/indirect-thunk-extern-3.c
++++ b/gcc/testsuite/gcc.target/i386/indirect-thunk-extern-3.c
+@@ -15,7 +15,7 @@ male_indirect_jump (long offset)
+ 
+ /* { dg-final { scan-assembler "mov(?:l|q)\[ \t\]*dispatch" { target *-*-linux* } } } */
+ /* { dg-final { scan-assembler {movq[ \t]*_dispatch} { target { lp64 && *-*-darwin* } } } } */
+-/* { dg-final { scan-assembler {movl[ \t]*l_dispatch\$non_lazy_ptr-L[0-9]+\$pb} { target { ia32 && *-*-darwin* } } } } */
++/* { dg-final { scan-assembler {movl[ \t]*[Ll]_dispatch\$non_lazy_ptr-L[0-9]+\$pb} { target { ia32 && *-*-darwin* } } } } */
+ /* { dg-final { scan-assembler "call\[ \t\]*_?__x86_indirect_thunk_(r|e)ax" } } */
+ /* { dg-final { scan-assembler-not {\t(lfence|pause)} } } */
+ /* { dg-final { scan-assembler-not {jmp[ \t]*\.?LIND} } } */
+diff --git a/gcc/testsuite/gcc.target/i386/indirect-thunk-extern-4.c b/gcc/testsuite/gcc.target/i386/indirect-thunk-extern-4.c
+index f68902ddc25..6033d13e8a7 100644
+--- a/gcc/testsuite/gcc.target/i386/indirect-thunk-extern-4.c
++++ b/gcc/testsuite/gcc.target/i386/indirect-thunk-extern-4.c
+@@ -15,6 +15,6 @@ male_indirect_jump (long offset)
+ 
+ /* { dg-final { scan-assembler "mov(?:l|q)\[ \t\]*dispatch" { target *-*-linux* } } } */
+ /* { dg-final { scan-assembler {movq[ \t]*_dispatch} { target { lp64 && *-*-darwin* } } } } */
+-/* { dg-final { scan-assembler {movl[ \t]*l_dispatch\$non_lazy_ptr-L[0-9]+\$pb} { target { ia32 && *-*-darwin* } } } } */
++/* { dg-final { scan-assembler {movl[ \t]*[Ll]_dispatch\$non_lazy_ptr-L[0-9]+\$pb} { target { ia32 && *-*-darwin* } } } } */
+ /* { dg-final { scan-assembler "call\[ \t\]*_?__x86_indirect_thunk_(r|e)ax" } } */
+ /* { dg-final { scan-assembler-not {\t(lfence|pause)} } } */
+diff --git a/gcc/testsuite/gcc.target/i386/indirect-thunk-inline-1.c b/gcc/testsuite/gcc.target/i386/indirect-thunk-inline-1.c
+index 7301490d49c..ef3577d2934 100644
+--- a/gcc/testsuite/gcc.target/i386/indirect-thunk-inline-1.c
++++ b/gcc/testsuite/gcc.target/i386/indirect-thunk-inline-1.c
+@@ -14,7 +14,7 @@ male_indirect_jump (long offset)
+ 
+ /* { dg-final { scan-assembler "mov(?:l|q)\[ \t\]*dispatch" { target *-*-linux* } } } */
+ /* { dg-final { scan-assembler {movq[ \t]*_dispatch} { target { lp64 && *-*-darwin* } } } } */
+-/* { dg-final { scan-assembler {movl[ \t]*l_dispatch\$non_lazy_ptr-L[0-9]+\$pb} { target { ia32 && *-*-darwin* } } } } */
++/* { dg-final { scan-assembler {movl[ \t]*[Ll]_dispatch\$non_lazy_ptr-L[0-9]+\$pb} { target { ia32 && *-*-darwin* } } } } */
+ /* { dg-final { scan-assembler {jmp[ \t]*\.?LIND} } } */
+ /* { dg-final { scan-assembler {call[ \t]*\.?LIND} } } */
+ /* { dg-final { scan-assembler {\tpause} } } */
+diff --git a/gcc/testsuite/gcc.target/i386/indirect-thunk-inline-2.c b/gcc/testsuite/gcc.target/i386/indirect-thunk-inline-2.c
+index ef1ba02978d..f26a5fb9015 100644
+--- a/gcc/testsuite/gcc.target/i386/indirect-thunk-inline-2.c
++++ b/gcc/testsuite/gcc.target/i386/indirect-thunk-inline-2.c
+@@ -14,7 +14,7 @@ male_indirect_jump (long offset)
+ 
+ /* { dg-final { scan-assembler "mov(?:l|q)\[ \t\]*dispatch" { target *-*-linux* } } } */
+ /* { dg-final { scan-assembler {movq[ \t]*_dispatch} { target { lp64 && *-*-darwin* } } } } */
+-/* { dg-final { scan-assembler {movl[ \t]*l_dispatch\$non_lazy_ptr-L[0-9]+\$pb} { target { ia32 && *-*-darwin* } } } } */
++/* { dg-final { scan-assembler {movl[ \t]*[Ll]_dispatch\$non_lazy_ptr-L[0-9]+\$pb} { target { ia32 && *-*-darwin* } } } } */
+ /* { dg-final { scan-assembler {jmp[ \t]*\.?LIND} } } */
+ /* { dg-final { scan-assembler {call[ \t]*\.?LIND} } } */
+ /* { dg-final { scan-assembler {\tpause} } } */
+diff --git a/gcc/testsuite/gcc.target/i386/indirect-thunk-inline-3.c b/gcc/testsuite/gcc.target/i386/indirect-thunk-inline-3.c
+index 58de8f0393e..3b8a1eeaffb 100644
+--- a/gcc/testsuite/gcc.target/i386/indirect-thunk-inline-3.c
++++ b/gcc/testsuite/gcc.target/i386/indirect-thunk-inline-3.c
+@@ -15,7 +15,7 @@ male_indirect_jump (long offset)
+ 
+ /* { dg-final { scan-assembler "mov(?:l|q)\[ \t\]*dispatch" { target *-*-linux* } } } */
+ /* { dg-final { scan-assembler {movq[ \t]*_dispatch} { target { lp64 && *-*-darwin* } } } } */
+-/* { dg-final { scan-assembler {movl[ \t]*l_dispatch\$non_lazy_ptr-L[0-9]+\$pb} { target { ia32 && *-*-darwin* } } } } */
++/* { dg-final { scan-assembler {movl[ \t]*[Ll]_dispatch\$non_lazy_ptr-L[0-9]+\$pb} { target { ia32 && *-*-darwin* } } } } */
+ /* { dg-final { scan-assembler-times {jmp[ \t]*\.?LIND} 2 } } */
+ /* { dg-final { scan-assembler-times {call[ \t]*\.?LIND} 2 } } */
+ /* { dg-final { scan-assembler-times {\tpause} 1 } } */
+diff --git a/gcc/testsuite/gcc.target/i386/indirect-thunk-inline-4.c b/gcc/testsuite/gcc.target/i386/indirect-thunk-inline-4.c
+index 3be3ce07527..40d31803a2e 100644
+--- a/gcc/testsuite/gcc.target/i386/indirect-thunk-inline-4.c
++++ b/gcc/testsuite/gcc.target/i386/indirect-thunk-inline-4.c
+@@ -15,7 +15,7 @@ male_indirect_jump (long offset)
+ 
+ /* { dg-final { scan-assembler "mov(?:l|q)\[ \t\]*dispatch" { target *-*-linux* } } } */
+ /* { dg-final { scan-assembler {movq[ \t]*_dispatch} { target { lp64 && *-*-darwin* } } } } */
+-/* { dg-final { scan-assembler {movl[ \t]*l_dispatch\$non_lazy_ptr-L[0-9]+\$pb} { target { ia32 && *-*-darwin* } } } } */
++/* { dg-final { scan-assembler {movl[ \t]*[Ll]_dispatch\$non_lazy_ptr-L[0-9]+\$pb} { target { ia32 && *-*-darwin* } } } } */
+ /* { dg-final { scan-assembler-times {jmp[ \t]*\.?LIND} 2 } } */
+ /* { dg-final { scan-assembler-times {call[ \t]*\.?LIND} 2 } } */
+ /* { dg-final { scan-assembler-times {\tpause} 1 } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr32219-2.c b/gcc/testsuite/gcc.target/i386/pr32219-2.c
+index cb587db47aa..b6212f7dd4c 100644
+--- a/gcc/testsuite/gcc.target/i386/pr32219-2.c
++++ b/gcc/testsuite/gcc.target/i386/pr32219-2.c
+@@ -20,5 +20,5 @@ foo ()
+ /* { dg-final { scan-assembler "movl\[ \t\]xxx@GOT\\(%\[^,\]*\\), %" { target { ia32 && { ! *-*-darwin* } } } } } */
+ 
+ /* Darwin m32 defaults to PIC but common symbols need to be indirected.  */
+-/* { dg-final { scan-assembler {movl[ \t]l_xxx\$non_lazy_ptr-L1\$pb\(%eax\),[ \t]%eax} { target { ia32 && *-*-darwin* } } } } */
++/* { dg-final { scan-assembler {movl[ \t][Ll]_xxx\$non_lazy_ptr-L1\$pb\(%eax\),[ \t]%eax} { target { ia32 && *-*-darwin* } } } } */
+ 
+diff --git a/gcc/testsuite/gcc.target/i386/pr32219-3.c b/gcc/testsuite/gcc.target/i386/pr32219-3.c
+index f9cfca7d72c..a1b0df28d0d 100644
+--- a/gcc/testsuite/gcc.target/i386/pr32219-3.c
++++ b/gcc/testsuite/gcc.target/i386/pr32219-3.c
+@@ -24,4 +24,4 @@ foo ()
+ 
+ /* For Darwin, we need PIC to allow PIE, but also we must indirect weak symbols so that
+    they can be indirected.  Again, dyld knows how to deal with this. */
+-/* { dg-final { scan-assembler {movl[ \t]l_xxx\$non_lazy_ptr-L1\$pb\(%eax\),[ \t]%eax} { target { ia32 && *-*-darwin* } } } } */
++/* { dg-final { scan-assembler {movl[ \t][Ll]_xxx\$non_lazy_ptr-L1\$pb\(%eax\),[ \t]%eax} { target { ia32 && *-*-darwin* } } } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr32219-4.c b/gcc/testsuite/gcc.target/i386/pr32219-4.c
+index 0ac0674ae17..31d0710b7ed 100644
+--- a/gcc/testsuite/gcc.target/i386/pr32219-4.c
++++ b/gcc/testsuite/gcc.target/i386/pr32219-4.c
+@@ -21,4 +21,4 @@ foo ()
+ /* { dg-final { scan-assembler "movl\[ \t\]xxx@GOT\\(%\[^,\]*\\), %" { target { ia32 && { ! *-*-darwin* } } } } } */
+ 
+ /* Darwin m32 equivalent (indirect and PIC).  */
+-/* { dg-final { scan-assembler {movl[ \t]l_xxx\$non_lazy_ptr-L1\$pb\(%eax\),[ \t]%eax} { target { ia32 && *-*-darwin* } } } } */
++/* { dg-final { scan-assembler {movl[ \t][Ll]_xxx\$non_lazy_ptr-L1\$pb\(%eax\),[ \t]%eax} { target { ia32 && *-*-darwin* } } } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr32219-7.c b/gcc/testsuite/gcc.target/i386/pr32219-7.c
+index 469e9e38b07..20fef8dd063 100644
+--- a/gcc/testsuite/gcc.target/i386/pr32219-7.c
++++ b/gcc/testsuite/gcc.target/i386/pr32219-7.c
+@@ -23,4 +23,4 @@ foo ()
+ /* { dg-final { scan-assembler-not "movl\[ \t\]xxx@GOT\\(%\[^,\]*\\), %eax" { target { ia32 && { ! *-*-darwin* } } } } } */
+ 
+ /* Darwin m32 equivalent (indirect and PIC).  */
+-/* { dg-final { scan-assembler {movl[ \t]l_xxx\$non_lazy_ptr-L1\$pb\(%eax\),[ \t]%eax} { target { ia32 && *-*-darwin* } } } } */
++/* { dg-final { scan-assembler {movl[ \t][Ll]_xxx\$non_lazy_ptr-L1\$pb\(%eax\),[ \t]%eax} { target { ia32 && *-*-darwin* } } } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr32219-8.c b/gcc/testsuite/gcc.target/i386/pr32219-8.c
+index 75eb287fc59..767928f049e 100644
+--- a/gcc/testsuite/gcc.target/i386/pr32219-8.c
++++ b/gcc/testsuite/gcc.target/i386/pr32219-8.c
+@@ -21,4 +21,4 @@ foo ()
+ /* { dg-final { scan-assembler "movl\[ \t\]xxx@GOT\\(%\[^,\]*\\), %" { target { ia32 && { ! *-*-darwin* } } } } } */
+ 
+ /* Darwin m32 default to PIC but needs indirection for the weak symbol.  */
+-/* { dg-final { scan-assembler {movl[ \t]l_xxx\$non_lazy_ptr-L1\$pb\(%eax\),[ \t]%eax} { target { ia32 && *-*-darwin* } } } } */
++/* { dg-final { scan-assembler {movl[ \t][Ll]_xxx\$non_lazy_ptr-L1\$pb\(%eax\),[ \t]%eax} { target { ia32 && *-*-darwin* } } } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pr87853.c b/gcc/testsuite/gcc.target/i386/pr87853.c
 new file mode 100644
 index 00000000000..9a288879679
@@ -18238,6 +19212,43 @@ index 00000000000..b1232195b45
 +      d = b[e];
 +  a (d);
 +}
+diff --git a/gcc/testsuite/gcc.target/i386/ret-thunk-14.c b/gcc/testsuite/gcc.target/i386/ret-thunk-14.c
+index 3eaddee8c34..881f541772c 100644
+--- a/gcc/testsuite/gcc.target/i386/ret-thunk-14.c
++++ b/gcc/testsuite/gcc.target/i386/ret-thunk-14.c
+@@ -19,6 +19,6 @@ foo (void)
+ /* { dg-final { scan-assembler {call[ \t]*\.?LIND} } } */
+ /* { dg-final { scan-assembler "mov(?:l|q)\[ \t\]*bar" { target *-*-linux* } } } */
+ /* { dg-final { scan-assembler {movq[ \t]*_bar} { target { lp64 && *-*-darwin* } } } } */
+-/* { dg-final { scan-assembler {movl[ \t]*l_bar\$non_lazy_ptr-L[0-9]+\$pb} { target { ia32 && *-*-darwin* } } } } */
++/* { dg-final { scan-assembler {movl[ \t]*[Ll]_bar\$non_lazy_ptr-L[0-9]+\$pb} { target { ia32 && *-*-darwin* } } } } */
+ /* { dg-final { scan-assembler "call\[ \t\]*_?__x86_indirect_thunk_(r|e)ax" } } */
+ /* { dg-final { scan-assembler-not "pushq\[ \t\]%rax" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/ret-thunk-15.c b/gcc/testsuite/gcc.target/i386/ret-thunk-15.c
+index 2793f72cdc1..5687440bf31 100644
+--- a/gcc/testsuite/gcc.target/i386/ret-thunk-15.c
++++ b/gcc/testsuite/gcc.target/i386/ret-thunk-15.c
+@@ -19,6 +19,6 @@ foo (void)
+ /* { dg-final { scan-assembler-times {\tlfence} 1 } } */
+ /* { dg-final { scan-assembler "mov(?:l|q)\[ \t\]*bar" { target *-*-linux* } } } */
+ /* { dg-final { scan-assembler {movq[ \t]*_bar} { target { lp64 && *-*-darwin* } } } } */
+-/* { dg-final { scan-assembler {movl[ \t]*l_bar\$non_lazy_ptr-L[0-9]+\$pb} { target { ia32 && *-*-darwin* } } } } */
++/* { dg-final { scan-assembler {movl[ \t]*[Ll]_bar\$non_lazy_ptr-L[0-9]+\$pb} { target { ia32 && *-*-darwin* } } } } */
+ /* { dg-final { scan-assembler "call\[ \t\]*_?__x86_indirect_thunk_(r|e)ax" } } */
+ /* { dg-final { scan-assembler-not "pushq\[ \t\]%rax" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/ret-thunk-9.c b/gcc/testsuite/gcc.target/i386/ret-thunk-9.c
+index 63af6741e05..3d4497000dc 100644
+--- a/gcc/testsuite/gcc.target/i386/ret-thunk-9.c
++++ b/gcc/testsuite/gcc.target/i386/ret-thunk-9.c
+@@ -17,7 +17,7 @@ foo (void)
+ /* { dg-final { scan-assembler "_?__x86_return_thunk:" } } */
+ /* { dg-final { scan-assembler "mov(?:l|q)\[ \t\]*bar" { target *-*-linux* } } } */
+ /* { dg-final { scan-assembler {movq[ \t]*_bar} { target { lp64 && *-*-darwin* } } } } */
+-/* { dg-final { scan-assembler {movl[ \t]*l_bar\$non_lazy_ptr-L[0-9]+\$pb} { target { ia32 && *-*-darwin* } } } } */
++/* { dg-final { scan-assembler {movl[ \t]*[Ll]_bar\$non_lazy_ptr-L[0-9]+\$pb} { target { ia32 && *-*-darwin* } } } } */
+ /* { dg-final { scan-assembler-times {\tpause} 2 } } */
+ /* { dg-final { scan-assembler-times {\tlfence} 2 } } */
+ /* { dg-final { scan-assembler "call\[ \t\]*_?__x86_indirect_thunk_(r|e)ax" } } */
 diff --git a/gcc/testsuite/gcc.target/mips/cfgcleanup-jalr1.c b/gcc/testsuite/gcc.target/mips/cfgcleanup-jalr1.c
 new file mode 100644
 index 00000000000..24c18262b1a
@@ -20306,6 +21317,58 @@ index 00000000000..fa93f1d7ff2
 +      b = y - x + 1
 +   end
 +end
+diff --git a/gcc/testsuite/obj-c++.dg/stubify-1.mm b/gcc/testsuite/obj-c++.dg/stubify-1.mm
+index c2355437afc..46ce3fb8158 100644
+--- a/gcc/testsuite/obj-c++.dg/stubify-1.mm
++++ b/gcc/testsuite/obj-c++.dg/stubify-1.mm
+@@ -4,7 +4,7 @@
+ /* { dg-do compile { target *-*-darwin* } } */
+ /* { dg-skip-if "" { *-*-* } { "-fgnu-runtime" } { "" } } */
+ /* { dg-require-effective-target ilp32 } */
+-/* { dg-options "-Os -mdynamic-no-pic -fno-exceptions -mmacosx-version-min=10.4" } */
++/* { dg-options "-Os -mdynamic-no-pic -fno-exceptions -mmacosx-version-min=10.4 -msymbol-stubs" } */
+ 
+ typedef struct objc_object { } *id ;
+ int x = 41 ;
+diff --git a/gcc/testsuite/obj-c++.dg/stubify-2.mm b/gcc/testsuite/obj-c++.dg/stubify-2.mm
+index a9f66cac5d2..dd88974e259 100644
+--- a/gcc/testsuite/obj-c++.dg/stubify-2.mm
++++ b/gcc/testsuite/obj-c++.dg/stubify-2.mm
+@@ -4,7 +4,7 @@
+ /* { dg-do compile { target *-*-darwin* } } */
+ /* { dg-skip-if "" { *-*-* } { "-fgnu-runtime" } { "" } } */
+ /* { dg-require-effective-target ilp32 } */
+-/* { dg-options "-mdynamic-no-pic -fdump-rtl-jump -mmacosx-version-min=10.4" } */
++/* { dg-options "-mdynamic-no-pic -fdump-rtl-jump -mmacosx-version-min=10.4 -msymbol-stubs" } */
+ 
+ typedef struct objc_object { } *id ;
+ int x = 41 ;
+diff --git a/gcc/testsuite/objc.dg/stubify-1.m b/gcc/testsuite/objc.dg/stubify-1.m
+index 91bf73a14f7..97d5b598380 100644
+--- a/gcc/testsuite/objc.dg/stubify-1.m
++++ b/gcc/testsuite/objc.dg/stubify-1.m
+@@ -4,7 +4,7 @@
+ /* { dg-do compile { target *-*-darwin* } } */
+ /* { dg-skip-if "" { *-*-* } { "-fgnu-runtime" } { "" } } */
+ /* { dg-require-effective-target ilp32 } */
+-/* { dg-options "-Os -mdynamic-no-pic -mmacosx-version-min=10.4" } */
++/* { dg-options "-Os -mdynamic-no-pic -mmacosx-version-min=10.4 -msymbol-stubs" } */
+ 
+ typedef struct objc_object { } *id ;
+ int x = 41 ;
+diff --git a/gcc/testsuite/objc.dg/stubify-2.m b/gcc/testsuite/objc.dg/stubify-2.m
+index eaf4b964e4b..a07992a5a9e 100644
+--- a/gcc/testsuite/objc.dg/stubify-2.m
++++ b/gcc/testsuite/objc.dg/stubify-2.m
+@@ -4,7 +4,7 @@
+ /* { dg-do compile { target powerpc*-*-darwin* } } */
+ /* { dg-skip-if "" { *-*-* } { "-fgnu-runtime" } { "" } } */
+ /* { dg-require-effective-target ilp32 } */
+-/* { dg-options "-mdynamic-no-pic -fdump-rtl-jump -mmacosx-version-min=10.4" } */
++/* { dg-options "-mdynamic-no-pic -fdump-rtl-jump -mmacosx-version-min=10.4 -msymbol-stubs" } */
+ 
+ typedef struct objc_object { } *id ;
+ int x = 41 ;
 diff --git a/gcc/tree-cfg.c b/gcc/tree-cfg.c
 index 32be59acfb0..d27cc65f883 100644
 --- a/gcc/tree-cfg.c
@@ -21238,10 +22301,35 @@ index d650511c66f..331edfcb1c3 100644
  extern tree vector_cst_elt (const_tree, unsigned int);
  
 diff --git a/libgcc/ChangeLog b/libgcc/ChangeLog
-index 348c54c0b3e..bbf9b59926b 100644
+index 348c54c0b3e..ca2819f0e45 100644
 --- a/libgcc/ChangeLog
 +++ b/libgcc/ChangeLog
-@@ -1,3 +1,20 @@
+@@ -1,3 +1,45 @@
++2019-10-30  Iain Sandoe  <iain@sandoe.co.uk>
++
++	Backport from mainline.
++	2019-07-03  Iain Sandoe  <iain@sandoe.co.uk>
++
++	* config.host (powerpc-*-darwin*,powerpc64-*-darwin*): Revise crt
++	list.
++	* config/rs6000/t-darwin: Build crt3_2 for older systems.  Revise
++	mmacosx-version-min for crts to run across all system versions.
++	* config/rs6000/t-darwin64 (LIB2ADD): Remove.
++	* config/t-darwin: Revise mmacosx-version-min for crts to run across
++	system versions >= 10.4.
++
++2019-10-30  Iain Sandoe  <iain@sandoe.co.uk>
++
++	Backport from mainline.
++	2019-06-25  Iain Sandoe  <iain@sandoe.co.uk>
++
++	* config.host: Add libef_ppc.a to the extra files for powerpc-darwin.
++	* config/rs6000/t-darwin: (PPC_ENDFILE_SRC, PPC_ENDFILE_OBJS): New.
++	Build objects for the out of line save/restore register functions
++	so that they can be used for any supported Darwin version.
++	* config/t-darwin: Default the build Darwin version to Darwin8
++	(MacOS 10.4).
++
 +2019-10-15  John David Anglin  <danglin@gcc.gnu.org>
 +
 +	* config/pa/fptr.c (_dl_read_access_allowed): Change argument to
@@ -21262,6 +22350,26 @@ index 348c54c0b3e..bbf9b59926b 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
+diff --git a/libgcc/config.host b/libgcc/config.host
+index 91abc84da03..0f15fda3612 100644
+--- a/libgcc/config.host
++++ b/libgcc/config.host
+@@ -1072,12 +1072,12 @@ powerpc-*-darwin*)
+ 	  md_unwind_header=rs6000/darwin-unwind.h
+ 	  ;;
+ 	esac
+-	tmake_file="$tmake_file rs6000/t-ibm-ldouble"
+-	extra_parts="$extra_parts crt2.o"
++	tmake_file="$tmake_file rs6000/t-ppc64-fp rs6000/t-ibm-ldouble"
++	extra_parts="$extra_parts crt2.o crt3_2.o libef_ppc.a dw_ppc.o"
+ 	;;
+ powerpc64-*-darwin*)
+ 	tmake_file="$tmake_file rs6000/t-darwin64 rs6000/t-ibm-ldouble"
+-	extra_parts="$extra_parts crt2.o"
++	extra_parts="$extra_parts crt2.o crt3_2.o libef_ppc.a dw_ppc.o"
+ 	;;
+ powerpc*-*-freebsd*)
+ 	tmake_file="${tmake_file} rs6000/t-ppccomm rs6000/t-savresfgpr rs6000/t-crtstuff rs6000/t-freebsd t-softfp-sfdf t-softfp-excl t-softfp"
 diff --git a/libgcc/config/pa/fptr.c b/libgcc/config/pa/fptr.c
 index 53440051730..5beb0b832e2 100644
 --- a/libgcc/config/pa/fptr.c
@@ -21381,6 +22489,128 @@ index 1e46f5018b9..36040e9e78d 100644
  	.exit
  	.procend
  #endif
+diff --git a/libgcc/config/rs6000/t-darwin b/libgcc/config/rs6000/t-darwin
+index 61da0bdf13a..8b513bdb1d7 100644
+--- a/libgcc/config/rs6000/t-darwin
++++ b/libgcc/config/rs6000/t-darwin
+@@ -1,25 +1,57 @@
+-DARWIN_EXTRA_CRT_BUILD_CFLAGS = -mlongcall -mmacosx-version-min=10.4
+ 
+ crt2.o: $(srcdir)/config/rs6000/darwin-crt2.c
+-	$(crt_compile) $(DARWIN_EXTRA_CRT_BUILD_CFLAGS) -c $<
++	$(crt_compile) -mmacosx-version-min=10.1 -c $<
++
++# The sources for this indicate that there are some parts that
++# don't apply >= 10.4
++crt3_2.o: $(srcdir)/config/darwin-crt3.c
++	$(crt_compile) -mmacosx-version-min=10.1 -c $<
++
++# The outlined register save/restore functions need to run anywhere, and
++# they must be leaf functions suitable for use in an endfile.
++
++PPC_ENDFILE_SRC = \
++  $(srcdir)/config/rs6000/darwin-gpsave.S \
++  $(srcdir)/config/rs6000/darwin-fpsave.S \
++  $(srcdir)/config/rs6000/darwin-vecsave.S
++
++PPC_ENDFILE_OBJS = \
++ darwin-gpsave.o \
++ darwin-fpsave.o \
++ darwin-vecsave.o
++
++darwin-gpsave.o: $(srcdir)/config/rs6000/darwin-gpsave.S
++	$(crt_compile) -mmacosx-version-min=10.1 -c $<
++
++darwin-fpsave.o: $(srcdir)/config/rs6000/darwin-fpsave.S
++	$(crt_compile) -mmacosx-version-min=10.1 -c $<
++
++darwin-vecsave.o: $(srcdir)/config/rs6000/darwin-vecsave.S
++	$(crt_compile) -mmacosx-version-min=10.1 -c $<
++
++# We build these into a library, so that they are only linked as needed and not
++# forced into every object.
++
++libef_ppc.a: $(PPC_ENDFILE_OBJS)
++	$(AR_CREATE_FOR_TARGET) $@ $(PPC_ENDFILE_OBJS)
++	$(RANLIB_FOR_TARGET) $@
++
++dw_ppc.o: $(srcdir)/config/rs6000/darwin-world.S
++	$(crt_compile) -mmacosx-version-min=10.1 -c $<
+ 
+ LIB2ADD = $(srcdir)/config/rs6000/darwin-tramp.S \
+ 	  $(srcdir)/config/darwin-64.c \
+-	  $(srcdir)/config/rs6000/darwin-fpsave.S  \
+-	  $(srcdir)/config/rs6000/darwin-gpsave.S  \
+-	  $(srcdir)/config/rs6000/darwin-world.S \
+-	  $(srcdir)/config/rs6000/ppc64-fp.c
+-
+-LIB2ADD_ST = \
+-	  $(srcdir)/config/rs6000/darwin-vecsave.S
++	  $(srcdir)/config/rs6000/darwin-world.S
+ 
+ # The .S files above are designed to run on all processors, even though
+ # they use AltiVec instructions.
+ # -Wa is used because -force_cpusubtype_ALL doesn't work with -dynamiclib.
+-# -mmacosx-version-min=10.4 is used to provide compatibility for code from
+-# earlier OSX versions.
+-HOST_LIBGCC2_CFLAGS += -Wa,-force_cpusubtype_ALL -mmacosx-version-min=10.4
+ 
++HOST_LIBGCC2_CFLAGS += -Wa,-force_cpusubtype_ALL
++
++# Although the default for 10.4 is G3, we need the unwinder to be built
++# with vector support so that the "save/rest_world" outlined functions are
++# correctly invoked.
+ unwind-dw2_s.o: HOST_LIBGCC2_CFLAGS += -maltivec
+ unwind-dw2.o: HOST_LIBGCC2_CFLAGS += -maltivec
+ 
+diff --git a/libgcc/config/rs6000/t-darwin64 b/libgcc/config/rs6000/t-darwin64
+index 50f09d6de1a..999679fc3cb 100644
+--- a/libgcc/config/rs6000/t-darwin64
++++ b/libgcc/config/rs6000/t-darwin64
+@@ -1,7 +1 @@
+ LIB2_SIDITI_CONV_FUNCS = yes
+-
+-LIB2ADD = $(srcdir)/config/rs6000/darwin-tramp.S \
+-	  $(srcdir)/config/darwin-64.c \
+-	  $(srcdir)/config/rs6000/darwin-fpsave.S \
+-	  $(srcdir)/config/rs6000/darwin-gpsave.S \
+-	  $(srcdir)/config/rs6000/darwin-world.S
+diff --git a/libgcc/config/t-darwin b/libgcc/config/t-darwin
+index 8340ea2bfe4..3b5e3428958 100644
+--- a/libgcc/config/t-darwin
++++ b/libgcc/config/t-darwin
+@@ -1,21 +1,15 @@
+ # Set this as a minimum (unless overriden by arch t-files) since it's a
+ # reasonable lowest common denominator that works for all our archs.
+-HOST_LIBGCC2_CFLAGS += -mmacosx-version-min=10.5
++HOST_LIBGCC2_CFLAGS += -mmacosx-version-min=10.4
+ 
+ crt3.o: $(srcdir)/config/darwin-crt3.c
+-	$(crt_compile) $(DARWIN_EXTRA_CRT_BUILD_CFLAGS) -c $<
++	$(crt_compile) -mmacosx-version-min=10.4 -c $<
+ 
+ crttms.o: $(srcdir)/config/darwin-crt-tm.c
+-	$(crt_compile) $(DARWIN_EXTRA_CRT_BUILD_CFLAGS) -DSTART -c $<
++	$(crt_compile) -mmacosx-version-min=10.4 -DSTART -c $<
+ 
+ crttme.o: $(srcdir)/config/darwin-crt-tm.c
+-	$(crt_compile) $(DARWIN_EXTRA_CRT_BUILD_CFLAGS) -DEND -c $<
+-
+-# -pipe because there's an assembler bug, 4077127, which causes
+-# it to not properly process the first # directive, causing temporary
+-# file names to appear in stabs, causing the bootstrap to fail.  Using -pipe
+-# works around this by not having any temporary file names.
+-HOST_LIBGCC2_CFLAGS += -pipe
++	$(crt_compile) -mmacosx-version-min=10.4 -DEND -c $<
+ 
+ # Use unwind-dw2-fde-darwin
+ LIB2ADDEH = $(srcdir)/unwind-dw2.c $(srcdir)/config/unwind-dw2-fde-darwin.c \
+@@ -23,4 +17,4 @@ LIB2ADDEH = $(srcdir)/unwind-dw2.c $(srcdir)/config/unwind-dw2-fde-darwin.c \
+ 
+ # Patch to __Unwind_Find_Enclosing_Function for Darwin10.
+ d10-uwfef.o: $(srcdir)/config/darwin10-unwind-find-enc-func.c
+-	$(crt_compile) $(DARWIN_EXTRA_CRT_BUILD_CFLAGS) -mmacosx-version-min=10.6 -c $<
++	$(crt_compile) -mmacosx-version-min=10.6 -c $<
 diff --git a/libgfortran/ChangeLog b/libgfortran/ChangeLog
 index 48f9886896e..70ed7487eb7 100644
 --- a/libgfortran/ChangeLog
