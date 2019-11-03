@@ -14,13 +14,15 @@ burnus (2):
       Fortran] PR91586 Fix ICE on invalid code with CLASS
       Fortran] PR91863 - fix call to bind(C) with array descriptor
 
-danglin (6):
+danglin (8):
       * config/pa/pa.c (pa_trampoline_init): Remove spurious extended 	character.
       * config/pa/lib2funcs.S (__gcc_plt_call): Load branch target to %r21. 	Load PIC register after branch target.  Fix white space. 	* config/pa/milli64.S ($$dyncall): Separate LINUX and non LINUX 	implementations.  Load PIC register after branch target.  Don't 	clobber function pointer when it points to function descriptor. 	Use nullification instead of branch in LINUX implementation.
       * config/pa/pa.c (pa_output_call): Load descriptor address to register 	%r22.  Load function address before global pointer. 	(pa_attr_length_indirect_call): Adjust length of inline versions of 	$$dyncall. 	(pa_output_indirect_call): Remove fast inline version of $$dyncall 	before normal cases.  Update inline $$dyncall sequences to preserve 	function descriptor address in register %r22. 	(TRAMPOLINE_CODE_SIZE): Adjust. 	(pa_asm_trampoline_template): Revise 32-bit trampoline.  Don't assume 	register %r22 contains trampoline address. 	(pa_trampoline_init): Adjust offsets. 	(pa_trampoline_adjust_address): Likewise. 	* config/pa/pa.h (TRAMPOLINE_SIZE): Adjust 32-bit size.
       * config/pa/fptr.c (_dl_read_access_allowed): Change argument to 	unsigned int.  Adjust callers. 	(__canonicalize_funcptr_for_compare): Change plabel type to volatile 	unsigned int *.  Load relocation offset before function pointer. 	Add barrier to ensure ordering.
       * config/pa/pa.c (pa_output_indirect_call): Fix typos in last change.
       * config/abi/post/hppa-linux-gnu/baseline_symbols.txt: Update.
+      Backport from mainline 	2019-10-03  John David Anglin  <danglin@gcc.gnu.org>
+      Backport from mainline 	2019-10-03  John David Anglin  <danglin@gcc.gnu.org>
 
 draganm (3):
       Backprot fix for uninitialised use in mips_split_move
@@ -45,7 +47,9 @@ edlinger (3):
 emsr (1):
       2019-09-09  Edward Smith-Rowland  <3dw4rd@verizon.net>
 
-gccadmin (81):
+gccadmin (83):
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -629,10 +633,25 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..37a7432c3e8 100644
+index 7f6557d8018..b534127d232 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,1132 @@
+@@ -1,3 +1,1147 @@
++2019-11-01  John David Anglin  <danglin@gcc.gnu.org>
++
++	Backport from mainline
++	2019-10-03  John David Anglin  <danglin@gcc.gnu.org>
++
++	* config/pa/pa.c (pa_output_call): Remove 64-bit sibcall sequence.
++	(pa_attr_length_call): Adjust length for 64-bit plabel sequence.
++
++2019-11-01  John David Anglin  <danglin@gcc.gnu.org>
++
++	Backport from mainline
++	2019-10-03  John David Anglin  <danglin@gcc.gnu.org>
++
++	* config/pa/pa.h (MAX_PCREL17F_OFFSET): Adjust.
++
 +2019-10-30  Iain Sandoe  <iain@sandoe.co.uk>
 +
 +	Backport from mainline
@@ -1765,7 +1784,7 @@ index 7f6557d8018..37a7432c3e8 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +1642,7 @@
+@@ -513,7 +1657,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -5282,10 +5301,65 @@ index 2ae1f7e0440..a9b0c86be07 100644
    "cfc1\t%0,$31")
  
 diff --git a/gcc/config/pa/pa.c b/gcc/config/pa/pa.c
-index 707ae5822c3..5784fc076f5 100644
+index 707ae5822c3..6d75f26e02f 100644
 --- a/gcc/config/pa/pa.c
 +++ b/gcc/config/pa/pa.c
-@@ -8052,20 +8052,22 @@ pa_output_call (rtx_insn *insn, rtx call_dest, int sibcall)
+@@ -7856,7 +7856,7 @@ pa_attr_length_call (rtx_insn *insn, int sibcall)
+ 
+   /* 64-bit plabel sequence.  */
+   else if (TARGET_64BIT && !local_call)
+-    length += sibcall ? 28 : 24;
++    length += 24;
+ 
+   /* non-pic long absolute branch sequence.  */
+   else if ((TARGET_LONG_ABS_CALL || local_call) && !flag_pic)
+@@ -7928,38 +7928,24 @@ pa_output_call (rtx_insn *insn, rtx call_dest, int sibcall)
+ 	  xoperands[0] = pa_get_deferred_plabel (call_dest);
+ 	  xoperands[1] = gen_label_rtx ();
+ 
+-	  /* If this isn't a sibcall, we put the load of %r27 into the
+-	     delay slot.  We can't do this in a sibcall as we don't
+-	     have a second call-clobbered scratch register available.
+-	     We don't need to do anything when generating fast indirect
+-	     calls.  */
+-	  if (seq_length != 0 && !sibcall)
++	  /* Put the load of %r27 into the delay slot.  We don't need to
++	     do anything when generating fast indirect calls.  */
++	  if (seq_length != 0)
+ 	    {
+ 	      final_scan_insn (NEXT_INSN (insn), asm_out_file,
+ 			       optimize, 0, NULL);
+ 
+ 	      /* Now delete the delay insn.  */
+ 	      SET_INSN_DELETED (NEXT_INSN (insn));
+-	      seq_length = 0;
+ 	    }
+ 
+ 	  output_asm_insn ("addil LT'%0,%%r27", xoperands);
+ 	  output_asm_insn ("ldd RT'%0(%%r1),%%r1", xoperands);
+ 	  output_asm_insn ("ldd 0(%%r1),%%r1", xoperands);
+-
+-	  if (sibcall)
+-	    {
+-	      output_asm_insn ("ldd 24(%%r1),%%r27", xoperands);
+-	      output_asm_insn ("ldd 16(%%r1),%%r1", xoperands);
+-	      output_asm_insn ("bve (%%r1)", xoperands);
+-	    }
+-	  else
+-	    {
+-	      output_asm_insn ("ldd 16(%%r1),%%r2", xoperands);
+-	      output_asm_insn ("bve,l (%%r2),%%r2", xoperands);
+-	      output_asm_insn ("ldd 24(%%r1),%%r27", xoperands);
+-	      seq_length = 1;
+-	    }
++	  output_asm_insn ("ldd 16(%%r1),%%r2", xoperands);
++	  output_asm_insn ("bve,l (%%r2),%%r2", xoperands);
++	  output_asm_insn ("ldd 24(%%r1),%%r27", xoperands);
++	  seq_length = 1;
+ 	}
+       else
+ 	{
+@@ -8052,20 +8038,22 @@ pa_output_call (rtx_insn *insn, rtx call_dest, int sibcall)
  		    {
  		      output_asm_insn ("addil LT'%0,%%r19", xoperands);
  		      output_asm_insn ("ldw RT'%0(%%r1),%%r1", xoperands);
@@ -5314,7 +5388,7 @@ index 707ae5822c3..5784fc076f5 100644
  
  		  if (!sibcall && !TARGET_PA_20)
  		    {
-@@ -8158,10 +8160,6 @@ pa_attr_length_indirect_call (rtx_insn *insn)
+@@ -8158,10 +8146,6 @@ pa_attr_length_indirect_call (rtx_insn *insn)
    if (TARGET_PORTABLE_RUNTIME)
      return 16;
  
@@ -5325,7 +5399,7 @@ index 707ae5822c3..5784fc076f5 100644
    if (!TARGET_LONG_CALLS
        && ((TARGET_PA_20 && !TARGET_SOM && distance < 7600000)
  	  || distance < MAX_PCREL17F_OFFSET))
-@@ -8171,12 +8169,15 @@ pa_attr_length_indirect_call (rtx_insn *insn)
+@@ -8171,12 +8155,15 @@ pa_attr_length_indirect_call (rtx_insn *insn)
    if (!flag_pic)
      return 12;
  
@@ -5346,7 +5420,7 @@ index 707ae5822c3..5784fc076f5 100644
  
    /* Long PIC pc-relative call.  */
    return 20;
-@@ -8214,22 +8215,6 @@ pa_output_indirect_call (rtx_insn *insn, rtx call_dest)
+@@ -8214,22 +8201,6 @@ pa_output_indirect_call (rtx_insn *insn, rtx call_dest)
        return "blr %%r0,%%r2\n\tbv,n %%r0(%%r31)";
      }
  
@@ -5369,7 +5443,7 @@ index 707ae5822c3..5784fc076f5 100644
    /* Now the normal case -- we can reach $$dyncall directly or
       we're sure that we can get there via a long-branch stub. 
  
-@@ -8258,35 +8243,40 @@ pa_output_indirect_call (rtx_insn *insn, rtx call_dest)
+@@ -8258,35 +8229,40 @@ pa_output_indirect_call (rtx_insn *insn, rtx call_dest)
        return "ble R'$$dyncall(%%sr4,%%r2)\n\tcopy %%r31,%%r2";
      }
  
@@ -5429,7 +5503,7 @@ index 707ae5822c3..5784fc076f5 100644
    /* We need a long PIC call to $$dyncall.  */
    xoperands[0] = gen_rtx_SYMBOL_REF (Pmode, "$$dyncall");
    xoperands[1] = gen_rtx_REG (Pmode, 2);
-@@ -10048,7 +10038,7 @@ pa_modes_tieable_p (machine_mode mode1, machine_mode mode2)
+@@ -10048,7 +10024,7 @@ pa_modes_tieable_p (machine_mode mode1, machine_mode mode2)
  
  /* Length in units of the trampoline instruction code.  */
  
@@ -5438,7 +5512,7 @@ index 707ae5822c3..5784fc076f5 100644
  
  
  /* Output assembler code for a block containing the constant parts
-@@ -10069,27 +10059,46 @@ pa_asm_trampoline_template (FILE *f)
+@@ -10069,27 +10045,46 @@ pa_asm_trampoline_template (FILE *f)
  {
    if (!TARGET_64BIT)
      {
@@ -5497,7 +5571,7 @@ index 707ae5822c3..5784fc076f5 100644
  	}
        fputs ("\t.word	0\n", f);
        fputs ("\t.word	0\n", f);
-@@ -10103,11 +10112,11 @@ pa_asm_trampoline_template (FILE *f)
+@@ -10103,11 +10098,11 @@ pa_asm_trampoline_template (FILE *f)
        fputs ("\t.dword 0\n", f);
        fputs ("\t.dword 0\n", f);
        fputs ("\tmfia	%r31\n", f);
@@ -5513,7 +5587,7 @@ index 707ae5822c3..5784fc076f5 100644
        fputs ("\t.dword 0  ; fptr\n", f);
        fputs ("\t.dword 0  ; static link\n", f);
      }
-@@ -10117,10 +10126,10 @@ pa_asm_trampoline_template (FILE *f)
+@@ -10117,10 +10112,10 @@ pa_asm_trampoline_template (FILE *f)
     FNADDR is an RTX for the address of the function's pure code.
     CXT is an RTX for the static chain value for the function.
  
@@ -5528,7 +5602,7 @@ index 707ae5822c3..5784fc076f5 100644
     words create a plabel for the indirect call to the trampoline.
  
     A similar sequence is used for the 64-bit port but the plabel is
-@@ -10146,15 +10155,15 @@ pa_trampoline_init (rtx m_tramp, tree fndecl, rtx chain_value)
+@@ -10146,15 +10141,15 @@ pa_trampoline_init (rtx m_tramp, tree fndecl, rtx chain_value)
  
    if (!TARGET_64BIT)
      {
@@ -5548,7 +5622,7 @@ index 707ae5822c3..5784fc076f5 100644
        emit_move_insn (tmp, gen_rtx_REG (Pmode, 19));
  
        /* fdc and fic only use registers for the address to flush,
-@@ -10206,20 +10215,20 @@ pa_trampoline_init (rtx m_tramp, tree fndecl, rtx chain_value)
+@@ -10206,20 +10201,20 @@ pa_trampoline_init (rtx m_tramp, tree fndecl, rtx chain_value)
      }
  
  #ifdef HAVE_ENABLE_EXECUTE_STACK
@@ -5573,7 +5647,7 @@ index 707ae5822c3..5784fc076f5 100644
  }
  
 diff --git a/gcc/config/pa/pa.h b/gcc/config/pa/pa.h
-index 561efa51882..385feb27033 100644
+index 561efa51882..24739e56f97 100644
 --- a/gcc/config/pa/pa.h
 +++ b/gcc/config/pa/pa.h
 @@ -689,7 +689,7 @@ extern int may_call_alloca;
@@ -5584,6 +5658,26 @@ index 561efa51882..385feb27033 100644
 +#define TRAMPOLINE_SIZE (TARGET_64BIT ? 72 : 64)
  
  /* Alignment required by the trampoline.  */
+ 
+@@ -1293,13 +1293,12 @@ do {									     \
+ #endif
+ 
+ /* The maximum offset in bytes for a PA 1.X pc-relative call to the
+-   head of the preceding stub table.  The selected offsets have been
+-   chosen so that approximately one call stub is allocated for every
+-   86.7 instructions.  A long branch stub is two instructions when
+-   not generating PIC code.  For HP-UX and ELF targets, PIC stubs are
+-   seven and four instructions, respectively.  */  
+-#define MAX_PCREL17F_OFFSET \
+-  (flag_pic ? (TARGET_HPUX ? 198164 : 221312) : 240000)
++   head of the preceding stub table.  A long branch stub is two or three
++   instructions for non-PIC and PIC, respectively.  Import stubs are
++   seven and five instructions for HP-UX and ELF targets, respectively.
++   The default stub group size for ELF targets is 217856 bytes.
++   FIXME: We need an option to set the maximum offset.  */  
++#define MAX_PCREL17F_OFFSET (TARGET_HPUX ? 198164 : 217856)
+ 
+ #define NEED_INDICATE_EXEC_STACK 0
  
 diff --git a/gcc/config/riscv/riscv-protos.h b/gcc/config/riscv/riscv-protos.h
 index 8b510f87df8..5b0bbdd7cb4 100644
