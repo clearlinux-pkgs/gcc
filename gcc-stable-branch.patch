@@ -180,8 +180,9 @@ ian (3):
       PR go/91621     mksysinfo: change test == to test =
       compiler: don't inline integer expressions with named types
 
-iii (1):
+iii (2):
       Move jump threading before reload
+      S/390: Fix failing RTL check in s390_canonicalize_comparison
 
 jakub (24):
       * BASE-VER: Set to 9.2.1.
@@ -646,10 +647,16 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..4a24d37df06 100644
+index 7f6557d8018..5690dd9566f 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,1177 @@
+@@ -1,3 +1,1183 @@
++2019-11-06  Ilya Leoshkevich  <iii@linux.ibm.com>
++	Backport from mainline
++
++	* config/s390/s390.c (s390_canonicalize_comparison): Use XEXP
++	(*op0, 1) instead of XEXP (*op1, 0).
++
 +2019-11-05  Segher Boessenkool  <segher@kernel.crashing.org>
 +
 +	Backport from trunk
@@ -1827,7 +1834,7 @@ index 7f6557d8018..4a24d37df06 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +1687,7 @@
+@@ -513,7 +1693,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -7315,7 +7322,7 @@ index ab41cb883f3..502edea719b 100644
    PROCESSOR_max
  };
 diff --git a/gcc/config/s390/s390.c b/gcc/config/s390/s390.c
-index fc4571d0d0c..081b67d8dab 100644
+index fc4571d0d0c..db3f94978ec 100644
 --- a/gcc/config/s390/s390.c
 +++ b/gcc/config/s390/s390.c
 @@ -337,7 +337,7 @@ const struct s390_processor processor_table[] =
@@ -7340,6 +7347,15 @@ index fc4571d0d0c..081b67d8dab 100644
      }
    if (fcode >= S390_OVERLOADED_BUILTIN_VAR_OFFSET
        && fcode < S390_ALL_BUILTIN_MAX)
+@@ -1782,7 +1788,7 @@ s390_canonicalize_comparison (int *code, rtx *op0, rtx *op1,
+       if (*code == EQ)
+ 	new_code = reversed_comparison_code_parts (GET_CODE (*op0),
+ 						   XEXP (*op0, 0),
+-						   XEXP (*op1, 0), NULL);
++						   XEXP (*op0, 1), NULL);
+       else
+ 	new_code = GET_CODE (*op0);
+ 
 @@ -1795,7 +1801,7 @@ s390_canonicalize_comparison (int *code, rtx *op0, rtx *op1,
      }
  
@@ -15321,10 +15337,15 @@ index 29f6cdc4667..33b4be79c0f 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..7a0bedbfb30 100644
+index bc11ae4ae0b..b88ed2e8e91 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,778 @@
+@@ -1,3 +1,783 @@
++2019-11-06  Ilya Leoshkevich  <iii@linux.ibm.com>
++
++	Backport from mainline
++	* gcc.target/s390/sigfpe-eh.c: New test.
++
 +2019-11-05  Andreas Krebbel  <krebbel@linux.ibm.com>
 +
 +	Backport from mainline
@@ -16103,7 +16124,7 @@ index bc11ae4ae0b..7a0bedbfb30 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +1202,7 @@
+@@ -427,7 +1207,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -16112,7 +16133,7 @@ index bc11ae4ae0b..7a0bedbfb30 100644
  	(check_effective_target_powerpc_p8vector_ok): No support for Darwin.
  	(check_effective_target_powerpc_p9vector_ok): Likewise.
  	(check_effective_target_powerpc_float128_sw_ok): Likewise.
-@@ -720,7 +1495,7 @@
+@@ -720,7 +1500,7 @@
  
  	Backport from mainline
  	PR fortran/91077
@@ -16121,7 +16142,7 @@ index bc11ae4ae0b..7a0bedbfb30 100644
  
  2019-07-05  Szabolcs Nagy  <szabolcs.nagy@arm.com>
  
-@@ -969,7 +1744,7 @@
+@@ -969,7 +1749,7 @@
         * gcc.target/i386/pr82699-6.c: Likewise
         * gcc.target/i386/returninst1.c: Likewise
         * gcc.target/i386/returninst2.c: Likewise
@@ -16130,7 +16151,7 @@ index bc11ae4ae0b..7a0bedbfb30 100644
  
  2019-05-30  Iain Sandoe  <iain@sandoe.co.uk>
  
-@@ -1131,7 +1906,7 @@
+@@ -1131,7 +1911,7 @@
  
  	Backport from trunk
  	PR fortran/90498
@@ -16139,7 +16160,7 @@ index bc11ae4ae0b..7a0bedbfb30 100644
  
  2019-05-17  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -3801,21 +4576,21 @@
+@@ -3801,21 +4581,21 @@
  2019-02-23  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88117
@@ -16168,7 +16189,7 @@ index bc11ae4ae0b..7a0bedbfb30 100644
  
  2019-02-22  David Malcolm  <dmalcolm@redhat.com>
  
-@@ -4444,7 +5219,7 @@
+@@ -4444,7 +5224,7 @@
  2019-02-09  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/89200
@@ -16177,7 +16198,7 @@ index bc11ae4ae0b..7a0bedbfb30 100644
  
  2019-02-09  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -4704,17 +5479,17 @@
+@@ -4704,17 +5484,17 @@
  2019-02-02  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88393
@@ -20108,6 +20129,22 @@ index 86f7e4398eb..ee94a806766 100644
  	#endif
  	  return 0;
  	}
+diff --git a/gcc/testsuite/gcc.target/s390/sigfpe-eh.c b/gcc/testsuite/gcc.target/s390/sigfpe-eh.c
+new file mode 100644
+index 00000000000..52b0bf39d9e
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/s390/sigfpe-eh.c
+@@ -0,0 +1,10 @@
++/* { dg-do compile } */
++/* { dg-options "-march=z196 -O2 -fexceptions -fnon-call-exceptions" } */
++
++extern float f (void);
++extern float g (void);
++
++float h (float x, float y)
++{
++  return x < y ? f () : g ();
++}
 diff --git a/gcc/testsuite/gcc.target/sparc/20161111-1.c b/gcc/testsuite/gcc.target/sparc/20161111-1.c
 index eda8b0a9f12..8195fec8990 100644
 --- a/gcc/testsuite/gcc.target/sparc/20161111-1.c
