@@ -50,7 +50,8 @@ edlinger (3):
 emsr (1):
       2019-09-09  Edward Smith-Rowland  <3dw4rd@verizon.net>
 
-gccadmin (85):
+gccadmin (86):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -372,10 +373,12 @@ rguenth (7):
 ro (1):
       Update Solaris baselines for GCC 9.3
 
-segher (3):
+segher (5):
       Backport from trunk 	2019-08-22  Segher Boessenkool  <segher@kernel.crashing.org>
       Backport from trunk 	2019-08-22  Segher Boessenkool  <segher@kernel.crashing.org>
       Backport from trunk 	2019-08-23  Segher Boessenkool  <segher@kernel.crashing.org>
+      backport for PR91289
+      backport "rs6000: Implement [u]avg<mode>3_ceil"
 
 sje (1):
       2019-08-15  Steve Ellcey  <sellcey@marvell.com>
@@ -643,10 +646,32 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..d84440809a7 100644
+index 7f6557d8018..4a24d37df06 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,1155 @@
+@@ -1,3 +1,1177 @@
++2019-11-05  Segher Boessenkool  <segher@kernel.crashing.org>
++
++	Backport from trunk
++	2019-10-24  Segher Boessenkool  <segher@kernel.crashing.org>
++
++	* config/rs6000/altivec.md (altivec_vavgu<VI_char>): Rename to...
++	(uavg<mode>3_ceil): ... This.
++	(altivec_vavgs<VI_char>): Rename to...
++	(avg<mode>3_ceil): ... This.
++	* config/rs6000/rs6000-builtin.def (VAVGUB, VAVGSB, VAVGUH, VAVGSH,
++	VAVGUW, VAVGSW): Adjust.
++
++2019-11-05  Segher Boessenkool  <segher@kernel.crashing.org>
++
++	Backport from trunk
++	2019-10-26  Segher Boessenkool  <segher@kernel.crashing.org>
++
++	PR target/91289
++	* config/rs6000/rs6000.c (rs6000_emit_allocate_stack): Don't add an
++	immediate to r0; use r11 instead.  Save and restore r11 to r0 around
++	this.
++
 +2019-11-05  Andreas Krebbel  <krebbel@linux.ibm.com>
 +
 +	Backport from mainline
@@ -1802,7 +1827,7 @@ index 7f6557d8018..d84440809a7 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +1665,7 @@
+@@ -513,7 +1687,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -5963,7 +5988,7 @@ index a8bac170e72..e40535c9e40 100644
    operands[2] = GEN_INT (ctz_hwi (INTVAL (operands[2])));
  })
 diff --git a/gcc/config/rs6000/altivec.md b/gcc/config/rs6000/altivec.md
-index 4a1150e0994..8d535acd428 100644
+index 4a1150e0994..654d756647c 100644
 --- a/gcc/config/rs6000/altivec.md
 +++ b/gcc/config/rs6000/altivec.md
 @@ -80,9 +80,6 @@
@@ -5986,6 +6011,24 @@ index 4a1150e0994..8d535acd428 100644
     UNSPEC_VRLMI
     UNSPEC_VRLNM
  ])
+@@ -566,7 +560,7 @@
+   [(set_attr "type" "vecsimple")])
+ 
+ ;;
+-(define_insn "altivec_vavgu<VI_char>"
++(define_insn "uavg<mode>3_ceil"
+   [(set (match_operand:VI 0 "register_operand" "=v")
+         (unspec:VI [(match_operand:VI 1 "register_operand" "v")
+                     (match_operand:VI 2 "register_operand" "v")]
+@@ -575,7 +569,7 @@
+   "vavgu<VI_char> %0,%1,%2"
+   [(set_attr "type" "vecsimple")])
+ 
+-(define_insn "altivec_vavgs<VI_char>"
++(define_insn "avg<mode>3_ceil"
+   [(set (match_operand:VI 0 "register_operand" "=v")
+         (unspec:VI [(match_operand:VI 1 "register_operand" "v")
+                     (match_operand:VI 2 "register_operand" "v")]
 @@ -4101,223 +4095,6 @@
    "bcd<bcd_add_sub>. %0,%1,%2,%3"
    [(set_attr "type" "vecsimple")])
@@ -6344,9 +6387,28 @@ index 471058dd417..a1a46a9e7ea 100644
  ;; Mach-O PIC trickery.
  (define_expand "macho_high"
 diff --git a/gcc/config/rs6000/rs6000-builtin.def b/gcc/config/rs6000/rs6000-builtin.def
-index 0a2bdb79e15..4d4f3b3e746 100644
+index 0a2bdb79e15..0feee7cafca 100644
 --- a/gcc/config/rs6000/rs6000-builtin.def
 +++ b/gcc/config/rs6000/rs6000-builtin.def
+@@ -1002,12 +1002,12 @@ BU_ALTIVEC_2 (VADDUWS,	      "vadduws",	CONST,	altivec_vadduws)
+ BU_ALTIVEC_2 (VADDSWS,	      "vaddsws",	CONST,	altivec_vaddsws)
+ BU_ALTIVEC_2 (VAND,	      "vand",		CONST,	andv4si3)
+ BU_ALTIVEC_2 (VANDC,	      "vandc",		CONST,	andcv4si3)
+-BU_ALTIVEC_2 (VAVGUB,	      "vavgub",		CONST,	altivec_vavgub)
+-BU_ALTIVEC_2 (VAVGSB,	      "vavgsb",		CONST,	altivec_vavgsb)
+-BU_ALTIVEC_2 (VAVGUH,	      "vavguh",		CONST,	altivec_vavguh)
+-BU_ALTIVEC_2 (VAVGSH,	      "vavgsh",		CONST,	altivec_vavgsh)
+-BU_ALTIVEC_2 (VAVGUW,	      "vavguw",		CONST,	altivec_vavguw)
+-BU_ALTIVEC_2 (VAVGSW,	      "vavgsw",		CONST,	altivec_vavgsw)
++BU_ALTIVEC_2 (VAVGUB,	      "vavgub",		CONST,	uavgv16qi3_ceil)
++BU_ALTIVEC_2 (VAVGSB,	      "vavgsb",		CONST,	avgv16qi3_ceil)
++BU_ALTIVEC_2 (VAVGUH,	      "vavguh",		CONST,	uavgv8hi3_ceil)
++BU_ALTIVEC_2 (VAVGSH,	      "vavgsh",		CONST,	avgv8hi3_ceil)
++BU_ALTIVEC_2 (VAVGUW,	      "vavguw",		CONST,	uavgv4si3_ceil)
++BU_ALTIVEC_2 (VAVGSW,	      "vavgsw",		CONST,	avgv4si3_ceil)
+ BU_ALTIVEC_2 (VCFUX,	      "vcfux",		CONST,	altivec_vcfux)
+ BU_ALTIVEC_2 (VCFSX,	      "vcfsx",		CONST,	altivec_vcfsx)
+ BU_ALTIVEC_2 (VCMPBFP,	      "vcmpbfp",	CONST,	altivec_vcmpbfp)
 @@ -1177,26 +1177,26 @@ BU_ALTIVEC_X (MTVSCR,		"mtvscr",	    MISC)
  BU_ALTIVEC_X (MFVSCR,		"mfvscr",	    MISC)
  BU_ALTIVEC_X (DSSALL,		"dssall",	    MISC)
@@ -6472,7 +6534,7 @@ index c3b98315503..d30e5dec980 100644
        }
  
 diff --git a/gcc/config/rs6000/rs6000.c b/gcc/config/rs6000/rs6000.c
-index cb8d737976b..2a8932d80aa 100644
+index cb8d737976b..a670096145b 100644
 --- a/gcc/config/rs6000/rs6000.c
 +++ b/gcc/config/rs6000/rs6000.c
 @@ -7671,6 +7671,104 @@ address_offset (rtx op)
@@ -6604,7 +6666,26 @@ index cb8d737976b..2a8932d80aa 100644
  	      && MACHOPIC_INDIRECT
  	      && machopic_classify_symbol (x) == MACHOPIC_UNDEFINED_FUNCTION)
  	    name = machopic_indirection_name (x, /*stub_p=*/true);
-@@ -37762,25 +37866,31 @@ rs6000_can_inline_p (tree caller, tree callee)
+@@ -25729,10 +25833,14 @@ rs6000_emit_allocate_stack (HOST_WIDE_INT size, rtx copy_reg, int copy_off)
+ 						    stack_limit_rtx,
+ 						    GEN_INT (size)));
+ 
+-	  emit_insn (gen_elf_high (tmp_reg, toload));
+-	  emit_insn (gen_elf_low (tmp_reg, tmp_reg, toload));
+-	  emit_insn (gen_cond_trap (LTU, stack_reg, tmp_reg,
+-				    const0_rtx));
++	  /* We cannot use r0 with elf_low.  Lamely solve this problem by
++	     moving registers around.  */
++	  rtx r11_reg = gen_rtx_REG (Pmode, 11);
++	  emit_move_insn (tmp_reg, r11_reg);
++	  emit_insn (gen_elf_high (r11_reg, toload));
++	  emit_insn (gen_elf_low (r11_reg, r11_reg, toload));
++	  emit_insn (gen_cond_trap (LTU, stack_reg, r11_reg, const0_rtx));
++	  emit_move_insn (r11_reg, tmp_reg);
+ 	}
+       else
+ 	warning (0, "stack limit expression is not supported");
+@@ -37762,25 +37870,31 @@ rs6000_can_inline_p (tree caller, tree callee)
    tree caller_tree = DECL_FUNCTION_SPECIFIC_TARGET (caller);
    tree callee_tree = DECL_FUNCTION_SPECIFIC_TARGET (callee);
  
@@ -6648,7 +6729,7 @@ index cb8d737976b..2a8932d80aa 100644
  	ret = true;
      }
  
-@@ -38273,7 +38383,8 @@ rs6000_call_darwin_1 (rtx value, rtx func_desc, rtx tlsarg,
+@@ -38273,7 +38387,8 @@ rs6000_call_darwin_1 (rtx value, rtx func_desc, rtx tlsarg,
    if ((cookie_val & CALL_LONG) != 0
        && GET_CODE (func_desc) == SYMBOL_REF)
      {
