@@ -10,12 +10,13 @@ avieira (1):
 bergner (1):
       Backport from mainline 	2019-10-08  Tulio Magno Quites Machado Filho  <tuliom@linux.ibm.com>
 
-burnus (5):
+burnus (6):
       Fortran] PR91586 Fix ICE on invalid code with CLASS
       Fortran] PR91863 - fix call to bind(C) with array descriptor
       Backport Fortran BIND(C) fixes
       Fortran] PR 92208 don't use function-result dummy variable as actual argument
       PR 92208 + PR 92277 – GCC 9 follow-up fix
+      Fortran] PR91253 fix continuation-line handling with -pre_include
 
 danglin (8):
       * config/pa/pa.c (pa_trampoline_init): Remove spurious extended 	character.
@@ -9304,10 +9305,21 @@ index f0e43b5fda2..9feaea9fde5 100644
    low = fold_convert_loc (loc, etype, low);
    exp = fold_convert_loc (loc, etype, exp);
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index e3073787ea9..a9369691722 100644
+index e3073787ea9..1ace227a91f 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,378 @@
+@@ -1,3 +1,389 @@
++2019-11-08  Tobias Burnus  <tobias@codesourcery.com
++
++	Backport from mainline
++	2019-11-08  Tobias Burnus  <tobias@codesourcery.com
++
++	PR fortran/91253
++	* scanner.c (skip_fixed_comments): Move comment
++	lines to next if block.
++	(gfc_next_char_literal): Fix continue_line setting.
++	(get_file): Remove bogus ATTRIBUTE_UNUSED.
++
 +2019-11-05  Tobias Burnus  <tobias@codesourcery.com>
 +
 +	PR fortran/92208
@@ -11231,6 +11243,71 @@ index afa4e5c2ccf..b3807576653 100644
  
  static bool
  flag_fn_result_spec (gfc_expr *expr,
+diff --git a/gcc/fortran/scanner.c b/gcc/fortran/scanner.c
+index e54d483baff..40c06b6b674 100644
+--- a/gcc/fortran/scanner.c
++++ b/gcc/fortran/scanner.c
+@@ -1050,6 +1050,10 @@ skip_fixed_comments (void)
+ 	      return;
+ 	    }
+ 
++	  if (gfc_current_locus.lb != NULL
++	      && continue_line < gfc_linebuf_linenum (gfc_current_locus.lb))
++	    continue_line = gfc_linebuf_linenum (gfc_current_locus.lb);
++
+ 	  /* If -fopenmp/-fopenacc, we need to handle here 2 things:
+ 	     1) don't treat !$omp/!$acc|c$omp/c$acc|*$omp / *$acc as comments, 
+ 		but directives
+@@ -1057,10 +1061,6 @@ skip_fixed_comments (void)
+ 		!$|c$|*$ should be treated as 2 spaces if the characters
+ 		in columns 3 to 6 are valid fixed form label columns
+ 		characters.  */
+-	  if (gfc_current_locus.lb != NULL
+-	      && continue_line < gfc_linebuf_linenum (gfc_current_locus.lb))
+-	    continue_line = gfc_linebuf_linenum (gfc_current_locus.lb);
+-
+ 	  if ((flag_openmp || flag_openmp_simd) && !flag_openacc)
+ 	    {
+ 	      if (next_char () == '$')
+@@ -1313,6 +1313,14 @@ restart:
+       if (flag_openacc)
+ 	prev_openacc_flag = openacc_flag;
+ 
++      /* This can happen if the input file changed or via cpp's #line
++	 without getting reset (e.g. via input_stmt). It also happens
++	 when pre-including files via -fpre-include=.  */
++      if (continue_count == 0
++	  && gfc_current_locus.lb
++	  && continue_line > gfc_linebuf_linenum (gfc_current_locus.lb) + 1)
++	continue_line = gfc_linebuf_linenum (gfc_current_locus.lb) + 1;
++
+       continue_flag = 1;
+       if (c == '!')
+ 	skip_comment_line ();
+@@ -1475,6 +1483,14 @@ restart:
+       if (flag_openacc)
+ 	prev_openacc_flag = openacc_flag;
+ 
++      /* This can happen if the input file changed or via cpp's #line
++	 without getting reset (e.g. via input_stmt). It also happens
++	 when pre-including files via -fpre-include=.  */
++      if (continue_count == 0
++	  && gfc_current_locus.lb
++	  && continue_line > gfc_linebuf_linenum (gfc_current_locus.lb) + 1)
++	continue_line = gfc_linebuf_linenum (gfc_current_locus.lb) + 1;
++
+       continue_flag = 1;
+       old_loc = gfc_current_locus;
+ 
+@@ -1943,7 +1959,7 @@ next_char:
+    the file stack.  */
+ 
+ static gfc_file *
+-get_file (const char *name, enum lc_reason reason ATTRIBUTE_UNUSED)
++get_file (const char *name, enum lc_reason reason)
+ {
+   gfc_file *f;
+ 
 diff --git a/gcc/fortran/simplify.c b/gcc/fortran/simplify.c
 index 6c1f4bd4fce..58b4652b010 100644
 --- a/gcc/fortran/simplify.c
