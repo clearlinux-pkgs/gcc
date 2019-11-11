@@ -18,7 +18,7 @@ burnus (6):
       PR 92208 + PR 92277 – GCC 9 follow-up fix
       Fortran] PR91253 fix continuation-line handling with -pre_include
 
-danglin (8):
+danglin (9):
       * config/pa/pa.c (pa_trampoline_init): Remove spurious extended 	character.
       * config/pa/lib2funcs.S (__gcc_plt_call): Load branch target to %r21. 	Load PIC register after branch target.  Fix white space. 	* config/pa/milli64.S ($$dyncall): Separate LINUX and non LINUX 	implementations.  Load PIC register after branch target.  Don't 	clobber function pointer when it points to function descriptor. 	Use nullification instead of branch in LINUX implementation.
       * config/pa/pa.c (pa_output_call): Load descriptor address to register 	%r22.  Load function address before global pointer. 	(pa_attr_length_indirect_call): Adjust length of inline versions of 	$$dyncall. 	(pa_output_indirect_call): Remove fast inline version of $$dyncall 	before normal cases.  Update inline $$dyncall sequences to preserve 	function descriptor address in register %r22. 	(TRAMPOLINE_CODE_SIZE): Adjust. 	(pa_asm_trampoline_template): Revise 32-bit trampoline.  Don't assume 	register %r22 contains trampoline address. 	(pa_trampoline_init): Adjust offsets. 	(pa_trampoline_adjust_address): Likewise. 	* config/pa/pa.h (TRAMPOLINE_SIZE): Adjust 32-bit size.
@@ -27,6 +27,7 @@ danglin (8):
       * config/abi/post/hppa-linux-gnu/baseline_symbols.txt: Update.
       Backport from mainline 	2019-10-03  John David Anglin  <danglin@gcc.gnu.org>
       Backport from mainline 	2019-10-03  John David Anglin  <danglin@gcc.gnu.org>
+      Backport from mainline 	2019-11-07  John David Anglin  <danglin@gcc.gnu.org>
 
 draganm (3):
       Backprot fix for uninitialised use in mips_split_move
@@ -53,7 +54,10 @@ edlinger (3):
 emsr (1):
       2019-09-09  Edward Smith-Rowland  <3dw4rd@verizon.net>
 
-gccadmin (88):
+gccadmin (91):
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -189,7 +193,7 @@ iii (2):
       Move jump threading before reload
       S/390: Fix failing RTL check in s390_canonicalize_comparison
 
-jakub (24):
+jakub (34):
       * BASE-VER: Set to 9.2.1.
       * config/abi/post/aarch64-linux-gnu/baseline_symbols.txt: Update. 	* config/abi/post/s390x-linux-gnu/baseline_symbols.txt: Update.
       PR tree-optimization/91597 	* tree-vrp.c (extract_range_from_binary_expr): Remove unsafe 	BIT_AND_EXPR optimization for pointers, even if both operand 	ranges don't include NULL, the result can be NULL.
@@ -214,6 +218,16 @@ jakub (24):
       Backported from mainline 	2019-10-17  Jakub Jelinek  <jakub@redhat.com>
       Backported from mainline 	2019-10-17  Jakub Jelinek  <jakub@redhat.com>
       PR c++/92201 	* cp-gimplify.c (cp_gimplify_expr): If gimplify_to_rvalue changes the 	function pointer type, re-add cast to the original one.
+      Backported from mainline 	2019-10-21  Jakub Jelinek  <jakub@redhat.com>
+      Backported from mainline 	2019-10-22  Tamar Christina  <tamar.christina@arm.com>
+      Backported from mainline 	2019-10-22  Jakub Jelinek  <jakub@redhat.com>
+      Backported from mainline 	2019-10-27  Jakub Jelinek  <jakub@redhat.com>
+      Backported from mainline 	2019-10-29  Jakub Jelinek  <jakub@redhat.com>
+      Backported from mainline 	2019-10-31  Jakub Jelinek  <jakub@redhat.com>
+      Backported from mainline 	2019-10-31  Jakub Jelinek  <jakub@redhat.com>
+      Backported from mainline 	2019-10-31  Jakub Jelinek  <jakub@redhat.com>
+      Backported from mainline 	2019-11-05  Jakub Jelinek  <jakub@redhat.com>
+      PR c++/92384 	* function.c (assign_parm_setup_block, assign_parm_setup_stack): Don't 	copy TYPE_EMPTY_P arguments from data->entry_parm to data->stack_parm 	slot. 	(assign_parms): For TREE_ADDRESSABLE parms with TYPE_EMPTY_P type 	force creation of a unique data.stack_parm slot.
 
 jason (4):
       PR c++/90538 - multiple expansions of capture packs
@@ -304,7 +318,7 @@ marxin (7):
       Backport r276141
       Backport r276178
 
-mpolacek (12):
+mpolacek (13):
       PR c++/81429 - wrong parsing of constructor with C++11 attribute. 	* parser.c (cp_parser_constructor_declarator_p): Handle the scenario 	when a parameter declaration begins with [[attribute]].
       PR c++/87519 - bogus warning with -Wsign-conversion. 	* typeck.c (cp_build_binary_op): Use same_type_p instead of comparing 	the types directly.
       PR c++/90473 - wrong code with nullptr in default argument. 	* call.c (null_ptr_cst_p): Update quote from the standard. 	* decl.c (check_default_argument): Don't return nullptr when the arg 	has side-effects.
@@ -317,6 +331,7 @@ mpolacek (12):
       PR c++/92106 - ICE with structured bindings and -Wreturn-local-addr.
       PR c++/92062 - ODR-use ignored for static member of class template.
       * decl.c (reshape_init_r): Add missing space.
+      PR c++/90998 - ICE with copy elision in init by ctor and -Wconversion.
 
 msebor (1):
       Backport from mainline
@@ -367,7 +382,7 @@ redi (27):
       PR libstdc++/61761 fix std::proj for targets without C99 cproj
       PR libstdc++/90682 allow set_terminate(0) and set_unexpected(0)
 
-rguenth (7):
+rguenth (8):
       2019-08-12  Richard Biener  <rguenther@suse.de>
       2019-08-15  Richard Biener  <rguenther@suse.de>
       2019-08-28  Richard Biener  <rguenther@suse.de>
@@ -375,6 +390,7 @@ rguenth (7):
       2019-08-30  Richard Biener  <rguenther@suse.de>
       2019-10-16  Richard Biener  <rguenther@suse.de>
       2019-10-23  Richard Biener  <rguenther@suse.de>
+      2019-11-11  Richard Biener  <rguenther@suse.de>
 
 ro (1):
       Update Solaris baselines for GCC 9.3
@@ -389,17 +405,22 @@ segher (5):
 sje (1):
       2019-08-15  Steve Ellcey  <sellcey@marvell.com>
 
-tkoenig (6):
+tkoenig (8):
       2019-08-13  Thomas Koenig  <tkoenig@gcc.gnu.org>
       2019-08-13  Thomas Koenig  <tkoenig@gcc.gnu.org>
       2013-08-13  Thomas Koenig  <tkoenig@gcc.gnu.org>
       2019-09-15  Thomas Koenig  <tkoenig@gcc.gnu.org>
       2019-09-18  Thomas Koenig  <tkoenig@gcc.gnu.org>
       2019-10-07  Thomas Koenig <tkoenig@gcc.gnu.org>
+      Commit symbol for external BLAS routine when translating MATMUL to *GEMM.
+      Put vtab into RO section, same for __def_init if it contains an initializer.
 
-tschwinge (2):
+tschwinge (5):
       Avoid '-Wmaybe-uninitialized' diagnostic in 'gcc/dwarf2out.c'
       [LIBPHOBOS] Fix multi-lib RUNTESTFLAGS handling
+      [build] Properly track GCC language configure fragments
+      Assert 'offset2' instead of 'offset' in 'gcc/gimplify.c:gimplify_scan_omp_clauses'
+      [PR87833] x86: Put -fPIC and -shared the last to create offload image
 
 uros (5):
       * test_summary: Do not escape "=".
@@ -652,10 +673,82 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..4884798603e 100644
+index 7f6557d8018..c0ef3795017 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,1202 @@
+@@ -1,3 +1,1274 @@
++2019-11-11  Richard Biener  <rguenther@suse.de>
++
++	Backport from mainline
++	2019-06-25  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/90930
++	* tree-ssa-reassoc.c (reassociate_bb): Only rewrite expression
++	into parallel form in the last pass instance.
++
++2019-11-11  H.J. Lu  <hjl.tools@gmail.com>
++
++	Backport from trunk:
++	PR target/87833
++	* config/i386/intelmic-mkoffload.c (prepare_target_image): Put
++	-fPIC and -shared the last to create offload image.
++
++2019-11-11  Thomas Schwinge  <thomas@codesourcery.com>
++
++	Backport from trunk:
++	* gimplify.c (gimplify_scan_omp_clauses): Assert 'offset2' instead
++	of 'offset'.
++
++	Backport from trunk:
++	* Makefile.in (LANG_CONFIGUREFRAGS): Define.
++	(config.status): Use/depend on it.
++	* configure.ac (all_lang_configurefrags): Track, 'AC_SUBST'.
++	* configure: Regenerate.
++
++2019-11-09  John David Anglin  <danglin@gcc.gnu.org>
++
++	Backport from mainline
++	2019-11-07  John David Anglin  <danglin@gcc.gnu.org>
++
++	* config/pa/pa.md (memory_barrier): Revise to use ldcw barriers.
++	Enhance comment.
++	(memory_barrier_coherent, memory_barrier_64, memory_barrier_32): New
++	insn patterns using ldcw instruction.
++	(memory_barrier): Remove insn pattern using sync instruction.
++	* config/pa/pa.opt (coherent-ldcw): New option.
++	(ordered): New option.
++
++2019-11-08  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/92384
++	* function.c (assign_parm_setup_block, assign_parm_setup_stack): Don't
++	copy TYPE_EMPTY_P arguments from data->entry_parm to data->stack_parm
++	slot.
++	(assign_parms): For TREE_ADDRESSABLE parms with TYPE_EMPTY_P type
++	force creation of a unique data.stack_parm slot.
++
++	Backported from mainline
++	2019-10-31  Jakub Jelinek  <jakub@redhat.com>
++
++	PR middle-end/92231
++	* tree.h (fndecl_built_in_p): Use fndecl_built_in_p instead of
++	DECL_BUILT_IN in comment.  Remove redundant ()s around return
++	argument.
++	* tree.c (free_lang_data_in_decl): Check if var is FUNCTION_DECL
++	before calling fndecl_built_in_p.
++	* gimple-fold.c (gimple_fold_stmt_to_constant_1): Check if
++	TREE_OPERAND (fn, 0) is a FUNCTION_DECL before calling
++	fndecl_built_in_p on it.
++
++	PR c++/90947
++	* tree.h (type_initializer_zero_p): Remove.
++	* tree.c (type_initializer_zero_p): Remove.
++
++	2019-10-29  Jakub Jelinek  <jakub@redhat.com>
++
++	* doc/install.texi (--enable-offload-targets): Fix up a typo in the
++	example, use actual names of supported offload targets.
++
 +2019-11-08  Eric Botcazou  <ebotcazou@adacore.com>
 +
 +	PR target/92095
@@ -1858,7 +1951,7 @@ index 7f6557d8018..4884798603e 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +1712,7 @@
+@@ -513,7 +1784,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -1867,11 +1960,39 @@ index 7f6557d8018..4884798603e 100644
  	2019-07-06  Richard Sandiford  <richard.sandiford@arm.com>
  
  	* config/i386/sse.md (*andnot<mode>3_bcst): Fix VI/VI48_AVX512VL typo.
+diff --git a/gcc/Makefile.in b/gcc/Makefile.in
+index 5f43d9de00e..abae872cd63 100644
+--- a/gcc/Makefile.in
++++ b/gcc/Makefile.in
+@@ -1120,6 +1120,7 @@ endif
+ # Support for additional languages (other than C).
+ # C can be supported this way too (leave for later).
+ 
++LANG_CONFIGUREFRAGS  = @all_lang_configurefrags@
+ LANG_MAKEFRAGS = @all_lang_makefrags@
+ 
+ # Used by gcc/jit/Make-lang.in
+@@ -1894,7 +1895,7 @@ cstamp-h: config.in config.status
+ # Really, really stupid make features, such as SUN's KEEP_STATE, may force
+ # a target to build even if it is up-to-date.  So we must verify that
+ # config.status does not exist before failing.
+-config.status: $(srcdir)/configure $(srcdir)/config.gcc
++config.status: $(srcdir)/configure $(srcdir)/config.gcc $(LANG_CONFIGUREFRAGS)
+ 	@if [ ! -f config.status ] ; then \
+ 	  echo You must configure gcc.  Look at http://gcc.gnu.org/install/ for details.; \
+ 	  false; \
 diff --git a/gcc/ada/ChangeLog b/gcc/ada/ChangeLog
-index 22cd00956dc..64ff4397fd4 100644
+index 22cd00956dc..dd515bca601 100644
 --- a/gcc/ada/ChangeLog
 +++ b/gcc/ada/ChangeLog
-@@ -1,3 +1,29 @@
+@@ -1,3 +1,36 @@
++2019-11-08  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from mainline
++	2019-10-27  Jakub Jelinek  <jakub@redhat.com>
++
++	* locales.c (iso_3166): Add missing comma after "United-States".
++
 +2019-10-12  Eric Botcazou  <ebotcazou@adacore.com>
 +
 +	PR ada/91995
@@ -2010,6 +2131,19 @@ index 49fd34656ad..f08f6aac330 100644
  	by_descriptor = true;
      }
    else if (Nkind (Name (gnat_node)) == N_Attribute_Reference)
+diff --git a/gcc/ada/locales.c b/gcc/ada/locales.c
+index 2bf900319ca..9372bdb2d58 100644
+--- a/gcc/ada/locales.c
++++ b/gcc/ada/locales.c
+@@ -529,7 +529,7 @@ static char* iso_3166[] =
+   "UM", "United States Minor Outlying Islands",
+   "US", "United States",
+   "US", "United States of America",
+-  "US", "United-States"
++  "US", "United-States",
+   "UY", "Uruguay",
+   "UZ", "Uzbekistan",
+ 
 diff --git a/gcc/ada/sem_ch8.adb b/gcc/ada/sem_ch8.adb
 index a5e821da1b4..340aa49bd11 100644
 --- a/gcc/ada/sem_ch8.adb
@@ -5308,6 +5442,29 @@ index 2cb16d9fbf6..170bbdd7fbf 100644
  #define MACHOPIC_ATT_STUB 0
  /* (b) Macros defined in config/darwin.h  */
  #define MACHO_DYNAMIC_NO_PIC_P 0
+diff --git a/gcc/config/i386/intelmic-mkoffload.c b/gcc/config/i386/intelmic-mkoffload.c
+index 2a3e912ee74..0b12edc72c1 100644
+--- a/gcc/config/i386/intelmic-mkoffload.c
++++ b/gcc/config/i386/intelmic-mkoffload.c
+@@ -453,8 +453,6 @@ prepare_target_image (const char *target_compiler, int argc, char **argv)
+   if (verbose)
+     obstack_ptr_grow (&argv_obstack, "-v");
+   obstack_ptr_grow (&argv_obstack, "-xlto");
+-  obstack_ptr_grow (&argv_obstack, "-shared");
+-  obstack_ptr_grow (&argv_obstack, "-fPIC");
+   obstack_ptr_grow (&argv_obstack, opt1);
+   for (int i = 1; i < argc; i++)
+     {
+@@ -466,6 +464,9 @@ prepare_target_image (const char *target_compiler, int argc, char **argv)
+   if (!out_obj_filename)
+     fatal_error (input_location, "output file not specified");
+   obstack_ptr_grow (&argv_obstack, opt2);
++  /* NB: Put -fPIC and -shared the last to create shared library.  */
++  obstack_ptr_grow (&argv_obstack, "-fPIC");
++  obstack_ptr_grow (&argv_obstack, "-shared");
+   obstack_ptr_grow (&argv_obstack, "-o");
+   obstack_ptr_grow (&argv_obstack, target_so_filename);
+   compile_for_target (&argv_obstack);
 diff --git a/gcc/config/i386/sse.md b/gcc/config/i386/sse.md
 index 46ec4602eb7..c1b7ce99125 100644
 --- a/gcc/config/i386/sse.md
@@ -5753,6 +5910,102 @@ index 561efa51882..24739e56f97 100644
  
  #define NEED_INDICATE_EXEC_STACK 0
  
+diff --git a/gcc/config/pa/pa.md b/gcc/config/pa/pa.md
+index 84630ad536d..e273cddc01d 100644
+--- a/gcc/config/pa/pa.md
++++ b/gcc/config/pa/pa.md
+@@ -10091,23 +10091,55 @@ add,l %2,%3,%3\;bv,n %%r0(%3)"
+    (set_attr "length" "4,16")])
+ 
+ ;; PA 2.0 hardware supports out-of-order execution of loads and stores, so
+-;; we need a memory barrier to enforce program order for memory references.
+-;; Since we want PA 1.x code to be PA 2.0 compatible, we also need the
+-;; barrier when generating PA 1.x code.
++;; we need memory barriers to enforce program order for memory references
++;; when the TLB and PSW O bits are not set.  We assume all PA 2.0 systems
++;; are weakly ordered since neither HP-UX or Linux set the PSW O bit.  Since
++;; we want PA 1.x code to be PA 2.0 compatible, we also need barriers when
++;; generating PA 1.x code even though all PA 1.x systems are strongly ordered.
++
++;; When barriers are needed, we use a strongly ordered ldcw instruction as
++;; the barrier.  Most PA 2.0 targets are cache coherent.  In that case, we
++;; can use the coherent cache control hint and avoid aligning the ldcw
++;; address.  In spite of its description, it is not clear that the sync
++;; instruction works as a barrier.
+ 
+ (define_expand "memory_barrier"
+-  [(set (match_dup 0)
+-        (unspec:BLK [(match_dup 0)] UNSPEC_MEMORY_BARRIER))]
++  [(parallel
++     [(set (match_dup 0) (unspec:BLK [(match_dup 0)] UNSPEC_MEMORY_BARRIER))
++      (clobber (match_dup 1))])]
+   ""
+ {
+-  operands[0] = gen_rtx_MEM (BLKmode, gen_rtx_SCRATCH (Pmode));
++  /* We don't need a barrier if the target uses ordered memory references.  */
++  if (TARGET_ORDERED)
++    FAIL;
++  operands[1] = gen_reg_rtx (Pmode);
++  operands[0] = gen_rtx_MEM (BLKmode, operands[1]);
+   MEM_VOLATILE_P (operands[0]) = 1;
+ })
+ 
+-(define_insn "*memory_barrier"
++(define_insn "*memory_barrier_coherent"
+   [(set (match_operand:BLK 0 "" "")
+-        (unspec:BLK [(match_dup 0)] UNSPEC_MEMORY_BARRIER))]
+-  ""
+-  "sync"
++        (unspec:BLK [(match_dup 0)] UNSPEC_MEMORY_BARRIER))
++   (clobber (match_operand 1 "pmode_register_operand" "=r"))]
++  "TARGET_PA_20 && TARGET_COHERENT_LDCW"
++  "ldcw,co 0(%%sp),%1"
+   [(set_attr "type" "binary")
+    (set_attr "length" "4")])
++
++(define_insn "*memory_barrier_64"
++  [(set (match_operand:BLK 0 "" "")
++        (unspec:BLK [(match_dup 0)] UNSPEC_MEMORY_BARRIER))
++    (clobber (match_operand 1 "pmode_register_operand" "=&r"))]
++  "TARGET_64BIT"
++  "ldo 15(%%sp),%1\n\tdepd %%r0,63,3,%1\n\tldcw 0(%1),%1"
++  [(set_attr "type" "binary")
++   (set_attr "length" "12")])
++
++(define_insn "*memory_barrier_32"
++  [(set (match_operand:BLK 0 "" "")
++        (unspec:BLK [(match_dup 0)] UNSPEC_MEMORY_BARRIER))
++    (clobber (match_operand 1 "pmode_register_operand" "=&r"))]
++  ""
++  "ldo 15(%%sp),%1\n\t{dep|depw} %%r0,31,3,%1\n\tldcw 0(%1),%1"
++  [(set_attr "type" "binary")
++   (set_attr "length" "12")])
+diff --git a/gcc/config/pa/pa.opt b/gcc/config/pa/pa.opt
+index b32b3d8abc0..4cb81109933 100644
+--- a/gcc/config/pa/pa.opt
++++ b/gcc/config/pa/pa.opt
+@@ -45,6 +45,10 @@ mcaller-copies
+ Target Report Mask(CALLER_COPIES)
+ Caller copies function arguments passed by hidden reference.
+ 
++mcoherent-ldcw
++Target Report Var(TARGET_COHERENT_LDCW) Init(1)
++Use ldcw/ldcd coherent cache-control hint.
++
+ mdisable-fpregs
+ Target Report Mask(DISABLE_FPREGS)
+ Disable FP regs.
+@@ -90,6 +94,10 @@ mno-space-regs
+ Target RejectNegative Report Mask(NO_SPACE_REGS)
+ Disable space regs.
+ 
++mordered
++Target Report Var(TARGET_ORDERED) Init(0)
++Assume memory references are ordered and barriers are not needed.
++
+ mpa-risc-1-0
+ Target RejectNegative
+ Generate PA1.0 code.
 diff --git a/gcc/config/riscv/riscv-protos.h b/gcc/config/riscv/riscv-protos.h
 index 8b510f87df8..5b0bbdd7cb4 100644
 --- a/gcc/config/riscv/riscv-protos.h
@@ -8346,11 +8599,135 @@ index 19bd616d67f..ee5612441e2 100644
  	{
  	  rtx tmp_reg = gen_rtx_REG (Pmode, A9_REG);
  	  emit_move_insn (tmp_reg, GEN_INT (total_size -
+diff --git a/gcc/configure b/gcc/configure
+index 481071b4265..b4d80d140b5 100755
+--- a/gcc/configure
++++ b/gcc/configure
+@@ -701,6 +701,7 @@ build_exeext
+ all_selected_languages
+ all_languages
+ all_lang_makefrags
++all_lang_configurefrags
+ all_gtfiles
+ all_compilers
+ srcdir
+@@ -18646,7 +18647,7 @@ else
+   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
+   lt_status=$lt_dlunknown
+   cat > conftest.$ac_ext <<_LT_EOF
+-#line 18649 "configure"
++#line 18650 "configure"
+ #include "confdefs.h"
+ 
+ #if HAVE_DLFCN_H
+@@ -18752,7 +18753,7 @@ else
+   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
+   lt_status=$lt_dlunknown
+   cat > conftest.$ac_ext <<_LT_EOF
+-#line 18755 "configure"
++#line 18756 "configure"
+ #include "confdefs.h"
+ 
+ #if HAVE_DLFCN_H
+@@ -29559,7 +29560,8 @@ lang_tree_files=
+ all_languages=
+ all_compilers=
+ all_outputs='Makefile'
+-# List of language makefile fragments.
++# List of language configure and makefile fragments.
++all_lang_configurefrags=
+ all_lang_makefrags=
+ # Additional files for gengtype
+ all_gtfiles="$target_gtfiles"
+@@ -29645,6 +29647,7 @@ do
+ 	esac
+ 	$ok || continue
+ 
++	all_lang_configurefrags="$all_lang_configurefrags \$(srcdir)/$gcc_subdir/config-lang.in"
+ 	all_lang_makefrags="$all_lang_makefrags \$(srcdir)/$gcc_subdir/Make-lang.in"
+ 	if test -f $srcdir/$gcc_subdir/lang.opt; then
+ 	    lang_opt_files="$lang_opt_files $srcdir/$gcc_subdir/lang.opt"
+@@ -29815,6 +29818,7 @@ fi
+ 
+ 
+ 
++
+ 
+ 
+ # Echo link setup.
+diff --git a/gcc/configure.ac b/gcc/configure.ac
+index ce2825580c6..8243716589f 100644
+--- a/gcc/configure.ac
++++ b/gcc/configure.ac
+@@ -6188,7 +6188,8 @@ lang_tree_files=
+ all_languages=
+ all_compilers=
+ all_outputs='Makefile'
+-# List of language makefile fragments.
++# List of language configure and makefile fragments.
++all_lang_configurefrags=
+ all_lang_makefrags=
+ # Additional files for gengtype
+ all_gtfiles="$target_gtfiles"
+@@ -6276,6 +6277,7 @@ changequote([,])dnl
+ 	esac
+ 	$ok || continue
+ 
++	all_lang_configurefrags="$all_lang_configurefrags \$(srcdir)/$gcc_subdir/config-lang.in"
+ 	all_lang_makefrags="$all_lang_makefrags \$(srcdir)/$gcc_subdir/Make-lang.in"
+ 	if test -f $srcdir/$gcc_subdir/lang.opt; then
+ 	    lang_opt_files="$lang_opt_files $srcdir/$gcc_subdir/lang.opt"
+@@ -6383,6 +6385,7 @@ AC_SUBST(subdirs)
+ AC_SUBST(srcdir)
+ AC_SUBST(all_compilers)
+ AC_SUBST(all_gtfiles)
++AC_SUBST(all_lang_configurefrags)
+ AC_SUBST(all_lang_makefrags)
+ AC_SUBST(all_languages)
+ AC_SUBST(all_selected_languages)
 diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
-index c977850d067..86007bde317 100644
+index c977850d067..f44fdee6aa1 100644
 --- a/gcc/cp/ChangeLog
 +++ b/gcc/cp/ChangeLog
-@@ -1,3 +1,200 @@
+@@ -1,3 +1,238 @@
++2019-11-08  Marek Polacek  <polacek@redhat.com>
++
++	Backported from mainline
++	2019-10-29  Marek Polacek  <polacek@redhat.com>
++
++	PR c++/90998 - ICE with copy elision in init by ctor and -Wconversion.
++	* call.c (joust): Don't attempt to warn if ->second_conv is null.
++
++2019-11-08  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from mainline
++	2019-11-05  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/92343
++	* constexpr.c (potential_constant_expression_1): Return true rather
++	than false for PREDICT_EXPR.
++
++	2019-10-31  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/90947
++	* cp-tree.h (type_initializer_zero_p): Declare.
++	* decl.c (reshape_init_array_1): Formatting fix.
++	* tree.c (type_initializer_zero_p): New function.  Moved from
++	../tree.c, use next_initializable_field, formatting fix.  Return
++	false for TYPE_NON_AGGREGATE_CLASS types.
++
++	2019-10-22  Jakub Jelinek  <jakub@redhat.com>
++
++	PR tree-optimization/85887
++	* decl.c (expand_static_init): Drop ECF_LEAF from __cxa_guard_acquire
++	and __cxa_guard_release.
++
++	2019-10-21  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/92015
++	* constexpr.c (cxx_eval_component_reference, cxx_eval_bit_field_ref):
++	Use STRIP_ANY_LOCATION_WRAPPER on CONSTRUCTOR elts.
++
 +2019-10-29  Jakub Jelinek  <jakub@redhat.com>
 +
 +	PR c++/92201
@@ -8551,7 +8928,7 @@ index c977850d067..86007bde317 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -16,7 +213,7 @@
+@@ -16,7 +251,7 @@
  
  	Backported from mainline
  	2019-08-02  Marek Polacek  <polacek@redhat.com>
@@ -8561,7 +8938,7 @@ index c977850d067..86007bde317 100644
  	* pt.c (value_dependent_expression_p): Consider __PRETTY_FUNCTION__
  	inside a template function value-dependent.
 diff --git a/gcc/cp/call.c b/gcc/cp/call.c
-index 9e22a146a16..14ddc98f301 100644
+index 9e22a146a16..8f950d13321 100644
 --- a/gcc/cp/call.c
 +++ b/gcc/cp/call.c
 @@ -530,9 +530,8 @@ null_ptr_cst_p (tree t)
@@ -8687,6 +9064,17 @@ index 9e22a146a16..14ddc98f301 100644
    result = build3_loc (loc, COND_EXPR, result_type, arg1, arg2, arg3);
  
    /* If the ARG2 and ARG3 are the same and don't have side-effects,
+@@ -10732,7 +10739,9 @@ joust (struct z_candidate *cand1, struct z_candidate *cand2, bool warn,
+      either between a constructor and a conversion op, or between two
+      conversion ops.  */
+   if ((complain & tf_warning)
+-      && winner && warn_conversion && cand1->second_conv
++      /* In C++17, the constructor might have been elided, which means that
++	 an originally null ->second_conv could become non-null.  */
++      && winner && warn_conversion && cand1->second_conv && cand2->second_conv
+       && (!DECL_CONSTRUCTOR_P (cand1->fn) || !DECL_CONSTRUCTOR_P (cand2->fn))
+       && winner != compare_ics (cand1->second_conv, cand2->second_conv))
+     {
 diff --git a/gcc/cp/class.c b/gcc/cp/class.c
 index a47777cdd9e..f7059fb7341 100644
 --- a/gcc/cp/class.c
@@ -8715,10 +9103,30 @@ index a47777cdd9e..f7059fb7341 100644
  		    "%q#D is public, but requires an existing %q#T object",
  		    copy_or_move, t);
 diff --git a/gcc/cp/constexpr.c b/gcc/cp/constexpr.c
-index f6f21b33396..a229b48d746 100644
+index f6f21b33396..9845416a812 100644
 --- a/gcc/cp/constexpr.c
 +++ b/gcc/cp/constexpr.c
-@@ -3973,6 +3973,10 @@ cxx_eval_increment_expression (const constexpr_ctx *ctx, tree t,
+@@ -2703,7 +2703,10 @@ cxx_eval_component_reference (const constexpr_ctx *ctx, tree t,
+ 	  : field == part)
+ 	{
+ 	  if (value)
+-	    return value;
++	    {
++	      STRIP_ANY_LOCATION_WRAPPER (value);
++	      return value;
++	    }
+ 	  else
+ 	    /* We're in the middle of initializing it.  */
+ 	    break;
+@@ -2793,6 +2796,7 @@ cxx_eval_bit_field_ref (const constexpr_ctx *ctx, tree t,
+   FOR_EACH_CONSTRUCTOR_ELT (CONSTRUCTOR_ELTS (whole), i, field, value)
+     {
+       tree bitpos = bit_position (field);
++      STRIP_ANY_LOCATION_WRAPPER (value);
+       if (bitpos == start && DECL_SIZE (field) == TREE_OPERAND (t, 1))
+ 	return value;
+       if (TREE_CODE (TREE_TYPE (field)) == INTEGER_TYPE
+@@ -3973,6 +3977,10 @@ cxx_eval_increment_expression (const constexpr_ctx *ctx, tree t,
    tree offset = TREE_OPERAND (t, 1);
    gcc_assert (TREE_CONSTANT (offset));
  
@@ -8729,6 +9137,22 @@ index f6f21b33396..a229b48d746 100644
    /* The operand as an lvalue.  */
    op = cxx_eval_constant_expression (ctx, op, true,
  				     non_constant_p, overflow_p);
+@@ -5917,6 +5925,7 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
+     case LABEL_DECL:
+     case LABEL_EXPR:
+     case CASE_LABEL_EXPR:
++    case PREDICT_EXPR:
+     case CONST_DECL:
+     case SIZEOF_EXPR:
+     case ALIGNOF_EXPR:
+@@ -6751,7 +6760,6 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
+ 
+     case CLEANUP_STMT:
+     case EMPTY_CLASS_EXPR:
+-    case PREDICT_EXPR:
+       return false;
+ 
+     case GOTO_EXPR:
 diff --git a/gcc/cp/cp-gimplify.c b/gcc/cp/cp-gimplify.c
 index 17d10456341..a7121b70a3b 100644
 --- a/gcc/cp/cp-gimplify.c
@@ -8772,7 +9196,7 @@ index 17d10456341..a7121b70a3b 100644
  
    /* this may not be specified in data-sharing clauses, still we need
 diff --git a/gcc/cp/cp-tree.h b/gcc/cp/cp-tree.h
-index ff4ce068a83..e15a07392ca 100644
+index ff4ce068a83..050e4b0f3a7 100644
 --- a/gcc/cp/cp-tree.h
 +++ b/gcc/cp/cp-tree.h
 @@ -423,7 +423,6 @@ extern GTY(()) tree cp_global_trees[CPTI_MAX];
@@ -8807,8 +9231,20 @@ index ff4ce068a83..e15a07392ca 100644
  extern bool template_parameter_pack_p           (const_tree);
  extern bool function_parameter_pack_p		(const_tree);
  extern bool function_parameter_expanded_from_pack_p (tree, tree);
+@@ -7328,6 +7325,11 @@ extern tree cxx_copy_lang_qualifiers		(const_tree, const_tree);
+ 
+ extern void cxx_print_statistics		(void);
+ extern bool maybe_warn_zero_as_null_pointer_constant (tree, location_t);
++/* Analogous to initializer_zerop but also examines the type for
++   which the initializer is being used.  Unlike initializer_zerop,
++   considers empty strings to be zero initializers for arrays and
++   non-zero for pointers.  */
++extern bool type_initializer_zero_p		(tree, tree);
+ 
+ /* in ptree.c */
+ extern void cxx_print_xnode			(FILE *, tree, int);
 diff --git a/gcc/cp/decl.c b/gcc/cp/decl.c
-index b57ded813b6..9769c1cb15d 100644
+index b57ded813b6..444332e53ba 100644
 --- a/gcc/cp/decl.c
 +++ b/gcc/cp/decl.c
 @@ -4474,13 +4474,27 @@ cp_fname_init (const char* name, tree *type_p)
@@ -8842,19 +9278,18 @@ index b57ded813b6..9769c1cb15d 100644
      free (CONST_CAST (char *, name));
  
    /* As we're using pushdecl_with_scope, we must set the context.  */
-@@ -5836,8 +5850,9 @@ reshape_init_array_1 (tree elt_type, tree max_index, reshape_iter *d,
+@@ -5836,8 +5850,8 @@ reshape_init_array_1 (tree elt_type, tree max_index, reshape_iter *d,
        /* Pointers initialized to strings must be treated as non-zero
  	 even if the string is empty.  */
        tree init_type = TREE_TYPE (elt_init);
 -      if ((POINTER_TYPE_P (elt_type) != POINTER_TYPE_P (init_type))
 -	  || !initializer_zerop (elt_init))
-+      if ((POINTER_TYPE_P (elt_type) != POINTER_TYPE_P (init_type)))
-+	last_nonzero = index;
-+      else if (!type_initializer_zero_p (elt_type, elt_init))
++      if (POINTER_TYPE_P (elt_type) != POINTER_TYPE_P (init_type)
++	  || !type_initializer_zero_p (elt_type, elt_init))
  	last_nonzero = index;
  
        /* This can happen with an invalid initializer (c++/54501).  */
-@@ -6114,7 +6129,7 @@ reshape_init_r (tree type, reshape_iter *d, bool first_initializer_p,
+@@ -6114,7 +6128,7 @@ reshape_init_r (tree type, reshape_iter *d, bool first_initializer_p,
  			       (CONSTRUCTOR_ELT (stripped_init,0)->value))))
  		{
  		  if (complain & tf_error)
@@ -8863,7 +9298,24 @@ index b57ded813b6..9769c1cb15d 100644
  		           "for type %qT", type);
  		  init = error_mark_node;
  		}
-@@ -9539,10 +9554,12 @@ build_ptrmemfunc_type (tree type)
+@@ -8407,14 +8421,14 @@ expand_static_init (tree decl, tree init)
+ 	      (acquire_name, build_function_type_list (integer_type_node,
+ 						       TREE_TYPE (guard_addr),
+ 						       NULL_TREE),
+-	       NULL_TREE, ECF_NOTHROW | ECF_LEAF);
++	       NULL_TREE, ECF_NOTHROW);
+ 	  if (!release_fn || !abort_fn)
+ 	    vfntype = build_function_type_list (void_type_node,
+ 						TREE_TYPE (guard_addr),
+ 						NULL_TREE);
+ 	  if (!release_fn)
+ 	    release_fn = push_library_fn (release_name, vfntype, NULL_TREE,
+-					   ECF_NOTHROW | ECF_LEAF);
++					  ECF_NOTHROW);
+ 	  if (!abort_fn)
+ 	    abort_fn = push_library_fn (abort_name, vfntype, NULL_TREE,
+ 					ECF_NOTHROW | ECF_LEAF);
+@@ -9539,10 +9553,12 @@ build_ptrmemfunc_type (tree type)
    TYPE_PTRMEMFUNC_FLAG (t) = 1;
  
    field = build_decl (input_location, FIELD_DECL, pfn_identifier, type);
@@ -8876,7 +9328,7 @@ index b57ded813b6..9769c1cb15d 100644
    DECL_CHAIN (field) = fields;
    fields = field;
  
-@@ -11435,6 +11452,8 @@ grokdeclarator (const cp_declarator *declarator,
+@@ -11435,6 +11451,8 @@ grokdeclarator (const cp_declarator *declarator,
  		else if (late_return_type
  			 && sfk != sfk_conversion)
  		  {
@@ -8885,7 +9337,7 @@ index b57ded813b6..9769c1cb15d 100644
  		    if (cxx_dialect < cxx11)
  		      /* Not using maybe_warn_cpp0x because this should
  			 always be an error.  */
-@@ -13042,7 +13061,9 @@ check_default_argument (tree decl, tree arg, tsubst_flags_t complain)
+@@ -13042,7 +13060,9 @@ check_default_argument (tree decl, tree arg, tsubst_flags_t complain)
    /* Avoid redundant -Wzero-as-null-pointer-constant warnings at
       the call sites.  */
    if (TYPE_PTR_OR_PTRMEM_P (decl_type)
@@ -9272,6 +9724,79 @@ index 6d40b145fcb..ebfdf9a47b0 100644
  	      if (VAR_P (t)
  		  && OMP_CLAUSE_CODE (c) == OMP_CLAUSE_FIRSTPRIVATE
  		  && TREE_STATIC (t)
+diff --git a/gcc/cp/tree.c b/gcc/cp/tree.c
+index 1339e9fd204..ae9bfd24cfb 100644
+--- a/gcc/cp/tree.c
++++ b/gcc/cp/tree.c
+@@ -5487,6 +5487,68 @@ maybe_warn_zero_as_null_pointer_constant (tree expr, location_t loc)
+   return false;
+ }
+ 
++/* Given an initializer INIT for a TYPE, return true if INIT is zero
++   so that it can be replaced by value initialization.  This function
++   distinguishes betwen empty strings as initializers for arrays and
++   for pointers (which make it return false).  */
++
++bool
++type_initializer_zero_p (tree type, tree init)
++{
++  if (type == error_mark_node || init == error_mark_node)
++    return false;
++
++  STRIP_NOPS (init);
++
++  if (POINTER_TYPE_P (type))
++    return TREE_CODE (init) != STRING_CST && initializer_zerop (init);
++
++  if (TREE_CODE (init) != CONSTRUCTOR)
++    return initializer_zerop (init);
++
++  if (TREE_CODE (type) == ARRAY_TYPE)
++    {
++      tree elt_type = TREE_TYPE (type);
++      elt_type = TYPE_MAIN_VARIANT (elt_type);
++      if (elt_type == char_type_node)
++	return initializer_zerop (init);
++
++      tree elt_init;
++      unsigned HOST_WIDE_INT i;
++      FOR_EACH_CONSTRUCTOR_VALUE (CONSTRUCTOR_ELTS (init), i, elt_init)
++	if (!type_initializer_zero_p (elt_type, elt_init))
++	  return false;
++      return true;
++    }
++
++  if (TREE_CODE (type) != RECORD_TYPE)
++    return initializer_zerop (init);
++
++  if (TYPE_NON_AGGREGATE_CLASS (type))
++    return false;
++
++  tree fld = TYPE_FIELDS (type);
++
++  tree fld_init;
++  unsigned HOST_WIDE_INT i;
++  FOR_EACH_CONSTRUCTOR_VALUE (CONSTRUCTOR_ELTS (init), i, fld_init)
++    {
++      fld = next_initializable_field (fld);
++      if (!fld)
++	return true;
++
++      tree fldtype = TREE_TYPE (fld);
++      if (!type_initializer_zero_p (fldtype, fld_init))
++	return false;
++
++      fld = DECL_CHAIN (fld);
++      if (!fld)
++	break;
++    }
++
++  return true;
++}
++
+ #if defined ENABLE_TREE_CHECKING && (GCC_VERSION >= 2007)
+ /* Complain that some language-specific thing hanging off a tree
+    node has been accessed improperly.  */
 diff --git a/gcc/cp/typeck.c b/gcc/cp/typeck.c
 index 3255af58a25..2169f8c4efd 100644
 --- a/gcc/cp/typeck.c
@@ -9408,6 +9933,19 @@ index 91679e8b9ba..5e5e8aa87e5 100644
  @cindex @code{aligned} variable attribute
  @item aligned
  @itemx aligned (@var{alignment})
+diff --git a/gcc/doc/install.texi b/gcc/doc/install.texi
+index 911875f9578..78a59e6b21c 100644
+--- a/gcc/doc/install.texi
++++ b/gcc/doc/install.texi
+@@ -2129,7 +2129,7 @@ specifying paths @var{path1}, @dots{}, @var{pathN}.
+ 
+ @smallexample
+ % @var{srcdir}/configure \
+-    --enable-offload-target=i686-unknown-linux-gnu=/path/to/i686/compiler,x86_64-pc-linux-gnu
++    --enable-offload-targets=x86_64-intelmicemul-linux-gnu=/path/to/x86_64/compiler,nvptx-none,hsa
+ @end smallexample
+ 
+ If @samp{hsa} is specified as one of the targets, the compiler will be
 diff --git a/gcc/dse.c b/gcc/dse.c
 index 6f6f768f371..4becdcf1cbb 100644
 --- a/gcc/dse.c
@@ -9529,10 +10067,24 @@ index f0e43b5fda2..9feaea9fde5 100644
    low = fold_convert_loc (loc, etype, low);
    exp = fold_convert_loc (loc, etype, exp);
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index e3073787ea9..1ace227a91f 100644
+index e3073787ea9..42430e46ef6 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,389 @@
+@@ -1,3 +1,403 @@
++2019-11-10  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	Backport from trunk
++	PR fortran/92113
++	* trans-decl.c (gfc_get_symbol_decl): If __def_init actually
++	contains a value, put it into  the read-only section.
++
++2019-11-10  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	Backport from trunk
++	PR fortran/92321
++	* frontend-passes.c (call_external_blas): Commit symbol for
++	external BLAS routine.
++
 +2019-11-08  Tobias Burnus  <tobias@codesourcery.com
 +
 +	Backport from mainline
@@ -10632,7 +11184,7 @@ index 2aeea92b8fb..cad0dd36a67 100644
  
    return MATCH_YES;
 diff --git a/gcc/fortran/frontend-passes.c b/gcc/fortran/frontend-passes.c
-index d4264dafa6f..e6786635788 100644
+index d4264dafa6f..ec374b684e0 100644
 --- a/gcc/fortran/frontend-passes.c
 +++ b/gcc/fortran/frontend-passes.c
 @@ -2519,7 +2519,12 @@ insert_index (gfc_expr *e, gfc_symbol *sym, mpz_t val, mpz_t ret)
@@ -10725,6 +11277,14 @@ index d4264dafa6f..e6786635788 100644
  }
  
  /* This selction deals with inlining calls to MATMUL.  */
+@@ -4601,6 +4637,7 @@ call_external_blas (gfc_code **c, int *walk_subtrees ATTRIBUTE_UNUSED,
+   call->symtree->n.sym->attr.procedure = 1;
+   call->symtree->n.sym->attr.flavor = FL_PROCEDURE;
+   call->resolved_sym = call->symtree->n.sym;
++  gfc_commit_symbol (call->resolved_sym);
+ 
+   /* Argument TRANSA.  */
+   next = gfc_get_actual_arglist ();
 diff --git a/gcc/fortran/gfortran.h b/gcc/fortran/gfortran.h
 index 2bb82980e8e..29b962d889c 100644
 --- a/gcc/fortran/gfortran.h
@@ -11669,7 +12229,7 @@ index 583425c516d..3945d116180 100644
        if (size)
  	array_parameter_size (se->expr, expr, size);
 diff --git a/gcc/fortran/trans-decl.c b/gcc/fortran/trans-decl.c
-index 9538dee5733..d1a6172063e 100644
+index 9538dee5733..27613f761e3 100644
 --- a/gcc/fortran/trans-decl.c
 +++ b/gcc/fortran/trans-decl.c
 @@ -369,44 +369,37 @@ gfc_sym_identifier (gfc_symbol * sym)
@@ -11730,22 +12290,29 @@ index 9538dee5733..d1a6172063e 100644
  }
  
  /* Get mangled identifier, adding the symbol to the global table if
-@@ -1892,9 +1885,13 @@ gfc_get_symbol_decl (gfc_symbol * sym)
+@@ -1892,9 +1885,18 @@ gfc_get_symbol_decl (gfc_symbol * sym)
    if (sym->attr.associate_var)
      GFC_DECL_ASSOCIATE_VAR_P (decl) = 1;
  
-+  /* We no longer mark __def_init as read-only so it does not take up
-+     space in the read-only section and dan go into the BSS instead,
-+     see PR 84487.  Marking this as artificial means that OpenMP will
-+     treat this as predetermined shared.  */
-   if (sym->attr.vtab
-       || (sym->name[0] == '_' && gfc_str_startswith (sym->name, "__def_init")))
+-  if (sym->attr.vtab
+-      || (sym->name[0] == '_' && gfc_str_startswith (sym->name, "__def_init")))
 -    TREE_READONLY (decl) = 1;
-+    DECL_ARTIFICIAL (decl) = 1;
++  /* We only mark __def_init as read-only if it actually has an
++     initializer so it does not needlessly take up space in the
++     read-only section and can go into the BSS instead, see PR 84487.
++     Marking this as artificial means that OpenMP will treat this as
++     predetermined shared.  */
++
++  if (sym->attr.vtab || gfc_str_startswith (sym->name, "__def_init"))
++    {
++      DECL_ARTIFICIAL (decl) = 1;
++      if (sym->attr.vtab || sym->value)
++	TREE_READONLY (decl) = 1;
++    }
  
    return decl;
  }
-@@ -5862,9 +5859,11 @@ generate_local_decl (gfc_symbol * sym)
+@@ -5862,9 +5864,11 @@ generate_local_decl (gfc_symbol * sym)
  	    }
  	  else if (warn_unused_dummy_argument)
  	    {
@@ -11760,7 +12327,7 @@ index 9538dee5733..d1a6172063e 100644
  	      if (sym->backend_decl != NULL_TREE)
  		TREE_NO_WARNING(sym->backend_decl) = 1;
  	    }
-@@ -5956,7 +5955,14 @@ generate_local_decl (gfc_symbol * sym)
+@@ -5956,7 +5960,14 @@ generate_local_decl (gfc_symbol * sym)
  
        if (sym->ns && sym->ns->construct_entities)
  	{
@@ -11776,7 +12343,7 @@ index 9538dee5733..d1a6172063e 100644
  	    gfc_get_symbol_decl (sym);
  	  sym->mark = 1;
  	}
-@@ -6440,6 +6446,20 @@ gfc_generate_return (void)
+@@ -6440,6 +6451,20 @@ gfc_generate_return (void)
  				    TREE_TYPE (result), DECL_RESULT (fndecl),
  				    result);
  	}
@@ -12069,7 +12636,7 @@ index 273c75a422c..6b42d82806b 100644
  /* Find the appropriate variant of a math intrinsic.  */
  tree gfc_builtin_decl_for_float_kind (enum built_in_function, int);
 diff --git a/gcc/function.c b/gcc/function.c
-index c6e862b3369..6c1d27f8a92 100644
+index c6e862b3369..acf9f9e60c7 100644
 --- a/gcc/function.c
 +++ b/gcc/function.c
 @@ -2449,8 +2449,7 @@ assign_parm_find_data_types (struct assign_parm_data_all *all, tree parm,
@@ -12082,6 +12649,43 @@ index c6e862b3369..6c1d27f8a92 100644
        && TYPE_TRANSPARENT_AGGR (passed_type))
      passed_type = TREE_TYPE (first_field (passed_type));
  
+@@ -3079,7 +3078,7 @@ assign_parm_setup_block (struct assign_parm_data_all *all,
+ 	move_block_from_reg (REGNO (entry_parm), mem,
+ 			     size_stored / UNITS_PER_WORD);
+     }
+-  else if (data->stack_parm == 0)
++  else if (data->stack_parm == 0 && !TYPE_EMPTY_P (data->passed_type))
+     {
+       push_to_sequence2 (all->first_conversion_insn, all->last_conversion_insn);
+       emit_block_move (stack_parm, data->entry_parm, GEN_INT (size),
+@@ -3455,7 +3454,9 @@ assign_parm_setup_stack (struct assign_parm_data_all *all, tree parm,
+       dest = validize_mem (copy_rtx (data->stack_parm));
+       src = validize_mem (copy_rtx (data->entry_parm));
+ 
+-      if (MEM_P (src))
++      if (TYPE_EMPTY_P (data->passed_type))
++	/* Empty types don't really need to be copied.  */;
++      else if (MEM_P (src))
+ 	{
+ 	  /* Use a block move to handle potentially misaligned entry_parm.  */
+ 	  if (!to_conversion)
+@@ -3611,6 +3612,16 @@ assign_parms (tree fndecl)
+ 	{
+ 	  assign_parm_find_stack_rtl (parm, &data);
+ 	  assign_parm_adjust_entry_rtl (&data);
++	  /* For arguments that occupy no space in the parameter
++	     passing area, have non-zero size and have address taken,
++	     force creation of a stack slot so that they have distinct
++	     address from other parameters.  */
++	  if (TYPE_EMPTY_P (data.passed_type)
++	      && TREE_ADDRESSABLE (parm)
++	      && data.entry_parm == data.stack_parm
++	      && MEM_P (data.entry_parm)
++	      && int_size_in_bytes (data.passed_type))
++	    data.stack_parm = NULL_RTX;
+ 	}
+       /* Record permanently how this parm was passed.  */
+       if (data.passed_pointer)
 diff --git a/gcc/gcov.c b/gcc/gcov.c
 index b06a6714c2e..7e51c2efb30 100644
 --- a/gcc/gcov.c
@@ -12297,6 +12901,18 @@ index 60273f2e57d..31606dc843f 100644
  /* Assume that all GGC memory is reachable and grow the limits for next collection. */
  extern void ggc_grow (void);
  
+diff --git a/gcc/gimple-fold.c b/gcc/gimple-fold.c
+index f30818042ee..d00f1e2b035 100644
+--- a/gcc/gimple-fold.c
++++ b/gcc/gimple-fold.c
+@@ -6557,6 +6557,7 @@ gimple_fold_stmt_to_constant_1 (gimple *stmt, tree (*valueize) (tree),
+ 
+ 	fn = (*valueize) (gimple_call_fn (stmt));
+ 	if (TREE_CODE (fn) == ADDR_EXPR
++	    && TREE_CODE (TREE_OPERAND (fn, 0)) == FUNCTION_DECL
+ 	    && fndecl_built_in_p (TREE_OPERAND (fn, 0))
+ 	    && gimple_builtin_call_types_compatible_p (stmt,
+ 						       TREE_OPERAND (fn, 0)))
 diff --git a/gcc/gimple-streamer-out.c b/gcc/gimple-streamer-out.c
 index 34b8d6fda7d..7185c07f36b 100644
 --- a/gcc/gimple-streamer-out.c
@@ -12347,7 +12963,7 @@ index 34b8d6fda7d..7185c07f36b 100644
  	  /* Emit the EH region holding STMT.  */
  	  region = lookup_stmt_eh_lp_fn (fn, stmt);
 diff --git a/gcc/gimplify.c b/gcc/gimplify.c
-index 98408b981dc..28e13a71021 100644
+index 98408b981dc..a0cb6c402bc 100644
 --- a/gcc/gimplify.c
 +++ b/gcc/gimplify.c
 @@ -7058,6 +7058,8 @@ omp_default_clause (struct gimplify_omp_ctx *ctx, tree decl,
@@ -12359,6 +12975,17 @@ index 98408b981dc..28e13a71021 100644
  
    switch (default_kind)
      {
+@@ -8716,8 +8718,8 @@ gimplify_scan_omp_clauses (tree *list_p, gimple_seq *pre_p,
+ 			      break;
+ 			    if (scp)
+ 			      continue;
+-			    gcc_assert (offset == NULL_TREE
+-					|| poly_int_tree_p (offset));
++			    gcc_assert (offset2 == NULL_TREE
++					|| poly_int_tree_p (offset2));
+ 			    tree d1 = OMP_CLAUSE_DECL (*sc);
+ 			    tree d2 = OMP_CLAUSE_DECL (c);
+ 			    while (TREE_CODE (d1) == ARRAY_REF)
 diff --git a/gcc/go/gofrontend/expressions.cc b/gcc/go/gofrontend/expressions.cc
 index 6f9775dd5a2..859c1ece5da 100644
 --- a/gcc/go/gofrontend/expressions.cc
@@ -12804,10 +13431,19 @@ index ac971494054..10bd7c9becb 100644
  					&decoded_options_count);
  
 diff --git a/gcc/lto/ChangeLog b/gcc/lto/ChangeLog
-index eb2653be616..c78f9c92a86 100644
+index eb2653be616..e381db79f17 100644
 --- a/gcc/lto/ChangeLog
 +++ b/gcc/lto/ChangeLog
-@@ -1,3 +1,19 @@
+@@ -1,3 +1,28 @@
++2019-11-08  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from mainline
++	2019-10-31  Jakub Jelinek  <jakub@redhat.com>
++
++	PR middle-end/92231
++	* lto-lang.c (handle_const_attribute): Don't call fndecl_built_in_p
++	on *node that is not FUNCTION_DECL.
++
 +2019-10-26  Jan Hubicka  <hubicka@ucw.cz>
 +
 +	Backport from mainline
@@ -12827,6 +13463,20 @@ index eb2653be616..c78f9c92a86 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
+diff --git a/gcc/lto/lto-lang.c b/gcc/lto/lto-lang.c
+index 5a35d4794c2..4ef228fcb45 100644
+--- a/gcc/lto/lto-lang.c
++++ b/gcc/lto/lto-lang.c
+@@ -303,7 +303,8 @@ handle_const_attribute (tree *node, tree ARG_UNUSED (name),
+ 			tree ARG_UNUSED (args), int ARG_UNUSED (flags),
+ 			bool * ARG_UNUSED (no_add_attrs))
+ {
+-  if (!fndecl_built_in_p (*node))
++  if (TREE_CODE (*node) != FUNCTION_DECL
++      || !fndecl_built_in_p (*node))
+     inform (UNKNOWN_LOCATION, "%s:%s: %E: %E", __FILE__, __func__, *node, name);
+ 
+   tree type = TREE_TYPE (*node);
 diff --git a/gcc/lto/lto.c b/gcc/lto/lto.c
 index 4367928a515..4dde8c001e1 100644
 --- a/gcc/lto/lto.c
@@ -15640,10 +16290,50 @@ index 29f6cdc4667..33b4be79c0f 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..087d24de351 100644
+index bc11ae4ae0b..f77cdb49cda 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,792 @@
+@@ -1,3 +1,832 @@
++2019-11-11  Richard Biener  <rguenther@suse.de>
++
++	Backport from mainline
++	2019-06-25  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/90930
++	* gcc.dg/tree-ssa/reassoc-24.c: Adjust.
++	* gcc.dg/tree-ssa/reassoc-25.c: Likewise.
++
++2019-11-10  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	Backport from trunk
++	PR fortran/92321
++	* gfortran.dg/matmul_blas_2.f90: New test.
++
++2019-11-08  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/92384
++	* g++.dg/torture/pr92384.C: New test.
++
++	Backported from mainline
++	2019-11-05  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/92343
++	* g++.dg/cpp2a/attr-likely6.C: New test.
++
++	2019-10-31  Jakub Jelinek  <jakub@redhat.com>
++
++	PR preprocessor/92296
++	* c-c++-common/cpp/pr92296-1.c: New test.
++	* c-c++-common/cpp/pr92296-2.c: New test.
++
++	PR middle-end/92231
++	* gcc.c-torture/compile/pr92231.c: New test.
++
++	2019-10-21  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/92015
++	* g++.dg/cpp0x/constexpr-92015.C: New test.
++
 +2019-11-08  Eric Botcazou  <ebotcazou@adacore.com>
 +
 +	* gcc.c-torture/compile/20191108-1.c: New test.
@@ -16436,7 +17126,7 @@ index bc11ae4ae0b..087d24de351 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +1216,7 @@
+@@ -427,7 +1256,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -16445,7 +17135,7 @@ index bc11ae4ae0b..087d24de351 100644
  	(check_effective_target_powerpc_p8vector_ok): No support for Darwin.
  	(check_effective_target_powerpc_p9vector_ok): Likewise.
  	(check_effective_target_powerpc_float128_sw_ok): Likewise.
-@@ -720,7 +1509,7 @@
+@@ -720,7 +1549,7 @@
  
  	Backport from mainline
  	PR fortran/91077
@@ -16454,7 +17144,7 @@ index bc11ae4ae0b..087d24de351 100644
  
  2019-07-05  Szabolcs Nagy  <szabolcs.nagy@arm.com>
  
-@@ -969,7 +1758,7 @@
+@@ -969,7 +1798,7 @@
         * gcc.target/i386/pr82699-6.c: Likewise
         * gcc.target/i386/returninst1.c: Likewise
         * gcc.target/i386/returninst2.c: Likewise
@@ -16463,7 +17153,7 @@ index bc11ae4ae0b..087d24de351 100644
  
  2019-05-30  Iain Sandoe  <iain@sandoe.co.uk>
  
-@@ -1131,7 +1920,7 @@
+@@ -1131,7 +1960,7 @@
  
  	Backport from trunk
  	PR fortran/90498
@@ -16472,7 +17162,7 @@ index bc11ae4ae0b..087d24de351 100644
  
  2019-05-17  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -3801,21 +4590,21 @@
+@@ -3801,21 +4630,21 @@
  2019-02-23  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88117
@@ -16501,7 +17191,7 @@ index bc11ae4ae0b..087d24de351 100644
  
  2019-02-22  David Malcolm  <dmalcolm@redhat.com>
  
-@@ -4444,7 +5233,7 @@
+@@ -4444,7 +5273,7 @@
  2019-02-09  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/89200
@@ -16510,7 +17200,7 @@ index bc11ae4ae0b..087d24de351 100644
  
  2019-02-09  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -4704,17 +5493,17 @@
+@@ -4704,17 +5533,17 @@
  2019-02-02  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88393
@@ -16784,6 +17474,123 @@ index 00000000000..5de9ade4d43
 +}
 +
 +// { dg-final { scan-tree-dump-not "abort" "optimized" } }
+diff --git a/gcc/testsuite/c-c++-common/cpp/pr92296-1.c b/gcc/testsuite/c-c++-common/cpp/pr92296-1.c
+new file mode 100644
+index 00000000000..4bd69c8be87
+--- /dev/null
++++ b/gcc/testsuite/c-c++-common/cpp/pr92296-1.c
+@@ -0,0 +1,32 @@
++/* PR preprocessor/92296 */
++/* { dg-do preprocess } */
++
++#pragma push_macro("__TIMESTAMP__")
++#pragma pop_macro("__TIMESTAMP__")
++
++#pragma push_macro("__TIME__")
++#pragma pop_macro("__TIME__")
++
++#pragma push_macro("__DATE__")
++#pragma pop_macro("__DATE__")
++
++#pragma push_macro("__FILE__")
++#pragma pop_macro("__FILE__")
++
++#pragma push_macro("__BASE_FILE__")
++#pragma pop_macro("__BASE_FILE__")
++
++#pragma push_macro("__LINE__")
++#pragma pop_macro("__LINE__")
++
++#pragma push_macro("__INCLUDE_LEVEL__")
++#pragma pop_macro("__INCLUDE_LEVEL__")
++
++#pragma push_macro("__COUNTER__")
++#pragma pop_macro("__COUNTER__")
++
++#pragma push_macro("__has_attribute")
++#pragma pop_macro("__has_attribute")
++
++#pragma push_macro("__has_cpp_attribute")
++#pragma pop_macro("__has_cpp_attribute")
+diff --git a/gcc/testsuite/c-c++-common/cpp/pr92296-2.c b/gcc/testsuite/c-c++-common/cpp/pr92296-2.c
+new file mode 100644
+index 00000000000..15362a4bdc3
+--- /dev/null
++++ b/gcc/testsuite/c-c++-common/cpp/pr92296-2.c
+@@ -0,0 +1,73 @@
++/* PR preprocessor/92296 */
++/* { dg-do preprocess } */
++/* { dg-options "-Wno-builtin-macro-redefined" } */
++
++#pragma push_macro("__TIMESTAMP__")
++#undef __TIMESTAMP__
++#define __TIMESTAMP__ "Thu Oct 31 12:00:00 2019"
++timestamp1 = __TIMESTAMP__
++#pragma pop_macro("__TIMESTAMP__")
++timestamp2 = __TIMESTAMP__
++
++#pragma push_macro("__TIME__")
++#undef __TIME__
++#define __TIME__ "12:00:00"
++time1 = __TIME__
++#pragma pop_macro("__TIME__")
++time2 = __TIME__
++
++#pragma push_macro("__DATE__")
++#undef __DATE__
++#define __DATE__ "Oct 31 2019"
++date1 = __DATE__
++#pragma pop_macro("__DATE__")
++date2 = __DATE__
++
++#pragma push_macro("__FILE__")
++#undef __FILE__
++#define __FILE__ "pr92296-3.c"
++file1 = __FILE__	/* { dg-final { scan-file pr92296-2.i "file1 = \"pr92296-3.c\"" } } */
++#pragma pop_macro("__FILE__")
++file2 = __FILE__	/* { dg-final { scan-file-not pr92296-2.i "file2 = \"pr92296-3.c\"" } } */
++
++#pragma push_macro("__BASE_FILE__")
++#undef __BASE_FILE__
++#define __BASE_FILE__ "pr92296-4.c"
++filebase1 = __BASE_FILE__	/* { dg-final { scan-file pr92296-2.i "filebase1 = \"pr92296-4.c\"" } } */
++#pragma pop_macro("__BASE_FILE__")
++filebase2 = __BASE_FILE__	/* { dg-final { scan-file-not pr92296-2.i "filebase2 = \"pr92296-4.c\"" } } */
++
++#pragma push_macro("__LINE__")
++#undef __LINE__		/* { dg-warning "undefining" } */
++#define __LINE__ 142
++line1 = __LINE__	/* { dg-final { scan-file pr92296-2.i "line1 = 142" } } */
++#pragma pop_macro("__LINE__")
++line2 = __LINE__	/* { dg-final { scan-file pr92296-2.i "line2 = 45" } } */
++
++#pragma push_macro("__INCLUDE_LEVEL__")
++#undef __INCLUDE_LEVEL__	/* { dg-warning "undefining" } */
++#define __INCLUDE_LEVEL__ 42
++includelevel1 = __INCLUDE_LEVEL__	/* { dg-final { scan-file pr92296-2.i "includelevel1 = 42" } } */
++#pragma pop_macro("__INCLUDE_LEVEL__")
++includelevel2 = __INCLUDE_LEVEL__	/* { dg-final { scan-file pr92296-2.i "includelevel2 = 0" } } */
++
++#pragma push_macro("__COUNTER__")
++#undef __COUNTER__	/* { dg-warning "undefining" } */
++#define __COUNTER__ 172
++counter1 = __COUNTER__	/* { dg-final { scan-file pr92296-2.i "counter1 = 172" } } */
++#pragma pop_macro("__COUNTER__")
++counter2 = __COUNTER__	/* { dg-final { scan-file-not pr92296-2.i "counter2 = 172" } } */
++
++#pragma push_macro("__has_attribute")
++#undef __has_attribute	/* { dg-warning "undefining" } */
++#define __has_attribute(x) 0
++hasattr1 = __has_attribute(noreturn)	/* { dg-final { scan-file pr92296-2.i "hasattr1 = 0" } } */
++#pragma pop_macro("__has_attribute")
++hasattr2 = __has_attribute(noreturn)	/* { dg-final { scan-file-not pr92296-2.i "hasattr2 = 0" } } */
++
++#pragma push_macro("__has_cpp_attribute")
++#undef __has_cpp_attribute	/* { dg-warning "undefining" } */
++#define __has_cpp_attribute(x) 0
++hasattrcpp1 = __has_cpp_attribute(noreturn)	/* { dg-final { scan-file pr92296-2.i "hasattrcpp1 = 0" } } */
++#pragma pop_macro("__has_cpp_attribute")
++hasattrcpp2 = __has_cpp_attribute(noreturn)	/* { dg-final { scan-file-not pr92296-2.i "hasattrcpp2 = 0" } } */
 diff --git a/gcc/testsuite/c-c++-common/gomp/pr88203-1.c b/gcc/testsuite/c-c++-common/gomp/pr88203-1.c
 new file mode 100644
 index 00000000000..54a686487c9
@@ -17141,6 +17948,19 @@ index 00000000000..7df74dc110b
 +  A a;
 +  decltype (bar (a)) p;
 +};
+diff --git a/gcc/testsuite/g++.dg/cpp0x/constexpr-92015.C b/gcc/testsuite/g++.dg/cpp0x/constexpr-92015.C
+new file mode 100644
+index 00000000000..60f288ee993
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp0x/constexpr-92015.C
+@@ -0,0 +1,7 @@
++// PR c++/92015
++// { dg-do compile { target c++11 } }
++
++struct S1 { char c[6] {'h', 'e', 'l', 'l', 'o', 0}; };
++struct S2 { char c[6] = "hello"; };
++static_assert (S1{}.c[0] == 'h', "");
++static_assert (S2{}.c[0] == 'h', "");
 diff --git a/gcc/testsuite/g++.dg/cpp0x/constexpr-odr1.C b/gcc/testsuite/g++.dg/cpp0x/constexpr-odr1.C
 new file mode 100644
 index 00000000000..cf3f95f0565
@@ -17351,6 +18171,35 @@ index 00000000000..2fb628df6d7
 +  fn2 ();
 +  if (g != 2)
 +    __builtin_abort ();
++}
+diff --git a/gcc/testsuite/g++.dg/cpp0x/overload-conv-4.C b/gcc/testsuite/g++.dg/cpp0x/overload-conv-4.C
+new file mode 100644
+index 00000000000..6fcdbbaa6a4
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp0x/overload-conv-4.C
+@@ -0,0 +1,23 @@
++// PR c++/90998 - ICE with copy elision in init by ctor and -Wconversion.
++// { dg-do compile { target c++11 } }
++// { dg-options "-Wconversion" }
++
++struct B;
++
++struct A {
++    operator B();
++};
++
++struct B {
++    B(A const &rs);
++    B(B const &rs);
++};
++
++B
++f (A x)
++{
++  // C++14: we call B::B(A const &)
++  // C++17: we call A::operator B()
++  return B(x); // { dg-warning "choosing .A::operator B\\(\\). over .B::B\\(const A&\\)" "" { target c++17 } }
++  // { dg-warning "for conversion from .A. to .B." "" { target c++17 } .-1 }
 +}
 diff --git a/gcc/testsuite/g++.dg/cpp0x/range-for19.C b/gcc/testsuite/g++.dg/cpp0x/range-for19.C
 index e3f446f3700..6afaee577f2 100644
@@ -17647,6 +18496,26 @@ index 00000000000..a8f06ed421a
 +  if (fn != bar || !ok)
 +    abort ();
 +}
+diff --git a/gcc/testsuite/g++.dg/cpp2a/attr-likely6.C b/gcc/testsuite/g++.dg/cpp2a/attr-likely6.C
+new file mode 100644
+index 00000000000..a04021e5037
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp2a/attr-likely6.C
+@@ -0,0 +1,14 @@
++// PR c++/92343
++// { dg-do compile { target c++14 } }
++
++constexpr bool
++foo (bool x)
++{
++  if (x)
++    [[unlikely]] return true;
++  else
++    [[likely]] return false;
++}
++
++static_assert (foo (true), "");
++static_assert (!foo (false), "");
 diff --git a/gcc/testsuite/g++.dg/cpp2a/nontype-class23.C b/gcc/testsuite/g++.dg/cpp2a/nontype-class23.C
 new file mode 100644
 index 00000000000..ab9e80fd335
@@ -18029,6 +18898,25 @@ index 00000000000..2bf480561fe
 +}
 +
 +// { dg-final { scan-tree-dump-not "abort" "optimized" } }
+diff --git a/gcc/testsuite/g++.dg/init/array54.C b/gcc/testsuite/g++.dg/init/array54.C
+new file mode 100644
+index 00000000000..f6be350ba72
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/init/array54.C
+@@ -0,0 +1,13 @@
++// PR c++/90947
++// { dg-do run { target c++11 } }
++
++#include <atomic>
++
++static std::atomic<int> a[1] { {1} };
++
++int
++main ()
++{
++  if (a[0].load () != 1)
++    __builtin_abort ();
++}
 diff --git a/gcc/testsuite/g++.dg/lookup/missing-std-include-5.C b/gcc/testsuite/g++.dg/lookup/missing-std-include-5.C
 index fe880a6263b..3ec9abd9316 100644
 --- a/gcc/testsuite/g++.dg/lookup/missing-std-include-5.C
@@ -18367,6 +19255,50 @@ index 00000000000..37a05a5e3a5
 +{
 +  return getFuncId(&MyStruct::fun1);
 +}
+diff --git a/gcc/testsuite/g++.dg/torture/pr92384.C b/gcc/testsuite/g++.dg/torture/pr92384.C
+new file mode 100644
+index 00000000000..049a45a0154
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/torture/pr92384.C
+@@ -0,0 +1,38 @@
++// PR c++/92384
++// { dg-do run }
++
++struct S {};
++struct T : public S { S a, b, c, d, e, f, g, h, i, j, k, l, m; };
++struct U { long long a, b, c; };
++
++U
++foo (S, S, S, T, T, T, U g)
++{
++  return g;
++}
++
++__attribute__((noipa)) bool
++bar (S a, S b, S c, T d, T e, T f, U g, void **h)
++{
++  h[0] = (void *) &a;
++  h[1] = (void *) &b;
++  h[2] = (void *) &c;
++  h[3] = (void *) &d;
++  h[4] = (void *) &e;
++  h[5] = (void *) &f;
++  h[6] = (void *) &g;
++  asm volatile ("" : : "r" (h) : "memory");
++  return (h[0] != h[1] && h[1] != h[2] && h[2] != h[3]
++	  && h[3] != h[4] && h[4] != h[5] && h[5] != h[6]);
++}
++
++int
++main ()
++{
++  S a;
++  T b;
++  U c = { 1, 2, 3 };
++  void *d[7];
++  if (!bar (a, a, a, b, b, b, c, d))
++    __builtin_abort ();
++}
 diff --git a/gcc/testsuite/g++.dg/warn/Wsign-conversion-5.C b/gcc/testsuite/g++.dg/warn/Wsign-conversion-5.C
 new file mode 100644
 index 00000000000..ff384164901
@@ -18495,6 +19427,21 @@ index 00000000000..d04da763e15
 +    case 4:
 +      __builtin_sprintf (e, a);
 +    }
++}
+diff --git a/gcc/testsuite/gcc.c-torture/compile/pr92231.c b/gcc/testsuite/gcc.c-torture/compile/pr92231.c
+new file mode 100644
+index 00000000000..1813add63c6
+--- /dev/null
++++ b/gcc/testsuite/gcc.c-torture/compile/pr92231.c
+@@ -0,0 +1,9 @@
++/* PR middle-end/92231 */
++
++extern int bar (void);
++
++int
++foo (void)
++{
++  return (&bar + 4096) ();
 +}
 diff --git a/gcc/testsuite/gcc.c-torture/execute/20190820-1.c b/gcc/testsuite/gcc.c-torture/execute/20190820-1.c
 new file mode 100644
@@ -19410,6 +20357,40 @@ index 00000000000..b578de79cf1
 +/* The second statement is redundant.  */
 +/* { dg-final { scan-tree-dump-times "x = " 1 "fre1" } } */
 +/* { dg-final { scan-tree-dump-times " = \[^;\]*x;" 1 "fre1" } } */
+diff --git a/gcc/testsuite/gcc.dg/tree-ssa/reassoc-24.c b/gcc/testsuite/gcc.dg/tree-ssa/reassoc-24.c
+index 4503cd74009..c320d1cb71b 100644
+--- a/gcc/testsuite/gcc.dg/tree-ssa/reassoc-24.c
++++ b/gcc/testsuite/gcc.dg/tree-ssa/reassoc-24.c
+@@ -1,5 +1,5 @@
+ /* { dg-do compile } */
+-/* { dg-options "-O2 --param tree-reassoc-width=2 -fdump-tree-reassoc1" } */
++/* { dg-options "-O2 --param tree-reassoc-width=2 -fdump-tree-reassoc2" } */
+ 
+ unsigned int
+ foo (void)
+@@ -21,4 +21,4 @@ foo (void)
+ 
+ /* Verify there are two pairs of __asm__ statements with no
+    intervening stmts.  */
+-/* { dg-final { scan-tree-dump-times "__asm__\[^;\n]*;\n *__asm__" 2 "reassoc1"} } */
++/* { dg-final { scan-tree-dump-times "__asm__\[^;\n]*;\n *__asm__" 2 "reassoc2"} } */
+diff --git a/gcc/testsuite/gcc.dg/tree-ssa/reassoc-25.c b/gcc/testsuite/gcc.dg/tree-ssa/reassoc-25.c
+index 553736bc391..dbb02683778 100644
+--- a/gcc/testsuite/gcc.dg/tree-ssa/reassoc-25.c
++++ b/gcc/testsuite/gcc.dg/tree-ssa/reassoc-25.c
+@@ -1,5 +1,5 @@
+ /* { dg-do compile } */
+-/* { dg-options "-O2 --param tree-reassoc-width=3 -fdump-tree-reassoc1-details" } */
++/* { dg-options "-O2 --param tree-reassoc-width=3 -fdump-tree-reassoc2-details" } */
+ 
+ unsigned int
+ foo (int a, int b, int c, int d)
+@@ -15,4 +15,4 @@ foo (int a, int b, int c, int d)
+ }
+ 
+ /* Verify reassociation width was chosen to be 2.  */
+-/* { dg-final { scan-tree-dump-times "Width = 2" 1 "reassoc1"} } */
++/* { dg-final { scan-tree-dump-times "Width = 2" 1 "reassoc2"} } */
 diff --git a/gcc/testsuite/gcc.dg/vect/pr91665.c b/gcc/testsuite/gcc.dg/vect/pr91665.c
 new file mode 100644
 index 00000000000..6b69ea030b1
@@ -21117,6 +22098,37 @@ index 00000000000..072de218253
 +    u(:) = v(:)
 +  end do
 +end
+diff --git a/gcc/testsuite/gfortran.dg/matmul_blas_2.f90 b/gcc/testsuite/gfortran.dg/matmul_blas_2.f90
+new file mode 100644
+index 00000000000..237f4a10d89
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/matmul_blas_2.f90
+@@ -0,0 +1,25 @@
++! { dg-do compile }
++! { dg-options "-O3 -fdump-tree-original -fexternal-blas" }
++! PR fortran/92321 - this used to cause an ICE.  Original test case
++! by Nathan Wukie.
++
++module mod_badmatmul
++    implicit none
++contains
++
++    subroutine test(c)
++        real, intent(inout) :: c(3,3)
++        real :: a(3,3), b(3,3)
++        c = matmul(a, b)
++    end subroutine test
++
++end module mod_badmatmul
++
++program main
++    use mod_badmatmul, only: test
++    implicit none
++
++    real :: a(3,3)
++    call test(a)
++
++end program main
 diff --git a/gcc/testsuite/gfortran.dg/pdt_4.f03 b/gcc/testsuite/gfortran.dg/pdt_4.f03
 index 0bb58f91c67..c1af65a5248 100644
 --- a/gcc/testsuite/gfortran.dg/pdt_4.f03
@@ -22759,6 +23771,50 @@ index 646feb6085f..8bd17b82368 100644
  	  if (visited)
  	    BITMAP_FREE (visited);
  	}
+diff --git a/gcc/tree-ssa-reassoc.c b/gcc/tree-ssa-reassoc.c
+index 7161c4c36c3..6794fbde29e 100644
+--- a/gcc/tree-ssa-reassoc.c
++++ b/gcc/tree-ssa-reassoc.c
+@@ -6013,12 +6013,7 @@ reassociate_bb (basic_block bb)
+ 		{
+ 		  machine_mode mode = TYPE_MODE (TREE_TYPE (lhs));
+ 		  int ops_num = ops.length ();
+-		  int width = get_reassociation_width (ops_num, rhs_code, mode);
+-
+-		  if (dump_file && (dump_flags & TDF_DETAILS))
+-		    fprintf (dump_file,
+-			     "Width = %d was chosen for reassociation\n", width);
+-
++		  int width;
+ 
+ 		  /* For binary bit operations, if there are at least 3
+ 		     operands and the last last operand in OPS is a constant,
+@@ -6032,10 +6027,21 @@ reassociate_bb (basic_block bb)
+ 		      && TREE_CODE (ops.last ()->op) == INTEGER_CST)
+ 		    std::swap (*ops[0], *ops[ops_num - 1]);
+ 
+-		  if (width > 1
+-		      && ops.length () > 3)
+-		    rewrite_expr_tree_parallel (as_a <gassign *> (stmt),
+-						width, ops);
++		  /* Only rewrite the expression tree to parallel in the
++		     last reassoc pass to avoid useless work back-and-forth
++		     with initial linearization.  */
++		  if (!reassoc_insert_powi_p
++		      && ops.length () > 3
++		      && (width = get_reassociation_width (ops_num, rhs_code,
++							   mode)) > 1)
++		    {
++		      if (dump_file && (dump_flags & TDF_DETAILS))
++			fprintf (dump_file,
++				 "Width = %d was chosen for reassociation\n",
++				 width);
++		      rewrite_expr_tree_parallel (as_a <gassign *> (stmt),
++						  width, ops);
++		    }
+ 		  else
+                     {
+                       /* When there are three operands left, we want
 diff --git a/gcc/tree-ssa-sccvn.c b/gcc/tree-ssa-sccvn.c
 index 9529d1669c9..aea11bdebba 100644
 --- a/gcc/tree-ssa-sccvn.c
@@ -23281,7 +24337,7 @@ index 795d7184a65..2140101d7d2 100644
  					 wmin, wmax, min_ovf, max_ovf);
  	  if (type == VR_VARYING)
 diff --git a/gcc/tree.c b/gcc/tree.c
-index 73102c4e75b..b20781ce00b 100644
+index 73102c4e75b..1549bde9147 100644
 --- a/gcc/tree.c
 +++ b/gcc/tree.c
 @@ -5514,8 +5514,7 @@ free_lang_data_in_type (tree type, struct free_lang_data_d *fld)
@@ -23294,7 +24350,17 @@ index 73102c4e75b..b20781ce00b 100644
  	    TYPE_BINFO (type) = NULL;
  	}
      }
-@@ -5937,8 +5936,9 @@ find_decls_types_r (tree *tp, int *ws, void *data)
+@@ -5778,7 +5777,8 @@ free_lang_data_in_decl (tree decl, struct free_lang_data_d *fld)
+       while (*nextp)
+ 	{
+ 	  tree var = *nextp;
+-	  if (fndecl_built_in_p (var))
++	  if (TREE_CODE (var) == FUNCTION_DECL
++	      && fndecl_built_in_p (var))
+ 	    *nextp = TREE_CHAIN (var);
+ 	  else
+ 	    nextp = &TREE_CHAIN (var);
+@@ -5937,8 +5937,9 @@ find_decls_types_r (tree *tp, int *ws, void *data)
      {
        for (tree *tem = &BLOCK_VARS (t); *tem; )
  	{
@@ -23306,7 +24372,7 @@ index 73102c4e75b..b20781ce00b 100644
  	    {
  	      gcc_assert (TREE_CODE (*tem) != RESULT_DECL
  			  && TREE_CODE (*tem) != PARM_DECL);
-@@ -6107,6 +6107,13 @@ find_decls_types_in_node (struct cgraph_node *n, struct free_lang_data_d *fld)
+@@ -6107,6 +6108,13 @@ find_decls_types_in_node (struct cgraph_node *n, struct free_lang_data_d *fld)
  	    {
  	      tree arg = gimple_op (stmt, i);
  	      find_decls_types (arg, fld);
@@ -23320,97 +24386,133 @@ index 73102c4e75b..b20781ce00b 100644
  	    }
  	}
      }
-@@ -11357,6 +11364,73 @@ initializer_each_zero_or_onep (const_tree expr)
+diff --git a/gcc/tree.h b/gcc/tree.h
+index d650511c66f..43dabd1a3bf 100644
+--- a/gcc/tree.h
++++ b/gcc/tree.h
+@@ -5946,12 +5946,12 @@ type_has_mode_precision_p (const_tree t)
+ 
+    Note that it is different from the DECL_IS_BUILTIN accessor.  For
+    instance, user declared prototypes of C library functions are not
+-   DECL_IS_BUILTIN but may be DECL_BUILT_IN.  */
++   DECL_IS_BUILTIN but may be fndecl_built_in_p.  */
+ 
+ inline bool
+ fndecl_built_in_p (const_tree node)
+ {
+-  return (DECL_BUILT_IN_CLASS (node) != NOT_BUILT_IN);
++  return DECL_BUILT_IN_CLASS (node) != NOT_BUILT_IN;
+ }
+ 
+ /* Return true if a FUNCTION_DECL NODE is a GCC built-in function
+@@ -5960,7 +5960,7 @@ fndecl_built_in_p (const_tree node)
+ inline bool
+ fndecl_built_in_p (const_tree node, built_in_class klass)
+ {
+-  return (fndecl_built_in_p (node) && DECL_BUILT_IN_CLASS (node) == klass);
++  return fndecl_built_in_p (node) && DECL_BUILT_IN_CLASS (node) == klass;
+ }
+ 
+ /* Return true if a FUNCTION_DECL NODE is a GCC built-in function
+diff --git a/libcpp/ChangeLog b/libcpp/ChangeLog
+index 99e2386de14..68c9237cf03 100644
+--- a/libcpp/ChangeLog
++++ b/libcpp/ChangeLog
+@@ -1,3 +1,17 @@
++2019-11-08  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from mainline
++	2019-10-31  Jakub Jelinek  <jakub@redhat.com>
++
++	PR preprocessor/92296
++	* internal.h (struct def_pragma_macro): Add is_builtin bitfield.
++	(_cpp_restore_special_builtin): Declare.
++	* init.c (_cpp_restore_special_builtin): New function.
++	* directives.c (do_pragma_push_macro): For NT_BUILTIN_MACRO
++	set is_builtin and don't try to grab definition.
++	(cpp_pop_definition): Use _cpp_restore_special_builtin to restore
++	builtin macros.
++
+ 2019-08-12  Release Manager
+ 
+ 	* GCC 9.2.0 released.
+diff --git a/libcpp/directives.c b/libcpp/directives.c
+index 1ada834da17..d78e4b7fc19 100644
+--- a/libcpp/directives.c
++++ b/libcpp/directives.c
+@@ -1564,6 +1564,8 @@ do_pragma_push_macro (cpp_reader *pfile)
+   node = _cpp_lex_identifier (pfile, c->name);
+   if (node->type == NT_VOID)
+     c->is_undef = 1;
++  else if (node->type == NT_BUILTIN_MACRO)
++    c->is_builtin = 1;
+   else
+     {
+       defn = cpp_macro_definition (pfile, node);
+@@ -2452,6 +2454,11 @@ cpp_pop_definition (cpp_reader *pfile, struct def_pragma_macro *c)
+ 
+   if (c->is_undef)
+     return;
++  if (c->is_builtin)
++    {
++      _cpp_restore_special_builtin (pfile, c);
++      return;
++    }
+ 
+   {
+     size_t namelen;
+diff --git a/libcpp/init.c b/libcpp/init.c
+index 60d25889857..7f2f976037a 100644
+--- a/libcpp/init.c
++++ b/libcpp/init.c
+@@ -489,6 +489,25 @@ cpp_init_special_builtins (cpp_reader *pfile)
      }
  }
  
-+/* Given an initializer INIT for a TYPE, return true if INIT is zero
-+   so that it can be replaced by value initialization.  This function
-+   distinguishes betwen empty strings as initializers for arrays and
-+   for pointers (which make it return false).  */
++/* Restore macro C to builtin macro definition.  */
 +
-+bool
-+type_initializer_zero_p (tree type, tree init)
++void
++_cpp_restore_special_builtin (cpp_reader *pfile, struct def_pragma_macro *c)
 +{
-+  if (type  == error_mark_node || init == error_mark_node)
-+    return false;
++  size_t len = strlen (c->name);
 +
-+  STRIP_NOPS (init);
-+
-+  if (POINTER_TYPE_P (type))
-+    return TREE_CODE (init) != STRING_CST && initializer_zerop (init);
-+
-+  if (TREE_CODE (init) != CONSTRUCTOR)
-+    return initializer_zerop (init);
-+
-+  if (TREE_CODE (type) == ARRAY_TYPE)
-+    {
-+      tree elt_type = TREE_TYPE (type);
-+      elt_type = TYPE_MAIN_VARIANT (elt_type);
-+      if (elt_type == char_type_node)
-+	return initializer_zerop (init);
-+
-+      tree elt_init;
-+      unsigned HOST_WIDE_INT i;
-+      FOR_EACH_CONSTRUCTOR_VALUE (CONSTRUCTOR_ELTS (init), i, elt_init)
-+	if (!type_initializer_zero_p (elt_type, elt_init))
-+	  return false;
-+      return true;
-+    }
-+
-+  if (TREE_CODE (type) != RECORD_TYPE)
-+    return initializer_zerop (init);
-+
-+  tree fld = TYPE_FIELDS (type);
-+
-+  tree fld_init;
-+  unsigned HOST_WIDE_INT i;
-+  FOR_EACH_CONSTRUCTOR_VALUE (CONSTRUCTOR_ELTS (init), i, fld_init)
-+    {
-+      /* Advance to the next member, skipping over everything that
-+	 canot be initialized (including unnamed bit-fields).  */
-+      while (TREE_CODE (fld) != FIELD_DECL
-+	     || DECL_ARTIFICIAL (fld)
-+	     || (DECL_BIT_FIELD (fld) && !DECL_NAME (fld)))
-+	{
-+	  fld = DECL_CHAIN (fld);
-+	  if (!fld)
-+	    return true;
-+	  continue;
-+	}
-+
-+      tree fldtype = TREE_TYPE (fld);
-+      if (!type_initializer_zero_p (fldtype, fld_init))
-+	return false;
-+
-+      fld = DECL_CHAIN (fld);
-+      if (!fld)
-+	break;
-+    }
-+
-+  return true;
++  for (const struct builtin_macro *b = builtin_array;
++       b < builtin_array + ARRAY_SIZE (builtin_array); b++)
++    if (b->len == len && memcmp (c->name, b->name, len + 1) == 0)
++      {
++	cpp_hashnode *hp = cpp_lookup (pfile, b->name, b->len);
++	hp->type = NT_BUILTIN_MACRO;
++	if (b->always_warn_if_redefined)
++	  hp->flags |= NODE_WARN;
++	hp->value.builtin = (enum cpp_builtin_type) b->value;
++      }
 +}
 +
- /* Check if vector VEC consists of all the equal elements and
-    that the number of elements corresponds to the type of VEC.
-    The function returns first element of the vector
-diff --git a/gcc/tree.h b/gcc/tree.h
-index d650511c66f..331edfcb1c3 100644
---- a/gcc/tree.h
-+++ b/gcc/tree.h
-@@ -4525,6 +4525,12 @@ extern tree first_field (const_tree);
- extern bool initializer_zerop (const_tree, bool * = NULL);
- extern bool initializer_each_zero_or_onep (const_tree);
+ /* Read the builtins table above and enter them, and language-specific
+    macros, into the hash table.  HOSTED is true if this is a hosted
+    environment.  */
+diff --git a/libcpp/internal.h b/libcpp/internal.h
+index 77a2a3becb3..496c9d63236 100644
+--- a/libcpp/internal.h
++++ b/libcpp/internal.h
+@@ -380,6 +380,8 @@ struct def_pragma_macro {
  
-+/* Analogous to initializer_zerop but also examines the type for
-+   which the initializer is being used.  Unlike initializer_zerop,
-+   considers empty strings to be zero initializers for arrays and
-+   non-zero for pointers.  */
-+extern bool type_initializer_zero_p (tree, tree);
-+
- extern wide_int vector_cst_int_elt (const_tree, unsigned int);
- extern tree vector_cst_elt (const_tree, unsigned int);
+   /* Mark if we save an undefined macro.  */
+   unsigned int is_undef : 1;
++  /* Nonzero if it was a builtin macro.  */
++  unsigned int is_builtin : 1;
+ };
  
+ /* A cpp_reader encapsulates the "state" of a pre-processor run.
+@@ -712,6 +714,8 @@ extern void *_cpp_commit_buff (cpp_reader *pfile, size_t size);
+ /* In init.c.  */
+ extern void _cpp_maybe_push_include_file (cpp_reader *);
+ extern const char *cpp_named_operator2name (enum cpp_ttype type);
++extern void _cpp_restore_special_builtin (cpp_reader *pfile,
++					  struct def_pragma_macro *);
+ 
+ /* In directives.c */
+ extern int _cpp_test_assertion (cpp_reader *, unsigned int *);
 diff --git a/libgcc/ChangeLog b/libgcc/ChangeLog
 index 348c54c0b3e..ca2819f0e45 100644
 --- a/libgcc/ChangeLog
@@ -24266,10 +25368,19 @@ index 76275b51b62..81eb957d2fa 100644
  #define __quadmath_extern_inline \
    extern inline __attribute__ ((__gnu_inline__))
 diff --git a/libsanitizer/ChangeLog b/libsanitizer/ChangeLog
-index c7d3cf4f562..b797761bc43 100644
+index c7d3cf4f562..82b7b112d94 100644
 --- a/libsanitizer/ChangeLog
 +++ b/libsanitizer/ChangeLog
-@@ -1,3 +1,15 @@
+@@ -1,3 +1,24 @@
++2019-11-08  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from mainline
++	2019-10-22  Tamar Christina  <tamar.christina@arm.com>
++
++	PR sanitizer/92154
++	* sanitizer_common/sanitizer_platform_limits_posix.cc:
++	Cherry-pick compiler-rt revision r375220.
++
 +2019-08-18  Iain Sandoe  <iain@sandoe.co.uk>
 +
 +	Backport from mainline
@@ -24329,6 +25440,24 @@ index b599ebb0ba9..beb1dc9532b 100644
  # if defined(_GLIBCXX_SJLJ_EXCEPTIONS) || (SANITIZER_IOS && defined(__arm__))
  #  define ASAN_INTERCEPT__UNWIND_SJLJ_RAISEEXCEPTION 1
  # else
+diff --git a/libsanitizer/sanitizer_common/sanitizer_platform_limits_posix.cc b/libsanitizer/sanitizer_common/sanitizer_platform_limits_posix.cc
+index 6cd4a5bac8b..06a605ff467 100644
+--- a/libsanitizer/sanitizer_common/sanitizer_platform_limits_posix.cc
++++ b/libsanitizer/sanitizer_common/sanitizer_platform_limits_posix.cc
+@@ -1156,8 +1156,12 @@ CHECK_SIZE_AND_OFFSET(ipc_perm, uid);
+ CHECK_SIZE_AND_OFFSET(ipc_perm, gid);
+ CHECK_SIZE_AND_OFFSET(ipc_perm, cuid);
+ CHECK_SIZE_AND_OFFSET(ipc_perm, cgid);
+-#if !defined(__aarch64__) || !SANITIZER_LINUX || __GLIBC_PREREQ (2, 21)
++#if (!defined(__aarch64__) || !SANITIZER_LINUX || __GLIBC_PREREQ (2, 21)) && \
++    !defined(__arm__)
+ /* On aarch64 glibc 2.20 and earlier provided incorrect mode field.  */
++/* On Arm glibc 2.31 and later provide a different mode field, this field is
++   never used by libsanitizer so we can simply ignore this assert for all glibc
++   versions.  */
+ CHECK_SIZE_AND_OFFSET(ipc_perm, mode);
+ #endif
+ 
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
 index 8ac50251005..ef28457065c 100644
 --- a/libstdc++-v3/ChangeLog
