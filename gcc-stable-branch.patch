@@ -10,13 +10,14 @@ avieira (1):
 bergner (1):
       Backport from mainline 	2019-10-08  Tulio Magno Quites Machado Filho  <tuliom@linux.ibm.com>
 
-burnus (6):
+burnus (7):
       Fortran] PR91586 Fix ICE on invalid code with CLASS
       Fortran] PR91863 - fix call to bind(C) with array descriptor
       Backport Fortran BIND(C) fixes
       Fortran] PR 92208 don't use function-result dummy variable as actual argument
       PR 92208 + PR 92277 – GCC 9 follow-up fix
       Fortran] PR91253 fix continuation-line handling with -pre_include
+      PR fortran/92470 Fixes for CFI_address
 
 danglin (9):
       * config/pa/pa.c (pa_trampoline_init): Remove spurious extended 	character.
@@ -16337,10 +16338,28 @@ index 29f6cdc4667..33b4be79c0f 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..f77cdb49cda 100644
+index bc11ae4ae0b..9ed961d3970 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,832 @@
+@@ -1,3 +1,850 @@
++2019-11-13  Tobias Burnus  <tobias@codesourcery.com>
++
++	Backport from mainline
++	2019-11-13  Tobias Burnus  <tobias@codesourcery.com>
++
++	PR fortran/92470
++	* gfortran.dg/ISO_Fortran_binding_1.c (establish_c): Add assert for
++	lower_bound == 0.
++
++	2019-11-12  Tobias Burnus  <tobias@codesourcery.com>
++
++	PR fortran/92470
++	* gfortran.dg/ISO_Fortran_binding_17.c: New.
++	* gfortran.dg/ISO_Fortran_binding_17.f90: New.
++	* gfortran.dg/ISO_Fortran_binding_1.c (elemental_mult_c, allocate_c,
++	section_c, select_part_c): Update for CFI_{address} changes;
++	add asserts.
++
 +2019-11-11  Richard Biener  <rguenther@suse.de>
 +
 +	Backport from mainline
@@ -17173,7 +17192,7 @@ index bc11ae4ae0b..f77cdb49cda 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +1256,7 @@
+@@ -427,7 +1274,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -17182,7 +17201,7 @@ index bc11ae4ae0b..f77cdb49cda 100644
  	(check_effective_target_powerpc_p8vector_ok): No support for Darwin.
  	(check_effective_target_powerpc_p9vector_ok): Likewise.
  	(check_effective_target_powerpc_float128_sw_ok): Likewise.
-@@ -720,7 +1549,7 @@
+@@ -720,7 +1567,7 @@
  
  	Backport from mainline
  	PR fortran/91077
@@ -17191,7 +17210,7 @@ index bc11ae4ae0b..f77cdb49cda 100644
  
  2019-07-05  Szabolcs Nagy  <szabolcs.nagy@arm.com>
  
-@@ -969,7 +1798,7 @@
+@@ -969,7 +1816,7 @@
         * gcc.target/i386/pr82699-6.c: Likewise
         * gcc.target/i386/returninst1.c: Likewise
         * gcc.target/i386/returninst2.c: Likewise
@@ -17200,7 +17219,7 @@ index bc11ae4ae0b..f77cdb49cda 100644
  
  2019-05-30  Iain Sandoe  <iain@sandoe.co.uk>
  
-@@ -1131,7 +1960,7 @@
+@@ -1131,7 +1978,7 @@
  
  	Backport from trunk
  	PR fortran/90498
@@ -17209,7 +17228,7 @@ index bc11ae4ae0b..f77cdb49cda 100644
  
  2019-05-17  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -3801,21 +4630,21 @@
+@@ -3801,21 +4648,21 @@
  2019-02-23  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88117
@@ -17238,7 +17257,7 @@ index bc11ae4ae0b..f77cdb49cda 100644
  
  2019-02-22  David Malcolm  <dmalcolm@redhat.com>
  
-@@ -4444,7 +5273,7 @@
+@@ -4444,7 +5291,7 @@
  2019-02-09  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/89200
@@ -17247,7 +17266,7 @@ index bc11ae4ae0b..f77cdb49cda 100644
  
  2019-02-09  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -4704,17 +5533,17 @@
+@@ -4704,17 +5551,17 @@
  2019-02-02  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88393
@@ -21573,6 +21592,126 @@ index 67d4ac38095..f00283f6e7b 100644
  
  #include <stdbool.h>
  #include <stdint.h>
+diff --git a/gcc/testsuite/gfortran.dg/ISO_Fortran_binding_1.c b/gcc/testsuite/gfortran.dg/ISO_Fortran_binding_1.c
+index a6353c7cca6..a5714593c52 100644
+--- a/gcc/testsuite/gfortran.dg/ISO_Fortran_binding_1.c
++++ b/gcc/testsuite/gfortran.dg/ISO_Fortran_binding_1.c
+@@ -1,6 +1,7 @@
+ /* Test F2008 18.5: ISO_Fortran_binding.h functions.  */
+ 
+ #include "../../../libgfortran/ISO_Fortran_binding.h"
++#include <assert.h>
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <complex.h>
+@@ -33,13 +34,34 @@ int elemental_mult_c(CFI_cdesc_t * a_desc, CFI_cdesc_t * b_desc,
+       || c_desc->rank != 2)
+     return err;
+ 
+-  for (idx[0] = 0; idx[0] < a_desc->dim[0].extent; idx[0]++)
+-    for (idx[1] = 0; idx[1] < a_desc->dim[1].extent; idx[1]++)
+-      {
+-	res_addr = CFI_address (a_desc, idx);
+-	*res_addr = *(int*)CFI_address (b_desc, idx)
+-		    * *(int*)CFI_address (c_desc, idx);
+-      }
++  if (a_desc->attribute == CFI_attribute_other)
++    {
++      assert (a_desc->dim[0].lower_bound == 0);
++      assert (a_desc->dim[1].lower_bound == 0);
++      for (idx[0] = 0; idx[0] < a_desc->dim[0].extent; idx[0]++)
++	for (idx[1] = 0; idx[1] < a_desc->dim[1].extent; idx[1]++)
++	  {
++	    res_addr = CFI_address (a_desc, idx);
++	    *res_addr = *(int*)CFI_address (b_desc, idx)
++			* *(int*)CFI_address (c_desc, idx);
++	  }
++    }
++  else
++    {
++      assert (a_desc->attribute == CFI_attribute_allocatable
++	      || a_desc->attribute == CFI_attribute_pointer);
++      for (idx[0] = a_desc->dim[0].lower_bound;
++	   idx[0] < a_desc->dim[0].extent + a_desc->dim[0].lower_bound;
++	   idx[0]++)
++	for (idx[1] = a_desc->dim[1].lower_bound;
++	     idx[1] < a_desc->dim[1].extent + a_desc->dim[1].lower_bound;
++	     idx[1]++)
++	  {
++	    res_addr = CFI_address (a_desc, idx);
++	    *res_addr = *(int*)CFI_address (b_desc, idx)
++			* *(int*)CFI_address (c_desc, idx);
++	  }
++    }
+ 
+   return 0;
+ }
+@@ -57,15 +79,16 @@ int allocate_c(CFI_cdesc_t * da, CFI_index_t lower[], CFI_index_t upper[])
+   CFI_index_t idx[2];
+   int *res_addr;
+ 
++  if (da->attribute == CFI_attribute_other) return err;
+   if (CFI_allocate(da, lower, upper, 0)) return err;
++  assert (da->dim[0].lower_bound == lower[0]);
++  assert (da->dim[1].lower_bound == lower[1]);
+ 
+-
+-  for (idx[0] = 0; idx[0] < da->dim[0].extent; idx[0]++)
+-    for (idx[1] = 0; idx[1] < da->dim[1].extent; idx[1]++)
++  for (idx[0] = lower[0]; idx[0] < da->dim[0].extent + lower[0]; idx[0]++)
++    for (idx[1] = lower[1]; idx[1] < da->dim[1].extent + lower[1]; idx[1]++)
+       {
+ 	res_addr = CFI_address (da, idx);
+-	*res_addr = (int)((idx[0] + da->dim[0].lower_bound)
+-			  * (idx[1] + da->dim[1].lower_bound));
++	*res_addr = (int)(idx[0] * idx[1]);
+       }
+ 
+   return 0;
+@@ -86,6 +109,7 @@ int establish_c(CFI_cdesc_t * desc)
+ 		      CFI_attribute_pointer,
+ 		      CFI_type_struct,
+ 		      sizeof(t), 1, extent);
++  assert (desc->dim[0].lower_bound == 0);
+   for (idx[0] = 0; idx[0] < extent[0]; idx[0]++)
+     {
+       res_addr = (t*)CFI_address (desc, idx);
+@@ -118,10 +142,11 @@ float section_c(int *std_case, CFI_cdesc_t * source, int *low, int *str)
+ 			  CFI_type_float, 0, 1, NULL);
+       if (ind) return -1.0;
+       ind = CFI_section((CFI_cdesc_t *)&section, source, lower, NULL, strides);
++      assert (section.dim[0].lower_bound == lower[0]);
+       if (ind) return -2.0;
+ 
+       /* Sum over the section  */
+-      for (idx[0] = 0; idx[0] < section.dim[0].extent; idx[0]++)
++      for (idx[0] = lower[0]; idx[0] < section.dim[0].extent + lower[0]; idx[0]++)
+         ans += *(float*)CFI_address ((CFI_cdesc_t*)&section, idx);
+       return ans;
+     }
+@@ -138,10 +163,12 @@ float section_c(int *std_case, CFI_cdesc_t * source, int *low, int *str)
+       if (ind) return -1.0;
+       ind = CFI_section((CFI_cdesc_t *)&section, source,
+ 			lower, upper, strides);
++      assert (section.rank == 1);
++      assert (section.dim[0].lower_bound == lower[0]);
+       if (ind) return -2.0;
+ 
+       /* Sum over the section  */
+-      for (idx[0] = 0; idx[0] < section.dim[0].extent; idx[0]++)
++      for (idx[0] = lower[0]; idx[0] < section.dim[0].extent + lower[0]; idx[0]++)
+         ans += *(float*)CFI_address ((CFI_cdesc_t*)&section, idx);
+       return ans;
+     }
+@@ -166,6 +193,8 @@ double select_part_c (CFI_cdesc_t * source)
+ 		      CFI_type_double_Complex, sizeof(double _Complex),
+ 		      2, extent);
+   (void)CFI_select_part(comp_cdesc, source, offsetof(t,y), 0);
++  assert (comp_cdesc->dim[0].lower_bound == 0);
++  assert (comp_cdesc->dim[1].lower_bound == 0);
+ 
+   /* Sum over comp_cdesc[4,:]  */
+   size = comp_cdesc->dim[1].extent;
 diff --git a/gcc/testsuite/gfortran.dg/ISO_Fortran_binding_13.c b/gcc/testsuite/gfortran.dg/ISO_Fortran_binding_13.c
 new file mode 100644
 index 00000000000..1ac9fc89eb1
@@ -21683,6 +21822,120 @@ index 00000000000..388c5438252
 +    if (before .NE. after) stop 2
 +
 +END PROGRAM
+diff --git a/gcc/testsuite/gfortran.dg/ISO_Fortran_binding_17.c b/gcc/testsuite/gfortran.dg/ISO_Fortran_binding_17.c
+new file mode 100644
+index 00000000000..b0893cc15e8
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/ISO_Fortran_binding_17.c
+@@ -0,0 +1,25 @@
++/* PR fortran/92470  - to be used with ISO_Fortran_binding_17.f90 */
++
++#include <stdio.h>
++#include <assert.h>
++#include "ISO_Fortran_binding.h"
++
++void Csub(const CFI_cdesc_t *, size_t, CFI_index_t invalid);
++
++void Csub(const CFI_cdesc_t * dv, size_t locd, CFI_index_t invalid) {
++
++   CFI_index_t lb[1];
++   lb[0] = dv->dim[0].lower_bound;
++   size_t ld = (size_t)CFI_address(dv, lb);
++
++   if (ld != locd)
++     printf ("In C function: CFI_address of dv = %I64x\n", ld);
++   assert( ld == locd );
++
++   lb[0] = invalid;
++   /* Shall return NULL and produce stderr diagnostic with -fcheck=array.  */
++   ld = (size_t)CFI_address(dv, lb);
++   assert (ld == 0);
++
++   return;
++}
+diff --git a/gcc/testsuite/gfortran.dg/ISO_Fortran_binding_17.f90 b/gcc/testsuite/gfortran.dg/ISO_Fortran_binding_17.f90
+new file mode 100644
+index 00000000000..fa341a7f3d4
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/ISO_Fortran_binding_17.f90
+@@ -0,0 +1,77 @@
++! { dg-do run }
++! { dg-additional-sources ISO_Fortran_binding_17.c }
++! { dg-options "-fcheck=all" }
++! { dg-warning "command line option '-fcheck=all' is valid for Fortran but not for C" "" { target *-*-* } 0 }
++!
++! PR fortran/92470
++!
++! https://github.com/j3-fortran/fortran_proposals/issues/57#issuecomment-552680503
++!
++! Unit Test #: Test-1.F2018-2.7.5
++! Author     : FortranFan
++! Reference  : The New Features of Fortran 2018, John Reid, August 2, 2018
++!              ISO/IEC JTC1/SC22/WG5 N2161
++! Description:
++! Test item 2.7.5 Fortran subscripting
++! void *CFI_address(const CFI_cdesc_t *dv, const CFI_index_t subscripts[]);
++! that returns the C address of a scalar or of an element of an array using
++! Fortran sub-scripting.
++!
++   use, intrinsic :: iso_c_binding, only: c_int, c_size_t, c_loc
++   implicit none
++
++   integer, parameter :: LB_A = -2
++   integer, parameter :: UB_A = 1
++   character(len=*), parameter :: fmtg = "(*(g0,1x))"
++   character(len=*), parameter :: fmth = "(g0,1x,z0)"
++
++   blk1: block
++      interface
++         subroutine Csub(a, loc_a_1, invalid_idx) bind(C, name="Csub")
++            import :: c_size_t
++            type(*), intent(in) :: a(:)
++            integer(c_size_t), intent(in), value :: loc_a_1, invalid_idx
++         end subroutine
++      end interface
++
++      integer(c_int), target :: a( LB_A:UB_A )
++      integer(c_size_t) :: loc_a
++
++      print fmtg, "Block 1"
++
++      loc_a = transfer( c_loc(a(lbound(a,dim=1))), mold=loc_a)
++      print fmth, "Address of a: ", loc_a
++
++      call Csub(a, loc_a, -1_c_size_t) ! LB starts at 0
++      call Csub(a, loc_a, 5_c_size_t)  ! 4 elements + 1
++      print *
++   end block blk1
++
++   blk2: block
++      interface
++         subroutine Csub(a, loc_a_1, invalid_idx) bind(C, name="Csub")
++            import :: c_int, c_size_t
++            integer(kind=c_int), allocatable, intent(in) :: a(:)
++            integer(c_size_t), intent(in), value :: loc_a_1, invalid_idx
++         end subroutine
++      end interface
++
++      integer(c_int), allocatable, target :: a(:)
++      integer(c_size_t) :: loc_a
++
++      print fmtg, "Block 2"
++
++      allocate( a( LB_A:UB_A ) )
++      loc_a = transfer( c_loc(a(lbound(a,dim=1))), mold=loc_a )
++      print fmth, "Address of a: ", loc_a
++
++      call Csub(a, loc_a, LB_A-1_c_size_t)
++      call Csub(a, loc_a, UB_A+1_c_size_t)
++      print *
++   end block blk2
++end
++
++! { dg-output "CFI_address: subscripts\\\[0\\\] is out of bounds. For dimension = 0, subscripts = -1, lower_bound = 0, upper bound = 4, extend = 4(\n|\r\n|\r)" }
++! { dg-output "CFI_address: subscripts\\\[0\\\] is out of bounds. For dimension = 0, subscripts = 5, lower_bound = 0, upper bound = 4, extend = 4(\n|\r\n|\r).*" }
++! { dg-output "CFI_address: subscripts\\\[0\\\] is out of bounds. For dimension = 0, subscripts = -3, lower_bound = -2, upper bound = 6, extend = 4(\n|\r\n|\r)" }
++! { dg-output "CFI_address: subscripts\\\[0\\\] is out of bounds. For dimension = 0, subscripts = 2, lower_bound = -2, upper bound = 6, extend = 4(\n|\r\n|\r)" }
 diff --git a/gcc/testsuite/gfortran.dg/allocated_1.f90 b/gcc/testsuite/gfortran.dg/allocated_1.f90
 new file mode 100644
 index 00000000000..43260c24336
@@ -24872,10 +25125,28 @@ index 8340ea2bfe4..3b5e3428958 100644
 -	$(crt_compile) $(DARWIN_EXTRA_CRT_BUILD_CFLAGS) -mmacosx-version-min=10.6 -c $<
 +	$(crt_compile) -mmacosx-version-min=10.6 -c $<
 diff --git a/libgfortran/ChangeLog b/libgfortran/ChangeLog
-index 48f9886896e..70ed7487eb7 100644
+index 48f9886896e..6dc32e8e173 100644
 --- a/libgfortran/ChangeLog
 +++ b/libgfortran/ChangeLog
-@@ -1,3 +1,13 @@
+@@ -1,3 +1,31 @@
++2019-11-13  Tobias Burnus  <tobias@codesourcery.com>
++
++	Backport from mainline
++	2019-11-13  Tobias Burnus  <tobias@codesourcery.com>
++
++	PR fortran/92470
++	* runtime/ISO_Fortran_binding.c (CFI_establish): Set lower_bound to 0
++	also for CFI_attribute_other.
++
++	2019-11-12  Tobias Burnus  <tobias@codesourcery.com>
++
++	PR fortran/92470
++	* runtime/ISO_Fortran_binding.c (CFI_address): Handle non-zero
++	lower_bound; update error message.
++	(CFI_allocate): Fix comment typo.
++	(CFI_establish): Fix identation, fix typos, don't check values of 'dv'
++	argument.
++
 +2019-08-13  Janne Blomqvist  <jb@gcc.gnu.org>
 +
 +	Partial backport from trunk
@@ -24889,6 +25160,25 @@ index 48f9886896e..70ed7487eb7 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
+@@ -24,12 +52,12 @@
+ 2019-05-20  Janne Blomqvist  <jb@gcc.gnu.org>
+ 
+ 	Backport from trunk
+-        PR libfortran/90038
+-        * intrinsics/execute_command_line (sigchld_handler): New function.
+-        (execute_command_line): Install handler for SIGCHLD.
+-        * configure.ac: Check for presence of sigaction and waitpid.
+-        * config.h.in: Regenerated.
+-        * configure: Regenerated.
++	PR libfortran/90038
++	* intrinsics/execute_command_line (sigchld_handler): New function.
++	(execute_command_line): Install handler for SIGCHLD.
++	* configure.ac: Check for presence of sigaction and waitpid.
++	* config.h.in: Regenerated.
++	* configure: Regenerated.
+ 
+ 2019-05-20  Janne Blomqvist  <jb@gcc.gnu.org>
+ 
 diff --git a/libgfortran/intrinsics/random.c b/libgfortran/intrinsics/random.c
 index 7476439647c..5d81bcba74a 100644
 --- a/libgfortran/intrinsics/random.c
@@ -24984,7 +25274,7 @@ index 7476439647c..5d81bcba74a 100644
        master_init = true;
      }
 diff --git a/libgfortran/runtime/ISO_Fortran_binding.c b/libgfortran/runtime/ISO_Fortran_binding.c
-index 695ef57ac32..c71d8e89453 100644
+index 695ef57ac32..0aec06b5eed 100644
 --- a/libgfortran/runtime/ISO_Fortran_binding.c
 +++ b/libgfortran/runtime/ISO_Fortran_binding.c
 @@ -119,24 +119,25 @@ gfc_desc_to_cfi_desc (CFI_cdesc_t **d_ptr, const gfc_array_void *s)
@@ -25031,6 +25321,107 @@ index 695ef57ac32..c71d8e89453 100644
  
    if (*d_ptr == NULL)
      *d_ptr = d;
+@@ -176,19 +177,21 @@ void *CFI_address (const CFI_cdesc_t *dv, const CFI_index_t subscripts[])
+ 	 specified by subscripts. */
+       for (i = 0; i < dv->rank; i++)
+ 	{
++	  CFI_index_t idx = subscripts[i] - dv->dim[i].lower_bound;
+ 	  if (unlikely (compile_options.bounds_check)
+-	      && ((dv->dim[i].extent != -1
+-		   && subscripts[i] >= dv->dim[i].extent)
+-		  || subscripts[i] < 0))
++	      && ((dv->dim[i].extent != -1 && idx >= dv->dim[i].extent)
++		  || idx < 0))
+ 	    {
+-	      fprintf (stderr, "CFI_address: subscripts[%d], is out of "
+-		       "bounds. dv->dim[%d].extent = %d subscripts[%d] "
+-		       "= %d.\n", i, i, (int)dv->dim[i].extent, i,
+-		       (int)subscripts[i]);
++	      fprintf (stderr, "CFI_address: subscripts[%d] is out of "
++		       "bounds. For dimension = %d, subscripts = %d, "
++		       "lower_bound = %d, upper bound = %d, extend = %d\n",
++		       i, i, (int)subscripts[i], (int)dv->dim[i].lower_bound,
++		       (int)(dv->dim[i].extent - dv->dim[i].lower_bound),
++		       (int)dv->dim[i].extent);
+               return NULL;
+             }
+ 
+-	  base_addr = base_addr + (CFI_index_t)(subscripts[i] * dv->dim[i].sm);
++	  base_addr = base_addr + (CFI_index_t)(idx * dv->dim[i].sm);
+ 	}
+     }
+ 
+@@ -227,7 +230,7 @@ CFI_allocate (CFI_cdesc_t *dv, const CFI_index_t lower_bounds[],
+     }
+ 
+   /* If the type is a character, the descriptor's element length is replaced
+-   * by the elem_len argument. */
++     by the elem_len argument. */
+   if (dv->type == CFI_type_char || dv->type == CFI_type_ucs4_char ||
+       dv->type == CFI_type_signed_char)
+     dv->elem_len = elem_len;
+@@ -236,7 +239,7 @@ CFI_allocate (CFI_cdesc_t *dv, const CFI_index_t lower_bounds[],
+   size_t arr_len = 1;
+ 
+   /* If rank is greater than 0, lower_bounds and upper_bounds are used. They're
+-   * ignored otherwhise. */
++     ignored otherwise. */
+   if (dv->rank > 0)
+     {
+       if (unlikely (compile_options.bounds_check)
+@@ -324,20 +327,10 @@ int CFI_establish (CFI_cdesc_t *dv, void *base_addr, CFI_attribute_t attribute,
+ 	{
+ 	  fprintf (stderr, "CFI_establish: Rank must be between 0 and %d, "
+ 		   "0 < rank (0 !< %d).\n", CFI_MAX_RANK, (int)rank);
+-      return CFI_INVALID_RANK;
+-    }
+-
+-      /* C Descriptor must not be an allocated allocatable. */
+-      if (dv->attribute == CFI_attribute_allocatable && dv->base_addr != NULL)
+-	{
+-	  fprintf (stderr, "CFI_establish: If the C Descriptor represents an "
+-		   "allocatable variable (dv->attribute = %d), its base "
+-		   "address must be NULL (dv->base_addr = NULL).\n",
+-		   CFI_attribute_allocatable);
+-	  return CFI_INVALID_DESCRIPTOR;
++	  return CFI_INVALID_RANK;
+ 	}
+ 
+-       /* If base address is not NULL, the established C Descriptor is for a
++      /* If base address is not NULL, the established C Descriptor is for a
+ 	  nonallocatable entity. */
+       if (attribute == CFI_attribute_allocatable && base_addr != NULL)
+ 	{
+@@ -381,26 +374,20 @@ int CFI_establish (CFI_cdesc_t *dv, void *base_addr, CFI_attribute_t attribute,
+   dv->type = type;
+ 
+   /* Extents must not be NULL if rank is greater than zero and base_addr is not
+-   * NULL */
++     NULL */
+   if (rank > 0 && base_addr != NULL)
+     {
+       if (unlikely (compile_options.bounds_check) && extents == NULL)
+         {
+ 	  fprintf (stderr, "CFI_establish: Extents must not be NULL "
+-		   "(extents != NULL) if rank (= %d) > 0 nd base address"
++		   "(extents != NULL) if rank (= %d) > 0 and base address "
+ 		   "is not NULL (base_addr != NULL).\n", (int)rank);
+ 	  return CFI_INVALID_EXTENT;
+ 	}
+ 
+       for (int i = 0; i < rank; i++)
+ 	{
+-	  /* If the C Descriptor is for a pointer then the lower bounds of every
+-	   * dimension are set to zero. */
+-	  if (attribute == CFI_attribute_pointer)
+-	    dv->dim[i].lower_bound = 0;
+-	  else
+-	    dv->dim[i].lower_bound = 1;
+-
++	  dv->dim[i].lower_bound = 0;
+ 	  dv->dim[i].extent = extents[i];
+ 	  if (i == 0)
+ 	    dv->dim[i].sm = dv->elem_len;
 diff --git a/libgo/go/go/internal/gccgoimporter/importer_test.go b/libgo/go/go/internal/gccgoimporter/importer_test.go
 index 58fa8c8cf5c..eb070c137ff 100644
 --- a/libgo/go/go/internal/gccgoimporter/importer_test.go
