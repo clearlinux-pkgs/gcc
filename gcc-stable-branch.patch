@@ -34,7 +34,7 @@ draganm (3):
       Backport fix for PR target/91769
       Backport fix for PR89245
 
-ebotcazou (10):
+ebotcazou (11):
       PR rtl-optimization/91347 	* dse.c (scan_insn): Call add_wild_read for non-const/memset tail calls 	before reload if HARD_FRAME_POINTER_IS_ARG_POINTER.
       PR target/91472 	* config/sparc/sparc.c (sparc_cannot_force_const_mem): Return true 	during LRA/reload in PIC mode if the PIC register hasn't been used yet. 	(sparc_pic_register_p): Test reload_in_progress for consistency's sake.
       PR rtl-optimization/89795 	* rtlanal.c (nonzero_bits1) <SUBREG>: Do not propagate results from 	inner REGs to paradoxical SUBREGs if WORD_REGISTER_OPERATIONS is set.
@@ -45,6 +45,7 @@ ebotcazou (10):
       PR tree-optimization/92131 	* tree-vrp.c (extract_range_from_plus_minus_expr): If the resulting 	range would be symbolic, drop to varying for any explicit overflow 	in the constant part or if neither range is a singleton.
       PR target/92095 	* config/sparc/sparc-protos.h (output_load_pcrel_sym): Declare. 	* config/sparc/sparc.c (sparc_cannot_force_const_mem): Revert latest  	change. 	(got_helper_needed): New static variable. 	(output_load_pcrel_sym): New function. 	(get_pc_thunk_name): Remove after inlining... 	(load_got_register): ...here.  Rework the initialization of the GOT 	register and of the GOT helper. 	(save_local_or_in_reg_p): Test the REGNO of the GOT register. 	(sparc_file_end): Test got_helper_needed to decide whether the GOT 	helper must be emitted.  Use output_asm_insn instead of fprintf. 	(sparc_init_pic_reg): In PIC mode, always initialize the PIC register 	if optimization is enabled. 	* config/sparc/sparc.md (load_pcrel_sym<P:mode>): Emit the assembly 	by calling output_load_pcrel_sym.
       * gcc.target/sparc/overflow-1.c: Add -fno-pie to the options. 	* gcc.target/sparc/overflow-2.c: Likewise.
+      * c-ada-spec.c (get_underlying_decl): Do not look through typedefs. 	(dump_forward_type): Do not generate a declaration for function types. 	(dump_nested_type) <ARRAY_TYPE>: Do not generate a nested declaration 	of the component type if it is declared in another file.
 
 edlinger (3):
       2019-08-16  Bernd Edlinger  <bernd.edlinger@hotmail.de>
@@ -54,7 +55,8 @@ edlinger (3):
 emsr (1):
       2019-09-09  Edward Smith-Rowland  <3dw4rd@verizon.net>
 
-gccadmin (92):
+gccadmin (93):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -2444,10 +2446,17 @@ index 1ffb491d785..66c9295ff4a 100644
  
  #endif /* GCC_BUILTINS_H */
 diff --git a/gcc/c-family/ChangeLog b/gcc/c-family/ChangeLog
-index acdfe79894e..6e9ed0bb17e 100644
+index acdfe79894e..e7f0127dcf2 100644
 --- a/gcc/c-family/ChangeLog
 +++ b/gcc/c-family/ChangeLog
-@@ -1,3 +1,38 @@
+@@ -1,3 +1,45 @@
++2019-11-13  Eric Botcazou  <ebotcazou@adacore.com>
++
++	* c-ada-spec.c (get_underlying_decl): Do not look through typedefs.
++	(dump_forward_type): Do not generate a declaration for function types.
++	(dump_nested_type) <ARRAY_TYPE>: Do not generate a nested declaration
++	of the component type if it is declared in another file.
++
 +2019-10-21  Jakub Jelinek  <jakub@redhat.com>
 +
 +	Backported from mainline
@@ -2486,6 +2495,43 @@ index acdfe79894e..6e9ed0bb17e 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
+diff --git a/gcc/c-family/c-ada-spec.c b/gcc/c-family/c-ada-spec.c
+index 76e736964de..0fee9a0d037 100644
+--- a/gcc/c-family/c-ada-spec.c
++++ b/gcc/c-family/c-ada-spec.c
+@@ -1025,7 +1025,9 @@ get_underlying_decl (tree type)
+ 
+   if (TYPE_P (type))
+     {
+-      type = TYPE_MAIN_VARIANT (type);
++      /* Strip qualifiers but do not look through typedefs.  */
++      if (TYPE_QUALS_NO_ADDR_SPACE (type))
++	type = TYPE_MAIN_VARIANT (type);
+ 
+       /* type is a typedef.  */
+       if (TYPE_NAME (type) && DECL_P (TYPE_NAME (type)))
+@@ -2451,6 +2453,9 @@ dump_forward_type (pretty_printer *buffer, tree type, tree t, int spc)
+   if (DECL_SOURCE_FILE (decl) != DECL_SOURCE_FILE (t))
+     return;
+ 
++  if (TREE_CODE (type) == FUNCTION_TYPE)
++    return;
++
+   /* Generate an incomplete type declaration.  */
+   pp_string (buffer, "type ");
+   dump_ada_node (buffer, decl, NULL_TREE, spc, false, true);
+@@ -2519,7 +2524,10 @@ dump_nested_type (pretty_printer *buffer, tree field, tree t, tree parent,
+       while (TREE_CODE (tmp) == ARRAY_TYPE)
+ 	tmp = TREE_TYPE (tmp);
+       decl = get_underlying_decl (tmp);
+-      if (decl && !DECL_NAME (decl) && !TREE_VISITED (decl))
++      if (decl
++	  && !DECL_NAME (decl)
++	  && DECL_SOURCE_FILE (decl) == DECL_SOURCE_FILE (t)
++	  && !TREE_VISITED (decl))
+ 	{
+ 	  /* Generate full declaration.  */
+ 	  dump_nested_type (buffer, decl, t, parent, spc);
 diff --git a/gcc/c-family/c-common.h b/gcc/c-family/c-common.h
 index 1cf2cae6395..e9ef16aff29 100644
 --- a/gcc/c-family/c-common.h
