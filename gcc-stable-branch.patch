@@ -10,7 +10,7 @@ avieira (1):
 bergner (1):
       Backport from mainline 	2019-10-08  Tulio Magno Quites Machado Filho  <tuliom@linux.ibm.com>
 
-burnus (7):
+burnus (8):
       Fortran] PR91586 Fix ICE on invalid code with CLASS
       Fortran] PR91863 - fix call to bind(C) with array descriptor
       Backport Fortran BIND(C) fixes
@@ -18,6 +18,10 @@ burnus (7):
       PR 92208 + PR 92277 – GCC 9 follow-up fix
       Fortran] PR91253 fix continuation-line handling with -pre_include
       PR fortran/92470 Fixes for CFI_address
+      Fix gfortran.dg/ISO_Fortran_binding_17.c using rel. #include
+
+claziss (1):
+      [ARC] Backport from mainline r278056,r278057
 
 danglin (9):
       * config/pa/pa.c (pa_trampoline_init): Remove spurious extended 	character.
@@ -315,7 +319,7 @@ law (1):
 luoxhu (1):
       Backport r274411 from trunk to gcc-9-branch
 
-marxin (7):
+marxin (8):
       Backport r274502
       Backport r274503
       Backport r274504
@@ -323,6 +327,7 @@ marxin (7):
       Backport r275292
       Backport r276141
       Backport r276178
+      Backport r278210
 
 mpolacek (13):
       PR c++/81429 - wrong parsing of constructor with C++11 attribute. 	* parser.c (cp_parser_constructor_declarator_p): Handle the scenario 	when a parameter declaration begins with [[attribute]].
@@ -679,10 +684,29 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..400e02fae59 100644
+index 7f6557d8018..63209837908 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,1280 @@
+@@ -1,3 +1,1299 @@
++2019-11-13  Claudiu Zissulescu <claziss@gmail.com>
++
++	Backport from mainline
++	* config/arc/arc.md (movsi_ne): Reorder instruction variants and
++	use new register constraint letters.
++	* config/arc/arc.c (arc_legitimize_pic_address): Consider UNSPECs
++	as well, if interesting recover the symbol and re-legitimize the
++	pic address.
++
++2019-11-14  Martin Liska  <mliska@suse.cz>
++
++	Backport from mainline
++	2019-11-14  Martin Liska  <mliska@suse.cz>
++
++	PR target/92389
++	* config/i386/i386.h: Add PTA_AVX512VPOPCNTDQ to
++	PTA_ICELAKE_CLIENT which is later interited by
++	PTA_ICELAKE_SERVER and PTA_TIGERLAKE.
++
 +2019-11-13  Dragan Mladjenovic  <dmladjenovic@wavecomp.com>
 +
 +	Backport from mainline
@@ -1963,7 +1987,7 @@ index 7f6557d8018..400e02fae59 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +1790,7 @@
+@@ -513,7 +1809,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -3221,6 +3245,69 @@ index 984540f0b53..524379d3763 100644
  		    default:
  		      gcc_unreachable ();
  		    }
+diff --git a/gcc/config/arc/arc.c b/gcc/config/arc/arc.c
+index ee1f70bbb51..e6e4fb18ce1 100644
+--- a/gcc/config/arc/arc.c
++++ b/gcc/config/arc/arc.c
+@@ -5992,6 +5992,22 @@ arc_legitimize_pic_address (rtx addr)
+ 
+   switch (GET_CODE (addr))
+     {
++    case UNSPEC:
++      /* Can be one or our GOT or GOTOFFPC unspecs.  This situation
++	 happens when an address is not a legitimate constant and we
++	 need the resolve it via force_reg in
++	 prepare_move_operands.  */
++      switch (XINT (addr, 1))
++	{
++	case ARC_UNSPEC_GOT:
++	case ARC_UNSPEC_GOTOFFPC:
++	  /* Recover the symbol ref.  */
++	  addr = XVECEXP (addr, 0, 0);
++	  break;
++	default:
++	  return addr;
++	}
++      /* Fall through.  */
+     case SYMBOL_REF:
+       /* TLS symbols are handled in different place.  */
+       if (SYMBOL_REF_TLS_MODEL (addr))
+diff --git a/gcc/config/arc/arc.md b/gcc/config/arc/arc.md
+index 78e304d4c71..722cccd8be3 100644
+--- a/gcc/config/arc/arc.md
++++ b/gcc/config/arc/arc.md
+@@ -3742,20 +3742,20 @@ core_3, archs4x, archs4xd, archs4xd_slow"
+ ; cond_exec patterns
+ (define_insn "*movsi_ne"
+   [(cond_exec
+-     (ne (match_operand:CC_Z 2 "cc_use_register"    "Rcc,  Rcc,  Rcc,Rcc,Rcc") (const_int 0))
+-     (set (match_operand:SI 0 "dest_reg_operand" "=Rcq#q,Rcq#q,Rcq#q,  w,w")
+-	  (match_operand:SI 1 "nonmemory_operand"   "C_0,    h, ?Cal, Lc,?Cal")))]
++    (ne (match_operand:CC_Z 2 "cc_use_register"  "Rcc,Rcc,Rcc,Rcc,Rcc") (const_int 0))
++    (set (match_operand:SI 0 "dest_reg_operand"   "=q,  q,  r,  q,  r")
++	 (match_operand:SI 1 "nonmemory_operand" "C_0,  h, Lr,Cal,Cal")))]
+   ""
+   "@
+-	* current_insn_predicate = 0; return \"sub%?.ne %0,%0,%0%&\";
+-	* current_insn_predicate = 0; return \"mov%?.ne %0,%1\";
+-	* current_insn_predicate = 0; return \"mov%?.ne %0,%1\";
+-	mov.ne %0,%1
+-	mov.ne %0,%1"
++	* current_insn_predicate = 0; return \"sub%?.ne\\t%0,%0,%0\";
++	* current_insn_predicate = 0; return \"mov%?.ne\\t%0,%1\";
++	mov.ne\\t%0,%1
++	* current_insn_predicate = 0; return \"mov%?.ne\\t%0,%1\";
++	mov.ne\\t%0,%1"
+   [(set_attr "type" "cmove")
+-   (set_attr "iscompact" "true,true,true_limm,false,false")
+-   (set_attr "length" "2,2,6,4,8")
+-   (set_attr "cpu_facility" "*,av2,av2,*,*")])
++   (set_attr "iscompact" "true,true,false,true_limm,false")
++   (set_attr "length" "2,2,4,6,8")
++   (set_attr "cpu_facility" "*,av2,*,av2,*")])
+ 
+ (define_insn "*movsi_cond_exec"
+   [(cond_exec
 diff --git a/gcc/config/arm/arm.c b/gcc/config/arm/arm.c
 index 45abcd89963..91bb65130b8 100644
 --- a/gcc/config/arm/arm.c
@@ -5486,7 +5573,7 @@ index 2b37296e537..73a3ef364b3 100644
        else
  	{
 diff --git a/gcc/config/i386/i386.h b/gcc/config/i386/i386.h
-index 2cb16d9fbf6..170bbdd7fbf 100644
+index 2cb16d9fbf6..934352d6331 100644
 --- a/gcc/config/i386/i386.h
 +++ b/gcc/config/i386/i386.h
 @@ -640,7 +640,7 @@ extern tree x86_mfence;
@@ -5498,6 +5585,15 @@ index 2cb16d9fbf6..170bbdd7fbf 100644
  #define MACHOPIC_ATT_STUB 0
  /* (b) Macros defined in config/darwin.h  */
  #define MACHO_DYNAMIC_NO_PIC_P 0
+@@ -2380,7 +2380,7 @@ const wide_int_bitmask PTA_CANNONLAKE = PTA_SKYLAKE | PTA_AVX512F
+   | PTA_AVX512VBMI | PTA_AVX512IFMA | PTA_SHA;
+ const wide_int_bitmask PTA_ICELAKE_CLIENT = PTA_CANNONLAKE | PTA_AVX512VNNI
+   | PTA_GFNI | PTA_VAES | PTA_AVX512VBMI2 | PTA_VPCLMULQDQ | PTA_AVX512BITALG
+-  | PTA_RDPID | PTA_CLWB;
++  | PTA_RDPID | PTA_CLWB | PTA_AVX512VPOPCNTDQ;
+ const wide_int_bitmask PTA_ICELAKE_SERVER = PTA_ICELAKE_CLIENT | PTA_PCONFIG
+   | PTA_WBNOINVD;
+ const wide_int_bitmask PTA_KNL = PTA_BROADWELL | PTA_AVX512PF | PTA_AVX512ER
 diff --git a/gcc/config/i386/intelmic-mkoffload.c b/gcc/config/i386/intelmic-mkoffload.c
 index 2a3e912ee74..0b12edc72c1 100644
 --- a/gcc/config/i386/intelmic-mkoffload.c
@@ -16357,10 +16453,23 @@ index 29f6cdc4667..33b4be79c0f 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..9ed961d3970 100644
+index bc11ae4ae0b..1ae0ef123a0 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,850 @@
+@@ -1,3 +1,863 @@
++2019-11-13  Claudiu Zissulescu <claziss@gmail.com>
++
++	Backport from mainline
++	* gcc.target/arc/delay-slot-limm.c: New test.
++	* gcc.target/arc/pic-2.c: New file.
++
++2019-11-13  Tobias Burnus  <tobias@codesourcery.com>
++
++	PR fortran/92470
++	PR fortran/92500
++	* gfortran.dg/ISO_Fortran_binding_17.c: Include
++	ISO_Fortran_binding.h with relative path.
++
 +2019-11-13  Tobias Burnus  <tobias@codesourcery.com>
 +
 +	Backport from mainline
@@ -17211,7 +17320,7 @@ index bc11ae4ae0b..9ed961d3970 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +1274,7 @@
+@@ -427,7 +1287,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -17220,7 +17329,7 @@ index bc11ae4ae0b..9ed961d3970 100644
  	(check_effective_target_powerpc_p8vector_ok): No support for Darwin.
  	(check_effective_target_powerpc_p9vector_ok): Likewise.
  	(check_effective_target_powerpc_float128_sw_ok): Likewise.
-@@ -720,7 +1567,7 @@
+@@ -720,7 +1580,7 @@
  
  	Backport from mainline
  	PR fortran/91077
@@ -17229,7 +17338,7 @@ index bc11ae4ae0b..9ed961d3970 100644
  
  2019-07-05  Szabolcs Nagy  <szabolcs.nagy@arm.com>
  
-@@ -969,7 +1816,7 @@
+@@ -969,7 +1829,7 @@
         * gcc.target/i386/pr82699-6.c: Likewise
         * gcc.target/i386/returninst1.c: Likewise
         * gcc.target/i386/returninst2.c: Likewise
@@ -17238,7 +17347,7 @@ index bc11ae4ae0b..9ed961d3970 100644
  
  2019-05-30  Iain Sandoe  <iain@sandoe.co.uk>
  
-@@ -1131,7 +1978,7 @@
+@@ -1131,7 +1991,7 @@
  
  	Backport from trunk
  	PR fortran/90498
@@ -17247,7 +17356,7 @@ index bc11ae4ae0b..9ed961d3970 100644
  
  2019-05-17  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -3801,21 +4648,21 @@
+@@ -3801,21 +4661,21 @@
  2019-02-23  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88117
@@ -17276,7 +17385,7 @@ index bc11ae4ae0b..9ed961d3970 100644
  
  2019-02-22  David Malcolm  <dmalcolm@redhat.com>
  
-@@ -4444,7 +5291,7 @@
+@@ -4444,7 +5304,7 @@
  2019-02-09  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/89200
@@ -17285,7 +17394,7 @@ index bc11ae4ae0b..9ed961d3970 100644
  
  2019-02-09  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -4704,17 +5551,17 @@
+@@ -4704,17 +5564,17 @@
  2019-02-02  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88393
@@ -20564,6 +20673,93 @@ index 00000000000..da5975ad165
 +
 +/* { dg-final { scan-assembler-times "str\tx..?, .*" 1 } } */
 +/* { dg-final { scan-assembler-not "str\tw..?, .*" } } */
+diff --git a/gcc/testsuite/gcc.target/arc/delay-slot-limm.c b/gcc/testsuite/gcc.target/arc/delay-slot-limm.c
+new file mode 100644
+index 00000000000..e5de3c4badd
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/arc/delay-slot-limm.c
+@@ -0,0 +1,52 @@
++/* We have encountered an issue that a "mov_s.ne" instruction *
++ * with  an  immediate  value  was put in the delay slot of a *
++ * branch:                                                    *
++ *                                                            *
++ * bne.d @.L1      # 33    [c=20 l=4]  *branch_insn           *
++ * mov_s.ne r0,7   # 35    [c=0 l=6]  *movsi_ne/2             *
++ *                                                            *
++ * This is not sanctioned and must not happen. The test below *
++ * is a reduced version of the source  code  leading  to  the *
++ * problem.                                                   */
++
++/* { dg-do compile }               */
++/* { dg-skip-if "" { ! { clmcpu } } } */
++/* { dg-options "-mcpu=archs -Og" } */
++typedef struct
++{
++  struct
++  {
++    int length;
++  } table;
++} room;
++
++struct house
++{
++  room *r;
++};
++
++int glob;
++
++_Bool bar();
++
++int func(struct house *h, int i, int whatever)
++{
++  for (;;)
++  {
++    _Bool a;
++    if (h && h->r[i].table.length == glob)
++    {
++      if (whatever)
++      {
++        a = bar();
++        if (__builtin_expect(!a, 0))
++          return 7;
++      }
++      break;
++    }
++  }
++  return 0;
++}
++
++/* no 'mov_s.ne r,limm' in a delay slot */
++/* { dg-final { scan-assembler-not "bne.d\.*\n\\s\+mov_s.ne\\s+r\[0-9\]+,7" } } */
+diff --git a/gcc/testsuite/gcc.target/arc/pic-2.c b/gcc/testsuite/gcc.target/arc/pic-2.c
+new file mode 100644
+index 00000000000..4b0e17126e9
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/arc/pic-2.c
+@@ -0,0 +1,23 @@
++/* { dg-do compile } */
++/* { dg-skip-if "PIC not available for ARC6xx" { arc6xx } } */
++/* { dg-options "-mno-sdata -O2 -fpic -fno-builtin" } */
++
++/* Check if we resolve correctly complex PIC addresses.  */
++
++char *foo (unsigned size)
++{
++  static char buf[32];
++  register int i;
++
++  if (size > 31)
++    size = 31;
++
++  for (i = 0; i < size; i++)
++    {
++      buf[i] = ' ';
++    }
++  buf[size] = '\0';
++  return buf;
++}
++
++/* { dg-final { scan-assembler "@buf.\[0-9\]\+@pcl-1" } } */
 diff --git a/gcc/testsuite/gcc.target/arm/acle/crc_hf_1.c b/gcc/testsuite/gcc.target/arm/acle/crc_hf_1.c
 new file mode 100644
 index 00000000000..e6cbfc0b33e
@@ -21843,7 +22039,7 @@ index 00000000000..388c5438252
 +END PROGRAM
 diff --git a/gcc/testsuite/gfortran.dg/ISO_Fortran_binding_17.c b/gcc/testsuite/gfortran.dg/ISO_Fortran_binding_17.c
 new file mode 100644
-index 00000000000..b0893cc15e8
+index 00000000000..14dfcc90c4e
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/ISO_Fortran_binding_17.c
 @@ -0,0 +1,25 @@
@@ -21851,7 +22047,7 @@ index 00000000000..b0893cc15e8
 +
 +#include <stdio.h>
 +#include <assert.h>
-+#include "ISO_Fortran_binding.h"
++#include "../../../libgfortran/ISO_Fortran_binding.h"
 +
 +void Csub(const CFI_cdesc_t *, size_t, CFI_index_t invalid);
 +
