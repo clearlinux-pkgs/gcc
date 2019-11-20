@@ -41,7 +41,7 @@ draganm (4):
       Backport fix for PR89245
       Sanitize the constant argument for rotr<mode>3
 
-ebotcazou (11):
+ebotcazou (12):
       PR rtl-optimization/91347 	* dse.c (scan_insn): Call add_wild_read for non-const/memset tail calls 	before reload if HARD_FRAME_POINTER_IS_ARG_POINTER.
       PR target/91472 	* config/sparc/sparc.c (sparc_cannot_force_const_mem): Return true 	during LRA/reload in PIC mode if the PIC register hasn't been used yet. 	(sparc_pic_register_p): Test reload_in_progress for consistency's sake.
       PR rtl-optimization/89795 	* rtlanal.c (nonzero_bits1) <SUBREG>: Do not propagate results from 	inner REGs to paradoxical SUBREGs if WORD_REGISTER_OPERATIONS is set.
@@ -53,6 +53,7 @@ ebotcazou (11):
       PR target/92095 	* config/sparc/sparc-protos.h (output_load_pcrel_sym): Declare. 	* config/sparc/sparc.c (sparc_cannot_force_const_mem): Revert latest  	change. 	(got_helper_needed): New static variable. 	(output_load_pcrel_sym): New function. 	(get_pc_thunk_name): Remove after inlining... 	(load_got_register): ...here.  Rework the initialization of the GOT 	register and of the GOT helper. 	(save_local_or_in_reg_p): Test the REGNO of the GOT register. 	(sparc_file_end): Test got_helper_needed to decide whether the GOT 	helper must be emitted.  Use output_asm_insn instead of fprintf. 	(sparc_init_pic_reg): In PIC mode, always initialize the PIC register 	if optimization is enabled. 	* config/sparc/sparc.md (load_pcrel_sym<P:mode>): Emit the assembly 	by calling output_load_pcrel_sym.
       * gcc.target/sparc/overflow-1.c: Add -fno-pie to the options. 	* gcc.target/sparc/overflow-2.c: Likewise.
       * c-ada-spec.c (get_underlying_decl): Do not look through typedefs. 	(dump_forward_type): Do not generate a declaration for function types. 	(dump_nested_type) <ARRAY_TYPE>: Do not generate a nested declaration 	of the component type if it is declared in another file.
+      * doc/invoke.texi (-gno-internal-reset-location-views): Fix typo.
 
 edlinger (3):
       2019-08-16  Bernd Edlinger  <bernd.edlinger@hotmail.de>
@@ -62,7 +63,9 @@ edlinger (3):
 emsr (1):
       2019-09-09  Edward Smith-Rowland  <3dw4rd@verizon.net>
 
-gccadmin (98):
+gccadmin (100):
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -209,7 +212,7 @@ iii (3):
       S/390: Fix failing RTL check in s390_canonicalize_comparison
       Free dominance info at the beginning of pass_jump_after_combine
 
-jakub (34):
+jakub (40):
       * BASE-VER: Set to 9.2.1.
       * config/abi/post/aarch64-linux-gnu/baseline_symbols.txt: Update. 	* config/abi/post/s390x-linux-gnu/baseline_symbols.txt: Update.
       PR tree-optimization/91597 	* tree-vrp.c (extract_range_from_binary_expr): Remove unsafe 	BIT_AND_EXPR optimization for pointers, even if both operand 	ranges don't include NULL, the result can be NULL.
@@ -244,6 +247,12 @@ jakub (34):
       Backported from mainline 	2019-10-31  Jakub Jelinek  <jakub@redhat.com>
       Backported from mainline 	2019-11-05  Jakub Jelinek  <jakub@redhat.com>
       PR c++/92384 	* function.c (assign_parm_setup_block, assign_parm_setup_stack): Don't 	copy TYPE_EMPTY_P arguments from data->entry_parm to data->stack_parm 	slot. 	(assign_parms): For TREE_ADDRESSABLE parms with TYPE_EMPTY_P type 	force creation of a unique data.stack_parm slot.
+      PR middle-end/91450 	* internal-fn.c (expand_mul_overflow): For s1 * s2 -> ur, if one 	operand is negative and one non-negative, compare the non-negative 	one against 0 rather than comparing s1 & s2 against 0.  Otherwise, 	don't compare (s1 & s2) == 0, but compare separately both s1 == 0 	and s2 == 0, unless one of them is known to be negative.  Remove 	tem2 variable, use tem where tem2 has been used before.
+      Backported from mainline 	2019-11-19  Jakub Jelinek  <jakub@redhat.com>
+      PR c/90898 	* tree-ssa-ccp.c (insert_clobber_before_stack_restore): Remove 	assertion. 	(insert_clobbers_for_var): Fix a typo in function comment.
+      PR target/90867 	* config/i386/i386.c (ix86_valid_target_attribute_tree): Don't 	clear opts->x_ix86_isa_flags{,2} here... 	(ix86_valid_target_attribute_inner_p): ... but here when seeing 	arch=.  Also clear opts->x_ix86_isa_flags{,2}_explicit.
+      PR middle-end/90840 	* expmed.c (store_bit_field_1): Handle the case where op0 is not a MEM 	and has a mode that doesn't have corresponding integral type.
+      PR c++/90767 	* call.c (complain_about_no_candidates_for_method_call): If 	conv->from is not a type, pass to complain_about_bad_argument 	lvalue_type of conv->from.
 
 jason (4):
       PR c++/90538 - multiple expansions of capture packs
@@ -412,12 +421,13 @@ rguenth (8):
 ro (1):
       Update Solaris baselines for GCC 9.3
 
-segher (5):
+segher (6):
       Backport from trunk 	2019-08-22  Segher Boessenkool  <segher@kernel.crashing.org>
       Backport from trunk 	2019-08-22  Segher Boessenkool  <segher@kernel.crashing.org>
       Backport from trunk 	2019-08-23  Segher Boessenkool  <segher@kernel.crashing.org>
       backport for PR91289
       backport "rs6000: Implement [u]avg<mode>3_ceil"
+      Backport from trunk 	2019-11-12  Segher Boessenkool  <segher@kernel.crashing.org>
 
 sje (1):
       2019-08-15  Steve Ellcey  <sellcey@marvell.com>
@@ -431,6 +441,9 @@ tkoenig (8):
       2019-10-07  Thomas Koenig <tkoenig@gcc.gnu.org>
       Commit symbol for external BLAS routine when translating MATMUL to *GEMM.
       Put vtab into RO section, same for __def_init if it contains an initializer.
+
+tnfchris (1):
+      AArch64: Correct HWCAP for fp16fml
 
 tschwinge (5):
       Avoid '-Wmaybe-uninitialized' diagnostic in 'gcc/dwarf2out.c'
@@ -690,10 +703,57 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..f2694e5dc2d 100644
+index 7f6557d8018..e31d5565539 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,1307 @@
+@@ -1,3 +1,1354 @@
++2019-11-20  Jakub Jelinek  <jakub@redhat.com>
++
++	PR middle-end/90840
++	* expmed.c (store_bit_field_1): Handle the case where op0 is not a MEM
++	and has a mode that doesn't have corresponding integral type.
++
++	PR target/90867
++	* config/i386/i386.c (ix86_valid_target_attribute_tree): Don't
++	clear opts->x_ix86_isa_flags{,2} here...
++	(ix86_valid_target_attribute_inner_p): ... but here when seeing
++	arch=.  Also clear opts->x_ix86_isa_flags{,2}_explicit.
++
++	PR c/90898
++	* tree-ssa-ccp.c (insert_clobber_before_stack_restore): Remove
++	assertion.
++	(insert_clobbers_for_var): Fix a typo in function comment.
++
++2019-11-19  Jakub Jelinek  <jakub@redhat.com>
++
++	PR middle-end/91450
++	* internal-fn.c (expand_mul_overflow): For s1 * s2 -> ur, if one
++	operand is negative and one non-negative, compare the non-negative
++	one against 0 rather than comparing s1 & s2 against 0.  Otherwise,
++	don't compare (s1 & s2) == 0, but compare separately both s1 == 0
++	and s2 == 0, unless one of them is known to be negative.  Remove
++	tem2 variable, use tem where tem2 has been used before.
++
++2019-11-19  Eric Botcazou  <ebotcazou@adacore.com>
++
++	* doc/invoke.texi (-gno-internal-reset-location-views): Fix typo.
++
++2019-11-18  Segher Boessenkool  <segher@kernel.crashing.org>
++
++	Backport from trunk
++	2019-11-12  Segher Boessenkool  <segher@kernel.crashing.org>
++
++	* config/rs6000/rs6000.md (rs6000_set_fpscr_drn): Use ULL on big
++	hexadecimal literal.
++
++2019-11-15  Tamar Christina  <tamar.christina@arm.com>
++
++	Backport from mainline
++	2019-09-24  Stamatis Markianos-Wright  <stam.markianos-wright@arm.com>
++
++	* config/aarch64/aarch64-option-extensions.def (fp16fml):
++	Update hwcap string for fp16fml.
++
 +2019-11-15  Ilya Leoshkevich  <iii@linux.ibm.com>
 +
 +	Backport from mainline
@@ -2001,7 +2061,7 @@ index 7f6557d8018..f2694e5dc2d 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +1817,7 @@
+@@ -513,7 +1864,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -3169,6 +3229,19 @@ index ddd3b8f4d9d..b2282ecdf0b 100644
  				# OK
  				;;
  			*)
+diff --git a/gcc/config/aarch64/aarch64-option-extensions.def b/gcc/config/aarch64/aarch64-option-extensions.def
+index 53dcd03590d..010fd3ccf76 100644
+--- a/gcc/config/aarch64/aarch64-option-extensions.def
++++ b/gcc/config/aarch64/aarch64-option-extensions.def
+@@ -108,7 +108,7 @@ AARCH64_OPT_EXTENSION("sm4", AARCH64_FL_SM4, AARCH64_FL_SIMD, 0, false, "sm3 sm4
+ 
+ /* Enabling "fp16fml" also enables "fp" and "fp16".
+    Disabling "fp16fml" just disables "fp16fml".  */
+-AARCH64_OPT_EXTENSION("fp16fml", AARCH64_FL_F16FML, AARCH64_FL_FP | AARCH64_FL_F16, 0, false, "asimdfml")
++AARCH64_OPT_EXTENSION("fp16fml", AARCH64_FL_F16FML, AARCH64_FL_FP | AARCH64_FL_F16, 0, false, "asimdfhm")
+ 
+ /* Enabling "sve" also enables "fp16", "fp" and "simd".
+    Disabling "sve" just disables "sve".  */
 diff --git a/gcc/config/aarch64/aarch64.c b/gcc/config/aarch64/aarch64.c
 index 6b25d9cbfae..82e9b1fbfd8 100644
 --- a/gcc/config/aarch64/aarch64.c
@@ -5579,10 +5652,58 @@ index 6580890edc0..5dedeb2d18b 100644
  BDESC (OPTION_MASK_ISA_SSSE3, 0, CODE_FOR_ssse3_phaddwv8hi3, "__builtin_ia32_phaddw128", IX86_BUILTIN_PHADDW128, UNKNOWN, (int) V8HI_FTYPE_V8HI_V8HI)
  BDESC (OPTION_MASK_ISA_SSSE3 | OPTION_MASK_ISA_MMX, 0, CODE_FOR_ssse3_phaddwv4hi3, "__builtin_ia32_phaddw", IX86_BUILTIN_PHADDW, UNKNOWN, (int) V4HI_FTYPE_V4HI_V4HI)
 diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
-index 2b37296e537..73a3ef364b3 100644
+index 2b37296e537..ce3fbd120ed 100644
 --- a/gcc/config/i386/i386.c
 +++ b/gcc/config/i386/i386.c
-@@ -16960,7 +16960,7 @@ output_pic_addr_const (FILE *file, rtx x, int code)
+@@ -5423,7 +5423,25 @@ ix86_valid_target_attribute_inner_p (tree args, char *p_strings[],
+ 	      ret = false;
+ 	    }
+ 	  else
+-	    p_strings[opt] = xstrdup (p + opt_len);
++	    {
++	      p_strings[opt] = xstrdup (p + opt_len);
++	      if (opt == IX86_FUNCTION_SPECIFIC_ARCH)
++		{
++		  /* If arch= is set,  clear all bits in x_ix86_isa_flags,
++		     except for ISA_64BIT, ABI_64, ABI_X32, and CODE16
++		     and all bits in x_ix86_isa_flags2.  */
++		  opts->x_ix86_isa_flags &= (OPTION_MASK_ISA_64BIT
++					     | OPTION_MASK_ABI_64
++					     | OPTION_MASK_ABI_X32
++					     | OPTION_MASK_CODE16);
++		  opts->x_ix86_isa_flags_explicit &= (OPTION_MASK_ISA_64BIT
++						      | OPTION_MASK_ABI_64
++						      | OPTION_MASK_ABI_X32
++						      | OPTION_MASK_CODE16);
++		  opts->x_ix86_isa_flags2 = 0;
++		  opts->x_ix86_isa_flags2_explicit = 0;
++		}
++	    }
+ 	}
+ 
+       else if (type == ix86_opt_enum)
+@@ -5498,18 +5516,8 @@ ix86_valid_target_attribute_tree (tree args,
+       /* If we are using the default tune= or arch=, undo the string assigned,
+ 	 and use the default.  */
+       if (option_strings[IX86_FUNCTION_SPECIFIC_ARCH])
+-	{
+-	  opts->x_ix86_arch_string
+-	    = ggc_strdup (option_strings[IX86_FUNCTION_SPECIFIC_ARCH]);
+-
+-	  /* If arch= is set,  clear all bits in x_ix86_isa_flags,
+-	     except for ISA_64BIT, ABI_64, ABI_X32, and CODE16.  */
+-	  opts->x_ix86_isa_flags &= (OPTION_MASK_ISA_64BIT
+-				     | OPTION_MASK_ABI_64
+-				     | OPTION_MASK_ABI_X32
+-				     | OPTION_MASK_CODE16);
+-	  opts->x_ix86_isa_flags2 = 0;
+-	}
++	opts->x_ix86_arch_string
++	  = ggc_strdup (option_strings[IX86_FUNCTION_SPECIFIC_ARCH]);
+       else if (!orig_arch_specified)
+ 	opts->x_ix86_arch_string = NULL;
+ 
+@@ -16960,7 +16968,7 @@ output_pic_addr_const (FILE *file, rtx x, int code)
        break;
  
      case SYMBOL_REF:
@@ -7206,7 +7327,7 @@ index cb8d737976b..a670096145b 100644
        else
  	{
 diff --git a/gcc/config/rs6000/rs6000.md b/gcc/config/rs6000/rs6000.md
-index ad80592765d..b3469a17f27 100644
+index ad80592765d..7bfa5eea2ee 100644
 --- a/gcc/config/rs6000/rs6000.md
 +++ b/gcc/config/rs6000/rs6000.md
 @@ -137,6 +137,9 @@
@@ -7229,6 +7350,15 @@ index ad80592765d..b3469a17f27 100644
     UNSPECV_NLGR			; non-local goto receiver
     UNSPECV_MFFS			; Move from FPSCR
     UNSPECV_MFFSL		; Move from FPSCR light instruction version
+@@ -5930,7 +5936,7 @@
+       /* Insert new RN mode into FSCPR.  */
+       emit_insn (gen_rs6000_mffs (tmp_df));
+       tmp_di = simplify_gen_subreg (DImode, tmp_df, DFmode, 0);
+-      emit_insn (gen_anddi3 (tmp_di, tmp_di, GEN_INT (0xFFFFFFF8FFFFFFFF)));
++      emit_insn (gen_anddi3 (tmp_di, tmp_di, GEN_INT (0xFFFFFFF8FFFFFFFFULL)));
+       emit_insn (gen_iordi3 (tmp_di, tmp_di, tmp_rn));
+ 
+       /* Need to write to field 7.  The fields are [0:15].  The equation to
 @@ -6818,13 +6824,6 @@
  ;; do the load 16-bits at a time.  We could do this by loading from memory,
  ;; and this is even supposed to be faster, but it is simpler not to get
@@ -8868,10 +8998,24 @@ index ce2825580c6..8243716589f 100644
  AC_SUBST(all_languages)
  AC_SUBST(all_selected_languages)
 diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
-index c977850d067..f44fdee6aa1 100644
+index c977850d067..ae4ba4a372a 100644
 --- a/gcc/cp/ChangeLog
 +++ b/gcc/cp/ChangeLog
-@@ -1,3 +1,238 @@
+@@ -1,3 +1,252 @@
++2019-11-20  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/90767
++	* call.c (complain_about_no_candidates_for_method_call): If
++	conv->from is not a type, pass to complain_about_bad_argument
++	lvalue_type of conv->from.
++
++	Backported from mainline
++	2019-11-19  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/92504
++	* semantics.c (handle_omp_for_class_iterator): Don't call
++	cp_fully_fold on cond.
++
 +2019-11-08  Marek Polacek  <polacek@redhat.com>
 +
 +	Backported from mainline
@@ -9110,7 +9254,7 @@ index c977850d067..f44fdee6aa1 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -16,7 +251,7 @@
+@@ -16,7 +265,7 @@
  
  	Backported from mainline
  	2019-08-02  Marek Polacek  <polacek@redhat.com>
@@ -9120,7 +9264,7 @@ index c977850d067..f44fdee6aa1 100644
  	* pt.c (value_dependent_expression_p): Consider __PRETTY_FUNCTION__
  	inside a template function value-dependent.
 diff --git a/gcc/cp/call.c b/gcc/cp/call.c
-index 9e22a146a16..8f950d13321 100644
+index 9e22a146a16..8e56705d6ce 100644
 --- a/gcc/cp/call.c
 +++ b/gcc/cp/call.c
 @@ -530,9 +530,8 @@ null_ptr_cst_p (tree t)
@@ -9246,7 +9390,20 @@ index 9e22a146a16..8f950d13321 100644
    result = build3_loc (loc, COND_EXPR, result_type, arg1, arg2, arg3);
  
    /* If the ARG2 and ARG3 are the same and don't have side-effects,
-@@ -10732,7 +10739,9 @@ joust (struct z_candidate *cand1, struct z_candidate *cand2, bool warn,
+@@ -9551,8 +9558,11 @@ complain_about_no_candidates_for_method_call (tree instance,
+ 	  if (const conversion_info *conv
+ 		= maybe_get_bad_conversion_for_unmatched_call (candidate))
+ 	    {
++	      tree from_type = conv->from;
++	      if (!TYPE_P (conv->from))
++		from_type = lvalue_type (conv->from);
+ 	      complain_about_bad_argument (conv->loc,
+-					   conv->from, conv->to_type,
++					   from_type, conv->to_type,
+ 					   candidate->fn, conv->n_arg);
+ 	      return;
+ 	    }
+@@ -10732,7 +10742,9 @@ joust (struct z_candidate *cand1, struct z_candidate *cand2, bool warn,
       either between a constructor and a conversion op, or between two
       conversion ops.  */
    if ((complain & tf_warning)
@@ -9889,7 +10046,7 @@ index a2a986b1db1..48d8dbb6ad2 100644
        tree tparms;
  
 diff --git a/gcc/cp/semantics.c b/gcc/cp/semantics.c
-index 6d40b145fcb..ebfdf9a47b0 100644
+index 6d40b145fcb..b8a279f8b08 100644
 --- a/gcc/cp/semantics.c
 +++ b/gcc/cp/semantics.c
 @@ -7790,6 +7790,13 @@ finish_omp_clauses (tree clauses, enum c_omp_region_type ort)
@@ -9906,6 +10063,14 @@ index 6d40b145fcb..ebfdf9a47b0 100644
  	      if (VAR_P (t)
  		  && OMP_CLAUSE_CODE (c) == OMP_CLAUSE_FIRSTPRIVATE
  		  && TREE_STATIC (t)
+@@ -8187,7 +8194,6 @@ handle_omp_for_class_iterator (int i, location_t locus, enum tree_code code,
+   if (init && EXPR_HAS_LOCATION (init))
+     elocus = EXPR_LOCATION (init);
+ 
+-  cond = cp_fully_fold (cond);
+   switch (TREE_CODE (cond))
+     {
+     case GT_EXPR:
 diff --git a/gcc/cp/tree.c b/gcc/cp/tree.c
 index 1339e9fd204..ae9bfd24cfb 100644
 --- a/gcc/cp/tree.c
@@ -10128,6 +10293,19 @@ index 911875f9578..78a59e6b21c 100644
  @end smallexample
  
  If @samp{hsa} is specified as one of the targets, the compiler will be
+diff --git a/gcc/doc/invoke.texi b/gcc/doc/invoke.texi
+index 6ef36ce02aa..b3fdcde8b4d 100644
+--- a/gcc/doc/invoke.texi
++++ b/gcc/doc/invoke.texi
+@@ -8027,7 +8027,7 @@ consumers are not expected to support this extended format, and they
+ would be rendered unable to decode location lists using it.
+ 
+ @item -ginternal-reset-location-views
+-@itemx -gnointernal-reset-location-views
++@itemx -gno-internal-reset-location-views
+ @opindex ginternal-reset-location-views
+ @opindex gno-internal-reset-location-views
+ Attempt to determine location views that can be omitted from location
 diff --git a/gcc/dse.c b/gcc/dse.c
 index 6f6f768f371..4becdcf1cbb 100644
 --- a/gcc/dse.c
@@ -10212,6 +10390,38 @@ index 1cec00f2b85..ae47387b763 100644
  	{
  	  /* We get called via the symtab code invoking late_global_decl
  	     for symbols that are optimized out.
+diff --git a/gcc/expmed.c b/gcc/expmed.c
+index d7f8e9a5d76..c5f5499c013 100644
+--- a/gcc/expmed.c
++++ b/gcc/expmed.c
+@@ -838,6 +838,27 @@ store_bit_field_1 (rtx str_rtx, poly_uint64 bitsize, poly_uint64 bitnum,
+       if (MEM_P (op0))
+ 	op0 = adjust_bitfield_address_size (op0, op0_mode.else_blk (),
+ 					    0, MEM_SIZE (op0));
++      else if (!op0_mode.exists ())
++	{
++	  if (ibitnum == 0
++	      && known_eq (ibitsize, GET_MODE_BITSIZE (GET_MODE (op0)))
++	      && MEM_P (value)
++	      && !reverse)
++	    {
++	      value = adjust_address (value, GET_MODE (op0), 0);
++	      emit_move_insn (op0, value);
++	      return true;
++	    }
++	  if (!fallback_p)
++	    return false;
++	  rtx temp = assign_stack_temp (GET_MODE (op0),
++					GET_MODE_SIZE (GET_MODE (op0)));
++	  emit_move_insn (temp, op0);
++	  store_bit_field_1 (temp, bitsize, bitnum, 0, 0, fieldmode, value,
++			     reverse, fallback_p);
++	  emit_move_insn (op0, temp);
++	  return true;
++	}
+       else
+ 	op0 = gen_lowpart (op0_mode.require (), op0);
+     }
 diff --git a/gcc/fold-const.c b/gcc/fold-const.c
 index f0e43b5fda2..9feaea9fde5 100644
 --- a/gcc/fold-const.c
@@ -13211,6 +13421,62 @@ index 6f9775dd5a2..859c1ece5da 100644
  
    void
    do_export(Export_function_body*) const;
+diff --git a/gcc/internal-fn.c b/gcc/internal-fn.c
+index 04081f36c4d..95788dfee7d 100644
+--- a/gcc/internal-fn.c
++++ b/gcc/internal-fn.c
+@@ -1407,7 +1407,7 @@ expand_mul_overflow (location_t loc, tree lhs, tree arg0, tree arg1,
+   /* s1 * s2 -> ur  */
+   if (!uns0_p && !uns1_p && unsr_p)
+     {
+-      rtx tem, tem2;
++      rtx tem;
+       switch (pos_neg0 | pos_neg1)
+ 	{
+ 	case 1: /* Both operands known to be non-negative.  */
+@@ -1437,10 +1437,8 @@ expand_mul_overflow (location_t loc, tree lhs, tree arg0, tree arg1,
+ 	      ops.op2 = NULL_TREE;
+ 	      ops.location = loc;
+ 	      res = expand_expr_real_2 (&ops, NULL_RTX, mode, EXPAND_NORMAL);
+-	      tem = expand_binop (mode, and_optab, op0, op1, NULL_RTX, false,
+-				  OPTAB_LIB_WIDEN);
+-	      do_compare_rtx_and_jump (tem, const0_rtx, EQ, true, mode,
+-				       NULL_RTX, NULL, done_label,
++	      do_compare_rtx_and_jump (pos_neg0 == 1 ? op0 : op1, const0_rtx, EQ,
++				       true, mode, NULL_RTX, NULL, done_label,
+ 				       profile_probability::very_likely ());
+ 	      goto do_error_label;
+ 	    }
+@@ -1471,16 +1469,23 @@ expand_mul_overflow (location_t loc, tree lhs, tree arg0, tree arg1,
+ 	  arg1 = error_mark_node;
+ 	  emit_jump (do_main_label);
+ 	  emit_label (after_negate_label);
+-	  tem2 = expand_binop (mode, xor_optab, op0, op1, NULL_RTX, false,
+-			       OPTAB_LIB_WIDEN);
+-	  do_compare_rtx_and_jump (tem2, const0_rtx, GE, false, mode, NULL_RTX,
+-				   NULL, do_main_label, profile_probability::very_likely ());
++	  tem = expand_binop (mode, xor_optab, op0, op1, NULL_RTX, false,
++			      OPTAB_LIB_WIDEN);
++	  do_compare_rtx_and_jump (tem, const0_rtx, GE, false, mode, NULL_RTX,
++				   NULL, do_main_label,
++				   profile_probability::very_likely ());
+ 	  /* One argument is negative here, the other positive.  This
+ 	     overflows always, unless one of the arguments is 0.  But
+ 	     if e.g. s2 is 0, (U) s1 * 0 doesn't overflow, whatever s1
+ 	     is, thus we can keep do_main code oring in overflow as is.  */
+-	  do_compare_rtx_and_jump (tem, const0_rtx, EQ, true, mode, NULL_RTX,
+-				   NULL, do_main_label, profile_probability::very_likely ());
++	  if (pos_neg0 != 2)
++	    do_compare_rtx_and_jump (op0, const0_rtx, EQ, true, mode, NULL_RTX,
++				     NULL, do_main_label,
++				     profile_probability::very_unlikely ());
++	  if (pos_neg1 != 2)
++	    do_compare_rtx_and_jump (op1, const0_rtx, EQ, true, mode, NULL_RTX,
++				     NULL, do_main_label,
++				     profile_probability::very_unlikely ());
+ 	  expand_arith_set_overflow (lhs, target);
+ 	  emit_label (do_main_label);
+ 	  goto do_main;
 diff --git a/gcc/ipa-cp.c b/gcc/ipa-cp.c
 index 32b352328a9..d414632e602 100644
 --- a/gcc/ipa-cp.c
@@ -16472,10 +16738,37 @@ index 29f6cdc4667..33b4be79c0f 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..e4f275430ec 100644
+index bc11ae4ae0b..9d362e3f423 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,869 @@
+@@ -1,3 +1,896 @@
++2019-11-20  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/90767
++	* g++.dg/diagnostic/pr90767-1.C: New test.
++	* g++.dg/diagnostic/pr90767-2.C: New test.
++
++	PR middle-end/90840
++	* gcc.c-torture/compile/pr90840.c: New test.
++
++	PR target/90867
++	* gcc.target/i386/pr90867.c: New test.
++
++	PR c/90898
++	* gcc.dg/pr90898.c: New test.
++
++	Backported from mainline
++	2019-11-19  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/92504
++	* g++.dg/gomp/pr92504.C: New test.
++
++2019-11-19  Jakub Jelinek  <jakub@redhat.com>
++
++	PR middle-end/91450
++	* gcc.c-torture/execute/pr91450-1.c: New test.
++	* gcc.c-torture/execute/pr91450-2.c: New test.
++
 +2019-11-15  Ilya Leoshkevich  <iii@linux.ibm.com>
 +
 +	Backport from mainline
@@ -17345,7 +17638,7 @@ index bc11ae4ae0b..e4f275430ec 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +1293,7 @@
+@@ -427,7 +1320,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -17354,7 +17647,7 @@ index bc11ae4ae0b..e4f275430ec 100644
  	(check_effective_target_powerpc_p8vector_ok): No support for Darwin.
  	(check_effective_target_powerpc_p9vector_ok): Likewise.
  	(check_effective_target_powerpc_float128_sw_ok): Likewise.
-@@ -720,7 +1586,7 @@
+@@ -720,7 +1613,7 @@
  
  	Backport from mainline
  	PR fortran/91077
@@ -17363,7 +17656,7 @@ index bc11ae4ae0b..e4f275430ec 100644
  
  2019-07-05  Szabolcs Nagy  <szabolcs.nagy@arm.com>
  
-@@ -969,7 +1835,7 @@
+@@ -969,7 +1862,7 @@
         * gcc.target/i386/pr82699-6.c: Likewise
         * gcc.target/i386/returninst1.c: Likewise
         * gcc.target/i386/returninst2.c: Likewise
@@ -17372,7 +17665,7 @@ index bc11ae4ae0b..e4f275430ec 100644
  
  2019-05-30  Iain Sandoe  <iain@sandoe.co.uk>
  
-@@ -1131,7 +1997,7 @@
+@@ -1131,7 +2024,7 @@
  
  	Backport from trunk
  	PR fortran/90498
@@ -17381,7 +17674,7 @@ index bc11ae4ae0b..e4f275430ec 100644
  
  2019-05-17  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -3801,21 +4667,21 @@
+@@ -3801,21 +4694,21 @@
  2019-02-23  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88117
@@ -17410,7 +17703,7 @@ index bc11ae4ae0b..e4f275430ec 100644
  
  2019-02-22  David Malcolm  <dmalcolm@redhat.com>
  
-@@ -4444,7 +5310,7 @@
+@@ -4444,7 +5337,7 @@
  2019-02-09  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/89200
@@ -17419,7 +17712,7 @@ index bc11ae4ae0b..e4f275430ec 100644
  
  2019-02-09  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -4704,17 +5570,17 @@
+@@ -4704,17 +5597,17 @@
  2019-02-02  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88393
@@ -19006,6 +19299,48 @@ index 00000000000..6cd99cc9bb8
 +template <class R, typename... Args>
 +int Bind(R(Args...), typename B<Args>::type...) { return 0; }
 +void KeepBufferRefs(A, A) { A a, b(Bind(KeepBufferRefs, a, b)); }
+diff --git a/gcc/testsuite/g++.dg/diagnostic/pr90767-1.C b/gcc/testsuite/g++.dg/diagnostic/pr90767-1.C
+new file mode 100644
+index 00000000000..7d1cd3db398
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/diagnostic/pr90767-1.C
+@@ -0,0 +1,15 @@
++// PR c++/90767
++// { dg-do compile }
++
++struct X {
++  int n;
++  void foo ();	// { dg-message "initializing argument 'this'" }
++
++  template<typename T>
++  operator T () const
++    {
++      if (n == 0)
++	foo ();	// { dg-error "cannot convert 'const X\\*' to 'X\\*'" }
++      return n;
++    }
++};
+diff --git a/gcc/testsuite/g++.dg/diagnostic/pr90767-2.C b/gcc/testsuite/g++.dg/diagnostic/pr90767-2.C
+new file mode 100644
+index 00000000000..550762b2db9
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/diagnostic/pr90767-2.C
+@@ -0,0 +1,15 @@
++// PR c++/90767
++// { dg-do compile }
++
++struct A {
++  struct B { B (int) {} };
++
++  template <typename T>
++  void foo ()
++  {
++    int x = 0;
++    bar (x);	// { dg-error "cannot convert 'int' to 'A::B&'" }
++  }
++
++  void bar (B &arg) {}	// { dg-message "initializing argument 1" }
++};
 diff --git a/gcc/testsuite/g++.dg/expr/cond15.C b/gcc/testsuite/g++.dg/expr/cond15.C
 new file mode 100644
 index 00000000000..4a9d057a757
@@ -19078,6 +19413,41 @@ index b3875ad04ae..20e5d629ff5 100644
 +
 +static_assert( my_is_final<final1>::value, "final1 is final" );
 +static_assert( my_is_final<final2<int>>::value, "final2<int> is final" );
+diff --git a/gcc/testsuite/g++.dg/gomp/pr92504.C b/gcc/testsuite/g++.dg/gomp/pr92504.C
+new file mode 100644
+index 00000000000..8df67621532
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/gomp/pr92504.C
+@@ -0,0 +1,29 @@
++// PR c++/92504
++// { dg-do compile { target c++11 } }
++// { dg-additional-options "-O2" }
++
++namespace std {
++  typedef __SIZE_TYPE__ size_t;
++  typedef __PTRDIFF_TYPE__ ptrdiff_t;
++}
++
++struct A {
++  A ();
++  A (const A &);
++  A & operator++ ();
++  bool operator != (const A &) const;
++  std::ptrdiff_t operator - (const A &);
++  A & operator += (std::size_t);
++  int a;
++  A & begin ();
++  A & end ();				// { dg-message "declared here" }
++};
++
++void
++bar ()
++{
++  A a;
++  #pragma omp for
++  for (auto b = a; b != a.end; ++b)	// { dg-error "invalid use of non-static member function" }
++    ;
++}
 diff --git a/gcc/testsuite/g++.dg/init/array53.C b/gcc/testsuite/g++.dg/init/array53.C
 new file mode 100644
 index 00000000000..2bf480561fe
@@ -19586,6 +19956,31 @@ index 00000000000..7929751bb06
 +  (&f)->b[0] = 15728640;
 +  return e ? -(&f)->a : (&f)->a;
 +}
+diff --git a/gcc/testsuite/gcc.c-torture/compile/pr90840.c b/gcc/testsuite/gcc.c-torture/compile/pr90840.c
+new file mode 100644
+index 00000000000..94a6f3f4baf
+--- /dev/null
++++ b/gcc/testsuite/gcc.c-torture/compile/pr90840.c
+@@ -0,0 +1,19 @@
++/* PR middle-end/90840 */
++struct S { long long a; int b; };
++struct S foo (void);
++struct __attribute__((packed)) T { long long a; char b; };
++struct T baz (void);
++
++void
++bar (void)
++{
++  _Complex long double c;
++  *(struct S *) &c = foo ();
++}
++
++void
++qux (void)
++{
++  _Complex long double c;
++  *(struct T *) &c = baz ();
++}
 diff --git a/gcc/testsuite/gcc.c-torture/compile/pr91001.c b/gcc/testsuite/gcc.c-torture/compile/pr91001.c
 new file mode 100644
 index 00000000000..4b6a017c860
@@ -19900,6 +20295,182 @@ index 00000000000..3811ebca151
 +    a();
 +    return 0;
 +}
+diff --git a/gcc/testsuite/gcc.c-torture/execute/pr91450-1.c b/gcc/testsuite/gcc.c-torture/execute/pr91450-1.c
+new file mode 100644
+index 00000000000..9aafc5f791a
+--- /dev/null
++++ b/gcc/testsuite/gcc.c-torture/execute/pr91450-1.c
+@@ -0,0 +1,88 @@
++/* PR middle-end/91450 */
++
++__attribute__((noipa)) unsigned long long
++foo (int a, int b)
++{
++  unsigned long long r;
++  if (!__builtin_mul_overflow (a, b, &r))
++    __builtin_abort ();
++  return r;
++}
++
++__attribute__((noipa)) unsigned long long
++bar (int a, int b)
++{
++  unsigned long long r;
++  if (a >= 0)
++    return 0;
++  if (!__builtin_mul_overflow (a, b, &r))
++    __builtin_abort ();
++  return r;
++}
++
++__attribute__((noipa)) unsigned long long
++baz (int a, int b)
++{
++  unsigned long long r;
++  if (b >= 0)
++    return 0;
++  if (!__builtin_mul_overflow (a, b, &r))
++    __builtin_abort ();
++  return r;
++}
++
++__attribute__((noipa)) unsigned long long
++qux (int a, int b)
++{
++  unsigned long long r;
++  if (a >= 0)
++    return 0;
++  if (b < 0)
++    return 0;
++  if (!__builtin_mul_overflow (a, b, &r))
++    __builtin_abort ();
++  return r;
++}
++
++__attribute__((noipa)) unsigned long long
++quux (int a, int b)
++{
++  unsigned long long r;
++  if (a < 0)
++    return 0;
++  if (b >= 0)
++    return 0;
++  if (!__builtin_mul_overflow (a, b, &r))
++    __builtin_abort ();
++  return r;
++}
++
++int
++main ()
++{
++  if (foo (-4, 2) != -8ULL)
++    __builtin_abort ();
++  if (foo (2, -4) != -8ULL)
++    __builtin_abort ();
++  if (bar (-4, 2) != -8ULL)
++    __builtin_abort ();
++  if (baz (2, -4) != -8ULL)
++    __builtin_abort ();
++  if (qux (-4, 2) != -8ULL)
++    __builtin_abort ();
++  if (quux (2, -4) != -8ULL)
++    __builtin_abort ();
++  if (foo (-2, 1) != -2ULL)
++    __builtin_abort ();
++  if (foo (1, -2) != -2ULL)
++    __builtin_abort ();
++  if (bar (-2, 1) != -2ULL)
++    __builtin_abort ();
++  if (baz (1, -2) != -2ULL)
++    __builtin_abort ();
++  if (qux (-2, 1) != -2ULL)
++    __builtin_abort ();
++  if (quux (1, -2) != -2ULL)
++    __builtin_abort ();
++  return 0;
++}
+diff --git a/gcc/testsuite/gcc.c-torture/execute/pr91450-2.c b/gcc/testsuite/gcc.c-torture/execute/pr91450-2.c
+new file mode 100644
+index 00000000000..bfaabbb5ac6
+--- /dev/null
++++ b/gcc/testsuite/gcc.c-torture/execute/pr91450-2.c
+@@ -0,0 +1,76 @@
++/* PR middle-end/91450 */
++
++__attribute__((noipa)) void
++foo (int a, int b)
++{
++  unsigned long long r;
++  if (__builtin_mul_overflow (a, b, &r))
++    __builtin_abort ();
++  if (r != 0)
++    __builtin_abort ();
++}
++
++__attribute__((noipa)) void
++bar (int a, int b)
++{
++  unsigned long long r;
++  if (a >= 0)
++    return;
++  if (__builtin_mul_overflow (a, b, &r))
++    __builtin_abort ();
++  if (r != 0)
++    __builtin_abort ();
++}
++
++__attribute__((noipa)) void
++baz (int a, int b)
++{
++  unsigned long long r;
++  if (b >= 0)
++    return;
++  if (__builtin_mul_overflow (a, b, &r))
++    __builtin_abort ();
++  if (r != 0)
++    __builtin_abort ();
++}
++
++__attribute__((noipa)) void
++qux (int a, int b)
++{
++  unsigned long long r;
++  if (a >= 0)
++    return;
++  if (b < 0)
++    return;
++  if (__builtin_mul_overflow (a, b, &r))
++    __builtin_abort ();
++  if (r != 0)
++    __builtin_abort ();
++}
++
++__attribute__((noipa)) void
++quux (int a, int b)
++{
++  unsigned long long r;
++  if (a < 0)
++    return;
++  if (b >= 0)
++    return;
++  if (__builtin_mul_overflow (a, b, &r))
++    __builtin_abort ();
++  if (r != 0)
++    __builtin_abort ();
++}
++
++int
++main ()
++{
++  foo (-4, 0);
++  foo (0, -4);
++  foo (0, 0);
++  bar (-4, 0);
++  baz (0, -4);
++  qux (-4, 0);
++  quux (0, -4);
++  return 0;
++}
 diff --git a/gcc/testsuite/gcc.c-torture/execute/pr91597.c b/gcc/testsuite/gcc.c-torture/execute/pr91597.c
 new file mode 100644
 index 00000000000..6a917cb58af
@@ -20158,6 +20729,28 @@ index 00000000000..4ceaa433f3c
 +    __builtin_abort ();
 +#endif
 +  return 0;
++}
+diff --git a/gcc/testsuite/gcc.dg/pr90898.c b/gcc/testsuite/gcc.dg/pr90898.c
+new file mode 100644
+index 00000000000..e992ea34cd9
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/pr90898.c
+@@ -0,0 +1,16 @@
++/* PR c/90898 */
++/* { dg-do compile } */
++/* { dg-options "-O2" } */
++
++void *p;
++int bar (void);
++void baz (int *);
++
++void
++foo (void)
++{
++  p = __builtin_stack_save ();
++  int a[(bar (), 2)];
++  baz (a);
++  __builtin_stack_restore (p);
 +}
 diff --git a/gcc/testsuite/gcc.dg/pr91269.c b/gcc/testsuite/gcc.dg/pr91269.c
 new file mode 100644
@@ -21223,6 +21816,42 @@ index 00000000000..9a288879679
 +bar (__m128i x, __m128i y)
 +{
 +  return _mm_cmplt_epi8 (x, y);
++}
+diff --git a/gcc/testsuite/gcc.target/i386/pr90867.c b/gcc/testsuite/gcc.target/i386/pr90867.c
+new file mode 100644
+index 00000000000..1ed96b582ed
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr90867.c
+@@ -0,0 +1,30 @@
++/* PR target/90867 */
++/* { dg-do run { target lp64 } } */
++/* { dg-options "-O2 -msse2" } */
++
++unsigned long long freq = 3600000000UL;   /* 3.6 GHz = 3600.0 MHz */
++
++__attribute__((noipa)) void
++bar (double x)
++{
++  static double d = 3600000000.0;
++  if (x != d)
++    __builtin_abort ();
++  d /= 1000.0;
++}
++
++__attribute__ ((target ("arch=x86-64"))) int
++foo ()
++{
++  bar ((double) freq);
++  bar (1e-3 * freq);
++  bar (1e-6 * freq);
++  bar (1e-9 * freq);
++  return 0;
++}
++
++int
++main ()
++{
++  return foo ();
 +}
 diff --git a/gcc/testsuite/gcc.target/i386/pr91623.c b/gcc/testsuite/gcc.target/i386/pr91623.c
 new file mode 100644
@@ -24266,6 +24895,32 @@ index cee844973d9..ddd28ec3c75 100644
  				     void *(*)(ao_ref *, tree, void *),
  				     void *(*)(ao_ref *, tree, void *, bool *),
  				     tree (*)(tree), unsigned &, void *);
+diff --git a/gcc/tree-ssa-ccp.c b/gcc/tree-ssa-ccp.c
+index e6bcc216e7c..8db6a34e059 100644
+--- a/gcc/tree-ssa-ccp.c
++++ b/gcc/tree-ssa-ccp.c
+@@ -2079,8 +2079,6 @@ insert_clobber_before_stack_restore (tree saved_val, tree var,
+     else if (gimple_assign_ssa_name_copy_p (stmt))
+       insert_clobber_before_stack_restore (gimple_assign_lhs (stmt), var,
+ 					   visited);
+-    else
+-      gcc_assert (is_gimple_debug (stmt));
+ }
+ 
+ /* Advance the iterator to the previous non-debug gimple statement in the same
+@@ -2105,9 +2103,9 @@ gsi_prev_dom_bb_nondebug (gimple_stmt_iterator *i)
+ /* Find a BUILT_IN_STACK_SAVE dominating gsi_stmt (I), and insert
+    a clobber of VAR before each matching BUILT_IN_STACK_RESTORE.
+ 
+-   It is possible that BUILT_IN_STACK_SAVE cannot be find in a dominator when a
+-   previous pass (such as DOM) duplicated it along multiple paths to a BB.  In
+-   that case the function gives up without inserting the clobbers.  */
++   It is possible that BUILT_IN_STACK_SAVE cannot be found in a dominator when
++   a previous pass (such as DOM) duplicated it along multiple paths to a BB.
++   In that case the function gives up without inserting the clobbers.  */
+ 
+ static void
+ insert_clobbers_for_var (gimple_stmt_iterator i, tree var)
 diff --git a/gcc/tree-ssa-dse.c b/gcc/tree-ssa-dse.c
 index aa998f416c7..efe5b31cc0a 100644
 --- a/gcc/tree-ssa-dse.c
