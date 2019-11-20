@@ -345,6 +345,9 @@ marxin (8):
       Backport r276178
       Backport r278210
 
+matz (1):
+      Fix PR90796
+
 mpolacek (13):
       PR c++/81429 - wrong parsing of constructor with C++11 attribute. 	* parser.c (cp_parser_constructor_declarator_p): Handle the scenario 	when a parameter declaration begins with [[attribute]].
       PR c++/87519 - bogus warning with -Wsign-conversion. 	* typeck.c (cp_build_binary_op): Use same_type_p instead of comparing 	the types directly.
@@ -704,10 +707,18 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..a68a466d6ae 100644
+index 7f6557d8018..52aa9c3b5d2 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,1358 @@
+@@ -1,3 +1,1366 @@
++2019-11-20  Michael Matz  <matz@suse.de>
++
++	Backport from mainline
++	PR middle-end/90796
++	* gimple-loop-jam.c (any_access_function_variant_p): New function.
++	(adjust_unroll_factor): Use it to constrain safety, new parameter.
++	(tree_loop_unroll_and_jam): Adjust call and profitable unroll factor.
++
 +2019-11-20  Joseph Myers  <joseph@codesourcery.com>
 +
 +	* doc/invoke.texi (-Wc11-c2x-compat): Document.
@@ -2066,7 +2077,7 @@ index 7f6557d8018..a68a466d6ae 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +1868,7 @@
+@@ -513,7 +1876,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -13333,6 +13344,127 @@ index f30818042ee..d00f1e2b035 100644
  	    && fndecl_built_in_p (TREE_OPERAND (fn, 0))
  	    && gimple_builtin_call_types_compatible_p (stmt,
  						       TREE_OPERAND (fn, 0)))
+diff --git a/gcc/gimple-loop-jam.c b/gcc/gimple-loop-jam.c
+index 90ddbf37b07..236349e36ba 100644
+--- a/gcc/gimple-loop-jam.c
++++ b/gcc/gimple-loop-jam.c
+@@ -360,16 +360,33 @@ fuse_loops (struct loop *loop)
+   rewrite_into_loop_closed_ssa_1 (NULL, 0, SSA_OP_USE, loop);
+ }
+ 
++/* Return true if any of the access functions for dataref A
++   isn't invariant with respect to loop LOOP_NEST.  */
++static bool
++any_access_function_variant_p (const struct data_reference *a,
++			       const class loop *loop_nest)
++{
++  unsigned int i;
++  vec<tree> fns = DR_ACCESS_FNS (a);
++  tree t;
++
++  FOR_EACH_VEC_ELT (fns, i, t)
++    if (!evolution_function_is_invariant_p (t, loop_nest->num))
++      return true;
++
++  return false;
++}
++
+ /* Returns true if the distance in DDR can be determined and adjusts
+    the unroll factor in *UNROLL to make unrolling valid for that distance.
+-   Otherwise return false.
++   Otherwise return false.  DDR is with respect to the outer loop of INNER.
+ 
+    If this data dep can lead to a removed memory reference, increment
+    *REMOVED and adjust *PROFIT_UNROLL to be the necessary unroll factor
+    for this to happen.  */
+ 
+ static bool
+-adjust_unroll_factor (struct data_dependence_relation *ddr,
++adjust_unroll_factor (class loop *inner, struct data_dependence_relation *ddr,
+ 		      unsigned *unroll, unsigned *profit_unroll,
+ 		      unsigned *removed)
+ {
+@@ -392,9 +409,59 @@ adjust_unroll_factor (struct data_dependence_relation *ddr,
+ 	    gcc_unreachable ();
+ 	  else if ((unsigned)dist >= *unroll)
+ 	    ;
+-	  else if (lambda_vector_lexico_pos (dist_v + 1, DDR_NB_LOOPS (ddr) - 1)
+-		   || (lambda_vector_zerop (dist_v + 1, DDR_NB_LOOPS (ddr) - 1)
+-		       && dist > 0))
++	  else if (lambda_vector_zerop (dist_v + 1, DDR_NB_LOOPS (ddr) - 1))
++	    {
++	      /* We have (a,0) with a < N, so this will be transformed into
++	         (0,0) after unrolling by N.  This might potentially be a
++		 problem, if it's not a read-read dependency.  */
++	      if (DR_IS_READ (DDR_A (ddr)) && DR_IS_READ (DDR_B (ddr)))
++		;
++	      else
++		{
++		  /* So, at least one is a write, and we might reduce the
++		     distance vector to (0,0).  This is still no problem
++		     if both data-refs are affine with respect to the inner
++		     loops.  But if one of them is invariant with respect
++		     to an inner loop our reordering implicit in loop fusion
++		     corrupts the program, as our data dependences don't
++		     capture this.  E.g. for:
++		       for (0 <= i < n)
++		         for (0 <= j < m)
++		           a[i][0] = a[i+1][0] + 2;    // (1)
++		           b[i][j] = b[i+1][j] + 2;    // (2)
++		     the distance vector for both statements is (-1,0),
++		     but exchanging the order for (2) is okay, while
++		     for (1) it is not.  To see this, write out the original
++		     accesses (assume m is 2):
++		       a i j original
++		       0 0 0 r a[1][0] b[1][0]
++		       1 0 0 w a[0][0] b[0][0]
++		       2 0 1 r a[1][0] b[1][1]
++		       3 0 1 w a[0][0] b[0][1]
++		       4 1 0 r a[2][0] b[2][0]
++		       5 1 0 w a[1][0] b[1][0]
++		     after unroll-by-2 and fusion the accesses are done in
++		     this order (from column a): 0,1, 4,5, 2,3, i.e. this:
++		       a i j transformed
++		       0 0 0 r a[1][0] b[1][0]
++		       1 0 0 w a[0][0] b[0][0]
++		       4 1 0 r a[2][0] b[2][0]
++		       5 1 0 w a[1][0] b[1][0]
++		       2 0 1 r a[1][0] b[1][1]  
++		       3 0 1 w a[0][0] b[0][1]
++		     Note how access 2 accesses the same element as access 5
++		     for array 'a' but not for array 'b'.  */
++		  if (any_access_function_variant_p (DDR_A (ddr), inner)
++		      && any_access_function_variant_p (DDR_B (ddr), inner))
++		    ;
++		  else
++		    /* And if any dataref of this pair is invariant with
++		       respect to the inner loop, we have no chance than
++		       to reduce the unroll factor.  */
++		    *unroll = dist;
++		}
++	    }
++	  else if (lambda_vector_lexico_pos (dist_v + 1, DDR_NB_LOOPS (ddr) - 1))
+ 	    ;
+ 	  else
+ 	    *unroll = dist;
+@@ -486,7 +553,7 @@ tree_loop_unroll_and_jam (void)
+ 	  /* Now check the distance vector, for determining a sensible
+ 	     outer unroll factor, and for validity of merging the inner
+ 	     loop copies.  */
+-	  if (!adjust_unroll_factor (ddr, &unroll_factor, &profit_unroll,
++	  if (!adjust_unroll_factor (loop, ddr, &unroll_factor, &profit_unroll,
+ 				     &removed))
+ 	    {
+ 	      /* Couldn't get the distance vector.  For two reads that's
+@@ -506,7 +573,7 @@ tree_loop_unroll_and_jam (void)
+ 	 to ignore all profitability concerns and apply the transformation
+ 	 always.  */
+       if (!PARAM_VALUE (PARAM_UNROLL_JAM_MIN_PERCENT))
+-	profit_unroll = 2;
++	profit_unroll = MAX(2, profit_unroll);
+       else if (removed * 100 / datarefs.length ()
+ 	  < (unsigned)PARAM_VALUE (PARAM_UNROLL_JAM_MIN_PERCENT))
+ 	profit_unroll = 1;
 diff --git a/gcc/gimple-streamer-out.c b/gcc/gimple-streamer-out.c
 index 34b8d6fda7d..7185c07f36b 100644
 --- a/gcc/gimple-streamer-out.c
@@ -16766,10 +16898,19 @@ index 29f6cdc4667..33b4be79c0f 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..9d362e3f423 100644
+index bc11ae4ae0b..4cc884294d1 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,896 @@
+@@ -1,3 +1,905 @@
++2019-10-28  Michael Matz  <matz@suse.de>
++
++	Backport from mainline
++	PR middle-end/90796
++	* gcc.dg/unroll-and-jam.c: Disable loop-invariant motion and adjust.
++
++	PR middle-end/90796
++	* gcc.dg/unroll-and-jam.c: Add three invalid and one valid case.
++
 +2019-11-20  Jakub Jelinek  <jakub@redhat.com>
 +
 +	PR c++/90767
@@ -17666,7 +17807,7 @@ index bc11ae4ae0b..9d362e3f423 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +1320,7 @@
+@@ -427,7 +1329,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -17675,7 +17816,7 @@ index bc11ae4ae0b..9d362e3f423 100644
  	(check_effective_target_powerpc_p8vector_ok): No support for Darwin.
  	(check_effective_target_powerpc_p9vector_ok): Likewise.
  	(check_effective_target_powerpc_float128_sw_ok): Likewise.
-@@ -720,7 +1613,7 @@
+@@ -720,7 +1622,7 @@
  
  	Backport from mainline
  	PR fortran/91077
@@ -17684,7 +17825,7 @@ index bc11ae4ae0b..9d362e3f423 100644
  
  2019-07-05  Szabolcs Nagy  <szabolcs.nagy@arm.com>
  
-@@ -969,7 +1862,7 @@
+@@ -969,7 +1871,7 @@
         * gcc.target/i386/pr82699-6.c: Likewise
         * gcc.target/i386/returninst1.c: Likewise
         * gcc.target/i386/returninst2.c: Likewise
@@ -17693,7 +17834,7 @@ index bc11ae4ae0b..9d362e3f423 100644
  
  2019-05-30  Iain Sandoe  <iain@sandoe.co.uk>
  
-@@ -1131,7 +2024,7 @@
+@@ -1131,7 +2033,7 @@
  
  	Backport from trunk
  	PR fortran/90498
@@ -17702,7 +17843,7 @@ index bc11ae4ae0b..9d362e3f423 100644
  
  2019-05-17  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -3801,21 +4694,21 @@
+@@ -3801,21 +4703,21 @@
  2019-02-23  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88117
@@ -17731,7 +17872,7 @@ index bc11ae4ae0b..9d362e3f423 100644
  
  2019-02-22  David Malcolm  <dmalcolm@redhat.com>
  
-@@ -4444,7 +5337,7 @@
+@@ -4444,7 +5346,7 @@
  2019-02-09  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/89200
@@ -17740,7 +17881,7 @@ index bc11ae4ae0b..9d362e3f423 100644
  
  2019-02-09  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -4704,17 +5597,17 @@
+@@ -4704,17 +5606,17 @@
  2019-02-02  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88393
@@ -21262,6 +21403,84 @@ index 553736bc391..dbb02683778 100644
  /* Verify reassociation width was chosen to be 2.  */
 -/* { dg-final { scan-tree-dump-times "Width = 2" 1 "reassoc1"} } */
 +/* { dg-final { scan-tree-dump-times "Width = 2" 1 "reassoc2"} } */
+diff --git a/gcc/testsuite/gcc.dg/unroll-and-jam.c b/gcc/testsuite/gcc.dg/unroll-and-jam.c
+index 70910d318cb..7eb64217a05 100644
+--- a/gcc/testsuite/gcc.dg/unroll-and-jam.c
++++ b/gcc/testsuite/gcc.dg/unroll-and-jam.c
+@@ -1,5 +1,5 @@
+ /* { dg-do run } */
+-/* { dg-options "-O3 -floop-unroll-and-jam --param unroll-jam-min-percent=0 -fdump-tree-unrolljam-details" } */
++/* { dg-options "-O3 -floop-unroll-and-jam -fno-tree-loop-im --param unroll-jam-min-percent=0 -fdump-tree-unrolljam-details" } */
+ /* { dg-require-effective-target int32plus } */
+ 
+ #include <stdio.h>
+@@ -34,7 +34,7 @@ void checkb(void)
+ #define TEST(name, body, test) \
+ static void __attribute__((noinline,noclone)) name (unsigned long n, unsigned long m) \
+ { \
+-  unsigned long i, j; \
++  unsigned i, j; \
+   for (i = 1; i < m; i++) { \
+       for (j = 1; j < n; j++) { \
+ 	  body; \
+@@ -58,9 +58,14 @@ TEST(foo3, aa[i+1][j-1]=aa[i][j] * aa[i][j] / 2, checkaa()) //notok, -1,1
+ TEST(foo4, aa[i][j] = aa[i-1][j+1] * aa[i-1][j+1] / 2, checkaa()) //notok, -1,1
+ TEST(foo5, aa[i][j] = aa[i+1][j+1] * aa[i+1][j+1] / 2, checkaa()) //ok, 1,1
+ TEST(foo6, aa[i][j] = aa[i+1][j] * aa[i+1][j] / 2, checkaa()) //ok, -1,0
++TEST(foo61, aa[i][0] = aa[i+1][0] * aa[i+1][0] / 2, checkaa()) //notok, -1,0
++TEST(foo62, aa[i][j/2] = aa[i+1][j/2] * aa[i+1][j/2] / 2, checkaa()) //notok, not affine
++TEST(foo63, aa[i][j%2] = aa[i+1][j%2] * aa[i+1][j%2] / 2, checkaa()) //notok, not affine
+ TEST(foo7, aa[i+1][j] = aa[i][j] * aa[i][j] / 2, checkaa()) //ok, 1,0
+ TEST(foo9, b[j] = 3*b[j+1] + 1, checkb()) //notok, 0,-1
+ TEST(foo10, b[j] = 3*b[j] + 1, checkb()) //ok, 0,0
++extern int f;
++TEST(foo11, f = b[i-1] = 1 + 3* b[i+1], checkb()) //ok, 2,0 but must reduce unroll factor to 2, (it would be incorrect with unroll-by-3, which the profitability would suggest)
+ 
+ /* foo8 should work as well, but currently doesn't because the distance
+    vectors we compute are too pessimistic.  We compute
+@@ -68,6 +73,7 @@ TEST(foo10, b[j] = 3*b[j] + 1, checkb()) //ok, 0,0
+    and the last one causes us to lose.  */
+ TEST(foo8, b[j+1] = 3*b[j] + 1, checkb()) //ok, 0,1
+ 
++int f;
+ unsigned int a[1024];
+ unsigned int b[1024];
+ unsigned int aa[16][1024];
+@@ -88,10 +94,12 @@ void init(void)
+     printf(" %s\n", #name); \
+     init();for(i=0;i<4;i++)name##noopt(32,8); checka = checksum; \
+     init();for(i=0;i<4;i++)name(32,8); \
++    if (checka != checksum) fail = 1; \
+     printf("%sok %s\n", checka != checksum ? "NOT " : "", #name);
+ 
+ int main()
+ {
++  int fail = 0;
+   int i;
+   unsigned checka;
+   RUN(foo1);
+@@ -100,12 +108,18 @@ int main()
+   RUN(foo4);
+   RUN(foo5);
+   RUN(foo6);
++  RUN(foo61);
++  RUN(foo62);
++  RUN(foo63);
+   RUN(foo7);
+   RUN(foo8);
+   RUN(foo9);
+   RUN(foo10);
+-  return 0;
++  RUN(foo11);
++  if (fail)
++    __builtin_abort();
++  return fail;
+ }
+ 
+-/* Five loops should be unroll-jammed (actually six, but see above).  */
+-/* { dg-final { scan-tree-dump-times "applying unroll and jam" 5 "unrolljam" } } */
++/* Six loops should be unroll-jammed (actually seven, but see above).  */
++/* { dg-final { scan-tree-dump-times "applying unroll and jam" 6 "unrolljam" } } */
 diff --git a/gcc/testsuite/gcc.dg/vect/pr91665.c b/gcc/testsuite/gcc.dg/vect/pr91665.c
 new file mode 100644
 index 00000000000..6b69ea030b1
