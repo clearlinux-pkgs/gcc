@@ -64,7 +64,8 @@ edlinger (3):
 emsr (1):
       2019-09-09  Edward Smith-Rowland  <3dw4rd@verizon.net>
 
-gccadmin (100):
+gccadmin (101):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -213,7 +214,7 @@ iii (3):
       S/390: Fix failing RTL check in s390_canonicalize_comparison
       Free dominance info at the beginning of pass_jump_after_combine
 
-jakub (40):
+jakub (41):
       * BASE-VER: Set to 9.2.1.
       * config/abi/post/aarch64-linux-gnu/baseline_symbols.txt: Update. 	* config/abi/post/s390x-linux-gnu/baseline_symbols.txt: Update.
       PR tree-optimization/91597 	* tree-vrp.c (extract_range_from_binary_expr): Remove unsafe 	BIT_AND_EXPR optimization for pointers, even if both operand 	ranges don't include NULL, the result can be NULL.
@@ -254,6 +255,7 @@ jakub (40):
       PR target/90867 	* config/i386/i386.c (ix86_valid_target_attribute_tree): Don't 	clear opts->x_ix86_isa_flags{,2} here... 	(ix86_valid_target_attribute_inner_p): ... but here when seeing 	arch=.  Also clear opts->x_ix86_isa_flags{,2}_explicit.
       PR middle-end/90840 	* expmed.c (store_bit_field_1): Handle the case where op0 is not a MEM 	and has a mode that doesn't have corresponding integral type.
       PR c++/90767 	* call.c (complain_about_no_candidates_for_method_call): If 	conv->from is not a type, pass to complain_about_bad_argument 	lvalue_type of conv->from.
+      PR tree-optimization/91355 	* tree-ssa-sink.c (select_best_block): Use >= rather than > 	for early_bb scaled count with best_bb count comparison.
 
 jason (4):
       PR c++/90538 - multiple expansions of capture packs
@@ -413,7 +415,7 @@ redi (27):
       PR libstdc++/61761 fix std::proj for targets without C99 cproj
       PR libstdc++/90682 allow set_terminate(0) and set_unexpected(0)
 
-rguenth (8):
+rguenth (9):
       2019-08-12  Richard Biener  <rguenther@suse.de>
       2019-08-15  Richard Biener  <rguenther@suse.de>
       2019-08-28  Richard Biener  <rguenther@suse.de>
@@ -422,6 +424,7 @@ rguenth (8):
       2019-10-16  Richard Biener  <rguenther@suse.de>
       2019-10-23  Richard Biener  <rguenther@suse.de>
       2019-11-11  Richard Biener  <rguenther@suse.de>
+      2019-11-21  Richard Biener  <rguenther@suse.de>
 
 ro (1):
       Update Solaris baselines for GCC 9.3
@@ -708,10 +711,25 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..2e76ab46f48 100644
+index 7f6557d8018..b7c5c5617d1 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,1375 @@
+@@ -1,3 +1,1390 @@
++2019-11-21  Jakub Jelinek  <jakub@redhat.com>
++
++	PR tree-optimization/91355
++	* tree-ssa-sink.c (select_best_block): Use >= rather than >
++	for early_bb scaled count with best_bb count comparison.
++
++2019-11-21  Richard Biener  <rguenther@suse.de>
++
++	Revert
++	2019-09-17  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/91790
++	* tree-vect-stmts.c (vectorizable_load): For BB vectorization
++	use the correct DR for setting up realignment.
++
 +2019-11-20  Peter Bergner <bergner@linux.ibm.com>
 +
 +	Backport from mainline
@@ -2087,7 +2105,7 @@ index 7f6557d8018..2e76ab46f48 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +1885,7 @@
+@@ -513,7 +1900,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -16922,10 +16940,15 @@ index 29f6cdc4667..33b4be79c0f 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..6fd3d9392b8 100644
+index bc11ae4ae0b..f3a84448206 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,923 @@
+@@ -1,3 +1,928 @@
++2019-11-21  Jakub Jelinek  <jakub@redhat.com>
++
++	PR tree-optimization/91355
++	* g++.dg/torture/pr91355.C: New test.
++
 +2019-11-20  Peter Bergner  <bergner@linux.ibm.com>
 +
 +	Backport from mainline
@@ -17849,7 +17872,7 @@ index bc11ae4ae0b..6fd3d9392b8 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +1347,7 @@
+@@ -427,7 +1352,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -17858,7 +17881,7 @@ index bc11ae4ae0b..6fd3d9392b8 100644
  	(check_effective_target_powerpc_p8vector_ok): No support for Darwin.
  	(check_effective_target_powerpc_p9vector_ok): Likewise.
  	(check_effective_target_powerpc_float128_sw_ok): Likewise.
-@@ -720,7 +1640,7 @@
+@@ -720,7 +1645,7 @@
  
  	Backport from mainline
  	PR fortran/91077
@@ -17867,7 +17890,7 @@ index bc11ae4ae0b..6fd3d9392b8 100644
  
  2019-07-05  Szabolcs Nagy  <szabolcs.nagy@arm.com>
  
-@@ -969,7 +1889,7 @@
+@@ -969,7 +1894,7 @@
         * gcc.target/i386/pr82699-6.c: Likewise
         * gcc.target/i386/returninst1.c: Likewise
         * gcc.target/i386/returninst2.c: Likewise
@@ -17876,7 +17899,7 @@ index bc11ae4ae0b..6fd3d9392b8 100644
  
  2019-05-30  Iain Sandoe  <iain@sandoe.co.uk>
  
-@@ -1131,7 +2051,7 @@
+@@ -1131,7 +2056,7 @@
  
  	Backport from trunk
  	PR fortran/90498
@@ -17885,7 +17908,7 @@ index bc11ae4ae0b..6fd3d9392b8 100644
  
  2019-05-17  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -3801,21 +4721,21 @@
+@@ -3801,21 +4726,21 @@
  2019-02-23  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88117
@@ -17914,7 +17937,7 @@ index bc11ae4ae0b..6fd3d9392b8 100644
  
  2019-02-22  David Malcolm  <dmalcolm@redhat.com>
  
-@@ -4444,7 +5364,7 @@
+@@ -4444,7 +5369,7 @@
  2019-02-09  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/89200
@@ -17923,7 +17946,7 @@ index bc11ae4ae0b..6fd3d9392b8 100644
  
  2019-02-09  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -4704,17 +5624,17 @@
+@@ -4704,17 +5629,17 @@
  2019-02-02  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88393
@@ -19939,6 +19962,40 @@ index 00000000000..04e4f7ab41b
 +    if (__builtin_strcmp ("const char* test() [with T = dummy<\'\\\'\'>]", test< dummy< '\'' > > ()) != 0)
 +    {};//      __builtin_abort ();
 +    return 0;
++}
+diff --git a/gcc/testsuite/g++.dg/torture/pr91355.C b/gcc/testsuite/g++.dg/torture/pr91355.C
+new file mode 100644
+index 00000000000..7a385dc5bdd
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/torture/pr91355.C
+@@ -0,0 +1,28 @@
++// PR tree-optimization/91355
++// { dg-do run }
++// { dg-options "-std=c++14" }
++
++unsigned int d = 0;
++
++struct S {
++  S () { d++; }
++  S (const S &) { d++; }
++  ~S () { d--; }
++};
++
++void
++foo (int i) throw (int) // { dg-warning "dynamic exception specifications are deprecated" }
++{
++  if (i == 0)
++    throw 3;
++  S d;
++  throw 3;
++}
++
++int
++main ()
++{
++  try { foo (1); } catch (...) {}
++  if (d)
++    __builtin_abort ();
 +}
 diff --git a/gcc/testsuite/g++.dg/torture/pr91606.C b/gcc/testsuite/g++.dg/torture/pr91606.C
 new file mode 100644
@@ -25677,9 +25734,18 @@ index e08e24dfcc1..26e081f2149 100644
  	{
  	  if (insert)
 diff --git a/gcc/tree-ssa-sink.c b/gcc/tree-ssa-sink.c
-index fe762f54d96..8a64ab084e5 100644
+index fe762f54d96..2648b24f7d5 100644
 --- a/gcc/tree-ssa-sink.c
 +++ b/gcc/tree-ssa-sink.c
+@@ -229,7 +229,7 @@ select_best_block (basic_block early_bb,
+       /* If result of comparsion is unknown, preffer EARLY_BB.
+ 	 Thus use !(...>=..) rather than (...<...)  */
+       && !(best_bb->count.apply_scale (100, 1)
+-	   > (early_bb->count.apply_scale (threshold, 1))))
++	   >= early_bb->count.apply_scale (threshold, 1)))
+     return best_bb;
+ 
+   /* No better block found, so return EARLY_BB, which happens to be the
 @@ -439,7 +439,10 @@ statement_sink_location (gimple *stmt, basic_block frombb,
  	  if (sinkbb == frombb)
  	    return false;
@@ -25828,7 +25894,7 @@ index 017bfa873f7..05e14569ee0 100644
      dump_printf_loc (metadata, user_loc, "\tstmt %d %G", i, stmt_info->stmt);
    if (SLP_TREE_CHILDREN (node).is_empty ())
 diff --git a/gcc/tree-vect-stmts.c b/gcc/tree-vect-stmts.c
-index 17769c88b6a..8263889cbe4 100644
+index 17769c88b6a..6ca8623fbe1 100644
 --- a/gcc/tree-vect-stmts.c
 +++ b/gcc/tree-vect-stmts.c
 @@ -3279,7 +3279,7 @@ vectorizable_call (stmt_vec_info stmt_info, gimple_stmt_iterator *gsi,
@@ -25840,17 +25906,6 @@ index 17769c88b6a..8263889cbe4 100644
  	{
  	  if (dump_enabled_p ())
  	    dump_printf_loc (MSG_MISSED_OPTIMIZATION, vect_location,
-@@ -8276,7 +8276,9 @@ vectorizable_load (stmt_vec_info stmt_info, gimple_stmt_iterator *gsi,
-        || alignment_support_scheme == dr_explicit_realign)
-       && !compute_in_loop)
-     {
--      msq = vect_setup_realignment (first_stmt_info, gsi, &realignment_token,
-+      msq = vect_setup_realignment (first_stmt_info_for_drptr
-+				    ? first_stmt_info_for_drptr
-+				    : first_stmt_info, gsi, &realignment_token,
- 				    alignment_support_scheme, NULL_TREE,
- 				    &at_loop);
-       if (alignment_support_scheme == dr_explicit_realign_optimized)
 diff --git a/gcc/tree-vectorizer.c b/gcc/tree-vectorizer.c
 index d27104933a9..d89ec3b7c76 100644
 --- a/gcc/tree-vectorizer.c
