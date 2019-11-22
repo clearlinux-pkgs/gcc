@@ -387,7 +387,7 @@ rearnsha (3):
       [arm]  PR target/89400 fix thumb1 unaligned access expansion
       [arm][PR88167] Fix __builtin_return_address returns invalid address
 
-redi (27):
+redi (28):
       PR libstdc++/90361 add missing macro definition
       PR c++/91436 fix C++ dialect for std::make_unique fix-it hint
       Implement new serial algorithms from Parallelism TS (P0024R2)
@@ -415,6 +415,7 @@ redi (27):
       Fix more failing tests for C++98 mode
       PR libstdc++/61761 fix std::proj for targets without C99 cproj
       PR libstdc++/90682 allow set_terminate(0) and set_unexpected(0)
+      PR libstdc++/92267 fix ABI change in deque iterators
 
 rguenth (9):
       2019-08-12  Richard Biener  <rguenther@suse.de>
@@ -27652,10 +27653,20 @@ index 6cd4a5bac8b..06a605ff467 100644
  #endif
  
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
-index 8ac50251005..ef28457065c 100644
+index 8ac50251005..c793fe97722 100644
 --- a/libstdc++-v3/ChangeLog
 +++ b/libstdc++-v3/ChangeLog
-@@ -1,3 +1,332 @@
+@@ -1,3 +1,342 @@
++2019-11-22  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backport from mainline
++	2019-10-29  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/92267
++	* include/bits/stl_deque.h (_Deque_iterator(const _Deque_iterator&)):
++	Do not define as defaulted.
++	* testsuite/23_containers/deque/types/92267.cc: New test.
++
 +2019-10-28  John David Anglin  <danglin@gcc.gnu.org>
 +
 +	* config/abi/post/hppa-linux-gnu/baseline_symbols.txt: Update.
@@ -31315,6 +31326,31 @@ index 3b1139401ee..6e9316a24cd 100644
      struct __copy_move
      {
        template<typename _II, typename _OI>
+diff --git a/libstdc++-v3/include/bits/stl_deque.h b/libstdc++-v3/include/bits/stl_deque.h
+index 5c86efc0db2..5a95399162f 100644
+--- a/libstdc++-v3/include/bits/stl_deque.h
++++ b/libstdc++-v3/include/bits/stl_deque.h
+@@ -158,13 +158,16 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
+ #else
+       // Conversion from iterator to const_iterator.
+       template<typename _Iter,
+-              typename = _Require<is_same<_Self, const_iterator>,
+-                                  is_same<_Iter, iterator>>>
++	       typename = _Require<is_same<_Self, const_iterator>,
++				   is_same<_Iter, iterator>>>
+        _Deque_iterator(const _Iter& __x) noexcept
+        : _M_cur(__x._M_cur), _M_first(__x._M_first),
+-         _M_last(__x._M_last), _M_node(__x._M_node) { }
++	 _M_last(__x._M_last), _M_node(__x._M_node) { }
++
++      _Deque_iterator(const _Deque_iterator& __x) noexcept
++       : _M_cur(__x._M_cur), _M_first(__x._M_first),
++	 _M_last(__x._M_last), _M_node(__x._M_node) { }
+ 
+-      _Deque_iterator(const _Deque_iterator&) = default;
+       _Deque_iterator& operator=(const _Deque_iterator&) = default;
+ #endif
+ 
 diff --git a/libstdc++-v3/include/bits/stl_numeric.h b/libstdc++-v3/include/bits/stl_numeric.h
 index e859c76bc44..387bed91174 100644
 --- a/libstdc++-v3/include/bits/stl_numeric.h
@@ -33701,6 +33737,39 @@ index 8051196011b..83ee4492ff3 100644
  // { dg-prune-output "no matching function .*_M_fill_insert" }
  
  #include <deque>
+diff --git a/libstdc++-v3/testsuite/23_containers/deque/types/92267.cc b/libstdc++-v3/testsuite/23_containers/deque/types/92267.cc
+new file mode 100644
+index 00000000000..cab8d25f0db
+--- /dev/null
++++ b/libstdc++-v3/testsuite/23_containers/deque/types/92267.cc
+@@ -0,0 +1,27 @@
++// Copyright (C) 2019 Free Software Foundation, Inc.
++//
++// This file is part of the GNU ISO C++ Library.  This library is free
++// software; you can redistribute it and/or modify it under the
++// terms of the GNU General Public License as published by the
++// Free Software Foundation; either version 3, or (at your option)
++// any later version.
++
++// This library is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++
++// You should have received a copy of the GNU General Public License along
++// with this library; see the file COPYING3.  If not see
++// <http://www.gnu.org/licenses/>.
++
++// { dg-do compile { target c++11 } }
++
++#include <deque>
++
++using std::deque;
++using std::is_trivially_copy_constructible;
++
++// PR libstdc++/92267
++static_assert(!is_trivially_copy_constructible<deque<int>::iterator>::value);
++static_assert(!is_trivially_copy_constructible<deque<int>::const_iterator>::value);
 diff --git a/libstdc++-v3/testsuite/23_containers/list/requirements/dr438/assign_neg.cc b/libstdc++-v3/testsuite/23_containers/list/requirements/dr438/assign_neg.cc
 index a3da00b03e9..a4dd34d8a6d 100644
 --- a/libstdc++-v3/testsuite/23_containers/list/requirements/dr438/assign_neg.cc
