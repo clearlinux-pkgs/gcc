@@ -11,7 +11,7 @@ bergner (2):
       Backport from mainline 	2019-10-08  Tulio Magno Quites Machado Filho  <tuliom@linux.ibm.com>
       Backport fix for PR92090.
 
-burnus (8):
+burnus (9):
       Fortran] PR91586 Fix ICE on invalid code with CLASS
       Fortran] PR91863 - fix call to bind(C) with array descriptor
       Backport Fortran BIND(C) fixes
@@ -20,6 +20,7 @@ burnus (8):
       Fortran] PR91253 fix continuation-line handling with -pre_include
       PR fortran/92470 Fixes for CFI_address
       Fix gfortran.dg/ISO_Fortran_binding_17.c using rel. #include
+      Fortran] PR 92050 - fix ICE with -fcheck=all
 
 claziss (1):
       [ARC] Backport from mainline r278056,r278057
@@ -10612,10 +10613,19 @@ index f0e43b5fda2..9feaea9fde5 100644
    low = fold_convert_loc (loc, etype, low);
    exp = fold_convert_loc (loc, etype, exp);
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index e3073787ea9..42430e46ef6 100644
+index e3073787ea9..181a48c574e 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,403 @@
+@@ -1,3 +1,412 @@
++2019-11-25  Tobias Burnus  <tobias@codesourcery.com
++
++	Backport from mainline
++	2019-10-11  Tobias Burnus  <tobias@codesourcery.com>
++
++	PR fortran/92050
++	* trans-expr.c (gfc_conv_procedure_call): Handle code generated
++	by -fcheck=all.
++
 +2019-11-10  Thomas Koenig  <tkoenig@gcc.gnu.org>
 +
 +	Backport from trunk
@@ -12910,7 +12920,7 @@ index 9538dee5733..27613f761e3 100644
  
    return build1_v (RETURN_EXPR, result);
 diff --git a/gcc/fortran/trans-expr.c b/gcc/fortran/trans-expr.c
-index afe08fc2668..52a8cdd6902 100644
+index afe08fc2668..fe10d52dd16 100644
 --- a/gcc/fortran/trans-expr.c
 +++ b/gcc/fortran/trans-expr.c
 @@ -4989,21 +4989,30 @@ gfc_conv_gfc_desc_to_cfi_desc (gfc_se *parmse, gfc_expr *e, gfc_symbol *fsym)
@@ -13077,7 +13087,21 @@ index afe08fc2668..52a8cdd6902 100644
  		  if (GFC_DESCRIPTOR_TYPE_P (TREE_TYPE (tmp)))
  		    tmp = gfc_conv_descriptor_data_get (tmp);
  		  tmp = gfc_deallocate_with_status (tmp, NULL_TREE, NULL_TREE,
-@@ -10603,7 +10639,8 @@ gfc_trans_assignment_1 (gfc_expr * expr1, gfc_expr * expr2, bool init_flag,
+@@ -6782,8 +6818,11 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
+ 	gfc_allocate_lang_decl (result);
+       GFC_DECL_SAVED_DESCRIPTOR (result) = parmse.expr;
+       gfc_free_expr (class_expr);
+-      gcc_assert (parmse.pre.head == NULL_TREE
+-		  && parmse.post.head == NULL_TREE);
++      /* -fcheck= can add diagnostic code, which has to be placed before
++	 the call. */
++      if (parmse.pre.head != NULL)
++	  gfc_add_expr_to_block (&se->pre, parmse.pre.head);
++      gcc_assert (parmse.post.head == NULL_TREE);
+     }
+ 
+   /* Follow the function call with the argument post block.  */
+@@ -10603,7 +10642,8 @@ gfc_trans_assignment_1 (gfc_expr * expr1, gfc_expr * expr2, bool init_flag,
        if (expr1->ts.deferred
  	  && gfc_expr_attr (expr1).allocatable
  	  && gfc_check_dependency (expr1, expr2, true))
@@ -17012,10 +17036,18 @@ index 29f6cdc4667..33b4be79c0f 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..c9e38713caa 100644
+index bc11ae4ae0b..40c60b99e90 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,932 @@
+@@ -1,3 +1,940 @@
++2019-11-25  Tobias Burnus  <tobias@codesourcery.com
++
++	Backport from mainline
++	2019-10-11  Tobias Burnus  <tobias@codesourcery.com>
++
++	PR fortran/92050
++	* gfortran.dg/pr92050.f90: New.
++
 +2019-11-25  Eric Botcazou  <ebotcazou@adacore.com>
 +
 +	* gnat.dg/addr14.adb: New test.
@@ -17948,7 +17980,7 @@ index bc11ae4ae0b..c9e38713caa 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +1356,7 @@
+@@ -427,7 +1364,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -17957,7 +17989,7 @@ index bc11ae4ae0b..c9e38713caa 100644
  	(check_effective_target_powerpc_p8vector_ok): No support for Darwin.
  	(check_effective_target_powerpc_p9vector_ok): Likewise.
  	(check_effective_target_powerpc_float128_sw_ok): Likewise.
-@@ -720,7 +1649,7 @@
+@@ -720,7 +1657,7 @@
  
  	Backport from mainline
  	PR fortran/91077
@@ -17966,7 +17998,7 @@ index bc11ae4ae0b..c9e38713caa 100644
  
  2019-07-05  Szabolcs Nagy  <szabolcs.nagy@arm.com>
  
-@@ -969,7 +1898,7 @@
+@@ -969,7 +1906,7 @@
         * gcc.target/i386/pr82699-6.c: Likewise
         * gcc.target/i386/returninst1.c: Likewise
         * gcc.target/i386/returninst2.c: Likewise
@@ -17975,7 +18007,7 @@ index bc11ae4ae0b..c9e38713caa 100644
  
  2019-05-30  Iain Sandoe  <iain@sandoe.co.uk>
  
-@@ -1131,7 +2060,7 @@
+@@ -1131,7 +2068,7 @@
  
  	Backport from trunk
  	PR fortran/90498
@@ -17984,7 +18016,7 @@ index bc11ae4ae0b..c9e38713caa 100644
  
  2019-05-17  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -3801,21 +4730,21 @@
+@@ -3801,21 +4738,21 @@
  2019-02-23  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88117
@@ -18013,7 +18045,7 @@ index bc11ae4ae0b..c9e38713caa 100644
  
  2019-02-22  David Malcolm  <dmalcolm@redhat.com>
  
-@@ -4444,7 +5373,7 @@
+@@ -4444,7 +5381,7 @@
  2019-02-09  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/89200
@@ -18022,7 +18054,7 @@ index bc11ae4ae0b..c9e38713caa 100644
  
  2019-02-09  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -4704,17 +5633,17 @@
+@@ -4704,17 +5641,17 @@
  2019-02-02  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88393
@@ -24928,6 +24960,65 @@ index 00000000000..cd237d38660
 +   flush (iostat=i%kind) ! { dg-error "Expecting a variable at" }
 +   rewind (iostat=i%kind) ! { dg-error "Expecting a variable at" }
 +end
+diff --git a/gcc/testsuite/gfortran.dg/pr92050.f90 b/gcc/testsuite/gfortran.dg/pr92050.f90
+new file mode 100644
+index 00000000000..64193878d8f
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr92050.f90
+@@ -0,0 +1,53 @@
++! { dg-do run }
++! { dg-options "-fcheck=all" }
++! { dg-shouldfail "above upper bound" }
++!
++! PR fortran/92050
++!
++!
++module buggy
++  implicit none (type, external)
++
++  type :: par
++  contains
++    procedure, public :: fun => fun_par
++  end type par
++
++  type comp
++    class(par), allocatable :: p
++  end type comp
++
++  type foo
++    type(comp), allocatable :: m(:)
++  end type foo
++
++contains
++
++  function fun_par(this)
++    class(par) :: this
++    integer    :: fun_par(1)
++    fun_par = 42
++  end function fun_par
++
++  subroutine update_foo(this)
++    class(foo) :: this
++    write(*,*) this%m(1)%p%fun()
++  end subroutine update_foo
++
++  subroutine bad_update_foo(this)
++    class(foo) :: this
++    write(*,*) this%m(2)%p%fun()
++  end subroutine bad_update_foo
++end module buggy
++
++program main
++  use buggy
++  implicit none (type, external)
++  type(foo) :: x
++  allocate(x%m(1))
++  allocate(x%m(1)%p)
++  call update_foo(x)
++  call bad_update_foo(x)
++end program main
++
++! { dg-output "At line 39 of file .*pr92050.f90.*Fortran runtime error: Index '2' of dimension 1 of array 'this%m' above upper bound of 1" }
 diff --git a/gcc/testsuite/gfortran.dg/pr92208.f90 b/gcc/testsuite/gfortran.dg/pr92208.f90
 new file mode 100644
 index 00000000000..9de7f4b24b5
