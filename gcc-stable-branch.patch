@@ -42,7 +42,7 @@ draganm (4):
       Backport fix for PR89245
       Sanitize the constant argument for rotr<mode>3
 
-ebotcazou (12):
+ebotcazou (14):
       PR rtl-optimization/91347 	* dse.c (scan_insn): Call add_wild_read for non-const/memset tail calls 	before reload if HARD_FRAME_POINTER_IS_ARG_POINTER.
       PR target/91472 	* config/sparc/sparc.c (sparc_cannot_force_const_mem): Return true 	during LRA/reload in PIC mode if the PIC register hasn't been used yet. 	(sparc_pic_register_p): Test reload_in_progress for consistency's sake.
       PR rtl-optimization/89795 	* rtlanal.c (nonzero_bits1) <SUBREG>: Do not propagate results from 	inner REGs to paradoxical SUBREGs if WORD_REGISTER_OPERATIONS is set.
@@ -55,6 +55,8 @@ ebotcazou (12):
       * gcc.target/sparc/overflow-1.c: Add -fno-pie to the options. 	* gcc.target/sparc/overflow-2.c: Likewise.
       * c-ada-spec.c (get_underlying_decl): Do not look through typedefs. 	(dump_forward_type): Do not generate a declaration for function types. 	(dump_nested_type) <ARRAY_TYPE>: Do not generate a nested declaration 	of the component type if it is declared in another file.
       * doc/invoke.texi (-gno-internal-reset-location-views): Fix typo.
+      PR ada/92575 	* expect.c (__gnat_expect_poll [VMS, HPUX]): Fix typo.
+      PR ada/92362 	* gcc-interface/trans.c (gnat_to_gnu) <N_Attribute_Definition_Clause>: 	Use a temporary instead of clobbering the result with a freeze node.
 
 edlinger (3):
       2019-08-16  Bernd Edlinger  <bernd.edlinger@hotmail.de>
@@ -64,7 +66,10 @@ edlinger (3):
 emsr (1):
       2019-09-09  Edward Smith-Rowland  <3dw4rd@verizon.net>
 
-gccadmin (102):
+gccadmin (105):
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -2138,10 +2143,21 @@ index 5f43d9de00e..abae872cd63 100644
  	  echo You must configure gcc.  Look at http://gcc.gnu.org/install/ for details.; \
  	  false; \
 diff --git a/gcc/ada/ChangeLog b/gcc/ada/ChangeLog
-index 22cd00956dc..dd515bca601 100644
+index 22cd00956dc..e2efd819c04 100644
 --- a/gcc/ada/ChangeLog
 +++ b/gcc/ada/ChangeLog
-@@ -1,3 +1,36 @@
+@@ -1,3 +1,47 @@
++2019-11-25  Eric Botcazou  <ebotcazou@adacore.com>
++
++	PR ada/92362
++	* gcc-interface/trans.c (gnat_to_gnu) <N_Attribute_Definition_Clause>:
++	Use a temporary instead of clobbering the result with a freeze node.
++
++2019-11-25  Eric Botcazou  <ebotcazou@adacore.com>
++
++	PR ada/92575
++	* expect.c (__gnat_expect_poll [VMS, HPUX]): Fix typo.
++
 +2019-11-08  Jakub Jelinek  <jakub@redhat.com>
 +
 +	Backported from mainline
@@ -2178,6 +2194,28 @@ index 22cd00956dc..dd515bca601 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
+diff --git a/gcc/ada/expect.c b/gcc/ada/expect.c
+index 76fce788fc9..d4ffae21913 100644
+--- a/gcc/ada/expect.c
++++ b/gcc/ada/expect.c
+@@ -265,7 +265,7 @@ __gnat_expect_poll (int *fd,
+ 	  if ((status & 1) != 1)
+ 	    {
+               ready = -1;
+-              dead_process = i + 1;
++              *dead_process = i + 1;
+               return ready;
+ 	    }
+ 	}
+@@ -450,7 +450,7 @@ __gnat_expect_poll (int *fd,
+ 	            if (ei.request == TIOCCLOSE)
+ 		      {
+ 		        ioctl (fd[i], TIOCREQSET, &ei);
+-                        dead_process = i + 1;
++                        *dead_process = i + 1;
+ 		        return -1;
+ 		      }
+ 
 diff --git a/gcc/ada/gcc-interface/decl.c b/gcc/ada/gcc-interface/decl.c
 index 4e73df0d7f0..a724ba693fd 100644
 --- a/gcc/ada/gcc-interface/decl.c
@@ -2220,7 +2258,7 @@ index 4e73df0d7f0..a724ba693fd 100644
        break;
  
 diff --git a/gcc/ada/gcc-interface/trans.c b/gcc/ada/gcc-interface/trans.c
-index 49fd34656ad..f08f6aac330 100644
+index 49fd34656ad..2581b71d6fa 100644
 --- a/gcc/ada/gcc-interface/trans.c
 +++ b/gcc/ada/gcc-interface/trans.c
 @@ -2248,32 +2248,29 @@ Attribute_to_gnu (Node_Id gnat_node, tree *gnu_result_type_p, int attribute)
@@ -2287,6 +2325,38 @@ index 49fd34656ad..f08f6aac330 100644
  	by_descriptor = true;
      }
    else if (Nkind (Name (gnat_node)) == N_Attribute_Reference)
+@@ -8310,7 +8308,7 @@ gnat_to_gnu (Node_Id gnat_node)
+       gnat_temp = Entity (Name (gnat_node));
+       if (Freeze_Node (gnat_temp))
+ 	{
+-	  tree gnu_address = gnat_to_gnu (Expression (gnat_node));
++	  tree gnu_address = gnat_to_gnu (Expression (gnat_node)), gnu_temp;
+ 
+ 	  /* Get the value to use as the address and save it as the equivalent
+ 	     for the object; when it is frozen, gnat_to_gnu_entity will do the
+@@ -8320,7 +8318,7 @@ gnat_to_gnu (Node_Id gnat_node)
+ 	     of the object is limited and it is initialized with the result of
+ 	     a function call.  */
+ 	  if (Is_Subprogram (gnat_temp))
+-	    gnu_result = gnu_address;
++	    gnu_temp = gnu_address;
+ 	  else
+ 	    {
+ 	      tree gnu_type = gnat_to_gnu_type (Etype (gnat_temp));
+@@ -8329,11 +8327,11 @@ gnat_to_gnu (Node_Id gnat_node)
+ 	      gnu_type
+ 		= build_reference_type_for_mode (gnu_type, ptr_mode, true);
+ 	      gnu_address = convert (gnu_type, gnu_address);
+-	      gnu_result
++	      gnu_temp
+ 		= build_unary_op (INDIRECT_REF, NULL_TREE, gnu_address);
+ 	    }
+ 
+-	  save_gnu_tree (gnat_temp, gnu_result, true);
++	  save_gnu_tree (gnat_temp, gnu_temp, true);
+ 	}
+       break;
+ 
 diff --git a/gcc/ada/locales.c b/gcc/ada/locales.c
 index 2bf900319ca..9372bdb2d58 100644
 --- a/gcc/ada/locales.c
@@ -16942,10 +17012,14 @@ index 29f6cdc4667..33b4be79c0f 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..f3a84448206 100644
+index bc11ae4ae0b..c9e38713caa 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,928 @@
+@@ -1,3 +1,932 @@
++2019-11-25  Eric Botcazou  <ebotcazou@adacore.com>
++
++	* gnat.dg/addr14.adb: New test.
++
 +2019-11-21  Jakub Jelinek  <jakub@redhat.com>
 +
 +	PR tree-optimization/91355
@@ -17874,7 +17948,7 @@ index bc11ae4ae0b..f3a84448206 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +1352,7 @@
+@@ -427,7 +1356,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -17883,7 +17957,7 @@ index bc11ae4ae0b..f3a84448206 100644
  	(check_effective_target_powerpc_p8vector_ok): No support for Darwin.
  	(check_effective_target_powerpc_p9vector_ok): Likewise.
  	(check_effective_target_powerpc_float128_sw_ok): Likewise.
-@@ -720,7 +1645,7 @@
+@@ -720,7 +1649,7 @@
  
  	Backport from mainline
  	PR fortran/91077
@@ -17892,7 +17966,7 @@ index bc11ae4ae0b..f3a84448206 100644
  
  2019-07-05  Szabolcs Nagy  <szabolcs.nagy@arm.com>
  
-@@ -969,7 +1894,7 @@
+@@ -969,7 +1898,7 @@
         * gcc.target/i386/pr82699-6.c: Likewise
         * gcc.target/i386/returninst1.c: Likewise
         * gcc.target/i386/returninst2.c: Likewise
@@ -17901,7 +17975,7 @@ index bc11ae4ae0b..f3a84448206 100644
  
  2019-05-30  Iain Sandoe  <iain@sandoe.co.uk>
  
-@@ -1131,7 +2056,7 @@
+@@ -1131,7 +2060,7 @@
  
  	Backport from trunk
  	PR fortran/90498
@@ -17910,7 +17984,7 @@ index bc11ae4ae0b..f3a84448206 100644
  
  2019-05-17  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -3801,21 +4726,21 @@
+@@ -3801,21 +4730,21 @@
  2019-02-23  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88117
@@ -17939,7 +18013,7 @@ index bc11ae4ae0b..f3a84448206 100644
  
  2019-02-22  David Malcolm  <dmalcolm@redhat.com>
  
-@@ -4444,7 +5369,7 @@
+@@ -4444,7 +5373,7 @@
  2019-02-09  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/89200
@@ -17948,7 +18022,7 @@ index bc11ae4ae0b..f3a84448206 100644
  
  2019-02-09  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -4704,17 +5629,17 @@
+@@ -4704,17 +5633,17 @@
  2019-02-02  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88393
@@ -25034,6 +25108,36 @@ index 00000000000..fa93f1d7ff2
 +      b = y - x + 1
 +   end
 +end
+diff --git a/gcc/testsuite/gnat.dg/addr14.adb b/gcc/testsuite/gnat.dg/addr14.adb
+new file mode 100644
+index 00000000000..e92c902f038
+--- /dev/null
++++ b/gcc/testsuite/gnat.dg/addr14.adb
+@@ -0,0 +1,24 @@
++--  { dg-do run }
++
++with System;
++
++procedure Addr14 is
++
++  type Arr is array (1 .. 4) of aliased Integer;
++
++  A : Arr := (1, 2, 3, 4);
++  I : Natural := 0;
++
++  function Get_Address return System.Address is
++  begin
++    I := I + 1;
++    return A(I)'Address;
++  end;
++
++  Foo : Integer with Address => Get_Address;
++
++begin
++  if Foo /= 1 then
++    raise Program_Error;
++  end if;
++end;
 diff --git a/gcc/testsuite/obj-c++.dg/stubify-1.mm b/gcc/testsuite/obj-c++.dg/stubify-1.mm
 index c2355437afc..e8f21882de9 100644
 --- a/gcc/testsuite/obj-c++.dg/stubify-1.mm
