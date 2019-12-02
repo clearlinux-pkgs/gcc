@@ -14,7 +14,7 @@
 
 Name     : gcc
 Version  : 9.2.1
-Release  : 742
+Release  : 743
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://gcc.gnu.org/pub/gcc/releases/gcc-9.2.0/gcc-9.2.0.tar.xz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.16.1.tar.bz2
@@ -408,6 +408,8 @@ popd
 %find_lang gcc tmp.lang
 %find_lang libstdc++ cxx.lang
 cat *.lang > gcc.lang
+
+rm -f %{buildroot}/usr/lib64/gcc/x86_64-generic-linux/9/include-fixed/bits/statx.h
 
 %files
 /usr/bin/%{gcc_target}-gcc-ar
