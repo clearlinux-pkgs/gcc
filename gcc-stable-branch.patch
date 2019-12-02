@@ -1,8 +1,9 @@
 akrl (1):
       Backport fix for PR jit/91928
 
-anlauf (1):
+anlauf (2):
       2019-09-05  Harald Anlauf  <anlauf@gmx.de>
+      2019-11-29  Harald Anlauf  <anlauf@gmx.de>
 
 avieira (1):
       [arm] Backport -- Fix multilibs for Armv7-R
@@ -11,7 +12,7 @@ bergner (2):
       Backport from mainline 	2019-10-08  Tulio Magno Quites Machado Filho  <tuliom@linux.ibm.com>
       Backport fix for PR92090.
 
-burnus (9):
+burnus (10):
       Fortran] PR91586 Fix ICE on invalid code with CLASS
       Fortran] PR91863 - fix call to bind(C) with array descriptor
       Backport Fortran BIND(C) fixes
@@ -21,6 +22,7 @@ burnus (9):
       PR fortran/92470 Fixes for CFI_address
       Fix gfortran.dg/ISO_Fortran_binding_17.c using rel. #include
       Fortran] PR 92050 - fix ICE with -fcheck=all
+      Fix testcase - was missing -fopenacc
 
 claziss (1):
       [ARC] Backport from mainline r278056,r278057
@@ -43,7 +45,7 @@ draganm (4):
       Backport fix for PR89245
       Sanitize the constant argument for rotr<mode>3
 
-ebotcazou (14):
+ebotcazou (15):
       PR rtl-optimization/91347 	* dse.c (scan_insn): Call add_wild_read for non-const/memset tail calls 	before reload if HARD_FRAME_POINTER_IS_ARG_POINTER.
       PR target/91472 	* config/sparc/sparc.c (sparc_cannot_force_const_mem): Return true 	during LRA/reload in PIC mode if the PIC register hasn't been used yet. 	(sparc_pic_register_p): Test reload_in_progress for consistency's sake.
       PR rtl-optimization/89795 	* rtlanal.c (nonzero_bits1) <SUBREG>: Do not propagate results from 	inner REGs to paradoxical SUBREGs if WORD_REGISTER_OPERATIONS is set.
@@ -58,6 +60,7 @@ ebotcazou (14):
       * doc/invoke.texi (-gno-internal-reset-location-views): Fix typo.
       PR ada/92575 	* expect.c (__gnat_expect_poll [VMS, HPUX]): Fix typo.
       PR ada/92362 	* gcc-interface/trans.c (gnat_to_gnu) <N_Attribute_Definition_Clause>: 	Use a temporary instead of clobbering the result with a freeze node.
+      PR ada/92489 	Backport from mainline 	2019-07-01  Ed Schonberg  <schonberg@adacore.com>
 
 edlinger (3):
       2019-08-16  Bernd Edlinger  <bernd.edlinger@hotmail.de>
@@ -67,7 +70,12 @@ edlinger (3):
 emsr (1):
       2019-09-09  Edward Smith-Rowland  <3dw4rd@verizon.net>
 
-gccadmin (107):
+gccadmin (112):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -183,6 +191,9 @@ gjl (2):
 guojiufu (2):
       [rs6000] PR70010, avoid no-vsx function to be inlined to vsx function
       Backport from mainline
+
+helijia (1):
+      [rs6000]Fix PR92098 by backporting vec_cmp and vcond_mask supports to gcc-9-branch
 
 hubicka (3):
       Backport ggc_trim 	Backport from mainline
@@ -454,7 +465,7 @@ segher (6):
 sje (1):
       2019-08-15  Steve Ellcey  <sellcey@marvell.com>
 
-tkoenig (9):
+tkoenig (10):
       2019-08-13  Thomas Koenig  <tkoenig@gcc.gnu.org>
       2019-08-13  Thomas Koenig  <tkoenig@gcc.gnu.org>
       2013-08-13  Thomas Koenig  <tkoenig@gcc.gnu.org>
@@ -464,6 +475,7 @@ tkoenig (9):
       Commit symbol for external BLAS routine when translating MATMUL to *GEMM.
       Put vtab into RO section, same for __def_init if it contains an initializer.
       Fix EOF handling for arrays.
+      Backport from trunk as an insurance policy.
 
 tnfchris (1):
       AArch64: Correct HWCAP for fp16fml
@@ -726,10 +738,27 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..d75b9005eb2 100644
+index 7f6557d8018..1bb2099b027 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,1405 @@
+@@ -1,3 +1,1422 @@
++2019-12-02  Li Jia He  <helijia@linux.ibm.com>
++
++	Partial backport from mainline
++	PR target/92098
++	2019-11-08  Kewen Lin  <linkw@gcc.gnu.org>
++
++	PR target/92132
++	* config/rs6000/predicates.md
++	(signed_or_equality_comparison_operator): New predicate.
++	(unsigned_or_equality_comparison_operator): Likewise.
++	* config/rs6000/rs6000.md (one_cmpl<mode>2): Remove expand.
++	(one_cmpl<mode>3_internal): Rename to one_cmpl<mode>2.
++	* config/rs6000/vector.md
++	(vcond_mask_<mode><mode> for VEC_I and VEC_I): New expand.
++	(vec_cmp<mode><mode> for VEC_I and VEC_I): Likewise.
++	(vec_cmpu<mode><mode> for VEC_I and VEC_I): Likewise.
++
 +2019-11-27  Richard Biener  <rguenther@suse.de>
 +
 +	Backport from mainline
@@ -2135,7 +2164,7 @@ index 7f6557d8018..d75b9005eb2 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +1915,7 @@
+@@ -513,7 +1932,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -2166,10 +2195,20 @@ index 5f43d9de00e..abae872cd63 100644
  	  echo You must configure gcc.  Look at http://gcc.gnu.org/install/ for details.; \
  	  false; \
 diff --git a/gcc/ada/ChangeLog b/gcc/ada/ChangeLog
-index 22cd00956dc..e2efd819c04 100644
+index 22cd00956dc..5464c6b3d68 100644
 --- a/gcc/ada/ChangeLog
 +++ b/gcc/ada/ChangeLog
-@@ -1,3 +1,47 @@
+@@ -1,3 +1,57 @@
++2019-11-29  Eric Botcazou  <ebotcazou@adacore.com>
++
++	PR ada/92489
++	Backport from mainline
++	2019-07-01  Ed Schonberg  <schonberg@adacore.com>
++
++	* exp_attr.adb (Expand_Attribute_Reference, case Invalid_Value):
++	Resolve result of call to Get_Simple_Init_Val, which may be a
++	conversion of a literal.
++
 +2019-11-25  Eric Botcazou  <ebotcazou@adacore.com>
 +
 +	PR ada/92362
@@ -2217,6 +2256,22 @@ index 22cd00956dc..e2efd819c04 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
+diff --git a/gcc/ada/exp_attr.adb b/gcc/ada/exp_attr.adb
+index 22368a19d0b..cbf7db372ff 100644
+--- a/gcc/ada/exp_attr.adb
++++ b/gcc/ada/exp_attr.adb
+@@ -4242,6 +4242,11 @@ package body Exp_Attr is
+       when Attribute_Invalid_Value =>
+          Rewrite (N, Get_Simple_Init_Val (Ptyp, N));
+ 
++         --  The value produced may be a conversion of a literal, which
++         --  must be resolved to establish its proper type.
++
++         Analyze_And_Resolve (N);
++
+       ----------
+       -- Last --
+       ----------
 diff --git a/gcc/ada/expect.c b/gcc/ada/expect.c
 index 76fce788fc9..d4ffae21913 100644
 --- a/gcc/ada/expect.c
@@ -7113,7 +7168,7 @@ index 471058dd417..a1a46a9e7ea 100644
  ;; Mach-O PIC trickery.
  (define_expand "macho_high"
 diff --git a/gcc/config/rs6000/predicates.md b/gcc/config/rs6000/predicates.md
-index 5cc80dea66c..9e1d717a65b 100644
+index 5cc80dea66c..07f272df858 100644
 --- a/gcc/config/rs6000/predicates.md
 +++ b/gcc/config/rs6000/predicates.md
 @@ -1053,8 +1053,7 @@
@@ -7126,6 +7181,23 @@ index 5cc80dea66c..9e1d717a65b 100644
      return 1;
  
    /* Allow easy vector constants.  */
+@@ -1154,6 +1153,16 @@
+ (define_predicate "signed_comparison_operator"
+   (match_code "lt,gt,le,ge"))
+ 
++;; Return 1 if OP is a signed comparison or an equality operator.
++(define_predicate "signed_or_equality_comparison_operator"
++  (ior (match_operand 0 "equality_operator")
++       (match_operand 0 "signed_comparison_operator")))
++
++;; Return 1 if OP is an unsigned comparison or an equality operator.
++(define_predicate "unsigned_or_equality_comparison_operator"
++  (ior (match_operand 0 "equality_operator")
++       (match_operand 0 "unsigned_comparison_operator")))
++
+ ;; Return 1 if OP is a comparison operation that is valid for an SCC insn --
+ ;; it must be a positive comparison.
+ (define_predicate "scc_comparison_operator"
 diff --git a/gcc/config/rs6000/rs6000-builtin.def b/gcc/config/rs6000/rs6000-builtin.def
 index 0a2bdb79e15..0feee7cafca 100644
 --- a/gcc/config/rs6000/rs6000-builtin.def
@@ -7480,7 +7552,7 @@ index cb8d737976b..a670096145b 100644
        else
  	{
 diff --git a/gcc/config/rs6000/rs6000.md b/gcc/config/rs6000/rs6000.md
-index ad80592765d..7bfa5eea2ee 100644
+index ad80592765d..32da805a32d 100644
 --- a/gcc/config/rs6000/rs6000.md
 +++ b/gcc/config/rs6000/rs6000.md
 @@ -137,6 +137,9 @@
@@ -7512,7 +7584,29 @@ index ad80592765d..7bfa5eea2ee 100644
        emit_insn (gen_iordi3 (tmp_di, tmp_di, tmp_rn));
  
        /* Need to write to field 7.  The fields are [0:15].  The equation to
-@@ -6818,13 +6824,6 @@
+@@ -6424,12 +6430,6 @@
+   ""
+   "")
+ 
+-(define_expand "one_cmpl<mode>2"
+-  [(set (match_operand:BOOL_128 0 "vlogical_operand")
+-        (not:BOOL_128 (match_operand:BOOL_128 1 "vlogical_operand")))]
+-  ""
+-  "")
+-
+ (define_expand "nor<mode>3"
+   [(set (match_operand:BOOL_128 0 "vlogical_operand")
+ 	(and:BOOL_128
+@@ -6724,7 +6724,7 @@
+ 	 (const_string "16")))])
+ 
+ ;; 128-bit one's complement
+-(define_insn_and_split "*one_cmpl<mode>3_internal"
++(define_insn_and_split "one_cmpl<mode>2"
+   [(set (match_operand:BOOL_128 0 "vlogical_operand" "=<BOOL_REGS_OUTPUT>")
+ 	(not:BOOL_128
+ 	  (match_operand:BOOL_128 1 "vlogical_operand" "<BOOL_REGS_UNARY>")))]
+@@ -6818,13 +6818,6 @@
  ;; do the load 16-bits at a time.  We could do this by loading from memory,
  ;; and this is even supposed to be faster, but it is simpler not to get
  ;; integers in the TOC.
@@ -7526,7 +7620,7 @@ index ad80592765d..7bfa5eea2ee 100644
  
  ;;		MR           LA           LWZ          LFIWZX       LXSIWZX
  ;;		STW          STFIWX       STXSIWX      LI           LIS
-@@ -14322,7 +14321,225 @@
+@@ -14322,7 +14315,225 @@
     "xscmpuqp %0,%1,%2"
    [(set_attr "type" "veccmp")
     (set_attr "size" "128")])
@@ -7539,7 +7633,7 @@ index ad80592765d..7bfa5eea2ee 100644
 +  "TARGET_P9_MISC"
 +  "darn %0,0"
 +  [(set_attr "type" "integer")])
- 
++
 +(define_insn "darn_raw"
 +  [(set (match_operand:DI 0 "register_operand" "=r")
 +        (unspec_volatile:DI [(const_int 0)] UNSPECV_DARN_RAW))]
@@ -7625,7 +7719,7 @@ index ad80592765d..7bfa5eea2ee 100644
 +  "TARGET_P9_MISC"
 +  "setb %0,%1"
 +  [(set_attr "type" "logical")])
-+
+ 
 +(define_insn "setb_unsigned"
 +   [(set (match_operand:SI 0 "gpc_reg_operand" "=r")
 +	 (if_then_else:SI (ltu (match_operand:CCUNS 1 "cc_reg_operand" "y")
@@ -7752,6 +7846,112 @@ index ad80592765d..7bfa5eea2ee 100644
  
  
  (include "sync.md")
+diff --git a/gcc/config/rs6000/vector.md b/gcc/config/rs6000/vector.md
+index 70bcfe02e22..0b62dd04bde 100644
+--- a/gcc/config/rs6000/vector.md
++++ b/gcc/config/rs6000/vector.md
+@@ -493,6 +493,101 @@
+     FAIL;
+ })
+ 
++;; To support vector condition vectorization, define vcond_mask and vec_cmp.
++
++;; Same mode for condition true/false values and predicate operand.
++(define_expand "vcond_mask_<mode><mode>"
++  [(match_operand:VEC_I 0 "vint_operand")
++   (match_operand:VEC_I 1 "vint_operand")
++   (match_operand:VEC_I 2 "vint_operand")
++   (match_operand:VEC_I 3 "vint_operand")]
++  "VECTOR_UNIT_ALTIVEC_OR_VSX_P (<MODE>mode)"
++{
++  emit_insn (gen_vector_select_<mode> (operands[0], operands[2], operands[1],
++                                  operands[3]));
++  DONE;
++})
++
++;; For signed integer vectors comparison.
++(define_expand "vec_cmp<mode><mode>"
++  [(set (match_operand:VEC_I 0 "vint_operand")
++        (match_operator 1 "signed_or_equality_comparison_operator"
++          [(match_operand:VEC_I 2 "vint_operand")
++           (match_operand:VEC_I 3 "vint_operand")]))]
++  "VECTOR_UNIT_ALTIVEC_OR_VSX_P (<MODE>mode)"
++{
++  enum rtx_code code = GET_CODE (operands[1]);
++  rtx tmp = gen_reg_rtx (<MODE>mode);
++  switch (code)
++    {
++    case NE:
++      emit_insn (gen_vector_eq<mode> (operands[0], operands[2], operands[3]));
++      emit_insn (gen_one_cmpl<mode>2 (operands[0], operands[0]));
++      break;
++    case EQ:
++      emit_insn (gen_vector_eq<mode> (operands[0], operands[2], operands[3]));
++      break;
++    case GE:
++      emit_insn (gen_vector_nlt<mode> (operands[0],operands[2], operands[3],
++                                       tmp));
++      break;
++    case GT:
++      emit_insn (gen_vector_gt<mode> (operands[0], operands[2], operands[3]));
++      break;
++    case LE:
++      emit_insn (gen_vector_ngt<mode> (operands[0], operands[2], operands[3],
++                                       tmp));
++      break;
++    case LT:
++      emit_insn (gen_vector_gt<mode> (operands[0], operands[3], operands[2]));
++      break;
++    default:
++      gcc_unreachable ();
++      break;
++    }
++  DONE;
++})
++
++;; For unsigned integer vectors comparison.
++(define_expand "vec_cmpu<mode><mode>"
++  [(set (match_operand:VEC_I 0 "vint_operand")
++        (match_operator 1 "unsigned_or_equality_comparison_operator"
++          [(match_operand:VEC_I 2 "vint_operand")
++           (match_operand:VEC_I 3 "vint_operand")]))]
++  "VECTOR_UNIT_ALTIVEC_OR_VSX_P (<MODE>mode)"
++{
++  enum rtx_code code = GET_CODE (operands[1]);
++  rtx tmp = gen_reg_rtx (<MODE>mode);
++  switch (code)
++    {
++    case NE:
++      emit_insn (gen_vector_eq<mode> (operands[0], operands[2], operands[3]));
++      emit_insn (gen_one_cmpl<mode>2 (operands[0], operands[0]));
++      break;
++    case EQ:
++      emit_insn (gen_vector_eq<mode> (operands[0], operands[2], operands[3]));
++      break;
++    case GEU:
++      emit_insn (gen_vector_nltu<mode> (operands[0], operands[2], operands[3],
++                                        tmp));
++      break;
++    case GTU:
++      emit_insn (gen_vector_gtu<mode> (operands[0], operands[2], operands[3]));
++      break;
++    case LEU:
++      emit_insn (gen_vector_ngtu<mode> (operands[0], operands[2], operands[3],
++                                        tmp));
++      break;
++    case LTU:
++      emit_insn (gen_vector_gtu<mode> (operands[0], operands[3], operands[2]));
++      break;
++    default:
++      gcc_unreachable ();
++      break;
++    }
++  DONE;
++})
++
+ (define_expand "vector_eq<mode>"
+   [(set (match_operand:VEC_C 0 "vlogical_operand")
+ 	(eq:VEC_C (match_operand:VEC_C 1 "vlogical_operand")
 diff --git a/gcc/config/s390/8561.md b/gcc/config/s390/8561.md
 index e5a345f4dba..2442349271b 100644
 --- a/gcc/config/s390/8561.md
@@ -10635,10 +10835,17 @@ index f0e43b5fda2..9feaea9fde5 100644
    low = fold_convert_loc (loc, etype, low);
    exp = fold_convert_loc (loc, etype, exp);
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index e3073787ea9..181a48c574e 100644
+index e3073787ea9..d0d71467e7f 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,412 @@
+@@ -1,3 +1,419 @@
++2019-11-29  Harald Anlauf  <anlauf@gmx.de>
++
++	Backport from mainline
++	PR fortran/92629
++	* simplify.c (convert_mpz_to_unsigned): Skip assert for argument
++	range when -fno-range-check is specified.
++
 +2019-11-25  Tobias Burnus  <tobias@codesourcery.com
 +
 +	Backport from mainline
@@ -12670,10 +12877,23 @@ index e54d483baff..40c06b6b674 100644
    gfc_file *f;
  
 diff --git a/gcc/fortran/simplify.c b/gcc/fortran/simplify.c
-index 6c1f4bd4fce..58b4652b010 100644
+index 6c1f4bd4fce..583a1c136e2 100644
 --- a/gcc/fortran/simplify.c
 +++ b/gcc/fortran/simplify.c
-@@ -4808,8 +4808,12 @@ gfc_simplify_merge (gfc_expr *tsource, gfc_expr *fsource, gfc_expr *mask)
+@@ -169,8 +169,10 @@ convert_mpz_to_unsigned (mpz_t x, int bitsize)
+     }
+   else
+     {
+-      /* Confirm that no bits above the signed range are set.  */
+-      gcc_assert (mpz_scan1 (x, bitsize-1) == ULONG_MAX);
++      /* Confirm that no bits above the signed range are set if we
++	 are doing range checking.  */
++      if (flag_range_check != 0)
++	gcc_assert (mpz_scan1 (x, bitsize-1) == ULONG_MAX);
+     }
+ }
+ 
+@@ -4808,8 +4810,12 @@ gfc_simplify_merge (gfc_expr *tsource, gfc_expr *fsource, gfc_expr *mask)
    gfc_constructor *tsource_ctor, *fsource_ctor, *mask_ctor;
  
    if (mask->expr_type == EXPR_CONSTANT)
@@ -12688,7 +12908,7 @@ index 6c1f4bd4fce..58b4652b010 100644
  
    if (!mask->rank || !is_constant_array_expr (mask)
        || !is_constant_array_expr (tsource) || !is_constant_array_expr (fsource))
-@@ -6684,6 +6688,9 @@ gfc_simplify_reshape (gfc_expr *source, gfc_expr *shape_exp,
+@@ -6684,6 +6690,9 @@ gfc_simplify_reshape (gfc_expr *source, gfc_expr *shape_exp,
    mpz_init (index);
    rank = 0;
  
@@ -12698,7 +12918,7 @@ index 6c1f4bd4fce..58b4652b010 100644
    for (;;)
      {
        e = gfc_constructor_lookup_expr (shape_exp->value.constructor, rank);
-@@ -6708,8 +6715,28 @@ gfc_simplify_reshape (gfc_expr *source, gfc_expr *shape_exp,
+@@ -6708,8 +6717,28 @@ gfc_simplify_reshape (gfc_expr *source, gfc_expr *shape_exp,
      }
    else
      {
@@ -12729,7 +12949,7 @@ index 6c1f4bd4fce..58b4652b010 100644
  
        for (i = 0; i < rank; i++)
  	{
-@@ -6718,9 +6745,22 @@ gfc_simplify_reshape (gfc_expr *source, gfc_expr *shape_exp,
+@@ -6718,9 +6747,22 @@ gfc_simplify_reshape (gfc_expr *source, gfc_expr *shape_exp,
  
  	  gfc_extract_int (e, &order[i]);
  
@@ -12754,7 +12974,7 @@ index 6c1f4bd4fce..58b4652b010 100644
  	  x[order[i]] = 1;
  	}
      }
-@@ -8494,6 +8534,12 @@ gfc_convert_constant (gfc_expr *e, bt type, int kind)
+@@ -8494,6 +8536,12 @@ gfc_convert_constant (gfc_expr *e, bt type, int kind)
  	    {
  	      if (c->expr->expr_type == EXPR_ARRAY)
  		tmp = gfc_convert_constant (c->expr, type, kind);
@@ -17058,10 +17278,42 @@ index 29f6cdc4667..33b4be79c0f 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..ef0e59311f7 100644
+index bc11ae4ae0b..9285ba60ef2 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,961 @@
+@@ -1,3 +1,993 @@
++2019-12-02  Li Jia He  <helijia@linux.ibm.com>
++
++	Partial backport from trunk
++	PR target/92098
++	2019-11-08  Kewen Lin  <linkw@gcc.gnu.org>
++
++	PR target/92132
++	* gcc.target/powerpc/pr92132-fp-1.c: New test.
++	* gcc.target/powerpc/pr92132-fp-2.c: New test.
++
++2019-11-30  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	PR fortran/91783
++	* gfortran.dg/dependency_56.f90: New test. Backport from trunk on
++	the off-chance that somebody backports something that will break
++	this test case.
++
++2019-11-29  Harald Anlauf  <anlauf@gmx.de>
++
++	Backport from mainline
++	PR fortran/92629
++	* gfortran.dg/pr92629.f90: New testcase.
++
++2019-11-29 Tobias Burnus  <tobias@codesourcery.com>
++
++	Backport from mainline
++	2019-11-29 Tobias Burnus  <tobias@codesourcery.com>
++
++	PR ipa/84963
++	* gfortran.dg/goacc/pr84963.f90: Use dg-additional-options not
++	dg-options as otherwise -fopenacc is not used.
++
 +2019-11-27  Richard Biener  <rguenther@suse.de>
 +
 +	Backport from mainline
@@ -18023,7 +18275,7 @@ index bc11ae4ae0b..ef0e59311f7 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +1385,7 @@
+@@ -427,7 +1417,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -18032,7 +18284,7 @@ index bc11ae4ae0b..ef0e59311f7 100644
  	(check_effective_target_powerpc_p8vector_ok): No support for Darwin.
  	(check_effective_target_powerpc_p9vector_ok): Likewise.
  	(check_effective_target_powerpc_float128_sw_ok): Likewise.
-@@ -720,7 +1678,7 @@
+@@ -720,7 +1710,7 @@
  
  	Backport from mainline
  	PR fortran/91077
@@ -18041,7 +18293,7 @@ index bc11ae4ae0b..ef0e59311f7 100644
  
  2019-07-05  Szabolcs Nagy  <szabolcs.nagy@arm.com>
  
-@@ -969,7 +1927,7 @@
+@@ -969,7 +1959,7 @@
         * gcc.target/i386/pr82699-6.c: Likewise
         * gcc.target/i386/returninst1.c: Likewise
         * gcc.target/i386/returninst2.c: Likewise
@@ -18050,7 +18302,7 @@ index bc11ae4ae0b..ef0e59311f7 100644
  
  2019-05-30  Iain Sandoe  <iain@sandoe.co.uk>
  
-@@ -1131,7 +2089,7 @@
+@@ -1131,7 +2121,7 @@
  
  	Backport from trunk
  	PR fortran/90498
@@ -18059,7 +18311,7 @@ index bc11ae4ae0b..ef0e59311f7 100644
  
  2019-05-17  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -3801,21 +4759,21 @@
+@@ -3801,21 +4791,21 @@
  2019-02-23  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88117
@@ -18088,7 +18340,7 @@ index bc11ae4ae0b..ef0e59311f7 100644
  
  2019-02-22  David Malcolm  <dmalcolm@redhat.com>
  
-@@ -4444,7 +5402,7 @@
+@@ -4444,7 +5434,7 @@
  2019-02-09  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/89200
@@ -18097,7 +18349,7 @@ index bc11ae4ae0b..ef0e59311f7 100644
  
  2019-02-09  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -4704,17 +5662,17 @@
+@@ -4704,17 +5694,17 @@
  2019-02-02  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88393
@@ -22889,6 +23141,270 @@ index 00000000000..77c9f843533
 +  for (int h; h; h++)
 +    j = 0;
 +}
+diff --git a/gcc/testsuite/gcc.target/powerpc/pr92098-int-1.c b/gcc/testsuite/gcc.target/powerpc/pr92098-int-1.c
+new file mode 100644
+index 00000000000..57fba774885
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/powerpc/pr92098-int-1.c
+@@ -0,0 +1,126 @@
++/* { dg-do run } */
++/* { dg-require-effective-target p8vector_hw } */
++/* { dg-options "-O2 -ftree-vectorize -mdejagnu-cpu=power8 -fno-vect-cost-model -fdump-tree-vect-details" } */
++
++/* To test condition reduction vectorization, where comparison operands are of
++   signed int type and condition true/false values are integer type.  */
++
++#include <math.h>
++
++extern void
++abort (void) __attribute__ ((noreturn));
++
++#define N 27
++#define INT_TYPE signed int 
++
++__attribute__ ((noinline)) int
++test_eq (INT_TYPE *a, INT_TYPE min_v)
++{
++  int last = 0;
++
++  for (int i = 0; i < N; i++)
++    if (a[i] == min_v)
++      last = i;
++
++  return last;
++}
++
++__attribute__ ((noinline)) int
++test_ne (INT_TYPE *a, INT_TYPE min_v)
++{
++  int last = 0;
++
++  for (int i = 0; i < N; i++)
++    if (a[i] != min_v)
++      last = i;
++
++  return last;
++}
++
++__attribute__ ((noinline)) int
++test_gt (INT_TYPE *a, INT_TYPE min_v)
++{
++  int last = 0;
++
++  for (int i = 0; i < N; i++)
++    if (a[i] > min_v)
++      last = i;
++
++  return last;
++}
++
++__attribute__ ((noinline)) int
++test_ge (INT_TYPE *a, INT_TYPE min_v)
++{
++  int last = 0;
++
++  for (int i = 0; i < N; i++)
++    if (a[i] >= min_v)
++      last = i;
++
++  return last;
++}
++
++__attribute__ ((noinline)) int
++test_lt (INT_TYPE *a, INT_TYPE min_v)
++{
++  int last = 0;
++
++  for (int i = 0; i < N; i++)
++    if (a[i] < min_v)
++      last = i;
++
++  return last;
++}
++
++__attribute__ ((noinline)) int
++test_le (INT_TYPE *a, INT_TYPE min_v)
++{
++  int last = 0;
++
++  for (int i = 0; i < N; i++)
++    if (a[i] <= min_v)
++      last = i;
++
++  return last;
++}
++
++int
++main (void)
++{
++  int ret = 0;
++
++  INT_TYPE a1[N] = {11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 1,  2,  3, 4,
++		   5,  6,  7,  8,  9,  10, 21, 22, 23, 24, 25, 26, 27};
++
++  INT_TYPE a2[N] = {21, 22, 23, 24, 25, 26, 27, 28, 29, 10, 11, 12, 13, 14,
++		   15, 16, 17, 18, 19, 20, 1,  2,  3,  4,  5,  6,  7};
++
++  ret = test_eq (a1, 10);
++  if (ret != 19)
++    abort ();
++
++  ret = test_ne (a1, 10);
++  if (ret != 26)
++    abort ();
++
++  ret = test_gt (a2, 10);
++  if (ret != 19)
++    abort ();
++
++  ret = test_ge (a2, 10);
++  if (ret != 19)
++    abort ();
++
++  ret = test_lt (a1, 10);
++  if (ret != 18)
++    abort ();
++
++  ret = test_le (a1, 10);
++  if (ret != 19)
++    abort ();
++
++  return 0;
++}
++
++/* { dg-final { scan-tree-dump-times "LOOP VECTORIZED" 6 "vect" } } */
+diff --git a/gcc/testsuite/gcc.target/powerpc/pr92098-int-2.c b/gcc/testsuite/gcc.target/powerpc/pr92098-int-2.c
+new file mode 100644
+index 00000000000..372c7af14a9
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/powerpc/pr92098-int-2.c
+@@ -0,0 +1,126 @@
++/* { dg-do run } */
++/* { dg-require-effective-target p8vector_hw } */
++/* { dg-options "-O2 -ftree-vectorize -mdejagnu-cpu=power8 -fno-vect-cost-model -fdump-tree-vect-details" } */
++
++/* To test condition reduction vectorization, where comparison operands are of
++   unsigned int type and condition true/false values are integer type.  */
++
++#include <math.h>
++
++extern void
++abort (void) __attribute__ ((noreturn));
++
++#define N 27
++#define INT_TYPE unsigned int 
++
++__attribute__ ((noinline)) unsigned int
++test_eq (INT_TYPE *a, INT_TYPE min_v)
++{
++  unsigned int last = 0;
++
++  for (unsigned int i = 0; i < N; i++)
++    if (a[i] == min_v)
++      last = i;
++
++  return last;
++}
++
++__attribute__ ((noinline)) unsigned int
++test_ne (INT_TYPE *a, INT_TYPE min_v)
++{
++  unsigned int last = 0;
++
++  for (unsigned int i = 0; i < N; i++)
++    if (a[i] != min_v)
++      last = i;
++
++  return last;
++}
++
++__attribute__ ((noinline)) unsigned int
++test_gt (INT_TYPE *a, INT_TYPE min_v)
++{
++  unsigned int last = 0;
++
++  for (unsigned int i = 0; i < N; i++)
++    if (a[i] > min_v)
++      last = i;
++
++  return last;
++}
++
++__attribute__ ((noinline)) unsigned int
++test_ge (INT_TYPE *a, INT_TYPE min_v)
++{
++  unsigned int last = 0;
++
++  for (unsigned int i = 0; i < N; i++)
++    if (a[i] >= min_v)
++      last = i;
++
++  return last;
++}
++
++__attribute__ ((noinline)) unsigned int
++test_lt (INT_TYPE *a, INT_TYPE min_v)
++{
++  unsigned int last = 0;
++
++  for (unsigned int i = 0; i < N; i++)
++    if (a[i] < min_v)
++      last = i;
++
++  return last;
++}
++
++__attribute__ ((noinline)) unsigned int
++test_le (INT_TYPE *a, INT_TYPE min_v)
++{
++  unsigned int last = 0;
++
++  for (unsigned int i = 0; i < N; i++)
++    if (a[i] <= min_v)
++      last = i;
++
++  return last;
++}
++
++int
++main (void)
++{
++  int ret = 0;
++
++  INT_TYPE a1[N] = {11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 1,  2,  3, 4,
++		   5,  6,  7,  8,  9,  10, 21, 22, 23, 24, 25, 26, 27};
++
++  INT_TYPE a2[N] = {21, 22, 23, 24, 25, 26, 27, 28, 29, 10, 11, 12, 13, 14,
++		   15, 16, 17, 18, 19, 20, 1,  2,  3,  4,  5,  6,  7};
++
++  ret = test_eq (a1, 10);
++  if (ret != 19)
++    abort ();
++
++  ret = test_ne (a1, 10);
++  if (ret != 26)
++    abort ();
++
++  ret = test_gt (a2, 10);
++  if (ret != 19)
++    abort ();
++
++  ret = test_ge (a2, 10);
++  if (ret != 19)
++    abort ();
++
++  ret = test_lt (a1, 10);
++  if (ret != 18)
++    abort ();
++
++  ret = test_le (a1, 10);
++  if (ret != 19)
++    abort ();
++
++  return 0;
++}
++
++/* { dg-final { scan-tree-dump-times "LOOP VECTORIZED" 6 "vect" } } */
 diff --git a/gcc/testsuite/gcc.target/powerpc/pure-builtin-redundant-load.c b/gcc/testsuite/gcc.target/powerpc/pure-builtin-redundant-load.c
 new file mode 100644
 index 00000000000..16ab6abfc3b
@@ -23790,6 +24306,26 @@ index 00000000000..20408412879
 +   z = z(2)
 +   if (any(z /= 'xy')) stop 1
 +end
+diff --git a/gcc/testsuite/gfortran.dg/dependency_56.f90 b/gcc/testsuite/gfortran.dg/dependency_56.f90
+new file mode 100644
+index 00000000000..97c0c814aed
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/dependency_56.f90
+@@ -0,0 +1,14 @@
++! { dg-do compile }
++! PR 91783 - used to cause an ICE in dependency checking.
++! Test case by Gerhard Steinmetz.
++program p
++   class(*), allocatable :: a(:)
++   a = [1, 2, 3]
++   a = f(a)
++contains
++   function f(x) result(y)
++      class(*), allocatable, intent(in) :: x(:)
++      class(*), allocatable :: y(:)
++      y = x
++   end
++end
 diff --git a/gcc/testsuite/gfortran.dg/directive_unroll_5.f90 b/gcc/testsuite/gfortran.dg/directive_unroll_5.f90
 index b88b4b2c380..33f2fda537f 100644
 --- a/gcc/testsuite/gfortran.dg/directive_unroll_5.f90
@@ -23929,6 +24465,17 @@ index e48484ec30d..106431fe206 100644
    foo = real (kind (foo))
  end function
 +! { dg-prune-output "Bad kind expression for function" }
+diff --git a/gcc/testsuite/gfortran.dg/goacc/pr84963.f90 b/gcc/testsuite/gfortran.dg/goacc/pr84963.f90
+index 4548082bee3..481f20711f5 100644
+--- a/gcc/testsuite/gfortran.dg/goacc/pr84963.f90
++++ b/gcc/testsuite/gfortran.dg/goacc/pr84963.f90
+@@ -1,5 +1,5 @@
+ ! PR ipa/84963
+-! { dg-options "-O2" }
++! { dg-additional-options "-O2" }
+ 
+ program p
+    print *, sin([1.0, 2.0])
 diff --git a/gcc/testsuite/gfortran.dg/gomp/pr87752.f90 b/gcc/testsuite/gfortran.dg/gomp/pr87752.f90
 new file mode 100644
 index 00000000000..072de218253
@@ -25197,6 +25744,23 @@ index 00000000000..5121063f5f3
 +    call arr_set_c_opt(that)
 +  end subroutine arr_set
 +end module arr_m
+diff --git a/gcc/testsuite/gfortran.dg/pr92629.f90 b/gcc/testsuite/gfortran.dg/pr92629.f90
+new file mode 100644
+index 00000000000..5c2267ca6f1
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr92629.f90
+@@ -0,0 +1,11 @@
++! { dg-do run }
++! { dg-options "-fno-range-check" }
++!
++! Test the fix for PR92629.
++program bge_tests
++  if (bge (huge (1_1), 128_1)) stop 1
++  if (bge (    128_1 , 255_1)) stop 2
++  if (bge (huge (1_2), 32768_2)) stop 3
++  if (bge (huge (1_4), 2147483648_4)) stop 4
++  if (bge (huge (1_8), 9223372036854775808_8)) stop 5
++end program
 diff --git a/gcc/testsuite/gfortran.dg/streamio_18.f90 b/gcc/testsuite/gfortran.dg/streamio_18.f90
 new file mode 100644
 index 00000000000..ee36238ecfa
