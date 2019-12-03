@@ -409,8 +409,6 @@ popd
 %find_lang libstdc++ cxx.lang
 cat *.lang > gcc.lang
 
-rm -f %{buildroot}/usr/lib64/gcc/x86_64-generic-linux/9/include-fixed/bits/statx.h
-
 %files
 /usr/bin/%{gcc_target}-gcc-ar
 /usr/bin/%{gcc_target}-gcc-ranlib
