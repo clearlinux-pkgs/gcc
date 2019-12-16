@@ -1,9 +1,10 @@
 akrl (1):
       Backport fix for PR jit/91928
 
-anlauf (2):
+anlauf (3):
       2019-09-05  Harald Anlauf  <anlauf@gmx.de>
       2019-11-29  Harald Anlauf  <anlauf@gmx.de>
+      2019-12-12  Harald Anlauf  <anlauf@gmx.de>
 
 avieira (1):
       [arm] Backport -- Fix multilibs for Armv7-R
@@ -12,7 +13,7 @@ bergner (2):
       Backport from mainline 	2019-10-08  Tulio Magno Quites Machado Filho  <tuliom@linux.ibm.com>
       Backport fix for PR92090.
 
-burnus (10):
+burnus (11):
       Fortran] PR91586 Fix ICE on invalid code with CLASS
       Fortran] PR91863 - fix call to bind(C) with array descriptor
       Backport Fortran BIND(C) fixes
@@ -23,9 +24,11 @@ burnus (10):
       Fix gfortran.dg/ISO_Fortran_binding_17.c using rel. #include
       Fortran] PR 92050 - fix ICE with -fcheck=all
       Fix testcase - was missing -fopenacc
+      libgomp – spelling fixes, incl. omp_lib.h.in
 
-claziss (1):
+claziss (2):
       [ARC] Backport from mainline r278056,r278057
+      [ARC] Enable using DCMPF for hard float comparisons (backports)
 
 danglin (10):
       * config/pa/pa.c (pa_trampoline_init): Remove spurious extended 	character.
@@ -71,7 +74,13 @@ edlinger (3):
 emsr (1):
       2019-09-09  Edward Smith-Rowland  <3dw4rd@verizon.net>
 
-gccadmin (120):
+gccadmin (126):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -286,11 +295,15 @@ jakub (41):
       PR c++/90767 	* call.c (complain_about_no_candidates_for_method_call): If 	conv->from is not a type, pass to complain_about_bad_argument 	lvalue_type of conv->from.
       PR tree-optimization/91355 	* tree-ssa-sink.c (select_best_block): Use >= rather than > 	for early_bb scaled count with best_bb count comparison.
 
-jason (4):
+jason (8):
       PR c++/90538 - multiple expansions of capture packs
       PR c++/91378 - ICE with noexcept and auto return type.
       PR c++/88095, CTAD for literal operator templates per P0732
       PR c++/90393 - ICE with throw in ?:
+      PR c++/92150 - partial specialization with class NTTP.
+      PR c++/92446 - deduction of class NTTP.
+      PR c++/92859 - ADL and bit-field.
+      PR c++/57082 - new X{} and private destructor.
 
 jb (2):
       PR fortran/91414 Improve initialization of PRNG
@@ -311,7 +324,7 @@ jsm28 (7):
 jvdelisle (1):
       2019-11-26  Jerry DeLisle  <jvdelisle@gcc.ngu.org>
 
-kargl (34):
+kargl (35):
       2019-08-01  Steven G. Kargl  <kargl@gcc.gnu.org>
       2019-08-12  Steven G. Kargl  <kargl@gcc.gnu.org>
       2019-08-13  Steven G. Kargl  <kargl@gcc.gnu.org>
@@ -346,6 +359,7 @@ kargl (34):
       2019-10-17  Steven G. Kargl  <kargl@gcc.gnu.org>
       2019-10-18  Steven G. Kargl  <kargl@gcc.gnu.org>
       2019-10-22  Steven G. Kargl  <kargl@gcc.gnu.org>
+      2019-12-11 Steven G. Kargl  <kargl@gcc.gnu.org>
 
 kito (2):
       RISC-V: Fix bad insn splits with paradoxical subregs.
@@ -421,7 +435,7 @@ rearnsha (3):
       [arm]  PR target/89400 fix thumb1 unaligned access expansion
       [arm][PR88167] Fix __builtin_return_address returns invalid address
 
-redi (29):
+redi (31):
       PR libstdc++/90361 add missing macro definition
       PR c++/91436 fix C++ dialect for std::make_unique fix-it hint
       Implement new serial algorithms from Parallelism TS (P0024R2)
@@ -451,6 +465,8 @@ redi (29):
       PR libstdc++/90682 allow set_terminate(0) and set_unexpected(0)
       PR libstdc++/92267 fix ABI change in deque iterators
       libstdc++: fix buffer overflow in path::operator+= (PR92853)
+      PR libstdc++/91786 fix compilation error with Clang
+      libstdc++: Fix whitepace in changelog
 
 rguenth (10):
       2019-08-12  Richard Biener  <rguenther@suse.de>
@@ -466,6 +482,9 @@ rguenth (10):
 
 ro (1):
       Update Solaris baselines for GCC 9.3
+
+rodgertq (1):
+      Restore enable_if lost during original import of pstl
 
 sandra (1):
       2019-12-02  Sandra Loosemore  <sandra@codesourcery.com>
@@ -496,12 +515,13 @@ tkoenig (10):
 tnfchris (1):
       AArch64: Correct HWCAP for fp16fml
 
-tschwinge (5):
+tschwinge (6):
       Avoid '-Wmaybe-uninitialized' diagnostic in 'gcc/dwarf2out.c'
       [LIBPHOBOS] Fix multi-lib RUNTESTFLAGS handling
       [build] Properly track GCC language configure fragments
       Assert 'offset2' instead of 'offset' in 'gcc/gimplify.c:gimplify_scan_omp_clauses'
       [PR87833] x86: Put -fPIC and -shared the last to create offload image
+      [OpenACC, libgomp] Initialize 'dynamic_refcount' whenever we initialize 'refcount'
 
 uros (5):
       * test_summary: Do not escape "=".
@@ -754,10 +774,29 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..df3323044b1 100644
+index 7f6557d8018..2e934af4794 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,1456 @@
+@@ -1,3 +1,1475 @@
++2019-12-12  Vineet Gupta  <vgupta@synopsys.com>
++
++	Backport from mainline
++	* config/arc/arc-modes.def (CC_FPUE): New Mode CC_FPUE which
++	helps codegen generate exceptions even for quiet NaN.
++	* config/arc/arc.c (arc_init_reg_tables): Handle New CC_FPUE mode.
++	(get_arc_condition_code): Likewise.
++	(arc_select_cc_mode): LT, LE, GT, GE to use the New CC_FPUE mode.
++	* config/arc/arc.h (REVERSE_CONDITION): Handle New CC_FPUE mode.
++	* config/arc/predicates.md (proper_comparison_operator): Likewise.
++	* config/arc/fpu.md (cmpsf_fpu_trap): New Pattern for CC_FPUE.
++	(cmpdf_fpu_trap): Likewise.
++
++2019-12-12  Claudiu Zissulescu  <claziss@synopsys.com>
++
++	Backport from mainline
++	* config/arc/arc.md (iterator SDF): Check TARGET_FP_DP_BASE.
++	(cstoredi4): Use TARGET_HARD_FLOAT.
++
 +2019-12-10  Kewen Lin  <linkw@gcc.gnu.org>
 +
 +	Backport from mainline
@@ -2214,7 +2253,7 @@ index 7f6557d8018..df3323044b1 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +1966,7 @@
+@@ -513,7 +1985,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -3633,11 +3672,53 @@ index 984540f0b53..524379d3763 100644
  		    default:
  		      gcc_unreachable ();
  		    }
+diff --git a/gcc/config/arc/arc-modes.def b/gcc/config/arc/arc-modes.def
+index 36a2f4abfb2..d16b6a289a1 100644
+--- a/gcc/config/arc/arc-modes.def
++++ b/gcc/config/arc/arc-modes.def
+@@ -38,4 +38,5 @@ VECTOR_MODES (INT, 16);       /* V16QI V8HI V4SI V2DI */
+ 
+ /* FPU condition flags.  */
+ CC_MODE (CC_FPU);
++CC_MODE (CC_FPUE);
+ CC_MODE (CC_FPU_UNEQ);
 diff --git a/gcc/config/arc/arc.c b/gcc/config/arc/arc.c
-index ee1f70bbb51..e6e4fb18ce1 100644
+index ee1f70bbb51..f7ff95a0edf 100644
 --- a/gcc/config/arc/arc.c
 +++ b/gcc/config/arc/arc.c
-@@ -5992,6 +5992,22 @@ arc_legitimize_pic_address (rtx addr)
+@@ -1445,6 +1445,7 @@ get_arc_condition_code (rtx comparison)
+ 	default : gcc_unreachable ();
+ 	}
+     case E_CC_FPUmode:
++    case E_CC_FPUEmode:
+       switch (GET_CODE (comparison))
+ 	{
+ 	case EQ	       : return ARC_CC_EQ;
+@@ -1567,11 +1568,13 @@ arc_select_cc_mode (enum rtx_code op, rtx x, rtx y)
+       case UNLE:
+       case UNGT:
+       case UNGE:
++	return CC_FPUmode;
++
+       case LT:
+       case LE:
+       case GT:
+       case GE:
+-	return CC_FPUmode;
++	return CC_FPUEmode;
+ 
+       case LTGT:
+       case UNEQ:
+@@ -1725,7 +1728,7 @@ arc_init_reg_tables (void)
+ 	  if (i == (int) CCmode || i == (int) CC_ZNmode || i == (int) CC_Zmode
+ 	      || i == (int) CC_Cmode
+ 	      || i == CC_FP_GTmode || i == CC_FP_GEmode || i == CC_FP_ORDmode
+-	      || i == CC_FPUmode || i == CC_FPU_UNEQmode)
++	      || i == CC_FPUmode || i == CC_FPUEmode || i == CC_FPU_UNEQmode)
+ 	    arc_mode_class[i] = 1 << (int) C_MODE;
+ 	  else
+ 	    arc_mode_class[i] = 0;
+@@ -5992,6 +5995,22 @@ arc_legitimize_pic_address (rtx addr)
  
    switch (GET_CODE (addr))
      {
@@ -3660,10 +3741,49 @@ index ee1f70bbb51..e6e4fb18ce1 100644
      case SYMBOL_REF:
        /* TLS symbols are handled in different place.  */
        if (SYMBOL_REF_TLS_MODEL (addr))
+@@ -8217,6 +8236,7 @@ arc_reorg (void)
+ 
+ 	  /* Avoid FPU instructions.  */
+ 	  if ((GET_MODE (XEXP (XEXP (pc_target, 0), 0)) == CC_FPUmode)
++	      || (GET_MODE (XEXP (XEXP (pc_target, 0), 0)) == CC_FPUEmode)
+ 	      || (GET_MODE (XEXP (XEXP (pc_target, 0), 0)) == CC_FPU_UNEQmode))
+ 	    continue;
+ 
+diff --git a/gcc/config/arc/arc.h b/gcc/config/arc/arc.h
+index 80dead957cb..00fc3e4711d 100644
+--- a/gcc/config/arc/arc.h
++++ b/gcc/config/arc/arc.h
+@@ -1530,7 +1530,7 @@ enum arc_function_type {
+   (((MODE) == CC_FP_GTmode || (MODE) == CC_FP_GEmode		 \
+     || (MODE) == CC_FP_UNEQmode || (MODE) == CC_FP_ORDmode	 \
+     || (MODE) == CC_FPXmode || (MODE) == CC_FPU_UNEQmode	 \
+-    || (MODE) == CC_FPUmode)					 \
++    || (MODE) == CC_FPUmode || (MODE) == CC_FPUEmode)		 \
+    ? reverse_condition_maybe_unordered ((CODE))			 \
+    : reverse_condition ((CODE)))
+ 
 diff --git a/gcc/config/arc/arc.md b/gcc/config/arc/arc.md
-index 78e304d4c71..722cccd8be3 100644
+index 78e304d4c71..34e8248bcdb 100644
 --- a/gcc/config/arc/arc.md
 +++ b/gcc/config/arc/arc.md
+@@ -3674,7 +3674,7 @@ core_3, archs4x, archs4xd, archs4xd_slow"
+ })
+ 
+ (define_mode_iterator SDF [(SF "TARGET_FP_SP_BASE || TARGET_OPTFPE")
+-			   (DF "TARGET_OPTFPE")])
++			   (DF "TARGET_FP_DP_BASE || TARGET_OPTFPE")])
+ 
+ (define_expand "cstore<mode>4"
+   [(set (reg:CC CC_REG)
+@@ -3684,7 +3684,7 @@ core_3, archs4x, archs4xd, archs4xd_slow"
+ 	(match_operator:SI 1 "comparison_operator" [(reg CC_REG)
+ 						    (const_int 0)]))]
+ 
+-  "TARGET_FP_SP_BASE || TARGET_OPTFPE"
++  "TARGET_HARD_FLOAT || TARGET_OPTFPE"
+ {
+   gcc_assert (XEXP (operands[1], 0) == operands[2]);
+   gcc_assert (XEXP (operands[1], 1) == operands[3]);
 @@ -3742,20 +3742,20 @@ core_3, archs4x, archs4xd, archs4xd_slow"
  ; cond_exec patterns
  (define_insn "*movsi_ne"
@@ -3696,6 +3816,60 @@ index 78e304d4c71..722cccd8be3 100644
  
  (define_insn "*movsi_cond_exec"
    [(cond_exec
+diff --git a/gcc/config/arc/fpu.md b/gcc/config/arc/fpu.md
+index 6289e9c3f59..6729795de54 100644
+--- a/gcc/config/arc/fpu.md
++++ b/gcc/config/arc/fpu.md
+@@ -242,6 +242,18 @@
+    (set_attr "type" "fpu")
+    (set_attr "predicable" "yes")])
+ 
++(define_insn "*cmpsf_fpu_trap"
++  [(set (reg:CC_FPUE CC_REG)
++	(compare:CC_FPUE (match_operand:SF 0 "register_operand"  "r,  r,r")
++			(match_operand:SF 1 "nonmemory_operand" "r,CfZ,F")))]
++  "TARGET_FP_SP_BASE"
++  "fscmpf%?\\t%0,%1"
++  [(set_attr "length" "4,4,8")
++   (set_attr "iscompact" "false")
++   (set_attr "cond" "set")
++   (set_attr "type" "fpu")
++   (set_attr "predicable" "yes")])
++
+ (define_insn "*cmpsf_fpu_uneq"
+   [(set (reg:CC_FPU_UNEQ CC_REG)
+ 	(compare:CC_FPU_UNEQ
+@@ -338,6 +350,18 @@
+    (set_attr "type" "fpu")
+    (set_attr "predicable" "yes")])
+ 
++(define_insn "*cmpdf_fpu_trap"
++  [(set (reg:CC_FPUE CC_REG)
++	(compare:CC_FPUE (match_operand:DF 0 "even_register_operand"  "r")
++			(match_operand:DF 1 "even_register_operand"  "r")))]
++  "TARGET_FP_DP_BASE"
++  "fdcmpf%? %0, %1"
++  [(set_attr "length" "4")
++   (set_attr "iscompact" "false")
++   (set_attr "cond" "set")
++   (set_attr "type" "fpu")
++   (set_attr "predicable" "yes")])
++
+ (define_insn "*cmpdf_fpu_uneq"
+   [(set (reg:CC_FPU_UNEQ CC_REG)
+ 	(compare:CC_FPU_UNEQ
+diff --git a/gcc/config/arc/predicates.md b/gcc/config/arc/predicates.md
+index 72fbf2a8528..7d31ad9f99e 100644
+--- a/gcc/config/arc/predicates.md
++++ b/gcc/config/arc/predicates.md
+@@ -437,6 +437,7 @@
+ 	      || code == ORDERED || code == UNORDERED);
+ 
+     case E_CC_FPUmode:
++    case E_CC_FPUEmode:
+       return 1;
+     case E_CC_FPU_UNEQmode:
+       return 1;
 diff --git a/gcc/config/arm/arm.c b/gcc/config/arm/arm.c
 index 45abcd89963..91bb65130b8 100644
 --- a/gcc/config/arm/arm.c
@@ -9498,10 +9672,31 @@ index ce2825580c6..8243716589f 100644
  AC_SUBST(all_languages)
  AC_SUBST(all_selected_languages)
 diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
-index c977850d067..ae4ba4a372a 100644
+index c977850d067..5600ebea798 100644
 --- a/gcc/cp/ChangeLog
 +++ b/gcc/cp/ChangeLog
-@@ -1,3 +1,252 @@
+@@ -1,3 +1,273 @@
++2019-12-11  Jason Merrill  <jason@redhat.com>
++
++	PR c++/57082 - new X{} and private destructor.
++	* init.c (build_new_1): Also pass tf_no_cleanup to
++	build_special_member_call.
++
++2019-12-11  Jason Merrill  <jason@redhat.com>
++
++	PR c++/92859 - ADL and bit-field.
++	* name-lookup.c: Use unlowered_expr_type.
++
++2019-12-11  Jason Merrill  <jason@redhat.com>
++
++	PR c++/92446 - deduction of class NTTP.
++	* pt.c (deducible_expression): Look through VIEW_CONVERT_EXPR.
++
++2019-11-06  Jason Merrill  <jason@redhat.com>
++
++	PR c++/92150 - partial specialization with class NTTP.
++	* pt.c (unify): Handle VIEW_CONVERT_EXPR.
++
 +2019-11-20  Jakub Jelinek  <jakub@redhat.com>
 +
 +	PR c++/90767
@@ -9754,7 +9949,7 @@ index c977850d067..ae4ba4a372a 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -16,7 +265,7 @@
+@@ -16,7 +286,7 @@
  
  	Backported from mainline
  	2019-08-02  Marek Polacek  <polacek@redhat.com>
@@ -10187,6 +10382,19 @@ index b57ded813b6..444332e53ba 100644
      return nullptr_node;
  
    /* [dcl.fct.default]
+diff --git a/gcc/cp/init.c b/gcc/cp/init.c
+index 59e1f351fc6..6cd32d98448 100644
+--- a/gcc/cp/init.c
++++ b/gcc/cp/init.c
+@@ -3512,7 +3512,7 @@ build_new_1 (vec<tree, va_gc> **placement, tree type, tree nelts,
+ 						     complete_ctor_identifier,
+ 						     init, elt_type,
+ 						     LOOKUP_NORMAL,
+-                                                     complain);
++						     complain|tf_no_cleanup);
+ 	    }
+ 	  else if (explicit_value_init_p)
+ 	    {
 diff --git a/gcc/cp/lambda.c b/gcc/cp/lambda.c
 index 93664181b47..edfd2f75853 100644
 --- a/gcc/cp/lambda.c
@@ -10243,9 +10451,18 @@ index 93664181b47..edfd2f75853 100644
    /* Make member variable.  */
    member = build_decl (input_location, FIELD_DECL, name, type);
 diff --git a/gcc/cp/name-lookup.c b/gcc/cp/name-lookup.c
-index 4ca976c812d..29004d920b1 100644
+index 4ca976c812d..4fea4c04c66 100644
 --- a/gcc/cp/name-lookup.c
 +++ b/gcc/cp/name-lookup.c
+@@ -909,7 +909,7 @@ name_lookup::adl_expr (tree expr)
+ 
+   if (TREE_TYPE (expr) != unknown_type_node)
+     {
+-      adl_type (TREE_TYPE (expr));
++      adl_type (unlowered_expr_type (expr));
+       return;
+     }
+ 
 @@ -5656,7 +5656,7 @@ get_std_name_hint (const char *name)
      {"bitset", "<bitset>", cxx11},
      /* <complex>.  */
@@ -10341,7 +10558,7 @@ index a7218e752b1..3fac495d293 100644
    cp_lexer_get_preprocessor_token (NULL, first_token);
    if (first_token->type == CPP_STRING)
 diff --git a/gcc/cp/pt.c b/gcc/cp/pt.c
-index a2a986b1db1..48d8dbb6ad2 100644
+index a2a986b1db1..0ebac069984 100644
 --- a/gcc/cp/pt.c
 +++ b/gcc/cp/pt.c
 @@ -3875,7 +3875,7 @@ find_parameter_packs_r (tree *tp, int *walk_subtrees, void* data)
@@ -10482,7 +10699,28 @@ index a2a986b1db1..48d8dbb6ad2 100644
  
  	  if (id_equal (DECL_NAME (field), "__this"))
  	    LAMBDA_EXPR_THIS_CAPTURE (r) = field;
-@@ -24321,12 +24325,11 @@ maybe_instantiate_noexcept (tree fn, tsubst_flags_t complain)
+@@ -20571,7 +20575,7 @@ static bool
+ deducible_expression (tree expr)
+ {
+   /* Strip implicit conversions.  */
+-  while (CONVERT_EXPR_P (expr))
++  while (CONVERT_EXPR_P (expr) || TREE_CODE (expr) == VIEW_CONVERT_EXPR)
+     expr = TREE_OPERAND (expr, 0);
+   return (TREE_CODE (expr) == TEMPLATE_PARM_INDEX);
+ }
+@@ -22041,8 +22045,9 @@ unify (tree tparms, tree targs, tree parm, tree arg, int strict,
+   /* I don't think this will do the right thing with respect to types.
+      But the only case I've seen it in so far has been array bounds, where
+      signedness is the only information lost, and I think that will be
+-     okay.  */
+-  while (CONVERT_EXPR_P (parm))
++     okay.  VIEW_CONVERT_EXPR can appear with class NTTP, thanks to
++     finish_id_expression_1, and are also OK.  */
++  while (CONVERT_EXPR_P (parm) || TREE_CODE (parm) == VIEW_CONVERT_EXPR)
+     parm = TREE_OPERAND (parm, 0);
+ 
+   if (arg == error_mark_node)
+@@ -24321,12 +24326,11 @@ maybe_instantiate_noexcept (tree fn, tsubst_flags_t complain)
  	}
        else if (push_tinst_level (fn))
  	{
@@ -10496,7 +10734,7 @@ index a2a986b1db1..48d8dbb6ad2 100644
  	  /* If needed, set current_class_ptr for the benefit of
  	     tsubst_copy/PARM_DECL.  */
  	  tree tdecl = DECL_TEMPLATE_RESULT (DECL_TI_TEMPLATE (fn));
-@@ -24352,9 +24355,6 @@ maybe_instantiate_noexcept (tree fn, tsubst_flags_t complain)
+@@ -24352,9 +24356,6 @@ maybe_instantiate_noexcept (tree fn, tsubst_flags_t complain)
  					/*function_p=*/false,
  					/*i_c_e_p=*/true);
  
@@ -10506,7 +10744,7 @@ index a2a986b1db1..48d8dbb6ad2 100644
  	  /* Build up the noexcept-specification.  */
  	  spec = build_noexcept_spec (noex, tf_warning_or_error);
  
-@@ -24364,6 +24364,7 @@ maybe_instantiate_noexcept (tree fn, tsubst_flags_t complain)
+@@ -24364,6 +24365,7 @@ maybe_instantiate_noexcept (tree fn, tsubst_flags_t complain)
  	  pop_deferring_access_checks ();
  	  pop_access_scope (fn);
  	  pop_tinst_level ();
@@ -10514,7 +10752,7 @@ index a2a986b1db1..48d8dbb6ad2 100644
  	}
        else
  	spec = noexcept_false_spec;
-@@ -25232,8 +25233,9 @@ invalid_nontype_parm_type_p (tree type, tsubst_flags_t complain)
+@@ -25232,8 +25234,9 @@ invalid_nontype_parm_type_p (tree type, tsubst_flags_t complain)
      {
        if (cxx_dialect < cxx2a)
  	{
@@ -10526,7 +10764,7 @@ index a2a986b1db1..48d8dbb6ad2 100644
  	  return true;
  	}
        if (dependent_type_p (type))
-@@ -26715,7 +26717,7 @@ build_non_dependent_expr (tree expr)
+@@ -26715,7 +26718,7 @@ build_non_dependent_expr (tree expr)
    if (TREE_CODE (expr) == COND_EXPR)
      return build3 (COND_EXPR,
  		   TREE_TYPE (expr),
@@ -10535,7 +10773,7 @@ index a2a986b1db1..48d8dbb6ad2 100644
  		   (TREE_OPERAND (expr, 1)
  		    ? build_non_dependent_expr (TREE_OPERAND (expr, 1))
  		    : build_non_dependent_expr (TREE_OPERAND (expr, 0))),
-@@ -27615,6 +27617,9 @@ do_auto_deduction (tree type, tree init, tree auto_node,
+@@ -27615,6 +27618,9 @@ do_auto_deduction (tree type, tree init, tree auto_node,
      }
    else
      {
@@ -10982,10 +11220,23 @@ index f0e43b5fda2..9feaea9fde5 100644
    low = fold_convert_loc (loc, etype, low);
    exp = fold_convert_loc (loc, etype, exp);
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index e3073787ea9..d0d71467e7f 100644
+index e3073787ea9..6f9baa48a8f 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,419 @@
+@@ -1,3 +1,432 @@
++2019-12-12  Harald Anlauf  <anlauf@gmx.de>
++
++	Backport from mainline
++	PR fortran/92898
++	* check.c (gfc_check_is_contiguous): Simplify check to handle
++	arbitrary NULL() argument.
++
++2019-12-11 Steven G. Kargl  <kargl@gcc.gnu.org>
++
++	PR fortran/92897
++	* array.c (gfc_set_array_spec):  Remove invalid assert() triggered
++	by invalid Fortran code.
++
 +2019-11-29  Harald Anlauf  <anlauf@gmx.de>
 +
 +	Backport from mainline
@@ -11406,11 +11657,17 @@ index e3073787ea9..d0d71467e7f 100644
  
  	* GCC 9.2.0 released.
 diff --git a/gcc/fortran/array.c b/gcc/fortran/array.c
-index 0aee220e68d..6d20cbb9d36 100644
+index 0aee220e68d..ebce014c28f 100644
 --- a/gcc/fortran/array.c
 +++ b/gcc/fortran/array.c
-@@ -843,6 +843,10 @@ gfc_set_array_spec (gfc_symbol *sym, gfc_array_spec *as, locus *error_loc)
+@@ -837,12 +837,12 @@ gfc_set_array_spec (gfc_symbol *sym, gfc_array_spec *as, locus *error_loc)
  
+   if (as->corank)
+     {
+-      /* The "sym" has no corank (checked via gfc_add_codimension). Thus
+-	 the codimension is simply added.  */
+-      gcc_assert (as->rank == 0 && sym->as->corank == 0);
+-
        sym->as->cotype = as->cotype;
        sym->as->corank = as->corank;
 +      /* Check F2018:C822.  */
@@ -11420,7 +11677,7 @@ index 0aee220e68d..6d20cbb9d36 100644
        for (i = 0; i < as->corank; i++)
  	{
  	  sym->as->lower[sym->as->rank + i] = as->lower[i];
-@@ -861,6 +865,10 @@ gfc_set_array_spec (gfc_symbol *sym, gfc_array_spec *as, locus *error_loc)
+@@ -861,6 +861,10 @@ gfc_set_array_spec (gfc_symbol *sym, gfc_array_spec *as, locus *error_loc)
        sym->as->cray_pointee = as->cray_pointee;
        sym->as->cp_was_assumed = as->cp_was_assumed;
  
@@ -11431,7 +11688,7 @@ index 0aee220e68d..6d20cbb9d36 100644
        for (i = 0; i < sym->as->corank; i++)
  	{
  	  sym->as->lower[as->rank + i] = sym->as->lower[i];
-@@ -875,6 +883,12 @@ gfc_set_array_spec (gfc_symbol *sym, gfc_array_spec *as, locus *error_loc)
+@@ -875,6 +879,12 @@ gfc_set_array_spec (gfc_symbol *sym, gfc_array_spec *as, locus *error_loc)
  
    free (as);
    return true;
@@ -11444,7 +11701,7 @@ index 0aee220e68d..6d20cbb9d36 100644
  }
  
  
-@@ -1124,6 +1138,31 @@ match_array_cons_element (gfc_constructor_base *result)
+@@ -1124,6 +1134,31 @@ match_array_cons_element (gfc_constructor_base *result)
  }
  
  
@@ -11476,7 +11733,7 @@ index 0aee220e68d..6d20cbb9d36 100644
  /* Match an array constructor.  */
  
  match
-@@ -1253,14 +1292,13 @@ done:
+@@ -1253,14 +1288,13 @@ done:
  	    }
  	}
  
@@ -11496,7 +11753,7 @@ index 0aee220e68d..6d20cbb9d36 100644
  	}
      }
    else
-@@ -2175,6 +2213,9 @@ gfc_copy_iterator (gfc_iterator *src)
+@@ -2175,6 +2209,9 @@ gfc_copy_iterator (gfc_iterator *src)
    dest->end = gfc_copy_expr (src->end);
    dest->step = gfc_copy_expr (src->step);
    dest->unroll = src->unroll;
@@ -11507,7 +11764,7 @@ index 0aee220e68d..6d20cbb9d36 100644
    return dest;
  }
 diff --git a/gcc/fortran/check.c b/gcc/fortran/check.c
-index a04f0d66655..4ef354f0a6e 100644
+index a04f0d66655..6d37bbb8fd2 100644
 --- a/gcc/fortran/check.c
 +++ b/gcc/fortran/check.c
 @@ -924,6 +924,10 @@ gfc_check_all_any (gfc_expr *mask, gfc_expr *dim)
@@ -11598,12 +11855,11 @@ index a04f0d66655..4ef354f0a6e 100644
  }
  
  
-@@ -6549,6 +6578,14 @@ gfc_check_ttynam_sub (gfc_expr *unit, gfc_expr *name)
+@@ -6549,6 +6578,13 @@ gfc_check_ttynam_sub (gfc_expr *unit, gfc_expr *name)
  bool
  gfc_check_is_contiguous (gfc_expr *array)
  {
-+  if (array->expr_type == EXPR_NULL
-+      && array->symtree->n.sym->attr.pointer == 1)
++  if (array->expr_type == EXPR_NULL)
 +    {
 +      gfc_error ("Actual argument at %L of %qs intrinsic shall be an "
 +		 "associated pointer", &array->where, gfc_current_intrinsic);
@@ -11613,7 +11869,7 @@ index a04f0d66655..4ef354f0a6e 100644
    if (!array_check (array, 0))
      return false;
  
-@@ -6556,7 +6593,6 @@ gfc_check_is_contiguous (gfc_expr *array)
+@@ -6556,7 +6592,6 @@ gfc_check_is_contiguous (gfc_expr *array)
  }
  
  
@@ -17425,10 +17681,21 @@ index 29f6cdc4667..33b4be79c0f 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..3dbbfc787b6 100644
+index bc11ae4ae0b..3ec5f55852b 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,1006 @@
+@@ -1,3 +1,1017 @@
++2019-12-12  Harald Anlauf  <anlauf@gmx.de>
++
++	Backport from mainline
++	PR fortran/92898
++	* gfortran.dg/pr92898.f90: New test.
++
++2019-12-11 Steven G. Kargl  <kargl@gcc.gnu.org>
++
++	PR fortran/92897
++	* gfortran.dg/pr92897.f90: New test.
++
 +2019-12-09  Eric Botcazou  <ebotcazou@adacore.com>
 +
 +	* gnat.dg/lto23.adb: New test.
@@ -17436,7 +17703,7 @@ index bc11ae4ae0b..3dbbfc787b6 100644
 +2019-12-02  Sandra Loosemore  <sandra@codesourcery.com>
 +
 +	Fix bugs relating to flexibly-sized objects in nios2 backend.
-+	
++
 +	PR target/92499
 +	* gcc.target/nios2/pr92499-1.c: New.
 +	* gcc.target/nios2/pr92499-2.c: New.
@@ -18435,7 +18702,7 @@ index bc11ae4ae0b..3dbbfc787b6 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +1430,7 @@
+@@ -427,7 +1441,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -18444,7 +18711,7 @@ index bc11ae4ae0b..3dbbfc787b6 100644
  	(check_effective_target_powerpc_p8vector_ok): No support for Darwin.
  	(check_effective_target_powerpc_p9vector_ok): Likewise.
  	(check_effective_target_powerpc_float128_sw_ok): Likewise.
-@@ -720,7 +1723,7 @@
+@@ -720,7 +1734,7 @@
  
  	Backport from mainline
  	PR fortran/91077
@@ -18453,7 +18720,7 @@ index bc11ae4ae0b..3dbbfc787b6 100644
  
  2019-07-05  Szabolcs Nagy  <szabolcs.nagy@arm.com>
  
-@@ -969,7 +1972,7 @@
+@@ -969,7 +1983,7 @@
         * gcc.target/i386/pr82699-6.c: Likewise
         * gcc.target/i386/returninst1.c: Likewise
         * gcc.target/i386/returninst2.c: Likewise
@@ -18462,7 +18729,7 @@ index bc11ae4ae0b..3dbbfc787b6 100644
  
  2019-05-30  Iain Sandoe  <iain@sandoe.co.uk>
  
-@@ -1131,7 +2134,7 @@
+@@ -1131,7 +2145,7 @@
  
  	Backport from trunk
  	PR fortran/90498
@@ -18471,7 +18738,7 @@ index bc11ae4ae0b..3dbbfc787b6 100644
  
  2019-05-17  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -3801,21 +4804,21 @@
+@@ -3801,21 +4815,21 @@
  2019-02-23  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88117
@@ -18500,7 +18767,7 @@ index bc11ae4ae0b..3dbbfc787b6 100644
  
  2019-02-22  David Malcolm  <dmalcolm@redhat.com>
  
-@@ -4444,7 +5447,7 @@
+@@ -4444,7 +5458,7 @@
  2019-02-09  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/89200
@@ -18509,7 +18776,7 @@ index bc11ae4ae0b..3dbbfc787b6 100644
  
  2019-02-09  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -4704,17 +5707,17 @@
+@@ -4704,17 +5718,17 @@
  2019-02-02  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88393
@@ -19412,6 +19679,27 @@ index 00000000000..43173dbbdf4
 +struct S8 {
 +  S8(int __attribute__((unused)), int __attribute__((unused)));
 +};
+diff --git a/gcc/testsuite/g++.dg/cpp0x/initlist-new2.C b/gcc/testsuite/g++.dg/cpp0x/initlist-new2.C
+new file mode 100644
+index 00000000000..439b8dabacb
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp0x/initlist-new2.C
+@@ -0,0 +1,15 @@
++// PR c++/57082
++// { dg-do compile { target c++11 } }
++
++struct X
++{
++private:
++  ~X() {}
++};
++
++int main()
++{
++  new X;    // OK
++  new X();  // OK
++  new X{};  // { dg-bogus "" }
++}
 diff --git a/gcc/testsuite/g++.dg/cpp0x/lambda/lambda-variadic9.C b/gcc/testsuite/g++.dg/cpp0x/lambda/lambda-variadic9.C
 new file mode 100644
 index 00000000000..8c5085cf0f1
@@ -19933,6 +20221,50 @@ index 00000000000..ab9e80fd335
 +extern BAS2_2<AS2_2{{{ }}}>                                              b2_2;
 +extern BAS2_2<AS2_2{{ }}>                                                b2_2;
 +extern BAS2_2<AS2_2{ }>                                                  b2_2;
+diff --git a/gcc/testsuite/g++.dg/cpp2a/nontype-class24.C b/gcc/testsuite/g++.dg/cpp2a/nontype-class24.C
+new file mode 100644
+index 00000000000..aa96de36a80
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp2a/nontype-class24.C
+@@ -0,0 +1,19 @@
++// PR c++/92150
++// { dg-do compile { target c++2a } }
++
++struct X {
++  int value;
++  // auto operator==(const X&) = default;
++};
++
++template<typename T, X N>
++struct b;
++
++template<typename T>
++inline constexpr bool is_b = false;
++
++template<typename T, X N>
++inline constexpr bool is_b<b<T, N>> = true;
++
++using my_b = b<int, X{1}>;
++static_assert(is_b<my_b>);
+diff --git a/gcc/testsuite/g++.dg/cpp2a/nontype-class26.C b/gcc/testsuite/g++.dg/cpp2a/nontype-class26.C
+new file mode 100644
+index 00000000000..315e0ac2309
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp2a/nontype-class26.C
+@@ -0,0 +1,13 @@
++// { dg-do compile { target c++2a } }
++
++struct p { unsigned p_ {}; };
++
++template <p i> struct pp {};
++struct qq : public pp <p {}> {};
++
++template <p i> int f (pp <i> const &);
++
++int main ()
++{
++  return f (qq {});
++}
 diff --git a/gcc/testsuite/g++.dg/cpp2a/udlit-class-nttp-ctad-neg.C b/gcc/testsuite/g++.dg/cpp2a/udlit-class-nttp-ctad-neg.C
 new file mode 100644
 index 00000000000..437fa9b5ab8
@@ -20463,6 +20795,30 @@ index 00000000000..15ba1a12525
 +foo (void (*p) ())
 +{
 +  return (*reinterpret_cast<int (*)()> (p)) ();
++}
+diff --git a/gcc/testsuite/g++.dg/overload/bit-field1.C b/gcc/testsuite/g++.dg/overload/bit-field1.C
+new file mode 100644
+index 00000000000..318caaaeb65
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/overload/bit-field1.C
+@@ -0,0 +1,18 @@
++// PR c++/92859
++// { dg-do compile { target c++11 } }
++
++void f(int) = delete;
++
++struct ES { 
++  enum E { v }; 
++  friend void f(E) { }
++};
++
++struct S {
++  ES::E e : 1; 
++};
++
++int main() {
++  S s{}; 
++  f (s.e);
 +}
 diff --git a/gcc/testsuite/g++.dg/parse/operator8.C b/gcc/testsuite/g++.dg/parse/operator8.C
 new file mode 100644
@@ -25921,6 +26277,32 @@ index 00000000000..5c2267ca6f1
 +  if (bge (huge (1_4), 2147483648_4)) stop 4
 +  if (bge (huge (1_8), 9223372036854775808_8)) stop 5
 +end program
+diff --git a/gcc/testsuite/gfortran.dg/pr92897.f90 b/gcc/testsuite/gfortran.dg/pr92897.f90
+new file mode 100644
+index 00000000000..6e0f9836bb4
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr92897.f90
+@@ -0,0 +1,8 @@
++! { dg-do compile }
++! { dg-options "-fcoarray=single" }
++! Test contributed by Gerhard Steinmetz
++type(t) function f()                    ! { dg-error "has not been declared" }
++   dimension :: t(1,2,1,2,1,2,1,2)
++   codimension :: t[1,2,1,2,1,2,1,*]    ! { dg-error "rank \\+ corank of" }
++end
++! { dg-prune-output "which has not been defined" }
+diff --git a/gcc/testsuite/gfortran.dg/pr92898.f90 b/gcc/testsuite/gfortran.dg/pr92898.f90
+new file mode 100644
+index 00000000000..1c831eda1bb
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr92898.f90
+@@ -0,0 +1,6 @@
++! { dg-do compile }
++! PR fortran/92898
++! Code contributed by Gerhard Steinmetz
++program p
++  print *, is_contiguous (null())     ! { dg-error "shall be an associated" }
++end
 diff --git a/gcc/testsuite/gfortran.dg/streamio_18.f90 b/gcc/testsuite/gfortran.dg/streamio_18.f90
 new file mode 100644
 index 00000000000..ee36238ecfa
@@ -28874,10 +29256,24 @@ index c9dd8d494a9..f086c507e07 100755
  fi
  if ! echo "$statfs" | grep f_flags; then
 diff --git a/libgomp/ChangeLog b/libgomp/ChangeLog
-index 958572a54c0..15d12873e80 100644
+index 958572a54c0..c1959a44b8c 100644
 --- a/libgomp/ChangeLog
 +++ b/libgomp/ChangeLog
-@@ -1,3 +1,10 @@
+@@ -1,3 +1,24 @@
++2019-12-11  Thomas Schwinge  <thomas@codesourcery.com>
++	    Julian Brown  <julian@codesourcery.com>
++
++	* target.c (gomp_load_image_to_device, omp_target_associate_ptr):
++	Initialize 'dynamic_refcount' whenever we initialize 'refcount'.
++
++2019-12-11  Tobias Burnus  <tobias@codesourcery.com>
++
++	Backported from mainline
++	2019-12-11  Tobias Burnus  <tobias@codesourcery.com>
++
++	* omp_lib.h.in: Fix spelling of function declaration
++	omp_get_cancell(l)ation.
++
 +2019-08-13  Thomas Koenig  <tkoenig@gcc.gnu.org>
 +
 +	Backport from trunk
@@ -28888,6 +29284,49 @@ index 958572a54c0..15d12873e80 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
+diff --git a/libgomp/omp_lib.h.in b/libgomp/omp_lib.h.in
+index a0fc04cc724..2c33ce8ea76 100644
+--- a/libgomp/omp_lib.h.in
++++ b/libgomp/omp_lib.h.in
+@@ -102,8 +102,8 @@
+       external omp_in_final
+       logical(4) omp_in_final
+ 
+-      external omp_get_cancelllation
+-      logical(4) omp_get_cancelllation
++      external omp_get_cancellation
++      logical(4) omp_get_cancellation
+ 
+       external omp_get_proc_bind
+       integer(omp_proc_bind_kind) omp_get_proc_bind
+diff --git a/libgomp/target.c b/libgomp/target.c
+index 31148003d0a..97fc1ee2ddc 100644
+--- a/libgomp/target.c
++++ b/libgomp/target.c
+@@ -1214,6 +1214,7 @@ gomp_load_image_to_device (struct gomp_device_descr *devicep, unsigned version,
+       k->tgt = tgt;
+       k->tgt_offset = target_table[i].start;
+       k->refcount = REFCOUNT_INFINITY;
++      k->dynamic_refcount = 0;
+       k->link_key = NULL;
+       array->left = NULL;
+       array->right = NULL;
+@@ -1246,6 +1247,7 @@ gomp_load_image_to_device (struct gomp_device_descr *devicep, unsigned version,
+       k->tgt = tgt;
+       k->tgt_offset = target_var->start;
+       k->refcount = target_size & link_bit ? REFCOUNT_LINK : REFCOUNT_INFINITY;
++      k->dynamic_refcount = 0;
+       k->link_key = NULL;
+       array->left = NULL;
+       array->right = NULL;
+@@ -2501,6 +2503,7 @@ omp_target_associate_ptr (const void *host_ptr, const void *device_ptr,
+       k->tgt = tgt;
+       k->tgt_offset = (uintptr_t) device_ptr + device_offset;
+       k->refcount = REFCOUNT_INFINITY;
++      k->dynamic_refcount = 0;
+       array->left = NULL;
+       array->right = NULL;
+       splay_tree_insert (&devicep->mem_map, array);
 diff --git a/libgomp/testsuite/libgomp.oacc-fortran/routine-7.f90 b/libgomp/testsuite/libgomp.oacc-fortran/routine-7.f90
 index f58a95fe670..1009f4a81e5 100644
 --- a/libgomp/testsuite/libgomp.oacc-fortran/routine-7.f90
@@ -29101,10 +29540,28 @@ index 6cd4a5bac8b..06a605ff467 100644
  #endif
  
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
-index 8ac50251005..4a092e835fa 100644
+index 8ac50251005..3b5f453b04d 100644
 --- a/libstdc++-v3/ChangeLog
 +++ b/libstdc++-v3/ChangeLog
-@@ -1,3 +1,354 @@
+@@ -1,3 +1,372 @@
++2019-12-11  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backport from mainline
++	2019-11-25  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/91786
++	* include/bits/fs_path.h (filesystem_error): Move definition before
++	the use in u8path.
++
++2019-12-10  Thomas Rodgers  <trodgers@redhat.com>
++
++	Backport from mainline
++	2019-12-10  Thomas Rodgers  <trodgers@redhat.com>
++
++	* include/pstl/glue_numeric_defs.h: Restore enable_if lost during
++	original import of pstl.
++	* include/pstl/glue_numeric_impl.h: Likewise.
++
 +2019-12-09  Jonathan Wakely  <jwakely@redhat.com>
 +
 +	Backport from mainline
@@ -32681,6 +33138,90 @@ index 40e051aa9e3..5e47fffe86e 100644
     * @ingroup sorting_algorithms
     *
     * These algorithms are common set operations performed on sequences
+diff --git a/libstdc++-v3/include/bits/fs_path.h b/libstdc++-v3/include/bits/fs_path.h
+index e56a0a7f138..5dc624dbb1e 100644
+--- a/libstdc++-v3/include/bits/fs_path.h
++++ b/libstdc++-v3/include/bits/fs_path.h
+@@ -612,6 +612,36 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
+ 
+   size_t hash_value(const path& __p) noexcept;
+ 
++  /// Exception type thrown by the Filesystem library
++  class filesystem_error : public std::system_error
++  {
++  public:
++    filesystem_error(const string& __what_arg, error_code __ec);
++
++    filesystem_error(const string& __what_arg, const path& __p1,
++		     error_code __ec);
++
++    filesystem_error(const string& __what_arg, const path& __p1,
++		     const path& __p2, error_code __ec);
++
++    filesystem_error(const filesystem_error&) = default;
++    filesystem_error& operator=(const filesystem_error&) = default;
++
++    // No move constructor or assignment operator.
++    // Copy rvalues instead, so that _M_impl is not left empty.
++
++    ~filesystem_error();
++
++    const path& path1() const noexcept;
++    const path& path2() const noexcept;
++    const char* what() const noexcept;
++
++  private:
++    struct _Impl;
++    std::__shared_ptr<const _Impl> _M_impl;
++  };
++
++  /// Create a path from a UTF-8-encoded sequence of char
+   template<typename _InputIterator>
+     inline auto
+     u8path(_InputIterator __first, _InputIterator __last)
+@@ -642,6 +672,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
+ #endif
+     }
+ 
++  /// Create a path from a UTF-8-encoded sequence of char
+   template<typename _Source>
+     inline auto
+     u8path(const _Source& __source)
+@@ -663,34 +694,6 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
+ #endif
+     }
+ 
+-  class filesystem_error : public std::system_error
+-  {
+-  public:
+-    filesystem_error(const string& __what_arg, error_code __ec);
+-
+-    filesystem_error(const string& __what_arg, const path& __p1,
+-		     error_code __ec);
+-
+-    filesystem_error(const string& __what_arg, const path& __p1,
+-		     const path& __p2, error_code __ec);
+-
+-    filesystem_error(const filesystem_error&) = default;
+-    filesystem_error& operator=(const filesystem_error&) = default;
+-
+-    // No move constructor or assignment operator.
+-    // Copy rvalues instead, so that _M_impl is not left empty.
+-
+-    ~filesystem_error();
+-
+-    const path& path1() const noexcept;
+-    const path& path2() const noexcept;
+-    const char* what() const noexcept;
+-
+-  private:
+-    struct _Impl;
+-    std::__shared_ptr<const _Impl> _M_impl;
+-  };
+-
+   struct path::_Cmpt : path
+   {
+     _Cmpt(basic_string_view<value_type> __s, _Type __t, size_t __pos)
 diff --git a/libstdc++-v3/include/bits/memoryfwd.h b/libstdc++-v3/include/bits/memoryfwd.h
 index 8b1664a398d..732ac805322 100644
 --- a/libstdc++-v3/include/bits/memoryfwd.h
@@ -32970,6 +33511,32 @@ index 467bdfda3ed..3b397737bb6 100644
        ;
      return __i == 16 ? __a.scope_id() < __b.scope_id() : __aa[__i] < __bb[__i];
    }
+diff --git a/libstdc++-v3/include/pstl/glue_numeric_defs.h b/libstdc++-v3/include/pstl/glue_numeric_defs.h
+index 55187f1f6ea..12e967b1629 100644
+--- a/libstdc++-v3/include/pstl/glue_numeric_defs.h
++++ b/libstdc++-v3/include/pstl/glue_numeric_defs.h
+@@ -55,7 +55,7 @@ exclusive_scan(_ExecutionPolicy&& __exec, _ForwardIterator1 __first, _ForwardIte
+                _ForwardIterator2 __result, _Tp __init);
+ 
+ template <class _ExecutionPolicy, class _ForwardIterator1, class _ForwardIterator2, class _Tp, class _BinaryOperation>
+-_ForwardIterator2
++__pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardIterator2>
+ exclusive_scan(_ExecutionPolicy&& __exec, _ForwardIterator1 __first, _ForwardIterator1 __last,
+                _ForwardIterator2 __result, _Tp __init, _BinaryOperation __binary_op);
+ 
+diff --git a/libstdc++-v3/include/pstl/glue_numeric_impl.h b/libstdc++-v3/include/pstl/glue_numeric_impl.h
+index bde0b03f3fb..748f47ce0c0 100644
+--- a/libstdc++-v3/include/pstl/glue_numeric_impl.h
++++ b/libstdc++-v3/include/pstl/glue_numeric_impl.h
+@@ -100,7 +100,7 @@ exclusive_scan(_ExecutionPolicy&& __exec, _ForwardIterator1 __first, _ForwardIte
+ }
+ 
+ template <class _ExecutionPolicy, class _ForwardIterator1, class _ForwardIterator2, class _Tp, class _BinaryOperation>
+-_ForwardIterator2
++__pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardIterator2>
+ exclusive_scan(_ExecutionPolicy&& __exec, _ForwardIterator1 __first, _ForwardIterator1 __last,
+                _ForwardIterator2 __result, _Tp __init, _BinaryOperation __binary_op)
+ {
 diff --git a/libstdc++-v3/include/std/complex b/libstdc++-v3/include/std/complex
 index 0a4f68bc438..45450e8ca01 100644
 --- a/libstdc++-v3/include/std/complex
