@@ -74,7 +74,11 @@ edlinger (3):
 emsr (1):
       2019-09-09  Edward Smith-Rowland  <3dw4rd@verizon.net>
 
-gccadmin (129):
+gccadmin (133):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -256,7 +260,7 @@ iii (3):
       S/390: Fix failing RTL check in s390_canonicalize_comparison
       Free dominance info at the beginning of pass_jump_after_combine
 
-jakub (41):
+jakub (66):
       * BASE-VER: Set to 9.2.1.
       * config/abi/post/aarch64-linux-gnu/baseline_symbols.txt: Update. 	* config/abi/post/s390x-linux-gnu/baseline_symbols.txt: Update.
       PR tree-optimization/91597 	* tree-vrp.c (extract_range_from_binary_expr): Remove unsafe 	BIT_AND_EXPR optimization for pointers, even if both operand 	ranges don't include NULL, the result can be NULL.
@@ -298,6 +302,31 @@ jakub (41):
       PR middle-end/90840 	* expmed.c (store_bit_field_1): Handle the case where op0 is not a MEM 	and has a mode that doesn't have corresponding integral type.
       PR c++/90767 	* call.c (complain_about_no_candidates_for_method_call): If 	conv->from is not a type, pass to complain_about_bad_argument 	lvalue_type of conv->from.
       PR tree-optimization/91355 	* tree-ssa-sink.c (select_best_block): Use >= rather than > 	for early_bb scaled count with best_bb count comparison.
+      Backported from mainline 	2019-11-21  Jakub Jelinek  <jakub@redhat.com> 		    Jason Merrill  <jason@redhat.com>
+      Backported from mainline 	2019-11-22  Jakub Jelinek  <jakub@redhat.com>
+      Backported from mainline 	2019-11-23  Jakub Jelinek  <jakub@redhat.com>
+      Backported from mainline 	2019-11-26  Jakub Jelinek  <jakub@redhat.com>
+      Backported from mainline 	2019-11-26  Jakub Jelinek  <jakub@redhat.com>
+      Backported from mainline 	2019-11-26  Jakub Jelinek  <jakub@redhat.com>
+      Backported from mainline 	2019-11-26  Jakub Jelinek  <jakub@redhat.com>
+      Backported from mainline 	2019-11-27  Jakub Jelinek  <jakub@redhat.com>
+      Backported from mainline 	2019-11-27  Jakub Jelinek  <jakub@redhat.com>
+      Backported from mainline 	2019-11-27  Jakub Jelinek  <jakub@redhat.com>
+      Backported from mainline 	2019-11-28  Jakub Jelinek  <jakub@redhat.com>
+      Backported from mainline 	2019-11-29  Jakub Jelinek  <jakub@redhat.com>
+      Backported from mainline 	2019-12-02  Jakub Jelinek  <jakub@redhat.com>
+      Backported from mainline 	2019-12-03  Jakub Jelinek  <jakub@redhat.com>
+      Backported from mainline 	2019-12-03  Jakub Jelinek  <jakub@redhat.com>
+      PR fortran/92756 	* omp-low.c (check_omp_nesting_restrictions): If lang_GNU_Fortran, 	diagnose teams not closely nested inside of target.
+      Backported from mainline 	2019-12-05  Jakub Jelinek  <jakub@redhat.com>
+      Backported from mainline 	2019-12-06  Jakub Jelinek  <jakub@redhat.com>
+      Backported from mainline 	2019-12-06  Jakub Jelinek  <jakub@redhat.com>
+      Backported from mainline 	2019-12-11  Jakub Jelinek  <jakub@redhat.com>
+      Backported from mainline 	2019-12-11  Jakub Jelinek  <jakub@redhat.com>
+      Backported from mainline 	2019-12-12  Jakub Jelinek  <jakub@redhat.com>
+      Backported from mainline 	2019-12-14  Jakub Jelinek  <jakub@redhat.com>
+      Backported from mainline 	2019-12-14  Jakub Jelinek  <jakub@redhat.com>
+      Backported from mainline 	2019-12-19  Jakub Jelinek  <jakub@redhat.com>
 
 jason (8):
       PR c++/90538 - multiple expansions of capture packs
@@ -429,11 +458,12 @@ olegendo (4):
       gcc/ 2019-10-01  Oleg Endo  <olegendo@gcc.gnu.org>
       gcc/ 	Backport from mainline 	2019-10-10  Oleg Endo  <olegendo@gcc.gnu.org>
 
-pault (4):
+pault (5):
       2019-09-07  Paul Thomas  <pault@gcc.gnu.org>
       2019-09-21  Paul Thomas  <pault@gcc.gnu.org>
       2019-10-27  Paul Thomas  <pault@gcc.gnu.org>
       2019-10-28  Paul Thomas  <pault@gcc.gnu.org>
+      2019-12-21  Paul Thomas  <pault@gcc.gnu.org>
 
 rearnsha (3):
       [aarch64] PR target/91386 Use copy_rtx to avoid modifying original insns in peep2 pattern
@@ -547,6 +577,10 @@ willschm (1):
 wschmidt (2):
       [gcc]
       2019-10-17  Bill Schmidt  <wschmidt@linux.ibm.com>
+
+zhroma (2):
+      modulo-sched: backport PR92591 fix from mainline
+      Backport: rename tests to reference the correct PR
 
 diff --git a/contrib/ChangeLog b/contrib/ChangeLog
 index 8565be188d9..c9b9e26ee57 100644
@@ -779,10 +813,72 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..e01e58d3a0a 100644
+index 7f6557d8018..ddf21f7108e 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,1499 @@
+@@ -1,3 +1,1561 @@
++2019-12-20  Jakub Jelinek  <jakub@redhat.com>
++
++	PR fortran/92756
++	* omp-low.c (check_omp_nesting_restrictions): If lang_GNU_Fortran,
++	diagnose teams not closely nested inside of target.
++
++	Backported from mainline
++	2019-12-14  Jakub Jelinek  <jakub@redhat.com>
++
++	PR ipa/92357
++	* ipa-fnsummary.c (ipa_fn_summary_write): Use
++	lto_symtab_encoder_iterator with lsei_start_function_in_partition and
++	lsei_next_function_in_partition instead of walking all cgraph nodes
++	in encoder.
++
++	PR tree-optimization/92930
++	* ipa-pure-const.c (special_builtin_state): Don't handle
++	BUILT_IN_APPLY.
++
++	2019-12-12  Jakub Jelinek  <jakub@redhat.com>
++
++	PR target/92904
++	* config/i386/i386.c (ix86_gimplify_va_arg): If need_intregs and
++	not need_temp, decrease alignment of the read because the GPR save
++	area only guarantees 8-byte alignment.
++
++	2019-12-11  Jakub Jelinek  <jakub@redhat.com>
++
++	PR target/92723
++	* tree-vect-patterns.c (vect_recog_rotate_pattern): If dt is not
++	vect_internal_def, use oprnd1 as is, without trying to cast it.
++	Formatting fix.
++
++	2019-11-27  Jakub Jelinek  <jakub@redhat.com>
++
++	PR debug/92664
++	* dwarf2out.c (lookup_filename): Use "<stdin>" instead of "".
++
++	2019-11-26  Jakub Jelinek  <jakub@redhat.com>
++
++	PR tree-optimization/92644
++	* tree-ssa-phiopt.c (minmax_replacement): Add INTEGRAL_TYPE_P check
++	next to INTEGER_CST checks.
++
++	2019-11-23  Jakub Jelinek  <jakub@redhat.com>
++
++	PR target/92615
++	* config/i386/i386.c (ix86_md_asm_adjust): If dest_mode is
++	GET_MODE (dest), is not QImode, using ZERO_EXTEND and dest is not
++	register_operand, force x into register before storing it into dest.
++	Formatting fix.
++
++2019-12-20  Roman Zhuykov  <zhroma@ispras.ru>
++
++	Backport from mainline
++	2019-12-13  Roman Zhuykov  <zhroma@ispras.ru>
++
++	PR rtl-optimization/92591
++	* modulo-sched.c (ps_add_node_check_conflicts): Improve checking
++	for history > 0 case.
++	* params.def (sms-dfa-history): Limit to 16.
++
 +2019-12-19  Georg-Johann Lay  <avr@gjlay.de>
 +
 +	Backport support for some AVR devices from avrxmega3 family
@@ -2282,7 +2378,7 @@ index 7f6557d8018..e01e58d3a0a 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +2009,7 @@
+@@ -513,7 +2071,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -2865,10 +2961,29 @@ index 1ffb491d785..66c9295ff4a 100644
  
  #endif /* GCC_BUILTINS_H */
 diff --git a/gcc/c-family/ChangeLog b/gcc/c-family/ChangeLog
-index acdfe79894e..e7f0127dcf2 100644
+index acdfe79894e..f077a7dc503 100644
 --- a/gcc/c-family/ChangeLog
 +++ b/gcc/c-family/ChangeLog
-@@ -1,3 +1,45 @@
+@@ -1,3 +1,64 @@
++2019-12-20  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from mainline
++	2019-11-26  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/61414
++	* c-attribs.c (handle_mode_attribute): Add mode attribute to
++	ENUMERAL_TYPEs.
++
++	2019-11-22  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c/90677
++	* c-common.h (identifier_global_tag): Declare.
++	* c-format.c (get_pointer_to_named_type): Renamed to ...
++	(get_named_type): ... this.  Use identifier_global_tag instead of
++	identifier_global_value, handle the return value being a TYPE_P.
++	(init_dynamic_diag_info): Adjust get_pointer_to_named_type callers
++	to call get_named_type instead.  Formatting fixes.
++
 +2019-11-13  Eric Botcazou  <ebotcazou@adacore.com>
 +
 +	* c-ada-spec.c (get_underlying_decl): Do not look through typedefs.
@@ -2951,11 +3066,31 @@ index 76e736964de..0fee9a0d037 100644
  	{
  	  /* Generate full declaration.  */
  	  dump_nested_type (buffer, decl, t, parent, spc);
+diff --git a/gcc/c-family/c-attribs.c b/gcc/c-family/c-attribs.c
+index 93b210eed9c..0275dc0245c 100644
+--- a/gcc/c-family/c-attribs.c
++++ b/gcc/c-family/c-attribs.c
+@@ -1843,6 +1843,7 @@ handle_mode_attribute (tree *node, tree name, tree args,
+ 		typefm = make_signed_type (TYPE_PRECISION (typefm));
+ 	      TREE_TYPE (typefm) = type;
+ 	    }
++	  *no_add_attrs = false;
+ 	}
+       else if (VECTOR_MODE_P (mode)
+ 	       ? TREE_CODE (type) != TREE_CODE (TREE_TYPE (typefm))
 diff --git a/gcc/c-family/c-common.h b/gcc/c-family/c-common.h
-index 1cf2cae6395..e9ef16aff29 100644
+index 1cf2cae6395..68376426721 100644
 --- a/gcc/c-family/c-common.h
 +++ b/gcc/c-family/c-common.h
-@@ -1184,6 +1184,7 @@ extern void c_omp_split_clauses (location_t, enum tree_code, omp_clause_mask,
+@@ -800,6 +800,7 @@ extern void c_register_addr_space (const char *str, addr_space_t as);
+ extern bool in_late_binary_op;
+ extern const char *c_addr_space_name (addr_space_t as);
+ extern tree identifier_global_value (tree);
++extern tree identifier_global_tag (tree);
+ extern tree c_linkage_bindings (tree);
+ extern void record_builtin_type (enum rid, const char *, tree);
+ extern tree build_void_list_node (void);
+@@ -1184,6 +1185,7 @@ extern void c_omp_split_clauses (location_t, enum tree_code, omp_clause_mask,
  				 tree, tree *);
  extern tree c_omp_declare_simd_clauses_to_numbers (tree, tree);
  extern void c_omp_declare_simd_clauses_to_decls (tree, tree);
@@ -2963,6 +3098,100 @@ index 1cf2cae6395..e9ef16aff29 100644
  extern enum omp_clause_default_kind c_omp_predetermined_sharing (tree);
  
  /* Return next tree in the chain for chain_next walking of tree nodes.  */
+diff --git a/gcc/c-family/c-format.c b/gcc/c-family/c-format.c
+index a7f76c1c01d..f706793a479 100644
+--- a/gcc/c-family/c-format.c
++++ b/gcc/c-family/c-format.c
+@@ -3909,31 +3909,32 @@ init_dynamic_gfc_info (void)
+     }
+ }
+ 
+-/* Lookup the type named NAME and return a pointer-to-NAME type if found.
+-   Otherwise, return void_type_node if NAME has not been used yet, or NULL_TREE if
+-   NAME is not a type (issuing an error).  */
++/* Lookup the type named NAME and return a NAME type if found.
++   Otherwise, return void_type_node if NAME has not been used yet,
++   or NULL_TREE if NAME is not a type (issuing an error).  */
+ 
+ static tree
+-get_pointer_to_named_type (const char *name)
++get_named_type (const char *name)
+ {
+-  tree result;
+-  if ((result = maybe_get_identifier (name)))
++  if (tree result = maybe_get_identifier (name))
+     {
+-      result = identifier_global_value (result);
++      result = identifier_global_tag (result);
+       if (result)
+ 	{
+-	  if (TREE_CODE (result) != TYPE_DECL)
++	  if (TYPE_P (result))
++	    ;
++	  else if (TREE_CODE (result) == TYPE_DECL)
++	    result = TREE_TYPE (result);
++	  else
+ 	    {
+ 	      error ("%qs is not defined as a type", name);
+ 	      result = NULL_TREE;
+ 	    }
+-	  else
+-	    result = TREE_TYPE (result);
+ 	}
++      return result;
+     }
+   else
+-    result = void_type_node;
+-  return result;
++    return void_type_node;
+ }
+ 
+ /* Determine the types of "tree" and "location_t" in the code being
+@@ -3963,23 +3964,24 @@ init_dynamic_diag_info (void)
+ 	 an extra type level.  */
+       if ((local_tree_type_node = maybe_get_identifier ("tree")))
+ 	{
+-	  local_tree_type_node = identifier_global_value (local_tree_type_node);
++	  local_tree_type_node
++	    = identifier_global_value (local_tree_type_node);
+ 	  if (local_tree_type_node)
+ 	    {
+ 	      if (TREE_CODE (local_tree_type_node) != TYPE_DECL)
+ 		{
+ 		  error ("%<tree%> is not defined as a type");
+-		  local_tree_type_node = 0;
++		  local_tree_type_node = NULL_TREE;
+ 		}
+ 	      else if (TREE_CODE (TREE_TYPE (local_tree_type_node))
+ 		       != POINTER_TYPE)
+ 		{
+ 		  error ("%<tree%> is not defined as a pointer type");
+-		  local_tree_type_node = 0;
++		  local_tree_type_node = NULL_TREE;
+ 		}
+ 	      else
+-		local_tree_type_node =
+-		  TREE_TYPE (TREE_TYPE (local_tree_type_node));
++		local_tree_type_node
++		  = TREE_TYPE (TREE_TYPE (local_tree_type_node));
+ 	    }
+ 	}
+       else
+@@ -3989,12 +3991,12 @@ init_dynamic_diag_info (void)
+   /* Similar to the above but for gimple*.  */
+   if (!local_gimple_ptr_node
+       || local_gimple_ptr_node == void_type_node)
+-    local_gimple_ptr_node = get_pointer_to_named_type ("gimple");
++    local_gimple_ptr_node = get_named_type ("gimple");
+ 
+   /* Similar to the above but for cgraph_node*.  */
+   if (!local_cgraph_node_ptr_node
+       || local_cgraph_node_ptr_node == void_type_node)
+-    local_cgraph_node_ptr_node = get_pointer_to_named_type ("cgraph_node");
++    local_cgraph_node_ptr_node = get_named_type ("cgraph_node");
+ 
+   static tree hwi;
+ 
 diff --git a/gcc/c-family/c-lex.c b/gcc/c-family/c-lex.c
 index 0a368a33a58..3c92103a5d4 100644
 --- a/gcc/c-family/c-lex.c
@@ -3041,10 +3270,18 @@ index 322cf98eb02..67dce9e125a 100644
      {
        /* Check the expected alignment against the field alignment.  */
 diff --git a/gcc/c/ChangeLog b/gcc/c/ChangeLog
-index 89e5b25d020..1295ca2c2a5 100644
+index 89e5b25d020..67f52ddd562 100644
 --- a/gcc/c/ChangeLog
 +++ b/gcc/c/ChangeLog
-@@ -1,3 +1,41 @@
+@@ -1,3 +1,49 @@
++2019-12-20  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from mainline
++	2019-11-22  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c/90677
++	* c-decl.c (identifier_global_tag): Define.
++
 +2019-12-02  Sandra Loosemore  <sandra@codesourcery.com>
 +
 +	Fix bugs relating to flexibly-sized objects in nios2 backend.
@@ -3087,7 +3324,7 @@ index 89e5b25d020..1295ca2c2a5 100644
  
  	* GCC 9.2.0 released.
 diff --git a/gcc/c/c-decl.c b/gcc/c/c-decl.c
-index 04e0f4dc198..c423a0c41d2 100644
+index 04e0f4dc198..c632e4afd24 100644
 --- a/gcc/c/c-decl.c
 +++ b/gcc/c/c-decl.c
 @@ -5586,39 +5586,6 @@ check_compound_literal_type (location_t loc, struct c_type_name *type_name)
@@ -3130,6 +3367,27 @@ index 04e0f4dc198..c423a0c41d2 100644
  /* Performs sanity checks on the TYPE and WIDTH of the bit-field NAME,
     replacing with appropriate values if they are invalid.  */
  
+@@ -9974,6 +9941,20 @@ identifier_global_value	(tree t)
+   return NULL_TREE;
+ }
+ 
++/* Return the global value of tag T as a symbol.  */
++
++tree
++identifier_global_tag (tree t)
++{
++  struct c_binding *b;
++
++  for (b = I_TAG_BINDING (t); b; b = b->shadowed)
++    if (B_IN_FILE_SCOPE (b) || B_IN_EXTERNAL_SCOPE (b))
++      return b->decl;
++
++  return NULL_TREE;
++}
++
+ /* In C, the only C-linkage public declaration is at file scope.  */
+ 
+ tree
 diff --git a/gcc/c/c-parser.c b/gcc/c/c-parser.c
 index f8d1fb3fa78..aafe8d1740b 100644
 --- a/gcc/c/c-parser.c
@@ -7148,7 +7406,7 @@ index 6580890edc0..5dedeb2d18b 100644
  BDESC (OPTION_MASK_ISA_SSSE3, 0, CODE_FOR_ssse3_phaddwv8hi3, "__builtin_ia32_phaddw128", IX86_BUILTIN_PHADDW128, UNKNOWN, (int) V8HI_FTYPE_V8HI_V8HI)
  BDESC (OPTION_MASK_ISA_SSSE3 | OPTION_MASK_ISA_MMX, 0, CODE_FOR_ssse3_phaddwv4hi3, "__builtin_ia32_phaddw", IX86_BUILTIN_PHADDW, UNKNOWN, (int) V4HI_FTYPE_V4HI_V4HI)
 diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
-index 2b37296e537..ce3fbd120ed 100644
+index 2b37296e537..fa447770548 100644
 --- a/gcc/config/i386/i386.c
 +++ b/gcc/config/i386/i386.c
 @@ -5423,7 +5423,25 @@ ix86_valid_target_attribute_inner_p (tree args, char *p_strings[],
@@ -7199,7 +7457,41 @@ index 2b37296e537..ce3fbd120ed 100644
        else if (!orig_arch_specified)
  	opts->x_ix86_arch_string = NULL;
  
-@@ -16960,7 +16968,7 @@ output_pic_addr_const (FILE *file, rtx x, int code)
+@@ -9823,6 +9831,7 @@ ix86_gimplify_va_arg (tree valist, tree type, gimple_seq *pre_p,
+   tree ptrtype;
+   machine_mode nat_mode;
+   unsigned int arg_boundary;
++  unsigned int type_align;
+ 
+   /* Only 64bit target needs something special.  */
+   if (is_va_list_char_pointer (TREE_TYPE (valist)))
+@@ -9880,6 +9889,7 @@ ix86_gimplify_va_arg (tree valist, tree type, gimple_seq *pre_p,
+   /* Pull the value out of the saved registers.  */
+ 
+   addr = create_tmp_var (ptr_type_node, "addr");
++  type_align = TYPE_ALIGN (type);
+ 
+   if (container)
+     {
+@@ -10050,6 +10060,9 @@ ix86_gimplify_va_arg (tree valist, tree type, gimple_seq *pre_p,
+ 	  t = build2 (PLUS_EXPR, TREE_TYPE (gpr), gpr,
+ 		      build_int_cst (TREE_TYPE (gpr), needed_intregs * 8));
+ 	  gimplify_assign (gpr, t, pre_p);
++	  /* The GPR save area guarantees only 8-byte alignment.  */
++	  if (!need_temp)
++	    type_align = MIN (type_align, 64);
+ 	}
+ 
+       if (needed_sseregs)
+@@ -10094,6 +10107,7 @@ ix86_gimplify_va_arg (tree valist, tree type, gimple_seq *pre_p,
+   if (container)
+     gimple_seq_add_stmt (pre_p, gimple_build_label (lab_over));
+ 
++  type = build_aligned_type (type, type_align);
+   ptrtype = build_pointer_type_for_mode (type, ptr_mode, true);
+   addr = fold_convert (ptrtype, addr);
+ 
+@@ -16960,7 +16974,7 @@ output_pic_addr_const (FILE *file, rtx x, int code)
        break;
  
      case SYMBOL_REF:
@@ -7208,6 +7500,25 @@ index 2b37296e537..ce3fbd120ed 100644
  	output_addr_const (file, x);
        else
  	{
+@@ -44377,11 +44391,15 @@ ix86_md_asm_adjust (vec<rtx> &outputs, vec<rtx> &/*inputs*/,
+ 	    {
+ 	      x = force_reg (dest_mode, const0_rtx);
+ 
+-	      emit_insn (gen_movstrictqi
+-			 (gen_lowpart (QImode, x), destqi));
++	      emit_insn (gen_movstrictqi (gen_lowpart (QImode, x), destqi));
+ 	    }
+ 	  else
+-	    x = gen_rtx_ZERO_EXTEND (dest_mode, destqi);
++	    {
++	      x = gen_rtx_ZERO_EXTEND (dest_mode, destqi);
++	      if (dest_mode == GET_MODE (dest)
++		  && !register_operand (dest, GET_MODE (dest)))
++		x = force_reg (dest_mode, x);
++	    }
+ 	}
+ 
+       if (dest_mode != GET_MODE (dest))
 diff --git a/gcc/config/i386/i386.h b/gcc/config/i386/i386.h
 index 2cb16d9fbf6..934352d6331 100644
 --- a/gcc/config/i386/i386.h
@@ -10726,10 +11037,99 @@ index ce2825580c6..8243716589f 100644
  AC_SUBST(all_languages)
  AC_SUBST(all_selected_languages)
 diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
-index c977850d067..5600ebea798 100644
+index c977850d067..b2e49a4da4c 100644
 --- a/gcc/cp/ChangeLog
 +++ b/gcc/cp/ChangeLog
-@@ -1,3 +1,273 @@
+@@ -1,3 +1,362 @@
++2019-12-20  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from mainline
++	2019-12-06  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/92831 - CWG 1299, not extending temporary lifetime for ?:
++	* cp-tree.h (extend_ref_init_temps): Add a new argument with NULL
++	default arg.
++	* call.c (set_up_extended_ref_temp): Add COND_GUARD argument, pass it
++	down to extend_ref_init_temps.  Before pushing cleanup, if COND_GUARD
++	is non-NULL, create a bool temporary if needed, initialize to false
++	and guard the cleanup with the temporary being true.
++	(extend_ref_init_temps_1): Add COND_GUARD argument, pass it down
++	to recursive calls and set_up_extended_ref_temp.  Handle COND_EXPR.
++	(extend_ref_init_temps): Add COND_GUARD argument, pass it down to
++	recursive calls and to extend_ref_init_temps_1.
++
++	2019-12-03  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/92732
++	* typeck2.c (digest_nsdmi_init): For bitfields, use
++	DECL_BIT_FIELD_TYPE instead of TREE_TYPE.
++
++	PR c++/92695
++	* constexpr.c (cxx_bind_parameters_in_call): For virtual calls,
++	adjust the first argument to point to the derived object rather
++	than its base.
++
++	2019-12-02  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/92695
++	* constexpr.c (cxx_eval_constant_expression) <case OBJ_TYPE_REF>: Use
++	STRIP_NOPS before checking for ADDR_EXPR.
++
++	2019-11-29  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/60228
++	* parser.c (cp_parser_omp_declare_reduction_exprs): If
++	processing_template_decl, wrap the combiner or initializer
++	into EXPR_STMT.
++	* decl.c (start_preparsed_function): Don't start a lambda scope
++	for DECL_OMP_DECLARE_REDUCTION_P functions.
++	(finish_function): Don't finish a lambda scope for
++	DECL_OMP_DECLARE_REDUCTION_P functions, nor cp_fold_function
++	them nor cp_genericize them.
++	* mangle.c (decl_mangling_context): Look through
++	DECL_OMP_DECLARE_REDUCTION_P functions.
++	* semantics.c (expand_or_defer_fn_1): For DECL_OMP_DECLARE_REDUCTION_P
++	functions, use tentative linkage, don't keep their bodies with
++	-fkeep-inline-functions and return false at the end.
++
++	2019-11-28  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/92695
++	* decl2.c (mark_used): Don't call note_vague_linkage_fn for pure
++	virtual functions, even if they are declared inline.
++
++	2019-11-27  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/92524
++	* tree.c (replace_placeholders_r): Don't walk constructor elts with
++	RANGE_EXPR indexes.
++
++	2019-11-26  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/92648
++	* parser.c (cp_parser_std_attribute): For unknown attributes,
++	skip balanced token seq instead of trying to parse
++	attribute-argument-clause as expression list.
++
++	PR c++/61414
++	* class.c (enum_to_min_precision): New hash_map.
++	(enum_min_precision): New function.
++	(check_bitfield_decl): Use it.
++
++	2019-11-22  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c/90677
++	* cp-objcp-common.c (identifier_global_tag): Define.
++
++	2019-11-21  Jakub Jelinek  <jakub@redhat.com>
++		    Jason Merrill  <jason@redhat.com>
++
++	PR c++/90842
++	* parser.c (cp_parser_decl_specifier_seq): For concept or typedef
++	break early if CP_PARSER_FLAGS_ONLY_MUTABLE_OR_CONSTEXPR.
++	For type specifiers, set CP_PARSER_FLAGS_NO_TYPE_DEFINITIONS
++	if CP_PARSER_FLAGS_ONLY_MUTABLE_OR_CONSTEXPR is set.
++
 +2019-12-11  Jason Merrill  <jason@redhat.com>
 +
 +	PR c++/57082 - new X{} and private destructor.
@@ -11003,7 +11403,7 @@ index c977850d067..5600ebea798 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -16,7 +286,7 @@
+@@ -16,7 +375,7 @@
  
  	Backported from mainline
  	2019-08-02  Marek Polacek  <polacek@redhat.com>
@@ -11013,7 +11413,7 @@ index c977850d067..5600ebea798 100644
  	* pt.c (value_dependent_expression_p): Consider __PRETTY_FUNCTION__
  	inside a template function value-dependent.
 diff --git a/gcc/cp/call.c b/gcc/cp/call.c
-index 9e22a146a16..8e56705d6ce 100644
+index 9e22a146a16..bc182e2f6da 100644
 --- a/gcc/cp/call.c
 +++ b/gcc/cp/call.c
 @@ -530,9 +530,8 @@ null_ptr_cst_p (tree t)
@@ -11163,8 +11563,162 @@ index 9e22a146a16..8e56705d6ce 100644
        && (!DECL_CONSTRUCTOR_P (cand1->fn) || !DECL_CONSTRUCTOR_P (cand2->fn))
        && winner != compare_ics (cand1->second_conv, cand2->second_conv))
      {
+@@ -11437,7 +11449,7 @@ make_temporary_var_for_ref_to_temp (tree decl, tree type)
+ 
+ static tree
+ set_up_extended_ref_temp (tree decl, tree expr, vec<tree, va_gc> **cleanups,
+-			  tree *initp)
++			  tree *initp, tree *cond_guard)
+ {
+   tree init;
+   tree type;
+@@ -11468,7 +11480,8 @@ set_up_extended_ref_temp (tree decl, tree expr, vec<tree, va_gc> **cleanups,
+ 
+   /* Recursively extend temps in this initializer.  */
+   TARGET_EXPR_INITIAL (expr)
+-    = extend_ref_init_temps (decl, TARGET_EXPR_INITIAL (expr), cleanups);
++    = extend_ref_init_temps (decl, TARGET_EXPR_INITIAL (expr), cleanups,
++			     cond_guard);
+ 
+   /* Any reference temp has a non-trivial initializer.  */
+   DECL_NONTRIVIALLY_INITIALIZED_P (var) = true;
+@@ -11509,7 +11522,29 @@ set_up_extended_ref_temp (tree decl, tree expr, vec<tree, va_gc> **cleanups,
+ 	{
+ 	  tree cleanup = cxx_maybe_build_cleanup (var, tf_warning_or_error);
+ 	  if (cleanup)
+-	    vec_safe_push (*cleanups, cleanup);
++	    {
++	      if (cond_guard && cleanup != error_mark_node)
++		{
++		  if (*cond_guard == NULL_TREE)
++		    {
++		      *cond_guard = build_decl (input_location, VAR_DECL,
++						NULL_TREE, boolean_type_node);
++		      DECL_ARTIFICIAL (*cond_guard) = 1;
++		      DECL_IGNORED_P (*cond_guard) = 1;
++		      DECL_CONTEXT (*cond_guard) = current_function_decl;
++		      layout_decl (*cond_guard, 0);
++		      add_decl_expr (*cond_guard);
++		      tree set = cp_build_modify_expr (UNKNOWN_LOCATION,
++						       *cond_guard, NOP_EXPR,
++						       boolean_false_node,
++						       tf_warning_or_error);
++		      finish_expr_stmt (set);
++		    }
++		  cleanup = build3 (COND_EXPR, void_type_node,
++				    *cond_guard, cleanup, NULL_TREE);
++		}
++	      vec_safe_push (*cleanups, cleanup);
++	    }
+ 	}
+ 
+       /* We must be careful to destroy the temporary only
+@@ -11614,7 +11649,8 @@ initialize_reference (tree type, tree expr,
+    which is bound either to a reference or a std::initializer_list.  */
+ 
+ static tree
+-extend_ref_init_temps_1 (tree decl, tree init, vec<tree, va_gc> **cleanups)
++extend_ref_init_temps_1 (tree decl, tree init, vec<tree, va_gc> **cleanups,
++			 tree *cond_guard)
+ {
+   tree sub = init;
+   tree *p;
+@@ -11622,20 +11658,52 @@ extend_ref_init_temps_1 (tree decl, tree init, vec<tree, va_gc> **cleanups)
+   if (TREE_CODE (sub) == COMPOUND_EXPR)
+     {
+       TREE_OPERAND (sub, 1)
+-        = extend_ref_init_temps_1 (decl, TREE_OPERAND (sub, 1), cleanups);
++	= extend_ref_init_temps_1 (decl, TREE_OPERAND (sub, 1), cleanups,
++				   cond_guard);
++      return init;
++    }
++  if (TREE_CODE (sub) == COND_EXPR)
++    {
++      tree cur_cond_guard = NULL_TREE;
++      if (TREE_OPERAND (sub, 1))
++	TREE_OPERAND (sub, 1)
++	  = extend_ref_init_temps_1 (decl, TREE_OPERAND (sub, 1), cleanups,
++				     &cur_cond_guard);
++      if (cur_cond_guard)
++	{
++	  tree set = cp_build_modify_expr (UNKNOWN_LOCATION, cur_cond_guard,
++					   NOP_EXPR, boolean_true_node,
++					   tf_warning_or_error);
++	  TREE_OPERAND (sub, 1)
++	    = cp_build_compound_expr (set, TREE_OPERAND (sub, 1),
++				      tf_warning_or_error);
++	}
++      cur_cond_guard = NULL_TREE;
++      if (TREE_OPERAND (sub, 2))
++	TREE_OPERAND (sub, 2)
++	  = extend_ref_init_temps_1 (decl, TREE_OPERAND (sub, 2), cleanups,
++				     &cur_cond_guard);
++      if (cur_cond_guard)
++	{
++	  tree set = cp_build_modify_expr (UNKNOWN_LOCATION, cur_cond_guard,
++					   NOP_EXPR, boolean_true_node,
++					   tf_warning_or_error);
++	  TREE_OPERAND (sub, 2)
++	    = cp_build_compound_expr (set, TREE_OPERAND (sub, 2),
++				      tf_warning_or_error);
++	}
+       return init;
+     }
+   if (TREE_CODE (sub) != ADDR_EXPR)
+     return init;
+   /* Deal with binding to a subobject.  */
+   for (p = &TREE_OPERAND (sub, 0);
+-       (TREE_CODE (*p) == COMPONENT_REF
+-	|| TREE_CODE (*p) == ARRAY_REF); )
++       TREE_CODE (*p) == COMPONENT_REF || TREE_CODE (*p) == ARRAY_REF; )
+     p = &TREE_OPERAND (*p, 0);
+   if (TREE_CODE (*p) == TARGET_EXPR)
+     {
+       tree subinit = NULL_TREE;
+-      *p = set_up_extended_ref_temp (decl, *p, cleanups, &subinit);
++      *p = set_up_extended_ref_temp (decl, *p, cleanups, &subinit, cond_guard);
+       recompute_tree_invariant_for_addr_expr (sub);
+       if (init != sub)
+ 	init = fold_convert (TREE_TYPE (init), sub);
+@@ -11650,13 +11718,14 @@ extend_ref_init_temps_1 (tree decl, tree init, vec<tree, va_gc> **cleanups)
+    lifetime to match that of DECL.  */
+ 
+ tree
+-extend_ref_init_temps (tree decl, tree init, vec<tree, va_gc> **cleanups)
++extend_ref_init_temps (tree decl, tree init, vec<tree, va_gc> **cleanups,
++		       tree *cond_guard)
+ {
+   tree type = TREE_TYPE (init);
+   if (processing_template_decl)
+     return init;
+   if (TYPE_REF_P (type))
+-    init = extend_ref_init_temps_1 (decl, init, cleanups);
++    init = extend_ref_init_temps_1 (decl, init, cleanups, cond_guard);
+   else
+     {
+       tree ctor = init;
+@@ -11669,7 +11738,8 @@ extend_ref_init_temps (tree decl, tree init, vec<tree, va_gc> **cleanups)
+ 	      /* The temporary array underlying a std::initializer_list
+ 		 is handled like a reference temporary.  */
+ 	      tree array = CONSTRUCTOR_ELT (ctor, 0)->value;
+-	      array = extend_ref_init_temps_1 (decl, array, cleanups);
++	      array = extend_ref_init_temps_1 (decl, array, cleanups,
++					       cond_guard);
+ 	      CONSTRUCTOR_ELT (ctor, 0)->value = array;
+ 	    }
+ 	  else
+@@ -11678,7 +11748,8 @@ extend_ref_init_temps (tree decl, tree init, vec<tree, va_gc> **cleanups)
+ 	      constructor_elt *p;
+ 	      vec<constructor_elt, va_gc> *elts = CONSTRUCTOR_ELTS (ctor);
+ 	      FOR_EACH_VEC_SAFE_ELT (elts, i, p)
+-		p->value = extend_ref_init_temps (decl, p->value, cleanups);
++		p->value = extend_ref_init_temps (decl, p->value, cleanups,
++						  cond_guard);
+ 	    }
+ 	  recompute_constructor_flags (ctor);
+ 	  if (decl_maybe_constant_var_p (decl) && TREE_CONSTANT (ctor))
 diff --git a/gcc/cp/class.c b/gcc/cp/class.c
-index a47777cdd9e..f7059fb7341 100644
+index a47777cdd9e..35b75580c33 100644
 --- a/gcc/cp/class.c
 +++ b/gcc/cp/class.c
 @@ -1907,6 +1907,7 @@ fixup_type_variants (tree t)
@@ -11190,11 +11744,110 @@ index a47777cdd9e..f7059fb7341 100644
  	    inform (DECL_SOURCE_LOCATION (copy_or_move),
  		    "%q#D is public, but requires an existing %q#T object",
  		    copy_or_move, t);
+@@ -3197,6 +3198,60 @@ add_implicitly_declared_members (tree t, tree* access_decls,
+     }
+ }
+ 
++/* Cache of enum_min_precision values.  */
++static GTY((deletable)) hash_map<tree, int> *enum_to_min_precision;
++
++/* Return the minimum precision of a bit-field needed to store all
++   enumerators of ENUMERAL_TYPE TYPE.  */
++
++static int
++enum_min_precision (tree type)
++{
++  type = TYPE_MAIN_VARIANT (type);
++  /* For unscoped enums without fixed underlying type and without mode
++     attribute we can just use precision of the underlying type.  */
++  if (UNSCOPED_ENUM_P (type)
++      && !ENUM_FIXED_UNDERLYING_TYPE_P (type)
++      && !lookup_attribute ("mode", TYPE_ATTRIBUTES (type)))
++    return TYPE_PRECISION (ENUM_UNDERLYING_TYPE (type));
++
++  if (enum_to_min_precision == NULL)
++    enum_to_min_precision = hash_map<tree, int>::create_ggc (37);
++
++  bool existed;
++  int prec = enum_to_min_precision->get_or_insert (type, &existed);
++  if (existed)
++    return prec;
++
++  tree minnode, maxnode;
++  if (TYPE_VALUES (type))
++    {
++      minnode = maxnode = NULL_TREE;
++      for (tree values = TYPE_VALUES (type);
++	   values; values = TREE_CHAIN (values))
++	{
++	  tree decl = TREE_VALUE (values);
++	  tree value = DECL_INITIAL (decl);
++	  if (value == error_mark_node)
++	    value = integer_zero_node;
++	  if (!minnode)
++	    minnode = maxnode = value;
++	  else if (tree_int_cst_lt (maxnode, value))
++	    maxnode = value;
++	  else if (tree_int_cst_lt (value, minnode))
++	    minnode = value;
++	}
++    }
++  else
++    minnode = maxnode = integer_zero_node;
++
++  signop sgn = tree_int_cst_sgn (minnode) >= 0 ? UNSIGNED : SIGNED;
++  int lowprec = tree_int_cst_min_precision (minnode, sgn);
++  int highprec = tree_int_cst_min_precision (maxnode, sgn);
++  prec = MAX (lowprec, highprec);
++  return prec;
++}
++
+ /* FIELD is a bit-field.  We are finishing the processing for its
+    enclosing type.  Issue any appropriate messages and set appropriate
+    flags.  Returns false if an error has been diagnosed.  */
+@@ -3258,7 +3313,7 @@ check_bitfield_decl (tree field)
+ 		    "width of %qD exceeds its type", field);
+       else if (TREE_CODE (type) == ENUMERAL_TYPE)
+ 	{
+-	  int prec = TYPE_PRECISION (ENUM_UNDERLYING_TYPE (type));
++	  int prec = enum_min_precision (type);
+ 	  if (compare_tree_int (w, prec) < 0)
+ 	    warning_at (DECL_SOURCE_LOCATION (field), 0,
+ 			"%qD is too small to hold all values of %q#T",
 diff --git a/gcc/cp/constexpr.c b/gcc/cp/constexpr.c
-index f6f21b33396..9845416a812 100644
+index f6f21b33396..e2ca305aaca 100644
 --- a/gcc/cp/constexpr.c
 +++ b/gcc/cp/constexpr.c
-@@ -2703,7 +2703,10 @@ cxx_eval_component_reference (const constexpr_ctx *ctx, tree t,
+@@ -1419,6 +1419,28 @@ cxx_bind_parameters_in_call (const constexpr_ctx *ctx, tree t,
+ 	    arg = adjust_temp_type (type, arg);
+ 	  if (!TREE_CONSTANT (arg))
+ 	    *non_constant_args = true;
++
++	  /* For virtual calls, adjust the this argument, so that it is
++	     the object on which the method is called, rather than
++	     one of its bases.  */
++	  if (i == 0 && DECL_VIRTUAL_P (fun))
++	    {
++	      tree addr = arg;
++	      STRIP_NOPS (addr);
++	      if (TREE_CODE (addr) == ADDR_EXPR)
++		{
++		  tree obj = TREE_OPERAND (addr, 0);
++		  while (TREE_CODE (obj) == COMPONENT_REF
++			 && DECL_FIELD_IS_BASE (TREE_OPERAND (obj, 1))
++			 && !same_type_ignoring_top_level_qualifiers_p
++					(TREE_TYPE (obj), DECL_CONTEXT (fun)))
++		    obj = TREE_OPERAND (obj, 0);
++		  if (obj != TREE_OPERAND (addr, 0))
++		    arg = build_fold_addr_expr_with_type (obj,
++							  TREE_TYPE (arg));
++		}
++	    }
++
+ 	  *p = build_tree_list (parms, arg);
+ 	  p = &TREE_CHAIN (*p);
+ 	}
+@@ -2703,7 +2725,10 @@ cxx_eval_component_reference (const constexpr_ctx *ctx, tree t,
  	  : field == part)
  	{
  	  if (value)
@@ -11206,7 +11859,7 @@ index f6f21b33396..9845416a812 100644
  	  else
  	    /* We're in the middle of initializing it.  */
  	    break;
-@@ -2793,6 +2796,7 @@ cxx_eval_bit_field_ref (const constexpr_ctx *ctx, tree t,
+@@ -2793,6 +2818,7 @@ cxx_eval_bit_field_ref (const constexpr_ctx *ctx, tree t,
    FOR_EACH_CONSTRUCTOR_ELT (CONSTRUCTOR_ELTS (whole), i, field, value)
      {
        tree bitpos = bit_position (field);
@@ -11214,7 +11867,7 @@ index f6f21b33396..9845416a812 100644
        if (bitpos == start && DECL_SIZE (field) == TREE_OPERAND (t, 1))
  	return value;
        if (TREE_CODE (TREE_TYPE (field)) == INTEGER_TYPE
-@@ -3973,6 +3977,10 @@ cxx_eval_increment_expression (const constexpr_ctx *ctx, tree t,
+@@ -3973,6 +3999,10 @@ cxx_eval_increment_expression (const constexpr_ctx *ctx, tree t,
    tree offset = TREE_OPERAND (t, 1);
    gcc_assert (TREE_CONSTANT (offset));
  
@@ -11225,7 +11878,15 @@ index f6f21b33396..9845416a812 100644
    /* The operand as an lvalue.  */
    op = cxx_eval_constant_expression (ctx, op, true,
  				     non_constant_p, overflow_p);
-@@ -5917,6 +5925,7 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
+@@ -5116,6 +5146,7 @@ cxx_eval_constant_expression (const constexpr_ctx *ctx, tree t,
+ 	tree obj = OBJ_TYPE_REF_OBJECT (t);
+ 	obj = cxx_eval_constant_expression (ctx, obj, lval, non_constant_p,
+ 					    overflow_p);
++	STRIP_NOPS (obj);
+ 	/* We expect something in the form of &x.D.2103.D.2094; get x. */
+ 	if (TREE_CODE (obj) != ADDR_EXPR
+ 	    || !DECL_P (get_base_address (TREE_OPERAND (obj, 0))))
+@@ -5917,6 +5948,7 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
      case LABEL_DECL:
      case LABEL_EXPR:
      case CASE_LABEL_EXPR:
@@ -11233,7 +11894,7 @@ index f6f21b33396..9845416a812 100644
      case CONST_DECL:
      case SIZEOF_EXPR:
      case ALIGNOF_EXPR:
-@@ -6751,7 +6760,6 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
+@@ -6751,7 +6783,6 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
  
      case CLEANUP_STMT:
      case EMPTY_CLASS_EXPR:
@@ -11283,8 +11944,28 @@ index 17d10456341..a7121b70a3b 100644
      }
  
    /* this may not be specified in data-sharing clauses, still we need
+diff --git a/gcc/cp/cp-objcp-common.c b/gcc/cp/cp-objcp-common.c
+index 47651040008..a1c976e33a1 100644
+--- a/gcc/cp/cp-objcp-common.c
++++ b/gcc/cp/cp-objcp-common.c
+@@ -352,6 +352,15 @@ identifier_global_value (tree name)
+   return get_global_binding (name);
+ }
+ 
++/* Similarly, but return struct/class/union NAME instead.  */
++
++tree
++identifier_global_tag (tree name)
++{
++  return lookup_qualified_name (global_namespace, name, /*prefer_type*/2,
++				/*complain*/false);
++}
++
+ /* Register c++-specific dumps.  */
+ 
+ void
 diff --git a/gcc/cp/cp-tree.h b/gcc/cp/cp-tree.h
-index ff4ce068a83..050e4b0f3a7 100644
+index ff4ce068a83..f7c3eea4cdf 100644
 --- a/gcc/cp/cp-tree.h
 +++ b/gcc/cp/cp-tree.h
 @@ -423,7 +423,6 @@ extern GTY(()) tree cp_global_trees[CPTI_MAX];
@@ -11310,7 +11991,18 @@ index ff4ce068a83..050e4b0f3a7 100644
  #define DECLTYPE_FOR_LAMBDA_PROXY(NODE) \
    TREE_LANG_FLAG_2 (DECLTYPE_TYPE_CHECK (NODE))
  #define DECLTYPE_FOR_REF_CAPTURE(NODE) \
-@@ -6779,7 +6776,7 @@ extern bool maybe_instantiate_noexcept		(tree, tsubst_flags_t = tf_warning_or_er
+@@ -6232,7 +6229,9 @@ extern tree convert_for_arg_passing		(tree, tree, tsubst_flags_t);
+ extern bool is_properly_derived_from		(tree, tree);
+ extern tree initialize_reference		(tree, tree, int,
+ 						 tsubst_flags_t);
+-extern tree extend_ref_init_temps		(tree, tree, vec<tree, va_gc>**);
++extern tree extend_ref_init_temps		(tree, tree,
++						 vec<tree, va_gc>**,
++						 tree * = NULL);
+ extern tree make_temporary_var_for_ref_to_temp	(tree, tree);
+ extern bool type_has_extended_temps		(tree);
+ extern tree strip_top_quals			(tree);
+@@ -6779,7 +6778,7 @@ extern bool maybe_instantiate_noexcept		(tree, tsubst_flags_t = tf_warning_or_er
  extern tree instantiate_decl			(tree, bool, bool);
  extern int comp_template_parms			(const_tree, const_tree);
  extern bool builtin_pack_fn_p			(tree);
@@ -11319,7 +12011,7 @@ index ff4ce068a83..050e4b0f3a7 100644
  extern bool template_parameter_pack_p           (const_tree);
  extern bool function_parameter_pack_p		(const_tree);
  extern bool function_parameter_expanded_from_pack_p (tree, tree);
-@@ -7328,6 +7325,11 @@ extern tree cxx_copy_lang_qualifiers		(const_tree, const_tree);
+@@ -7328,6 +7327,11 @@ extern tree cxx_copy_lang_qualifiers		(const_tree, const_tree);
  
  extern void cxx_print_statistics		(void);
  extern bool maybe_warn_zero_as_null_pointer_constant (tree, location_t);
@@ -11332,7 +12024,7 @@ index ff4ce068a83..050e4b0f3a7 100644
  /* in ptree.c */
  extern void cxx_print_xnode			(FILE *, tree, int);
 diff --git a/gcc/cp/decl.c b/gcc/cp/decl.c
-index b57ded813b6..444332e53ba 100644
+index b57ded813b6..f3f20b55c8b 100644
 --- a/gcc/cp/decl.c
 +++ b/gcc/cp/decl.c
 @@ -4474,13 +4474,27 @@ cp_fname_init (const char* name, tree *type_p)
@@ -11436,6 +12128,63 @@ index b57ded813b6..444332e53ba 100644
      return nullptr_node;
  
    /* [dcl.fct.default]
+@@ -15612,7 +15632,8 @@ start_preparsed_function (tree decl1, tree attrs, int flags)
+       && !implicit_default_ctor_p (decl1))
+     cp_ubsan_maybe_initialize_vtbl_ptrs (current_class_ptr);
+ 
+-  start_lambda_scope (decl1);
++  if (!DECL_OMP_DECLARE_REDUCTION_P (decl1))
++    start_lambda_scope (decl1);
+ 
+   return true;
+ }
+@@ -16020,7 +16041,8 @@ finish_function (bool inline_p)
+   if (fndecl == NULL_TREE)
+     return error_mark_node;
+ 
+-  finish_lambda_scope ();
++  if (!DECL_OMP_DECLARE_REDUCTION_P (fndecl))
++    finish_lambda_scope ();
+ 
+   if (c_dialect_objc ())
+     objc_finish_function ();
+@@ -16137,7 +16159,7 @@ finish_function (bool inline_p)
+     invoke_plugin_callbacks (PLUGIN_PRE_GENERICIZE, fndecl);
+ 
+   /* Perform delayed folding before NRV transformation.  */
+-  if (!processing_template_decl)
++  if (!processing_template_decl && !DECL_OMP_DECLARE_REDUCTION_P (fndecl))
+     cp_fold_function (fndecl);
+ 
+   /* Set up the named return value optimization, if we can.  Candidate
+@@ -16260,7 +16282,8 @@ finish_function (bool inline_p)
+   if (!processing_template_decl)
+     {
+       struct language_function *f = DECL_SAVED_FUNCTION_DATA (fndecl);
+-      cp_genericize (fndecl);
++      if (!DECL_OMP_DECLARE_REDUCTION_P (fndecl))
++	cp_genericize (fndecl);
+       /* Clear out the bits we don't need.  */
+       f->x_current_class_ptr = NULL;
+       f->x_current_class_ref = NULL;
+diff --git a/gcc/cp/decl2.c b/gcc/cp/decl2.c
+index 6f23ee1cd3f..a46cbce08f4 100644
+--- a/gcc/cp/decl2.c
++++ b/gcc/cp/decl2.c
+@@ -5501,8 +5501,11 @@ mark_used (tree decl, tsubst_flags_t complain)
+ 	vec_safe_push (no_linkage_decls, decl);
+     }
+ 
+-  if (TREE_CODE (decl) == FUNCTION_DECL && DECL_DECLARED_INLINE_P (decl)
+-      && !DECL_INITIAL (decl) && !DECL_ARTIFICIAL (decl))
++  if (TREE_CODE (decl) == FUNCTION_DECL
++      && DECL_DECLARED_INLINE_P (decl)
++      && !DECL_INITIAL (decl)
++      && !DECL_ARTIFICIAL (decl)
++      && !DECL_PURE_VIRTUAL_P (decl))
+     /* Remember it, so we can check it was defined.  */
+     note_vague_linkage_fn (decl);
+ 
 diff --git a/gcc/cp/init.c b/gcc/cp/init.c
 index 59e1f351fc6..6cd32d98448 100644
 --- a/gcc/cp/init.c
@@ -11504,6 +12253,28 @@ index 93664181b47..edfd2f75853 100644
  
    /* Make member variable.  */
    member = build_decl (input_location, FIELD_DECL, name, type);
+diff --git a/gcc/cp/mangle.c b/gcc/cp/mangle.c
+index a5fd66fe0de..6f194375261 100644
+--- a/gcc/cp/mangle.c
++++ b/gcc/cp/mangle.c
+@@ -874,7 +874,16 @@ decl_mangling_context (tree decl)
+   else if (template_type_parameter_p (decl))
+      /* template type parms have no mangling context.  */
+       return NULL_TREE;
+-  return CP_DECL_CONTEXT (decl);
++
++  tcontext = CP_DECL_CONTEXT (decl);
++
++  /* Ignore the artificial declare reduction functions.  */
++  if (tcontext
++      && TREE_CODE (tcontext) == FUNCTION_DECL
++      && DECL_OMP_DECLARE_REDUCTION_P (tcontext))
++    return decl_mangling_context (tcontext);
++
++  return tcontext;
+ }
+ 
+ /* <name> ::= <unscoped-name>
 diff --git a/gcc/cp/name-lookup.c b/gcc/cp/name-lookup.c
 index 4ca976c812d..4fea4c04c66 100644
 --- a/gcc/cp/name-lookup.c
@@ -11536,10 +12307,68 @@ index 4ca976c812d..4fea4c04c66 100644
      {"unique_ptr", "<memory>", cxx11},
      {"weak_ptr", "<memory>", cxx11},
 diff --git a/gcc/cp/parser.c b/gcc/cp/parser.c
-index a7218e752b1..3fac495d293 100644
+index a7218e752b1..4df5d5797dc 100644
 --- a/gcc/cp/parser.c
 +++ b/gcc/cp/parser.c
-@@ -27596,7 +27596,9 @@ cp_parser_constructor_declarator_p (cp_parser *parser, cp_parser_flags flags,
+@@ -2650,6 +2650,7 @@ static bool cp_parser_init_statement_p
+   (cp_parser *);
+ static bool cp_parser_skip_to_closing_square_bracket
+   (cp_parser *);
++static size_t cp_parser_skip_balanced_tokens (cp_parser *, size_t);
+ 
+ /* Concept-related syntactic transformations */
+ 
+@@ -13998,6 +13999,10 @@ cp_parser_decl_specifier_seq (cp_parser* parser,
+         case RID_CONCEPT:
+           ds = ds_concept;
+           cp_lexer_consume_token (parser->lexer);
++
++	  if (flags & CP_PARSER_FLAGS_ONLY_MUTABLE_OR_CONSTEXPR)
++	    break;
++
+ 	  /* In C++20 a concept definition is just 'concept name = expr;'
+ 	     Support that syntax by pretending we've seen 'bool'.  */
+ 	  if (cp_lexer_next_token_is (parser->lexer, CPP_NAME)
+@@ -14025,6 +14030,10 @@ cp_parser_decl_specifier_seq (cp_parser* parser,
+ 	  ds = ds_typedef;
+ 	  /* Consume the token.  */
+ 	  cp_lexer_consume_token (parser->lexer);
++
++	  if (flags & CP_PARSER_FLAGS_ONLY_MUTABLE_OR_CONSTEXPR)
++	    break;
++
+ 	  /* A constructor declarator cannot appear in a typedef.  */
+ 	  constructor_possible_p = false;
+ 	  /* The "typedef" keyword can only occur in a declaration; we
+@@ -14120,6 +14129,9 @@ cp_parser_decl_specifier_seq (cp_parser* parser,
+ 	  bool is_cv_qualifier;
+ 	  tree type_spec;
+ 
++	  if (flags & CP_PARSER_FLAGS_ONLY_MUTABLE_OR_CONSTEXPR)
++	    flags |= CP_PARSER_FLAGS_NO_TYPE_DEFINITIONS;
++
+ 	  type_spec
+ 	    = cp_parser_type_specifier (parser, flags,
+ 					decl_specs,
+@@ -26178,6 +26190,17 @@ cp_parser_std_attribute (cp_parser *parser, tree attr_ns)
+       /* A GNU attribute that takes an identifier in parameter.  */
+       attr_flag = id_attr;
+ 
++    const attribute_spec *as
++      = lookup_attribute_spec (TREE_PURPOSE (attribute));
++    if (as == NULL)
++      {
++	/* For unknown attributes, just skip balanced tokens instead of
++	   trying to parse the arguments.  */
++	for (size_t n = cp_parser_skip_balanced_tokens (parser, 1) - 1; n; --n)
++	  cp_lexer_consume_token (parser->lexer);
++	return attribute;
++      }
++
+     vec = cp_parser_parenthesized_expression_list
+       (parser, attr_flag, /*cast_p=*/false,
+        /*allow_expansion_p=*/true,
+@@ -27596,7 +27619,9 @@ cp_parser_constructor_declarator_p (cp_parser *parser, cp_parser_flags flags,
  	  /* A parameter declaration begins with a decl-specifier,
  	     which is either the "attribute" keyword, a storage class
  	     specifier, or (usually) a type-specifier.  */
@@ -11550,7 +12379,7 @@ index a7218e752b1..3fac495d293 100644
  	{
  	  tree type;
  	  tree pushed_scope = NULL_TREE;
-@@ -27911,7 +27913,10 @@ cp_parser_template_declaration_after_parameters (cp_parser* parser,
+@@ -27911,7 +27936,10 @@ cp_parser_template_declaration_after_parameters (cp_parser* parser,
  	    {
  	      tree parm_list = TREE_VEC_ELT (parameter_list, 0);
  	      tree parm = INNERMOST_TEMPLATE_PARMS (parm_list);
@@ -11562,7 +12391,7 @@ index a7218e752b1..3fac495d293 100644
  		/* OK, C++20 string literal operator template.  We don't need
  		   to warn in lower dialects here because we will have already
  		   warned about the template parameter.  */;
-@@ -27925,7 +27930,7 @@ cp_parser_template_declaration_after_parameters (cp_parser* parser,
+@@ -27925,7 +27953,7 @@ cp_parser_template_declaration_after_parameters (cp_parser* parser,
  	      tree type = INNERMOST_TEMPLATE_PARMS (parm_type);
  	      tree parm_list = TREE_VEC_ELT (parameter_list, 1);
  	      tree parm = INNERMOST_TEMPLATE_PARMS (parm_list);
@@ -11571,7 +12400,7 @@ index a7218e752b1..3fac495d293 100644
  		  || TREE_TYPE (parm) != TREE_TYPE (type)
  		  || !TEMPLATE_PARM_PARAMETER_PACK (DECL_INITIAL (parm)))
  		ok = false;
-@@ -32463,6 +32468,14 @@ cp_parser_omp_var_list_no_open (cp_parser *parser, enum omp_clause_code kind,
+@@ -32463,6 +32491,14 @@ cp_parser_omp_var_list_no_open (cp_parser *parser, enum omp_clause_code kind,
  	    decl = TREE_OPERAND (decl, 0);
  	  cp_lexer_consume_token (parser->lexer);
  	}
@@ -11586,7 +12415,7 @@ index a7218e752b1..3fac495d293 100644
        else
  	{
  	  name = cp_parser_id_expression (parser, /*template_p=*/false,
-@@ -34891,8 +34904,10 @@ cp_parser_omp_clause_dist_schedule (cp_parser *parser, tree list,
+@@ -34891,8 +34927,10 @@ cp_parser_omp_clause_dist_schedule (cp_parser *parser, tree list,
    else if (!cp_parser_require (parser, CPP_CLOSE_PAREN, RT_COMMA_CLOSE_PAREN))
      goto resync_fail;
  
@@ -11599,7 +12428,25 @@ index a7218e752b1..3fac495d293 100644
    OMP_CLAUSE_CHAIN (c) = list;
    return c;
  
-@@ -40746,7 +40761,10 @@ cp_parser_initial_pragma (cp_token *first_token)
+@@ -39438,6 +39476,8 @@ cp_parser_omp_declare_reduction_exprs (tree fndecl, cp_parser *parser)
+   combiner = cp_parser_expression (parser);
+   finish_expr_stmt (combiner);
+   block = finish_omp_structured_block (block);
++  if (processing_template_decl)
++    block = build_stmt (input_location, EXPR_STMT, block);
+   add_stmt (block);
+ 
+   if (!cp_parser_require (parser, CPP_CLOSE_PAREN, RT_CLOSE_PAREN))
+@@ -39542,6 +39582,8 @@ cp_parser_omp_declare_reduction_exprs (tree fndecl, cp_parser *parser)
+ 
+       block = finish_omp_structured_block (block);
+       cp_walk_tree (&block, cp_remove_omp_priv_cleanup_stmt, omp_priv, NULL);
++      if (processing_template_decl)
++	block = build_stmt (input_location, EXPR_STMT, block);
+       add_stmt (block);
+ 
+       if (ctor)
+@@ -40746,7 +40788,10 @@ cp_parser_initial_pragma (cp_token *first_token)
  
    cp_lexer_get_preprocessor_token (NULL, first_token);
    if (cp_parser_pragma_kind (first_token) != PRAGMA_GCC_PCH_PREPROCESS)
@@ -11838,10 +12685,37 @@ index a2a986b1db1..0ebac069984 100644
        tree tparms;
  
 diff --git a/gcc/cp/semantics.c b/gcc/cp/semantics.c
-index 6d40b145fcb..b8a279f8b08 100644
+index 6d40b145fcb..1bd014696fc 100644
 --- a/gcc/cp/semantics.c
 +++ b/gcc/cp/semantics.c
-@@ -7790,6 +7790,13 @@ finish_omp_clauses (tree clauses, enum c_omp_region_type ort)
+@@ -4338,7 +4338,7 @@ expand_or_defer_fn_1 (tree fn)
+       if (DECL_INTERFACE_KNOWN (fn))
+ 	/* We've already made a decision as to how this function will
+ 	   be handled.  */;
+-      else if (!at_eof)
++      else if (!at_eof || DECL_OMP_DECLARE_REDUCTION_P (fn))
+ 	tentative_decl_linkage (fn);
+       else
+ 	import_export_decl (fn);
+@@ -4349,6 +4349,7 @@ expand_or_defer_fn_1 (tree fn)
+ 	 be emitted; there may be callers in other DLLs.  */
+       if (DECL_DECLARED_INLINE_P (fn)
+ 	  && !DECL_REALLY_EXTERN (fn)
++	  && !DECL_OMP_DECLARE_REDUCTION_P (fn)
+ 	  && (flag_keep_inline_functions
+ 	      || (flag_keep_inline_dllexport
+ 		  && lookup_attribute ("dllexport", DECL_ATTRIBUTES (fn)))))
+@@ -4381,6 +4382,9 @@ expand_or_defer_fn_1 (tree fn)
+       return false;
+     }
+ 
++  if (DECL_OMP_DECLARE_REDUCTION_P (fn))
++    return false;
++
+   return true;
+ }
+ 
+@@ -7790,6 +7794,13 @@ finish_omp_clauses (tree clauses, enum c_omp_region_type ort)
  	    case OMP_CLAUSE_DEFAULT_UNSPECIFIED:
  	      break;
  	    case OMP_CLAUSE_DEFAULT_SHARED:
@@ -11855,7 +12729,7 @@ index 6d40b145fcb..b8a279f8b08 100644
  	      if (VAR_P (t)
  		  && OMP_CLAUSE_CODE (c) == OMP_CLAUSE_FIRSTPRIVATE
  		  && TREE_STATIC (t)
-@@ -8187,7 +8194,6 @@ handle_omp_for_class_iterator (int i, location_t locus, enum tree_code code,
+@@ -8187,7 +8198,6 @@ handle_omp_for_class_iterator (int i, location_t locus, enum tree_code code,
    if (init && EXPR_HAS_LOCATION (init))
      elocus = EXPR_LOCATION (init);
  
@@ -11864,10 +12738,22 @@ index 6d40b145fcb..b8a279f8b08 100644
      {
      case GT_EXPR:
 diff --git a/gcc/cp/tree.c b/gcc/cp/tree.c
-index 1339e9fd204..ae9bfd24cfb 100644
+index 1339e9fd204..7275b7bf5b0 100644
 --- a/gcc/cp/tree.c
 +++ b/gcc/cp/tree.c
-@@ -5487,6 +5487,68 @@ maybe_warn_zero_as_null_pointer_constant (tree expr, location_t loc)
+@@ -3123,6 +3123,11 @@ replace_placeholders_r (tree* t, int* walk_subtrees, void* data_)
+ 	    tree type = TREE_TYPE (*valp);
+ 	    tree subob = obj;
+ 
++	    /* Elements with RANGE_EXPR index shouldn't have any
++	       placeholders in them.  */
++	    if (ce->index && TREE_CODE (ce->index) == RANGE_EXPR)
++	      continue;
++
+ 	    if (TREE_CODE (*valp) == CONSTRUCTOR
+ 		&& AGGREGATE_TYPE_P (type))
+ 	      {
+@@ -5487,6 +5492,68 @@ maybe_warn_zero_as_null_pointer_constant (tree expr, location_t loc)
    return false;
  }
  
@@ -12021,6 +12907,19 @@ index 3255af58a25..2169f8c4efd 100644
  	    }
  	}
        bool w = false;
+diff --git a/gcc/cp/typeck2.c b/gcc/cp/typeck2.c
+index bdb98f84435..b406368a5d6 100644
+--- a/gcc/cp/typeck2.c
++++ b/gcc/cp/typeck2.c
+@@ -1291,6 +1291,8 @@ digest_nsdmi_init (tree decl, tree init, tsubst_flags_t complain)
+   gcc_assert (TREE_CODE (decl) == FIELD_DECL);
+ 
+   tree type = TREE_TYPE (decl);
++  if (DECL_BIT_FIELD_TYPE (decl))
++    type = DECL_BIT_FIELD_TYPE (decl);
+   int flags = LOOKUP_IMPLICIT;
+   if (DIRECT_LIST_INIT_P (init))
+     {
 diff --git a/gcc/doc/avr-mmcu.texi b/gcc/doc/avr-mmcu.texi
 index ea0161ecccb..8c8d4dad663 100644
 --- a/gcc/doc/avr-mmcu.texi
@@ -12208,7 +13107,7 @@ index 6f6f768f371..4becdcf1cbb 100644
        else
  	/* Every other call, including pure functions, may read any memory
 diff --git a/gcc/dwarf2out.c b/gcc/dwarf2out.c
-index 1cec00f2b85..ae47387b763 100644
+index 1cec00f2b85..67a6bc92077 100644
 --- a/gcc/dwarf2out.c
 +++ b/gcc/dwarf2out.c
 @@ -15461,7 +15461,7 @@ mem_loc_descriptor (rtx rtl, machine_mode mode,
@@ -12271,6 +13170,16 @@ index 1cec00f2b85..ae47387b763 100644
  	{
  	  /* We get called via the symtab code invoking late_global_decl
  	     for symbols that are optimized out.
+@@ -27062,6 +27057,9 @@ lookup_filename (const char *file_name)
+   if (!file_name)
+     return NULL;
+ 
++  if (!file_name[0])
++    file_name = "<stdin>";
++
+   dwarf_file_data **slot
+     = file_table->find_slot_with_hash (file_name, htab_hash_string (file_name),
+ 				       INSERT);
 diff --git a/gcc/expmed.c b/gcc/expmed.c
 index d7f8e9a5d76..c5f5499c013 100644
 --- a/gcc/expmed.c
@@ -12340,10 +13249,69 @@ index f0e43b5fda2..9feaea9fde5 100644
    low = fold_convert_loc (loc, etype, low);
    exp = fold_convert_loc (loc, etype, exp);
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index e3073787ea9..6f9baa48a8f 100644
+index e3073787ea9..834f172c2e9 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,432 @@
+@@ -1,3 +1,491 @@
++2019-12-21  Paul Thomas  <pault@gcc.gnu.org>
++
++	Backported from mainline
++	PR fortran/92753
++	* expr.c (find_inquiry_ref): Catch INQUIRY_LEN case, where the
++	temporary expression has been converted to a constant and make
++	the new expression accordingly. Correct the error in INQUIRY_RE
++	and INQUIRY_IM cases. The original rather than the resolved
++	expression was being used as the source in mpfr_set.
++
++2019-12-20  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from mainline
++	2019-12-19  Jakub Jelinek  <jakub@redhat.com>
++
++ 	PR fortran/92977
++	* frontend-passes.c (call_external_blas): Use || instead of |.
++
++	PR fortran/92977
++	* frontend-passes.c (in_omp_atomic): New variable.
++	(cfe_expr_0, matmul_to_var_expr, matmul_temp_args,
++	inline_matmul_assign, call_external_blas): Don't optimize in
++	EXEC_OMP_ATOMIC.
++	(optimize_namespace): Clear in_omp_atomic.
++	(gfc_code_walker): Set in_omp_atomic for EXEC_OMP_ATOMIC, save/restore
++	it around.
++
++	2019-12-11  Jakub Jelinek  <jakub@redhat.com>
++
++	PR fortran/92899
++	* trans-openmp.c (gfc_trans_omp_atomic): For GFC_OMP_ATOMIC_SWAP,
++	do look through conversion on expr2 if any.
++
++	2019-12-06  Jakub Jelinek  <jakub@redhat.com>
++
++	PR fortran/92775
++	* trans.h (struct lang_type, struct lang_decl): Remove span member.
++	(GFC_DECL_SPAN, GFC_TYPE_ARRAY_SPAN): Remove macros.
++	* trans-array.h (gfc_get_descriptor_offsets_for_info): Add another
++	argument.
++	* trans-array.c (gfc_get_descriptor_offsets_for_info): Add SPAN_OFF
++	argument and initialize *SPAN_OFF to the offset of span field.
++	* trans-types.c (gfc_get_array_descr_info): Adjust
++	gfc_get_descriptor_offsets_for_info caller.  Compute elem_size
++	as base->span instead of TYPE_SIZE_UNIT (etype) constant.
++
++	2019-12-05  Jakub Jelinek  <jakub@redhat.com>
++
++	PR fortran/92781
++	* trans-decl.c (gfc_get_symbol_decl): If sym->backend_decl is
++	current_function_decl, add length to current rather than parent
++	function and expect DECL_CONTEXT (length) to be current_function_decl.
++
++	2019-11-27  Jakub Jelinek  <jakub@redhat.com>
++
++	PR fortran/91944
++	* simplify.c (gfc_simplify_spread): Check gfc_init_expr_flag instead
++	of gfc_current_ns->sym_root->n.sym->attr.flavor == FL_PARAMETER.
++
 +2019-12-12  Harald Anlauf  <anlauf@gmx.de>
 +
 +	Backport from mainline
@@ -13361,10 +14329,47 @@ index cf09420cfbe..52a98cd44ed 100644
 +  return MATCH_ERROR;
 +}
 diff --git a/gcc/fortran/expr.c b/gcc/fortran/expr.c
-index 2aeea92b8fb..cad0dd36a67 100644
+index 2aeea92b8fb..5663d91fe0f 100644
 --- a/gcc/fortran/expr.c
 +++ b/gcc/fortran/expr.c
-@@ -2220,6 +2220,11 @@ gfc_simplify_expr (gfc_expr *p, int type)
+@@ -1780,11 +1780,15 @@ find_inquiry_ref (gfc_expr *p, gfc_expr **newp)
+ 	  if (!gfc_notify_std (GFC_STD_F2003, "LEN part_ref at %C"))
+ 	    goto cleanup;
+ 
+-	  if (!tmp->ts.u.cl->length
+-	      || tmp->ts.u.cl->length->expr_type != EXPR_CONSTANT)
++	  if (tmp->ts.u.cl->length
++	      && tmp->ts.u.cl->length->expr_type == EXPR_CONSTANT)
++	    *newp = gfc_copy_expr (tmp->ts.u.cl->length);
++	  else if (tmp->expr_type == EXPR_CONSTANT)
++	    *newp = gfc_get_int_expr (gfc_default_integer_kind,
++				      NULL, tmp->value.character.length);
++	  else
+ 	    goto cleanup;
+ 
+-	  *newp = gfc_copy_expr (tmp->ts.u.cl->length);
+ 	  break;
+ 
+ 	case INQUIRY_KIND:
+@@ -1807,7 +1811,7 @@ find_inquiry_ref (gfc_expr *p, gfc_expr **newp)
+ 
+ 	  *newp = gfc_get_constant_expr (BT_REAL, tmp->ts.kind, &tmp->where);
+ 	  mpfr_set ((*newp)->value.real,
+-		    mpc_realref (p->value.complex), GFC_RND_MODE);
++		    mpc_realref (tmp->value.complex), GFC_RND_MODE);
+ 	  break;
+ 
+ 	case INQUIRY_IM:
+@@ -1819,7 +1823,7 @@ find_inquiry_ref (gfc_expr *p, gfc_expr **newp)
+ 
+ 	  *newp = gfc_get_constant_expr (BT_REAL, tmp->ts.kind, &tmp->where);
+ 	  mpfr_set ((*newp)->value.real,
+-		    mpc_imagref (p->value.complex), GFC_RND_MODE);
++		    mpc_imagref (tmp->value.complex), GFC_RND_MODE);
+ 	  break;
+ 	}
+       tmp = gfc_copy_expr (*newp);
+@@ -2220,6 +2224,11 @@ gfc_simplify_expr (gfc_expr *p, int type)
        if (!simplify_ref_chain (p->ref, type, &p))
  	return false;
  
@@ -13376,7 +14381,7 @@ index 2aeea92b8fb..cad0dd36a67 100644
        if (!simplify_constructor (p->value.constructor, type))
  	return false;
  
-@@ -2598,6 +2603,8 @@ check_inquiry (gfc_expr *e, int not_restricted)
+@@ -2598,6 +2607,8 @@ check_inquiry (gfc_expr *e, int not_restricted)
  
    int i = 0;
    gfc_actual_arglist *ap;
@@ -13385,7 +14390,7 @@ index 2aeea92b8fb..cad0dd36a67 100644
  
    if (!e->value.function.isym
        || !e->value.function.isym->inquiry)
-@@ -2607,20 +2614,22 @@ check_inquiry (gfc_expr *e, int not_restricted)
+@@ -2607,20 +2618,22 @@ check_inquiry (gfc_expr *e, int not_restricted)
    if (e->symtree == NULL)
      return MATCH_NO;
  
@@ -13415,7 +14420,7 @@ index 2aeea92b8fb..cad0dd36a67 100644
  
        functions = inquiry_func_gnu;
        if (gfc_option.warn_std & GFC_STD_F2003)
-@@ -2645,41 +2654,48 @@ check_inquiry (gfc_expr *e, int not_restricted)
+@@ -2645,41 +2658,48 @@ check_inquiry (gfc_expr *e, int not_restricted)
        if (!ap->expr)
  	continue;
  
@@ -13491,10 +14496,41 @@ index 2aeea92b8fb..cad0dd36a67 100644
  
    return MATCH_YES;
 diff --git a/gcc/fortran/frontend-passes.c b/gcc/fortran/frontend-passes.c
-index d4264dafa6f..ec374b684e0 100644
+index d4264dafa6f..4bb6cbb5d74 100644
 --- a/gcc/fortran/frontend-passes.c
 +++ b/gcc/fortran/frontend-passes.c
-@@ -2519,7 +2519,12 @@ insert_index (gfc_expr *e, gfc_symbol *sym, mpz_t val, mpz_t ret)
+@@ -94,6 +94,10 @@ static int forall_level;
+ 
+ static bool in_omp_workshare;
+ 
++/* Keep track of whether we are within an OMP atomic.  */
++
++static bool in_omp_atomic;
++
+ /* Keep track of whether we are within a WHERE statement.  */
+ 
+ static bool in_where;
+@@ -915,9 +919,9 @@ cfe_expr_0 (gfc_expr **e, int *walk_subtrees,
+   gfc_expr *newvar;
+   gfc_expr **ei, **ej;
+ 
+-  /* Don't do this optimization within OMP workshare or ASSOC lists.  */
++  /* Don't do this optimization within OMP workshare/atomic or ASSOC lists.  */
+ 
+-  if (in_omp_workshare || in_assoc_list)
++  if (in_omp_workshare || in_omp_atomic || in_assoc_list)
+     {
+       *walk_subtrees = 0;
+       return 0;
+@@ -1466,6 +1470,7 @@ optimize_namespace (gfc_namespace *ns)
+   iterator_level = 0;
+   in_assoc_list = false;
+   in_omp_workshare = false;
++  in_omp_atomic = false;
+ 
+   if (flag_frontend_optimize)
+     {
+@@ -2519,7 +2524,12 @@ insert_index (gfc_expr *e, gfc_symbol *sym, mpz_t val, mpz_t ret)
    data.sym = sym;
    mpz_init_set (data.val, val);
    gfc_expr_walker (&n, callback_insert_index, (void *) &data);
@@ -13507,7 +14543,7 @@ index d4264dafa6f..ec374b684e0 100644
  
    if (n->expr_type == EXPR_CONSTANT)
      {
-@@ -2557,6 +2562,12 @@ do_subscript (gfc_expr **e)
+@@ -2557,6 +2567,12 @@ do_subscript (gfc_expr **e)
    if (in_assoc_list)
      return 0;
  
@@ -13520,7 +14556,7 @@ index d4264dafa6f..ec374b684e0 100644
    for (ref = v->ref; ref; ref = ref->next)
      {
        if (ref->type == REF_ARRAY && ref->u.ar.type == AR_ELEMENT)
-@@ -2569,6 +2580,7 @@ do_subscript (gfc_expr **e)
+@@ -2569,6 +2585,7 @@ do_subscript (gfc_expr **e)
  	      bool have_do_start, have_do_end;
  	      bool error_not_proven;
  	      int warn;
@@ -13528,7 +14564,7 @@ index d4264dafa6f..ec374b684e0 100644
  
  	      dl = lp->c;
  	      if (dl == NULL)
-@@ -2597,7 +2609,16 @@ do_subscript (gfc_expr **e)
+@@ -2597,7 +2614,16 @@ do_subscript (gfc_expr **e)
  		 Do not warn in this case.  */
  
  	      if (dl->ext.iterator->step->expr_type == EXPR_CONSTANT)
@@ -13546,7 +14582,7 @@ index d4264dafa6f..ec374b684e0 100644
  	      else
  		continue;
  
-@@ -2609,7 +2630,6 @@ do_subscript (gfc_expr **e)
+@@ -2609,7 +2635,6 @@ do_subscript (gfc_expr **e)
  	      else
  		have_do_start = false;
  
@@ -13554,7 +14590,7 @@ index d4264dafa6f..ec374b684e0 100644
  	      if (dl->ext.iterator->end->expr_type == EXPR_CONSTANT)
  		{
  		  have_do_end = true;
-@@ -2621,6 +2641,16 @@ do_subscript (gfc_expr **e)
+@@ -2621,6 +2646,16 @@ do_subscript (gfc_expr **e)
  	      if (!have_do_start && !have_do_end)
  		return 0;
  
@@ -13571,7 +14607,7 @@ index d4264dafa6f..ec374b684e0 100644
  	      /* May have to correct the end value if the step does not equal
  		 one.  */
  	      if (have_do_start && have_do_end && mpz_cmp_ui (do_step, 1) != 0)
-@@ -2762,6 +2792,12 @@ static void
+@@ -2762,6 +2797,12 @@ static void
  doloop_warn (gfc_namespace *ns)
  {
    gfc_code_walker (&ns->code, doloop_code, do_function, NULL);
@@ -13584,7 +14620,43 @@ index d4264dafa6f..ec374b684e0 100644
  }
  
  /* This selction deals with inlining calls to MATMUL.  */
-@@ -4601,6 +4637,7 @@ call_external_blas (gfc_code **c, int *walk_subtrees ATTRIBUTE_UNUSED,
+@@ -2784,7 +2825,7 @@ matmul_to_var_expr (gfc_expr **ep, int *walk_subtrees ATTRIBUTE_UNUSED,
+     return 0;
+ 
+   if (forall_level > 0 || iterator_level > 0 || in_omp_workshare
+-      || in_where || in_assoc_list)
++      || in_omp_atomic || in_where || in_assoc_list)
+     return 0;
+ 
+   /* Check if this is already in the form c = matmul(a,b).  */
+@@ -2846,7 +2887,7 @@ matmul_temp_args (gfc_code **c, int *walk_subtrees ATTRIBUTE_UNUSED,
+     return 0;
+ 
+   if (forall_level > 0 || iterator_level > 0 || in_omp_workshare
+-      || in_where)
++      || in_omp_atomic || in_where)
+     return 0;
+ 
+   /* This has some duplication with inline_matmul_assign.  This
+@@ -3814,7 +3855,7 @@ inline_matmul_assign (gfc_code **c, int *walk_subtrees,
+   /* For now don't do anything in OpenMP workshare, it confuses
+      its translation, which expects only the allowed statements in there.
+      We should figure out how to parallelize this eventually.  */
+-  if (in_omp_workshare)
++  if (in_omp_workshare || in_omp_atomic)
+     return 0;
+ 
+   expr1 = co->expr1;
+@@ -4351,7 +4392,7 @@ call_external_blas (gfc_code **c, int *walk_subtrees ATTRIBUTE_UNUSED,
+   /* For now don't do anything in OpenMP workshare, it confuses
+      its translation, which expects only the allowed statements in there. */
+ 
+-  if (in_omp_workshare)
++  if (in_omp_workshare || in_omp_atomic)
+     return 0;
+ 
+   expr1 = co->expr1;
+@@ -4601,6 +4642,7 @@ call_external_blas (gfc_code **c, int *walk_subtrees ATTRIBUTE_UNUSED,
    call->symtree->n.sym->attr.procedure = 1;
    call->symtree->n.sym->attr.flavor = FL_PROCEDURE;
    call->resolved_sym = call->symtree->n.sym;
@@ -13592,6 +14664,41 @@ index d4264dafa6f..ec374b684e0 100644
  
    /* Argument TRANSA.  */
    next = gfc_get_actual_arglist ();
+@@ -5012,6 +5054,7 @@ gfc_code_walker (gfc_code **c, walk_code_fn_t codefn, walk_expr_fn_t exprfn,
+ 	  gfc_code *co;
+ 	  gfc_association_list *alist;
+ 	  bool saved_in_omp_workshare;
++	  bool saved_in_omp_atomic;
+ 	  bool saved_in_where;
+ 
+ 	  /* There might be statement insertions before the current code,
+@@ -5019,6 +5062,7 @@ gfc_code_walker (gfc_code **c, walk_code_fn_t codefn, walk_expr_fn_t exprfn,
+ 
+ 	  co = *c;
+ 	  saved_in_omp_workshare = in_omp_workshare;
++	  saved_in_omp_atomic = in_omp_atomic;
+ 	  saved_in_where = in_where;
+ 
+ 	  switch (co->op)
+@@ -5216,6 +5260,10 @@ gfc_code_walker (gfc_code **c, walk_code_fn_t codefn, walk_expr_fn_t exprfn,
+ 	      WALK_SUBEXPR (co->ext.dt->extra_comma);
+ 	      break;
+ 
++	    case EXEC_OMP_ATOMIC:
++	      in_omp_atomic = true;
++	      break;
++
+ 	    case EXEC_OMP_PARALLEL:
+ 	    case EXEC_OMP_PARALLEL_DO:
+ 	    case EXEC_OMP_PARALLEL_DO_SIMD:
+@@ -5333,6 +5381,7 @@ gfc_code_walker (gfc_code **c, walk_code_fn_t codefn, walk_expr_fn_t exprfn,
+ 	    select_level --;
+ 
+ 	  in_omp_workshare = saved_in_omp_workshare;
++	  in_omp_atomic = saved_in_omp_atomic;
+ 	  in_where = saved_in_where;
+ 	}
+     }
 diff --git a/gcc/fortran/gfortran.h b/gcc/fortran/gfortran.h
 index 2bb82980e8e..29b962d889c 100644
 --- a/gcc/fortran/gfortran.h
@@ -14400,7 +15507,7 @@ index e54d483baff..40c06b6b674 100644
    gfc_file *f;
  
 diff --git a/gcc/fortran/simplify.c b/gcc/fortran/simplify.c
-index 6c1f4bd4fce..583a1c136e2 100644
+index 6c1f4bd4fce..e26027edfae 100644
 --- a/gcc/fortran/simplify.c
 +++ b/gcc/fortran/simplify.c
 @@ -169,8 +169,10 @@ convert_mpz_to_unsigned (mpz_t x, int bitsize)
@@ -14497,6 +15604,15 @@ index 6c1f4bd4fce..583a1c136e2 100644
  	  x[order[i]] = 1;
  	}
      }
+@@ -7630,7 +7672,7 @@ gfc_simplify_spread (gfc_expr *source, gfc_expr *dim_expr, gfc_expr *ncopies_exp
+   nelem = mpz_get_si (size) * ncopies;
+   if (nelem > flag_max_array_constructor)
+     {
+-      if (gfc_current_ns->sym_root->n.sym->attr.flavor == FL_PARAMETER)
++      if (gfc_init_expr_flag)
+ 	{
+ 	  gfc_error ("The number of elements (%d) in the array constructor "
+ 		     "at %L requires an increase of the allowed %d upper "
 @@ -8494,6 +8536,12 @@ gfc_convert_constant (gfc_expr *e, bt type, int kind)
  	    {
  	      if (c->expr->expr_type == EXPR_ARRAY)
@@ -14511,10 +15627,33 @@ index 6c1f4bd4fce..583a1c136e2 100644
  		tmp = f (c->expr, kind);
  	    }
 diff --git a/gcc/fortran/trans-array.c b/gcc/fortran/trans-array.c
-index 583425c516d..3945d116180 100644
+index 583425c516d..2e5eb4f468f 100644
 --- a/gcc/fortran/trans-array.c
 +++ b/gcc/fortran/trans-array.c
-@@ -6110,17 +6110,20 @@ gfc_conv_array_initializer (tree type, gfc_expr * expr)
+@@ -537,9 +537,10 @@ gfc_conv_shift_descriptor_lbound (stmtblock_t* block, tree desc,
+ 
+ void
+ gfc_get_descriptor_offsets_for_info (const_tree desc_type, tree *data_off,
+-				     tree *dtype_off, tree *dim_off,
+-				     tree *dim_size, tree *stride_suboff,
+-				     tree *lower_suboff, tree *upper_suboff)
++				     tree *dtype_off, tree *span_off,
++				     tree *dim_off, tree *dim_size,
++				     tree *stride_suboff, tree *lower_suboff,
++				     tree *upper_suboff)
+ {
+   tree field;
+   tree type;
+@@ -549,6 +550,8 @@ gfc_get_descriptor_offsets_for_info (const_tree desc_type, tree *data_off,
+   *data_off = byte_position (field);
+   field = gfc_advance_chain (TYPE_FIELDS (type), DTYPE_FIELD);
+   *dtype_off = byte_position (field);
++  field = gfc_advance_chain (TYPE_FIELDS (type), SPAN_FIELD);
++  *span_off = byte_position (field);
+   field = gfc_advance_chain (TYPE_FIELDS (type), DIMENSION_FIELD);
+   *dim_off = byte_position (field);
+   type = TREE_TYPE (TREE_TYPE (field));
+@@ -6110,17 +6113,20 @@ gfc_conv_array_initializer (tree type, gfc_expr * expr)
  		  tree atype = type;
  		  while (TREE_CODE (TREE_TYPE (atype)) == ARRAY_TYPE)
  		    atype = TREE_TYPE (atype);
@@ -14539,7 +15678,7 @@ index 583425c516d..3945d116180 100644
  		}
  	      break;
  
-@@ -8024,7 +8027,7 @@ gfc_conv_array_parameter (gfc_se * se, gfc_expr * expr, bool g77,
+@@ -8024,7 +8030,7 @@ gfc_conv_array_parameter (gfc_se * se, gfc_expr * expr, bool g77,
  	  /* The components shall be deallocated before their containing entity.  */
  	  gfc_prepend_expr_to_block (&se->post, tmp);
  	}
@@ -14548,8 +15687,21 @@ index 583425c516d..3945d116180 100644
  	se->string_length = expr->ts.u.cl->backend_decl;
        if (size)
  	array_parameter_size (se->expr, expr, size);
+diff --git a/gcc/fortran/trans-array.h b/gcc/fortran/trans-array.h
+index 8c2d51838d4..aadb685b8b1 100644
+--- a/gcc/fortran/trans-array.h
++++ b/gcc/fortran/trans-array.h
+@@ -161,7 +161,7 @@ void gfc_trans_array_cobounds (tree, stmtblock_t *, const gfc_symbol *);
+ 
+ /* Build expressions for accessing components of an array descriptor.  */
+ void gfc_get_descriptor_offsets_for_info (const_tree, tree *, tree *, tree *, tree *,
+-					  tree *, tree *, tree *);
++					  tree *, tree *, tree *, tree *);
+ 
+ tree gfc_conv_descriptor_data_get (tree);
+ tree gfc_conv_descriptor_data_addr (tree);
 diff --git a/gcc/fortran/trans-decl.c b/gcc/fortran/trans-decl.c
-index 9538dee5733..27613f761e3 100644
+index 9538dee5733..71f751de76f 100644
 --- a/gcc/fortran/trans-decl.c
 +++ b/gcc/fortran/trans-decl.c
 @@ -369,44 +369,37 @@ gfc_sym_identifier (gfc_symbol * sym)
@@ -14610,7 +15762,30 @@ index 9538dee5733..27613f761e3 100644
  }
  
  /* Get mangled identifier, adding the symbol to the global table if
-@@ -1892,9 +1885,18 @@ gfc_get_symbol_decl (gfc_symbol * sym)
+@@ -1618,15 +1611,18 @@ gfc_get_symbol_decl (gfc_symbol * sym)
+ 	      /* Add the string length to the same context as the symbol.  */
+ 	      if (DECL_CONTEXT (length) == NULL_TREE)
+ 		{
+-		  if (DECL_CONTEXT (sym->backend_decl)
+-		      == current_function_decl)
++		  if (sym->backend_decl == current_function_decl
++		      || (DECL_CONTEXT (sym->backend_decl)
++			  == current_function_decl))
+ 		    gfc_add_decl_to_function (length);
+ 		  else
+ 		    gfc_add_decl_to_parent_function (length);
+ 		}
+ 
+-	      gcc_assert (DECL_CONTEXT (sym->backend_decl)
+-			  == DECL_CONTEXT (length));
++	      gcc_assert (sym->backend_decl == current_function_decl
++			  ? DECL_CONTEXT (length) == current_function_decl
++			  : (DECL_CONTEXT (sym->backend_decl)
++			     == DECL_CONTEXT (length)));
+ 
+ 	      gfc_defer_symbol_init (sym);
+ 	    }
+@@ -1892,9 +1888,18 @@ gfc_get_symbol_decl (gfc_symbol * sym)
    if (sym->attr.associate_var)
      GFC_DECL_ASSOCIATE_VAR_P (decl) = 1;
  
@@ -14632,7 +15807,7 @@ index 9538dee5733..27613f761e3 100644
  
    return decl;
  }
-@@ -5862,9 +5864,11 @@ generate_local_decl (gfc_symbol * sym)
+@@ -5862,9 +5867,11 @@ generate_local_decl (gfc_symbol * sym)
  	    }
  	  else if (warn_unused_dummy_argument)
  	    {
@@ -14647,7 +15822,7 @@ index 9538dee5733..27613f761e3 100644
  	      if (sym->backend_decl != NULL_TREE)
  		TREE_NO_WARNING(sym->backend_decl) = 1;
  	    }
-@@ -5956,7 +5960,14 @@ generate_local_decl (gfc_symbol * sym)
+@@ -5956,7 +5963,14 @@ generate_local_decl (gfc_symbol * sym)
  
        if (sym->ns && sym->ns->construct_entities)
  	{
@@ -14663,7 +15838,7 @@ index 9538dee5733..27613f761e3 100644
  	    gfc_get_symbol_decl (sym);
  	  sym->mark = 1;
  	}
-@@ -6440,6 +6451,20 @@ gfc_generate_return (void)
+@@ -6440,6 +6454,20 @@ gfc_generate_return (void)
  				    TREE_TYPE (result), DECL_RESULT (fndecl),
  				    result);
  	}
@@ -14876,6 +16051,18 @@ index afe08fc2668..fe10d52dd16 100644
        string_length = rse.string_length;
      }
    else
+diff --git a/gcc/fortran/trans-openmp.c b/gcc/fortran/trans-openmp.c
+index 0eb5956cc53..98e3d58e174 100644
+--- a/gcc/fortran/trans-openmp.c
++++ b/gcc/fortran/trans-openmp.c
+@@ -3215,7 +3215,6 @@ gfc_trans_omp_atomic (gfc_code *code)
+   expr2 = code->expr2;
+   if (((atomic_code->ext.omp_atomic & GFC_OMP_ATOMIC_MASK)
+        != GFC_OMP_ATOMIC_WRITE)
+-      && (atomic_code->ext.omp_atomic & GFC_OMP_ATOMIC_SWAP) == 0
+       && expr2->expr_type == EXPR_FUNCTION
+       && expr2->value.function.isym
+       && expr2->value.function.isym->id == GFC_ISYM_CONVERSION)
 diff --git a/gcc/fortran/trans-stmt.c b/gcc/fortran/trans-stmt.c
 index 5fa182bf05a..b839d6c73e1 100644
 --- a/gcc/fortran/trans-stmt.c
@@ -14922,7 +16109,7 @@ index 5fa182bf05a..b839d6c73e1 100644
    tmp = fold_build3_loc (loc, COND_EXPR, void_type_node,
  			 cond, tmp, build_empty_stmt (loc));
 diff --git a/gcc/fortran/trans-types.c b/gcc/fortran/trans-types.c
-index d3b61e78887..3c8188b30c4 100644
+index d3b61e78887..d0f1095edd5 100644
 --- a/gcc/fortran/trans-types.c
 +++ b/gcc/fortran/trans-types.c
 @@ -3021,6 +3021,7 @@ get_formal_from_actual_arglist (gfc_symbol *sym, gfc_actual_arglist *actual_args
@@ -14933,6 +16120,33 @@ index d3b61e78887..3c8188b30c4 100644
  	  s->attr.intent = INTENT_UNKNOWN;
  	  (*f)->sym = s;
  	}
+@@ -3322,7 +3323,7 @@ gfc_get_array_descr_info (const_tree type, struct array_descr_info *info)
+   int rank, dim;
+   bool indirect = false;
+   tree etype, ptype, t, base_decl;
+-  tree data_off, dim_off, dtype_off, dim_size, elem_size;
++  tree data_off, span_off, dim_off, dtype_off, dim_size, elem_size;
+   tree lower_suboff, upper_suboff, stride_suboff;
+   tree dtype, field, rank_off;
+ 
+@@ -3379,12 +3380,13 @@ gfc_get_array_descr_info (const_tree type, struct array_descr_info *info)
+   if (indirect)
+     base_decl = build1 (INDIRECT_REF, ptype, base_decl);
+ 
+-  elem_size = fold_convert (gfc_array_index_type, TYPE_SIZE_UNIT (etype));
+-
+-  gfc_get_descriptor_offsets_for_info (type, &data_off, &dtype_off, &dim_off,
+-				       &dim_size, &stride_suboff,
++  gfc_get_descriptor_offsets_for_info (type, &data_off, &dtype_off, &span_off,
++				       &dim_off, &dim_size, &stride_suboff,
+ 				       &lower_suboff, &upper_suboff);
+ 
++  t = fold_build_pointer_plus (base_decl, span_off);
++  elem_size = build1 (INDIRECT_REF, gfc_array_index_type, t);
++
+   t = base_decl;
+   if (!integer_zerop (data_off))
+     t = fold_build_pointer_plus (t, data_off);
 diff --git a/gcc/fortran/trans.c b/gcc/fortran/trans.c
 index e7844c9bf1f..167fcb2158c 100644
 --- a/gcc/fortran/trans.c
@@ -14958,7 +16172,7 @@ index e7844c9bf1f..167fcb2158c 100644
  /* Build a MODIFY_EXPR node and add it to a given statement block PBLOCK.
     A MODIFY_EXPR is an assignment:
 diff --git a/gcc/fortran/trans.h b/gcc/fortran/trans.h
-index 273c75a422c..6b42d82806b 100644
+index 273c75a422c..f6af09fedf7 100644
 --- a/gcc/fortran/trans.h
 +++ b/gcc/fortran/trans.h
 @@ -507,6 +507,7 @@ void gfc_conv_label_variable (gfc_se * se, gfc_expr * expr);
@@ -14969,6 +16183,38 @@ index 273c75a422c..6b42d82806b 100644
  
  /* Find the appropriate variant of a math intrinsic.  */
  tree gfc_builtin_decl_for_float_kind (enum built_in_function, int);
+@@ -962,7 +963,6 @@ struct GTY(())	lang_type	 {
+   tree offset;
+   tree dtype;
+   tree dataptr_type;
+-  tree span;
+   tree base_decl[2];
+   tree nonrestricted_type;
+   tree caf_token;
+@@ -978,7 +978,6 @@ struct GTY(()) lang_decl {
+      address of target label.  */
+   tree stringlen;
+   tree addr;
+-  tree span;
+   /* For assumed-shape coarrays.  */
+   tree token, caf_offset;
+   unsigned int scalar_allocatable : 1;
+@@ -988,7 +987,6 @@ struct GTY(()) lang_decl {
+ 
+ #define GFC_DECL_ASSIGN_ADDR(node) DECL_LANG_SPECIFIC(node)->addr
+ #define GFC_DECL_STRING_LEN(node) DECL_LANG_SPECIFIC(node)->stringlen
+-#define GFC_DECL_SPAN(node) DECL_LANG_SPECIFIC(node)->span
+ #define GFC_DECL_TOKEN(node) DECL_LANG_SPECIFIC(node)->token
+ #define GFC_DECL_CAF_OFFSET(node) DECL_LANG_SPECIFIC(node)->caf_offset
+ #define GFC_DECL_SAVED_DESCRIPTOR(node) \
+@@ -1037,7 +1035,6 @@ struct GTY(()) lang_decl {
+ #define GFC_TYPE_ARRAY_DTYPE(node) (TYPE_LANG_SPECIFIC(node)->dtype)
+ #define GFC_TYPE_ARRAY_DATAPTR_TYPE(node) \
+   (TYPE_LANG_SPECIFIC(node)->dataptr_type)
+-#define GFC_TYPE_ARRAY_SPAN(node) (TYPE_LANG_SPECIFIC(node)->span)
+ #define GFC_TYPE_ARRAY_BASE_DECL(node, internal) \
+   (TYPE_LANG_SPECIFIC(node)->base_decl[(internal)])
+ 
 diff --git a/gcc/function.c b/gcc/function.c
 index c6e862b3369..acf9f9e60c7 100644
 --- a/gcc/function.c
@@ -15550,6 +16796,44 @@ index 32b352328a9..d414632e602 100644
    max_new_size = 0;
 +  ipcp_free_transformation_sum ();
  }
+diff --git a/gcc/ipa-fnsummary.c b/gcc/ipa-fnsummary.c
+index 160261d34c9..7c5562ad801 100644
+--- a/gcc/ipa-fnsummary.c
++++ b/gcc/ipa-fnsummary.c
+@@ -3452,24 +3452,24 @@ static void
+ ipa_fn_summary_write (void)
+ {
+   struct output_block *ob = create_output_block (LTO_section_ipa_fn_summary);
++  lto_symtab_encoder_iterator lsei;
+   lto_symtab_encoder_t encoder = ob->decl_state->symtab_node_encoder;
+   unsigned int count = 0;
+-  int i;
+ 
+-  for (i = 0; i < lto_symtab_encoder_size (encoder); i++)
++  for (lsei = lsei_start_function_in_partition (encoder); !lsei_end_p (lsei);
++       lsei_next_function_in_partition (&lsei))
+     {
+-      symtab_node *snode = lto_symtab_encoder_deref (encoder, i);
+-      cgraph_node *cnode = dyn_cast <cgraph_node *> (snode);
+-      if (cnode && cnode->definition && !cnode->alias)
++      cgraph_node *cnode = lsei_cgraph_node (lsei);
++      if (cnode->definition && !cnode->alias)
+ 	count++;
+     }
+   streamer_write_uhwi (ob, count);
+ 
+-  for (i = 0; i < lto_symtab_encoder_size (encoder); i++)
++  for (lsei = lsei_start_function_in_partition (encoder); !lsei_end_p (lsei);
++       lsei_next_function_in_partition (&lsei))
+     {
+-      symtab_node *snode = lto_symtab_encoder_deref (encoder, i);
+-      cgraph_node *cnode = dyn_cast <cgraph_node *> (snode);
+-      if (cnode && cnode->definition && !cnode->alias)
++      cgraph_node *cnode = lsei_cgraph_node (lsei);
++      if (cnode->definition && !cnode->alias)
+ 	{
+ 	  struct ipa_fn_summary *info = ipa_fn_summaries->get (cnode);
+ 	  struct bitpack_d bp;
 diff --git a/gcc/ipa-prop.c b/gcc/ipa-prop.c
 index d86c2f3db55..848180aa441 100644
 --- a/gcc/ipa-prop.c
@@ -15585,6 +16869,18 @@ index 7257a6d04f1..5ab3d07a6de 100644
  
  /* ipa_edge_args stores information related to a callsite and particularly its
     arguments.  It can be accessed by the IPA_EDGE_REF macro.  */
+diff --git a/gcc/ipa-pure-const.c b/gcc/ipa-pure-const.c
+index bb561d00853..0c6f84ff72d 100644
+--- a/gcc/ipa-pure-const.c
++++ b/gcc/ipa-pure-const.c
+@@ -527,7 +527,6 @@ special_builtin_state (enum pure_const_state_e *state, bool *looping,
+ 	case BUILT_IN_CXA_END_CLEANUP:
+ 	case BUILT_IN_EH_COPY_VALUES:
+ 	case BUILT_IN_FRAME_ADDRESS:
+-	case BUILT_IN_APPLY:
+ 	case BUILT_IN_APPLY_ARGS:
+ 	case BUILT_IN_ASAN_BEFORE_DYNAMIC_INIT:
+ 	case BUILT_IN_ASAN_AFTER_DYNAMIC_INIT:
 diff --git a/gcc/ira.c b/gcc/ira.c
 index fd481d6e0e2..b330f2a287b 100644
 --- a/gcc/ira.c
@@ -16185,6 +17481,87 @@ index 039ddacfed1..bd3e3bf1ae9 100644
     /* Transform sqrt(x) cmp sqrt(y) -> x cmp y.  */
     (simplify
      (cmp (sq @0) (sq @1))
+diff --git a/gcc/modulo-sched.c b/gcc/modulo-sched.c
+index 9954ea5cfa1..059b5440123 100644
+--- a/gcc/modulo-sched.c
++++ b/gcc/modulo-sched.c
+@@ -3201,7 +3201,7 @@ ps_add_node_check_conflicts (partial_schedule_ptr ps, int n,
+    			     int c, sbitmap must_precede,
+ 			     sbitmap must_follow)
+ {
+-  int has_conflicts = 0;
++  int i, first, amount, has_conflicts = 0;
+   ps_insn_ptr ps_i;
+ 
+   /* First add the node to the PS, if this succeeds check for
+@@ -3209,23 +3209,32 @@ ps_add_node_check_conflicts (partial_schedule_ptr ps, int n,
+   if (! (ps_i = add_node_to_ps (ps, n, c, must_precede, must_follow)))
+     return NULL; /* Failed to insert the node at the given cycle.  */
+ 
+-  has_conflicts = ps_has_conflicts (ps, c, c)
+-		  || (ps->history > 0
+-		      && ps_has_conflicts (ps,
+-					   c - ps->history,
+-					   c + ps->history));
+-
+-  /* Try different issue slots to find one that the given node can be
+-     scheduled in without conflicts.  */
+-  while (has_conflicts)
++  while (1)
+     {
++      has_conflicts = ps_has_conflicts (ps, c, c);
++      if (ps->history > 0 && !has_conflicts)
++	{
++	  /* Check all 2h+1 intervals, starting from c-2h..c up to c..2h,
++	     but not more than ii intervals.  */
++	  first = c - ps->history;
++	  amount = 2 * ps->history + 1;
++	  if (amount > ps->ii)
++	    amount = ps->ii;
++	  for (i = first; i < first + amount; i++)
++	    {
++	      has_conflicts = ps_has_conflicts (ps,
++						i - ps->history,
++						i + ps->history);
++	      if (has_conflicts)
++		break;
++	    }
++	}
++      if (!has_conflicts)
++	break;
++      /* Try different issue slots to find one that the given node can be
++	 scheduled in without conflicts.  */
+       if (! ps_insn_advance_column (ps, ps_i, must_follow))
+ 	break;
+-      has_conflicts = ps_has_conflicts (ps, c, c)
+-		      || (ps->history > 0
+-			  && ps_has_conflicts (ps,
+-					       c - ps->history,
+-					       c + ps->history));
+     }
+ 
+   if (has_conflicts)
+diff --git a/gcc/omp-low.c b/gcc/omp-low.c
+index f9ab91aafaa..81280296a24 100644
+--- a/gcc/omp-low.c
++++ b/gcc/omp-low.c
+@@ -3041,6 +3041,16 @@ check_omp_nesting_restrictions (gimple *stmt, omp_context *ctx)
+       }
+       break;
+     case GIMPLE_OMP_TEAMS:
++      if ((ctx == NULL
++           || gimple_code (ctx->stmt) != GIMPLE_OMP_TARGET
++           || gimple_omp_target_kind (ctx->stmt) != GF_OMP_TARGET_KIND_REGION)
++	  && lang_GNU_Fortran ())
++	{
++	  error_at (gimple_location (stmt),
++		    "%<teams%> construct not closely nested inside of "
++		    "%<target%> construct");
++	  return false;
++	}
+       if (ctx == NULL)
+ 	break;
+       else if (gimple_code (ctx->stmt) != GIMPLE_OMP_TARGET
 diff --git a/gcc/omp-simd-clone.c b/gcc/omp-simd-clone.c
 index 472e2025e19..845443efc59 100644
 --- a/gcc/omp-simd-clone.c
@@ -16270,6 +17647,19 @@ index 74096bc5462..cf1c3689eff 100644
  	print "";
  }
  
+diff --git a/gcc/params.def b/gcc/params.def
+index 813dc55d94c..8e4887e50a2 100644
+--- a/gcc/params.def
++++ b/gcc/params.def
+@@ -419,7 +419,7 @@ DEFPARAM(PARAM_SMS_MIN_SC,
+ DEFPARAM(PARAM_SMS_DFA_HISTORY,
+ 	 "sms-dfa-history",
+ 	 "The number of cycles the swing modulo scheduler considers when checking conflicts using DFA.",
+-	 0, 0, 0)
++	 0, 0, 16)
+ DEFPARAM(PARAM_SMS_LOOP_AVERAGE_COUNT_THRESHOLD,
+ 	 "sms-loop-average-count-threshold",
+ 	 "A threshold on the average loop count considered by the swing modulo scheduler.",
 diff --git a/gcc/passes.c b/gcc/passes.c
 index d8d479a1c17..e071a878301 100644
 --- a/gcc/passes.c
@@ -18801,10 +20191,131 @@ index 29f6cdc4667..33b4be79c0f 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..dcee8381c86 100644
+index bc11ae4ae0b..d2177c79e4d 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,1025 @@
+@@ -1,3 +1,1146 @@
++2019-12-21  Paul Thomas  <pault@gcc.gnu.org>
++
++	Backported from mainline
++	PR fortran/92753
++	* gfortran.dg/inquiry_type_ref_5.f90 : New test.
++
++2019-12-20  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from mainline
++	2019-12-19  Jakub Jelinek  <jakub@redhat.com>
++
++ 	PR fortran/92977
++	* gfortran.dg/gomp/pr92977.f90: New test.
++
++	2019-12-14  Jakub Jelinek  <jakub@redhat.com>
++
++	PR tree-optimization/92930
++	* gcc.dg/tree-ssa/pr92930.c: New test.
++
++	2019-12-12  Jakub Jelinek  <jakub@redhat.com>
++
++	PR target/92904
++	* gcc.c-torture/execute/pr92904.c: New test.
++
++	2019-12-11  Jakub Jelinek  <jakub@redhat.com>
++
++	PR target/92723
++	* gcc.dg/vect/pr92723.c: New test.
++
++	2019-12-06  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/92831 - CWG 1299, not extending temporary lifetime for ?:
++	* g++.dg/cpp0x/temp-extend2.C: New test.
++
++	2019-12-05  Jakub Jelinek  <jakub@redhat.com>
++
++	PR fortran/92781
++	* gfortran.dg/pr92781.f90: New test.
++
++	2019-12-04  Jakub Jelinek  <jakub@redhat.com>
++
++	PR fortran/92756
++	* gfortran.dg/gomp/teams1.f90: New test.
++
++	2019-12-03  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/92732
++	* g++.dg/cpp2a/bitfield3.C: Don't expect narrowing conversion
++	warnings.
++	* g++.dg/cpp2a/bitfield4.C: New test.
++
++	PR c++/92695
++	* g++.dg/cpp2a/constexpr-virtual14.C: New test.
++
++	2019-12-02  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/92695
++	* g++.dg/cpp2a/constexpr-virtual15.C: New test.
++
++	2019-11-29  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/60228
++	* g++.dg/gomp/openmp-simd-2.C: Don't expect bodies for
++	DECL_OMP_DECLARE_REDUCTION_P functions.
++
++	2019-11-28  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/92695
++	* g++.dg/warn/inline3.C: New test.
++
++	2019-11-27  Jakub Jelinek  <jakub@redhat.com>
++
++	PR fortran/91944
++	* gfortran.dg/spread_size_limit_2.f90: New test.
++
++	PR c++/92524
++	* g++.dg/cpp0x/pr92524.C: New test.
++
++	2019-11-26  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/92648
++	* g++.dg/cpp0x/gen-attrs-71.C: New test.
++
++	PR c++/61414
++	* g++.dg/cpp0x/enum23.C: Remove xfail.
++	* g++.dg/cpp0x/enum28.C: New test.
++
++	PR tree-optimization/92644
++	* g++.dg/opt/pr92644.C: New test.
++
++	2019-11-23  Jakub Jelinek  <jakub@redhat.com>
++
++	PR target/92615
++	* gcc.target/i386/pr92615.c: New test.
++
++	2019-11-22  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c/90677
++	* c-c++-common/pr90677.c: New test.
++
++	2019-11-21  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/90842
++	* g++.dg/cpp1y/lambda-generic-90842.C: New test.
++
++2019-12-20  Roman Zhuykov  <zhroma@ispras.ru>
++
++	* gcc.dg/pr92951-1.c: Rename to ...
++	* gcc.dg/pr92591-1.c: ... this.
++	* gcc.dg/pr92951-2.c: Rename to ...
++	* gcc.dg/pr92591-2.c: ... this.
++
++2019-12-20  Roman Zhuykov  <zhroma@ispras.ru>
++
++	Backport from mainline
++	2019-12-13  Roman Zhuykov  <zhroma@ispras.ru>
++
++	PR rtl-optimization/92591
++	* gcc.dg/pr92951-1.c: New test.
++	* gcc.dg/pr92951-2.c: New test.
++
 +2019-12-17  Andreas Krebbel  <krebbel@linux.ibm.com>
 +
 +	Backport from mainline
@@ -19830,7 +21341,7 @@ index bc11ae4ae0b..dcee8381c86 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +1449,7 @@
+@@ -427,7 +1570,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -19839,7 +21350,7 @@ index bc11ae4ae0b..dcee8381c86 100644
  	(check_effective_target_powerpc_p8vector_ok): No support for Darwin.
  	(check_effective_target_powerpc_p9vector_ok): Likewise.
  	(check_effective_target_powerpc_float128_sw_ok): Likewise.
-@@ -720,7 +1742,7 @@
+@@ -720,7 +1863,7 @@
  
  	Backport from mainline
  	PR fortran/91077
@@ -19848,7 +21359,7 @@ index bc11ae4ae0b..dcee8381c86 100644
  
  2019-07-05  Szabolcs Nagy  <szabolcs.nagy@arm.com>
  
-@@ -969,7 +1991,7 @@
+@@ -969,7 +2112,7 @@
         * gcc.target/i386/pr82699-6.c: Likewise
         * gcc.target/i386/returninst1.c: Likewise
         * gcc.target/i386/returninst2.c: Likewise
@@ -19857,7 +21368,7 @@ index bc11ae4ae0b..dcee8381c86 100644
  
  2019-05-30  Iain Sandoe  <iain@sandoe.co.uk>
  
-@@ -1131,7 +2153,7 @@
+@@ -1131,7 +2274,7 @@
  
  	Backport from trunk
  	PR fortran/90498
@@ -19866,7 +21377,7 @@ index bc11ae4ae0b..dcee8381c86 100644
  
  2019-05-17  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -3801,21 +4823,21 @@
+@@ -3801,21 +4944,21 @@
  2019-02-23  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88117
@@ -19895,7 +21406,7 @@ index bc11ae4ae0b..dcee8381c86 100644
  
  2019-02-22  David Malcolm  <dmalcolm@redhat.com>
  
-@@ -4444,7 +5466,7 @@
+@@ -4444,7 +5587,7 @@
  2019-02-09  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/89200
@@ -19904,7 +21415,7 @@ index bc11ae4ae0b..dcee8381c86 100644
  
  2019-02-09  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -4704,17 +5726,17 @@
+@@ -4704,17 +5847,17 @@
  2019-02-02  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88393
@@ -20529,6 +22040,23 @@ index 00000000000..604fd5986f8
 +    }
 +  bar (f);
 +}
+diff --git a/gcc/testsuite/c-c++-common/pr90677.c b/gcc/testsuite/c-c++-common/pr90677.c
+new file mode 100644
+index 00000000000..897fbc6e13e
+--- /dev/null
++++ b/gcc/testsuite/c-c++-common/pr90677.c
+@@ -0,0 +1,11 @@
++/* PR c/90677 */
++/* { dg-do compile } */
++/* { dg-options "-W -Wall" } */
++
++struct cgraph_node;
++union tree_node;
++typedef union tree_node *tree;
++union gimple_statement_d;
++typedef union gimple_statement_d *gimple;
++struct cgraph_node *cgraph_node (tree);
++void foo (int, const char *, ...) __attribute__((__format__(__gcc_diag__, 2, 3)));
 diff --git a/gcc/testsuite/g++.dg/abi/mangle73.C b/gcc/testsuite/g++.dg/abi/mangle73.C
 new file mode 100644
 index 00000000000..2a5322a37c3
@@ -20715,6 +22243,48 @@ index 00000000000..0927488e569
 +  if (g != 42)
 +    __builtin_abort ();
 +}
+diff --git a/gcc/testsuite/g++.dg/cpp0x/enum23.C b/gcc/testsuite/g++.dg/cpp0x/enum23.C
+index b2378e1b366..53ad990bf93 100644
+--- a/gcc/testsuite/g++.dg/cpp0x/enum23.C
++++ b/gcc/testsuite/g++.dg/cpp0x/enum23.C
+@@ -5,5 +5,5 @@ enum class MyEnum { A = 1 };
+ 
+ struct MyClass
+ {
+-  MyEnum Field1 : 3; // { dg-bogus "warning: 'MyClass::Field1' is too small" "" { xfail *-*-* } }
++  MyEnum Field1 : 3; // { dg-bogus "warning: 'MyClass::Field1' is too small" }
+ };
+diff --git a/gcc/testsuite/g++.dg/cpp0x/enum38.C b/gcc/testsuite/g++.dg/cpp0x/enum38.C
+new file mode 100644
+index 00000000000..f0dd8a1fc6b
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp0x/enum38.C
+@@ -0,0 +1,25 @@
++// PR c++/61414
++// { dg-do compile { target c++11 } }
++
++enum C { C0 = -4, C1 = 3 };
++enum D { D0 = 0, D1 = 15 };
++enum class E { E0 = -4, E1 = 3 };
++enum F : unsigned { F0 = 0, F1 = 15 };
++enum __attribute__((__mode__ (__QI__))) G { G0 = -4, G1 = 3 };
++enum __attribute__((__mode__ (__HI__))) H { H0 = 0, H1 = 15 };
++
++struct S
++{
++  C a : 2;	// { dg-warning "'S::a' is too small to hold all values of 'enum C'" }
++  C b : 3;	// { dg-bogus "'S::b' is too small to hold all values of 'enum C'" }
++  D c : 3;	// { dg-warning "'S::c' is too small to hold all values of 'enum D'" }
++  D d : 4;	// { dg-bogus "'S::d' is too small to hold all values of 'enum D'" }
++  E e : 2;	// { dg-warning "'S::e' is too small to hold all values of 'enum class E'" }
++  E f : 3;	// { dg-bogus "'S::f' is too small to hold all values of 'enum class E'" }
++  F g : 3;	// { dg-warning "'S::g' is too small to hold all values of 'enum F'" }
++  F h : 4;	// { dg-bogus "'S::h' is too small to hold all values of 'enum F'" }
++  G i : 2;	// { dg-warning "'S::i' is too small to hold all values of 'enum G'" }
++  G j : 3;	// { dg-bogus "'S::j' is too small to hold all values of 'enum G'" }
++  H k : 3;	// { dg-warning "'S::k' is too small to hold all values of 'enum H'" }
++  H l : 4;	// { dg-bogus "'S::l' is too small to hold all values of 'enum H'" }
++};
 diff --git a/gcc/testsuite/g++.dg/cpp0x/gen-attrs-68.C b/gcc/testsuite/g++.dg/cpp0x/gen-attrs-68.C
 new file mode 100644
 index 00000000000..6bede0659db
@@ -20807,6 +22377,19 @@ index 00000000000..43173dbbdf4
 +struct S8 {
 +  S8(int __attribute__((unused)), int __attribute__((unused)));
 +};
+diff --git a/gcc/testsuite/g++.dg/cpp0x/gen-attrs-71.C b/gcc/testsuite/g++.dg/cpp0x/gen-attrs-71.C
+new file mode 100644
+index 00000000000..7876a2fba30
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp0x/gen-attrs-71.C
+@@ -0,0 +1,7 @@
++// PR c++/92648
++// { dg-do compile { target c++11 } }
++
++int a [[gnu::no_such_attribute(![!(!)!]!,;;)]];	// { dg-warning "ignored" }
++int b [[no_such_namespace::nonexisting_attribute(linear(c, d : 2), reduction(*:e), linear(uval (f)))]];	// { dg-warning "ignored" }
++int c [[gnu::nonexisting_attribute()]];	// { dg-warning "ignored" }
++int d [[gnu::another_nonexistent_attr(1,"abcd",g+6)]];	// { dg-warning "ignored" }
 diff --git a/gcc/testsuite/g++.dg/cpp0x/initlist-new2.C b/gcc/testsuite/g++.dg/cpp0x/initlist-new2.C
 new file mode 100644
 index 00000000000..439b8dabacb
@@ -20926,6 +22509,24 @@ index 00000000000..6fcdbbaa6a4
 +  return B(x); // { dg-warning "choosing .A::operator B\\(\\). over .B::B\\(const A&\\)" "" { target c++17 } }
 +  // { dg-warning "for conversion from .A. to .B." "" { target c++17 } .-1 }
 +}
+diff --git a/gcc/testsuite/g++.dg/cpp0x/pr92524.C b/gcc/testsuite/g++.dg/cpp0x/pr92524.C
+new file mode 100644
+index 00000000000..ffbcd8f9f3a
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp0x/pr92524.C
+@@ -0,0 +1,12 @@
++// PR c++/92524
++// { dg-do compile { target c++11 } }
++
++struct A { char a = '*'; };
++struct B { A b[64]; };
++
++void
++foo ()
++{
++  A a;
++  B{a};
++}
 diff --git a/gcc/testsuite/g++.dg/cpp0x/range-for19.C b/gcc/testsuite/g++.dg/cpp0x/range-for19.C
 index e3f446f3700..6afaee577f2 100644
 --- a/gcc/testsuite/g++.dg/cpp0x/range-for19.C
@@ -20938,6 +22539,48 @@ index e3f446f3700..6afaee577f2 100644
 +  for(auto i: a)
      ;
  }
+diff --git a/gcc/testsuite/g++.dg/cpp0x/temp-extend2.C b/gcc/testsuite/g++.dg/cpp0x/temp-extend2.C
+new file mode 100644
+index 00000000000..0b904e3ffbc
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp0x/temp-extend2.C
+@@ -0,0 +1,36 @@
++// PR c++/92831
++// { dg-do run { target c++11 } }
++
++template<typename T> using id = T;
++struct S { S () { s++; } ~S () { s--; } S (int) { s++; } static int s; };
++int S::s = 0;
++
++void
++bar (bool cond, bool cond2)
++{
++  if (S::s != (cond ? cond2 ? 7 : 5 : cond2 ? 8 : 9))
++    __builtin_abort ();
++}
++
++void
++foo (bool cond, bool cond2)
++{
++  int i = 1;
++  // temporary array has same lifetime as a
++  S&& a = id<S[3]>{1, 2, 3}[i];
++  // temporary S has same lifetime as b
++  const S& b = static_cast<const S&>(0);
++  // exactly one of the four temporaries is lifetime-extended
++  S&& c = cond ? cond2 ? id<S[3]>{1, 2, 3}[i] : static_cast<S&&>(0)
++	       : cond2 ? id<S[4]>{1, 2, 3, 4}[i] : id<S[5]>{1, 2, 3, 4, 5}[i];
++  bar (cond, cond2);
++}
++
++int
++main ()
++{
++  foo (true, true);
++  foo (true, false);
++  foo (false, true);
++  foo (false, false);
++}
 diff --git a/gcc/testsuite/g++.dg/cpp1y/auto-fn56.C b/gcc/testsuite/g++.dg/cpp1y/auto-fn56.C
 new file mode 100644
 index 00000000000..69bdd9586eb
@@ -21055,6 +22698,19 @@ index b21ca98e279..00000000000
 -  A a;
 -  b ? a : throw 42;
 -}
+diff --git a/gcc/testsuite/g++.dg/cpp1y/lambda-generic-90842.C b/gcc/testsuite/g++.dg/cpp1y/lambda-generic-90842.C
+new file mode 100644
+index 00000000000..e36aa547053
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp1y/lambda-generic-90842.C
+@@ -0,0 +1,7 @@
++// PR c++/90842
++// { dg-do compile { target c++14 } }
++
++auto a = [](auto x) struct C { void foo (); } {};	// { dg-error "expected" }
++							// { dg-error "type-specifier invalid in lambda" "" { target *-*-* } .-1 }
++auto b = [](auto x) mutable typedef {};			// { dg-error "'typedef' invalid in lambda" }
++auto d = [](auto x) mutable friend {};			// { dg-error "'friend' invalid in lambda" }
 diff --git a/gcc/testsuite/g++.dg/cpp1y/lambda-init16.C b/gcc/testsuite/g++.dg/cpp1y/lambda-init16.C
 index 0a40ebbee0f..6b4ed347eee 100644
 --- a/gcc/testsuite/g++.dg/cpp1y/lambda-init16.C
@@ -21241,6 +22897,98 @@ index 00000000000..a04021e5037
 +
 +static_assert (foo (true), "");
 +static_assert (!foo (false), "");
+diff --git a/gcc/testsuite/g++.dg/cpp2a/bitfield3.C b/gcc/testsuite/g++.dg/cpp2a/bitfield3.C
+index 511c8894703..5482da490e2 100644
+--- a/gcc/testsuite/g++.dg/cpp2a/bitfield3.C
++++ b/gcc/testsuite/g++.dg/cpp2a/bitfield3.C
+@@ -15,11 +15,9 @@ const int b = 0;
+ struct S {
+   int c : 5 = 2 * a;			// { dg-warning "default member initializers for bit-fields only available with" "" { target c++17_down } }
+   int d : 6 { c + a };			// { dg-warning "default member initializers for bit-fields only available with" "" { target c++17_down } }
+-					// { dg-warning "narrowing conversion of" "" { target *-*-* } .-1 }
+   int e : true ? 7 : a = 3;
+   int f : (true ? 8 : b) = d + a;	// { dg-warning "default member initializers for bit-fields only available with" "" { target c++17_down } }
+   int g : (true ? 9 : b) { f + a };	// { dg-warning "default member initializers for bit-fields only available with" "" { target c++17_down } }
+-					// { dg-warning "narrowing conversion of" "" { target *-*-* } .-1 }
+   int h : 1 || new int { 0 };
+   int i = g + a;
+ };
+@@ -28,11 +26,9 @@ template <bool V, int W>
+ struct U {
+   int j : W = 3 * a;			// { dg-warning "default member initializers for bit-fields only available with" "" { target c++17_down } }
+   int k : W { j + a };			// { dg-warning "default member initializers for bit-fields only available with" "" { target c++17_down } }
+-					// { dg-warning "narrowing conversion of" "" { target *-*-* } .-1 }
+   int l : V ? 7 : a = 3;
+   int m : (V ? W : b) = k + a;		// { dg-warning "default member initializers for bit-fields only available with" "" { target c++17_down } }
+   int n : (V ? W : b) { m + a };	// { dg-warning "default member initializers for bit-fields only available with" "" { target c++17_down } }
+-					// { dg-warning "narrowing conversion of" "" { target *-*-* } .-1 }
+   int o : 1 || new int { 0 };
+   int p = n + a;
+ };
+diff --git a/gcc/testsuite/g++.dg/cpp2a/bitfield4.C b/gcc/testsuite/g++.dg/cpp2a/bitfield4.C
+new file mode 100644
+index 00000000000..bbfa86cbb9e
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp2a/bitfield4.C
+@@ -0,0 +1,12 @@
++// PR c++/92732
++// { dg-do compile { target c++17 } }
++// { dg-options "" }
++
++enum class byte : unsigned char { };
++using uint8_t = unsigned char;
++
++struct T
++{
++  byte a : 2 = byte{0};	// { dg-warning "default member initializers for bit-fields only available with" "" { target c++17_down } }
++  uint8_t b : 2 = 0;	// { dg-warning "default member initializers for bit-fields only available with" "" { target c++17_down } }
++} t;
+diff --git a/gcc/testsuite/g++.dg/cpp2a/constexpr-virtual14.C b/gcc/testsuite/g++.dg/cpp2a/constexpr-virtual14.C
+new file mode 100644
+index 00000000000..b29d3f6aefb
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp2a/constexpr-virtual14.C
+@@ -0,0 +1,27 @@
++// PR c++/92695
++// { dg-do compile { target c++2a } }
++
++struct A {
++  virtual int get () = 0;
++  virtual int set (A *o) = 0;
++};
++struct B : A {
++  constexpr int get () override { return 10; }
++  constexpr int set (A *o) override { a = o; return 20; }
++  A *a {};
++};
++constexpr auto addressof = [] (A &n) { return &n; };
++struct C {
++  B b;
++  A *c { addressof (b) };
++  constexpr int add () { return c->set (addressof (b)); }
++};
++struct D {
++  B b[2];
++  A *c { addressof (b[0]) };
++  constexpr int add () { return c->set (addressof (b[0])); }
++};
++template <typename T>
++constexpr int get () { T f; return f.add (); }
++static_assert (get<C> () == 20);
++static_assert (get<D> () == 20);
+diff --git a/gcc/testsuite/g++.dg/cpp2a/constexpr-virtual15.C b/gcc/testsuite/g++.dg/cpp2a/constexpr-virtual15.C
+new file mode 100644
+index 00000000000..cb55aa3bb56
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp2a/constexpr-virtual15.C
+@@ -0,0 +1,7 @@
++// PR c++/92695
++// { dg-do compile { target c++2a } }
++
++struct A { virtual int get() = 0; };
++struct B : A { constexpr int get() override { return 10; } };
++struct D { B b[2]; A* c{&(b[0])}; };
++static_assert(D{}.c->get() == 10);
 diff --git a/gcc/testsuite/g++.dg/cpp2a/nontype-class23.C b/gcc/testsuite/g++.dg/cpp2a/nontype-class23.C
 new file mode 100644
 index 00000000000..ab9e80fd335
@@ -21670,6 +23418,19 @@ index b3875ad04ae..20e5d629ff5 100644
 +
 +static_assert( my_is_final<final1>::value, "final1 is final" );
 +static_assert( my_is_final<final2<int>>::value, "final2<int> is final" );
+diff --git a/gcc/testsuite/g++.dg/gomp/openmp-simd-2.C b/gcc/testsuite/g++.dg/gomp/openmp-simd-2.C
+index e31c1ebecf9..e66806845b7 100644
+--- a/gcc/testsuite/g++.dg/gomp/openmp-simd-2.C
++++ b/gcc/testsuite/g++.dg/gomp/openmp-simd-2.C
+@@ -36,8 +36,6 @@ void bar(int n, float *a, float *b)
+     a[i] = b[i];
+ }
+ 
+-/* { dg-final { scan-tree-dump-times "Function void omp declare reduction operator\\+" 1 "original" } } */
+-/* { dg-final { scan-tree-dump-times "Function void omp declare reduction foo" 2 "original" } } */
+ /* { dg-final { scan-tree-dump-times "pragma omp simd reduction\\(u\\) reduction\\(t\\) reduction\\(\\+:s\\) aligned\\(a:32\\)" 1 "original" } } */
+ /* { dg-final { scan-tree-dump-times "pragma omp simd safelen\\(64\\)" 1 "original" } } */
+ /* { dg-final { scan-tree-dump-not "omp parallel" "original" } } */
 diff --git a/gcc/testsuite/g++.dg/gomp/pr92504.C b/gcc/testsuite/g++.dg/gomp/pr92504.C
 new file mode 100644
 index 00000000000..8df67621532
@@ -21911,6 +23672,18 @@ index 00000000000..9434cc929dd
 +      sb (v9);
 +    }
 +}
+diff --git a/gcc/testsuite/g++.dg/opt/pr92644.C b/gcc/testsuite/g++.dg/opt/pr92644.C
+new file mode 100644
+index 00000000000..2f8a86f1fdb
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/opt/pr92644.C
+@@ -0,0 +1,6 @@
++// PR tree-optimization/92644
++// { dg-do compile { target c++14 } }
++// { dg-options "-O2 -fno-early-inlining" }
++
++inline auto foo () { return nullptr; }
++int bar () { return foo () ? 1 : 0; }
 diff --git a/gcc/testsuite/g++.dg/other/pr92201.C b/gcc/testsuite/g++.dg/other/pr92201.C
 new file mode 100644
 index 00000000000..15ba1a12525
@@ -22251,6 +24024,32 @@ index 00000000000..d67fd26943e
 +  __nonesuch(__nonesuch const &);
 +};
 +} // namespace std
+diff --git a/gcc/testsuite/g++.dg/warn/inline3.C b/gcc/testsuite/g++.dg/warn/inline3.C
+new file mode 100644
+index 00000000000..0d4dc8ff268
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/warn/inline3.C
+@@ -0,0 +1,20 @@
++struct S {
++  inline virtual void foo () = 0;	// { dg-bogus "used but never defined" }
++#if __cplusplus > 201703L
++  constexpr virtual void bar () = 0;	// { dg-bogus "used but never defined" "" { target c++2a } }
++#else
++  inline virtual void bar () = 0;	// { dg-bogus "used but never defined" "" { target c++17_down }  }
++#endif
++  S () {}
++};
++struct T : public S {
++  inline virtual void foo () {}
++#if __cplusplus > 201703L
++  constexpr virtual void bar () {}
++#else
++  inline virtual void bar () {}
++#endif
++  T () {}
++};
++T t;
++void foo (S *s) { s->foo (); s->bar (); }
 diff --git a/gcc/testsuite/gcc.c-torture/compile/20191108-1.c b/gcc/testsuite/gcc.c-torture/compile/20191108-1.c
 new file mode 100644
 index 00000000000..7929751bb06
@@ -22939,6 +24738,407 @@ index 00000000000..878a491fc36
 +#endif
 +  return 0;
 +}
+diff --git a/gcc/testsuite/gcc.c-torture/execute/pr92904.c b/gcc/testsuite/gcc.c-torture/execute/pr92904.c
+new file mode 100644
+index 00000000000..25cb0b8c595
+--- /dev/null
++++ b/gcc/testsuite/gcc.c-torture/execute/pr92904.c
+@@ -0,0 +1,395 @@
++/* PR target/92904 */
++
++#include <stdarg.h>
++
++struct S { long long a, b; };
++struct __attribute__((aligned (16))) T { long long a, b; };
++struct U { double a, b, c, d; };
++struct __attribute__((aligned (32))) V { double a, b, c, d; };
++struct W { double a; long long b; };
++struct __attribute__((aligned (16))) X { double a; long long b; };
++#if __SIZEOF_INT128__ == 2 * __SIZEOF_LONG_LONG__
++__int128 b;
++#endif
++struct S c;
++struct T d;
++struct U e;
++struct V f;
++struct W g;
++struct X h;
++
++#if __SIZEOF_INT128__ == 2 * __SIZEOF_LONG_LONG__
++__attribute__((noipa)) __int128
++f1 (int x, ...)
++{
++  __int128 r;
++  va_list ap;
++  va_start (ap, x);
++  while (x--)
++    va_arg (ap, int);
++  r = va_arg (ap, __int128);
++  va_end (ap);
++  return r;
++}
++#endif
++
++__attribute__((noipa)) struct S
++f2 (int x, ...)
++{
++  struct S r;
++  va_list ap;
++  va_start (ap, x);
++  while (x--)
++    va_arg (ap, int);
++  r = va_arg (ap, struct S);
++  va_end (ap);
++  return r;
++}
++
++__attribute__((noipa)) struct T
++f3 (int x, ...)
++{
++  struct T r;
++  va_list ap;
++  va_start (ap, x);
++  while (x--)
++    va_arg (ap, int);
++  r = va_arg (ap, struct T);
++  va_end (ap);
++  return r;
++}
++
++#if __SIZEOF_INT128__ == 2 * __SIZEOF_LONG_LONG__
++__attribute__((noipa)) void
++f4 (int x, ...)
++{
++  va_list ap;
++  va_start (ap, x);
++  while (x--)
++    va_arg (ap, int);
++  b = va_arg (ap, __int128);
++  va_end (ap);
++}
++#endif
++
++__attribute__((noipa)) void
++f5 (int x, ...)
++{
++  va_list ap;
++  va_start (ap, x);
++  while (x--)
++    va_arg (ap, int);
++  c = va_arg (ap, struct S);
++  va_end (ap);
++}
++
++__attribute__((noipa)) void
++f6 (int x, ...)
++{
++  va_list ap;
++  va_start (ap, x);
++  while (x--)
++    va_arg (ap, int);
++  d = va_arg (ap, struct T);
++  va_end (ap);
++}
++
++__attribute__((noipa)) struct U
++f7 (int x, ...)
++{
++  struct U r;
++  va_list ap;
++  va_start (ap, x);
++  while (x--)
++    va_arg (ap, double);
++  r = va_arg (ap, struct U);
++  va_end (ap);
++  return r;
++}
++
++__attribute__((noipa)) struct V
++f8 (int x, ...)
++{
++  struct V r;
++  va_list ap;
++  va_start (ap, x);
++  while (x--)
++    va_arg (ap, double);
++  r = va_arg (ap, struct V);
++  va_end (ap);
++  return r;
++}
++
++__attribute__((noipa)) void
++f9 (int x, ...)
++{
++  va_list ap;
++  va_start (ap, x);
++  while (x--)
++    va_arg (ap, double);
++  e = va_arg (ap, struct U);
++  va_end (ap);
++}
++
++__attribute__((noipa)) void
++f10 (int x, ...)
++{
++  va_list ap;
++  va_start (ap, x);
++  while (x--)
++    va_arg (ap, double);
++  f = va_arg (ap, struct V);
++  va_end (ap);
++}
++
++__attribute__((noipa)) struct W
++f11 (int x, ...)
++{
++  struct W r;
++  va_list ap;
++  va_start (ap, x);
++  while (x--)
++    {
++      va_arg (ap, int);
++      va_arg (ap, double);
++    }
++  r = va_arg (ap, struct W);
++  va_end (ap);
++  return r;
++}
++
++__attribute__((noipa)) struct X
++f12 (int x, ...)
++{
++  struct X r;
++  va_list ap;
++  va_start (ap, x);
++  while (x--)
++    {
++      va_arg (ap, int);
++      va_arg (ap, double);
++    }
++  r = va_arg (ap, struct X);
++  va_end (ap);
++  return r;
++}
++
++__attribute__((noipa)) void
++f13 (int x, ...)
++{
++  va_list ap;
++  va_start (ap, x);
++  while (x--)
++    {
++      va_arg (ap, int);
++      va_arg (ap, double);
++    }
++  g = va_arg (ap, struct W);
++  va_end (ap);
++}
++
++__attribute__((noipa)) void
++f14 (int x, ...)
++{
++  va_list ap;
++  va_start (ap, x);
++  while (x--)
++    {
++      va_arg (ap, int);
++      va_arg (ap, double);
++    }
++  h = va_arg (ap, struct X);
++  va_end (ap);
++}
++
++int
++main ()
++{
++  union Y {
++#if __SIZEOF_INT128__ == 2 * __SIZEOF_LONG_LONG__
++    __int128 b;
++#endif
++    struct S c;
++    struct T d;
++    struct U e;
++    struct V f;
++    struct W g;
++    struct X h;
++  } u, v;
++  u.c.a = 0x5555555555555555ULL;
++  u.c.b = 0xaaaaaaaaaaaaaaaaULL;
++#define C(x) \
++  do {								\
++    if (u.c.a != x.c.a || u.c.b != x.c.b) __builtin_abort ();	\
++    u.c.a++;							\
++    u.c.b--;							\
++  } while (0)
++#if __SIZEOF_INT128__ == 2 * __SIZEOF_LONG_LONG__
++  v.b = f1 (0, u.b); C (v);
++  v.b = f1 (1, 0, u.b); C (v);
++  v.b = f1 (2, 0, 0, u.b); C (v);
++  v.b = f1 (3, 0, 0, 0, u.b); C (v);
++  v.b = f1 (4, 0, 0, 0, 0, u.b); C (v);
++  v.b = f1 (5, 0, 0, 0, 0, 0, u.b); C (v);
++  v.b = f1 (6, 0, 0, 0, 0, 0, 0, u.b); C (v);
++  v.b = f1 (7, 0, 0, 0, 0, 0, 0, 0, u.b); C (v);
++  v.b = f1 (8, 0, 0, 0, 0, 0, 0, 0, 0, u.b); C (v);
++  v.b = f1 (9, 0, 0, 0, 0, 0, 0, 0, 0, 0, u.b); C (v);
++#endif
++  v.c = f2 (0, u.c); C (v);
++  v.c = f2 (1, 0, u.c); C (v);
++  v.c = f2 (2, 0, 0, u.c); C (v);
++  v.c = f2 (3, 0, 0, 0, u.c); C (v);
++  v.c = f2 (4, 0, 0, 0, 0, u.c); C (v);
++  v.c = f2 (5, 0, 0, 0, 0, 0, u.c); C (v);
++  v.c = f2 (6, 0, 0, 0, 0, 0, 0, u.c); C (v);
++  v.c = f2 (7, 0, 0, 0, 0, 0, 0, 0, u.c); C (v);
++  v.c = f2 (8, 0, 0, 0, 0, 0, 0, 0, 0, u.c); C (v);
++  v.c = f2 (9, 0, 0, 0, 0, 0, 0, 0, 0, 0, u.c); C (v);
++  v.d = f3 (0, u.d); C (v);
++  v.d = f3 (1, 0, u.d); C (v);
++  v.d = f3 (2, 0, 0, u.d); C (v);
++  v.d = f3 (3, 0, 0, 0, u.d); C (v);
++  v.d = f3 (4, 0, 0, 0, 0, u.d); C (v);
++  v.d = f3 (5, 0, 0, 0, 0, 0, u.d); C (v);
++  v.d = f3 (6, 0, 0, 0, 0, 0, 0, u.d); C (v);
++  v.d = f3 (7, 0, 0, 0, 0, 0, 0, 0, u.d); C (v);
++  v.d = f3 (8, 0, 0, 0, 0, 0, 0, 0, 0, u.d); C (v);
++  v.d = f3 (9, 0, 0, 0, 0, 0, 0, 0, 0, 0, u.d); C (v);
++#if __SIZEOF_INT128__ == 2 * __SIZEOF_LONG_LONG__
++  f4 (0, u.b); v.b = b; C (v);
++  f4 (1, 0, u.b); v.b = b; C (v);
++  f4 (2, 0, 0, u.b); v.b = b; C (v);
++  f4 (3, 0, 0, 0, u.b); v.b = b; C (v);
++  f4 (4, 0, 0, 0, 0, u.b); v.b = b; C (v);
++  f4 (5, 0, 0, 0, 0, 0, u.b); v.b = b; C (v);
++  f4 (6, 0, 0, 0, 0, 0, 0, u.b); v.b = b; C (v);
++  f4 (7, 0, 0, 0, 0, 0, 0, 0, u.b); v.b = b; C (v);
++  f4 (8, 0, 0, 0, 0, 0, 0, 0, 0, u.b); v.b = b; C (v);
++  f4 (9, 0, 0, 0, 0, 0, 0, 0, 0, 0, u.b); v.b = b; C (v);
++#endif
++  f5 (0, u.c); v.c = c; C (v);
++  f5 (1, 0, u.c); v.c = c; C (v);
++  f5 (2, 0, 0, u.c); v.c = c; C (v);
++  f5 (3, 0, 0, 0, u.c); v.c = c; C (v);
++  f5 (4, 0, 0, 0, 0, u.c); v.c = c; C (v);
++  f5 (5, 0, 0, 0, 0, 0, u.c); v.c = c; C (v);
++  f5 (6, 0, 0, 0, 0, 0, 0, u.c); v.c = c; C (v);
++  f5 (7, 0, 0, 0, 0, 0, 0, 0, u.c); v.c = c; C (v);
++  f5 (8, 0, 0, 0, 0, 0, 0, 0, 0, u.c); v.c = c; C (v);
++  f5 (9, 0, 0, 0, 0, 0, 0, 0, 0, 0, u.c); v.c = c; C (v);
++  f6 (0, u.d); v.d = d; C (v);
++  f6 (1, 0, u.d); v.d = d; C (v);
++  f6 (2, 0, 0, u.d); v.d = d; C (v);
++  f6 (3, 0, 0, 0, u.d); v.d = d; C (v);
++  f6 (4, 0, 0, 0, 0, u.d); v.d = d; C (v);
++  f6 (5, 0, 0, 0, 0, 0, u.d); v.d = d; C (v);
++  f6 (6, 0, 0, 0, 0, 0, 0, u.d); v.d = d; C (v);
++  f6 (7, 0, 0, 0, 0, 0, 0, 0, u.d); v.d = d; C (v);
++  f6 (8, 0, 0, 0, 0, 0, 0, 0, 0, u.d); v.d = d; C (v);
++  f6 (9, 0, 0, 0, 0, 0, 0, 0, 0, 0, u.d); v.d = d; C (v);
++  u.e.a = 1.25;
++  u.e.b = 2.75;
++  u.e.c = -3.5;
++  u.e.d = -2.0;
++#undef C
++#define C(x) \
++  do {								\
++    if (u.e.a != x.e.a || u.e.b != x.e.b			\
++	|| u.e.c != x.e.c || u.e.d != x.e.d) __builtin_abort ();\
++    u.e.a++;							\
++    u.e.b--;							\
++    u.e.c++;							\
++    u.e.d--;							\
++  } while (0)
++  v.e = f7 (0, u.e); C (v);
++  v.e = f7 (1, 0.0, u.e); C (v);
++  v.e = f7 (2, 0.0, 0.0, u.e); C (v);
++  v.e = f7 (3, 0.0, 0.0, 0.0, u.e); C (v);
++  v.e = f7 (4, 0.0, 0.0, 0.0, 0.0, u.e); C (v);
++  v.e = f7 (5, 0.0, 0.0, 0.0, 0.0, 0.0, u.e); C (v);
++  v.e = f7 (6, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, u.e); C (v);
++  v.e = f7 (7, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, u.e); C (v);
++  v.e = f7 (8, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, u.e); C (v);
++  v.e = f7 (9, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, u.e); C (v);
++  v.f = f8 (0, u.f); C (v);
++  v.f = f8 (1, 0.0, u.f); C (v);
++  v.f = f8 (2, 0.0, 0.0, u.f); C (v);
++  v.f = f8 (3, 0.0, 0.0, 0.0, u.f); C (v);
++  v.f = f8 (4, 0.0, 0.0, 0.0, 0.0, u.f); C (v);
++  v.f = f8 (5, 0.0, 0.0, 0.0, 0.0, 0.0, u.f); C (v);
++  v.f = f8 (6, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, u.f); C (v);
++  v.f = f8 (7, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, u.f); C (v);
++  v.f = f8 (8, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, u.f); C (v);
++  v.f = f8 (9, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, u.f); C (v);
++  f9 (0, u.e); v.e = e; C (v);
++  f9 (1, 0.0, u.e); v.e = e; C (v);
++  f9 (2, 0.0, 0.0, u.e); v.e = e; C (v);
++  f9 (3, 0.0, 0.0, 0.0, u.e); v.e = e; C (v);
++  f9 (4, 0.0, 0.0, 0.0, 0.0, u.e); v.e = e; C (v);
++  f9 (5, 0.0, 0.0, 0.0, 0.0, 0.0, u.e); v.e = e; C (v);
++  f9 (6, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, u.e); v.e = e; C (v);
++  f9 (7, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, u.e); v.e = e; C (v);
++  f9 (8, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, u.e); v.e = e; C (v);
++  f9 (9, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, u.e); v.e = e; C (v);
++  f10 (0, u.f); v.f = f; C (v);
++  f10 (1, 0.0, u.f); v.f = f; C (v);
++  f10 (2, 0.0, 0.0, u.f); v.f = f; C (v);
++  f10 (3, 0.0, 0.0, 0.0, u.f); v.f = f; C (v);
++  f10 (4, 0.0, 0.0, 0.0, 0.0, u.f); v.f = f; C (v);
++  f10 (5, 0.0, 0.0, 0.0, 0.0, 0.0, u.f); v.f = f; C (v);
++  f10 (6, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, u.f); v.f = f; C (v);
++  f10 (7, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, u.f); v.f = f; C (v);
++  f10 (8, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, u.f); v.f = f; C (v);
++  f10 (9, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, u.f); v.f = f; C (v);
++  u.g.a = 9.5;
++  u.g.b = 0x5555555555555555ULL;
++#undef C
++#define C(x) \
++  do {								\
++    if (u.e.a != x.e.a || u.e.b != x.e.b) __builtin_abort ();	\
++    u.e.a++;							\
++    u.e.b--;							\
++  } while (0)
++  v.g = f11 (0, u.g); C (v);
++  v.g = f11 (1, 0, 0.0, u.g); C (v);
++  v.g = f11 (2, 0, 0.0, 0, 0.0, u.g); C (v);
++  v.g = f11 (3, 0, 0.0, 0, 0.0, 0, 0.0, u.g); C (v);
++  v.g = f11 (4, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, u.g); C (v);
++  v.g = f11 (5, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, u.g); C (v);
++  v.g = f11 (6, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, u.g); C (v);
++  v.g = f11 (7, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, u.g); C (v);
++  v.g = f11 (8, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, u.g); C (v);
++  v.g = f11 (9, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, u.g); C (v);
++  v.h = f12 (0, u.h); C (v);
++  v.h = f12 (1, 0, 0.0, u.h); C (v);
++  v.h = f12 (2, 0, 0.0, 0, 0.0, u.h); C (v);
++  v.h = f12 (3, 0, 0.0, 0, 0.0, 0, 0.0, u.h); C (v);
++  v.h = f12 (4, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, u.h); C (v);
++  v.h = f12 (5, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, u.h); C (v);
++  v.h = f12 (6, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, u.h); C (v);
++  v.h = f12 (7, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, u.h); C (v);
++  v.h = f12 (8, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, u.h); C (v);
++  v.h = f12 (9, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, u.h); C (v);
++  f13 (0, u.g); v.g = g; C (v);
++  f13 (1, 0, 0.0, u.g); v.g = g; C (v);
++  f13 (2, 0, 0.0, 0, 0.0, u.g); v.g = g; C (v);
++  f13 (3, 0, 0.0, 0, 0.0, 0, 0.0, u.g); v.g = g; C (v);
++  f13 (4, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, u.g); v.g = g; C (v);
++  f13 (5, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, u.g); v.g = g; C (v);
++  f13 (6, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, u.g); v.g = g; C (v);
++  f13 (7, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, u.g); v.g = g; C (v);
++  f13 (8, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, u.g); v.g = g; C (v);
++  f13 (9, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, u.g); v.g = g; C (v);
++  f14 (0, u.h); v.h = h; C (v);
++  f14 (1, 0, 0.0, u.h); v.h = h; C (v);
++  f14 (2, 0, 0.0, 0, 0.0, u.h); v.h = h; C (v);
++  f14 (3, 0, 0.0, 0, 0.0, 0, 0.0, u.h); v.h = h; C (v);
++  f14 (4, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, u.h); v.h = h; C (v);
++  f14 (5, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, u.h); v.h = h; C (v);
++  f14 (6, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, u.h); v.h = h; C (v);
++  f14 (7, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, u.h); v.h = h; C (v);
++  f14 (8, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, u.h); v.h = h; C (v);
++  f14 (9, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, u.h); v.h = h; C (v);
++  return 0;
++}
 diff --git a/gcc/testsuite/gcc.dg/Wnonnull.c b/gcc/testsuite/gcc.dg/Wnonnull.c
 index be89a5a755c..0ed06aabe68 100644
 --- a/gcc/testsuite/gcc.dg/Wnonnull.c
@@ -23358,6 +25558,34 @@ index 00000000000..915606893ba
 +      pe = ir = lx;
 +    }
 +}
+diff --git a/gcc/testsuite/gcc.dg/pr92591-1.c b/gcc/testsuite/gcc.dg/pr92591-1.c
+new file mode 100644
+index 00000000000..0f9365d06e5
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/pr92591-1.c
+@@ -0,0 +1,11 @@
++/* PR rtl-optimization/92591 */
++/* { dg-do compile } */
++/* { dg-options "-O2 -fmodulo-sched -fweb -fno-dce -fno-ivopts -fno-sched-pressure -fno-tree-loop-distribute-patterns --param sms-dfa-history=1" } */
++/* { dg-additional-options "-mcpu=e500mc" { target { powerpc-*-* } } } */
++
++void
++wf (char *mr, int tc)
++{
++  while (tc-- > 0)
++    *mr++ = 0;
++}
+diff --git a/gcc/testsuite/gcc.dg/pr92591-2.c b/gcc/testsuite/gcc.dg/pr92591-2.c
+new file mode 100644
+index 00000000000..04a80924650
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/pr92591-2.c
+@@ -0,0 +1,5 @@
++/* PR rtl-optimization/92591 */
++/* { dg-do compile } */
++/* { dg-options "-Os -fmodulo-sched -fmodulo-sched-allow-regmoves --param sms-dfa-history=8" } */
++
++#include "../gcc.c-torture/execute/pr61682.c"
 diff --git a/gcc/testsuite/gcc.dg/torture/pr90278.c b/gcc/testsuite/gcc.dg/torture/pr90278.c
 new file mode 100644
 index 00000000000..617246a6d4c
@@ -23538,6 +25766,31 @@ index 00000000000..b578de79cf1
 +/* The second statement is redundant.  */
 +/* { dg-final { scan-tree-dump-times "x = " 1 "fre1" } } */
 +/* { dg-final { scan-tree-dump-times " = \[^;\]*x;" 1 "fre1" } } */
+diff --git a/gcc/testsuite/gcc.dg/tree-ssa/pr92930.c b/gcc/testsuite/gcc.dg/tree-ssa/pr92930.c
+new file mode 100644
+index 00000000000..67e604b6c50
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/tree-ssa/pr92930.c
+@@ -0,0 +1,19 @@
++/* PR tree-optimization/92930 */
++/* { dg-do compile { target untyped_assembly } } */
++/* { dg-options "-O2 -fdump-tree-optimized" } */
++/* { dg-final { scan-tree-dump "__builtin_apply " "optimized" } } */
++/* { dg-final { scan-tree-dump "__builtin_apply_args" "optimized" } } */
++
++void foo (int a, int b, int c, int d, int e, int f, int g);
++
++static void bar (int a, ...)
++{
++  __builtin_apply (foo, __builtin_apply_args (), 20);
++}
++
++int
++main ()
++{
++  bar (1024, 1025, 1026, 1027, 1028, 1029, 1030);
++  return 0;
++}
 diff --git a/gcc/testsuite/gcc.dg/tree-ssa/reassoc-24.c b/gcc/testsuite/gcc.dg/tree-ssa/reassoc-24.c
 index 4503cd74009..c320d1cb71b 100644
 --- a/gcc/testsuite/gcc.dg/tree-ssa/reassoc-24.c
@@ -23670,6 +25923,21 @@ index 00000000000..6b69ea030b1
 +  x = 1;
 +  while (x != 0)
 +    x += ++y || (*p = x);
++}
+diff --git a/gcc/testsuite/gcc.dg/vect/pr92723.c b/gcc/testsuite/gcc.dg/vect/pr92723.c
+new file mode 100644
+index 00000000000..0d60883cadd
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/vect/pr92723.c
+@@ -0,0 +1,9 @@
++/* { dg-do compile } */
++
++void
++foo (unsigned long long *x, unsigned long long *y, int z)
++{
++  int i;
++  for (i = 0; i < 1024; i++)
++    x[i] = (y[i] >> z) | (y[i] << (-z & (__SIZEOF_LONG_LONG__ * __CHAR_BIT__ - 1)));
 +}
 diff --git a/gcc/testsuite/gcc.dg/vect/vect-fma-3.c b/gcc/testsuite/gcc.dg/vect/vect-fma-3.c
 new file mode 100644
@@ -24351,6 +26619,57 @@ index 00000000000..b1232195b45
 +    if (b[e] > d)
 +      d = b[e];
 +  a (d);
++}
+diff --git a/gcc/testsuite/gcc.target/i386/pr92615.c b/gcc/testsuite/gcc.target/i386/pr92615.c
+new file mode 100644
+index 00000000000..b84bfcdabbe
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr92615.c
+@@ -0,0 +1,45 @@
++/* PR target/92615 */
++/* { dg-do compile } */
++/* { dg-options "-O2" } */
++
++void *a;
++long long b;
++char c;
++
++void
++foo (void)
++{
++  void *p;
++  long long q;
++  char r;
++  __asm__ ("" : : "r" (&p), "r" (&q), "r" (&r));
++  __asm__ ("" : "=@cca" (p));
++  a = p;
++  __asm__ ("" : "=@cca" (q));
++  b = q;
++  __asm__ ("" : "=@cca" (r));
++  c = r;
++  __asm__ ("" : : "r" (&p), "r" (&q), "r" (&r));
++}
++
++void
++bar (void)
++{
++  void *p;
++  long long q;
++  char r;
++  __asm__ ("" : "=@cca" (p));
++  a = p;
++  __asm__ ("" : "=@cca" (q));
++  b = q;
++  __asm__ ("" : "=@cca" (r));
++  c = r;
++  __asm__ ("" : : "r" (p), "A" (q), "q" (r));
++}
++
++void
++baz (void)
++{
++  void *p = (void *) &p;
++  __asm__ __volatile__ ("" : "=@ccng" (p) : "r" (1));
 +}
 diff --git a/gcc/testsuite/gcc.target/i386/ret-thunk-14.c b/gcc/testsuite/gcc.target/i386/ret-thunk-14.c
 index 3eaddee8c34..881f541772c 100644
@@ -26168,6 +28487,76 @@ index 00000000000..072de218253
 +    u(:) = v(:)
 +  end do
 +end
+diff --git a/gcc/testsuite/gfortran.dg/gomp/pr92977.f90 b/gcc/testsuite/gfortran.dg/gomp/pr92977.f90
+new file mode 100644
+index 00000000000..0c31f470a94
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/gomp/pr92977.f90
+@@ -0,0 +1,15 @@
++! PR fortran/92977
++! { dg-do compile }
++! { dg-additional-options "-O2" }
++
++program pr92977
++  integer :: n = 1
++  integer :: a
++!$omp atomic write
++  a = f(n) - f(n)
++contains
++  integer function f(x)
++    integer, intent(in) :: x
++    f = x
++  end
++end
+diff --git a/gcc/testsuite/gfortran.dg/gomp/teams1.f90 b/gcc/testsuite/gfortran.dg/gomp/teams1.f90
+new file mode 100644
+index 00000000000..5456bc80479
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/gomp/teams1.f90
+@@ -0,0 +1,8 @@
++! PR fortran/92756
++
++program pr92756
++  integer :: i
++  !$omp teams distribute parallel do	! { dg-error "'teams' construct not closely nested inside of 'target' construct" }
++  do i = 1, 64
++  end do
++end
+diff --git a/gcc/testsuite/gfortran.dg/inquiry_type_ref_5.f90 b/gcc/testsuite/gfortran.dg/inquiry_type_ref_5.f90
+new file mode 100644
+index 00000000000..b27943ae496
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/inquiry_type_ref_5.f90
+@@ -0,0 +1,29 @@
++! { dg-do run }
++!
++! Test the fix for pr92753
++!
++! Contributed by Gerhardt Steinmetz  <gscfq@t-online.de>
++!
++module m
++   type t
++      character(3) :: c
++   end type
++   type u
++      complex :: z
++   end type
++   type(t), parameter :: x = t ('abc')
++   integer, parameter :: l = x%c%len           ! Used to ICE
++
++   type(u), parameter :: z = u ((42.0,-42.0))
++end
++program p
++   use m
++   call s (x%c%len)                            !   ditto
++
++   if (int (z%z%re) .ne. 42) stop 1            ! Produced wrong code and
++   if (int (z%z%re) .ne. -int (z%z%im)) stop 2 ! runtime seg fault
++contains
++   subroutine s(n)
++      if (n .ne. l) stop 3
++   end
++end
 diff --git a/gcc/testsuite/gfortran.dg/matmul_blas_2.f90 b/gcc/testsuite/gfortran.dg/matmul_blas_2.f90
 new file mode 100644
 index 00000000000..237f4a10d89
@@ -27435,6 +29824,23 @@ index 00000000000..5c2267ca6f1
 +  if (bge (huge (1_4), 2147483648_4)) stop 4
 +  if (bge (huge (1_8), 9223372036854775808_8)) stop 5
 +end program
+diff --git a/gcc/testsuite/gfortran.dg/pr92781.f90 b/gcc/testsuite/gfortran.dg/pr92781.f90
+new file mode 100644
+index 00000000000..67a1961205a
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr92781.f90
+@@ -0,0 +1,11 @@
++! PR fortran/92781
++! { dg-do compile }
++
++function foo ()
++  character(:), allocatable :: foo
++  call bar ()
++  foo = 'abc'
++contains
++  subroutine bar
++  end
++end
 diff --git a/gcc/testsuite/gfortran.dg/pr92897.f90 b/gcc/testsuite/gfortran.dg/pr92897.f90
 new file mode 100644
 index 00000000000..6e0f9836bb4
@@ -27460,6 +29866,23 @@ index 00000000000..1c831eda1bb
 +! Code contributed by Gerhard Steinmetz
 +program p
 +  print *, is_contiguous (null())     ! { dg-error "shall be an associated" }
++end
+diff --git a/gcc/testsuite/gfortran.dg/spread_size_limit_2.f90 b/gcc/testsuite/gfortran.dg/spread_size_limit_2.f90
+new file mode 100644
+index 00000000000..3ea064e267f
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/spread_size_limit_2.f90
+@@ -0,0 +1,11 @@
++! PR fortran/91944
++! { dg-do compile }
++! { dg-options "-fmax-array-constructor=65535" }
++
++program pr91944
++  integer, parameter :: n = 10
++  integer, parameter :: m = 65536
++  integer :: i
++  integer :: x(n,m) = spread([(i,i=1,n)], dim=2, ncopies=m)	! { dg-error "requires an increase of the allowed 65535 upper limit" }
++  print *, x(n,m)
 +end
 diff --git a/gcc/testsuite/gfortran.dg/streamio_18.f90 b/gcc/testsuite/gfortran.dg/streamio_18.f90
 new file mode 100644
@@ -28017,6 +30440,40 @@ index b7bbde4e402..bf9466b417f 100644
  
    math_opts_dom_walker (&cfg_changed).walk (ENTRY_BLOCK_PTR_FOR_FN (cfun));
  
+diff --git a/gcc/tree-ssa-phiopt.c b/gcc/tree-ssa-phiopt.c
+index 8bf09bdf2a0..19b37b43b8e 100644
+--- a/gcc/tree-ssa-phiopt.c
++++ b/gcc/tree-ssa-phiopt.c
+@@ -1365,7 +1365,8 @@ minmax_replacement (basic_block cond_bb, basic_block middle_bb,
+ 
+   /* Turn EQ/NE of extreme values to order comparisons.  */
+   if ((cmp == NE_EXPR || cmp == EQ_EXPR)
+-      && TREE_CODE (rhs) == INTEGER_CST)
++      && TREE_CODE (rhs) == INTEGER_CST
++      && INTEGRAL_TYPE_P (TREE_TYPE (rhs)))
+     {
+       if (wi::eq_p (wi::to_wide (rhs), wi::min_value (TREE_TYPE (rhs))))
+ 	{
+@@ -1391,7 +1392,8 @@ minmax_replacement (basic_block cond_bb, basic_block middle_bb,
+       larger = rhs;
+       /* If we have smaller < CST it is equivalent to smaller <= CST-1.
+ 	 Likewise smaller <= CST is equivalent to smaller < CST+1.  */
+-      if (TREE_CODE (larger) == INTEGER_CST)
++      if (TREE_CODE (larger) == INTEGER_CST
++	  && INTEGRAL_TYPE_P (TREE_TYPE (larger)))
+ 	{
+ 	  if (cmp == LT_EXPR)
+ 	    {
+@@ -1419,7 +1421,8 @@ minmax_replacement (basic_block cond_bb, basic_block middle_bb,
+       larger = gimple_cond_lhs (cond);
+       /* If we have larger > CST it is equivalent to larger >= CST+1.
+ 	 Likewise larger >= CST is equivalent to larger > CST-1.  */
+-      if (TREE_CODE (smaller) == INTEGER_CST)
++      if (TREE_CODE (smaller) == INTEGER_CST
++	  && INTEGRAL_TYPE_P (TREE_TYPE (smaller)))
+ 	{
+ 	  wi::overflow_type overflow;
+ 	  if (cmp == GT_EXPR)
 diff --git a/gcc/tree-ssa-phiprop.c b/gcc/tree-ssa-phiprop.c
 index d710582a915..e90ae6a89cb 100644
 --- a/gcc/tree-ssa-phiprop.c
@@ -28450,6 +30907,43 @@ index 337e078df00..0308b26b808 100644
  	    {
  	      cond_reduc_op_code = MIN_EXPR;
  	      if (tree_int_cst_sgn (base) == -1)
+diff --git a/gcc/tree-vect-patterns.c b/gcc/tree-vect-patterns.c
+index ff952d6f464..badf4e7104e 100644
+--- a/gcc/tree-vect-patterns.c
++++ b/gcc/tree-vect-patterns.c
+@@ -2070,14 +2070,12 @@ vect_recog_rotate_pattern (stmt_vec_info stmt_vinfo, tree *type_out)
+ 
+   *type_out = vectype;
+ 
+-  if (dt == vect_external_def
+-      && TREE_CODE (oprnd1) == SSA_NAME)
++  if (dt == vect_external_def && TREE_CODE (oprnd1) == SSA_NAME)
+     ext_def = vect_get_external_def_edge (vinfo, oprnd1);
+ 
+   def = NULL_TREE;
+   scalar_int_mode mode = SCALAR_INT_TYPE_MODE (type);
+-  if (TREE_CODE (oprnd1) == INTEGER_CST
+-      || TYPE_MODE (TREE_TYPE (oprnd1)) == mode)
++  if (dt != vect_internal_def || TYPE_MODE (TREE_TYPE (oprnd1)) == mode)
+     def = oprnd1;
+   else if (def_stmt && gimple_assign_cast_p (def_stmt))
+     {
+@@ -2092,14 +2090,7 @@ vect_recog_rotate_pattern (stmt_vec_info stmt_vinfo, tree *type_out)
+     {
+       def = vect_recog_temp_ssa_var (type, NULL);
+       def_stmt = gimple_build_assign (def, NOP_EXPR, oprnd1);
+-      if (ext_def)
+-	{
+-	  basic_block new_bb
+-	    = gsi_insert_on_edge_immediate (ext_def, def_stmt);
+-	  gcc_assert (!new_bb);
+-	}
+-      else
+-	append_pattern_def_seq (stmt_vinfo, def_stmt);
++      append_pattern_def_seq (stmt_vinfo, def_stmt);
+     }
+   stype = TREE_TYPE (def);
+   scalar_int_mode smode = SCALAR_INT_TYPE_MODE (stype);
 diff --git a/gcc/tree-vect-slp.c b/gcc/tree-vect-slp.c
 index 017bfa873f7..2abf480270c 100644
 --- a/gcc/tree-vect-slp.c
@@ -30414,10 +32908,24 @@ index c9dd8d494a9..f086c507e07 100755
  fi
  if ! echo "$statfs" | grep f_flags; then
 diff --git a/libgomp/ChangeLog b/libgomp/ChangeLog
-index 958572a54c0..c1959a44b8c 100644
+index 958572a54c0..da2b99fa933 100644
 --- a/libgomp/ChangeLog
 +++ b/libgomp/ChangeLog
-@@ -1,3 +1,24 @@
+@@ -1,3 +1,38 @@
++2019-12-20  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from mainline
++	2019-12-11  Jakub Jelinek  <jakub@redhat.com>
++
++	PR fortran/92899
++	* testsuite/libgomp.fortran/atomic1.f90: New test.
++
++	2019-11-29  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/60228
++	* testsuite/libgomp.c++/udr-20.C: New test.
++	* testsuite/libgomp.c++/udr-21.C: New test.
++
 +2019-12-11  Thomas Schwinge  <thomas@codesourcery.com>
 +	    Julian Brown  <julian@codesourcery.com>
 +
@@ -30485,6 +32993,178 @@ index 31148003d0a..97fc1ee2ddc 100644
        array->left = NULL;
        array->right = NULL;
        splay_tree_insert (&devicep->mem_map, array);
+diff --git a/libgomp/testsuite/libgomp.c++/udr-20.C b/libgomp/testsuite/libgomp.c++/udr-20.C
+new file mode 100644
+index 00000000000..83388758edd
+--- /dev/null
++++ b/libgomp/testsuite/libgomp.c++/udr-20.C
+@@ -0,0 +1,54 @@
++// PR c++/60228
++// { dg-additional-options "-std=c++11" }
++
++extern "C" void abort ();
++
++struct A
++{
++  typedef int T;
++  #pragma omp declare reduction (x : T : omp_out += omp_in + [](){ return 0; }()) initializer (omp_priv = [](){ return 0; }())
++  static void foo ();
++};
++
++template <typename T>
++struct B
++{
++  #pragma omp declare reduction (x : T : omp_out += omp_in + [](){ return T (0); }()) initializer (omp_priv = [](){ return T (0); }())
++  static void foo ();
++};
++
++void
++A::foo ()
++{
++  int r = 0, s = 0;
++  #pragma omp parallel for reduction (x : r, s)
++  for (int i = 0; i < 64; i++)
++    {
++      r++;
++      s += i;
++    }
++  if (r != 64 || s != (64 * 63) / 2)
++    abort ();
++}
++
++template <typename T>
++void
++B<T>::foo ()
++{
++  T r = 0, s = 0;
++  #pragma omp parallel for reduction (x : r, s)
++  for (int i = 0; i < 64; i++)
++    {
++      r++;
++      s += i;
++    }
++  if (r != 64 || s != (64 * 63) / 2)
++    abort ();
++}
++
++int
++main ()
++{
++  A::foo ();
++  B<long>::foo ();
++}
+diff --git a/libgomp/testsuite/libgomp.c++/udr-21.C b/libgomp/testsuite/libgomp.c++/udr-21.C
+new file mode 100644
+index 00000000000..9ec655718fd
+--- /dev/null
++++ b/libgomp/testsuite/libgomp.c++/udr-21.C
+@@ -0,0 +1,54 @@
++// PR c++/60228
++// { dg-additional-options "-std=c++11" }
++
++extern "C" void abort ();
++
++struct A
++{
++  typedef int T;
++  #pragma omp declare reduction (y : T : [&omp_out, &omp_in]() { omp_out += omp_in; return 0; }()) initializer (omp_priv = [omp_orig]() { return omp_orig; }())
++  static void foo ();
++};
++
++template <typename T>
++struct B
++{
++  #pragma omp declare reduction (y : T : [&omp_out, &omp_in]() { omp_out += omp_in; return 0; }()) initializer (omp_priv = [omp_orig]() { return omp_orig; }())
++  static void foo ();
++};
++
++void
++A::foo ()
++{
++  int r = 0, s = 0;
++  #pragma omp parallel for reduction (y : r, s)
++  for (int i = 0; i < 64; i++)
++    {
++      r++;
++      s += i;
++    }
++  if (r != 64 || s != (64 * 63) / 2)
++    abort ();
++}
++
++template <typename T>
++void
++B<T>::foo ()
++{
++  T r = 0, s = 0;
++  #pragma omp parallel for reduction (y : r, s)
++  for (int i = 0; i < 64; i++)
++    {
++      r++;
++      s += i;
++    }
++  if (r != 64 || s != (64 * 63) / 2)
++    abort ();
++}
++
++int
++main ()
++{
++  A::foo ();
++  B<short>::foo ();
++}
+diff --git a/libgomp/testsuite/libgomp.fortran/atomic1.f90 b/libgomp/testsuite/libgomp.fortran/atomic1.f90
+new file mode 100644
+index 00000000000..e0c13536f94
+--- /dev/null
++++ b/libgomp/testsuite/libgomp.fortran/atomic1.f90
+@@ -0,0 +1,46 @@
++! PR fortran/92899
++
++program pr92899
++  real :: x = 1.0
++  double precision :: y
++  integer(kind=4) :: z = 4
++  integer(kind=8) :: w
++  !$omp atomic capture
++  y = x
++  x = 2.0
++  !$omp end atomic
++  if (y /= 1.0 .or. x /= 2.0) stop 1
++  !$omp atomic capture
++  x = y
++  y = 3.0
++  !$omp end atomic
++  if (x /= 1.0 .or. y /= 3.0) stop 2
++  !$omp atomic capture
++  w = z
++  z = 5
++  !$omp end atomic
++  if (w /= 4 .or. z /= 5) stop 3
++  !$omp atomic capture
++  z = w
++  w = 6
++  !$omp end atomic
++  if (z /= 4 .or. w /= 6) stop 4
++  !$omp atomic write
++  x = y
++  !$omp end atomic
++  if (x /= 3.0 .or. y /= 3.0) stop 5
++  x = 7.0
++  !$omp atomic write
++  y = x
++  !$omp end atomic
++  if (x /= 7.0 .or. y /= 7.0) stop 6
++  !$omp atomic write
++  z = w
++  !$omp end atomic
++  if (z /= 6 .or. w /= 6) stop 7
++  z = 8
++  !$omp atomic write
++  w = z
++  !$omp end atomic
++  if (z /= 8 .or. w /= 8) stop 8
++end
 diff --git a/libgomp/testsuite/libgomp.oacc-fortran/routine-7.f90 b/libgomp/testsuite/libgomp.oacc-fortran/routine-7.f90
 index f58a95fe670..1009f4a81e5 100644
 --- a/libgomp/testsuite/libgomp.oacc-fortran/routine-7.f90
@@ -30607,10 +33287,20 @@ index 76275b51b62..81eb957d2fa 100644
  #define __quadmath_extern_inline \
    extern inline __attribute__ ((__gnu_inline__))
 diff --git a/libsanitizer/ChangeLog b/libsanitizer/ChangeLog
-index c7d3cf4f562..82b7b112d94 100644
+index c7d3cf4f562..e96f13b4ae6 100644
 --- a/libsanitizer/ChangeLog
 +++ b/libsanitizer/ChangeLog
-@@ -1,3 +1,24 @@
+@@ -1,3 +1,34 @@
++2019-12-20  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from mainline
++	2019-11-26  Jakub Jelinek  <jakub@redhat.com>
++
++	PR sanitizer/92154
++	* sanitizer_common/sanitizer_platform_limits_posix.h: Cherry-pick
++	llvm-project revision 947f9692440836dcb8d88b74b69dd379d85974ce.
++	* sanitizer_common/sanitizer_platform_limits_posix.cc: Likewise.
++
 +2019-11-08  Jakub Jelinek  <jakub@redhat.com>
 +
 +	Backported from mainline
@@ -30680,23 +33370,53 @@ index b599ebb0ba9..beb1dc9532b 100644
  #  define ASAN_INTERCEPT__UNWIND_SJLJ_RAISEEXCEPTION 1
  # else
 diff --git a/libsanitizer/sanitizer_common/sanitizer_platform_limits_posix.cc b/libsanitizer/sanitizer_common/sanitizer_platform_limits_posix.cc
-index 6cd4a5bac8b..06a605ff467 100644
+index 6cd4a5bac8b..d823a12190c 100644
 --- a/libsanitizer/sanitizer_common/sanitizer_platform_limits_posix.cc
 +++ b/libsanitizer/sanitizer_common/sanitizer_platform_limits_posix.cc
-@@ -1156,8 +1156,12 @@ CHECK_SIZE_AND_OFFSET(ipc_perm, uid);
+@@ -1156,8 +1156,9 @@ CHECK_SIZE_AND_OFFSET(ipc_perm, uid);
  CHECK_SIZE_AND_OFFSET(ipc_perm, gid);
  CHECK_SIZE_AND_OFFSET(ipc_perm, cuid);
  CHECK_SIZE_AND_OFFSET(ipc_perm, cgid);
 -#if !defined(__aarch64__) || !SANITIZER_LINUX || __GLIBC_PREREQ (2, 21)
-+#if (!defined(__aarch64__) || !SANITIZER_LINUX || __GLIBC_PREREQ (2, 21)) && \
-+    !defined(__arm__)
- /* On aarch64 glibc 2.20 and earlier provided incorrect mode field.  */
-+/* On Arm glibc 2.31 and later provide a different mode field, this field is
-+   never used by libsanitizer so we can simply ignore this assert for all glibc
-+   versions.  */
+-/* On aarch64 glibc 2.20 and earlier provided incorrect mode field.  */
++#if !SANITIZER_LINUX || __GLIBC_PREREQ (2, 31)
++/* glibc 2.30 and earlier provided 16-bit mode field instead of 32-bit
++   on many architectures.  */
  CHECK_SIZE_AND_OFFSET(ipc_perm, mode);
  #endif
  
+diff --git a/libsanitizer/sanitizer_common/sanitizer_platform_limits_posix.h b/libsanitizer/sanitizer_common/sanitizer_platform_limits_posix.h
+index 73af92af1e8..6a673a7c995 100644
+--- a/libsanitizer/sanitizer_common/sanitizer_platform_limits_posix.h
++++ b/libsanitizer/sanitizer_common/sanitizer_platform_limits_posix.h
+@@ -211,26 +211,13 @@ namespace __sanitizer {
+     u64 __unused1;
+     u64 __unused2;
+ #elif defined(__sparc__)
+-#if defined(__arch64__)
+     unsigned mode;
+-    unsigned short __pad1;
+-#else
+-    unsigned short __pad1;
+-    unsigned short mode;
+     unsigned short __pad2;
+-#endif
+     unsigned short __seq;
+     unsigned long long __unused1;
+     unsigned long long __unused2;
+-#elif defined(__mips__) || defined(__aarch64__) || defined(__s390x__)
+-    unsigned int mode;
+-    unsigned short __seq;
+-    unsigned short __pad1;
+-    unsigned long __unused1;
+-    unsigned long __unused2;
+ #else
+-    unsigned short mode;
+-    unsigned short __pad1;
++    unsigned int mode;
+     unsigned short __seq;
+     unsigned short __pad2;
+ #if defined(__x86_64__) && !defined(_LP64)
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
 index 8ac50251005..3b5f453b04d 100644
 --- a/libstdc++-v3/ChangeLog
