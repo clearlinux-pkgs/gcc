@@ -30,7 +30,7 @@ claziss (2):
       [ARC] Backport from mainline r278056,r278057
       [ARC] Enable using DCMPF for hard float comparisons (backports)
 
-danglin (10):
+danglin (13):
       * config/pa/pa.c (pa_trampoline_init): Remove spurious extended 	character.
       * config/pa/lib2funcs.S (__gcc_plt_call): Load branch target to %r21. 	Load PIC register after branch target.  Fix white space. 	* config/pa/milli64.S ($$dyncall): Separate LINUX and non LINUX 	implementations.  Load PIC register after branch target.  Don't 	clobber function pointer when it points to function descriptor. 	Use nullification instead of branch in LINUX implementation.
       * config/pa/pa.c (pa_output_call): Load descriptor address to register 	%r22.  Load function address before global pointer. 	(pa_attr_length_indirect_call): Adjust length of inline versions of 	$$dyncall. 	(pa_output_indirect_call): Remove fast inline version of $$dyncall 	before normal cases.  Update inline $$dyncall sequences to preserve 	function descriptor address in register %r22. 	(TRAMPOLINE_CODE_SIZE): Adjust. 	(pa_asm_trampoline_template): Revise 32-bit trampoline.  Don't assume 	register %r22 contains trampoline address. 	(pa_trampoline_init): Adjust offsets. 	(pa_trampoline_adjust_address): Likewise. 	* config/pa/pa.h (TRAMPOLINE_SIZE): Adjust 32-bit size.
@@ -41,6 +41,9 @@ danglin (10):
       Backport from mainline 	2019-10-03  John David Anglin  <danglin@gcc.gnu.org>
       Backport from mainline 	2019-11-07  John David Anglin  <danglin@gcc.gnu.org>
       * config/pa/linux-atomic.c (__kernel_cmpxchg): Change argument 1 to 	volatile void *.  Remove trap check. 	(__kernel_cmpxchg2): Likewise. 	(FETCH_AND_OP_2): Adjust operand types. 	(OP_AND_FETCH_2): Likewise. 	(FETCH_AND_OP_WORD): Likewise. 	(OP_AND_FETCH_WORD): Likewise. 	(COMPARE_AND_SWAP_2): Likewise. 	(__sync_val_compare_and_swap_4): Likewise. 	(__sync_bool_compare_and_swap_4): Likewise. 	(SYNC_LOCK_TEST_AND_SET_2): Likewise. 	(__sync_lock_test_and_set_4): Likewise. 	(SYNC_LOCK_RELEASE_1): Likewise.  Use __kernel_cmpxchg2 for release. 	(__sync_lock_release_4): Adjust operand types.  Use __kernel_cmpxchg 	for release. 	(__sync_lock_release_8): Remove.
+      Backport from mainline 	2019-12-30  John David Anglin  <danglin@gcc.gnu.org>
+      PR target/93111 	* config/pa/pa.md (scc): Use ordered_comparison_operator instead of 	comparison_operator in B and S integer comparisons.  Likewise, use 	ordered_comparison_operator instead of cmpib_comparison_operator in 	cmpib patterns. 	* config/pa/predicates.md (cmpib_comparison_operator): Remove.
+      PR target/67834 	* config/pa/pa.c (pa_elf_select_rtx_section): New.  Put references to 	COMDAT group function labels in .data.rel.ro.local section. 	* config/pa/pa32-linux.h (TARGET_ASM_SELECT_RTX_SECTION): Define.
 
 draganm (4):
       Backprot fix for uninitialised use in mips_split_move
@@ -74,7 +77,19 @@ edlinger (3):
 emsr (1):
       2019-09-09  Edward Smith-Rowland  <3dw4rd@verizon.net>
 
-gccadmin (133):
+gccadmin (145):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -226,7 +241,7 @@ hubicka (3):
       free summary vectors. 	Backport from mainline 	2019-10-24  Jan Hubicka  <hubicka@ucw.cz> 	* symbols-summary.h (fast_function_summary<T *, V>::release, 	fast_call_summary<T *, V>::release): Free m_vector.
       Avoid gimple body modifications while streaming. 	Backport from mainline 	2019-10-11  Jan Hubicka  <hubicka@ucw.cz> 	* gimple-streamer-out.c (output_gimple_stmt): Add explicit function 	parameter. 	* lto-streamer-out.c: Include tree-dfa.h. 	(output_cfg): Do not use cfun. 	(lto_prepare_function_for_streaming): New. 	(output_function): Do not push cfun; do not initialize loop optimizer. 	* lto-streamer.h (lto_prepare_function_for_streaming): Declare. 	* passes.c (ipa_write_summaries): Use it. 	(ipa_write_optimization_summaries): Do not modify bodies. 	* tree-dfa.c (renumber_gimple_stmt_uids): Add function parameter. 	* tree.dfa.h (renumber_gimple_stmt_uids): Update prototype. 	* tree-ssa-dse.c (pass_dse::execute): Update use of 	renumber_gimple_stmt_uids. 	* tree-ssa-math-opts.c (pass_optimize_widening_mul::execute): Likewise.
 
-iains (22):
+iains (23):
       Darwin, libsanitizer - remove reference to __cxa_rethrow_primary_exception.
       [Darwin, PPC] Fix fail of cpp/assert4.c
       [Darwin, fixincludes] Backport fix for PR83531
@@ -249,6 +264,7 @@ iains (22):
       [Darwin, machopic] Back out part of PR71767 fix.
       [testsuite] Make the Wnonnull test independent of system headers.
       [objective-c/c++, testsuite] Fix stubify tests for -fnext-runtime.
+      [Darwin, PPC] Use Darwin9 bundle header for Rosetta builds.
 
 ian (3):
       go/internal/gccgoimporter: support embedded field in pointer loop
@@ -260,7 +276,7 @@ iii (3):
       S/390: Fix failing RTL check in s390_canonicalize_comparison
       Free dominance info at the beginning of pass_jump_after_combine
 
-jakub (66):
+jakub (67):
       * BASE-VER: Set to 9.2.1.
       * config/abi/post/aarch64-linux-gnu/baseline_symbols.txt: Update. 	* config/abi/post/s390x-linux-gnu/baseline_symbols.txt: Update.
       PR tree-optimization/91597 	* tree-vrp.c (extract_range_from_binary_expr): Remove unsafe 	BIT_AND_EXPR optimization for pointers, even if both operand 	ranges don't include NULL, the result can be NULL.
@@ -327,6 +343,7 @@ jakub (66):
       Backported from mainline 	2019-12-14  Jakub Jelinek  <jakub@redhat.com>
       Backported from mainline 	2019-12-14  Jakub Jelinek  <jakub@redhat.com>
       Backported from mainline 	2019-12-19  Jakub Jelinek  <jakub@redhat.com>
+      PR c/90677 	* cp-objcp-common.c (identifier_global_tag): Return NULL_TREE if name 	has not been found, rather than error_mark_node.
 
 jason (8):
       PR c++/90538 - multiple expansions of capture packs
@@ -345,7 +362,7 @@ jb (2):
 jcmvbkbc (1):
       xtensa: backport fix for PR target/90922
 
-jsm28 (7):
+jsm28 (8):
       * zh_CN.po: Update.
       Fix libstdc++ lstat missing return type for Windows target.
       * es.po: Update.
@@ -353,6 +370,7 @@ jsm28 (7):
       * es.po: Update.
       * fi.po: Update.
       Document -Wc11-c2x-compat.
+      * fi.po: Update.
 
 jvdelisle (1):
       2019-11-26  Jerry DeLisle  <jvdelisle@gcc.ngu.org>
@@ -535,7 +553,7 @@ segher (6):
 sje (1):
       2019-08-15  Steve Ellcey  <sellcey@marvell.com>
 
-tkoenig (10):
+tkoenig (12):
       2019-08-13  Thomas Koenig  <tkoenig@gcc.gnu.org>
       2019-08-13  Thomas Koenig  <tkoenig@gcc.gnu.org>
       2013-08-13  Thomas Koenig  <tkoenig@gcc.gnu.org>
@@ -546,6 +564,8 @@ tkoenig (10):
       Put vtab into RO section, same for __def_init if it contains an initializer.
       Fix EOF handling for arrays.
       Backport from trunk as an insurance policy.
+      Catch division by zero errors in array sizes.
+      2019-12-30  Thomas Koenig  <tkoenig@gcc.gnu.org>
 
 tnfchris (1):
       AArch64: Correct HWCAP for fp16fml
@@ -608,10 +628,21 @@ index 3560a64c4f1..5760b053ec2 100755
  /^(XPASS|FAIL|UNRESOLVED|WARNING|ERROR|# of )/ { sub ("\r", ""); print; }
  /^using:/ { print ""; print; print ""; }
 diff --git a/fixincludes/ChangeLog b/fixincludes/ChangeLog
-index 829d91dac87..6f22154630c 100644
+index 829d91dac87..a8c4cf22997 100644
 --- a/fixincludes/ChangeLog
 +++ b/fixincludes/ChangeLog
-@@ -1,3 +1,15 @@
+@@ -1,3 +1,26 @@
++2020-01-01  John David Anglin  <danglin@gcc.gnu.org>
++
++	Backport from mainline
++	2019-12-30  John David Anglin  <danglin@gcc.gnu.org>
++
++	PR libgomp/93066
++	* inclhack.def (hpux_c99_inttypes3): Fix defines for INTPTR_MAX
++	and UINTPTR_MAX, and missing define for SIZE_MAX.
++	* fixincl.x: Regenerate.
++	* tests/base/inttypes.h: Update for above fix.
++
 +2019-08-21  Iain Sandoe  <iain@sandoe.co.uk>
 +
 +	Backport from mainline.
@@ -628,7 +659,7 @@ index 829d91dac87..6f22154630c 100644
  
  	* GCC 9.2.0 released.
 diff --git a/fixincludes/fixincl.x b/fixincludes/fixincl.x
-index 802162bb507..5d297868758 100644
+index 802162bb507..47a3578f017 100644
 --- a/fixincludes/fixincl.x
 +++ b/fixincludes/fixincl.x
 @@ -2,11 +2,11 @@
@@ -636,12 +667,12 @@ index 802162bb507..5d297868758 100644
   * DO NOT EDIT THIS FILE   (fixincl.x)
   *
 - * It has been AutoGen-ed  July  7, 2019 at 11:43:37 AM by AutoGen 5.17.4
-+ * It has been AutoGen-ed  August 21, 2019 at 07:47:23 PM by AutoGen 5.17.4
++ * It has been AutoGen-ed  January  1, 2020 at 11:59:56 AM by AutoGen 5.18.16
   * From the definitions    inclhack.def
   * and the template file   fixincl
   */
 -/* DO NOT SVN-MERGE THIS FILE, EITHER Sun Jul  7 11:43:37 BST 2019
-+/* DO NOT SVN-MERGE THIS FILE, EITHER Wed Aug 21 19:47:23 BST 2019
++/* DO NOT SVN-MERGE THIS FILE, EITHER Wed Jan  1 11:59:56 EST 2020
   *
   * You must regenerate it.  Use the ./genfixes script.
   *
@@ -650,7 +681,7 @@ index 802162bb507..5d297868758 100644
   * correctly with ANSI C and placed in a directory that GNU C will search.
   *
 - * This file contains 255 fixup descriptions.
-+ * This file contains 256 fixup descriptions.
++ * This file contains 257 fixup descriptions.
   *
   * See README for more information.
   *
@@ -711,19 +742,75 @@ index 802162bb507..5d297868758 100644
  /* * * * * * * * * * * * * * * * * * * * * * * * * *
   *
   *  Description of Aab_Fd_Zero_Asm_Posix_Types_H fix
-@@ -10346,9 +10396,9 @@ static const char* apzX11_SprintfPatch[] = {
+@@ -5097,6 +5147,55 @@ static const char* apzHpux_C99_Inttypes2Patch[] = { sed_cmd_z,
+     "-e", "s@^[ \t]*#[ \t]*define[ \t]*UINT16_C(__c)[ \t]*((unsigned short)(__c))[ \t]*$@#define UINT16_C(__c) (__c)@",
+     (char*)NULL };
+ 
++/* * * * * * * * * * * * * * * * * * * * * * * * * *
++ *
++ *  Description of Hpux_C99_Inttypes3 fix
++ */
++tSCC zHpux_C99_Inttypes3Name[] =
++     "hpux_c99_inttypes3";
++
++/*
++ *  File name selection pattern
++ */
++tSCC zHpux_C99_Inttypes3List[] =
++  "inttypes.h\0";
++/*
++ *  Machine/OS name selection pattern
++ */
++tSCC* apzHpux_C99_Inttypes3Machs[] = {
++        "hppa*-hp-hpux11*",
++        (const char*)NULL };
++
++/*
++ *  content selection pattern - do fix if pattern found
++ */
++tSCC zHpux_C99_Inttypes3Select0[] =
++       "#define[ \t]INTPTR_MAX[ \t]*\n\
++#define[ \t]UINTPTR_MAX[ \t]*\n";
++
++#define    HPUX_C99_INTTYPES3_TEST_CT  1
++static tTestDesc aHpux_C99_Inttypes3Tests[] = {
++  { TT_EGREP,    zHpux_C99_Inttypes3Select0, (regex_t*)NULL }, };
++
++/*
++ *  Fix Command Arguments for Hpux_C99_Inttypes3
++ */
++static const char* apzHpux_C99_Inttypes3Patch[] = {
++    "format",
++    "#undef SIZE_MAX\n\
++#define SIZE_MAX __SIZE_MAX__\n\
++#ifdef __INTPTR_MAX__\n\
++# undef INTPTR_MAX\n\
++# define INTPTR_MAX __INTPTR_MAX__\n\
++# undef INTPTR_MIN\n\
++# define INTPTR_MIN (-INTPTR_MAX - 1)\n\
++#endif\n\
++#ifdef __UINTPTR_MAX__\n\
++# undef UINTPTR_MAX\n\
++# define UINTPTR_MAX __UINTPTR_MAX__\n\
++#endif\n",
++    (char*)NULL };
++
+ /* * * * * * * * * * * * * * * * * * * * * * * * * *
+  *
+  *  Description of Hpux_Ctype_Macros fix
+@@ -10346,9 +10445,9 @@ static const char* apzX11_SprintfPatch[] = {
   *
   *  List of all fixes
   */
 -#define REGEX_COUNT          293
-+#define REGEX_COUNT          295
++#define REGEX_COUNT          296
  #define MACH_LIST_SIZE_LIMIT 187
 -#define FIX_COUNT            255
-+#define FIX_COUNT            256
++#define FIX_COUNT            257
  
  /*
   *  Enumerate the fixes
-@@ -10357,6 +10407,7 @@ typedef enum {
+@@ -10357,6 +10456,7 @@ typedef enum {
      AAB_AIX_STDIO_FIXIDX,
      AAB_AIX_FCNTL_FIXIDX,
      AAB_DARWIN7_9_LONG_DOUBLE_FUNCS_FIXIDX,
@@ -731,7 +818,15 @@ index 802162bb507..5d297868758 100644
      AAB_FD_ZERO_ASM_POSIX_TYPES_H_FIXIDX,
      AAB_FD_ZERO_GNU_TYPES_H_FIXIDX,
      AAB_FD_ZERO_SELECTBITS_H_FIXIDX,
-@@ -10627,6 +10678,11 @@ tFixDesc fixDescList[ FIX_COUNT ] = {
+@@ -10476,6 +10576,7 @@ typedef enum {
+     HPUX_C99_INTPTR_FIXIDX,
+     HPUX_C99_INTTYPES_FIXIDX,
+     HPUX_C99_INTTYPES2_FIXIDX,
++    HPUX_C99_INTTYPES3_FIXIDX,
+     HPUX_CTYPE_MACROS_FIXIDX,
+     HPUX_EXTERN_ERRNO_FIXIDX,
+     HPUX_HTONL_FIXIDX,
+@@ -10627,6 +10728,11 @@ tFixDesc fixDescList[ FIX_COUNT ] = {
       AAB_DARWIN7_9_LONG_DOUBLE_FUNCS_TEST_CT, FD_MACH_ONLY | FD_REPLACEMENT,
       aAab_Darwin7_9_Long_Double_FuncsTests,   apzAab_Darwin7_9_Long_Double_FuncsPatch, 0 },
  
@@ -743,8 +838,20 @@ index 802162bb507..5d297868758 100644
    {  zAab_Fd_Zero_Asm_Posix_Types_HName,    zAab_Fd_Zero_Asm_Posix_Types_HList,
       apzAab_Fd_Zero_Asm_Posix_Types_HMachs,
       AAB_FD_ZERO_ASM_POSIX_TYPES_H_TEST_CT, FD_MACH_ONLY | FD_REPLACEMENT,
+@@ -11222,6 +11328,11 @@ tFixDesc fixDescList[ FIX_COUNT ] = {
+      HPUX_C99_INTTYPES2_TEST_CT, FD_MACH_ONLY,
+      aHpux_C99_Inttypes2Tests,   apzHpux_C99_Inttypes2Patch, 0 },
+ 
++  {  zHpux_C99_Inttypes3Name,    zHpux_C99_Inttypes3List,
++     apzHpux_C99_Inttypes3Machs,
++     HPUX_C99_INTTYPES3_TEST_CT, FD_MACH_ONLY | FD_SUBROUTINE,
++     aHpux_C99_Inttypes3Tests,   apzHpux_C99_Inttypes3Patch, 0 },
++
+   {  zHpux_Ctype_MacrosName,    zHpux_Ctype_MacrosList,
+      apzHpux_Ctype_MacrosMachs,
+      HPUX_CTYPE_MACROS_TEST_CT, FD_MACH_ONLY | FD_SUBROUTINE,
 diff --git a/fixincludes/inclhack.def b/fixincludes/inclhack.def
-index 861532c2a1d..3c6b48d26e1 100644
+index 861532c2a1d..bf136fdaa20 100644
 --- a/fixincludes/inclhack.def
 +++ b/fixincludes/inclhack.def
 @@ -194,6 +194,33 @@ fix = {
@@ -781,6 +888,64 @@ index 861532c2a1d..3c6b48d26e1 100644
  /*
   *  This fixes __FD_ZERO bug for linux 2.x.y (x <= 2 && y <= some n)
   */
+@@ -2560,6 +2587,32 @@ fix = {
+ 		"#  define	UINT16_C(__c)	((unsigned short)(__c))\n";
+ };
+ 
++/*
++ * Fix broken and missing defines in inttypes.h
++ */
++fix = {
++    hackname  = hpux_c99_inttypes3;
++    mach      = "hppa*-hp-hpux11*";
++    files     = inttypes.h;
++    select    = "#define[ \t]INTPTR_MAX[ \t]*\n"
++		"#define[ \t]UINTPTR_MAX[ \t]*\n";
++    c_fix     = format;
++    c_fix_arg = "#undef SIZE_MAX\n"
++		"#define SIZE_MAX __SIZE_MAX__\n"
++		"#ifdef __INTPTR_MAX__\n"
++		"# undef INTPTR_MAX\n"
++		"# define INTPTR_MAX __INTPTR_MAX__\n"
++		"# undef INTPTR_MIN\n"
++		"# define INTPTR_MIN (-INTPTR_MAX - 1)\n"
++		"#endif\n"
++		"#ifdef __UINTPTR_MAX__\n"
++		"# undef UINTPTR_MAX\n"
++		"# define UINTPTR_MAX __UINTPTR_MAX__\n"
++		"#endif\n";
++    test_text = "#define INTPTR_MAX\n"
++		"#define UINTPTR_MAX\n";
++};
++
+ /*
+  *  Fix hpux broken ctype macros
+  */
+diff --git a/fixincludes/tests/base/inttypes.h b/fixincludes/tests/base/inttypes.h
+index 3f556856a41..e2216832666 100644
+--- a/fixincludes/tests/base/inttypes.h
++++ b/fixincludes/tests/base/inttypes.h
+@@ -16,3 +16,20 @@
+ #define UINT32_C(__c) __CONCAT__(__c,u)
+ 
+ #endif  /* HPUX_C99_INTTYPES_CHECK */
++
++
++#if defined( HPUX_C99_INTTYPES3_CHECK )
++#undef SIZE_MAX
++#define SIZE_MAX __SIZE_MAX__
++#ifdef __INTPTR_MAX__
++# undef INTPTR_MAX
++# define INTPTR_MAX __INTPTR_MAX__
++# undef INTPTR_MIN
++# define INTPTR_MIN (-INTPTR_MAX - 1)
++#endif
++#ifdef __UINTPTR_MAX__
++# undef UINTPTR_MAX
++# define UINTPTR_MAX __UINTPTR_MAX__
++#endif
++
++#endif  /* HPUX_C99_INTTYPES3_CHECK */
 diff --git a/fixincludes/tests/base/os/availability.h b/fixincludes/tests/base/os/availability.h
 new file mode 100644
 index 00000000000..e8696b14acd
@@ -813,10 +978,35 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..ddf21f7108e 100644
+index 7f6557d8018..6c0c09d7dca 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,1561 @@
+@@ -1,3 +1,1586 @@
++2020-01-01  John David Anglin  <danglin@gcc.gnu.org>
++
++	PR target/67834
++	* config/pa/pa.c (pa_elf_select_rtx_section): New.  Put references to
++	COMDAT group function labels in .data.rel.ro.local section.
++	* config/pa/pa32-linux.h (TARGET_ASM_SELECT_RTX_SECTION): Define.
++
++	PR target/93111
++	* config/pa/pa.md (scc): Use ordered_comparison_operator instead of
++	comparison_operator in B and S integer comparisons.  Likewise, use
++	ordered_comparison_operator instead of cmpib_comparison_operator in
++	cmpib patterns.
++	* config/pa/predicates.md (cmpib_comparison_operator): Remove.
++
++2019-12-25 Iain Sandoe <iain@sandoe.co.uk>
++
++	Backport from mainline.
++	2019-12-14 Iain Sandoe <iain@sandoe.co.uk>
++
++	* config/darwin.h (DARWIN_EXTRA_SPECS): Add new
++	bundle spec. (DARWIN_BUNDLE1_SPEC): New.
++	(STARTFILE_SPEC): Use darwin bundle spec.
++	* config/rs6000/darwin.h (DARWIN_BUNDLE1_SPEC): New.
++	(DARWIN_DYLIB1_SPEC): Delete duplicate.
++
 +2019-12-20  Jakub Jelinek  <jakub@redhat.com>
 +
 +	PR fortran/92756
@@ -2378,7 +2568,7 @@ index 7f6557d8018..ddf21f7108e 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +2071,7 @@
+@@ -513,7 +2096,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -6428,7 +6618,7 @@ index b9862353843..a7610829f75 100644
    /* The c_dialect...() macros are not available to us here.  */
    darwin_running_cxx = (strstr (lang_hooks.name, "C++") != 0);
 diff --git a/gcc/config/darwin.h b/gcc/config/darwin.h
-index 0e253cb0dfa..be261e73a7b 100644
+index 0e253cb0dfa..fab9af97afd 100644
 --- a/gcc/config/darwin.h
 +++ b/gcc/config/darwin.h
 @@ -126,6 +126,24 @@ extern GTY(()) int darwin_ms_struct;
@@ -6530,7 +6720,7 @@ index 0e253cb0dfa..be261e73a7b 100644
     %{prebind} %{noprebind} %{nofixprebinding} %{prebind_all_twolevel_modules} \
     %{read_only_relocs} \
     %{sectcreate*} %{sectorder*} %{seg1addr*} %{segprot*} \
-@@ -327,43 +357,42 @@ extern GTY(()) int darwin_ms_struct;
+@@ -327,45 +357,42 @@ extern GTY(()) int darwin_ms_struct;
  
  /* Support -mmacosx-version-min by supplying different (stub) libgcc_s.dylib
     libraries to link against, and by not linking against libgcc_s on
@@ -6588,12 +6778,14 @@ index 0e253cb0dfa..be261e73a7b 100644
  #define STARTFILE_SPEC							    \
 -  "%{Zdynamiclib: %(darwin_dylib1) %{fgnu-tm: -lcrttms.o}}		    \
 -   %{!Zdynamiclib:%{Zbundle:%{!static:					    \
+-	%:version-compare(< 10.6 mmacosx-version-min= -lbundle1.o)	    \
+-	%{fgnu-tm: -lcrttms.o}}}					    \
 +"%{Zdynamiclib: %(darwin_dylib1) %{fgnu-tm: -lcrttms.o}}		    \
-+ %{!Zdynamiclib:%{Zbundle:%{!static:					    \
- 	%:version-compare(< 10.6 mmacosx-version-min= -lbundle1.o)	    \
- 	%{fgnu-tm: -lcrttms.o}}}					    \
++ %{!Zdynamiclib:%{Zbundle:%(darwin_bundle1)}				    \
       %{!Zbundle:%{pg:%{static:-lgcrt0.o}				    \
-@@ -377,7 +406,7 @@ extern GTY(()) int darwin_ms_struct;
+                      %{!static:%{object:-lgcrt0.o}			    \
+                                %{!object:%{preload:-lgcrt0.o}		    \
+@@ -377,7 +404,7 @@ extern GTY(()) int darwin_ms_struct;
                                  %{!object:%{preload:-lcrt0.o}		    \
                                    %{!preload: %(darwin_crt1)		    \
  					      %(darwin_crt2)}}}}}}	    \
@@ -6602,21 +6794,23 @@ index 0e253cb0dfa..be261e73a7b 100644
  
  /* We want a destructor last in the list.  */
  #define TM_DESTRUCTOR "%{fgnu-tm: -lcrttme.o}"
-@@ -385,18 +414,30 @@ extern GTY(()) int darwin_ms_struct;
+@@ -385,11 +412,10 @@ extern GTY(()) int darwin_ms_struct;
  
  #define DARWIN_EXTRA_SPECS						\
    { "darwin_crt1", DARWIN_CRT1_SPEC },					\
-+  { "darwin_crt2", DARWIN_CRT2_SPEC },					\
-+  { "darwin_crt3", DARWIN_CRT3_SPEC },					\
-   { "darwin_dylib1", DARWIN_DYLIB1_SPEC },
- 
+-  { "darwin_dylib1", DARWIN_DYLIB1_SPEC },
+-
 -#define DARWIN_DYLIB1_SPEC						\
 -  "%:version-compare(!> 10.5 mmacosx-version-min= -ldylib1.o)		\
 -   %:version-compare(>< 10.5 10.6 mmacosx-version-min= -ldylib1.10.5.o)"
--
++  { "darwin_crt2", DARWIN_CRT2_SPEC },					\
++  { "darwin_crt3", DARWIN_CRT3_SPEC },					\
++  { "darwin_dylib1", DARWIN_DYLIB1_SPEC },				\
++  { "darwin_bundle1", DARWIN_BUNDLE1_SPEC },
+ 
  #define DARWIN_CRT1_SPEC						\
    "%:version-compare(!> 10.5 mmacosx-version-min= -lcrt1.o)		\
-    %:version-compare(>< 10.5 10.6 mmacosx-version-min= -lcrt1.10.5.o)	\
+@@ -397,6 +423,24 @@ extern GTY(()) int darwin_ms_struct;
     %:version-compare(>< 10.6 10.8 mmacosx-version-min= -lcrt1.10.6.o)	\
     %{fgnu-tm: -lcrttms.o}"
  
@@ -6634,10 +6828,14 @@ index 0e253cb0dfa..be261e73a7b 100644
 +  "%:version-compare(!> 10.5 mmacosx-version-min= -ldylib1.o)		\
 +   %:version-compare(>< 10.5 10.6 mmacosx-version-min= -ldylib1.10.5.o)"
 +
++#define DARWIN_BUNDLE1_SPEC \
++"%{!static:%:version-compare(< 10.6 mmacosx-version-min= -lbundle1.o)	\
++	   %{fgnu-tm: -lcrttms.o}}"
++
  #ifdef HAVE_AS_MMACOSX_VERSION_MIN_OPTION
  /* Emit macosx version (but only major).  */
  #define ASM_MMACOSX_VERSION_MIN_SPEC \
-@@ -762,21 +803,52 @@ extern GTY(()) section * darwin_sections[NUM_DARWIN_SECTIONS];
+@@ -762,21 +806,52 @@ extern GTY(()) section * darwin_sections[NUM_DARWIN_SECTIONS];
  #undef TARGET_ASM_MARK_DECL_PRESERVED
  #define TARGET_ASM_MARK_DECL_PRESERVED darwin_mark_decl_preserved
  
@@ -6698,7 +6896,7 @@ index 0e253cb0dfa..be261e73a7b 100644
  
  /* Symbolic names for various things we might know about a symbol.  */
  
-@@ -969,8 +1041,12 @@ extern void darwin_driver_init (unsigned int *,struct cl_decoded_option **);
+@@ -969,8 +1044,12 @@ extern void darwin_driver_init (unsigned int *,struct cl_decoded_option **);
     _tested_ version known to support this so far.  */
  #define MIN_LD64_NO_COAL_SECTS "236.4"
  
@@ -7687,10 +7885,18 @@ index 9dec57d67ae..88671652707 100644
    else                                                                  \
      switch_to_section (bss_section);					\
 diff --git a/gcc/config/pa/pa.c b/gcc/config/pa/pa.c
-index 707ae5822c3..6d75f26e02f 100644
+index 707ae5822c3..a26169d689e 100644
 --- a/gcc/config/pa/pa.c
 +++ b/gcc/config/pa/pa.c
-@@ -7856,7 +7856,7 @@ pa_attr_length_call (rtx_insn *insn, int sibcall)
+@@ -206,6 +206,7 @@ static bool pa_hard_regno_mode_ok (unsigned int, machine_mode);
+ static bool pa_modes_tieable_p (machine_mode, machine_mode);
+ static bool pa_can_change_mode_class (machine_mode, machine_mode, reg_class_t);
+ static HOST_WIDE_INT pa_starting_frame_offset (void);
++static section* pa_elf_select_rtx_section(machine_mode, rtx, unsigned HOST_WIDE_INT) ATTRIBUTE_UNUSED;
+ 
+ /* The following extra sections are only used for SOM.  */
+ static GTY(()) section *som_readonly_data_section;
+@@ -7856,7 +7857,7 @@ pa_attr_length_call (rtx_insn *insn, int sibcall)
  
    /* 64-bit plabel sequence.  */
    else if (TARGET_64BIT && !local_call)
@@ -7699,7 +7905,7 @@ index 707ae5822c3..6d75f26e02f 100644
  
    /* non-pic long absolute branch sequence.  */
    else if ((TARGET_LONG_ABS_CALL || local_call) && !flag_pic)
-@@ -7928,38 +7928,24 @@ pa_output_call (rtx_insn *insn, rtx call_dest, int sibcall)
+@@ -7928,38 +7929,24 @@ pa_output_call (rtx_insn *insn, rtx call_dest, int sibcall)
  	  xoperands[0] = pa_get_deferred_plabel (call_dest);
  	  xoperands[1] = gen_label_rtx ();
  
@@ -7745,7 +7951,7 @@ index 707ae5822c3..6d75f26e02f 100644
  	}
        else
  	{
-@@ -8052,20 +8038,22 @@ pa_output_call (rtx_insn *insn, rtx call_dest, int sibcall)
+@@ -8052,20 +8039,22 @@ pa_output_call (rtx_insn *insn, rtx call_dest, int sibcall)
  		    {
  		      output_asm_insn ("addil LT'%0,%%r19", xoperands);
  		      output_asm_insn ("ldw RT'%0(%%r1),%%r1", xoperands);
@@ -7774,7 +7980,7 @@ index 707ae5822c3..6d75f26e02f 100644
  
  		  if (!sibcall && !TARGET_PA_20)
  		    {
-@@ -8158,10 +8146,6 @@ pa_attr_length_indirect_call (rtx_insn *insn)
+@@ -8158,10 +8147,6 @@ pa_attr_length_indirect_call (rtx_insn *insn)
    if (TARGET_PORTABLE_RUNTIME)
      return 16;
  
@@ -7785,7 +7991,7 @@ index 707ae5822c3..6d75f26e02f 100644
    if (!TARGET_LONG_CALLS
        && ((TARGET_PA_20 && !TARGET_SOM && distance < 7600000)
  	  || distance < MAX_PCREL17F_OFFSET))
-@@ -8171,12 +8155,15 @@ pa_attr_length_indirect_call (rtx_insn *insn)
+@@ -8171,12 +8156,15 @@ pa_attr_length_indirect_call (rtx_insn *insn)
    if (!flag_pic)
      return 12;
  
@@ -7806,7 +8012,7 @@ index 707ae5822c3..6d75f26e02f 100644
  
    /* Long PIC pc-relative call.  */
    return 20;
-@@ -8214,22 +8201,6 @@ pa_output_indirect_call (rtx_insn *insn, rtx call_dest)
+@@ -8214,22 +8202,6 @@ pa_output_indirect_call (rtx_insn *insn, rtx call_dest)
        return "blr %%r0,%%r2\n\tbv,n %%r0(%%r31)";
      }
  
@@ -7829,7 +8035,7 @@ index 707ae5822c3..6d75f26e02f 100644
    /* Now the normal case -- we can reach $$dyncall directly or
       we're sure that we can get there via a long-branch stub. 
  
-@@ -8258,35 +8229,40 @@ pa_output_indirect_call (rtx_insn *insn, rtx call_dest)
+@@ -8258,35 +8230,40 @@ pa_output_indirect_call (rtx_insn *insn, rtx call_dest)
        return "ble R'$$dyncall(%%sr4,%%r2)\n\tcopy %%r31,%%r2";
      }
  
@@ -7889,7 +8095,34 @@ index 707ae5822c3..6d75f26e02f 100644
    /* We need a long PIC call to $$dyncall.  */
    xoperands[0] = gen_rtx_SYMBOL_REF (Pmode, "$$dyncall");
    xoperands[1] = gen_rtx_REG (Pmode, 2);
-@@ -10048,7 +10024,7 @@ pa_modes_tieable_p (machine_mode mode1, machine_mode mode2)
+@@ -9871,6 +9848,26 @@ pa_select_section (tree exp, int reloc,
+     return data_section;
+ }
+ 
++/* Implement pa_elf_select_rtx_section.  If X is a function label operand
++   and the function is in a COMDAT group, place the plabel reference in the
++   .data.rel.ro.local section.  The linker ignores references to symbols in
++   discarded sections from this section.  */
++   
++static section *
++pa_elf_select_rtx_section (machine_mode mode, rtx x,
++			   unsigned HOST_WIDE_INT align)
++{
++  if (function_label_operand (x, VOIDmode))
++    {
++      tree decl = SYMBOL_REF_DECL (x);
++
++      if (DECL_P (decl) && DECL_COMDAT_GROUP (decl))
++	return get_named_section (NULL, ".data.rel.ro.local", 1);
++    }
++
++  return default_elf_select_rtx_section (mode, x, align);
++}
++
+ /* Implement pa_reloc_rw_mask.  */
+ 
+ static int
+@@ -10048,7 +10045,7 @@ pa_modes_tieable_p (machine_mode mode1, machine_mode mode2)
  
  /* Length in units of the trampoline instruction code.  */
  
@@ -7898,7 +8131,7 @@ index 707ae5822c3..6d75f26e02f 100644
  
  
  /* Output assembler code for a block containing the constant parts
-@@ -10069,27 +10045,46 @@ pa_asm_trampoline_template (FILE *f)
+@@ -10069,27 +10066,46 @@ pa_asm_trampoline_template (FILE *f)
  {
    if (!TARGET_64BIT)
      {
@@ -7957,7 +8190,7 @@ index 707ae5822c3..6d75f26e02f 100644
  	}
        fputs ("\t.word	0\n", f);
        fputs ("\t.word	0\n", f);
-@@ -10103,11 +10098,11 @@ pa_asm_trampoline_template (FILE *f)
+@@ -10103,11 +10119,11 @@ pa_asm_trampoline_template (FILE *f)
        fputs ("\t.dword 0\n", f);
        fputs ("\t.dword 0\n", f);
        fputs ("\tmfia	%r31\n", f);
@@ -7973,7 +8206,7 @@ index 707ae5822c3..6d75f26e02f 100644
        fputs ("\t.dword 0  ; fptr\n", f);
        fputs ("\t.dword 0  ; static link\n", f);
      }
-@@ -10117,10 +10112,10 @@ pa_asm_trampoline_template (FILE *f)
+@@ -10117,10 +10133,10 @@ pa_asm_trampoline_template (FILE *f)
     FNADDR is an RTX for the address of the function's pure code.
     CXT is an RTX for the static chain value for the function.
  
@@ -7988,7 +8221,7 @@ index 707ae5822c3..6d75f26e02f 100644
     words create a plabel for the indirect call to the trampoline.
  
     A similar sequence is used for the 64-bit port but the plabel is
-@@ -10146,15 +10141,15 @@ pa_trampoline_init (rtx m_tramp, tree fndecl, rtx chain_value)
+@@ -10146,15 +10162,15 @@ pa_trampoline_init (rtx m_tramp, tree fndecl, rtx chain_value)
  
    if (!TARGET_64BIT)
      {
@@ -8008,7 +8241,7 @@ index 707ae5822c3..6d75f26e02f 100644
        emit_move_insn (tmp, gen_rtx_REG (Pmode, 19));
  
        /* fdc and fic only use registers for the address to flush,
-@@ -10206,20 +10201,20 @@ pa_trampoline_init (rtx m_tramp, tree fndecl, rtx chain_value)
+@@ -10206,20 +10222,20 @@ pa_trampoline_init (rtx m_tramp, tree fndecl, rtx chain_value)
      }
  
  #ifdef HAVE_ENABLE_EXECUTE_STACK
@@ -8066,9 +8299,224 @@ index 561efa51882..24739e56f97 100644
  #define NEED_INDICATE_EXEC_STACK 0
  
 diff --git a/gcc/config/pa/pa.md b/gcc/config/pa/pa.md
-index 84630ad536d..e273cddc01d 100644
+index 84630ad536d..aa18937bea9 100644
 --- a/gcc/config/pa/pa.md
 +++ b/gcc/config/pa/pa.md
+@@ -765,7 +765,7 @@
+ 
+ (define_insn "scc"
+   [(set (match_operand:SI 0 "register_operand" "=r")
+-	(match_operator:SI 3 "comparison_operator"
++	(match_operator:SI 3 "ordered_comparison_operator"
+ 			   [(match_operand:SI 1 "reg_or_0_operand" "rM")
+ 			    (match_operand:SI 2 "arith11_operand" "rI")]))]
+   ""
+@@ -775,7 +775,7 @@
+ 
+ (define_insn ""
+   [(set (match_operand:DI 0 "register_operand" "=r")
+-	(match_operator:DI 3 "comparison_operator"
++	(match_operator:DI 3 "ordered_comparison_operator"
+ 			   [(match_operand:DI 1 "reg_or_0_operand" "rM")
+ 			    (match_operand:DI 2 "arith11_operand" "rI")]))]
+   "TARGET_64BIT"
+@@ -785,10 +785,10 @@
+ 
+ (define_insn "iorscc"
+   [(set (match_operand:SI 0 "register_operand" "=r")
+-	(ior:SI (match_operator:SI 3 "comparison_operator"
++	(ior:SI (match_operator:SI 3 "ordered_comparison_operator"
+ 				   [(match_operand:SI 1 "reg_or_0_operand" "rM")
+ 				    (match_operand:SI 2 "arith11_operand" "rI")])
+-		(match_operator:SI 6 "comparison_operator"
++		(match_operator:SI 6 "ordered_comparison_operator"
+ 				   [(match_operand:SI 4 "reg_or_0_operand" "rM")
+ 				    (match_operand:SI 5 "arith11_operand" "rI")])))]
+   ""
+@@ -798,10 +798,10 @@
+ 
+ (define_insn ""
+   [(set (match_operand:DI 0 "register_operand" "=r")
+-	(ior:DI (match_operator:DI 3 "comparison_operator"
++	(ior:DI (match_operator:DI 3 "ordered_comparison_operator"
+ 				   [(match_operand:DI 1 "reg_or_0_operand" "rM")
+ 				    (match_operand:DI 2 "arith11_operand" "rI")])
+-		(match_operator:DI 6 "comparison_operator"
++		(match_operator:DI 6 "ordered_comparison_operator"
+ 				   [(match_operand:DI 4 "reg_or_0_operand" "rM")
+ 				    (match_operand:DI 5 "arith11_operand" "rI")])))]
+   "TARGET_64BIT"
+@@ -813,7 +813,7 @@
+ ;; from an scc insn (negscc and incscc).
+ (define_insn "negscc"
+   [(set (match_operand:SI 0 "register_operand" "=r")
+-	(neg:SI (match_operator:SI 3 "comparison_operator"
++	(neg:SI (match_operator:SI 3 "ordered_comparison_operator"
+ 	       [(match_operand:SI 1 "reg_or_0_operand" "rM")
+ 		(match_operand:SI 2 "arith11_operand" "rI")])))]
+   ""
+@@ -823,7 +823,7 @@
+ 
+ (define_insn ""
+   [(set (match_operand:DI 0 "register_operand" "=r")
+-	(neg:DI (match_operator:DI 3 "comparison_operator"
++	(neg:DI (match_operator:DI 3 "ordered_comparison_operator"
+ 	       [(match_operand:DI 1 "reg_or_0_operand" "rM")
+ 		(match_operand:DI 2 "arith11_operand" "rI")])))]
+   "TARGET_64BIT"
+@@ -904,7 +904,7 @@
+ 
+ (define_insn "incscc"
+   [(set (match_operand:SI 0 "register_operand" "=r,r")
+- 	(plus:SI (match_operator:SI 4 "comparison_operator"
++ 	(plus:SI (match_operator:SI 4 "ordered_comparison_operator"
+ 		    [(match_operand:SI 2 "register_operand" "r,r")
+ 		     (match_operand:SI 3 "arith11_operand" "rI,rI")])
+ 		 (match_operand:SI 1 "register_operand" "0,?r")))]
+@@ -917,7 +917,7 @@
+ 
+ (define_insn ""
+   [(set (match_operand:DI 0 "register_operand" "=r,r")
+- 	(plus:DI (match_operator:DI 4 "comparison_operator"
++ 	(plus:DI (match_operator:DI 4 "ordered_comparison_operator"
+ 		    [(match_operand:DI 2 "register_operand" "r,r")
+ 		     (match_operand:DI 3 "arith11_operand" "rI,rI")])
+ 		 (match_operand:DI 1 "register_operand" "0,?r")))]
+@@ -1062,7 +1062,7 @@
+ (define_insn "decscc"
+   [(set (match_operand:SI 0 "register_operand" "=r,r")
+ 	(minus:SI (match_operand:SI 1 "register_operand" "0,?r")
+-		  (match_operator:SI 4 "comparison_operator"
++		  (match_operator:SI 4 "ordered_comparison_operator"
+ 		     [(match_operand:SI 2 "register_operand" "r,r")
+ 		      (match_operand:SI 3 "arith11_operand" "rI,rI")])))]
+   ""
+@@ -1075,7 +1075,7 @@
+ (define_insn ""
+   [(set (match_operand:DI 0 "register_operand" "=r,r")
+ 	(minus:DI (match_operand:DI 1 "register_operand" "0,?r")
+-		  (match_operator:DI 4 "comparison_operator"
++		  (match_operator:DI 4 "ordered_comparison_operator"
+ 		     [(match_operand:DI 2 "register_operand" "r,r")
+ 		      (match_operand:DI 3 "arith11_operand" "rI,rI")])))]
+   "TARGET_64BIT"
+@@ -1242,7 +1242,7 @@
+ (define_expand "movsicc"
+   [(set (match_operand:SI 0 "register_operand" "")
+ 	(if_then_else:SI
+-	 (match_operand 1 "comparison_operator" "")
++	 (match_operand 1 "ordered_comparison_operator" "")
+ 	 (match_operand:SI 2 "reg_or_cint_move_operand" "")
+ 	 (match_operand:SI 3 "reg_or_cint_move_operand" "")))]
+   ""
+@@ -1264,7 +1264,7 @@
+ (define_insn ""
+   [(set (match_operand:SI 0 "register_operand" "=r,r,r,r")
+ 	(if_then_else:SI
+-	 (match_operator 2 "comparison_operator"
++	 (match_operator 2 "ordered_comparison_operator"
+ 	    [(match_operand:SI 3 "register_operand" "r,r,r,r")
+ 	     (match_operand:SI 4 "arith11_operand" "rI,rI,rI,rI")])
+ 	 (match_operand:SI 1 "reg_or_cint_move_operand" "0,J,N,K")
+@@ -1281,7 +1281,7 @@
+ (define_insn ""
+   [(set (match_operand:SI 0 "register_operand" "=r,r,r,r,r,r,r,r")
+ 	(if_then_else:SI
+-	 (match_operator 5 "comparison_operator"
++	 (match_operator 5 "ordered_comparison_operator"
+ 	    [(match_operand:SI 3 "register_operand" "r,r,r,r,r,r,r,r")
+ 	     (match_operand:SI 4 "arith11_operand" "rI,rI,rI,rI,rI,rI,rI,rI")])
+ 	 (match_operand:SI 1 "reg_or_cint_move_operand" "0,0,0,0,r,J,N,K")
+@@ -1302,7 +1302,7 @@
+ (define_expand "movdicc"
+   [(set (match_operand:DI 0 "register_operand" "")
+ 	(if_then_else:DI
+-	 (match_operand 1 "comparison_operator" "")
++	 (match_operand 1 "ordered_comparison_operator" "")
+ 	 (match_operand:DI 2 "reg_or_cint_move_operand" "")
+ 	 (match_operand:DI 3 "reg_or_cint_move_operand" "")))]
+   "TARGET_64BIT"
+@@ -1318,7 +1318,7 @@
+ (define_insn ""
+   [(set (match_operand:DI 0 "register_operand" "=r,r,r,r,r")
+ 	(if_then_else:DI
+-	 (match_operator 2 "comparison_operator"
++	 (match_operator 2 "ordered_comparison_operator"
+ 	    [(match_operand:DI 3 "register_operand" "r,r,r,r,r")
+ 	     (match_operand:DI 4 "arith11_operand" "rI,rI,rI,rI,rI")])
+ 	 (match_operand:DI 1 "reg_or_cint_move_operand" "0,r,J,N,K")
+@@ -1336,7 +1336,7 @@
+ (define_insn ""
+   [(set (match_operand:DI 0 "register_operand" "=r,r,r,r,r,r,r,r")
+ 	(if_then_else:DI
+-	 (match_operator 5 "comparison_operator"
++	 (match_operator 5 "ordered_comparison_operator"
+ 	    [(match_operand:DI 3 "register_operand" "r,r,r,r,r,r,r,r")
+ 	     (match_operand:DI 4 "arith11_operand" "rI,rI,rI,rI,rI,rI,rI,rI")])
+ 	 (match_operand:DI 1 "reg_or_cint_move_operand" "0,0,0,0,r,J,N,K")
+@@ -1413,7 +1413,7 @@
+ (define_insn ""
+   [(set (pc)
+ 	(if_then_else
+-	 (match_operator 3 "comparison_operator"
++	 (match_operator 3 "ordered_comparison_operator"
+ 			 [(match_operand:SI 1 "reg_or_0_operand" "rM")
+ 			  (match_operand:SI 2 "arith5_operand" "rL")])
+ 	 (label_ref (match_operand 0 "" ""))
+@@ -1442,7 +1442,7 @@
+ (define_insn ""
+   [(set (pc)
+ 	(if_then_else
+-	 (match_operator 3 "comparison_operator"
++	 (match_operator 3 "ordered_comparison_operator"
+ 			 [(match_operand:SI 1 "reg_or_0_operand" "rM")
+ 			  (match_operand:SI 2 "arith5_operand" "rL")])
+ 	 (pc)
+@@ -1469,7 +1469,7 @@
+ (define_insn ""
+   [(set (pc)
+ 	(if_then_else
+-	 (match_operator 3 "comparison_operator"
++	 (match_operator 3 "ordered_comparison_operator"
+ 			 [(match_operand:DI 1 "reg_or_0_operand" "rM")
+ 			  (match_operand:DI 2 "reg_or_0_operand" "rM")])
+ 	 (label_ref (match_operand 0 "" ""))
+@@ -1498,7 +1498,7 @@
+ (define_insn ""
+   [(set (pc)
+ 	(if_then_else
+-	 (match_operator 3 "comparison_operator"
++	 (match_operator 3 "ordered_comparison_operator"
+ 			 [(match_operand:DI 1 "reg_or_0_operand" "rM")
+ 			  (match_operand:DI 2 "reg_or_0_operand" "rM")])
+ 	 (pc)
+@@ -1524,7 +1524,7 @@
+ (define_insn ""
+   [(set (pc)
+ 	(if_then_else
+-	 (match_operator 3 "cmpib_comparison_operator"
++	 (match_operator 3 "ordered_comparison_operator"
+ 			 [(match_operand:DI 1 "reg_or_0_operand" "rM")
+ 			  (match_operand:DI 2 "arith5_operand" "rL")])
+ 	 (label_ref (match_operand 0 "" ""))
+@@ -1553,7 +1553,7 @@
+ (define_insn ""
+   [(set (pc)
+ 	(if_then_else
+-	 (match_operator 3 "cmpib_comparison_operator"
++	 (match_operator 3 "ordered_comparison_operator"
+ 			 [(match_operand:DI 1 "reg_or_0_operand" "rM")
+ 			  (match_operand:DI 2 "arith5_operand" "rL")])
+ 	 (pc)
+@@ -9062,7 +9062,7 @@ add,l %2,%3,%3\;bv,n %%r0(%3)"
+ (define_insn "decrement_and_branch_until_zero"
+   [(set (pc)
+ 	(if_then_else
+-	  (match_operator 2 "comparison_operator"
++	  (match_operator 2 "ordered_comparison_operator"
+ 	   [(plus:SI
+ 	      (match_operand:SI 0 "reg_before_reload_operand" "+!r,!*f,*Q")
+ 	      (match_operand:SI 1 "int5_operand" "L,L,L"))
 @@ -10091,23 +10091,55 @@ add,l %2,%3,%3\;bv,n %%r0(%3)"
     (set_attr "length" "4,16")])
  
@@ -8161,6 +8609,36 @@ index b32b3d8abc0..4cb81109933 100644
  mpa-risc-1-0
  Target RejectNegative
  Generate PA1.0 code.
+diff --git a/gcc/config/pa/pa32-linux.h b/gcc/config/pa/pa32-linux.h
+index 30e338fdbc6..3e22c362d59 100644
+--- a/gcc/config/pa/pa32-linux.h
++++ b/gcc/config/pa/pa32-linux.h
+@@ -76,3 +76,8 @@ call_ ## FUNC (void)					\
+    rodata when generating non-PIC code.  */
+ #undef JUMP_TABLES_IN_TEXT_SECTION
+ #define JUMP_TABLES_IN_TEXT_SECTION (flag_pic)
++
++/* We need to override default selection to put references to functions
++   in COMDAT groups in .data.rel.ro.local.  */
++#undef TARGET_ASM_SELECT_RTX_SECTION
++#define TARGET_ASM_SELECT_RTX_SECTION pa_elf_select_rtx_section
+diff --git a/gcc/config/pa/predicates.md b/gcc/config/pa/predicates.md
+index 90b578ed984..70824b96bbe 100644
+--- a/gcc/config/pa/predicates.md
++++ b/gcc/config/pa/predicates.md
+@@ -662,12 +662,6 @@
+   (and (match_code "symbol_ref")
+        (match_test "SYMBOL_REF_TLS_MODEL (op) == TLS_MODEL_LOCAL_EXEC")))
+ 
+-;; True iff this is a comparison operator.  This allows the use of
+-;; MATCH_OPERATOR to recognize all the branch insns.
+-
+-(define_predicate "cmpib_comparison_operator"
+-  (match_code "eq,ne,lt,le,leu,gt,gtu,ge"))
+-
+ ;; True iff OP is an operator suitable for use in a movb instruction.
+ 
+ (define_predicate "movb_comparison_operator"
 diff --git a/gcc/config/riscv/riscv-protos.h b/gcc/config/riscv/riscv-protos.h
 index 8b510f87df8..5b0bbdd7cb4 100644
 --- a/gcc/config/riscv/riscv-protos.h
@@ -8693,7 +9171,7 @@ index 4a1150e0994..654d756647c 100644
    [(parallel [(set (reg:CCFP CR6_REGNO)
  		   (compare:CCFP
 diff --git a/gcc/config/rs6000/darwin.h b/gcc/config/rs6000/darwin.h
-index d3a59f42c37..e36de59ca25 100644
+index d3a59f42c37..165aca29838 100644
 --- a/gcc/config/rs6000/darwin.h
 +++ b/gcc/config/rs6000/darwin.h
 @@ -53,19 +53,28 @@
@@ -8732,7 +9210,7 @@ index d3a59f42c37..e36de59ca25 100644
  #define SUBTARGET_OVERRIDE_OPTIONS darwin_rs6000_override_options ()
  
  #define C_COMMON_OVERRIDE_OPTIONS do {					\
-@@ -127,9 +136,30 @@ extern int darwin_emit_branch_islands;
+@@ -127,9 +136,42 @@ extern int darwin_emit_branch_islands;
     %:version-compare(>< 10.5 10.7 mmacosx-version-min= -lcrt1.10.5.o)	\
     %{fgnu-tm: -lcrttms.o}"
  
@@ -8758,6 +9236,18 @@ index d3a59f42c37..e36de59ca25 100644
 +   %:version-compare(!> 10.4 mmacosx-version-min= crt3_2.o%s) \
 +  }}"
 +
++/* As for crt1, we need to force the dylib crt for 10.6.  */
++#undef DARWIN_DYLIB1_SPEC
++#define DARWIN_DYLIB1_SPEC						\
++  "%:version-compare(!> 10.5 mmacosx-version-min= -ldylib1.o)		\
++   %:version-compare(>< 10.5 10.7 mmacosx-version-min= -ldylib1.10.5.o)"
++
++/* Likewise, the bundle crt.  */
++#undef DARWIN_BUNDLE1_SPEC
++#define DARWIN_BUNDLE1_SPEC \
++"%{!static:%:version-compare(< 10.7 mmacosx-version-min= -lbundle1.o)	\
++	   %{fgnu-tm: -lcrttms.o}}"
++
 +/* The PPC regs save/restore functions are leaves and could, conceivably
 +   be used by the tm destructor.  */
 +#undef ENDFILE_SPEC
@@ -8765,7 +9255,20 @@ index d3a59f42c37..e36de59ca25 100644
  
  #undef SUBTARGET_EXTRA_SPECS
  #define SUBTARGET_EXTRA_SPECS			\
-@@ -279,9 +309,9 @@ extern int darwin_emit_branch_islands;
+@@ -138,12 +180,6 @@ extern int darwin_emit_branch_islands;
+   { "darwin_crt2", DARWIN_CRT2_SPEC },		\
+   { "darwin_subarch", DARWIN_SUBARCH_SPEC },
+ 
+-/* We need to jam the dylib crt to 10.5 for 10.6 (Rosetta) use.  */
+-#undef DARWIN_DYLIB1_SPEC
+-#define DARWIN_DYLIB1_SPEC						\
+-  "%:version-compare(!> 10.5 mmacosx-version-min= -ldylib1.o)		\
+-   %:version-compare(>< 10.5 10.7 mmacosx-version-min= -ldylib1.10.5.o)"
+-
+ /* Output a .machine directive.  */
+ #undef TARGET_ASM_FILE_START
+ #define TARGET_ASM_FILE_START rs6000_darwin_file_start
+@@ -279,9 +315,9 @@ extern int darwin_emit_branch_islands;
  /* This is supported in cctools 465 and later.  The macro test
     above prevents using it in earlier build environments.  */
  #define ASM_OUTPUT_MAX_SKIP_ALIGN(FILE,LOG,MAX_SKIP)          \
@@ -8777,7 +9280,7 @@ index d3a59f42c37..e36de59ca25 100644
          fprintf ((FILE), "\t.p2align %d\n", (LOG));           \
        else                                                    \
          fprintf ((FILE), "\t.p2align %d,,%d\n", (LOG), (MAX_SKIP)); \
-@@ -456,6 +486,9 @@ do {									\
+@@ -456,6 +492,9 @@ do {									\
     this will need to be modified similar to the x86 case.  */
  #define TARGET_FOLD_BUILTIN SUBTARGET_FOLD_BUILTIN
  
@@ -11037,10 +11540,16 @@ index ce2825580c6..8243716589f 100644
  AC_SUBST(all_languages)
  AC_SUBST(all_selected_languages)
 diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
-index c977850d067..b2e49a4da4c 100644
+index c977850d067..0d9b1806a51 100644
 --- a/gcc/cp/ChangeLog
 +++ b/gcc/cp/ChangeLog
-@@ -1,3 +1,362 @@
+@@ -1,3 +1,368 @@
++2020-01-02  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c/90677
++	* cp-objcp-common.c (identifier_global_tag): Return NULL_TREE if name
++	has not been found, rather than error_mark_node.
++
 +2019-12-20  Jakub Jelinek  <jakub@redhat.com>
 +
 +	Backported from mainline
@@ -11403,7 +11912,7 @@ index c977850d067..b2e49a4da4c 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -16,7 +375,7 @@
+@@ -16,7 +381,7 @@
  
  	Backported from mainline
  	2019-08-02  Marek Polacek  <polacek@redhat.com>
@@ -11945,10 +12454,10 @@ index 17d10456341..a7121b70a3b 100644
  
    /* this may not be specified in data-sharing clauses, still we need
 diff --git a/gcc/cp/cp-objcp-common.c b/gcc/cp/cp-objcp-common.c
-index 47651040008..a1c976e33a1 100644
+index 47651040008..4118ab8a31d 100644
 --- a/gcc/cp/cp-objcp-common.c
 +++ b/gcc/cp/cp-objcp-common.c
-@@ -352,6 +352,15 @@ identifier_global_value (tree name)
+@@ -352,6 +352,18 @@ identifier_global_value (tree name)
    return get_global_binding (name);
  }
  
@@ -11957,8 +12466,11 @@ index 47651040008..a1c976e33a1 100644
 +tree
 +identifier_global_tag (tree name)
 +{
-+  return lookup_qualified_name (global_namespace, name, /*prefer_type*/2,
-+				/*complain*/false);
++  tree ret = lookup_qualified_name (global_namespace, name, /*prefer_type*/2,
++				    /*complain*/false);
++  if (ret == error_mark_node)
++    return NULL_TREE;
++  return ret;
 +}
 +
  /* Register c++-specific dumps.  */
@@ -13249,10 +13761,21 @@ index f0e43b5fda2..9feaea9fde5 100644
    low = fold_convert_loc (loc, etype, low);
    exp = fold_convert_loc (loc, etype, exp);
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index e3073787ea9..834f172c2e9 100644
+index e3073787ea9..aaf5ded669b 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,491 @@
+@@ -1,3 +1,502 @@
++2019-12-30  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	Backport from trunk
++	PR fortran/92961
++	* gfortran.h (gfc_seen_div0): Add declaration.
++	* arith.h (gfc_seen_div0): Add definition.
++	(eval_intrinsic): For integer division by zero, set gfc_seen_div0.
++	* decl.c (variable_decl):  If resolution resp. simplification
++	fails for array spec and a division of zero error has been
++	seen, return MATCH_ERROR.
++
 +2019-12-21  Paul Thomas  <pault@gcc.gnu.org>
 +
 +	Backported from mainline
@@ -13744,6 +14267,30 @@ index e3073787ea9..834f172c2e9 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
+diff --git a/gcc/fortran/arith.c b/gcc/fortran/arith.c
+index a4f879531d9..8c025045b93 100644
+--- a/gcc/fortran/arith.c
++++ b/gcc/fortran/arith.c
+@@ -32,6 +32,8 @@ along with GCC; see the file COPYING3.  If not see
+ #include "target-memory.h"
+ #include "constructor.h"
+ 
++bool gfc_seen_div0;
++
+ /* MPFR does not have a direct replacement for mpz_set_f() from GMP.
+    It's easily implemented with a few calls though.  */
+ 
+@@ -1620,6 +1622,10 @@ eval_intrinsic (gfc_intrinsic_op op,
+       gfc_error (gfc_arith_error (rc), &op1->where);
+       if (rc == ARITH_OVERFLOW)
+ 	goto done;
++
++      if (rc == ARITH_DIV0 && op2->ts.type == BT_INTEGER)
++	gfc_seen_div0 = true;
++
+       return NULL;
+     }
+ 
 diff --git a/gcc/fortran/array.c b/gcc/fortran/array.c
 index 0aee220e68d..ebce014c28f 100644
 --- a/gcc/fortran/array.c
@@ -13980,7 +14527,7 @@ index 8a1f43f116c..9117121e5fe 100644
    if ((derived->attr.use_assoc || derived->attr.used_in_submodule)
         && !derived->attr.vtype && !derived->attr.is_class)
 diff --git a/gcc/fortran/decl.c b/gcc/fortran/decl.c
-index cf09420cfbe..52a98cd44ed 100644
+index cf09420cfbe..053f78321c6 100644
 --- a/gcc/fortran/decl.c
 +++ b/gcc/fortran/decl.c
 @@ -99,6 +99,11 @@ bool gfc_matching_function;
@@ -14008,7 +14555,72 @@ index cf09420cfbe..52a98cd44ed 100644
  	  && !sym->attr.implicit_type
  	  && sym->attr.proc == 0
  	  && gfc_current_ns->parent != NULL
-@@ -2644,7 +2649,7 @@ variable_decl (int elem)
+@@ -2506,6 +2511,8 @@ variable_decl (int elem)
+ 	  goto cleanup;
+ 	}
+ 
++      gfc_seen_div0 = false;
++      
+       /* F2018:C830 (R816) An explicit-shape-spec whose bounds are not
+ 	 constant expressions shall appear only in a subprogram, derived
+ 	 type definition, BLOCK construct, or interface body.  */
+@@ -2522,7 +2529,12 @@ variable_decl (int elem)
+ 	  for (int i = 0; i < as->rank; i++)
+ 	    {
+ 	      e = gfc_copy_expr (as->lower[i]);
+-	      gfc_resolve_expr (e);
++	      if (!gfc_resolve_expr (e) && gfc_seen_div0)
++		{
++		  m = MATCH_ERROR;
++		  goto cleanup;
++		}
++
+ 	      gfc_simplify_expr (e, 0);
+ 	      if (e && (e->expr_type != EXPR_CONSTANT))
+ 		{
+@@ -2532,7 +2544,12 @@ variable_decl (int elem)
+ 	      gfc_free_expr (e);
+ 
+ 	      e = gfc_copy_expr (as->upper[i]);
+-	      gfc_resolve_expr (e);
++	      if (!gfc_resolve_expr (e)  && gfc_seen_div0)
++		{
++		  m = MATCH_ERROR;
++		  goto cleanup;
++		}
++
+ 	      gfc_simplify_expr (e, 0);
+ 	      if (e && (e->expr_type != EXPR_CONSTANT))
+ 		{
+@@ -2558,7 +2575,12 @@ variable_decl (int elem)
+ 	      if (e->expr_type != EXPR_CONSTANT)
+ 		{
+ 		  n = gfc_copy_expr (e);
+-		  gfc_simplify_expr (n, 1);
++		  if (!gfc_simplify_expr (n, 1)  && gfc_seen_div0) 
++		    {
++		      m = MATCH_ERROR;
++		      goto cleanup;
++		    }
++
+ 		  if (n->expr_type == EXPR_CONSTANT)
+ 		    gfc_replace_expr (e, n);
+ 		  else
+@@ -2568,7 +2590,12 @@ variable_decl (int elem)
+ 	      if (e->expr_type != EXPR_CONSTANT)
+ 		{
+ 		  n = gfc_copy_expr (e);
+-		  gfc_simplify_expr (n, 1);
++		  if (!gfc_simplify_expr (n, 1)  && gfc_seen_div0) 
++		    {
++		      m = MATCH_ERROR;
++		      goto cleanup;
++		    }
++		  
+ 		  if (n->expr_type == EXPR_CONSTANT)
+ 		    gfc_replace_expr (e, n);
+ 		  else
+@@ -2644,7 +2671,7 @@ variable_decl (int elem)
        then we want to set the type & bail out.  */
    if (flag_cray_pointer && !gfc_comp_struct (gfc_current_state ()))
      {
@@ -14017,7 +14629,15 @@ index cf09420cfbe..52a98cd44ed 100644
        if (sym != NULL && sym->attr.cray_pointee)
  	{
  	  m = MATCH_YES;
-@@ -3991,7 +3996,6 @@ gfc_match_decl_type_spec (gfc_typespec *ts, int implicit_flag)
+@@ -2905,6 +2932,7 @@ variable_decl (int elem)
+ 
+ cleanup:
+   /* Free stuff up and return.  */
++  gfc_seen_div0 = false;
+   gfc_free_expr (initializer);
+   gfc_free_array_spec (as);
+ 
+@@ -3991,7 +4019,6 @@ gfc_match_decl_type_spec (gfc_typespec *ts, int implicit_flag)
        return MATCH_YES;
      }
  
@@ -14025,7 +14645,7 @@ index cf09420cfbe..52a98cd44ed 100644
    m = gfc_match (" type (");
    matched_type = (m == MATCH_YES);
    if (matched_type)
-@@ -4039,7 +4043,10 @@ gfc_match_decl_type_spec (gfc_typespec *ts, int implicit_flag)
+@@ -4039,7 +4066,10 @@ gfc_match_decl_type_spec (gfc_typespec *ts, int implicit_flag)
  	m = MATCH_YES;
  
        if (matched_type && m == MATCH_YES && gfc_match_char (')') != MATCH_YES)
@@ -14037,7 +14657,7 @@ index cf09420cfbe..52a98cd44ed 100644
  
        return m;
      }
-@@ -4062,8 +4069,12 @@ gfc_match_decl_type_spec (gfc_typespec *ts, int implicit_flag)
+@@ -4062,8 +4092,12 @@ gfc_match_decl_type_spec (gfc_typespec *ts, int implicit_flag)
  	  && !gfc_notify_std (GFC_STD_F2008, "TYPE with "
  			      "intrinsic-type-spec at %C"))
  	return MATCH_ERROR;
@@ -14051,7 +14671,7 @@ index cf09420cfbe..52a98cd44ed 100644
  
        ts->type = BT_REAL;
        ts->kind = gfc_default_double_kind;
-@@ -4093,7 +4104,10 @@ gfc_match_decl_type_spec (gfc_typespec *ts, int implicit_flag)
+@@ -4093,7 +4127,10 @@ gfc_match_decl_type_spec (gfc_typespec *ts, int implicit_flag)
  	return MATCH_ERROR;
  
        if (matched_type && gfc_match_char (')') != MATCH_YES)
@@ -14063,7 +14683,7 @@ index cf09420cfbe..52a98cd44ed 100644
  
        ts->type = BT_COMPLEX;
        ts->kind = gfc_default_double_kind;
-@@ -4114,7 +4128,13 @@ gfc_match_decl_type_spec (gfc_typespec *ts, int implicit_flag)
+@@ -4114,7 +4151,13 @@ gfc_match_decl_type_spec (gfc_typespec *ts, int implicit_flag)
        if (m == MATCH_ERROR)
  	return m;
  
@@ -14078,7 +14698,7 @@ index cf09420cfbe..52a98cd44ed 100644
      }
  
    if (m != MATCH_YES)
-@@ -4397,6 +4417,7 @@ get_kind:
+@@ -4397,6 +4440,7 @@ get_kind:
  	      gfc_next_ascii_char ();
  	      return MATCH_YES;
  	    }
@@ -14086,7 +14706,7 @@ index cf09420cfbe..52a98cd44ed 100644
  	  return MATCH_NO;
  	}
      }
-@@ -4410,7 +4431,10 @@ get_kind:
+@@ -4410,7 +4454,10 @@ get_kind:
      }
  
    if (matched_type && gfc_match_char (')') != MATCH_YES)
@@ -14098,7 +14718,7 @@ index cf09420cfbe..52a98cd44ed 100644
  
    /* Defer association of the KIND expression of function results
       until after USE and IMPORT statements.  */
-@@ -6145,13 +6169,17 @@ gfc_match_prefix (gfc_typespec *ts)
+@@ -6145,13 +6192,17 @@ gfc_match_prefix (gfc_typespec *ts)
  	  found_prefix = true;
  	}
  
@@ -14122,7 +14742,7 @@ index cf09420cfbe..52a98cd44ed 100644
  	}
  
        if (gfc_match ("elemental% ") == MATCH_YES)
-@@ -7202,13 +7230,16 @@ gfc_match_function_decl (void)
+@@ -7202,13 +7253,16 @@ gfc_match_function_decl (void)
    if (sym->attr.is_bind_c == 1)
      {
        sym->attr.is_bind_c = 0;
@@ -14146,7 +14766,7 @@ index cf09420cfbe..52a98cd44ed 100644
      }
  
    if (found_match != MATCH_YES)
-@@ -7222,6 +7253,24 @@ gfc_match_function_decl (void)
+@@ -7222,6 +7276,24 @@ gfc_match_function_decl (void)
  	found_match = suffix_match;
      }
  
@@ -14171,7 +14791,7 @@ index cf09420cfbe..52a98cd44ed 100644
    if(found_match != MATCH_YES)
      m = MATCH_ERROR;
    else
-@@ -7460,15 +7509,15 @@ gfc_match_entry (void)
+@@ -7460,15 +7532,15 @@ gfc_match_entry (void)
       not allowed for procedures.  */
    if (entry->attr.is_bind_c == 1)
      {
@@ -14195,7 +14815,7 @@ index cf09420cfbe..52a98cd44ed 100644
  
    /* Check what next non-whitespace character is so we can tell if there
       is the required parens if we have a BIND(C).  */
-@@ -7668,13 +7717,16 @@ gfc_match_subroutine (void)
+@@ -7668,13 +7740,16 @@ gfc_match_subroutine (void)
    if (sym->attr.is_bind_c == 1)
      {
        sym->attr.is_bind_c = 0;
@@ -14219,7 +14839,7 @@ index cf09420cfbe..52a98cd44ed 100644
      }
  
    /* C binding names are not allowed for internal procedures.  */
-@@ -7716,6 +7768,24 @@ gfc_match_subroutine (void)
+@@ -7716,6 +7791,24 @@ gfc_match_subroutine (void)
            return MATCH_ERROR;
          }
  
@@ -14244,7 +14864,7 @@ index cf09420cfbe..52a98cd44ed 100644
        /* Scan the dummy arguments for an alternate return.  */
        for (arg = sym->formal; arg; arg = arg->next)
  	if (!arg->sym)
-@@ -10161,6 +10231,20 @@ gfc_match_derived_decl (void)
+@@ -10161,6 +10254,20 @@ gfc_match_derived_decl (void)
        return MATCH_ERROR;
      }
  
@@ -14265,7 +14885,7 @@ index cf09420cfbe..52a98cd44ed 100644
    m = gfc_match (" %n ", name);
    if (m != MATCH_YES)
      return m;
-@@ -10168,7 +10252,7 @@ gfc_match_derived_decl (void)
+@@ -10168,7 +10275,7 @@ gfc_match_derived_decl (void)
    /* Make sure that we don't identify TYPE IS (...) as a parameterized
       derived type named 'is'.
       TODO Expand the check, when 'name' = "is" by matching " (tname) "
@@ -14274,7 +14894,7 @@ index cf09420cfbe..52a98cd44ed 100644
       misplaced TYPE IS statements such as in select_type_1.f03.  */
    if (gfc_peek_ascii_char () == '(')
      {
-@@ -11472,3 +11556,53 @@ gfc_match_gcc_builtin (void)
+@@ -11472,3 +11579,53 @@ gfc_match_gcc_builtin (void)
  
    return MATCH_YES;
  }
@@ -14700,7 +15320,7 @@ index d4264dafa6f..4bb6cbb5d74 100644
  	}
      }
 diff --git a/gcc/fortran/gfortran.h b/gcc/fortran/gfortran.h
-index 2bb82980e8e..29b962d889c 100644
+index 2bb82980e8e..d7071ae5fcf 100644
 --- a/gcc/fortran/gfortran.h
 +++ b/gcc/fortran/gfortran.h
 @@ -2407,6 +2407,9 @@ typedef struct
@@ -14723,6 +15343,15 @@ index 2bb82980e8e..29b962d889c 100644
  
  /* SIMD clause enum.  */
  enum gfc_simd_clause
+@@ -2961,6 +2967,8 @@ void gfc_arith_done_1 (void);
+ arith gfc_check_integer_range (mpz_t p, int kind);
+ bool gfc_check_character_range (gfc_char_t, int);
+ 
++extern bool gfc_seen_div0;
++
+ /* trans-types.c */
+ bool gfc_check_any_c_kind (gfc_typespec *);
+ int gfc_validate_kind (bt, int, bool);
 diff --git a/gcc/fortran/gfortran.texi b/gcc/fortran/gfortran.texi
 index 6a8337a4bbf..733403a129d 100644
 --- a/gcc/fortran/gfortran.texi
@@ -17855,10 +18484,14 @@ index bc147c4444d..9a859070b26 100644
  	  NEXT_PASS (pass_gcse2);
  	  NEXT_PASS (pass_split_after_reload);
 diff --git a/gcc/po/ChangeLog b/gcc/po/ChangeLog
-index e0186084236..bf3dc9c10ef 100644
+index e0186084236..cae483c15b1 100644
 --- a/gcc/po/ChangeLog
 +++ b/gcc/po/ChangeLog
-@@ -1,3 +1,23 @@
+@@ -1,3 +1,27 @@
++2019-12-30  Joseph Myers  <joseph@codesourcery.com>
++
++	* fi.po: Update.
++
 +2019-10-11  Joseph Myers  <joseph@codesourcery.com>
 +
 +	* fi.po: Update.
@@ -19066,7 +19699,7 @@ index 2f3a21984ac..c6eed017b3f 100644
  #: config/m32c/m32c.opt:23
  msgid "-msim\tUse simulator runtime."
 diff --git a/gcc/po/fi.po b/gcc/po/fi.po
-index c66de8afab4..b4b27c40017 100644
+index c66de8afab4..40b86635286 100644
 --- a/gcc/po/fi.po
 +++ b/gcc/po/fi.po
 @@ -33,7 +33,7 @@ msgstr ""
@@ -19074,11 +19707,31 @@ index c66de8afab4..b4b27c40017 100644
  "Report-Msgid-Bugs-To: https://gcc.gnu.org/bugs/\n"
  "POT-Creation-Date: 2019-05-02 20:28+0000\n"
 -"PO-Revision-Date: 2019-05-29 18:58+0300\n"
-+"PO-Revision-Date: 2019-10-11 20:03+0300\n"
++"PO-Revision-Date: 2019-12-26 00:56+0200\n"
  "Last-Translator: Lauri Nurmi <lanurmi@iki.fi>\n"
  "Language-Team: Finnish <translation-team-fi@lists.sourceforge.net>\n"
  "Language: fi\n"
-@@ -67,9 +67,9 @@ msgid "[cannot find %s]"
+@@ -42,15 +42,17 @@ msgstr ""
+ "Content-Transfer-Encoding: 8bit\n"
+ "X-Bugs: Report translation errors to the Language-Team address.\n"
+ "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+-"X-Generator: Poedit 2.2.3\n"
++"X-Generator: Poedit 2.2.4\n"
++"X-Poedit-Bookmarks: -1,4379,4571,5891,-1,9667,-1,-1,-1,-1\n"
+ 
+ #: cfgrtl.c:2705
+ msgid "flow control insn inside a basic block"
+ msgstr "vuonohjauskäsky peruslohkon sisällä"
+ 
+ #: cfgrtl.c:2937
++#, fuzzy
+ msgid "wrong insn in the fallthru edge"
+-msgstr ""
++msgstr "nimettömällä kentällä on vaillinainen tyyppi"
+ 
+ #: cfgrtl.c:2994
+ msgid "insn outside basic block"
+@@ -67,9 +69,9 @@ msgid "[cannot find %s]"
  msgstr "lähdetiedostoa %s ei löydy"
  
  #: collect2.c:1632
@@ -19090,7 +19743,16 @@ index c66de8afab4..b4b27c40017 100644
  
  #: collect2.c:1737
  #, c-format
-@@ -118,9 +118,9 @@ msgid "const/copy propagation disabled"
+@@ -103,6 +105,8 @@ msgid ""
+ "\n"
+ "write_c_file - output name is %s, prefix is %s\n"
+ msgstr ""
++"\n"
++"write_c_file - tuotoksen nimi on %s, etuliite on %s\n"
+ 
+ #: collect2.c:2645
+ #, c-format
+@@ -118,9 +122,9 @@ msgid "const/copy propagation disabled"
  msgstr "const-/kopioinnin-eteneminen poistettu käytöstä"
  
  #: diagnostic.c:145
@@ -19102,7 +19764,137 @@ index c66de8afab4..b4b27c40017 100644
  
  #: diagnostic.c:150
  #, c-format
-@@ -6142,9 +6142,8 @@ msgid "gfortran does not support -E without -cpp"
+@@ -179,7 +183,7 @@ msgstr "%s:%d: hämmentynyt aikaisemmista virheistä, poistutaan\n"
+ #: diagnostic.c:1589
+ #, c-format
+ msgid "Internal compiler error: Error reporting routines re-entered.\n"
+-msgstr ""
++msgstr "Sisäinen kääntäjän virhe: virheraportoinnin rutiineihin palattiin uudelleen.\n"
+ 
+ #: final.c:1127
+ msgid "negative insn length"
+@@ -772,7 +776,7 @@ msgstr ""
+ #: gcov-tool.c:528
+ #, c-format
+ msgid "Copyright %s 2019 Free Software Foundation, Inc.\n"
+-msgstr ""
++msgstr "Tekijänoikeus %s 2019 Free Software Foundation, Inc.\n"
+ 
+ #: gcov-tool.c:531 gcov.c:925
+ #, c-format
+@@ -955,7 +959,6 @@ msgstr "Tulostiedoston ”%s” avaaminen epäonnistui\n"
+ msgid "Removing '%s'\n"
+ msgstr "Poistetaan ”%s”\n"
+ 
+-# Hmm...
+ #: gcov.c:1399 gcov.c:1467 gcov.c:2804
+ #, c-format
+ msgid "\n"
+@@ -1267,7 +1270,7 @@ msgstr "Virheellinen vähimmäisargumenttimäärä (%d) funktiolle %s"
+ #: opts.c:1396
+ #, c-format
+ msgid "Same as %s.  Use the latter option instead."
+-msgstr ""
++msgstr "Sama kuin %s. Käytä tätä valitsinta ensimmäisen sijaan."
+ 
+ #: opts.c:1404
+ #, fuzzy, c-format
+@@ -1657,9 +1660,8 @@ msgid "note: "
+ msgstr "huom: "
+ 
+ #: diagnostic.def:40
+-#, fuzzy
+ msgid "debug: "
+-msgstr "aseta vianjäljityksen tulostetiedoston nimi"
++msgstr "vianjäljitys: "
+ 
+ #. These two would be re-classified as DK_WARNING or DK_ERROR, so the
+ #. prefix does not matter.
+@@ -1814,9 +1816,9 @@ msgid "How much can given compilation unit grow because of the inlining (in perc
+ msgstr ""
+ 
+ #: params.def:232
+-#, no-c-format
++#, fuzzy, no-c-format
+ msgid "How much can given compilation unit grow because of the interprocedural constant propagation (in percent)."
+-msgstr ""
++msgstr "Sähkökatko"
+ 
+ #: params.def:236
+ #, no-c-format
+@@ -1844,9 +1846,9 @@ msgid "Interval in which to probe the stack expressed as a power of two in bytes
+ msgstr ""
+ 
+ #: params.def:262
+-#, no-c-format
++#, fuzzy, no-c-format
+ msgid "The maximum amount of memory to be allocated by GCSE."
+-msgstr ""
++msgstr "Kumoamistoimintojen enimmäismäärä"
+ 
+ #: params.def:269
+ #, fuzzy, no-c-format
+@@ -2074,9 +2076,9 @@ msgid "The maximum number of insns to duplicate when unfactoring computed gotos.
+ msgstr "parametrin %qs maksimiarvo on %u"
+ 
+ #: params.def:542
+-#, no-c-format
++#, fuzzy, no-c-format
+ msgid "The maximum length of path considered in cse."
+-msgstr ""
++msgstr "Kumoamistoimintojen enimmäismäärä"
+ 
+ #: params.def:546
+ #, fuzzy, no-c-format
+@@ -2099,9 +2101,9 @@ msgid "Bound on number of iv uses in loop optimized in iv optimizations."
+ msgstr "moduulienvälisiä optimointeja ei ole toteutettu C++:lle"
+ 
+ #: params.def:578
+-#, no-c-format
++#, fuzzy, no-c-format
+ msgid "If number of candidates in the set is smaller, we always try to remove unused ivs during its optimization."
+-msgstr ""
++msgstr "moduulienvälisiä optimointeja ei ole toteutettu C++:lle"
+ 
+ #: params.def:583
+ #, fuzzy, no-c-format
+@@ -2199,9 +2201,9 @@ msgid "The maximum conflict delay for an insn to be considered for speculative m
+ msgstr "parametrin %qs maksimiarvo on %u"
+ 
+ #: params.def:700
+-#, no-c-format
++#, fuzzy, no-c-format
+ msgid "The minimal probability of speculation success (in percents), so that speculative insn will be scheduled."
+-msgstr ""
++msgstr "parametrin %qs maksimiarvo on %u"
+ 
+ #: params.def:705
+ #, no-c-format
+@@ -2249,9 +2251,9 @@ msgid "The upper bound for sharing integer constants."
+ msgstr "luetellun tyypin jäsenen %qE arvo ei ole kokonaislukuvakio"
+ 
+ #: params.def:754
+-#, no-c-format
++#, fuzzy, no-c-format
+ msgid "The lower bound for a buffer to be considered for stack smashing protection."
+-msgstr ""
++msgstr "parametrin %qs maksimiarvo on %u"
+ 
+ #: params.def:759
+ #, no-c-format
+@@ -2334,9 +2336,9 @@ msgid "Maximum length of partial antic set when performing tree pre optimization
+ msgstr ""
+ 
+ #: params.def:894
+-#, no-c-format
++#, fuzzy, no-c-format
+ msgid "Maximum depth of a loop nest to fully value-number optimistically."
+-msgstr ""
++msgstr "parametrin %qs maksimiarvo on %u"
+ 
+ #: params.def:905
+ #, fuzzy, no-c-format
+@@ -6142,9 +6144,8 @@ msgid "gfortran does not support -E without -cpp"
  msgstr "gfortran ei tue valitsinta -E ilman valitsinta -cpp"
  
  #: objc/lang-specs.h:30 objc/lang-specs.h:41
@@ -19113,7 +19905,47 @@ index c66de8afab4..b4b27c40017 100644
  
  #: objc/lang-specs.h:55
  msgid "objc-cpp-output is deprecated; please use objective-c-cpp-output instead"
-@@ -6688,9 +6687,8 @@ msgid "Conform to the ISO Fortran 95 standard."
+@@ -6308,8 +6309,9 @@ msgid "Disable preprocessing."
+ msgstr "%s esikääntäjän direktiivissä"
+ 
+ #: fortran/lang.opt:370
++#, fuzzy
+ msgid "Eliminate multiple function invocations also for impure functions."
+-msgstr ""
++msgstr "indeksoitu arvo on osoitin funktioon"
+ 
+ #: fortran/lang.opt:374
+ #, fuzzy
+@@ -6424,7 +6426,7 @@ msgstr ""
+ #: common.opt:1010 common.opt:1574 common.opt:1630 common.opt:1762
+ #: common.opt:1766 common.opt:2000 common.opt:2178 common.opt:2879
+ msgid "Does nothing. Preserved for backward compatibility."
+-msgstr ""
++msgstr "Ei tee mitään. Säilytetty yhteensopivuuden vuoksi."
+ 
+ #: fortran/lang.opt:493
+ #, fuzzy
+@@ -6499,8 +6501,9 @@ msgid "-ffree-line-length-<n>\tUse n as character line width in free mode."
+ msgstr ""
+ 
+ #: fortran/lang.opt:565
++#, fuzzy
+ msgid "Try to interchange loops if profitable."
+-msgstr ""
++msgstr "Kumoamistoimintojen enimmäismäärä"
+ 
+ #: fortran/lang.opt:569
+ #, fuzzy
+@@ -6656,7 +6659,7 @@ msgstr ""
+ #: common.opt:2602 common.opt:2703 common.opt:2755 common.opt:2843
+ #: common.opt:2980 common.opt:2984 common.opt:2988 common.opt:2992
+ msgid "Does nothing.  Preserved for backward compatibility."
+-msgstr ""
++msgstr "Ei tee mitään. Säilytetty yhteensopivuuden vuoksi."
+ 
+ #: fortran/lang.opt:803
+ msgid "Statically link the GNU Fortran helper library (libgfortran)."
+@@ -6688,9 +6691,8 @@ msgid "Conform to the ISO Fortran 95 standard."
  msgstr "Noudata ISO Fortran 95 -standardia"
  
  #: fortran/lang.opt:827
@@ -19124,7 +19956,7 @@ index c66de8afab4..b4b27c40017 100644
  
  #: fortran/lang.opt:831
  msgid "Accept extensions to support legacy code."
-@@ -6732,24 +6730,20 @@ msgid "-I <dir>\tAdd <dir> to the end of the main include path."
+@@ -6732,24 +6734,20 @@ msgid "-I <dir>\tAdd <dir> to the end of the main include path."
  msgstr "-isystem <hakemisto>\tLisää <hakemisto> järjestelmän include-polun alkuun"
  
  #: c-family/c.opt:217
@@ -19153,7 +19985,7 @@ index c66de8afab4..b4b27c40017 100644
  
  #: c-family/c.opt:233
  msgid "Like -M but ignore system header files."
-@@ -6773,9 +6767,8 @@ msgid "-MT <target>\tAdd an unquoted target."
+@@ -6773,9 +6771,8 @@ msgid "-MT <target>\tAdd an unquoted target."
  msgstr ""
  
  #: c-family/c.opt:253
@@ -19164,7 +19996,7 @@ index c66de8afab4..b4b27c40017 100644
  
  #: c-family/c.opt:257
  #, fuzzy
-@@ -6817,11 +6810,9 @@ msgstr ""
+@@ -6817,11 +6814,9 @@ msgstr ""
  msgid "Enable most warning messages."
  msgstr "Subject: Fetchmailin varoitus liian suuresta viestistä"
  
@@ -19177,7 +20009,7 @@ index c66de8afab4..b4b27c40017 100644
  
  #: c-family/c.opt:312
  #, fuzzy
-@@ -6931,9 +6922,8 @@ msgstr "Varoita ”char”-tyypillä indeksoinnista."
+@@ -6931,9 +6926,8 @@ msgstr "Varoita ”char”-tyypillä indeksoinnista."
  #: c-family/c.opt:1369 c-family/c.opt:1373 c-family/c.opt:1377
  #: c-family/c.opt:1381 c-family/c.opt:1385 c-family/c.opt:1389
  #: config/i386/i386.opt:967
@@ -19188,7 +20020,7 @@ index c66de8afab4..b4b27c40017 100644
  
  #: c-family/c.opt:429
  msgid "Warn about variables that might be changed by \"longjmp\" or \"vfork\"."
-@@ -6964,9 +6954,8 @@ msgid "Warn when all constructors and destructors are private."
+@@ -6964,9 +6958,8 @@ msgid "Warn when all constructors and destructors are private."
  msgstr "Varoita kun kaikki muodostimet ja hajottimet ovat yksityisiä."
  
  #: c-family/c.opt:461
@@ -19199,7 +20031,18 @@ index c66de8afab4..b4b27c40017 100644
  
  #: c-family/c.opt:465
  msgid "Warn about __TIME__, __DATE__ and __TIMESTAMP__ usage."
-@@ -7119,9 +7108,8 @@ msgid "Warn whenever type qualifiers are ignored."
+@@ -7074,8 +7067,9 @@ msgid "Warn about format strings that are not literals."
+ msgstr "Varoita muotoilumerkkijonoista, jotka eivät ole literaaleja."
+ 
+ #: c-family/c.opt:575
++#, fuzzy
+ msgid "Warn about function calls with format strings that write past the end of the destination region.  Same as -Wformat-overflow=1."
+-msgstr ""
++msgstr "%<%.*s%>-direktiivi kirjoittaa jopa %wu tavua %wu tavun kokoiseen alueeseen"
+ 
+ #: c-family/c.opt:580
+ msgid "Warn about possible security problems with format functions."
+@@ -7119,9 +7113,8 @@ msgid "Warn whenever type qualifiers are ignored."
  msgstr "Varoita tyyppimääreiden huomiotta jättämisestä."
  
  #: c-family/c.opt:622
@@ -19210,7 +20053,7 @@ index c66de8afab4..b4b27c40017 100644
  
  #: c-family/c.opt:626
  #, fuzzy
-@@ -7196,9 +7184,8 @@ msgid "Warn when a string or character literal is followed by a ud-suffix which
+@@ -7196,9 +7189,8 @@ msgid "Warn when a string or character literal is followed by a ud-suffix which
  msgstr ""
  
  #: c-family/c.opt:701
@@ -19221,7 +20064,7 @@ index c66de8afab4..b4b27c40017 100644
  
  #: c-family/c.opt:705
  msgid "Warn when logical not is used on the left hand side operand of a comparison."
-@@ -7429,9 +7416,8 @@ msgid "Warn about packed bit-fields whose offset changed in GCC 4.4."
+@@ -7429,9 +7421,8 @@ msgid "Warn about packed bit-fields whose offset changed in GCC 4.4."
  msgstr "Varoita pakatuista bittikentistä, joiden siirrososoite vaihtui GCC 4.4:ssä"
  
  #: c-family/c.opt:955
@@ -19232,7 +20075,29 @@ index c66de8afab4..b4b27c40017 100644
  
  #: c-family/c.opt:963
  msgid "Warn about calling std::move on a local object in a return statement preventing copy elision."
-@@ -7975,9 +7961,8 @@ msgid "Enable OpenMP's SIMD directives."
+@@ -7646,8 +7637,9 @@ msgid "Warn if a variable length array is used."
+ msgstr "käytetään muuttuvapituista taulukkoa"
+ 
+ #: c-family/c.opt:1199
++#, fuzzy
+ msgid "-Wvla-larger-than=<number>\tWarn on unbounded uses of variable-length arrays, and on bounded uses of variable-length arrays whose bound can be larger than <number> bytes. <number> bytes."
+-msgstr ""
++msgstr "muuttuja %qD esitelty %<inline%>:ksi"
+ 
+ #: c-family/c.opt:1206
+ msgid "-Wno-vla-larger-than Disable Wvla-larger-than= warning.  Equivalent to Wvla-larger-than=<SIZE_MAX> or larger."
+@@ -7747,9 +7739,8 @@ msgid "Enable the char8_t fundamental type and use it as the type for UTF-8 stri
+ msgstr ""
+ 
+ #: c-family/c.opt:1393
+-#, fuzzy
+ msgid "Deprecated in GCC 8.  This switch has no effect."
+-msgstr "Vanhentunut. Tämä valitsin ei vaikuta mihinkään."
++msgstr "Vanhentunut GCC 8:ssa. Tämä valitsin ei vaikuta mihinkään."
+ 
+ #: c-family/c.opt:1397
+ #, fuzzy
+@@ -7975,9 +7966,8 @@ msgid "Enable OpenMP's SIMD directives."
  msgstr "Luokittelematon lause IF-lauseessa kohdassa %C"
  
  #: c-family/c.opt:1681
@@ -19243,7 +20108,18 @@ index c66de8afab4..b4b27c40017 100644
  
  #: c-family/c.opt:1692
  msgid "Look for and use PCH files even when preprocessing."
-@@ -8732,9 +8717,8 @@ msgid "Set the maximum amount for a single stack increment operation."
+@@ -8459,9 +8449,8 @@ msgid "Generate code for all template instantiations."
+ msgstr "Käytä AltiVec-käskyjä"
+ 
+ #: d/lang.opt:178
+-#, fuzzy
+ msgid "Generate code for assert contracts."
+-msgstr "Tuota koodia GNU-assemblerille (gas)"
++msgstr "Tuota koodia väitesopimuksille."
+ 
+ #: d/lang.opt:186
+ msgid "-fbounds-check=[on|safeonly|off]\tTurn array bounds checks on, in @safe code only, or off."
+@@ -8732,9 +8721,8 @@ msgid "Set the maximum amount for a single stack increment operation."
  msgstr ""
  
  #: config/mcore/mcore.opt:75
@@ -19254,7 +20130,155 @@ index c66de8afab4..b4b27c40017 100644
  
  #: config/linux-android.opt:23
  msgid "Generate code for the Android platform."
-@@ -19730,7 +19714,7 @@ msgstr "%qs-attribuuttia ei huomioida %qs:lle"
+@@ -9653,8 +9641,9 @@ msgid "Count speculative dependencies while calculating priority of instructions
+ msgstr "Tuota koodia, joka käyttää 68881-liukulukukäskyjä"
+ 
+ #: config/ia64/ia64.opt:178
++#, fuzzy
+ msgid "Place a stop bit after every cycle when scheduling."
+-msgstr ""
++msgstr "Ota käyttöön RX FPU-käskyjen käyttö."
+ 
+ #: config/ia64/ia64.opt:182
+ msgid "Assume that floating-point stores and loads are not likely to cause conflict when placed into one instruction group."
+@@ -13439,8 +13428,9 @@ msgstr ""
+ "\n"
+ 
+ #: config/rx/rx.opt:105
++#, fuzzy
+ msgid "Maximum size in bytes of constant values allowed as operands."
+-msgstr ""
++msgstr "parametrin %qs maksimiarvo on %u"
+ 
+ #: config/rx/rx.opt:111
+ #, fuzzy
+@@ -13512,7 +13502,7 @@ msgstr "Tuota koodia big-endian-tilassa"
+ 
+ #: config/visium/visium.opt:73
+ msgid "Only retained for backward compatibility."
+-msgstr ""
++msgstr "Säilytetty vain yhteensopivuuden vuoksi."
+ 
+ #: config/sol2.opt:32
+ msgid "Clear hardware capabilities when linking."
+@@ -17148,8 +17138,9 @@ msgid "Optimize amount of stdarg registers saved to stack at start of function."
+ msgstr ""
+ 
+ #: common.opt:2439
++#, fuzzy
+ msgid "Apply variable expansion when loops are unrolled."
+-msgstr ""
++msgstr "Tuota bittikäskyjä"
+ 
+ #: common.opt:2443
+ msgid "-fstack-check=[no|generic|specific]\tInsert stack checking code into the program."
+@@ -17398,8 +17389,9 @@ msgid "Perform straight-line strength reduction."
+ msgstr ""
+ 
+ #: common.opt:2715
++#, fuzzy
+ msgid "Perform scalar replacement of aggregates."
+-msgstr ""
++msgstr "Sähkökatko"
+ 
+ #: common.opt:2719
+ msgid "Replace temporary expressions in the SSA->normal pass."
+@@ -18102,9 +18094,8 @@ msgid "return with value in function with no return type"
+ msgstr "funktion paluuarvon tyyppi ei voi olla funktio"
+ 
+ #: go/gofrontend/statements.cc:2797
+-#, fuzzy
+ msgid "too many values in return statement"
+-msgstr "%s: liian monta arvoa"
++msgstr "liikaa arvoja return-lauseessa"
+ 
+ #: go/gofrontend/statements.cc:3214
+ #, fuzzy
+@@ -19207,9 +19198,9 @@ msgid "size of loop %d should be %d, not %d"
+ msgstr "sektorimäärä: %d, sektorikoko: %d\n"
+ 
+ #: cfgloop.c:1458
+-#, gcc-internal-format, gfc-internal-format
++#, fuzzy, gcc-internal-format, gfc-internal-format
+ msgid "bb %d does not belong to loop %d"
+-msgstr ""
++msgstr "säiekohtaista muistia ei tueta tälle kohteelle"
+ 
+ #: cfgloop.c:1470
+ #, fuzzy, gcc-internal-format, gfc-internal-format
+@@ -19237,9 +19228,9 @@ msgid "loop %d%'s latch is not dominated by its header"
+ msgstr "säiekohtaista muistia ei tueta tälle kohteelle"
+ 
+ #: cfgloop.c:1512
+-#, gcc-internal-format
++#, fuzzy, gcc-internal-format
+ msgid "loop %d%'s latch does not have exactly 1 successor"
+-msgstr ""
++msgstr "säiekohtaista muistia ei tueta tälle kohteelle"
+ 
+ #: cfgloop.c:1517
+ #, fuzzy, gcc-internal-format
+@@ -19247,9 +19238,9 @@ msgid "loop %d%'s latch does not have header as successor"
+ msgstr "säiekohtaista muistia ei tueta tälle kohteelle"
+ 
+ #: cfgloop.c:1522
+-#, gcc-internal-format
++#, fuzzy, gcc-internal-format
+ msgid "loop %d%'s latch does not belong directly to it"
+-msgstr ""
++msgstr "säiekohtaista muistia ei tueta tälle kohteelle"
+ 
+ #: cfgloop.c:1528
+ #, fuzzy, gcc-internal-format
+@@ -19257,9 +19248,9 @@ msgid "loop %d%'s header does not belong directly to it"
+ msgstr "säiekohtaista muistia ei tueta tälle kohteelle"
+ 
+ #: cfgloop.c:1534
+-#, gcc-internal-format
++#, fuzzy, gcc-internal-format
+ msgid "loop %d%'s latch is marked as part of irreducible region"
+-msgstr ""
++msgstr "säiekohtaista muistia ei tueta tälle kohteelle"
+ 
+ #: cfgloop.c:1568
+ #, fuzzy, gcc-internal-format, gfc-internal-format
+@@ -19342,9 +19333,9 @@ msgid "verify_flow_info: REG_BR_PROB does not match cfg %i %i"
+ msgstr "verify_flow_info: Väärä lohkolukumäärä %i %i"
+ 
+ #: cfgrtl.c:2507
+-#, gcc-internal-format
++#, fuzzy, gcc-internal-format
+ msgid "EDGE_CROSSING incorrectly set across same section"
+-msgstr ""
++msgstr "väärä määrä argumentteja funktiolle %<va_start%>"
+ 
+ #: cfgrtl.c:2512
+ #, fuzzy, gcc-internal-format, gfc-internal-format
+@@ -19537,9 +19528,9 @@ msgid "inline clone with address taken"
+ msgstr ""
+ 
+ #: cgraph.c:3148
+-#, gcc-internal-format
++#, fuzzy, gcc-internal-format
+ msgid "inline clone is forced to output"
+-msgstr ""
++msgstr "virheellinen sisäinen makro ”%s”"
+ 
+ #: cgraph.c:3155
+ #, gcc-internal-format, gfc-internal-format
+@@ -19637,9 +19628,9 @@ msgid "Analyzed alias has no reference"
+ msgstr ""
+ 
+ #: cgraph.c:3336
+-#, gcc-internal-format
++#, fuzzy, gcc-internal-format
+ msgid "No edge out of thunk node"
+-msgstr ""
++msgstr "bittikentän %qs leveys on negatiivinen"
+ 
+ #: cgraph.c:3341
+ #, gcc-internal-format
+@@ -19730,7 +19721,7 @@ msgstr "%qs-attribuuttia ei huomioida %qs:lle"
  #: cgraphunit.c:976 c/c-decl.c:11507
  #, fuzzy, gcc-internal-format
  msgid "%q+F used but never defined"
@@ -19263,7 +20287,737 @@ index c66de8afab4..b4b27c40017 100644
  
  #: cgraphunit.c:978 c/c-decl.c:11517
  #, fuzzy, gcc-internal-format
-@@ -29294,7 +29278,7 @@ msgstr "%<X<=Y<=Z%> -tyylisillä vertailuilla on eri merkitys kuin matematiikass
+@@ -19818,9 +19809,9 @@ msgid "can%'t get program status: %m"
+ msgstr "ei voi lukea tiedostoa %s: %m"
+ 
+ #: collect-utils.c:82
+-#, fuzzy, gcc-internal-format, gfc-internal-format
++#, gcc-internal-format, gfc-internal-format
+ msgid "%s terminated with signal %d [%s]%s"
+-msgstr "%s%sTuntematon signaali %d\n"
++msgstr "%s päätettiin signaalilla %d [%s]%s"
+ 
+ #: collect-utils.c:98
+ #, fuzzy, gcc-internal-format, gfc-internal-format
+@@ -20056,9 +20047,9 @@ msgid "profile for function %qD not found in profile data"
+ msgstr "”%s” ei ole oikea profiilidatatiedosto ”%s”:lle"
+ 
+ #: coverage.c:358
+-#, gcc-internal-format
++#, fuzzy, gcc-internal-format
+ msgid "number of counters in profile data for function %qD does not match its profile data (counter %qs, expected %i and have %i)"
+-msgstr ""
++msgstr "”%s” ei ole oikea profiilidatatiedosto ”%s”:lle"
+ 
+ #: coverage.c:367
+ #, fuzzy, gcc-internal-format
+@@ -20126,7 +20117,7 @@ msgid "%<-fdbg-cnt=%s%>"
+ msgstr "%s[%s] %s%s%s"
+ 
+ #: dbgcnt.c:188
+-#, fuzzy, gcc-internal-format, gfc-internal-format
++#, gcc-internal-format, gfc-internal-format
+ msgid "           %s"
+ msgstr "          %s"
+ 
+@@ -20503,9 +20494,9 @@ msgstr "nykyisen prosessin ryhmien noutaminen epäonnistui"
+ 
+ #. The inferior failed to catch the signal.
+ #: gcc.c:3270 gcc.c:3294
+-#, fuzzy, gcc-internal-format, gfc-internal-format
++#, gcc-internal-format, gfc-internal-format
+ msgid "%s signal terminated program %s"
+-msgstr "käytä aina numeroita käyttäjän/ryhmän nimissä"
++msgstr "%s-signaali päätti %s-ohjelman"
+ 
+ #: gcc.c:3772 opts-common.c:1326 opts-common.c:1358 opts-global.c:139
+ #, gcc-internal-format
+@@ -20941,9 +20932,9 @@ msgid "open /dev/zero: %m"
+ msgstr "fopen %s: %m"
+ 
+ #: ggc-page.c:2474 ggc-page.c:2480
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "can%'t write PCH file"
+-msgstr "ei voi kirjoittaa tiedostoon %s: %m"
++msgstr "PCH-tiedostoa ei voi kirjoittaa"
+ 
+ #: gimple-fold.c:1786 gimple-fold.c:2787
+ #, fuzzy, gcc-internal-format
+@@ -20961,9 +20952,8 @@ msgid "%G%qD destination unchanged after copying no bytes"
+ msgstr "%<%.*s%>-direktiivin tuloste saattaa katketa kirjoittaessa jopa %wu tavua %wu–%wu tavun kokoiseen alueeseen"
+ 
+ #: gimple-fold.c:2225 tree-ssa-strlen.c:2181
+-#, fuzzy
+ msgid "%G%qD specified bound %E equals destination size"
+-msgstr "%qE esitelty funktion palauttavana funktiona"
++msgstr "%G%qD-määritelty raja %E on yhtäsuuri kuin kohteen kokoon"
+ 
+ #: gimple-fold.c:2227
+ #, fuzzy
+@@ -21011,35 +21001,35 @@ msgid "%qE output truncated before the last format character"
+ msgstr ""
+ 
+ #: gimple-ssa-sprintf.c:2511 gimple-ssa-sprintf.c:2631
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "%qE may write a terminating nul past the end of the destination"
+-msgstr "%<%.*s%>-direktiivi kirjoittaa jopa %wu tavua %wu tavun kokoiseen alueeseen"
++msgstr "%qE saattaa kirjoittaa päättävän nul-tavun kohteen lopun yli"
+ 
+ #: gimple-ssa-sprintf.c:2513 gimple-ssa-sprintf.c:2633
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "%qE writing a terminating nul past the end of the destination"
+-msgstr "%<%.*s%>-direktiivi kirjoittaa jopa %wu tavua %wu tavun kokoiseen alueeseen"
++msgstr "%qE kirjoittaa päättävän nul-tavun kohteen lopun yli"
+ 
+ #: gimple-ssa-sprintf.c:2523
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "%<%.*s%> directive writing %wu byte into a region of size %wu"
+ msgid_plural "%<%.*s%> directive writing %wu bytes into a region of size %wu"
+-msgstr[0] "%<%.*s%>-direktiivi kirjoittaa jopa %wu tavua %wu tavun kokoiseen alueeseen"
+-msgstr[1] "%<%.*s%>-direktiivi kirjoittaa jopa %wu tavua %wu tavun kokoiseen alueeseen"
++msgstr[0] "%<%.*s%>-direktiivi kirjoittaa %wu tavun %wu tavun kokoiseen alueeseen"
++msgstr[1] "%<%.*s%>-direktiivi kirjoittaa %wu tavua %wu tavun kokoiseen alueeseen"
+ 
+ #: gimple-ssa-sprintf.c:2530
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "%<%.*s%> directive output may be truncated writing %wu byte into a region of size %wu"
+ msgid_plural "%<%.*s%> directive output may be truncated writing %wu bytes into a region of size %wu"
+-msgstr[0] "%<%.*s%>-direktiivin tuloste saattaa katketa kirjoittaessa jopa %wu tavua %wu–%wu tavun kokoiseen alueeseen"
+-msgstr[1] "%<%.*s%>-direktiivin tuloste saattaa katketa kirjoittaessa jopa %wu tavua %wu–%wu tavun kokoiseen alueeseen"
++msgstr[0] "%<%.*s%>-direktiivin tuloste saattaa katketa kirjoittaessa %wu tavu %wu tavun kokoiseen alueeseen"
++msgstr[1] "%<%.*s%>-direktiivin tuloste saattaa katketa kirjoittaessa %wu tavua %wu tavun kokoiseen alueeseen"
+ 
+ #: gimple-ssa-sprintf.c:2537
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "%<%.*s%> directive output truncated writing %wu byte into a region of size %wu"
+ msgid_plural "%<%.*s%> directive output truncated writing %wu bytes into a region of size %wu"
+-msgstr[0] "%<%.*s%>-direktiivin tuloste saattaa katketa kirjoittaessa jopa %wu tavua %wu–%wu tavun kokoiseen alueeseen"
+-msgstr[1] "%<%.*s%>-direktiivin tuloste saattaa katketa kirjoittaessa jopa %wu tavua %wu–%wu tavun kokoiseen alueeseen"
++msgstr[0] "%<%.*s%>-direktiivin tuloste katkeaa kirjoittaessa %wu tavu %wu tavun kokoiseen alueeseen"
++msgstr[1] "%<%.*s%>-direktiivin tuloste katkeaa kirjoittaessa %wu tavua %wu tavun kokoiseen alueeseen"
+ 
+ #: gimple-ssa-sprintf.c:2548
+ #, gcc-internal-format
+@@ -21047,9 +21037,9 @@ msgid "%<%.*s%> directive output may be truncated writing up to %wu bytes into a
+ msgstr "%<%.*s%>-direktiivin tuloste saattaa katketa kirjoittaessa jopa %wu tavua %wu tavun kokoiseen alueeseen"
+ 
+ #: gimple-ssa-sprintf.c:2551
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "%<%.*s%> directive output truncated writing up to %wu bytes into a region of size %wu"
+-msgstr "%<%.*s%>-direktiivi kirjoittaa jopa %wu tavua %wu tavun kokoiseen alueeseen"
++msgstr "%<%.*s%>-direktiivin tuloste katkeaa kirjoitettaessa jopa %wu tavua %wu tavun kokoiseen alueeseen"
+ 
+ #: gimple-ssa-sprintf.c:2553
+ #, gcc-internal-format
+@@ -21057,14 +21047,14 @@ msgid "%<%.*s%> directive writing up to %wu bytes into a region of size %wu"
+ msgstr "%<%.*s%>-direktiivi kirjoittaa jopa %wu tavua %wu tavun kokoiseen alueeseen"
+ 
+ #: gimple-ssa-sprintf.c:2565
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "%<%.*s%> directive output may be truncated writing likely %wu or more bytes into a region of size %wu"
+-msgstr "%<%.*s%>-direktiivin tuloste saattaa katketa kirjoittaessa jopa %wu tavua %wu–%wu tavun kokoiseen alueeseen"
++msgstr "%<%.*s%>-direktiivin tuloste saattaa katketa kirjoittaessa kaiketi ainakin %wu tavua %wu tavun kokoiseen alueeseen"
+ 
+ #: gimple-ssa-sprintf.c:2568
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "%<%.*s%> directive output truncated writing likely %wu or more bytes into a region of size %wu"
+-msgstr "%<%.*s%>-direktiivin tuloste saattaa katketa kirjoittaessa jopa %wu tavua %wu–%wu tavun kokoiseen alueeseen"
++msgstr "%<%.*s%>-direktiivin tuloste katkeaa kirjoittaessa kaiketi ainakin %wu tavua %wu tavun kokoiseen alueeseen"
+ 
+ #: gimple-ssa-sprintf.c:2571
+ #, gcc-internal-format
+@@ -21077,9 +21067,9 @@ msgid "%<%.*s%> directive output may be truncated writing between %wu and %wu by
+ msgstr "%<%.*s%>-direktiivin tuloste saattaa katketa kirjoittaessa %wu–%wu tavua %wu tavun kokoiseen alueeseen"
+ 
+ #: gimple-ssa-sprintf.c:2583
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "%<%.*s%> directive output truncated writing between %wu and %wu bytes into a region of size %wu"
+-msgstr "%<%.*s%>-direktiivin tuloste saattaa katketa kirjoittaessa jopa %wu tavua %wu–%wu tavun kokoiseen alueeseen"
++msgstr "%<%.*s%>-direktiivin katkeaa kirjoittaessa %wu–%wu tavua %wu tavun kokoiseen alueeseen"
+ 
+ #: gimple-ssa-sprintf.c:2586
+ #, gcc-internal-format
+@@ -21087,40 +21077,40 @@ msgid "%<%.*s%> directive writing between %wu and %wu bytes into a region of siz
+ msgstr "%<%.*s%>-direktiivi kirjoittaa %wu–%wu tavua %wu tavun kokoiseen alueeseen"
+ 
+ #: gimple-ssa-sprintf.c:2595
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "%<%.*s%> directive output may be truncated writing %wu or more bytes into a region of size %wu"
+-msgstr "%<%.*s%>-direktiivin tuloste saattaa katketa kirjoittaessa jopa %wu tavua %wu–%wu tavun kokoiseen alueeseen"
++msgstr "%<%.*s%>-direktiivin tuloste saattaa katketa kirjoittaessa ainakin %wu tavua %wu tavun kokoiseen alueeseen"
+ 
+ #: gimple-ssa-sprintf.c:2598
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "%<%.*s%> directive output truncated writing %wu or more bytes into a region of size %wu"
+-msgstr "%<%.*s%>-direktiivin tuloste saattaa katketa kirjoittaessa jopa %wu tavua %wu–%wu tavun kokoiseen alueeseen"
++msgstr "%<%.*s%>-direktiivin katkeaa kirjoittaessa ainakin %wu tavua %wu tavun kokoiseen alueeseen"
+ 
+ #: gimple-ssa-sprintf.c:2600
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "%<%.*s%> directive writing %wu or more bytes into a region of size %wu"
+-msgstr "%<%.*s%>-direktiivi kirjoittaa jopa %wu tavua %wu tavun kokoiseen alueeseen"
++msgstr "%<%.*s%>-direktiivi kirjoittaa vähintään %wu tavua %wu tavun kokoiseen alueeseen"
+ 
+ #: gimple-ssa-sprintf.c:2642
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "%<%.*s%> directive writing %wu byte into a region of size between %wu and %wu"
+ msgid_plural "%<%.*s%> directive writing %wu bytes into a region of size between %wu and %wu"
+-msgstr[0] "%<%.*s%>-direktiivi kirjoittaa jopa %wu tavua %wu tavun kokoiseen alueeseen"
+-msgstr[1] "%<%.*s%>-direktiivi kirjoittaa jopa %wu tavua %wu tavun kokoiseen alueeseen"
++msgstr[0] "%<%.*s%>-direktiivi kirjoittaa %wu tavun %wu–%wu tavun kokoiseen alueeseen"
++msgstr[1] "%<%.*s%>-direktiivi kirjoittaa %wu tavua %wu–%wu tavun kokoiseen alueeseen"
+ 
+ #: gimple-ssa-sprintf.c:2649
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "%<%.*s%> directive output may be truncated writing %wu byte into a region of size between %wu and %wu"
+ msgid_plural "%<%.*s%> directive output may be truncated writing %wu bytes into a region of size between %wu and %wu"
+-msgstr[0] "%<%.*s%>-direktiivin tuloste saattaa katketa kirjoittaessa jopa %wu tavua %wu–%wu tavun kokoiseen alueeseen"
+-msgstr[1] "%<%.*s%>-direktiivin tuloste saattaa katketa kirjoittaessa jopa %wu tavua %wu–%wu tavun kokoiseen alueeseen"
++msgstr[0] "%<%.*s%>-direktiivin tuloste saattaa katketa kirjoittaessa %wu tavu %wu–%wu tavun kokoiseen alueeseen"
++msgstr[1] "%<%.*s%>-direktiivin tuloste saattaa katketa kirjoittaessa %wu tavua %wu–%wu tavun kokoiseen alueeseen"
+ 
+ #: gimple-ssa-sprintf.c:2657
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "%<%.*s%> directive output truncated writing %wu byte into a region of size between %wu and %wu"
+ msgid_plural "%<%.*s%> directive output truncated writing %wu bytes into a region of size between %wu and %wu"
+-msgstr[0] "%<%.*s%>-direktiivin tuloste saattaa katketa kirjoittaessa jopa %wu tavua %wu–%wu tavun kokoiseen alueeseen"
+-msgstr[1] "%<%.*s%>-direktiivin tuloste saattaa katketa kirjoittaessa jopa %wu tavua %wu–%wu tavun kokoiseen alueeseen"
++msgstr[0] "%<%.*s%>-direktiivin katkeaa kirjoittaessa %wu tavu %wu–%wu tavun kokoiseen alueeseen"
++msgstr[1] "%<%.*s%>-direktiivin katkeaa kirjoittaessa %wu tavua %wu–%wu tavun kokoiseen alueeseen"
+ 
+ #: gimple-ssa-sprintf.c:2669
+ #, gcc-internal-format
+@@ -21128,29 +21118,29 @@ msgid "%<%.*s%> directive output may be truncated writing up to %wu bytes into a
+ msgstr "%<%.*s%>-direktiivin tuloste saattaa katketa kirjoittaessa jopa %wu tavua %wu–%wu tavun kokoiseen alueeseen"
+ 
+ #: gimple-ssa-sprintf.c:2672
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "%<%.*s%> directive output truncated writing up to %wu bytes into a region of size between %wu and %wu"
+-msgstr "%<%.*s%>-direktiivin tuloste saattaa katketa kirjoittaessa jopa %wu tavua %wu–%wu tavun kokoiseen alueeseen"
++msgstr "%<%.*s%>-direktiivin tuloste katkeaa kirjoittaessa jopa %wu tavua %wu–%wu tavun kokoiseen alueeseen"
+ 
+ #: gimple-ssa-sprintf.c:2675
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "%<%.*s%> directive writing up to %wu bytes into a region of size between %wu and %wu"
+-msgstr "%<%.*s%>-direktiivi kirjoittaa jopa %wu tavua %wu tavun kokoiseen alueeseen"
++msgstr "%<%.*s%>-direktiivi kirjoittaa jopa %wu tavua %wu–%wu tavun kokoiseen alueeseen"
+ 
+ #: gimple-ssa-sprintf.c:2688
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "%<%.*s%> directive output may be truncated writing likely %wu or more bytes into a region of size between %wu and %wu"
+-msgstr "%<%.*s%>-direktiivin tuloste saattaa katketa kirjoittaessa jopa %wu tavua %wu–%wu tavun kokoiseen alueeseen"
++msgstr "%<%.*s%>-direktiivin tuloste saattaa katketa kirjoittaessa kaiketi ainakin %wu tavua %wu–%wu tavun kokoiseen alueeseen"
+ 
+ #: gimple-ssa-sprintf.c:2691
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "%<%.*s%> directive output truncated writing likely %wu or more bytes into a region of size between %wu and %wu"
+-msgstr "%<%.*s%>-direktiivin tuloste saattaa katketa kirjoittaessa jopa %wu tavua %wu–%wu tavun kokoiseen alueeseen"
++msgstr "%<%.*s%>-direktiivin tuloste katkeaa kirjoittaessa kaiketi ainakin %wu tavua %wu–%wu tavun kokoiseen alueeseen"
+ 
+ #: gimple-ssa-sprintf.c:2694
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "%<%.*s%> directive writing likely %wu or more bytes into a region of size between %wu and %wu"
+-msgstr "%<%.*s%>-direktiivin tuloste saattaa katketa kirjoittaessa jopa %wu tavua %wu–%wu tavun kokoiseen alueeseen"
++msgstr "%<%.*s%>-direktiivi kirjoittanee ainakin %wu tavua %wu–%wu tavun kokoiseen alueeseen"
+ 
+ #: gimple-ssa-sprintf.c:2704
+ #, gcc-internal-format
+@@ -21158,49 +21148,48 @@ msgid "%<%.*s%> directive output may be truncated writing between %wu and %wu by
+ msgstr "%<%.*s%>-direktiivin tuloste saattaa katketa kirjoittaessa %wu–%wu tavua %wu–%wu tavun kokoiseen alueeseen"
+ 
+ #: gimple-ssa-sprintf.c:2707
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "%<%.*s%> directive output truncated writing between %wu and %wu bytes into a region of size between %wu and %wu"
+-msgstr "%<%.*s%>-direktiivin tuloste saattaa katketa kirjoittaessa jopa %wu tavua %wu–%wu tavun kokoiseen alueeseen"
++msgstr "%<%.*s%>-direktiivin tuloste katkeaa kirjoittaessa %wu–%wu tavua %wu–%wu tavun kokoiseen alueeseen"
+ 
+ #: gimple-ssa-sprintf.c:2710
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "%<%.*s%> directive writing between %wu and %wu bytes into a region of size between %wu and %wu"
+-msgstr "%<%.*s%>-direktiivi kirjoittaa jopa %wu tavua %wu tavun kokoiseen alueeseen"
++msgstr "%<%.*s%>-direktiivi kirjoittaa %wu–%wu tavua %wu–%wu tavun kokoiseen alueeseen"
+ 
+ #: gimple-ssa-sprintf.c:2719
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "%<%.*s%> directive output may be truncated writing %wu or more bytes into a region of size between %wu and %wu"
+-msgstr "%<%.*s%>-direktiivin tuloste saattaa katketa kirjoittaessa jopa %wu tavua %wu–%wu tavun kokoiseen alueeseen"
++msgstr "%<%.*s%>-direktiivin tuloste saattaa katketa kirjoittaessa ainakin %wu tavua %wu–%wu tavun kokoiseen alueeseen"
+ 
+ #: gimple-ssa-sprintf.c:2722
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "%<%.*s%> directive output truncated writing %wu or more bytes into a region of size between %wu and %wu"
+-msgstr "%<%.*s%>-direktiivin tuloste saattaa katketa kirjoittaessa jopa %wu tavua %wu–%wu tavun kokoiseen alueeseen"
++msgstr "%<%.*s%>-direktiivin tuloste katkeaa kirjoittaessa ainakin %wu tavua %wu–%wu tavun kokoiseen alueeseen"
+ 
+ #: gimple-ssa-sprintf.c:2725
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "%<%.*s%> directive writing %wu or more bytes into a region of size between %wu and %wu"
+-msgstr "%<%.*s%>-direktiivi kirjoittaa jopa %wu tavua %wu tavun kokoiseen alueeseen"
++msgstr "%<%.*s%>-direktiivi kirjoittaa ainakin %wu tavua %wu–%wu tavun kokoiseen alueeseen"
+ 
+ #: gimple-ssa-sprintf.c:2814
+-#, fuzzy
+ msgid "%G%<%.*s%> directive argument is null"
+-msgstr "Funktion %s argumentti kohdassa %L on negatiivinen"
++msgstr "%G%<%.*s%>-direktiivin argumentti on null"
+ 
+ #: gimple-ssa-sprintf.c:2887
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "%<%.*s%> directive output of %wu bytes exceeds minimum required size of 4095"
+-msgstr "%<%.*s%>-direktiivi kirjoittaa jopa %wu tavua %wu tavun kokoiseen alueeseen"
++msgstr "%<%.*s%>-direktiivin %wu tavun tuloste ylittää vaaditun vähimmäiskoon 4095"
+ 
+ #: gimple-ssa-sprintf.c:2893
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "%<%.*s%> directive output between %wu and %wu bytes exceeds minimum required size of 4095"
+-msgstr "%<%.*s%>-direktiivi kirjoittaa jopa %wu tavua %wu tavun kokoiseen alueeseen"
++msgstr "%<%.*s%>-direktiivin %wu–%wu tavun tuloste ylittää vaaditun vähimmäiskoon 4095"
+ 
+ #: gimple-ssa-sprintf.c:2900
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "%<%.*s%> directive output between %wu and %wu bytes may exceed minimum required size of 4095"
+-msgstr "%<%.*s%>-direktiivi kirjoittaa jopa %wu tavua %wu tavun kokoiseen alueeseen"
++msgstr "%<%.*s%>-direktiivin %wu–%wu tavun tuloste saattaa ylittää vaaditun vähimmäiskoon 4095"
+ 
+ #: gimple-ssa-sprintf.c:2930
+ #, fuzzy, gcc-internal-format
+@@ -21228,16 +21217,16 @@ msgid "%<%.*s%> directive output between %wu and %wu bytes may cause result to e
+ msgstr "%<%.*s%>-direktiivi kirjoittaa jopa %wu tavua %wu tavun kokoiseen alueeseen"
+ 
+ #: gimple-ssa-sprintf.c:2974
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "%<%.*s%> directive argument is not a nul-terminated string"
+-msgstr "Funktion %s argumentti kohdassa %L on negatiivinen"
++msgstr "%<%.*s%>-direktiivin argumentti ei ole nul-päätteinen merkkijono"
+ 
+ #: gimple-ssa-sprintf.c:2987
+ #, gcc-internal-format
+ msgid "assuming directive output of %wu byte"
+ msgid_plural "assuming directive output of %wu bytes"
+-msgstr[0] ""
+-msgstr[1] ""
++msgstr[0] "oletetaan direktiivin tuotos %wu-tavuiseksi"
++msgstr[1] "oletetaan direktiivin tuotos %wu-tavuiseksi"
+ 
+ #: gimple-ssa-sprintf.c:2994
+ #, fuzzy, gcc-internal-format
+@@ -21252,71 +21241,71 @@ msgstr "direktiivin argumentti välillä [%E, %E]"
+ #: gimple-ssa-sprintf.c:3000
+ #, gcc-internal-format
+ msgid "using the range [%E, %E] for directive argument"
+-msgstr ""
++msgstr "käytetään väliä [%E, %E] direktiivin argumentille"
+ 
+ #: gimple-ssa-sprintf.c:3020
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "%qE output %wu byte into a destination of size %wu"
+ msgid_plural "%qE output %wu bytes into a destination of size %wu"
+-msgstr[0] "%qE tulostaa vähintään %wu tavua (oletetaan %wu) %wu tavun kokoiseen kohteeseen"
+-msgstr[1] "%qE tulostaa vähintään %wu tavua (oletetaan %wu) %wu tavun kokoiseen kohteeseen"
++msgstr[0] "%qE tulosti %wu tavun %wu tavun kokoiseen kohteeseen"
++msgstr[1] "%qE tulosti %wu tavua %wu tavun kokoiseen kohteeseen"
+ 
+ #: gimple-ssa-sprintf.c:3025
+ #, gcc-internal-format
+ msgid "%qE output between %wu and %wu bytes into a destination of size %wu"
+-msgstr "%qE tulostaa %wu–%wu tavua %wu tavun kokoiseen kohteeseen"
++msgstr "%qE tulosti %wu–%wu tavua %wu tavun kokoiseen kohteeseen"
+ 
+ #: gimple-ssa-sprintf.c:3030
+ #, gcc-internal-format
+ msgid "%qE output %wu or more bytes (assuming %wu) into a destination of size %wu"
+-msgstr "%qE tulostaa vähintään %wu tavua (oletetaan %wu) %wu tavun kokoiseen kohteeseen"
++msgstr "%qE tulosti vähintään %wu tavua (oletetaan %wu) %wu tavun kokoiseen kohteeseen"
+ 
+ #: gimple-ssa-sprintf.c:3035
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "%qE output %wu or more bytes into a destination of size %wu"
+-msgstr "%qE tulostaa vähintään %wu tavua (oletetaan %wu) %wu tavun kokoiseen kohteeseen"
++msgstr "%qE tulosti ainakin %wu tavua %wu tavun kokoiseen kohteeseen"
+ 
+ #: gimple-ssa-sprintf.c:3046
+ #, gcc-internal-format
+ msgid "%qE output %wu byte"
+ msgid_plural "%qE output %wu bytes"
+-msgstr[0] ""
+-msgstr[1] ""
++msgstr[0] "%qE tulosti %wu tavun"
++msgstr[1] "%qE tulosti %wu tavua"
+ 
+ #: gimple-ssa-sprintf.c:3050
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "%qE output between %wu and %wu bytes"
+-msgstr "%qE tulostaa %wu–%wu tavua %wu tavun kokoiseen kohteeseen"
++msgstr "%qE tulosti %wu–%wu tavua"
+ 
+ #: gimple-ssa-sprintf.c:3054
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "%qE output %wu or more bytes (assuming %wu)"
+-msgstr "%qE tulostaa vähintään %wu tavua (oletetaan %wu) %wu tavun kokoiseen kohteeseen"
++msgstr "%qE tulosti ainakin %wu tavua (oletetaan %wu)"
+ 
+ #: gimple-ssa-sprintf.c:3058
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "%qE output %wu or more bytes"
+-msgstr "%qE tulostaa vähintään %wu tavua (oletetaan %wu) %wu tavun kokoiseen kohteeseen"
++msgstr "%qE tulosti ainakin %wu tavua"
+ 
+ #: gimple-ssa-sprintf.c:3433
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "%<%.*s%> directive width out of range"
+-msgstr "%<%.*s%>-direktiivi kirjoittaa jopa %wu tavua %wu tavun kokoiseen alueeseen"
++msgstr "%<%.*s%>-direktiivin leveys sallitun välin ulkopuolella"
+ 
+ #: gimple-ssa-sprintf.c:3467
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "%<%.*s%> directive precision out of range"
+-msgstr "%<%.*s%>-direktiivi kirjoittaa jopa %wu tavua %wu tavun kokoiseen alueeseen"
++msgstr "%<%.*s%>-direktiivin tarkkuus sallitun välin ulkopuolella"
+ 
+ #: gimple-ssa-sprintf.c:4096
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "specified bound %wu exceeds maximum object size %wu"
+-msgstr "paikallisten objektien kokonaiskoko on liian suuri"
++msgstr "määritelty raja %wu ylittää olion enimmäiskoon %wu"
+ 
+ #: gimple-ssa-sprintf.c:4107
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "specified bound %wu exceeds %<INT_MAX%>"
+-msgstr "paikallisten objektien kokonaiskoko on liian suuri"
++msgstr "määritelty raja %wu ylittää %<INT_MAX%>:in"
+ 
+ #: gimple-ssa-sprintf.c:4128
+ #, fuzzy, gcc-internal-format
+@@ -21339,44 +21328,44 @@ msgid "%Gnull format string"
+ msgstr "%s muotoilumerkkijonossa kohdassa %L"
+ 
+ #: gimple-ssa-warn-alloca.c:531
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "use of %<alloca%>"
+-msgstr "virheellinen %<auto%>:n käyttö muunnosoperaattorissa"
++msgstr "%<alloca%>:n käyttö"
+ 
+ #: gimple-ssa-warn-alloca.c:567
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "argument to variable-length array may be too large"
+-msgstr "käytetään muuttuvapituista taulukkoa"
++msgstr "muuttuvapituisen taulukon argumentti voi olla liian suuri"
+ 
+ #: gimple-ssa-warn-alloca.c:569
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "argument to %<alloca%> may be too large"
+-msgstr "blocks-argumentti on liian suuri, maksimi on %llu"
++msgstr "%<alloca%>:n argumentti voi olla liian suuri"
+ 
+ #: gimple-ssa-warn-alloca.c:574
+ #, gcc-internal-format
+ msgid "limit is %wu bytes, but argument may be as large as %s"
+-msgstr ""
++msgstr "raja on %wu tavua, mutta argumentin koko voi olla jopa %s"
+ 
+ #: gimple-ssa-warn-alloca.c:585
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "argument to variable-length array is too large"
+-msgstr "käytetään muuttuvapituista taulukkoa"
++msgstr "muuttuvapituisen taulukon argumentti on liian suuri"
+ 
+ #: gimple-ssa-warn-alloca.c:587
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "argument to %<alloca%> is too large"
+-msgstr "blocks-argumentti on liian suuri, maksimi on %llu"
++msgstr "%<alloca%>:n argumentti on liian suuri"
+ 
+ #: gimple-ssa-warn-alloca.c:591
+ #, gcc-internal-format
+ msgid "limit is %wu bytes, but argument is %s"
+-msgstr ""
++msgstr "raja on %wu tavua, mutta argumentti on %s"
+ 
+ #: gimple-ssa-warn-alloca.c:599
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "variable-length array bound is unknown"
+-msgstr "käytetään muuttuvapituista taulukkoa"
++msgstr "muuttuvapituisen taulukon raja on tuntematon"
+ 
+ #: gimple-ssa-warn-alloca.c:600
+ #, fuzzy, gcc-internal-format
+@@ -21414,9 +21403,9 @@ msgid "argument to variable-length array is zero"
+ msgstr "käytetään muuttuvapituista taulukkoa"
+ 
+ #: gimple-ssa-warn-alloca.c:625
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "argument to %<alloca%> is zero"
+-msgstr "%<__builtin_prefetch%>-funktion toinen argumentti on epäkelpo; käytetään nollaa"
++msgstr "%<alloca%>-funktion argumentti on nolla"
+ 
+ #: gimple-ssa-warn-restrict.c:1437
+ #, fuzzy
+@@ -21550,9 +21539,9 @@ msgid "%G%qD pointer overflow between offset %s and size %s accessing array %qD
+ msgstr ""
+ 
+ #: gimple-ssa-warn-restrict.c:1722
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "array %qD declared here"
+-msgstr "%qD esitelty täällä"
++msgstr "taulukko %qD esitelty täällä"
+ 
+ #: gimple-ssa-warn-restrict.c:1727 gimple-ssa-warn-restrict.c:1733
+ msgid "%G%qD pointer overflow between offset %s and size %s"
+@@ -21870,9 +21859,9 @@ msgid "%<mutexinoutset%> kind in %<depend%> clause on a %<taskwait%> construct"
+ msgstr "muuttuja %qD esitelty uudelleen funktiona"
+ 
+ #: gimplify.c:12131 omp-low.c:2926
+-#, gcc-internal-format
++#, fuzzy, gcc-internal-format
+ msgid "%<ordered%> construct with %<depend%> clause must be closely nested inside a loop with %<ordered%> clause with a parameter"
+-msgstr ""
++msgstr "%<void%> vain parametrina ei ole oikeutettu"
+ 
+ #: gimplify.c:12149
+ #, gcc-internal-format
+@@ -22073,9 +22062,9 @@ msgstr "edellinen määrittely täällä"
+ 
+ #: ipa-devirt.c:1027 ipa-devirt.c:1042 ipa-devirt.c:1323 ipa-devirt.c:1399
+ #: ipa-devirt.c:1438 ipa-devirt.c:1456
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "a different type is defined in another translation unit"
+-msgstr "%J%qD esitelty avoimeksi määrittelyn jälkeen"
++msgstr "erilainen tyyppi määritelty toisessa käännösyksikössä"
+ 
+ #: ipa-devirt.c:1034
+ #, gcc-internal-format
+@@ -22113,9 +22102,9 @@ msgid "the incompatible type is defined here"
+ msgstr "lueteltu tyyppi määritelty täällä"
+ 
+ #: ipa-devirt.c:1213
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "array types have different bounds"
+-msgstr "?:-lausekkeen operandeilla on eri tyypit, %qT ja %qT"
++msgstr "taulukkotyypeillä on eri rajat"
+ 
+ #: ipa-devirt.c:1228
+ #, fuzzy, gcc-internal-format
+@@ -22616,14 +22605,14 @@ msgid "multiple %<default%> targets were set"
+ msgstr "useita default-nimikkeitä samassa switch-lauseessa"
+ 
+ #: omp-expand.c:2150
+-#, gcc-internal-format
++#, fuzzy, gcc-internal-format
+ msgid "%<depend%> clause with %<sink%> modifier waiting for lexically later iteration"
+-msgstr ""
++msgstr "argumenttien määrä ei vastaa prototyyppiä"
+ 
+ #: omp-expand.c:2287
+-#, gcc-internal-format
++#, fuzzy, gcc-internal-format
+ msgid "%<depend%> clause with %<sink%> modifier refers to iteration never in the iteration space"
+-msgstr ""
++msgstr "argumenttien määrä ei vastaa prototyyppiä"
+ 
+ #: omp-general.c:637
+ #, fuzzy, gcc-internal-format
+@@ -22766,9 +22755,9 @@ msgid "%<ordered%> region must be closely nested inside a loop region with an %<
+ msgstr ""
+ 
+ #: omp-low.c:2984
+-#, gcc-internal-format
++#, fuzzy, gcc-internal-format
+ msgid "%<ordered%> region without %<depend%> clause may not be closely nested inside a loop region with an %<ordered%> clause with a parameter"
+-msgstr ""
++msgstr "%<void%> vain parametrina ei ole oikeutettu"
+ 
+ #: omp-low.c:3015
+ #, gcc-internal-format
+@@ -23369,14 +23358,14 @@ msgid "pass %s needs a set_pass_param implementation to handle the extra argumen
+ msgstr ""
+ 
+ #: passes.c:1024
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "unrecognized option %<-fenable%>"
+-msgstr "tunnistamaton valitsin"
++msgstr "tunnistamaton valitsin %<-fenable%>"
+ 
+ #: passes.c:1026
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "unrecognized option %<-fdisable%>"
+-msgstr "tunnistamaton valitsin"
++msgstr "tunnistamaton valitsin %<fdisable%>"
+ 
+ #: passes.c:1034
+ #, fuzzy, gcc-internal-format
+@@ -23515,7 +23504,7 @@ msgstr "luetellun tyypin jäsenen %qE arvo ei ole kokonaislukuvakio"
+ #: predict.c:2509
+ #, gcc-internal-format
+ msgid "probability %qE is outside the range [0.0, 1.0]"
+-msgstr ""
++msgstr "todennäköisyys %qE ei ole välillä [0,0; 1.0]"
+ 
+ #: predict.c:3483
+ #, fuzzy, gcc-internal-format, gfc-internal-format
+@@ -23756,9 +23745,9 @@ msgid "RTL check: expected code '%s', '%s' or '%s', have '%s' in %s, at %s:%d"
+ msgstr "verifiointi epäonnistui kohdassa PC=%d: %s"
+ 
+ #: rtl.c:936
+-#, gcc-internal-format, gfc-internal-format
++#, fuzzy, gcc-internal-format, gfc-internal-format
+ msgid "RTL check: attempt to treat non-block symbol as a block symbol in %s, at %s:%d"
+-msgstr ""
++msgstr "verifiointi epäonnistui kohdassa PC=%d: %s"
+ 
+ #: rtl.c:946
+ #, fuzzy, gcc-internal-format, gfc-internal-format
+@@ -24006,9 +23995,9 @@ msgid "mixing different types of symbol in same comdat groups is not supported"
+ msgstr ""
+ 
+ #: symtab.c:1126
+-#, gcc-internal-format
++#, fuzzy, gcc-internal-format
+ msgid "node is alone in a comdat group"
+-msgstr ""
++msgstr "virheellinen sisäinen makro ”%s”"
+ 
+ #: symtab.c:1133
+ #, gcc-internal-format
+@@ -24026,9 +24015,9 @@ msgid "implicit_section flag is set but section isn%'t"
+ msgstr "funktio %qE esitelty implisiittisesti"
+ 
+ #: symtab.c:1165
+-#, gcc-internal-format
++#, fuzzy, gcc-internal-format
+ msgid "Both section and comdat group is set"
+-msgstr ""
++msgstr "virheellinen sisäinen makro ”%s”"
+ 
+ #: symtab.c:1177
+ #, fuzzy, gcc-internal-format
+@@ -25219,9 +25208,9 @@ msgid "BB %i is missing an edge"
+ msgstr "fr30_print_operand: tunnistamaton %%b-koodi"
+ 
+ #: tree-eh.c:4856
+-#, gcc-internal-format, gfc-internal-format
++#, fuzzy, gcc-internal-format, gfc-internal-format
+ msgid "BB %i too many fallthru edges"
+-msgstr ""
++msgstr "nimettömällä kentällä on vaillinainen tyyppi"
+ 
+ #: tree-eh.c:4865
+ #, fuzzy, gcc-internal-format, gfc-internal-format
+@@ -25913,9 +25902,9 @@ msgid "TYPE_MAIN_VARIANT has different TYPE_MAIN_VARIANT"
+ msgstr "tyyppitäsmäämättömyys komponenttiviitteessä"
+ 
+ #: tree.c:14324
+-#, gcc-internal-format
++#, fuzzy, gcc-internal-format
+ msgid "TYPE_CANONICAL has different TYPE_CANONICAL"
+-msgstr ""
++msgstr "tyyppitäsmäämättömyys komponenttiviitteessä"
+ 
+ #: tree.c:14343
+ #, fuzzy, gcc-internal-format
+@@ -25958,14 +25947,14 @@ msgid "TYPE_BINFO type is not TYPE_MAIN_VARIANT"
+ msgstr "tyyppitäsmäämättömyys komponenttiviitteessä"
+ 
+ #: tree.c:14431
+-#, gcc-internal-format
++#, fuzzy, gcc-internal-format
+ msgid "TYPE_METHOD_BASETYPE is not record nor union"
+-msgstr ""
++msgstr "funktiokutsu epäsopivan tyypin läpi"
+ 
+ #: tree.c:14442
+-#, gcc-internal-format
++#, fuzzy, gcc-internal-format
+ msgid "TYPE_OFFSET_BASETYPE is not record nor union"
+-msgstr ""
++msgstr "funktiokutsu epäsopivan tyypin läpi"
+ 
+ #: tree.c:14460
+ #, fuzzy, gcc-internal-format
+@@ -26767,7 +26756,7 @@ msgstr "%qE-attribuutti pätee vain funktioihin"
+ #: c-family/c-attribs.c:2894
+ #, gcc-internal-format
+ msgid "%qE attribute ignored on a function returning %qT"
+-msgstr "%qE-attribuuttia ei huomioida %qT:n palauttavalle funktiolle"
++msgstr "%qE-attribuuttia ei huomioida %qT-tyypin palauttavalle funktiolle"
+ 
+ #: c-family/c-attribs.c:2913
+ #, fuzzy, gcc-internal-format
+@@ -27042,9 +27031,9 @@ msgid "signed conversion from %qT to %qT changes the value of %qE"
+ msgstr "muunnos tyypistä %qT tyyppiin %qT on moniselitteinen"
+ 
+ #: c-family/c-common.c:1530 c-family/c-common.c:1592
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "conversion to %qT from %qT may change the sign of the result"
+-msgstr "muunnos tyypistä %qT tyyppiin %qT on moniselitteinen"
++msgstr "muunnos tyypistä %qT tyyppiin %qT on saattaa muuttaa tuloksen etumerkin"
+ 
+ #: c-family/c-common.c:1778
+ #, gcc-internal-format
+@@ -28729,9 +28718,9 @@ msgid "complex floating point overflow in expression of type %qT results in %qE"
+ msgstr "kompleksiliukulukuylivuoto lausekkeessa"
+ 
+ #: c-family/c-warn.c:227
+-#, gcc-internal-format
++#, fuzzy, gcc-internal-format
+ msgid "logical %<or%> applied to non-boolean constant"
+-msgstr ""
++msgstr "taulukon %qE koko ei ole kokonaislukutyyppiä"
+ 
+ #: c-family/c-warn.c:231
+ #, gcc-internal-format
+@@ -29294,7 +29283,7 @@ msgstr "%<X<=Y<=Z%> -tyylisillä vertailuilla on eri merkitys kuin matematiikass
  #: c-family/c-warn.c:2021
  #, gcc-internal-format
  msgid "label %q+D defined but not used"
@@ -19272,7 +21026,642 @@ index c66de8afab4..b4b27c40017 100644
  
  #: c-family/c-warn.c:2023
  #, gcc-internal-format
-@@ -68642,7 +68626,7 @@ msgstr "(%qs:n alustuksen lähistöllä)"
+@@ -29539,9 +29528,9 @@ msgid "%<-mcpu=%s%> is not valid"
+ msgstr "-mcpu=%s ei ole kelvollinen"
+ 
+ #: common/config/bfin/bfin-common.c:359
+-#, gcc-internal-format
++#, fuzzy, gcc-internal-format
+ msgid "%<-mcpu=%s%> has invalid silicon revision"
+-msgstr ""
++msgstr "-mcpu=%s ei ole kelvollinen"
+ 
+ #: common/config/i386/i386-common.c:1340
+ #, fuzzy, gcc-internal-format
+@@ -29584,9 +29573,9 @@ msgid "%<-fsplit-stack%> currently only supported on GNU/Linux"
+ msgstr ""
+ 
+ #: common/config/i386/i386-common.c:1433
+-#, gcc-internal-format
++#, fuzzy, gcc-internal-format
+ msgid "%<-fsplit-stack%> requires assembler support for CFI directives"
+-msgstr ""
++msgstr "ISO C90 ei tue joustavia taulukon jäseniä"
+ 
+ #: common/config/ia64/ia64-common.c:58
+ #, fuzzy, gcc-internal-format
+@@ -29657,9 +29646,9 @@ msgid "%<-march=%s%>: first ISA subset must be %<e%>, %<i%> or %<g%>"
+ msgstr ""
+ 
+ #: common/config/riscv/riscv-common.c:378
+-#, gcc-internal-format
++#, fuzzy, gcc-internal-format
+ msgid "%<-march=%s%>: unsupported ISA subset %<%c%>"
+-msgstr ""
++msgstr "valitsin -mcpu=%s on ristiriidassa valitsimen -march=%s kanssa"
+ 
+ #: common/config/riscv/riscv-common.c:382
+ #, gcc-internal-format
+@@ -29672,9 +29661,9 @@ msgid "%<-march=%s%>: %s must separate with _"
+ msgstr "%s %qs"
+ 
+ #: common/config/riscv/riscv-common.c:486
+-#, gcc-internal-format
++#, fuzzy, gcc-internal-format
+ msgid "%<-march=%s%>: ISA string must begin with rv32 or rv64"
+-msgstr ""
++msgstr "%s %qs"
+ 
+ #: common/config/rx/rx-common.c:61
+ #, gcc-internal-format
+@@ -31128,24 +31117,24 @@ msgid "unknown core architecture %qs specified with %qs"
+ msgstr "Funktio %qs:"
+ 
+ #: config/avr/avr.c:765 config/visium/visium.c:422
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "%<-fpic%> is not supported"
+-msgstr "-fPIC ei ole tuettu"
++msgstr "%<-fPIC%> ei ole tuettu"
+ 
+ #: config/avr/avr.c:767 config/visium/visium.c:424
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "%<-fPIC%> is not supported"
+-msgstr "-fPIC ei ole tuettu"
++msgstr "%<-fPIC%> ei ole tuettu"
+ 
+ #: config/avr/avr.c:769
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "%<-fpie%> is not supported"
+-msgstr "Ei ole tuettu"
++msgstr "%<-fpie%> ei ole tuettu"
+ 
+ #: config/avr/avr.c:771
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "%<-fPIE%> is not supported"
+-msgstr "Ei ole tuettu"
++msgstr "%<-fPIE%> ei ole tuettu"
+ 
+ #: config/avr/avr.c:1047 config/avr/avr.c:1052 config/riscv/riscv.c:4787
+ #, fuzzy, gcc-internal-format
+@@ -31464,9 +31453,9 @@ msgid "unknown CRIS version specification in %<-march=%> or %<-mcpu=%> : %s"
+ msgstr ""
+ 
+ #: config/cris/cris.c:2719
+-#, gcc-internal-format
++#, fuzzy, gcc-internal-format
+ msgid "unknown CRIS cpu version specification in %<-mtune=%> : %s"
+-msgstr ""
++msgstr "Tuntematon argumenttiluettelofunktio kohdassa %L"
+ 
+ #: config/cris/cris.c:2740
+ #, fuzzy, gcc-internal-format
+@@ -31792,9 +31781,9 @@ msgid "%<-mexr%> is used without %<-ms%> or %<-msx%>"
+ msgstr "PROCEDURE-lauseen kohdassa %C on oltava geneerisessä rajapinnassa"
+ 
+ #: config/h8300/h8300.c:381
+-#, gcc-internal-format
++#, fuzzy, gcc-internal-format
+ msgid "%<-mno-exr%> valid only with %<-ms%> or %<-msx%> - Option ignored!"
+-msgstr ""
++msgstr "PROCEDURE-lauseen kohdassa %C on oltava geneerisessä rajapinnassa"
+ 
+ #: config/h8300/h8300.c:388
+ #, fuzzy, gcc-internal-format
+@@ -32102,9 +32091,9 @@ msgid "fixed ebp register requires %<target(\"accumulate-outgoing-args\")%>"
+ msgstr ""
+ 
+ #: config/i386/i386.c:4609
+-#, gcc-internal-format
++#, fuzzy, gcc-internal-format
+ msgid "%<-mfentry%> isn%'t supported for 32-bit in combination with %<-fpic%>"
+-msgstr ""
++msgstr "%qE-attribuutti pätee vain funktioihin"
+ 
+ #: config/i386/i386.c:4612
+ #, fuzzy, gcc-internal-format
+@@ -32919,19 +32908,19 @@ msgid "%qs is an invalid argument to %<-mcpu=%>"
+ msgstr "%qs-attribuutin virheellinen argumentti"
+ 
+ #: config/microblaze/microblaze.c:1823
+-#, gcc-internal-format
++#, fuzzy, gcc-internal-format
+ msgid "%<-mxl-multiply-high%> can be used only with %<-mcpu=v6.00.a%> or greater"
+-msgstr ""
++msgstr "Valitsinta --pax-option voi käyttää vain POSIX-arkistoille"
+ 
+ #: config/microblaze/microblaze.c:1840
+-#, gcc-internal-format
++#, fuzzy, gcc-internal-format
+ msgid "%<-mxl-reorder%> can be used only with %<-mcpu=v8.30.a%> or greater"
+-msgstr ""
++msgstr "Valitsinta --pax-option voi käyttää vain POSIX-arkistoille"
+ 
+ #: config/microblaze/microblaze.c:1847
+-#, gcc-internal-format
++#, fuzzy, gcc-internal-format
+ msgid "%<-mxl-reorder%> requires %<-mxl-pattern-compare%> for %<-mcpu=v8.30.a%>"
+-msgstr ""
++msgstr "valitsin vaatii argumentin -- %s"
+ 
+ #: config/microblaze/microblaze.c:1853
+ #, gcc-internal-format
+@@ -33593,9 +33582,9 @@ msgid "Unknown form for stack limit expression"
+ msgstr ""
+ 
+ #: config/nios2/nios2.c:1182
+-#, gcc-internal-format
++#, fuzzy, gcc-internal-format
+ msgid "switch %<-mcustom-%s%> is required for double precision floating point"
+-msgstr ""
++msgstr "Älä käytä laitteistoliukulukuja"
+ 
+ #: config/nios2/nios2.c:1195
+ #, gcc-internal-format
+@@ -33748,14 +33737,14 @@ msgid "%<custom-%s=%> argument should be a non-negative integer"
+ msgstr "%q+D:n ensimmäisen argumentin pitäisi olla %<int%>"
+ 
+ #: config/nios2/nios2.c:4293
+-#, gcc-internal-format
++#, fuzzy, gcc-internal-format
+ msgid "%<custom-%s=%> is not recognized as FPU instruction"
+-msgstr ""
++msgstr "weakref ei ole tuettu tässä konfiguraatiossa"
+ 
+ #: config/nios2/nios2.c:4300
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "%<%s%> is unknown"
+-msgstr "%s: tuntematon merkki kentässä ”%s”"
++msgstr "%<%s%> on tuntematon"
+ 
+ #: config/nvptx/mkoffload.c:109
+ #, fuzzy, gcc-internal-format
+@@ -34005,9 +33994,9 @@ msgid "missing open paren"
+ msgstr "Avaa"
+ 
+ #: config/rs6000/rs6000-c.c:67
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "missing number"
+-msgstr "$-operandinumero puuttuu muotoilussa"
++msgstr "puuttuva luku"
+ 
+ #: config/rs6000/rs6000-c.c:69
+ #, fuzzy, gcc-internal-format
+@@ -34015,9 +34004,9 @@ msgid "missing close paren"
+ msgstr "Sulje"
+ 
+ #: config/rs6000/rs6000-c.c:72
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "number must be 0 or 1"
+-msgstr "{0} versio {1}"
++msgstr "luvun on oltava 0 tai 1"
+ 
+ #: config/rs6000/rs6000-c.c:75
+ #, fuzzy, gcc-internal-format
+@@ -34936,9 +34925,9 @@ msgid "%<-mhard-dfp%> can%'t be used in conjunction with %<-msoft-float%>"
+ msgstr ""
+ 
+ #: config/s390/s390.c:15141
+-#, gcc-internal-format
++#, fuzzy, gcc-internal-format
+ msgid "%<-mbackchain%> %<-mpacked-stack%> %<-mhard-float%> are not supported in combination"
+-msgstr ""
++msgstr "-fPIC ei ole tuettu"
+ 
+ #: config/s390/s390.c:15147
+ #, fuzzy, gcc-internal-format
+@@ -34972,9 +34961,9 @@ msgid "argument to %qs is too large (max. %d)"
+ msgstr "blocks-argumentti on liian suuri, maksimi on %llu"
+ 
+ #: config/s390/s390.c:15314
+-#, gcc-internal-format
++#, fuzzy, gcc-internal-format
+ msgid "%<-mno-pic-data-is-text-relative%> cannot be used without %<-fpic%>/%<-fPIC%>"
+-msgstr ""
++msgstr "PROCEDURE-lauseen kohdassa %C on oltava geneerisessä rajapinnassa"
+ 
+ #. Value is not allowed for the target attribute.
+ #: config/s390/s390.c:15481
+@@ -36694,12 +36683,12 @@ msgstr "jäsenen %q+D kaksoiskappale"
+ #: c/c-decl.c:8103
+ #, gcc-internal-format
+ msgid "empty struct has size 0 in C, size 1 in C++"
+-msgstr ""
++msgstr "tyhjän structin koko on C:ssä 0, C++:ssa 1"
+ 
+ #: c/c-decl.c:8106
+ #, gcc-internal-format
+ msgid "empty union has size 0 in C, size 1 in C++"
+-msgstr ""
++msgstr "tyhjän unionin koko on C:ssä 0, C++:ssa 1"
+ 
+ #: c/c-decl.c:8211
+ #, gcc-internal-format
+@@ -38564,9 +38553,9 @@ msgid "expected %<acq_rel%>, %<release%> or %<acquire%>"
+ msgstr "  odotettiin luokkamallia, saatiin %qT"
+ 
+ #: c/c-parser.c:16700 cp/parser.c:36276
+-#, gcc-internal-format
++#, fuzzy, gcc-internal-format
+ msgid "%<flush%> list specified together with memory order clause"
+-msgstr ""
++msgstr "%<void%> vain parametrina ei ole oikeutettu"
+ 
+ #: c/c-parser.c:16749 cp/parser.c:36876
+ #, fuzzy, gcc-internal-format
+@@ -40282,9 +40271,9 @@ msgid "variable length element type in array %<reduction%> clause"
+ msgstr "käytetään muuttuvapituista taulukkoa"
+ 
+ #: c/c-typeck.c:13943 c/c-typeck.c:14589 cp/semantics.c:7720
+-#, gcc-internal-format
++#, fuzzy, gcc-internal-format
+ msgid "%<nowait%> clause must not be used together with %<copyprivate%>"
+-msgstr ""
++msgstr "%<void%> vain parametrina ei ole oikeutettu"
+ 
+ #: c/c-typeck.c:13955 cp/semantics.c:7763
+ #, fuzzy, gcc-internal-format
+@@ -40478,9 +40467,9 @@ msgid "%<simdlen%> clause value is bigger than %<safelen%> clause value"
+ msgstr ""
+ 
+ #: c/c-typeck.c:14754 cp/semantics.c:7696
+-#, gcc-internal-format
++#, fuzzy, gcc-internal-format
+ msgid "%<nonmonotonic%> schedule modifier specified together with %<ordered%> clause"
+-msgstr ""
++msgstr "%<void%> vain parametrina ei ole oikeutettu"
+ 
+ #: c/c-typeck.c:14772 cp/semantics.c:7663
+ #, fuzzy, gcc-internal-format
+@@ -40488,9 +40477,9 @@ msgid "%<linear%> clause step is a parameter %qD not specified in %<uniform%> cl
+ msgstr "%<void%> vain parametrina ei ole oikeutettu"
+ 
+ #: c/c-typeck.c:14787 cp/semantics.c:7709
+-#, gcc-internal-format
++#, fuzzy, gcc-internal-format
+ msgid "%<nogroup%> clause must not be used together with %<reduction%> clause"
+-msgstr ""
++msgstr "%<void%> vain parametrina ei ole oikeutettu"
+ 
+ #: c/c-typeck.c:14953
+ #, fuzzy, gcc-internal-format
+@@ -41928,9 +41917,9 @@ msgid "assuming pointer to member %qD"
+ msgstr "%qD ei ole %qD:n jäsen"
+ 
+ #: cp/class.c:8049
+-#, gcc-internal-format
++#, fuzzy, gcc-internal-format
+ msgid "(a pointer to member can only be formed with %<&%E%>)"
+-msgstr ""
++msgstr "keskeytyskäsittelijät eivät voi olla MIPS16-funktioita"
+ 
+ #: cp/class.c:8125 cp/class.c:8167
+ #, fuzzy, gcc-internal-format
+@@ -42896,7 +42885,7 @@ msgid "ambiguating new declaration of %q#D"
+ msgstr "%q+D:lle ei ole edellistä esittelyä"
+ 
+ #: cp/decl.c:1714
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "conflicting declaration %q#D"
+ msgstr "ristiriitainen esittely %q#D"
+ 
+@@ -42961,7 +42950,7 @@ msgid "redundant redeclaration of %qD in same scope"
+ msgstr "%qD uudelleenesitellään tarpeettomasti samalla näkyvyysalueella"
+ 
+ #: cp/decl.c:1980
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "deleted definition of %qD"
+ msgstr "%qD:n poistettu määrittely"
+ 
+@@ -44624,9 +44613,9 @@ msgid "member functions are implicitly friends of their class"
+ msgstr "staattinen jäsenfunktio %q#D esitelty tyyppimääreillä"
+ 
+ #: cp/decl.c:11871
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "extra qualification %<%T::%> on member %qs"
+-msgstr "ylimääräinen %<;%>"
++msgstr "ylimääräinen kvalifiointi %<%T::%> jäsenelle %qs"
+ 
+ #: cp/decl.c:11901
+ #, fuzzy, gcc-internal-format
+@@ -45788,7 +45777,7 @@ msgstr "ei argumentteja"
+ #: cp/error.c:3796
+ #, gcc-internal-format
+ msgid "[...]"
+-msgstr ""
++msgstr "[...]"
+ 
+ #: cp/error.c:4150
+ #, fuzzy, gcc-internal-format
+@@ -46303,9 +46292,9 @@ msgid "non-constant array new length must be specified directly, not by typedef"
+ msgstr ""
+ 
+ #: cp/init.c:3011
+-#, gcc-internal-format
++#, fuzzy, gcc-internal-format
+ msgid "non-constant array new length must be specified without parentheses around the type-id"
+-msgstr ""
++msgstr "taulukkoindeksi ei-taulukkoalustimessa"
+ 
+ #: cp/init.c:3021
+ #, fuzzy, gcc-internal-format
+@@ -48601,9 +48590,9 @@ msgid "expected class-key"
+ msgstr "odotettiin %<class%>"
+ 
+ #: cp/parser.c:24227
+-#, gcc-internal-format
++#, fuzzy, gcc-internal-format
+ msgid "ISO C++ forbids typename key in template template parameter; use %<-std=c++17%> or %<-std=gnu++17%>"
+-msgstr ""
++msgstr "attribuutti %qs pätee vain funktiotyyppeihin"
+ 
+ #: cp/parser.c:24231
+ #, fuzzy, gcc-internal-format
+@@ -52187,7 +52176,7 @@ msgstr ""
+ #: cp/typeck.c:9466 cp/typeck.c:9489
+ #, gcc-internal-format
+ msgid "remove %<std::move%> call"
+-msgstr ""
++msgstr "poista %<std::move%>-kutsu"
+ 
+ #: cp/typeck.c:9488
+ #, fuzzy, gcc-internal-format
+@@ -54955,9 +54944,9 @@ msgid "Variable %qs at %L may not be a C interoperable kind but it is BIND(C)"
+ msgstr "BIND(C)-funktion ”%s” paluutyyppi kohdassa %L ei voi olla taulukko"
+ 
+ #: fortran/decl.c:5708
+-#, gcc-internal-format
++#, fuzzy, gcc-internal-format
+ msgid "Variable %qs in common block %qs at %L cannot be declared with BIND(C) since it is not a global"
+-msgstr ""
++msgstr "BIND(C)-funktion ”%s” paluutyyppi kohdassa %L ei voi olla taulukko"
+ 
+ #: fortran/decl.c:5722
+ #, fuzzy, gcc-internal-format
+@@ -57221,9 +57210,9 @@ msgid "Assumed-shape actual argument at %L is incompatible with the non-assumed-
+ msgstr "muuttuvakokoista objektia ei voi alustaa"
+ 
+ #: fortran/interface.c:3322
+-#, gcc-internal-format
++#, fuzzy, gcc-internal-format
+ msgid "Array-section actual argument at %L is incompatible with the non-assumed-shape dummy argument %qs due to VOLATILE attribute"
+-msgstr ""
++msgstr "muuttuvakokoista objektia ei voi alustaa"
+ 
+ #: fortran/interface.c:3342
+ #, fuzzy, gcc-internal-format
+@@ -58091,14 +58080,14 @@ msgid "NAMELIST %qs in READ statement at %L contains the symbol %qs which may no
+ msgstr ""
+ 
+ #: fortran/io.c:3387
+-#, gcc-internal-format
++#, fuzzy, gcc-internal-format
+ msgid "NAMELIST object %qs in namelist %qs at %L is polymorphic and requires a defined input/output procedure"
+-msgstr ""
++msgstr "muuttuvakokoista objektia ei voi alustaa"
+ 
+ #: fortran/io.c:3397 fortran/resolve.c:14545
+-#, gcc-internal-format
++#, fuzzy, gcc-internal-format
+ msgid "NAMELIST object %qs in namelist %qs at %L with ALLOCATABLE or POINTER components"
+-msgstr ""
++msgstr "muuttuvakokoista objektia ei voi alustaa"
+ 
+ #: fortran/io.c:3405
+ #, fuzzy, gcc-internal-format
+@@ -58860,9 +58849,9 @@ msgid "MOLD tag at %L conflicts with SOURCE tag at %L"
+ msgstr "SAVE-attribuuttia kohdassa %L ei voida määritellä PURE-proseduurissa"
+ 
+ #: fortran/match.c:4462
+-#, gcc-internal-format, gfc-internal-format
++#, fuzzy, gcc-internal-format, gfc-internal-format
+ msgid "Allocate-object at %L with a deferred type parameter requires either a type-spec or SOURCE tag or a MOLD tag"
+-msgstr ""
++msgstr "kolme pistettä sisältävä parametriluettelo ei sovellu tyhjään parametrinimiluettelon esittelyyn"
+ 
+ #: fortran/match.c:4474
+ #, gcc-internal-format, gfc-internal-format
+@@ -58948,9 +58937,9 @@ msgid "Variable %qs at %L in common block %qs at %C must be declared with a C in
+ msgstr "BIND(C)-funktion ”%s” paluutyyppi kohdassa %L ei voi olla taulukko"
+ 
+ #: fortran/match.c:5145
+-#, gcc-internal-format
++#, fuzzy, gcc-internal-format
+ msgid "Variable %qs in common block %qs at %C cannot be bind(c) since it is not global"
+-msgstr ""
++msgstr "BIND(C)-funktion ”%s” paluutyyppi kohdassa %L ei voi olla taulukko"
+ 
+ #: fortran/match.c:5152
+ #, fuzzy, gcc-internal-format
+@@ -59831,9 +59820,9 @@ msgid "IF clause at %L requires a scalar LOGICAL expression"
+ msgstr "decltypen argumentin on oltava lauseke"
+ 
+ #: fortran/openmp.c:4038
+-#, gcc-internal-format, gfc-internal-format
++#, fuzzy, gcc-internal-format, gfc-internal-format
+ msgid "IF clause without modifier at %L used together with IF clauses with modifiers"
+-msgstr ""
++msgstr "%<void%> vain parametrina ei ole oikeutettu"
+ 
+ #: fortran/openmp.c:4115
+ #, gcc-internal-format, gfc-internal-format
+@@ -60039,9 +60028,9 @@ msgid "LINEAR clause modifier used on DO or SIMD construct at %L"
+ msgstr ""
+ 
+ #: fortran/openmp.c:4722
+-#, gcc-internal-format, gfc-internal-format
++#, fuzzy, gcc-internal-format, gfc-internal-format
+ msgid "LINEAR clause specified together with ORDERED clause with argument at %L"
+-msgstr ""
++msgstr "%<void%> vain parametrina ei ole oikeutettu"
+ 
+ #: fortran/openmp.c:4727
+ #, fuzzy, gcc-internal-format
+@@ -60084,9 +60073,9 @@ msgid "SOURCE dependence type only allowed on ORDERED directive at %L"
+ msgstr ""
+ 
+ #: fortran/openmp.c:4871
+-#, gcc-internal-format, gfc-internal-format
++#, fuzzy, gcc-internal-format, gfc-internal-format
+ msgid "%s must contain at least one MAP clause at %L"
+-msgstr ""
++msgstr "%Hdatamäärittelyllä ei ole tyyppiä eikä tallennusluokkaa"
+ 
+ #: fortran/openmp.c:4968
+ #, fuzzy, gcc-internal-format, gfc-internal-format
+@@ -60219,9 +60208,9 @@ msgid "%s iteration variable present on clause other than LINEAR at %L"
+ msgstr "”!$OMP DO”-iteraatiomuuttuja on läsnä muussa lauseessa kuin PRIVATE tai LASTPRIVATE kohdassa %L"
+ 
+ #: fortran/openmp.c:5691
+-#, gcc-internal-format, gfc-internal-format
++#, fuzzy, gcc-internal-format, gfc-internal-format
+ msgid "%s collapsed loops don't form rectangular iteration space at %L"
+-msgstr ""
++msgstr "liian vähän argumentteja"
+ 
+ #: fortran/openmp.c:5703
+ #, fuzzy, gcc-internal-format, gfc-internal-format
+@@ -60254,9 +60243,9 @@ msgid "!$ACC LOOP iteration variable must be of type integer at %L"
+ msgstr "”!$OMP DO”-iteraatiomuuttuja ei saa olla THREADPRIVATE kohdassa %L"
+ 
+ #: fortran/openmp.c:5858
+-#, gcc-internal-format, gfc-internal-format
++#, fuzzy, gcc-internal-format, gfc-internal-format
+ msgid "!$ACC LOOP %s loops don't form rectangular iteration space at %L"
+-msgstr ""
++msgstr "liian vähän argumentteja"
+ 
+ #: fortran/openmp.c:5870
+ #, fuzzy, gcc-internal-format, gfc-internal-format
+@@ -60624,14 +60613,14 @@ msgid "Noncoarray component %s at %L of type LOCK_TYPE or with subcomponent of t
+ msgstr "muuttuvakokoista objektia ei voi alustaa"
+ 
+ #: fortran/parse.c:3034
+-#, gcc-internal-format, gfc-internal-format
++#, fuzzy, gcc-internal-format, gfc-internal-format
+ msgid "Noncoarray component %s at %L of type LOCK_TYPE or with subcomponent of type LOCK_TYPE must have a codimension or be a subcomponent of a coarray. (Variables of type %s may not have a codimension as %s at %L has a codimension or a coarray subcomponent)"
+-msgstr ""
++msgstr "muuttuvakokoista objektia ei voi alustaa"
+ 
+ #: fortran/parse.c:3044
+-#, gcc-internal-format, gfc-internal-format
++#, fuzzy, gcc-internal-format, gfc-internal-format
+ msgid "Component %s at %L of type EVENT_TYPE must have a codimension or be a subcomponent of a coarray, which is not possible as the component has the pointer attribute"
+-msgstr ""
++msgstr "muuttuvakokoista objektia ei voi alustaa"
+ 
+ #: fortran/parse.c:3050
+ #, fuzzy, gcc-internal-format, gfc-internal-format
+@@ -60649,14 +60638,14 @@ msgid "Allocatable component %s at %L must have a codimension as it has a noncoa
+ msgstr "muuttuvakokoista objektia ei voi alustaa"
+ 
+ #: fortran/parse.c:3064
+-#, gcc-internal-format, gfc-internal-format
++#, fuzzy, gcc-internal-format, gfc-internal-format
+ msgid "Noncoarray component %s at %L of type EVENT_TYPE or with subcomponent of type EVENT_TYPE must have a codimension or be a subcomponent of a coarray. (Variables of type %s may not have a codimension as already a coarray subcomponent exists)"
+-msgstr ""
++msgstr "muuttuvakokoista objektia ei voi alustaa"
+ 
+ #: fortran/parse.c:3071
+-#, gcc-internal-format, gfc-internal-format
++#, fuzzy, gcc-internal-format, gfc-internal-format
+ msgid "Noncoarray component %s at %L of type EVENT_TYPE or with subcomponent of type EVENT_TYPE must have a codimension or be a subcomponent of a coarray. (Variables of type %s may not have a codimension as %s at %L has a codimension or a coarray subcomponent)"
+-msgstr ""
++msgstr "muuttuvakokoista objektia ei voi alustaa"
+ 
+ #: fortran/parse.c:3123
+ #, fuzzy, gcc-internal-format, gfc-internal-format
+@@ -61554,9 +61543,9 @@ msgid "ENTRY result %s cannot be an array in FUNCTION %s at %L"
+ msgstr "Muuttujatyyppi on UNKNOWN sijoituksessa kohdassa %L"
+ 
+ #: fortran/resolve.c:852
+-#, gcc-internal-format, gfc-internal-format
++#, fuzzy, gcc-internal-format, gfc-internal-format
+ msgid "FUNCTION result %s cannot be a POINTER in FUNCTION %s at %L"
+-msgstr ""
++msgstr "Muuttuja %s ei voida liittää PURE-proseduuriin kohdassa %C"
+ 
+ #: fortran/resolve.c:856
+ #, fuzzy, gcc-internal-format, gfc-internal-format
+@@ -61564,14 +61553,14 @@ msgid "ENTRY result %s cannot be a POINTER in FUNCTION %s at %L"
+ msgstr "Muuttuja %s ei voida liittää PURE-proseduuriin kohdassa %C"
+ 
+ #: fortran/resolve.c:894
+-#, gcc-internal-format, gfc-internal-format
++#, fuzzy, gcc-internal-format, gfc-internal-format
+ msgid "FUNCTION result %s cannot be of type %s in FUNCTION %s at %L"
+-msgstr ""
++msgstr "Muuttujatyyppi on UNKNOWN sijoituksessa kohdassa %L"
+ 
+ #: fortran/resolve.c:899
+-#, gcc-internal-format, gfc-internal-format
++#, fuzzy, gcc-internal-format, gfc-internal-format
+ msgid "ENTRY result %s cannot be of type %s in FUNCTION %s at %L"
+-msgstr ""
++msgstr "Muuttujatyyppi on UNKNOWN sijoituksessa kohdassa %L"
+ 
+ #: fortran/resolve.c:945
+ #, fuzzy, gcc-internal-format, gfc-internal-format
+@@ -63120,9 +63109,9 @@ msgid "Procedure pointer result %qs at %L is missing the pointer attribute"
+ msgstr "tyhjä esittely"
+ 
+ #: fortran/resolve.c:12873
+-#, gcc-internal-format, gfc-internal-format
++#, fuzzy, gcc-internal-format, gfc-internal-format
+ msgid "Mismatch in ELEMENTAL attribute between MODULE PROCEDURE at %L and its interface in %s"
+-msgstr ""
++msgstr "Syntaksivirhe PROCEDURE-lauseessa kohdassa %C"
+ 
+ #: fortran/resolve.c:12881
+ #, fuzzy, gcc-internal-format, gfc-internal-format
+@@ -63130,9 +63119,9 @@ msgid "Mismatch in PURE attribute between MODULE PROCEDURE at %L and its interfa
+ msgstr "Syntaksivirhe PROCEDURE-lauseessa kohdassa %C"
+ 
+ #: fortran/resolve.c:12889
+-#, gcc-internal-format, gfc-internal-format
++#, fuzzy, gcc-internal-format, gfc-internal-format
+ msgid "Mismatch in RECURSIVE attribute between MODULE PROCEDURE at %L and its interface in %s"
+-msgstr ""
++msgstr "Syntaksivirhe PROCEDURE-lauseessa kohdassa %C"
+ 
+ #: fortran/resolve.c:12898
+ #, gcc-internal-format
+@@ -63450,9 +63439,9 @@ msgid "CLASS variable %qs at %L cannot have the PARAMETER attribute"
+ msgstr "Muuttujalla ”%s” kohdassa %L ei voi olla sekä POINTER- että BIND(C)-attribuutit"
+ 
+ #: fortran/resolve.c:14705
+-#, gcc-internal-format
++#, fuzzy, gcc-internal-format
+ msgid "The object %qs at %L has a deferred LEN parameter %qs and is neither allocatable nor a pointer"
+-msgstr ""
++msgstr "kolme pistettä sisältävä parametriluettelo ei sovellu tyhjään parametrinimiluettelon esittelyyn"
+ 
+ #: fortran/resolve.c:14716
+ #, gcc-internal-format
+@@ -65217,9 +65206,9 @@ msgid "cannot read LTO decls from %s"
+ msgstr "tiedoston ”%s” otsaketta ei voi lukea"
+ 
+ #: lto/lto.c:2197
+-#, fuzzy, gcc-internal-format, gfc-internal-format
++#, gcc-internal-format, gfc-internal-format
+ msgid "Cannot open %s"
+-msgstr "'%s' ei voi avata"
++msgstr "Tiedostoa %s ei voi avata"
+ 
+ #: lto/lto.c:2218
+ #, fuzzy, gcc-internal-format, gfc-internal-format
+@@ -65497,9 +65486,9 @@ msgid "could not find interface for class %qE"
+ msgstr "ei löydetä luokkaa %qE"
+ 
+ #: objc/objc-act.c:1685 objc/objc-act.c:6831 objc/objc-act.c:6962
+-#, fuzzy, gcc-internal-format
++#, gcc-internal-format
+ msgid "class %qE is deprecated"
+-msgstr "%qE on vanhentunut"
++msgstr "luokka %qE on vanhentunut"
+ 
+ #: objc/objc-act.c:1714
+ #, fuzzy, gcc-internal-format
+@@ -66462,6 +66451,9 @@ msgstr "tunnistamaton rekisterinimi %qs"
+ msgid "unknown vtable verify initialization priority %qs"
+ msgstr "(%qs:n alustuksen lähistöllä)"
+ 
++#~ msgid "%<-Werror=%> argument %qs is not valid for %s"
++#~ msgstr "%<-Werror=%>-argumentti %qs ei ole kelvollinen %s-kielelle"
++
+ #~ msgid "invalid %%t operand '"
+ #~ msgstr "virheellinen %%t-operandi"
+ 
+@@ -68642,7 +68634,7 @@ msgstr "(%qs:n alustuksen lähistöllä)"
  
  #, fuzzy
  #~ msgid "variable %q+D set but not used"
@@ -19281,7 +21670,7 @@ index c66de8afab4..b4b27c40017 100644
  
  #~ msgid "jump to label %q+D"
  #~ msgstr "hyppy nimiöön %q+D"
-@@ -68659,7 +68643,7 @@ msgstr "(%qs:n alustuksen lähistöllä)"
+@@ -68659,7 +68651,7 @@ msgstr "(%qs:n alustuksen lähistöllä)"
  
  #, fuzzy
  #~ msgid "parameter %q+D set but not used"
@@ -19290,6 +21679,17 @@ index c66de8afab4..b4b27c40017 100644
  
  #~ msgid "%q+D declared here"
  #~ msgstr "%q+D esitelty täällä"
+@@ -69487,10 +69479,6 @@ msgstr "(%qs:n alustuksen lähistöllä)"
+ #~ msgid "%Hredefinition of %q#T"
+ #~ msgstr "%q#T uudelleenmääritelty"
+ 
+-#, fuzzy
+-#~ msgid "%H%qs is not valid for %qs"
+-#~ msgstr "%qs ei ole kelpo tulostetiedosto"
+-
+ #, fuzzy
+ #~ msgid "%Hiteration variable %qD should not be firstprivate"
+ #~ msgstr "sisäkkäisessä funktiossa käytetty rekisterimuuttujaa %qD"
 diff --git a/gcc/po/zh_CN.po b/gcc/po/zh_CN.po
 index 5701d2a5d9e..f18c00a6ddb 100644
 --- a/gcc/po/zh_CN.po
@@ -20191,10 +22591,21 @@ index 29f6cdc4667..33b4be79c0f 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..d2177c79e4d 100644
+index bc11ae4ae0b..25874aa79aa 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,1146 @@
+@@ -1,3 +1,1157 @@
++2020-01-02  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c/90677
++	* c-c++-common/pr90677-2.c: New test.
++
++2019-12-30  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	Backport from trunk
++	PR fortran/92961
++	* gfortran.dg/arith_divide_2.f90: New test.
++
 +2019-12-21  Paul Thomas  <pault@gcc.gnu.org>
 +
 +	Backported from mainline
@@ -21341,7 +23752,7 @@ index bc11ae4ae0b..d2177c79e4d 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +1570,7 @@
+@@ -427,7 +1581,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -21350,7 +23761,7 @@ index bc11ae4ae0b..d2177c79e4d 100644
  	(check_effective_target_powerpc_p8vector_ok): No support for Darwin.
  	(check_effective_target_powerpc_p9vector_ok): Likewise.
  	(check_effective_target_powerpc_float128_sw_ok): Likewise.
-@@ -720,7 +1863,7 @@
+@@ -720,7 +1874,7 @@
  
  	Backport from mainline
  	PR fortran/91077
@@ -21359,7 +23770,7 @@ index bc11ae4ae0b..d2177c79e4d 100644
  
  2019-07-05  Szabolcs Nagy  <szabolcs.nagy@arm.com>
  
-@@ -969,7 +2112,7 @@
+@@ -969,7 +2123,7 @@
         * gcc.target/i386/pr82699-6.c: Likewise
         * gcc.target/i386/returninst1.c: Likewise
         * gcc.target/i386/returninst2.c: Likewise
@@ -21368,7 +23779,7 @@ index bc11ae4ae0b..d2177c79e4d 100644
  
  2019-05-30  Iain Sandoe  <iain@sandoe.co.uk>
  
-@@ -1131,7 +2274,7 @@
+@@ -1131,7 +2285,7 @@
  
  	Backport from trunk
  	PR fortran/90498
@@ -21377,7 +23788,7 @@ index bc11ae4ae0b..d2177c79e4d 100644
  
  2019-05-17  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -3801,21 +4944,21 @@
+@@ -3801,21 +4955,21 @@
  2019-02-23  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88117
@@ -21406,7 +23817,7 @@ index bc11ae4ae0b..d2177c79e4d 100644
  
  2019-02-22  David Malcolm  <dmalcolm@redhat.com>
  
-@@ -4444,7 +5587,7 @@
+@@ -4444,7 +5598,7 @@
  2019-02-09  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/89200
@@ -21415,7 +23826,7 @@ index bc11ae4ae0b..d2177c79e4d 100644
  
  2019-02-09  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -4704,17 +5847,17 @@
+@@ -4704,17 +5858,17 @@
  2019-02-02  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88393
@@ -22040,6 +24451,20 @@ index 00000000000..604fd5986f8
 +    }
 +  bar (f);
 +}
+diff --git a/gcc/testsuite/c-c++-common/pr90677-2.c b/gcc/testsuite/c-c++-common/pr90677-2.c
+new file mode 100644
+index 00000000000..1d125e01586
+--- /dev/null
++++ b/gcc/testsuite/c-c++-common/pr90677-2.c
+@@ -0,0 +1,8 @@
++/* PR c/90677 */
++/* { dg-do compile } */
++/* { dg-options "-W -Wall" } */
++
++extern void foo (int, int, const char *, ...)
++  __attribute__ ((__format__ (__gcc_tdiag__, 3, 4)));
++struct cgraph_node;
++extern void bar (struct cgraph_node *);
 diff --git a/gcc/testsuite/c-c++-common/pr90677.c b/gcc/testsuite/c-c++-common/pr90677.c
 new file mode 100644
 index 00000000000..897fbc6e13e
@@ -28028,6 +30453,21 @@ index 00000000000..66748d6142f
 +! Contributed by Gerhard Steinmetz
 +program p
 +   if (allocated()) stop 1 ! { dg-error "requires an array or scalar allocatable" }
++end
+diff --git a/gcc/testsuite/gfortran.dg/arith_divide_2.f90 b/gcc/testsuite/gfortran.dg/arith_divide_2.f90
+new file mode 100644
+index 00000000000..ffafa269a1b
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/arith_divide_2.f90
+@@ -0,0 +1,9 @@
++! { dg-do compile }
++! PR 92961 - this used to ICE. Original test case by Gerhard Steinmetz.
++program p
++   integer :: a((0)/0)    ! { dg-error "Division by zero" }
++   integer :: b(0/(0))    ! { dg-error "Division by zero" }
++   integer :: c((0)/(0))  ! { dg-error "Division by zero" }
++   integer :: d(0/0)      ! { dg-error "Division by zero" }
++   integer :: x = ubound(a,1) ! { dg-error "must be an array" }
 +end
 diff --git a/gcc/testsuite/gfortran.dg/associate_49.f90 b/gcc/testsuite/gfortran.dg/associate_49.f90
 new file mode 100644
