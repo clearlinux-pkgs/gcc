@@ -30,7 +30,7 @@ claziss (2):
       [ARC] Backport from mainline r278056,r278057
       [ARC] Enable using DCMPF for hard float comparisons (backports)
 
-danglin (13):
+danglin (14):
       * config/pa/pa.c (pa_trampoline_init): Remove spurious extended 	character.
       * config/pa/lib2funcs.S (__gcc_plt_call): Load branch target to %r21. 	Load PIC register after branch target.  Fix white space. 	* config/pa/milli64.S ($$dyncall): Separate LINUX and non LINUX 	implementations.  Load PIC register after branch target.  Don't 	clobber function pointer when it points to function descriptor. 	Use nullification instead of branch in LINUX implementation.
       * config/pa/pa.c (pa_output_call): Load descriptor address to register 	%r22.  Load function address before global pointer. 	(pa_attr_length_indirect_call): Adjust length of inline versions of 	$$dyncall. 	(pa_output_indirect_call): Remove fast inline version of $$dyncall 	before normal cases.  Update inline $$dyncall sequences to preserve 	function descriptor address in register %r22. 	(TRAMPOLINE_CODE_SIZE): Adjust. 	(pa_asm_trampoline_template): Revise 32-bit trampoline.  Don't assume 	register %r22 contains trampoline address. 	(pa_trampoline_init): Adjust offsets. 	(pa_trampoline_adjust_address): Likewise. 	* config/pa/pa.h (TRAMPOLINE_SIZE): Adjust 32-bit size.
@@ -44,6 +44,7 @@ danglin (13):
       Backport from mainline 	2019-12-30  John David Anglin  <danglin@gcc.gnu.org>
       PR target/93111 	* config/pa/pa.md (scc): Use ordered_comparison_operator instead of 	comparison_operator in B and S integer comparisons.  Likewise, use 	ordered_comparison_operator instead of cmpib_comparison_operator in 	cmpib patterns. 	* config/pa/predicates.md (cmpib_comparison_operator): Remove.
       PR target/67834 	* config/pa/pa.c (pa_elf_select_rtx_section): New.  Put references to 	COMDAT group function labels in .data.rel.ro.local section. 	* config/pa/pa32-linux.h (TARGET_ASM_SELECT_RTX_SECTION): Define.
+      * config/pa/pa.md: Revert change to use ordered_comparison_operator 	instead of cmpib_comparison_operator in cmpib patterns. 	* config/pa/predicates.md (cmpib_comparison_operator): Revert removal 	of cmpib_comparison_operator.  Revise comment.
 
 draganm (4):
       Backprot fix for uninitialised use in mips_split_move
@@ -77,7 +78,8 @@ edlinger (3):
 emsr (1):
       2019-09-09  Edward Smith-Rowland  <3dw4rd@verizon.net>
 
-gccadmin (147):
+gccadmin (148):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -980,10 +982,17 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..6c0c09d7dca 100644
+index 7f6557d8018..8118f90bae3 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,1586 @@
+@@ -1,3 +1,1593 @@
++2020-01-06  John David Anglin  <danglin@gcc.gnu.org>
++
++	* config/pa/pa.md: Revert change to use ordered_comparison_operator
++	instead of cmpib_comparison_operator in cmpib patterns.
++	* config/pa/predicates.md (cmpib_comparison_operator): Revert removal
++	of cmpib_comparison_operator.  Revise comment.
++
 +2020-01-01  John David Anglin  <danglin@gcc.gnu.org>
 +
 +	PR target/67834
@@ -2570,7 +2579,7 @@ index 7f6557d8018..6c0c09d7dca 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +2096,7 @@
+@@ -513,7 +2103,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -8301,7 +8310,7 @@ index 561efa51882..24739e56f97 100644
  #define NEED_INDICATE_EXEC_STACK 0
  
 diff --git a/gcc/config/pa/pa.md b/gcc/config/pa/pa.md
-index 84630ad536d..aa18937bea9 100644
+index 84630ad536d..18f8e127d3d 100644
 --- a/gcc/config/pa/pa.md
 +++ b/gcc/config/pa/pa.md
 @@ -765,7 +765,7 @@
@@ -8492,24 +8501,6 @@ index 84630ad536d..aa18937bea9 100644
  			 [(match_operand:DI 1 "reg_or_0_operand" "rM")
  			  (match_operand:DI 2 "reg_or_0_operand" "rM")])
  	 (pc)
-@@ -1524,7 +1524,7 @@
- (define_insn ""
-   [(set (pc)
- 	(if_then_else
--	 (match_operator 3 "cmpib_comparison_operator"
-+	 (match_operator 3 "ordered_comparison_operator"
- 			 [(match_operand:DI 1 "reg_or_0_operand" "rM")
- 			  (match_operand:DI 2 "arith5_operand" "rL")])
- 	 (label_ref (match_operand 0 "" ""))
-@@ -1553,7 +1553,7 @@
- (define_insn ""
-   [(set (pc)
- 	(if_then_else
--	 (match_operator 3 "cmpib_comparison_operator"
-+	 (match_operator 3 "ordered_comparison_operator"
- 			 [(match_operand:DI 1 "reg_or_0_operand" "rM")
- 			  (match_operand:DI 2 "arith5_operand" "rL")])
- 	 (pc)
 @@ -9062,7 +9062,7 @@ add,l %2,%3,%3\;bv,n %%r0(%3)"
  (define_insn "decrement_and_branch_until_zero"
    [(set (pc)
@@ -8625,22 +8616,20 @@ index 30e338fdbc6..3e22c362d59 100644
 +#undef TARGET_ASM_SELECT_RTX_SECTION
 +#define TARGET_ASM_SELECT_RTX_SECTION pa_elf_select_rtx_section
 diff --git a/gcc/config/pa/predicates.md b/gcc/config/pa/predicates.md
-index 90b578ed984..70824b96bbe 100644
+index 90b578ed984..25247f1f0e8 100644
 --- a/gcc/config/pa/predicates.md
 +++ b/gcc/config/pa/predicates.md
-@@ -662,12 +662,6 @@
+@@ -662,8 +662,8 @@
    (and (match_code "symbol_ref")
         (match_test "SYMBOL_REF_TLS_MODEL (op) == TLS_MODEL_LOCAL_EXEC")))
  
 -;; True iff this is a comparison operator.  This allows the use of
 -;; MATCH_OPERATOR to recognize all the branch insns.
--
--(define_predicate "cmpib_comparison_operator"
--  (match_code "eq,ne,lt,le,leu,gt,gtu,ge"))
--
- ;; True iff OP is an operator suitable for use in a movb instruction.
++;; True iff OP is an operator suitable for use in a double-word cmpib
++;; instruction.
  
- (define_predicate "movb_comparison_operator"
+ (define_predicate "cmpib_comparison_operator"
+   (match_code "eq,ne,lt,le,leu,gt,gtu,ge"))
 diff --git a/gcc/config/riscv/riscv-protos.h b/gcc/config/riscv/riscv-protos.h
 index 8b510f87df8..5b0bbdd7cb4 100644
 --- a/gcc/config/riscv/riscv-protos.h
