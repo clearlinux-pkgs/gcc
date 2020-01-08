@@ -229,10 +229,11 @@ gccadmin (149):
       Daily bump.
       Daily bump.
 
-gjl (3):
+gjl (4):
       * doc/avr-mmcu.texi: Re-generate because config/avr/avr-devices.c 	was changed in r269487.
       Backport from 2019-10-18 trunk r277143. 	PR target/86040 	* config/avr/avr.c (avr_out_lpm): Do not shortcut-return.
       Backport support for some AVR devices from avrxmega3 family 	from SVN trunk r279309, r278387, r278389, r278478. 	PR target/92545 	* config/avr/avr-arch.h (avr_mcu_t) <flash_pm_offset>: New field. 	* config/avr/avr-devices.c (avr_mcu_types): Adjust initializers. 	* config/avr/avr-mcus.def (AVR_MCU): Add respective field. 	* config/avr/gen-avr-mmcu-specs.c (print_mcu) 	<*cpp, *cpp_mcu, *cpp_avrlibc, *link_pm_base_address>: Emit code 	for spec definitions. 	* config/avr/gen-avr-mmcu-texi.c: Rewrite. 	* doc/avr-mmcu.texi: Regenerate.
+      Backport from 2020-01-08 trunk r279995.
 
 guojiufu (2):
       [rs6000] PR70010, avoid no-vsx function to be inlined to vsx function
@@ -985,10 +986,22 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..8118f90bae3 100644
+index 7f6557d8018..70fff31239b 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,1593 @@
+@@ -1,3 +1,1605 @@
++2020-01-08  Georg-Johann Lay  <avr@gjlay.de>
++
++	Backport from 2020-01-08 trunk r279995.
++
++	Add -nodevicespecs option for avr.
++
++	PR target/93182
++	* config/avr/avr.opt (-nodevicespecs): New driver option.
++	* config/avr/driver-avr.c (avr_devicespecs_file): Only issue
++	"-specs=device-specs/..." if that option is not set.
++	* doc/invoke.texi (AVR Options) <-nodevicespecs>: Document.
++
 +2020-01-06  John David Anglin  <danglin@gcc.gnu.org>
 +
 +	* config/pa/pa.md: Revert change to use ordered_comparison_operator
@@ -2582,7 +2595,7 @@ index 7f6557d8018..8118f90bae3 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +2103,7 @@
+@@ -513,7 +2115,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -5522,6 +5535,44 @@ index a9f72b314c2..cb4b14ae379 100644
            else
              {
                avr_asm_len ("%4lpm %C0,%a2+" CR_TAB
+diff --git a/gcc/config/avr/avr.opt b/gcc/config/avr/avr.opt
+index 3fc83a2fdb1..702400d4597 100644
+--- a/gcc/config/avr/avr.opt
++++ b/gcc/config/avr/avr.opt
+@@ -118,3 +118,7 @@ Assume that all data in static storage can be accessed by LDS / STS.  This optio
+ nodevicelib
+ Driver Target Report RejectNegative
+ Do not link against the device-specific library lib<MCU>.a.
++
++nodevicespecs
++Driver Target Report RejectNegative
++Do not use the device-specific specs file device-specs/specs-<MCU>.
+diff --git a/gcc/config/avr/driver-avr.c b/gcc/config/avr/driver-avr.c
+index 7b9e712be6b..d804ed2cd58 100644
+--- a/gcc/config/avr/driver-avr.c
++++ b/gcc/config/avr/driver-avr.c
+@@ -26,8 +26,8 @@ along with GCC; see the file COPYING3.  If not see
+ #include "diagnostic.h"
+ #include "tm.h"
+ 
+-// Remove -nodevicelib from the command line if not needed
+-#define X_NODEVLIB "%<nodevicelib"
++// Remove -nodevicelib and -nodevicespecs from the command line if not needed.
++#define X_NODEVLIB "%<nodevicelib %<nodevicespecs"
+ 
+ static const char dir_separator_str[] = { DIR_SEPARATOR, 0 };
+ 
+@@ -102,8 +102,8 @@ avr_devicespecs_file (int argc, const char **argv)
+         return X_NODEVLIB;
+       }
+ 
+-  return concat ("-specs=device-specs", dir_separator_str, "specs-",
+-                 mmcu, "%s"
++  return concat ("%{!nodevicespecs:-specs=device-specs", dir_separator_str,
++		 "specs-", mmcu, "%s} %<nodevicespecs"
+ #if defined (WITH_AVRLIBC)
+                  " %{mmcu=avr*:" X_NODEVLIB "} %{!mmcu=*:" X_NODEVLIB "}",
+ #else
 diff --git a/gcc/config/avr/gen-avr-mmcu-specs.c b/gcc/config/avr/gen-avr-mmcu-specs.c
 index de861f40583..363d7034626 100644
 --- a/gcc/config/avr/gen-avr-mmcu-specs.c
@@ -13557,7 +13608,7 @@ index 911875f9578..78a59e6b21c 100644
  
  If @samp{hsa} is specified as one of the targets, the compiler will be
 diff --git a/gcc/doc/invoke.texi b/gcc/doc/invoke.texi
-index 6ef36ce02aa..1447ab056df 100644
+index 6ef36ce02aa..7d8c0802c08 100644
 --- a/gcc/doc/invoke.texi
 +++ b/gcc/doc/invoke.texi
 @@ -292,6 +292,7 @@ Objective-C and Objective-C++ Dialects}.
@@ -13568,6 +13619,15 @@ index 6ef36ce02aa..1447ab056df 100644
  -Wc++-compat  -Wc++11-compat  -Wc++14-compat  -Wc++17-compat  @gol
  -Wcast-align  -Wcast-align=strict  -Wcast-function-type  -Wcast-qual  @gol
  -Wchar-subscripts  -Wcatch-value  -Wcatch-value=@var{n} @gol
+@@ -712,7 +713,7 @@ Objective-C and Objective-C++ Dialects}.
+ -mn_flash=@var{size}  -mno-interrupts @gol
+ -mmain-is-OS_task  -mrelax  -mrmw  -mstrict-X  -mtiny-stack @gol
+ -mfract-convert-truncate @gol
+--mshort-calls  -nodevicelib @gol
++-mshort-calls -nodevicelib  -nodevicespecs @gol
+ -Waddr-space-convert  -Wmisspelled-isr}
+ 
+ @emph{Blackfin Options}
 @@ -6698,6 +6699,14 @@ For instance, warn about use of anonymous structures and unions,
  and so on.  This option is independent of the standards mode.  Warnings are
  disabled in the expression that follows @code{__extension__}.
@@ -13592,6 +13652,20 @@ index 6ef36ce02aa..1447ab056df 100644
  @opindex ginternal-reset-location-views
  @opindex gno-internal-reset-location-views
  Attempt to determine location views that can be omitted from location
+@@ -18083,6 +18092,13 @@ Allow to use truncation instead of rounding towards zero for fractional fixed-po
+ @opindex nodevicelib
+ Don't link against AVR-LibC's device specific library @code{lib<mcu>.a}.
+ 
++@item -nodevicespecs
++@opindex nodevicespecs
++Don't add @option{-specs=device-specs/specs-<mcu>} to the compiler driver's
++command line.  The user takes responsibility for supplying the sub-processes
++like compiler proper, assembler and linker with appropriate command line
++options.
++
+ @item -Waddr-space-convert
+ @opindex Waddr-space-convert
+ @opindex Wno-addr-space-convert
 diff --git a/gcc/dse.c b/gcc/dse.c
 index 6f6f768f371..4becdcf1cbb 100644
 --- a/gcc/dse.c
