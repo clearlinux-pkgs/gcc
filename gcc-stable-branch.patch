@@ -78,7 +78,8 @@ edlinger (3):
 emsr (1):
       2019-09-09  Edward Smith-Rowland  <3dw4rd@verizon.net>
 
-gccadmin (149):
+gccadmin (150):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -447,7 +448,7 @@ linkw (1):
 luoxhu (1):
       Backport r274411 from trunk to gcc-9-branch
 
-marxin (8):
+marxin (9):
       Backport r274502
       Backport r274503
       Backport r274504
@@ -456,6 +457,7 @@ marxin (8):
       Backport r276141
       Backport r276178
       Backport r278210
+      Backport r279306
 
 matz (1):
       Fix PR90796
@@ -496,7 +498,7 @@ rearnsha (3):
       [arm]  PR target/89400 fix thumb1 unaligned access expansion
       [arm][PR88167] Fix __builtin_return_address returns invalid address
 
-redi (31):
+redi (33):
       PR libstdc++/90361 add missing macro definition
       PR c++/91436 fix C++ dialect for std::make_unique fix-it hint
       Implement new serial algorithms from Parallelism TS (P0024R2)
@@ -528,6 +530,8 @@ redi (31):
       libstdc++: fix buffer overflow in path::operator+= (PR92853)
       PR libstdc++/91786 fix compilation error with Clang
       libstdc++: Fix whitepace in changelog
+      libstdc++: Fix error handling in filesystem::remove_all (PR93201)
+      libstdc++: Define memory resource key functions non-inline (PR93208)
 
 rguenth (10):
       2019-08-12  Richard Biener  <rguenther@suse.de>
@@ -986,10 +990,18 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..70fff31239b 100644
+index 7f6557d8018..8653f88fbd4 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,1605 @@
+@@ -1,3 +1,1613 @@
++2020-01-09  Martin Liska  <mliska@suse.cz>
++
++	Backport from mainline
++	2019-12-12  Jan Hubicka  <hubicka@ucw.cz>
++
++	* ipa-prop.c (read_ipcp_transformation_info): Fix undefined ordering
++	of execution of function call parameters.
++
 +2020-01-08  Georg-Johann Lay  <avr@gjlay.de>
 +
 +	Backport from 2020-01-08 trunk r279995.
@@ -2595,7 +2607,7 @@ index 7f6557d8018..70fff31239b 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +2115,7 @@
+@@ -513,7 +2123,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -17546,7 +17558,7 @@ index 160261d34c9..7c5562ad801 100644
  	  struct ipa_fn_summary *info = ipa_fn_summaries->get (cnode);
  	  struct bitpack_d bp;
 diff --git a/gcc/ipa-prop.c b/gcc/ipa-prop.c
-index d86c2f3db55..848180aa441 100644
+index d86c2f3db55..40edee7951c 100644
 --- a/gcc/ipa-prop.c
 +++ b/gcc/ipa-prop.c
 @@ -3725,6 +3725,18 @@ ipcp_transformation_initialize (void)
@@ -17568,6 +17580,19 @@ index d86c2f3db55..848180aa441 100644
  /* Set the aggregate replacements of NODE to be AGGVALS.  */
  
  void
+@@ -4703,9 +4715,10 @@ read_ipcp_transformation_info (lto_input_block *ib, cgraph_node *node,
+ 	  bool known = bp_unpack_value (&bp, 1);
+ 	  if (known)
+ 	    {
++	      const widest_int value = streamer_read_widest_int (ib);
++	      const widest_int mask = streamer_read_widest_int (ib);
+ 	      ipa_bits *bits
+-		= ipa_get_ipa_bits_for_value (streamer_read_widest_int (ib),
+-					      streamer_read_widest_int (ib));
++		= ipa_get_ipa_bits_for_value (value, mask);
+ 	      (*ts->bits)[i] = bits;
+ 	    }
+ 	}
 diff --git a/gcc/ipa-prop.h b/gcc/ipa-prop.h
 index 7257a6d04f1..5ab3d07a6de 100644
 --- a/gcc/ipa-prop.h
@@ -35969,10 +35994,33 @@ index 73af92af1e8..6a673a7c995 100644
      unsigned short __pad2;
  #if defined(__x86_64__) && !defined(_LP64)
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
-index 8ac50251005..3b5f453b04d 100644
+index 8ac50251005..abc85ede370 100644
 --- a/libstdc++-v3/ChangeLog
 +++ b/libstdc++-v3/ChangeLog
-@@ -1,3 +1,372 @@
+@@ -1,3 +1,395 @@
++2020-01-09  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/93208
++	* config/abi/pre/gnu.ver: Add new exports.
++	* include/std/memory_resource (memory_resource::~memory_resource()):
++	Do not define inline.
++	(monotonic_buffer_resource::~monotonic_buffer_resource()): Likewise.
++	* src/c++17/memory_resource.cc (memory_resource::~memory_resource()):
++	Define.
++	(monotonic_buffer_resource::~monotonic_buffer_resource()): Define.
++	* testsuite/20_util/monotonic_buffer_resource/93208.cc: New test.
++
++2020-01-08  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/93201
++	* src/c++17/fs_ops.cc (remove_all(const path&, error_code&)): Check
++	result of recursive call before incrementing iterator.
++	* src/filesystem/ops.cc (remove_all(const path&, error_code&)):
++	Likewise.
++	* testsuite/27_io/filesystem/operations/remove_all.cc: Check errors
++	are reported correctly.
++	* testsuite/experimental/filesystem/operations/remove_all.cc: Likewise.
++
 +2019-12-11  Jonathan Wakely  <jwakely@redhat.com>
 +
 +	Backport from mainline
@@ -39278,7 +39326,7 @@ index 871afd61294..a403f4b660a 100644
  OBJECT:0:GLIBCXX_3.4.4
  OBJECT:0:GLIBCXX_3.4.5
 diff --git a/libstdc++-v3/config/abi/pre/gnu.ver b/libstdc++-v3/config/abi/pre/gnu.ver
-index ff4b74cb971..07a00036827 100644
+index ff4b74cb971..ff1cc32614d 100644
 --- a/libstdc++-v3/config/abi/pre/gnu.ver
 +++ b/libstdc++-v3/config/abi/pre/gnu.ver
 @@ -2268,11 +2268,11 @@ GLIBCXX_3.4.26 {
@@ -39295,7 +39343,7 @@ index ff4b74cb971..07a00036827 100644
      _ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE[012]EEC2Ev;
      _ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE[012]EEC2Ev;
  
-@@ -2282,6 +2282,18 @@ GLIBCXX_3.4.27 {
+@@ -2282,6 +2282,24 @@ GLIBCXX_3.4.27 {
  
  } GLIBCXX_3.4.26;
  
@@ -39308,6 +39356,12 @@ index ff4b74cb971..07a00036827 100644
 +    # __shared_ptr<recursive_directory_iterator::_Dir_stack>::__shared_ptr(__shared_ptr&&) (base object ctor)
 +    _ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE[012]EEC2EOS5_;
 +    _ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE[012]EEC2EOS6_;
++
++    # key functions, vtables and rtti for memory resources
++    _ZNSt3pmr15memory_resourceD[0125]Ev;
++    _ZT[ISV]NSt3pmr15memory_resourceE;
++    _ZNSt3pmr25monotonic_buffer_resourceD[0125]Ev;
++    _ZT[ISV]NSt3pmr25monotonic_buffer_resourceE;
 +
 +} GLIBCXX_3.4.27;
 +
@@ -40077,6 +40131,28 @@ index 8cf2c670648..528452fed40 100644
  
    template<typename _Fn, typename... _Args>
      _Bind_front_t<_Fn, _Args...>
+diff --git a/libstdc++-v3/include/std/memory_resource b/libstdc++-v3/include/std/memory_resource
+index 7f1f0ca5e91..7ff5d17afe7 100644
+--- a/libstdc++-v3/include/std/memory_resource
++++ b/libstdc++-v3/include/std/memory_resource
+@@ -88,7 +88,7 @@ namespace pmr
+   public:
+     memory_resource() = default;
+     memory_resource(const memory_resource&) = default;
+-    virtual ~memory_resource() = default;
++    virtual ~memory_resource(); // key function
+ 
+     memory_resource& operator=(const memory_resource&) = default;
+ 
+@@ -600,7 +600,7 @@ namespace pmr
+ 
+     monotonic_buffer_resource(const monotonic_buffer_resource&) = delete;
+ 
+-    virtual ~monotonic_buffer_resource() { release(); }
++    virtual ~monotonic_buffer_resource(); // key function
+ 
+     monotonic_buffer_resource&
+     operator=(const monotonic_buffer_resource&) = delete;
 diff --git a/libstdc++-v3/include/std/numeric b/libstdc++-v3/include/std/numeric
 index bef823bf526..87a50e572d1 100644
 --- a/libstdc++-v3/include/std/numeric
@@ -41491,6 +41567,34 @@ index c405d8a25d5..85285ea5096 100644
          return refcounts['_M_use_count'] if refcounts else 0
  
  class SharedPtrUniqueWorker(SharedPtrUseCountWorker):
+diff --git a/libstdc++-v3/src/c++17/fs_ops.cc b/libstdc++-v3/src/c++17/fs_ops.cc
+index d8064819d36..d918c2af530 100644
+--- a/libstdc++-v3/src/c++17/fs_ops.cc
++++ b/libstdc++-v3/src/c++17/fs_ops.cc
+@@ -1299,12 +1299,17 @@ fs::remove_all(const path& p, error_code& ec)
+   uintmax_t count = 0;
+   if (s.type() == file_type::directory)
+     {
+-      for (directory_iterator d(p, ec), end; !ec && d != end; d.increment(ec))
+-	count += fs::remove_all(d->path(), ec);
+-      if (ec.value() == ENOENT)
+-	ec.clear();
+-      else if (ec)
+-	return -1;
++      directory_iterator d(p, ec), end;
++      while (!ec && d != end)
++	{
++	  const auto removed = fs::remove_all(d->path(), ec);
++	  if (removed == numeric_limits<uintmax_t>::max())
++	    return -1;
++	  count += removed;
++	  d.increment(ec);
++	  if (ec)
++	    return -1;
++	}
+     }
+ 
+   if (fs::remove(p, ec))
 diff --git a/libstdc++-v3/src/c++17/fs_path.cc b/libstdc++-v3/src/c++17/fs_path.cc
 index 14842452354..54bef75efd8 100644
 --- a/libstdc++-v3/src/c++17/fs_path.cc
@@ -41513,6 +41617,32 @@ index 14842452354..54bef75efd8 100644
  
        while (it != last)
  	{
+diff --git a/libstdc++-v3/src/c++17/memory_resource.cc b/libstdc++-v3/src/c++17/memory_resource.cc
+index b6698011f5c..e28526d1bfe 100644
+--- a/libstdc++-v3/src/c++17/memory_resource.cc
++++ b/libstdc++-v3/src/c++17/memory_resource.cc
+@@ -37,6 +37,10 @@ namespace std _GLIBCXX_VISIBILITY(default)
+ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+ namespace pmr
+ {
++  // This was defined inline in 9.1 and 9.2 so code compiled by those
++  // versions will not use this symbol.
++  memory_resource::~memory_resource() = default;
++
+   namespace
+   {
+     class newdel_res_t final : public memory_resource
+@@ -167,6 +171,10 @@ namespace pmr
+ 
+   // Member functions for std::pmr::monotonic_buffer_resource
+ 
++  // This was defined inline in 9.1 and 9.2 so code compiled by those
++  // versions will not use this symbol.
++  monotonic_buffer_resource::~monotonic_buffer_resource() { release(); }
++
+   // Memory allocated by the upstream resource is managed in a linked list
+   // of _Chunk objects. A _Chunk object recording the size and alignment of
+   // the allocated block and a pointer to the previous chunk is placed
 diff --git a/libstdc++-v3/src/c++17/string-inst.cc b/libstdc++-v3/src/c++17/string-inst.cc
 index c095a90587e..4dc0a9ca449 100644
 --- a/libstdc++-v3/src/c++17/string-inst.cc
@@ -41543,6 +41673,34 @@ index 6dc9b137dbf..21d0bbabb43 100644
    {
      // TODO symlinks not currently supported
      return stat(path, buffer);
+diff --git a/libstdc++-v3/src/filesystem/ops.cc b/libstdc++-v3/src/filesystem/ops.cc
+index 36b5d2c24f6..a5887f37ce1 100644
+--- a/libstdc++-v3/src/filesystem/ops.cc
++++ b/libstdc++-v3/src/filesystem/ops.cc
+@@ -1098,12 +1098,17 @@ fs::remove_all(const path& p, error_code& ec) noexcept
+   uintmax_t count = 0;
+   if (s.type() == file_type::directory)
+     {
+-      for (directory_iterator d(p, ec), end; !ec && d != end; d.increment(ec))
+-	count += fs::remove_all(d->path(), ec);
+-      if (ec.value() == ENOENT)
+-	ec.clear();
+-      else if (ec)
+-	return -1;
++      directory_iterator d(p, ec), end;
++      while (!ec && d != end)
++	{
++	  const auto removed = fs::remove_all(d->path(), ec);
++	  if (removed == numeric_limits<uintmax_t>::max())
++	    return -1;
++	  count += removed;
++	  d.increment(ec);
++	  if (ec)
++	    return -1;
++	}
+     }
+ 
+   if (fs::remove(p, ec))
 diff --git a/libstdc++-v3/testsuite/17_intro/names.cc b/libstdc++-v3/testsuite/17_intro/names.cc
 index 66c639ff3a3..a47d53503e3 100644
 --- a/libstdc++-v3/testsuite/17_intro/names.cc
@@ -41990,6 +42148,41 @@ index 0a365a910fc..24ab3d786ec 100644
  
    static_assert( ! is_nt_invocable< F, int, int >(),
  		   "would call private member");
+diff --git a/libstdc++-v3/testsuite/20_util/monotonic_buffer_resource/93208.cc b/libstdc++-v3/testsuite/20_util/monotonic_buffer_resource/93208.cc
+new file mode 100644
+index 00000000000..b0cfdbddad2
+--- /dev/null
++++ b/libstdc++-v3/testsuite/20_util/monotonic_buffer_resource/93208.cc
+@@ -0,0 +1,29 @@
++// Copyright (C) 2020 Free Software Foundation, Inc.
++//
++// This file is part of the GNU ISO C++ Library.  This library is free
++// software; you can redistribute it and/or modify it under the
++// terms of the GNU General Public License as published by the
++// Free Software Foundation; either version 3, or (at your option)
++// any later version.
++
++// This library is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++
++// You should have received a copy of the GNU General Public License along
++// with this library; see the file COPYING3.  If not see
++// <http://www.gnu.org/licenses/>.
++
++// { dg-options "-std=gnu++17" }
++// { dg-do compile { target c++17 } }
++// { dg-final { scan-assembler-not "_ZT\[IS\]NSt3pmr15memory_resourceE" } }
++// { dg-final { scan-assembler-not "_ZT\[IS\]NSt3pmr25monotonic\[a-z_\]*E" } }
++
++#include <memory_resource>
++
++void* f(int n)
++{
++  std::pmr::monotonic_buffer_resource res;
++  return res.allocate(n);
++}
 diff --git a/libstdc++-v3/testsuite/20_util/specialized_algorithms/uninitialized_copy/1.cc b/libstdc++-v3/testsuite/20_util/specialized_algorithms/uninitialized_copy/1.cc
 index d3b82107217..22b9805612f 100644
 --- a/libstdc++-v3/testsuite/20_util/specialized_algorithms/uninitialized_copy/1.cc
@@ -43685,6 +43878,54 @@ index 54172d9f20b..39fbc7b5d96 100644
 +  test03();
 +  test04();
  }
+diff --git a/libstdc++-v3/testsuite/27_io/filesystem/operations/remove_all.cc b/libstdc++-v3/testsuite/27_io/filesystem/operations/remove_all.cc
+index a19bac9c5f6..b0b176fc656 100644
+--- a/libstdc++-v3/testsuite/27_io/filesystem/operations/remove_all.cc
++++ b/libstdc++-v3/testsuite/27_io/filesystem/operations/remove_all.cc
+@@ -140,10 +140,43 @@ test03()
+   VERIFY( !exists(p) );
+ }
+ 
++void
++test04()
++{
++#if defined(__MINGW32__) || defined(__MINGW64__)
++  // no permissions
++#else
++  // PR libstdc++/93201
++  std::error_code ec;
++  std::uintmax_t n;
++
++  auto dir = __gnu_test::nonexistent_path();
++  fs::create_directory(dir);
++  __gnu_test::scoped_file f(dir/"file");
++  // remove write permission on the directory:
++  fs::permissions(dir, fs::perms::owner_read|fs::perms::owner_exec);
++  n = fs::remove_all(dir, ec);
++  VERIFY( n == -1 );
++  VERIFY( ec == std::errc::permission_denied ); // not ENOTEMPTY
++
++  try {
++    fs::remove_all(dir);
++    VERIFY( false );
++  } catch (const fs::filesystem_error& e) {
++    VERIFY( e.code() == std::errc::permission_denied );
++    // First path is the argument to remove_all
++    VERIFY( e.path1() == dir );
++  }
++
++  fs::permissions(dir, fs::perms::owner_write, fs::perm_options::add);
++#endif
++}
++
+ int
+ main()
+ {
+   test01();
+   test02();
+   test03();
++  test04();
+ }
 diff --git a/libstdc++-v3/testsuite/27_io/filesystem/path/concat/92853.cc b/libstdc++-v3/testsuite/27_io/filesystem/path/concat/92853.cc
 new file mode 100644
 index 00000000000..62bde05c3ad
@@ -43826,6 +44067,53 @@ index 80ce25ef119..f51707b171c 100644
    test01();
    test02();
    test03();
++  test04();
+ }
+diff --git a/libstdc++-v3/testsuite/experimental/filesystem/operations/remove_all.cc b/libstdc++-v3/testsuite/experimental/filesystem/operations/remove_all.cc
+index 99fb14a71d7..9d51a66c71f 100644
+--- a/libstdc++-v3/testsuite/experimental/filesystem/operations/remove_all.cc
++++ b/libstdc++-v3/testsuite/experimental/filesystem/operations/remove_all.cc
+@@ -108,9 +108,42 @@ test02()
+   VERIFY( !exists(dir) );
+ }
+ 
++void
++test04()
++{
++#if defined(__MINGW32__) || defined(__MINGW64__)
++  // no permissions
++#else
++  // PR libstdc++/93201
++  std::error_code ec;
++  std::uintmax_t n;
++
++  auto dir = __gnu_test::nonexistent_path();
++  fs::create_directory(dir);
++  __gnu_test::scoped_file f(dir/"file");
++  // remove write permission on the directory:
++  fs::permissions(dir, fs::perms::owner_read|fs::perms::owner_exec);
++  n = fs::remove_all(dir, ec);
++  VERIFY( n == -1 );
++  VERIFY( ec == std::errc::permission_denied ); // not ENOTEMPTY
++
++  try {
++    fs::remove_all(dir);
++    VERIFY( false );
++  } catch (const fs::filesystem_error& e) {
++    VERIFY( e.code() == std::errc::permission_denied );
++    // First path is the argument to remove_all
++    VERIFY( e.path1() == dir );
++  }
++
++  fs::permissions(dir, fs::perms::owner_write|fs::perms::add_perms);
++#endif
++}
++
+ int
+ main()
+ {
+   test01();
+   test02();
 +  test04();
  }
 diff --git a/libstdc++-v3/testsuite/experimental/names.cc b/libstdc++-v3/testsuite/experimental/names.cc
