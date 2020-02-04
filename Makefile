@@ -4,17 +4,17 @@ URL := https://mirrors.kernel.org/gnu/gcc/gcc-9.1.0/gcc-9.1.0.tar.gz
 include ../common/Makefile.common
 
 GCCGIT = ~/git/gcc
-GCCVER = 9_2_0
+GCCVER = 9.2.0
 
-GCCTAG = gcc-$(GCCVER)-release
-GCCBRANCH = origin/gcc-$(shell echo $(GCCVER) | sed 's/_.*//')-branch
+GCCTAG = releases/gcc-$(GCCVER)
+GCCBRANCH = origin/releases/gcc-$(shell echo $(GCCVER) | sed 's/\..*//')
 
 update:
 	git -C $(GCCGIT) remote update -p
 	git -C $(GCCGIT) shortlog $(GCCTAG)..$(GCCBRANCH) > gcc-stable-branch.patch
 	git -C $(GCCGIT) diff $(GCCTAG)..$(GCCBRANCH) -- \* ':!*/DATESTAMP' >> gcc-stable-branch.patch
 	git -C $(GCCGIT) show $(GCCBRANCH):gcc/DATESTAMP > DATESTAMP
-	git -C $(GCCGIT) cat-file -p $(GCCBRANCH) | sed -En '/^git-svn-id:.*\/branches\/(.*) .*/s//\1/p' > REVISION
+	git -C $(GCCGIT) describe --abbrev=10 $(GCCBRANCH) > REVISION
 	! git diff --exit-code  gcc-stable-branch.patch > /dev/null
 	$(MAKE) bumpnogit
 	git commit -m "stable update to `cat REVISION`" -a
