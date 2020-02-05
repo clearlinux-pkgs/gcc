@@ -11,11 +11,14 @@ GCCBRANCH = origin/releases/gcc-$(shell echo $(GCCVER) | sed 's/\..*//')
 
 update:
 	git -C $(GCCGIT) remote update -p
+	git -C $(GCCGIT) diff $(GCCTAG)..$(GCCBRANCH) -- \* ':!*/DATESTAMP' > new.patch~
+	git show HEAD:gcc-stable-branch.patch | sed -n '/^diff --git/,$$p' > current.patch~
+	! diff current.patch~ new.patch~ > /dev/null
 	git -C $(GCCGIT) shortlog $(GCCTAG)..$(GCCBRANCH) > gcc-stable-branch.patch
-	git -C $(GCCGIT) diff $(GCCTAG)..$(GCCBRANCH) -- \* ':!*/DATESTAMP' >> gcc-stable-branch.patch
+	cat new.patch~ >> gcc-stable-branch.patch
+	rm -f *.patch~
 	git -C $(GCCGIT) show $(GCCBRANCH):gcc/DATESTAMP > DATESTAMP
 	git -C $(GCCGIT) describe --abbrev=10 $(GCCBRANCH) > REVISION
-	! git diff --exit-code  gcc-stable-branch.patch > /dev/null
 	$(MAKE) bumpnogit
 	git commit -m "stable update to `cat REVISION`" -a
 	test -n "$(NO_KOJI)" || $(MAKE) koji-nowait
