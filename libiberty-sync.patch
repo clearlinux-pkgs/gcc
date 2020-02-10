@@ -1,0 +1,1790 @@
+From 7b944065aabe7703336180549369db026f1dea52 Mon Sep 17 00:00:00 2001
+From: Patrick McCarty <patrick.mccarty@intel.com>
+Date: Mon, 10 Feb 2020 13:06:16 -0800
+Subject: [PATCH] Sync libiberty sources from mainline
+
+binutils upgraded their sources, so the gcc-9 stable branch copies
+needed the same treatment.
+
+(Note that I excluded ChangeLog updates and files for which only the
+copyright year changed, to reduce the diff.)
+
+Signed-off-by: Patrick McCarty <patrick.mccarty@intel.com>
+---
+ include/ansidecl.h                         |  36 +-
+ include/demangle.h                         |  24 +-
+ include/hashtab.h                          |   6 +-
+ include/libiberty.h                        |  20 +-
+ libiberty/Makefile.in                      |  16 +-
+ libiberty/argv.c                           |   8 +
+ libiberty/cp-demangle.c                    |  64 +-
+ libiberty/cp-demint.c                      |   5 +-
+ libiberty/cplus-dem.c                      |  52 +-
+ libiberty/d-demangle.c                     |  22 +-
+ libiberty/filedescriptor.c                 |  47 ++
+ libiberty/hashtab.c                        |   6 +-
+ libiberty/make-relative-prefix.c           |   5 +-
+ libiberty/rust-demangle.c                  | 686 +++++++++++++--------
+ libiberty/simple-object-elf.c              |  88 ++-
+ libiberty/testsuite/d-demangle-expected    |  20 +
+ libiberty/testsuite/demangle-expected      |  22 +-
+ libiberty/testsuite/rust-demangle-expected |   6 +-
+ 18 files changed, 746 insertions(+), 387 deletions(-)
+ create mode 100644 libiberty/filedescriptor.c
+
+diff --git a/include/ansidecl.h b/include/ansidecl.h
+index 0395c4d0e..ec7a13f01 100644
+--- a/include/ansidecl.h
++++ b/include/ansidecl.h
+@@ -1,5 +1,5 @@
+ /* ANSI and traditional C compatability macros
+-   Copyright (C) 1991-2019 Free Software Foundation, Inc.
++   Copyright (C) 1991-2020 Free Software Foundation, Inc.
+    This file is part of the GNU C Library.
+ 
+ This program is free software; you can redistribute it and/or modify
+@@ -292,6 +292,40 @@ So instead we use the macro below and test it against specific values.  */
+ # endif
+ #endif
+ 
++/* Attribute `alloc_size' was valid as of gcc 4.3.  */
++#ifndef ATTRIBUTE_RESULT_SIZE_1
++# if (GCC_VERSION >= 4003)
++#  define ATTRIBUTE_RESULT_SIZE_1 __attribute__ ((alloc_size (1)))
++# else
++#  define ATTRIBUTE_RESULT_SIZE_1
++#endif
++#endif
++
++#ifndef ATTRIBUTE_RESULT_SIZE_2
++# if (GCC_VERSION >= 4003)
++#  define ATTRIBUTE_RESULT_SIZE_2 __attribute__ ((alloc_size (2)))
++# else
++#  define ATTRIBUTE_RESULT_SIZE_2
++#endif
++#endif
++
++#ifndef ATTRIBUTE_RESULT_SIZE_1_2
++# if (GCC_VERSION >= 4003)
++#  define ATTRIBUTE_RESULT_SIZE_1_2 __attribute__ ((alloc_size (1, 2)))
++# else
++#  define ATTRIBUTE_RESULT_SIZE_1_2
++#endif
++#endif
++
++/* Attribute `warn_unused_result' was valid as of gcc 3.3.  */
++#ifndef ATTRIBUTE_WARN_UNUSED_RESULT
++# if GCC_VERSION >= 3003
++#  define ATTRIBUTE_WARN_UNUSED_RESULT __attribute__ ((warn_unused_result))
++# else
++#  define ATTRIBUTE_WARN_UNUSED_RESULT
++# endif
++#endif
++
+ /* We use __extension__ in some places to suppress -pedantic warnings
+    about GCC extensions.  This feature didn't work properly before
+    gcc 2.8.  */
+diff --git a/include/demangle.h b/include/demangle.h
+index f5d9b9e8b..a7f11f592 100644
+--- a/include/demangle.h
++++ b/include/demangle.h
+@@ -1,5 +1,5 @@
+ /* Defs for interface to demanglers.
+-   Copyright (C) 1992-2019 Free Software Foundation, Inc.
++   Copyright (C) 1992-2020 Free Software Foundation, Inc.
+ 
+    This program is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Library General Public License
+@@ -159,24 +159,11 @@ ada_demangle (const char *mangled, int options);
+ extern char *
+ dlang_demangle (const char *mangled, int options);
+ 
+-/* Returns non-zero iff MANGLED is a rust mangled symbol.  MANGLED must
+-   already have been demangled through cplus_demangle_v3.  If this function
+-   returns non-zero then MANGLED can be demangled (in-place) using
+-   RUST_DEMANGLE_SYM.  */
+ extern int
+-rust_is_mangled (const char *mangled);
+-
+-/* Demangles SYM (in-place) if RUST_IS_MANGLED returned non-zero for SYM.
+-   If RUST_IS_MANGLED returned zero for SYM then RUST_DEMANGLE_SYM might
+-   replace characters that cannot be demangled with '?' and might truncate
+-   SYM.  After calling RUST_DEMANGLE_SYM SYM might be shorter, but never
+-   larger.  */
+-extern void
+-rust_demangle_sym (char *sym);
+-
+-/* Demangles MANGLED if it was GNU_V3 and then RUST mangled, otherwise
+-   returns NULL. Uses CPLUS_DEMANGLE_V3, RUST_IS_MANGLED and
+-   RUST_DEMANGLE_SYM.  Returns a new string that is owned by the caller.  */
++rust_demangle_callback (const char *mangled, int options,
++                        demangle_callbackref callback, void *opaque);
++
++
+ extern char *
+ rust_demangle (const char *mangled, int options);
+ 
+@@ -481,6 +468,7 @@ struct demangle_component
+      Initialize to zero.  Private to d_print_comp.
+      All other fields are final after initialization.  */
+   int d_printing;
++  int d_counting;
+ 
+   union
+   {
+diff --git a/include/hashtab.h b/include/hashtab.h
+index 9bb0293b6..6cca342b9 100644
+--- a/include/hashtab.h
++++ b/include/hashtab.h
+@@ -1,5 +1,5 @@
+ /* An expandable hash tables datatype.  
+-   Copyright (C) 1999-2019 Free Software Foundation, Inc.
++   Copyright (C) 1999-2020 Free Software Foundation, Inc.
+    Contributed by Vladimir Makarov (vmakarov@cygnus.com).
+ 
+ This program is free software; you can redistribute it and/or modify
+@@ -173,8 +173,8 @@ extern void *	htab_find_with_hash (htab_t, const void *, hashval_t);
+ extern void **	htab_find_slot_with_hash (htab_t, const void *,
+ 					  hashval_t, enum insert_option);
+ extern void	htab_clear_slot	(htab_t, void **);
+-extern void	htab_remove_elt	(htab_t, void *);
+-extern void	htab_remove_elt_with_hash (htab_t, void *, hashval_t);
++extern void	htab_remove_elt	(htab_t, const void *);
++extern void	htab_remove_elt_with_hash (htab_t, const void *, hashval_t);
+ 
+ extern void	htab_traverse (htab_t, htab_trav, void *);
+ extern void	htab_traverse_noresize (htab_t, htab_trav, void *);
+diff --git a/include/libiberty.h b/include/libiberty.h
+index 574761350..141cb886a 100644
+--- a/include/libiberty.h
++++ b/include/libiberty.h
+@@ -1,6 +1,6 @@
+ /* Function declarations for libiberty.
+ 
+-   Copyright (C) 1997-2019 Free Software Foundation, Inc.
++   Copyright (C) 1997-2020 Free Software Foundation, Inc.
+    
+    Note - certain prototypes declared in this header file are for
+    functions whoes implementation copyright does not belong to the
+@@ -137,6 +137,10 @@ extern const char *unix_lbasename (const char *) ATTRIBUTE_RETURNS_NONNULL ATTRI
+ 
+ extern char *lrealpath (const char *);
+ 
++/* Return true when FD file descriptor exists.  */
++
++extern int is_valid_fd (int fd);
++
+ /* Concatenate an arbitrary number of strings.  You must pass NULL as
+    the last argument of this function, to terminate the list of
+    strings.  Allocates memory using xmalloc.  */
+@@ -310,30 +314,30 @@ extern void xmalloc_failed (size_t) ATTRIBUTE_NORETURN;
+    message to stderr (using the name set by xmalloc_set_program_name,
+    if any) and then call xexit.  */
+ 
+-extern void *xmalloc (size_t) ATTRIBUTE_MALLOC ATTRIBUTE_RETURNS_NONNULL;
++extern void *xmalloc (size_t) ATTRIBUTE_MALLOC ATTRIBUTE_RETURNS_NONNULL ATTRIBUTE_RESULT_SIZE_1 ATTRIBUTE_WARN_UNUSED_RESULT;
+ 
+ /* Reallocate memory without fail.  This works like xmalloc.  Note,
+    realloc type functions are not suitable for attribute malloc since
+    they may return the same address across multiple calls. */
+ 
+-extern void *xrealloc (void *, size_t) ATTRIBUTE_RETURNS_NONNULL;
++extern void *xrealloc (void *, size_t) ATTRIBUTE_RETURNS_NONNULL ATTRIBUTE_RESULT_SIZE_2 ATTRIBUTE_WARN_UNUSED_RESULT;
+ 
+ /* Allocate memory without fail and set it to zero.  This works like
+    xmalloc.  */
+ 
+-extern void *xcalloc (size_t, size_t) ATTRIBUTE_MALLOC ATTRIBUTE_RETURNS_NONNULL;
++extern void *xcalloc (size_t, size_t) ATTRIBUTE_MALLOC ATTRIBUTE_RETURNS_NONNULL ATTRIBUTE_RESULT_SIZE_1_2 ATTRIBUTE_WARN_UNUSED_RESULT;
+ 
+ /* Copy a string into a memory buffer without fail.  */
+ 
+-extern char *xstrdup (const char *) ATTRIBUTE_MALLOC ATTRIBUTE_RETURNS_NONNULL;
++extern char *xstrdup (const char *) ATTRIBUTE_MALLOC ATTRIBUTE_RETURNS_NONNULL ATTRIBUTE_WARN_UNUSED_RESULT;
+ 
+ /* Copy at most N characters from string into a buffer without fail.  */
+ 
+-extern char *xstrndup (const char *, size_t) ATTRIBUTE_MALLOC ATTRIBUTE_RETURNS_NONNULL;
++extern char *xstrndup (const char *, size_t) ATTRIBUTE_MALLOC ATTRIBUTE_RETURNS_NONNULL ATTRIBUTE_WARN_UNUSED_RESULT;
+ 
+ /* Copy an existing memory buffer to a new memory buffer without fail.  */
+ 
+-extern void *xmemdup (const void *, size_t, size_t) ATTRIBUTE_MALLOC ATTRIBUTE_RETURNS_NONNULL;
++extern void *xmemdup (const void *, size_t, size_t) ATTRIBUTE_MALLOC ATTRIBUTE_RETURNS_NONNULL ATTRIBUTE_WARN_UNUSED_RESULT;
+ 
+ /* Physical memory routines.  Return values are in BYTES.  */
+ extern double physmem_total (void);
+@@ -649,7 +653,7 @@ extern int asprintf (char **, const char *, ...) ATTRIBUTE_PRINTF_2;
+ 
+ extern char *xasprintf (const char *, ...) ATTRIBUTE_MALLOC ATTRIBUTE_PRINTF_1;
+ 
+-#if !HAVE_DECL_VASPRINTF
++#if defined(HAVE_DECL_VASPRINTF) && !HAVE_DECL_VASPRINTF
+ /* Like vsprintf but provides a pointer to malloc'd storage, which
+    must be freed by the caller.  */
+ 
+diff --git a/libiberty/Makefile.in b/libiberty/Makefile.in
+index 0be45b4ae..fe738d0db 100644
+--- a/libiberty/Makefile.in
++++ b/libiberty/Makefile.in
+@@ -1,7 +1,7 @@
+ # Makefile for the libiberty library.
+ # Originally written by K. Richard Pixley <rich@cygnus.com>.
+ #
+-# Copyright (C) 1990-2019 Free Software Foundation, Inc.
++# Copyright (C) 1990-2020 Free Software Foundation, Inc.
+ #
+ # This file is part of the libiberty library.
+ # Libiberty is free software; you can redistribute it and/or
+@@ -127,7 +127,7 @@ CFILES = alloca.c argv.c asprintf.c atexit.c				\
+ 	calloc.c choose-temp.c clock.c concat.c cp-demangle.c		\
+ 	 cp-demint.c cplus-dem.c crc32.c				\
+ 	d-demangle.c dwarfnames.c dyn-string.c				\
+-	fdmatch.c ffs.c fibheap.c filename_cmp.c floatformat.c		\
++	fdmatch.c ffs.c fibheap.c filedescriptor.c filename_cmp.c floatformat.c		\
+ 	fnmatch.c fopen_unlocked.c					\
+ 	getcwd.c getopt.c getopt1.c getpagesize.c getpwd.c getruntime.c	\
+          gettimeofday.c                                                 \
+@@ -171,6 +171,7 @@ REQUIRED_OFILES =							\
+ 	./cp-demint.$(objext) ./crc32.$(objext) ./d-demangle.$(objext)	\
+ 	./dwarfnames.$(objext) ./dyn-string.$(objext)			\
+ 	./fdmatch.$(objext) ./fibheap.$(objext)				\
++	./filedescriptor.$(objext)	\
+ 	./filename_cmp.$(objext) ./floatformat.$(objext)		\
+ 	./fnmatch.$(objext) ./fopen_unlocked.$(objext)			\
+ 	./getopt.$(objext) ./getopt1.$(objext) ./getpwd.$(objext)	\
+@@ -756,6 +757,17 @@ $(CONFIGURED_OFILES): stamp-picdir stamp-noasandir
+ 	else true; fi
+ 	$(COMPILE.c) $(srcdir)/fibheap.c $(OUTPUT_OPTION)
+ 
++./filedescriptor.$(objext): $(srcdir)/filedescriptor.c config.h $(INCDIR)/ansidecl.h \
++	$(INCDIR)/libiberty.h
++	if [ x"$(PICFLAG)" != x ]; then \
++	  $(COMPILE.c) $(PICFLAG) $(srcdir)/filedescriptor.c -o pic/$@; \
++	else true; fi
++	if [ x"$(NOASANFLAG)" != x ]; then \
++	  $(COMPILE.c) $(PICFLAG) $(NOASANFLAG) $(srcdir)/filedescriptor.c -o noasan/$@; \
++	else true; fi
++	$(COMPILE.c) $(srcdir)/filedescriptor.c $(OUTPUT_OPTION)
++
++
+ ./filename_cmp.$(objext): $(srcdir)/filename_cmp.c config.h $(INCDIR)/ansidecl.h \
+ 	$(INCDIR)/filenames.h $(INCDIR)/hashtab.h \
+ 	$(INCDIR)/safe-ctype.h
+diff --git a/libiberty/argv.c b/libiberty/argv.c
+index 6444896f9..14c1c5115 100644
+--- a/libiberty/argv.c
++++ b/libiberty/argv.c
+@@ -327,6 +327,14 @@ writeargv (char * const *argv, FILE *f)
+           arg++;
+         }
+ 
++      /* Write out a pair of quotes for an empty argument.  */
++      if (arg == *argv)
++	if (EOF == fputs ("\"\"", f))
++	  {
++	    status = 1;
++	    goto done;
++	  }
++
+       if (EOF == fputc ('\n', f))
+         {
+           status = 1;
+diff --git a/libiberty/cp-demangle.c b/libiberty/cp-demangle.c
+index 779b4e763..fc55b7fae 100644
+--- a/libiberty/cp-demangle.c
++++ b/libiberty/cp-demangle.c
+@@ -1,5 +1,5 @@
+ /* Demangler for g++ V3 ABI.
+-   Copyright (C) 2003-2019 Free Software Foundation, Inc.
++   Copyright (C) 2003-2020 Free Software Foundation, Inc.
+    Written by Ian Lance Taylor <ian@wasabisystems.com>.
+ 
+    This file is part of the libiberty library, which is part of GCC.
+@@ -192,9 +192,9 @@ static void d_init_info (const char *, int, size_t, struct d_info *);
+ #else
+ #ifdef __STDC__
+ #ifdef __STDC_VERSION__
+-#if __STDC_VERSION__ >= 199901L
++#if __STDC_VERSION__ >= 199901L && !__STDC_NO_VLA__
+ #define CP_DYNAMIC_ARRAYS
+-#endif /* __STDC__VERSION >= 199901L */
++#endif /* __STDC_VERSION__ >= 199901L && !__STDC_NO_VLA__ */
+ #endif /* defined (__STDC_VERSION__) */
+ #endif /* defined (__STDC__) */
+ #endif /* ! defined (__GNUC__) */
+@@ -517,7 +517,7 @@ d_growable_string_callback_adapter (const char *, size_t, void *);
+ 
+ static void
+ d_print_init (struct d_print_info *, demangle_callbackref, void *,
+-	      const struct demangle_component *);
++	      struct demangle_component *);
+ 
+ static inline void d_print_error (struct d_print_info *);
+ 
+@@ -864,6 +864,7 @@ cplus_demangle_fill_name (struct demangle_component *p, const char *s, int len)
+   if (p == NULL || s == NULL || len <= 0)
+     return 0;
+   p->d_printing = 0;
++  p->d_counting = 0;
+   p->type = DEMANGLE_COMPONENT_NAME;
+   p->u.s_name.s = s;
+   p->u.s_name.len = len;
+@@ -880,6 +881,7 @@ cplus_demangle_fill_extended_operator (struct demangle_component *p, int args,
+   if (p == NULL || args < 0 || name == NULL)
+     return 0;
+   p->d_printing = 0;
++  p->d_counting = 0;
+   p->type = DEMANGLE_COMPONENT_EXTENDED_OPERATOR;
+   p->u.s_extended_operator.args = args;
+   p->u.s_extended_operator.name = name;
+@@ -900,6 +902,7 @@ cplus_demangle_fill_ctor (struct demangle_component *p,
+       || (int) kind > gnu_v3_object_ctor_group)
+     return 0;
+   p->d_printing = 0;
++  p->d_counting = 0;
+   p->type = DEMANGLE_COMPONENT_CTOR;
+   p->u.s_ctor.kind = kind;
+   p->u.s_ctor.name = name;
+@@ -920,6 +923,7 @@ cplus_demangle_fill_dtor (struct demangle_component *p,
+       || (int) kind > gnu_v3_object_dtor_group)
+     return 0;
+   p->d_printing = 0;
++  p->d_counting = 0;
+   p->type = DEMANGLE_COMPONENT_DTOR;
+   p->u.s_dtor.kind = kind;
+   p->u.s_dtor.name = name;
+@@ -937,6 +941,7 @@ d_make_empty (struct d_info *di)
+     return NULL;
+   p = &di->comps[di->next_comp];
+   p->d_printing = 0;
++  p->d_counting = 0;
+   ++di->next_comp;
+   return p;
+ }
+@@ -1330,8 +1335,14 @@ d_encoding (struct d_info *di, int top_level)
+ 	     really apply here; this happens when parsing a class
+ 	     which is local to a function.  */
+ 	  if (dc->type == DEMANGLE_COMPONENT_LOCAL_NAME)
+-	    while (is_fnqual_component_type (d_right (dc)->type))
+-	      d_right (dc) = d_left (d_right (dc));
++	    {
++	      while (d_right (dc) != NULL
++		     && is_fnqual_component_type (d_right (dc)->type))
++		d_right (dc) = d_left (d_right (dc));
++
++	      if (d_right (dc) == NULL)
++		dc = NULL;
++	    }
+ 	}
+       else
+ 	{
+@@ -1711,7 +1722,7 @@ d_number (struct d_info *di)
+ 	}
+       if (ret > ((INT_MAX - (peek - '0')) / 10))
+         return -1;
+-      ret = ret * 10 + peek - '0';
++      ret = ret * 10 + (peek - '0');
+       d_advance (di, 1);
+       peek = d_peek_char (di);
+     }
+@@ -1791,6 +1802,7 @@ const struct demangle_operator_info cplus_demangle_operators[] =
+   { "ad", NL ("&"),         1 },
+   { "an", NL ("&"),         2 },
+   { "at", NL ("alignof "),   1 },
++  { "aw", NL ("co_await "), 1 },
+   { "az", NL ("alignof "),   1 },
+   { "cc", NL ("const_cast"), 2 },
+   { "cl", NL ("()"),        2 },
+@@ -3359,7 +3371,7 @@ d_expression_1 (struct d_info *di)
+       d_advance (di, 2);
+       if (peek == 't')
+ 	type = cplus_demangle_type (di);
+-      if (!d_peek_next_char (di))
++      if (!d_peek_char (di) || !d_peek_next_char (di))
+ 	return NULL;
+       return d_make_comp (di, DEMANGLE_COMPONENT_INITIALIZER_LIST,
+ 			  type, d_exprlist (di, 'E'));
+@@ -3571,6 +3583,17 @@ d_expr_primary (struct d_info *di)
+ 	  && type->u.s_builtin.type->print != D_PRINT_DEFAULT)
+ 	di->expansion -= type->u.s_builtin.type->len;
+ 
++      if (type->type == DEMANGLE_COMPONENT_BUILTIN_TYPE
++	  && strcmp (type->u.s_builtin.type->name,
++		     cplus_demangle_builtin_types[33].name) == 0)
++	{
++	  if (d_peek_char (di) == 'E')
++	    {
++	      d_advance (di, 1);
++	      return type;
++	    }
++	}
++
+       /* Rather than try to interpret the literal value, we just
+ 	 collect it as a string.  Note that it's possible to have a
+ 	 floating point literal here.  The ABI specifies that the
+@@ -4062,11 +4085,13 @@ d_growable_string_callback_adapter (const char *s, size_t l, void *opaque)
+ 
+ static void
+ d_count_templates_scopes (struct d_print_info *dpi,
+-			  const struct demangle_component *dc)
++			  struct demangle_component *dc)
+ {
+-  if (dc == NULL)
++  if (dc == NULL || dc->d_counting > 1 || dpi->recursion > MAX_RECURSION_COUNT)
+     return;
+ 
++  ++ dc->d_counting;
++
+   switch (dc->type)
+     {
+     case DEMANGLE_COMPONENT_NAME:
+@@ -4196,7 +4221,7 @@ d_count_templates_scopes (struct d_print_info *dpi,
+ 
+ static void
+ d_print_init (struct d_print_info *dpi, demangle_callbackref callback,
+-	      void *opaque, const struct demangle_component *dc)
++	      void *opaque, struct demangle_component *dc)
+ {
+   dpi->len = 0;
+   dpi->last_char = '\0';
+@@ -4761,12 +4786,8 @@ d_print_comp_inner (struct d_print_info *dpi, int options,
+ 	    typed_name = d_right (typed_name);
+ 	    if (typed_name->type == DEMANGLE_COMPONENT_DEFAULT_ARG)
+ 	      typed_name = typed_name->u.s_unary_num.sub;
+-	    if (typed_name == NULL)
+-	      {
+-		d_print_error (dpi);
+-		return;
+-	      }
+-	    while (is_fnqual_component_type (typed_name->type))
++	    while (typed_name != NULL
++		   && is_fnqual_component_type (typed_name->type))
+ 	      {
+ 		if (i >= sizeof adpm / sizeof adpm[0])
+ 		  {
+@@ -4785,6 +4806,11 @@ d_print_comp_inner (struct d_print_info *dpi, int options,
+ 
+ 		typed_name = d_left (typed_name);
+ 	      }
++	    if (typed_name == NULL)
++	      {
++		d_print_error (dpi);
++		return;
++	      }
+ 	  }
+ 
+ 	/* If typed_name is a template, then it applies to the
+@@ -5970,10 +5996,10 @@ d_print_mod (struct d_print_info *dpi, int options,
+       d_append_string (dpi, "&&");
+       return;
+     case DEMANGLE_COMPONENT_COMPLEX:
+-      d_append_string (dpi, "complex ");
++      d_append_string (dpi, " _Complex");
+       return;
+     case DEMANGLE_COMPONENT_IMAGINARY:
+-      d_append_string (dpi, "imaginary ");
++      d_append_string (dpi, " _Imaginary");
+       return;
+     case DEMANGLE_COMPONENT_PTRMEM_TYPE:
+       if (d_last_char (dpi) != '(')
+diff --git a/libiberty/cp-demint.c b/libiberty/cp-demint.c
+index 950e4dc55..6e41bad26 100644
+--- a/libiberty/cp-demint.c
++++ b/libiberty/cp-demint.c
+@@ -1,5 +1,5 @@
+ /* Demangler component interface functions.
+-   Copyright (C) 2004-2019 Free Software Foundation, Inc.
++   Copyright (C) 2004-2020 Free Software Foundation, Inc.
+    Written by Ian Lance Taylor <ian@wasabisystems.com>.
+ 
+    This file is part of the libiberty library, which is part of GCC.
+@@ -125,6 +125,7 @@ cplus_demangle_fill_component (struct demangle_component *p,
+   p->u.s_binary.left = left;
+   p->u.s_binary.right = right;
+   p->d_printing = 0;
++  p->d_counting = 0;
+ 
+   return 1;
+ }
+@@ -149,6 +150,7 @@ cplus_demangle_fill_builtin_type (struct demangle_component *p,
+ 	  p->type = DEMANGLE_COMPONENT_BUILTIN_TYPE;
+ 	  p->u.s_builtin.type = &cplus_demangle_builtin_types[i];
+ 	  p->d_printing = 0;
++	  p->d_counting = 0;
+ 	  return 1;
+ 	}
+     }
+@@ -176,6 +178,7 @@ cplus_demangle_fill_operator (struct demangle_component *p,
+ 	  p->type = DEMANGLE_COMPONENT_OPERATOR;
+ 	  p->u.s_operator.op = &cplus_demangle_operators[i];
+ 	  p->d_printing = 0;
++	  p->d_counting = 0;
+ 	  return 1;
+ 	}
+     }
+diff --git a/libiberty/cplus-dem.c b/libiberty/cplus-dem.c
+index afceed2a1..fb0673d18 100644
+--- a/libiberty/cplus-dem.c
++++ b/libiberty/cplus-dem.c
+@@ -1,5 +1,5 @@
+ /* Demangler for GNU C++
+-   Copyright (C) 1989-2019 Free Software Foundation, Inc.
++   Copyright (C) 1989-2020 Free Software Foundation, Inc.
+    Written by James Clark (jjc@jclark.uucp)
+    Rewritten by Fred Fish (fnf@cygnus.com) for ARM and Lucid demangling
+    Modified by Satish Pai (pai@apollo.hp.com) for HP demangling
+@@ -159,27 +159,20 @@ cplus_demangle (const char *mangled, int options)
+   if ((options & DMGL_STYLE_MASK) == 0)
+     options |= (int) current_demangling_style & DMGL_STYLE_MASK;
+ 
++  /* The Rust demangling is implemented elsewhere.
++     Legacy Rust symbols overlap with GNU_V3, so try Rust first.  */
++  if (RUST_DEMANGLING || AUTO_DEMANGLING)
++    {
++      ret = rust_demangle (mangled, options);
++      if (ret || RUST_DEMANGLING)
++        return ret;
++    }
++
+   /* The V3 ABI demangling is implemented elsewhere.  */
+-  if (GNU_V3_DEMANGLING || RUST_DEMANGLING || AUTO_DEMANGLING)
++  if (GNU_V3_DEMANGLING || AUTO_DEMANGLING)
+     {
+       ret = cplus_demangle_v3 (mangled, options);
+-      if (GNU_V3_DEMANGLING)
+-	return ret;
+-
+-      if (ret)
+-	{
+-	  /* Rust symbols are GNU_V3 mangled plus some extra subtitutions.
+-	     The subtitutions are always smaller, so do in place changes.  */
+-	  if (rust_is_mangled (ret))
+-	    rust_demangle_sym (ret);
+-	  else if (RUST_DEMANGLING)
+-	    {
+-	      free (ret);
+-	      ret = NULL;
+-	    }
+-	}
+-
+-      if (ret || RUST_DEMANGLING)
++      if (ret || GNU_V3_DEMANGLING)
+ 	return ret;
+     }
+ 
+@@ -203,27 +196,6 @@ cplus_demangle (const char *mangled, int options)
+   return (ret);
+ }
+ 
+-char *
+-rust_demangle (const char *mangled, int options)
+-{
+-  /* Rust symbols are GNU_V3 mangled plus some extra subtitutions.  */
+-  char *ret = cplus_demangle_v3 (mangled, options);
+-
+-  /* The Rust subtitutions are always smaller, so do in place changes.  */
+-  if (ret != NULL)
+-    {
+-      if (rust_is_mangled (ret))
+-	rust_demangle_sym (ret);
+-      else
+-	{
+-	  free (ret);
+-	  ret = NULL;
+-	}
+-    }
+-
+-  return ret;
+-}
+-
+ /* Demangle ada names.  The encoding is documented in gcc/ada/exp_dbug.ads.  */
+ 
+ char *
+diff --git a/libiberty/d-demangle.c b/libiberty/d-demangle.c
+index 8acbf046f..a9702858a 100644
+--- a/libiberty/d-demangle.c
++++ b/libiberty/d-demangle.c
+@@ -1,5 +1,5 @@
+ /* Demangler for the D programming language
+-   Copyright (C) 2014-2019 Free Software Foundation, Inc.
++   Copyright (C) 2014-2020 Free Software Foundation, Inc.
+    Written by Iain Buclaw (ibuclaw@gdcproject.org)
+ 
+ This file is part of the libiberty library.
+@@ -939,8 +939,8 @@ dlang_parse_integer (string *decl, const char *mangled, char type)
+   if (type == 'a' || type == 'u' || type == 'w')
+     {
+       /* Parse character value.  */
+-      char value[10];
+-      int pos = 10;
++      char value[20];
++      int pos = sizeof(value);
+       int width = 0;
+       long val;
+ 
+@@ -991,7 +991,7 @@ dlang_parse_integer (string *decl, const char *mangled, char type)
+ 	  for (; width > 0; width--)
+ 	    value[--pos] = '0';
+ 
+-	  string_appendn (decl, &(value[pos]), 10 - pos);
++	  string_appendn (decl, &(value[pos]), sizeof(value) - pos);
+ 	}
+       string_append (decl, "'");
+     }
+@@ -1191,6 +1191,9 @@ dlang_parse_arrayliteral (string *decl, const char *mangled)
+   while (elements--)
+     {
+       mangled = dlang_value (decl, mangled, NULL, '\0');
++      if (mangled == NULL)
++	return NULL;
++
+       if (elements != 0)
+ 	string_append (decl, ", ");
+     }
+@@ -1214,8 +1217,13 @@ dlang_parse_assocarray (string *decl, const char *mangled)
+   while (elements--)
+     {
+       mangled = dlang_value (decl, mangled, NULL, '\0');
++      if (mangled == NULL)
++	return NULL;
++
+       string_append (decl, ":");
+       mangled = dlang_value (decl, mangled, NULL, '\0');
++      if (mangled == NULL)
++	return NULL;
+ 
+       if (elements != 0)
+ 	string_append (decl, ", ");
+@@ -1243,6 +1251,9 @@ dlang_parse_structlit (string *decl, const char *mangled, const char *name)
+   while (args--)
+     {
+       mangled = dlang_value (decl, mangled, NULL, '\0');
++      if (mangled == NULL)
++	return NULL;
++
+       if (args != 0)
+ 	string_append (decl, ", ");
+     }
+@@ -1497,6 +1508,9 @@ dlang_parse_tuple (string *decl, const char *mangled)
+   while (elements--)
+     {
+       mangled = dlang_type (decl, mangled);
++      if (mangled == NULL)
++	return NULL;
++
+       if (elements != 0)
+ 	string_append (decl, ", ");
+     }
+diff --git a/libiberty/filedescriptor.c b/libiberty/filedescriptor.c
+new file mode 100644
+index 000000000..ba2e87c24
+--- /dev/null
++++ b/libiberty/filedescriptor.c
+@@ -0,0 +1,47 @@
++/* File descriptor related functions.
++
++   Copyright (C) 2019-2020 Free Software Foundation, Inc.
++
++   This file is part of the libiberty library.
++
++   This program is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 2 of the License, or
++   (at your option) any later version.
++
++   This program is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with this program; if not, write to the Free Software
++   Foundation, Inc., 51 Franklin Street - Fifth Floor,
++   Boston, MA 02110-1301, USA.  */
++
++#include "config.h"
++#include "ansidecl.h"
++#include "libiberty.h"
++
++#ifdef HAVE_FCNTL_H
++#include <fcntl.h>
++#endif
++
++#if defined (_WIN32)
++#define WIN32_LEAN_AND_MEAN
++#include <windows.h> /* for GetFullPathName */
++#endif
++/* Return true when FD file descriptor exists.  */
++
++int
++is_valid_fd (int fd)
++{
++#if defined(_WIN32)
++  HANDLE h = (HANDLE) _get_osfhandle (fd);
++  return h != (HANDLE) -1;
++#elif defined(F_GETFD)
++  return fcntl (fd, F_GETFD) >= 0;
++#else
++  return dup2 (fd, fd) < 0;
++#endif
++}
+diff --git a/libiberty/hashtab.c b/libiberty/hashtab.c
+index 9f917c357..225e9e540 100644
+--- a/libiberty/hashtab.c
++++ b/libiberty/hashtab.c
+@@ -1,5 +1,5 @@
+ /* An expandable hash tables datatype.  
+-   Copyright (C) 1999-2019 Free Software Foundation, Inc.
++   Copyright (C) 1999-2020 Free Software Foundation, Inc.
+    Contributed by Vladimir Makarov (vmakarov@cygnus.com).
+ 
+ This file is part of the libiberty library.
+@@ -709,7 +709,7 @@ htab_find_slot (htab_t htab, const PTR element, enum insert_option insert)
+    element in the hash table, this function does nothing.  */
+ 
+ void
+-htab_remove_elt (htab_t htab, PTR element)
++htab_remove_elt (htab_t htab, const PTR element)
+ {
+   htab_remove_elt_with_hash (htab, element, (*htab->hash_f) (element));
+ }
+@@ -720,7 +720,7 @@ htab_remove_elt (htab_t htab, PTR element)
+    function does nothing.  */
+ 
+ void
+-htab_remove_elt_with_hash (htab_t htab, PTR element, hashval_t hash)
++htab_remove_elt_with_hash (htab_t htab, const PTR element, hashval_t hash)
+ {
+   PTR *slot;
+ 
+diff --git a/libiberty/make-relative-prefix.c b/libiberty/make-relative-prefix.c
+index ec0b0ee74..e3f9f920d 100644
+--- a/libiberty/make-relative-prefix.c
++++ b/libiberty/make-relative-prefix.c
+@@ -1,5 +1,5 @@
+ /* Relative (relocatable) prefix support.
+-   Copyright (C) 1987-2019 Free Software Foundation, Inc.
++   Copyright (C) 1987-2020 Free Software Foundation, Inc.
+ 
+ This file is part of libiberty.
+ 
+@@ -122,6 +122,9 @@ split_directories (const char *name, int *ptr_num_dirs)
+   const char *p, *q;
+   int ch;
+ 
++  if (!*name)
++    return NULL;
++
+   /* Count the number of directories.  Special case MSDOS disk names as part
+      of the initial directory.  */
+   p = name;
+diff --git a/libiberty/rust-demangle.c b/libiberty/rust-demangle.c
+index 9b2d2dbe6..b87365c85 100644
+--- a/libiberty/rust-demangle.c
++++ b/libiberty/rust-demangle.c
+@@ -1,5 +1,5 @@
+ /* Demangler for the Rust programming language
+-   Copyright (C) 2016-2019 Free Software Foundation, Inc.
++   Copyright (C) 2016-2020 Free Software Foundation, Inc.
+    Written by David Tolnay (dtolnay@gmail.com).
+ 
+ This file is part of the libiberty library.
+@@ -33,9 +33,11 @@ If not, see <http://www.gnu.org/licenses/>.  */
+ 
+ #include "safe-ctype.h"
+ 
++#include <inttypes.h>
+ #include <sys/types.h>
+ #include <string.h>
+ #include <stdio.h>
++#include <stdlib.h>
+ 
+ #ifdef HAVE_STRING_H
+ #include <string.h>
+@@ -48,301 +50,483 @@ extern void *memset(void *s, int c, size_t n);
+ #include <demangle.h>
+ #include "libiberty.h"
+ 
++struct rust_demangler
++{
++  const char *sym;
++  size_t sym_len;
+ 
+-/* Mangled Rust symbols look like this:
+-     _$LT$std..sys..fd..FileDesc$u20$as$u20$core..ops..Drop$GT$::drop::hc68340e1baa4987a
+-
+-   The original symbol is:
+-     <std::sys::fd::FileDesc as core::ops::Drop>::drop
+-
+-   The last component of the path is a 64-bit hash in lowercase hex,
+-   prefixed with "h". Rust does not have a global namespace between
+-   crates, an illusion which Rust maintains by using the hash to
+-   distinguish things that would otherwise have the same symbol.
+-
+-   Any path component not starting with a XID_Start character is
+-   prefixed with "_".
+-
+-   The following escape sequences are used:
++  void *callback_opaque;
++  demangle_callbackref callback;
+ 
+-   ","  =>  $C$
+-   "@"  =>  $SP$
+-   "*"  =>  $BP$
+-   "&"  =>  $RF$
+-   "<"  =>  $LT$
+-   ">"  =>  $GT$
+-   "("  =>  $LP$
+-   ")"  =>  $RP$
+-   " "  =>  $u20$
+-   "\"" =>  $u22$
+-   "'"  =>  $u27$
+-   "+"  =>  $u2b$
+-   ";"  =>  $u3b$
+-   "["  =>  $u5b$
+-   "]"  =>  $u5d$
+-   "{"  =>  $u7b$
+-   "}"  =>  $u7d$
+-   "~"  =>  $u7e$
++  /* Position of the next character to read from the symbol. */
++  size_t next;
+ 
+-   A double ".." means "::" and a single "." means "-".
++  /* Non-zero if any error occurred. */
++  int errored;
+ 
+-   The only characters allowed in the mangled symbol are a-zA-Z0-9 and _.:$  */
++  /* Non-zero if printing should be verbose (e.g. include hashes). */
++  int verbose;
+ 
+-static const char *hash_prefix = "::h";
+-static const size_t hash_prefix_len = 3;
+-static const size_t hash_len = 16;
++  /* Rust mangling version, with legacy mangling being -1. */
++  int version;
++};
+ 
+-static int is_prefixed_hash (const char *start);
+-static int looks_like_rust (const char *sym, size_t len);
+-static int unescape (const char **in, char **out, const char *seq, char value);
++/* Parsing functions. */
+ 
+-/* INPUT: sym: symbol that has been through C++ (gnu v3) demangling
++static char
++peek (const struct rust_demangler *rdm)
++{
++  if (rdm->next < rdm->sym_len)
++    return rdm->sym[rdm->next];
++  return 0;
++}
+ 
+-   This function looks for the following indicators:
++static char
++next (struct rust_demangler *rdm)
++{
++  char c = peek (rdm);
++  if (!c)
++    rdm->errored = 1;
++  else
++    rdm->next++;
++  return c;
++}
+ 
+-   1. The hash must consist of "h" followed by 16 lowercase hex digits.
++struct rust_mangled_ident
++{
++  /* ASCII part of the identifier. */
++  const char *ascii;
++  size_t ascii_len;
++};
+ 
+-   2. As a sanity check, the hash must use between 5 and 15 of the 16
+-      possible hex digits. This is true of 99.9998% of hashes so once
+-      in your life you may see a false negative. The point is to
+-      notice path components that could be Rust hashes but are
+-      probably not, like "haaaaaaaaaaaaaaaa". In this case a false
+-      positive (non-Rust symbol has an important path component
+-      removed because it looks like a Rust hash) is worse than a false
+-      negative (the rare Rust symbol is not demangled) so this sets
+-      the balance in favor of false negatives.
++static struct rust_mangled_ident
++parse_ident (struct rust_demangler *rdm)
++{
++  char c;
++  size_t start, len;
++  struct rust_mangled_ident ident;
++
++  ident.ascii = NULL;
++  ident.ascii_len = 0;
++
++  c = next (rdm);
++  if (!ISDIGIT (c))
++    {
++      rdm->errored = 1;
++      return ident;
++    }
++  len = c - '0';
++
++  if (c != '0')
++    while (ISDIGIT (peek (rdm)))
++      len = len * 10 + (next (rdm) - '0');
++
++  start = rdm->next;
++  rdm->next += len;
++  /* Check for overflows. */
++  if ((start > rdm->next) || (rdm->next > rdm->sym_len))
++    {
++      rdm->errored = 1;
++      return ident;
++    }
++
++  ident.ascii = rdm->sym + start;
++  ident.ascii_len = len;
++
++  if (ident.ascii_len == 0)
++    ident.ascii = NULL;
++
++  return ident;
++}
+ 
+-   3. There must be no characters other than a-zA-Z0-9 and _.:$
++/* Printing functions. */
+ 
+-   4. There must be no unrecognized $-sign sequences.
++static void
++print_str (struct rust_demangler *rdm, const char *data, size_t len)
++{
++  if (!rdm->errored)
++    rdm->callback (data, len, rdm->callback_opaque);
++}
+ 
+-   5. There must be no sequence of three or more dots in a row ("...").  */
++#define PRINT(s) print_str (rdm, s, strlen (s))
+ 
+-int
+-rust_is_mangled (const char *sym)
++/* Return a 0x0-0xf value if the char is 0-9a-f, and -1 otherwise. */
++static int
++decode_lower_hex_nibble (char nibble)
+ {
+-  size_t len, len_without_hash;
++  if ('0' <= nibble && nibble <= '9')
++    return nibble - '0';
++  if ('a' <= nibble && nibble <= 'f')
++    return 0xa + (nibble - 'a');
++  return -1;
++}
+ 
+-  if (!sym)
+-    return 0;
++/* Return the unescaped character for a "$...$" escape, or 0 if invalid. */
++static char
++decode_legacy_escape (const char *e, size_t len, size_t *out_len)
++{
++  char c = 0;
++  size_t escape_len = 0;
++  int lo_nibble = -1, hi_nibble = -1;
+ 
+-  len = strlen (sym);
+-  if (len <= hash_prefix_len + hash_len)
+-    /* Not long enough to contain "::h" + hash + something else */
++  if (len < 3 || e[0] != '$')
+     return 0;
+ 
+-  len_without_hash = len - (hash_prefix_len + hash_len);
+-  if (!is_prefixed_hash (sym + len_without_hash))
++  e++;
++  len--;
++
++  if (e[0] == 'C')
++    {
++      escape_len = 1;
++
++      c = ',';
++    }
++  else if (len > 2)
++    {
++      escape_len = 2;
++
++      if (e[0] == 'S' && e[1] == 'P')
++        c = '@';
++      else if (e[0] == 'B' && e[1] == 'P')
++        c = '*';
++      else if (e[0] == 'R' && e[1] == 'F')
++        c = '&';
++      else if (e[0] == 'L' && e[1] == 'T')
++        c = '<';
++      else if (e[0] == 'G' && e[1] == 'T')
++        c = '>';
++      else if (e[0] == 'L' && e[1] == 'P')
++        c = '(';
++      else if (e[0] == 'R' && e[1] == 'P')
++        c = ')';
++      else if (e[0] == 'u' && len > 3)
++        {
++          escape_len = 3;
++
++          hi_nibble = decode_lower_hex_nibble (e[1]);
++          if (hi_nibble < 0)
++            return 0;
++          lo_nibble = decode_lower_hex_nibble (e[2]);
++          if (lo_nibble < 0)
++            return 0;
++
++          /* Only allow non-control ASCII characters. */
++          if (hi_nibble > 7)
++            return 0;
++          c = (hi_nibble << 4) | lo_nibble;
++          if (c < 0x20)
++            return 0;
++        }
++    }
++
++  if (!c || len <= escape_len || e[escape_len] != '$')
+     return 0;
+ 
+-  return looks_like_rust (sym, len_without_hash);
++  *out_len = 2 + escape_len;
++  return c;
+ }
+ 
+-/* A hash is the prefix "::h" followed by 16 lowercase hex digits. The
+-   hex digits must comprise between 5 and 15 (inclusive) distinct
+-   digits.  */
++static void
++print_ident (struct rust_demangler *rdm, struct rust_mangled_ident ident)
++{
++  char unescaped;
++  size_t len;
+ 
++  if (rdm->errored)
++    return;
++
++  if (rdm->version == -1)
++    {
++      /* Ignore leading underscores preceding escape sequences.
++         The mangler inserts an underscore to make sure the
++         identifier begins with a XID_Start character. */
++      if (ident.ascii_len >= 2 && ident.ascii[0] == '_'
++          && ident.ascii[1] == '$')
++        {
++          ident.ascii++;
++          ident.ascii_len--;
++        }
++
++      while (ident.ascii_len > 0)
++        {
++          /* Handle legacy escape sequences ("$...$", ".." or "."). */
++          if (ident.ascii[0] == '$')
++            {
++              unescaped
++                  = decode_legacy_escape (ident.ascii, ident.ascii_len, &len);
++              if (unescaped)
++                print_str (rdm, &unescaped, 1);
++              else
++                {
++                  /* Unexpected escape sequence, print the rest verbatim. */
++                  print_str (rdm, ident.ascii, ident.ascii_len);
++                  return;
++                }
++            }
++          else if (ident.ascii[0] == '.')
++            {
++              if (ident.ascii_len >= 2 && ident.ascii[1] == '.')
++                {
++                  /* ".." becomes "::" */
++                  PRINT ("::");
++                  len = 2;
++                }
++              else
++                {
++                  /* "." becomes "-" */
++                  PRINT ("-");
++                  len = 1;
++                }
++            }
++          else
++            {
++              /* Print everything before the next escape sequence, at once. */
++              for (len = 0; len < ident.ascii_len; len++)
++                if (ident.ascii[len] == '$' || ident.ascii[len] == '.')
++                  break;
++
++              print_str (rdm, ident.ascii, len);
++            }
++
++          ident.ascii += len;
++          ident.ascii_len -= len;
++        }
++
++      return;
++    }
++}
++
++/* A legacy hash is the prefix "h" followed by 16 lowercase hex digits.
++   The hex digits must contain at least 5 distinct digits. */
+ static int
+-is_prefixed_hash (const char *str)
++is_legacy_prefixed_hash (struct rust_mangled_ident ident)
+ {
+-  const char *end;
+-  char seen[16];
+-  size_t i;
+-  int count;
++  uint16_t seen;
++  int nibble;
++  size_t i, count;
+ 
+-  if (strncmp (str, hash_prefix, hash_prefix_len))
++  if (ident.ascii_len != 17 || ident.ascii[0] != 'h')
+     return 0;
+-  str += hash_prefix_len;
+-
+-  memset (seen, 0, sizeof(seen));
+-  for (end = str + hash_len; str < end; str++)
+-    if (*str >= '0' && *str <= '9')
+-      seen[*str - '0'] = 1;
+-    else if (*str >= 'a' && *str <= 'f')
+-      seen[*str - 'a' + 10] = 1;
+-    else
+-      return 0;
+ 
+-  /* Count how many distinct digits seen */
+-  count = 0;
++  seen = 0;
+   for (i = 0; i < 16; i++)
+-    if (seen[i])
+-      count++;
+-
+-  return count >= 5 && count <= 15;
++    {
++      nibble = decode_lower_hex_nibble (ident.ascii[1 + i]);
++      if (nibble < 0)
++        return 0;
++      seen |= (uint16_t)1 << nibble;
++    }
++
++  /* Count how many distinct digits were seen. */
++  count = 0;
++  while (seen)
++    {
++      if (seen & 1)
++        count++;
++      seen >>= 1;
++    }
++
++  return count >= 5;
+ }
+ 
+-static int
+-looks_like_rust (const char *str, size_t len)
++int
++rust_demangle_callback (const char *mangled, int options,
++                        demangle_callbackref callback, void *opaque)
+ {
+-  const char *end = str + len;
+-
+-  while (str < end)
+-    switch (*str)
+-      {
+-      case '$':
+-	if (!strncmp (str, "$C$", 3))
+-	  str += 3;
+-	else if (!strncmp (str, "$SP$", 4)
+-		 || !strncmp (str, "$BP$", 4)
+-		 || !strncmp (str, "$RF$", 4)
+-		 || !strncmp (str, "$LT$", 4)
+-		 || !strncmp (str, "$GT$", 4)
+-		 || !strncmp (str, "$LP$", 4)
+-		 || !strncmp (str, "$RP$", 4))
+-	  str += 4;
+-	else if (!strncmp (str, "$u20$", 5)
+-		 || !strncmp (str, "$u22$", 5)
+-		 || !strncmp (str, "$u27$", 5)
+-		 || !strncmp (str, "$u2b$", 5)
+-		 || !strncmp (str, "$u3b$", 5)
+-		 || !strncmp (str, "$u5b$", 5)
+-		 || !strncmp (str, "$u5d$", 5)
+-		 || !strncmp (str, "$u7b$", 5)
+-		 || !strncmp (str, "$u7d$", 5)
+-		 || !strncmp (str, "$u7e$", 5))
+-	  str += 5;
+-	else
+-	  return 0;
+-	break;
+-      case '.':
+-	/* Do not allow three or more consecutive dots */
+-	if (!strncmp (str, "...", 3))
+-	  return 0;
+-	/* Fall through */
+-      case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
+-      case 'g': case 'h': case 'i': case 'j': case 'k': case 'l':
+-      case 'm': case 'n': case 'o': case 'p': case 'q': case 'r':
+-      case 's': case 't': case 'u': case 'v': case 'w': case 'x':
+-      case 'y': case 'z':
+-      case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
+-      case 'G': case 'H': case 'I': case 'J': case 'K': case 'L':
+-      case 'M': case 'N': case 'O': case 'P': case 'Q': case 'R':
+-      case 'S': case 'T': case 'U': case 'V': case 'W': case 'X':
+-      case 'Y': case 'Z':
+-      case '0': case '1': case '2': case '3': case '4': case '5':
+-      case '6': case '7': case '8': case '9':
+-      case '_':
+-      case ':':
+-	str++;
+-	break;
+-      default:
+-	return 0;
+-      }
+-
+-  return 1;
+-}
++  const char *p;
++  struct rust_demangler rdm;
++  struct rust_mangled_ident ident;
++
++  rdm.sym = mangled;
++  rdm.sym_len = 0;
++
++  rdm.callback_opaque = opaque;
++  rdm.callback = callback;
++
++  rdm.next = 0;
++  rdm.errored = 0;
++  rdm.verbose = (options & DMGL_VERBOSE) != 0;
++  rdm.version = 0;
++
++  /* Rust symbols always start with _ZN (legacy). */
++  if (rdm.sym[0] == '_' && rdm.sym[1] == 'Z' && rdm.sym[2] == 'N')
++    {
++      rdm.sym += 3;
++      rdm.version = -1;
++    }
++  else
++    return 0;
++
++  /* Legacy Rust symbols use only [_0-9a-zA-Z.:$] characters. */
++  for (p = rdm.sym; *p; p++)
++    {
++      rdm.sym_len++;
+ 
+-/*
+-  INPUT: sym: symbol for which rust_is_mangled(sym) returned 1.
++      if (*p == '_' || ISALNUM (*p))
++        continue;
+ 
+-  The input is demangled in-place because the mangled name is always
+-  longer than the demangled one.  */
++      if (rdm.version == -1 && (*p == '$' || *p == '.' || *p == ':'))
++        continue;
+ 
+-void
+-rust_demangle_sym (char *sym)
++      return 0;
++    }
++
++  /* Legacy Rust symbols need to be handled separately. */
++  if (rdm.version == -1)
++    {
++      /* Legacy Rust symbols always end with E. */
++      if (!(rdm.sym_len > 0 && rdm.sym[rdm.sym_len - 1] == 'E'))
++        return 0;
++      rdm.sym_len--;
++
++      /* Legacy Rust symbols also always end with a path segment
++         that encodes a 16 hex digit hash, i.e. '17h[a-f0-9]{16}'.
++         This early check, before any parse_ident calls, should
++         quickly filter out most C++ symbols unrelated to Rust. */
++      if (!(rdm.sym_len > 19
++            && !memcmp (&rdm.sym[rdm.sym_len - 19], "17h", 3)))
++        return 0;
++
++      do
++        {
++          ident = parse_ident (&rdm);
++          if (rdm.errored || !ident.ascii)
++            return 0;
++        }
++      while (rdm.next < rdm.sym_len);
++
++      /* The last path segment should be the hash. */
++      if (!is_legacy_prefixed_hash (ident))
++        return 0;
++
++      /* Reset the state for a second pass, to print the symbol. */
++      rdm.next = 0;
++      if (!rdm.verbose && rdm.sym_len > 19)
++        {
++          /* Hide the last segment, containing the hash, if not verbose. */
++          rdm.sym_len -= 19;
++        }
++
++      do
++        {
++          if (rdm.next > 0)
++            print_str (&rdm, "::", 2);
++
++          ident = parse_ident (&rdm);
++          print_ident (&rdm, ident);
++        }
++      while (rdm.next < rdm.sym_len);
++    }
++  else
++    return 0;
++
++  return !rdm.errored;
++}
++
++/* Growable string buffers. */
++struct str_buf
++{
++  char *ptr;
++  size_t len;
++  size_t cap;
++  int errored;
++};
++
++static void
++str_buf_reserve (struct str_buf *buf, size_t extra)
+ {
+-  const char *in;
+-  char *out;
+-  const char *end;
++  size_t available, min_new_cap, new_cap;
++  char *new_ptr;
+ 
+-  if (!sym)
++  /* Allocation failed before. */
++  if (buf->errored)
+     return;
+ 
+-  in = sym;
+-  out = sym;
+-  end = sym + strlen (sym) - (hash_prefix_len + hash_len);
+-
+-  while (in < end)
+-    switch (*in)
+-      {
+-      case '$':
+-	if (!(unescape (&in, &out, "$C$", ',')
+-	      || unescape (&in, &out, "$SP$", '@')
+-	      || unescape (&in, &out, "$BP$", '*')
+-	      || unescape (&in, &out, "$RF$", '&')
+-	      || unescape (&in, &out, "$LT$", '<')
+-	      || unescape (&in, &out, "$GT$", '>')
+-	      || unescape (&in, &out, "$LP$", '(')
+-	      || unescape (&in, &out, "$RP$", ')')
+-	      || unescape (&in, &out, "$u20$", ' ')
+-	      || unescape (&in, &out, "$u22$", '\"')
+-	      || unescape (&in, &out, "$u27$", '\'')
+-	      || unescape (&in, &out, "$u2b$", '+')
+-	      || unescape (&in, &out, "$u3b$", ';')
+-	      || unescape (&in, &out, "$u5b$", '[')
+-	      || unescape (&in, &out, "$u5d$", ']')
+-	      || unescape (&in, &out, "$u7b$", '{')
+-	      || unescape (&in, &out, "$u7d$", '}')
+-	      || unescape (&in, &out, "$u7e$", '~'))) {
+-	  /* unexpected escape sequence, not looks_like_rust. */
+-	  goto fail;
+-	}
+-	break;
+-      case '_':
+-	/* If this is the start of a path component and the next
+-	   character is an escape sequence, ignore the underscore. The
+-	   mangler inserts an underscore to make sure the path
+-	   component begins with a XID_Start character. */
+-	if ((in == sym || in[-1] == ':') && in[1] == '$')
+-	  in++;
+-	else
+-	  *out++ = *in++;
+-	break;
+-      case '.':
+-	if (in[1] == '.')
+-	  {
+-	    /* ".." becomes "::" */
+-	    *out++ = ':';
+-	    *out++ = ':';
+-	    in += 2;
+-	  }
+-	else
+-	  {
+-	    /* "." becomes "-" */
+-	    *out++ = '-';
+-	    in++;
+-	  }
+-	break;
+-      case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
+-      case 'g': case 'h': case 'i': case 'j': case 'k': case 'l':
+-      case 'm': case 'n': case 'o': case 'p': case 'q': case 'r':
+-      case 's': case 't': case 'u': case 'v': case 'w': case 'x':
+-      case 'y': case 'z':
+-      case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
+-      case 'G': case 'H': case 'I': case 'J': case 'K': case 'L':
+-      case 'M': case 'N': case 'O': case 'P': case 'Q': case 'R':
+-      case 'S': case 'T': case 'U': case 'V': case 'W': case 'X':
+-      case 'Y': case 'Z':
+-      case '0': case '1': case '2': case '3': case '4': case '5':
+-      case '6': case '7': case '8': case '9':
+-      case ':':
+-	*out++ = *in++;
+-	break;
+-      default:
+-	/* unexpected character in symbol, not looks_like_rust.  */
+-	goto fail;
+-      }
+-  goto done;
+-
+-fail:
+-  *out++ = '?'; /* This is pretty lame, but it's hard to do better. */
+-done:
+-  *out = '\0';
++  available = buf->cap - buf->len;
++
++  if (extra <= available)
++    return;
++
++  min_new_cap = buf->cap + (extra - available);
++
++  /* Check for overflows. */
++  if (min_new_cap < buf->cap)
++    {
++      buf->errored = 1;
++      return;
++    }
++
++  new_cap = buf->cap;
++
++  if (new_cap == 0)
++    new_cap = 4;
++
++  /* Double capacity until sufficiently large. */
++  while (new_cap < min_new_cap)
++    {
++      new_cap *= 2;
++
++      /* Check for overflows. */
++      if (new_cap < buf->cap)
++        {
++          buf->errored = 1;
++          return;
++        }
++    }
++
++  new_ptr = (char *)realloc (buf->ptr, new_cap);
++  if (new_ptr == NULL)
++    {
++      free (buf->ptr);
++      buf->ptr = NULL;
++      buf->len = 0;
++      buf->cap = 0;
++      buf->errored = 1;
++    }
++  else
++    {
++      buf->ptr = new_ptr;
++      buf->cap = new_cap;
++    }
+ }
+ 
+-static int
+-unescape (const char **in, char **out, const char *seq, char value)
++static void
++str_buf_append (struct str_buf *buf, const char *data, size_t len)
+ {
+-  size_t len = strlen (seq);
++  str_buf_reserve (buf, len);
++  if (buf->errored)
++    return;
+ 
+-  if (strncmp (*in, seq, len))
+-    return 0;
++  memcpy (buf->ptr + buf->len, data, len);
++  buf->len += len;
++}
++
++static void
++str_buf_demangle_callback (const char *data, size_t len, void *opaque)
++{
++  str_buf_append ((struct str_buf *)opaque, data, len);
++}
++
++char *
++rust_demangle (const char *mangled, int options)
++{
++  struct str_buf out;
++  int success;
++
++  out.ptr = NULL;
++  out.len = 0;
++  out.cap = 0;
++  out.errored = 0;
+ 
+-  **out = value;
++  success = rust_demangle_callback (mangled, options,
++                                    str_buf_demangle_callback, &out);
+ 
+-  *in += len;
+-  *out += 1;
++  if (!success)
++    {
++      free (out.ptr);
++      return NULL;
++    }
+ 
+-  return 1;
++  str_buf_append (&out, "\0", 1);
++  return out.ptr;
+ }
+diff --git a/libiberty/simple-object-elf.c b/libiberty/simple-object-elf.c
+index 3d49f3396..c62d5bba5 100644
+--- a/libiberty/simple-object-elf.c
++++ b/libiberty/simple-object-elf.c
+@@ -1,5 +1,5 @@
+ /* simple-object-elf.c -- routines to manipulate ELF object files.
+-   Copyright (C) 2010-2019 Free Software Foundation, Inc.
++   Copyright (C) 2010-2020 Free Software Foundation, Inc.
+    Written by Ian Lance Taylor, Google.
+ 
+ This program is free software; you can redistribute it and/or modify it
+@@ -548,7 +548,7 @@ simple_object_elf_match (unsigned char header[SIMPLE_OBJECT_MATCH_HEADER_LEN],
+       XDELETE (eor);
+       return NULL;
+     }
+-
++  
+   if (eor->shstrndx == 0)
+     {
+       *errmsg = "invalid ELF shstrndx == 0";
+@@ -556,7 +556,7 @@ simple_object_elf_match (unsigned char header[SIMPLE_OBJECT_MATCH_HEADER_LEN],
+       XDELETE (eor);
+       return NULL;
+     }
+-
++  
+   return (void *) eor;
+ }
+ 
+@@ -1366,36 +1366,17 @@ simple_object_elf_copy_lto_debug_sections (simple_object_read *sobj,
+ 	  return errmsg;
+ 	}
+ 
+-      /* If we are processing .symtab purge __gnu_lto_v1 and
+-	 __gnu_lto_slim symbols from it and any symbols in discarded
+-	 sections.  */
++      /* If we are processing .symtab purge any symbols
++	 in discarded sections.  */
+       if (sh_type == SHT_SYMTAB)
+ 	{
+ 	  unsigned entsize = ELF_FETCH_FIELD (type_functions, ei_class, Shdr,
+ 					      shdr, sh_entsize, Elf_Addr);
+ 	  unsigned strtab = ELF_FETCH_FIELD (type_functions, ei_class, Shdr,
+ 					     shdr, sh_link, Elf_Word);
+-	  unsigned char *strshdr = shdrs + (strtab - 1) * shdr_size;
+-	  off_t stroff = ELF_FETCH_FIELD (type_functions, ei_class, Shdr,
+-					  strshdr, sh_offset, Elf_Addr);
+-	  size_t strsz = ELF_FETCH_FIELD (type_functions, ei_class, Shdr,
+-					  strshdr, sh_size, Elf_Addr);
+-	  char *strings = XNEWVEC (char, strsz);
+-	  char *gnu_lto = strings;
++	  size_t prevailing_name_idx = 0;
+ 	  unsigned char *ent;
+ 	  unsigned *shndx_table = NULL;
+-	  simple_object_internal_read (sobj->descriptor,
+-				       sobj->offset + stroff,
+-				       (unsigned char *)strings,
+-				       strsz, &errmsg, err);
+-	  /* Find gnu_lto_ in strings.  */
+-	  while ((gnu_lto = (char *) memchr (gnu_lto, 'g',
+-					     strings + strsz - gnu_lto)))
+-	    if (strncmp (gnu_lto, "gnu_lto_v1",
+-			 strings + strsz - gnu_lto) == 0)
+-	      break;
+-	    else
+-	      gnu_lto++;
+ 	  /* Read the section index table if present.  */
+ 	  if (symtab_indices_shndx[i - 1] != 0)
+ 	    {
+@@ -1410,6 +1391,45 @@ simple_object_elf_copy_lto_debug_sections (simple_object_read *sobj,
+ 					   (unsigned char *)shndx_table,
+ 					   sidxsz, &errmsg, err);
+ 	    }
++
++	  /* Find a WEAK HIDDEN symbol which name we will use for removed
++	     symbols.  We know there's a prevailing weak hidden symbol
++	     at the start of the .debug_info section.  */
++	  for (ent = buf; ent < buf + length; ent += entsize)
++	    {
++	      unsigned st_shndx = ELF_FETCH_FIELD (type_functions, ei_class,
++						   Sym, ent,
++						   st_shndx, Elf_Half);
++	      unsigned char *st_info;
++	      unsigned char *st_other;
++	      if (ei_class == ELFCLASS32)
++		{
++		  st_info = &((Elf32_External_Sym *)ent)->st_info;
++		  st_other = &((Elf32_External_Sym *)ent)->st_other;
++		}
++	      else
++		{
++		  st_info = &((Elf64_External_Sym *)ent)->st_info;
++		  st_other = &((Elf64_External_Sym *)ent)->st_other;
++		}
++	      if (st_shndx == SHN_XINDEX)
++		st_shndx = type_functions->fetch_Elf_Word
++		    ((unsigned char *)(shndx_table + (ent - buf) / entsize));
++
++	      if (st_shndx != SHN_COMMON
++		  && !(st_shndx != SHN_UNDEF
++		       && st_shndx < shnum
++		       && pfnret[st_shndx - 1] == -1)
++		  && ELF_ST_BIND (*st_info) == STB_WEAK
++		  && *st_other == STV_HIDDEN)
++		{
++		  prevailing_name_idx = ELF_FETCH_FIELD (type_functions,
++							 ei_class, Sym, ent,
++							 st_name, Elf_Word);
++		  break;
++		}
++	    }
++
+ 	  for (ent = buf; ent < buf + length; ent += entsize)
+ 	    {
+ 	      unsigned st_shndx = ELF_FETCH_FIELD (type_functions, ei_class,
+@@ -1432,9 +1452,10 @@ simple_object_elf_copy_lto_debug_sections (simple_object_read *sobj,
+ 	      if (st_shndx == SHN_XINDEX)
+ 		st_shndx = type_functions->fetch_Elf_Word
+ 		    ((unsigned char *)(shndx_table + (ent - buf) / entsize));
+-	      /* Eliminate all COMMONs - this includes __gnu_lto_v1
+-		 and __gnu_lto_slim which otherwise cause endless
+-		 LTO plugin invocation.  */
++	      /* Eliminate all COMMONs - this includes __gnu_lto_slim
++		 which otherwise cause endless LTO plugin invocation.
++		 FIXME: remove the condition once we remove emission
++		 of __gnu_lto_slim symbol.  */
+ 	      if (st_shndx == SHN_COMMON)
+ 		discard = 1;
+ 	      /* We also need to remove symbols refering to sections
+@@ -1466,13 +1487,13 @@ simple_object_elf_copy_lto_debug_sections (simple_object_read *sobj,
+ 		  else
+ 		    {
+ 		      /* Make discarded global symbols hidden weak
+-			 undefined and sharing the gnu_lto_ name.  */
++			 undefined and sharing a name of a prevailing
++			 symbol.  */
+ 		      bind = STB_WEAK;
+ 		      other = STV_HIDDEN;
+-		      if (gnu_lto)
+-			ELF_SET_FIELD (type_functions, ei_class, Sym,
+-				       ent, st_name, Elf_Word,
+-				       gnu_lto - strings);
++		      ELF_SET_FIELD (type_functions, ei_class, Sym,
++				     ent, st_name, Elf_Word,
++				     prevailing_name_idx);
+ 		      ELF_SET_FIELD (type_functions, ei_class, Sym,
+ 				     ent, st_shndx, Elf_Half, SHN_UNDEF);
+ 		    }
+@@ -1489,7 +1510,6 @@ simple_object_elf_copy_lto_debug_sections (simple_object_read *sobj,
+ 		ELF_SET_FIELD (type_functions, ei_class, Sym,
+ 			       ent, st_shndx, Elf_Half, sh_map[st_shndx]);
+ 	    }
+-	  XDELETEVEC (strings);
+ 	  XDELETEVEC (shndx_table);
+ 	}
+       else if (sh_type == SHT_GROUP)
+diff --git a/libiberty/testsuite/d-demangle-expected b/libiberty/testsuite/d-demangle-expected
+index 547a2ddec..490d4e149 100644
+--- a/libiberty/testsuite/d-demangle-expected
++++ b/libiberty/testsuite/d-demangle-expected
+@@ -1306,3 +1306,23 @@ rt.lifetime._d_newarrayOpT!(_d_newarrayiT)._d_newarrayOpT(const(TypeInfo), ulong
+ --format=dlang
+ _D4core8demangle16__T6mangleTFZPvZ6mangleFNaNbNfAxaAaZ11DotSplitter5emptyMxFNaNbNdNiNfZb
+ core.demangle.mangle!(void*() function).mangle(const(char)[], char[]).DotSplitter.empty() const
++# Could crash
++--format=dlang
++_D8__T2fnVa8888888888888_
++_D8__T2fnVa8888888888888_
++# Could crash
++--format=dlang
++_D5__T2fnVmA1A1A911111111D
++_D5__T2fnVmA1A1A911111111D
++# Could crash
++--format=dlang
++_D7__T2fnVlS8S588888888888S6S5
++_D7__T2fnVlS8S588888888888S6S5
++# Could crash
++--format=dlang
++_D1_B699999999961*
++_D1_B699999999961*
++# Could crash
++--format=dlang
++_D5__T1fVHacA6666666666_
++_D5__T1fVHacA6666666666_
+diff --git a/libiberty/testsuite/demangle-expected b/libiberty/testsuite/demangle-expected
+index 3723b7a90..daffe7821 100644
+--- a/libiberty/testsuite/demangle-expected
++++ b/libiberty/testsuite/demangle-expected
+@@ -68,6 +68,19 @@ _$_H1R
+ 
+ _Q8ccQ4M2e.
+ _Q8ccQ4M2e.
++# Could crash
++
++_ZmmAtl
++_ZmmAtl
++# Could crash
++--no-params
++_ZZaSFvOEES_
++_ZZaSFvOEES_
++_ZZaSFvOEES_
++# Could crash
++
++_ZZeqFvOEES_z
++_ZZeqFvOEES_z
+ #
+ # demangler/80513 Test for bogus characters after __thunk_
+ 
+@@ -1265,7 +1278,7 @@ int& int_if_addable<Y>(A<sizeof ((*((Y*)(0)))+(*((Y*)(0))))>*)
+ #
+ --format=gnu-v3
+ _Z3bazIiEvP1AIXszcl3foocvT__ELCf00000000_00000000EEEE
+-void baz<int>(A<sizeof (foo((int)(), (floatcomplex )00000000_00000000))>*)
++void baz<int>(A<sizeof (foo((int)(), (float _Complex)00000000_00000000))>*)
+ #
+ --format=gnu-v3
+ _Z3fooI1FEN1XIXszdtcl1PclcvT__EEE5arrayEE4TypeEv
+@@ -1433,3 +1446,10 @@ Foo<int>()::X::fn
+ _ZZZ3FooIiEfvENKUlT_E_clIcEEDaS0_EN1X2fnEv
+ Foo<int>()::{lambda(auto:1)#1}::operator()<char>(char) const::X::fn()
+ Foo<int>()::{lambda(auto:1)#1}::operator()<char>(char) const::X::fn
++#PR91979 demangling nullptr expression
++
++_Z3fooILPv0EEvPN9enable_ifIXeqT_LDnEEvE4typeE
++void foo<(void*)0>(enable_if<((void*)0)==((decltype(nullptr))), void>::type*)
++
++_ZNK5coro15emptyawEv
++coro1::empty::operator co_await() const
+diff --git a/libiberty/testsuite/rust-demangle-expected b/libiberty/testsuite/rust-demangle-expected
+index 0b4288fc3..747747947 100644
+--- a/libiberty/testsuite/rust-demangle-expected
++++ b/libiberty/testsuite/rust-demangle-expected
+@@ -41,7 +41,7 @@ main::main::he714a2e23ed7db2g
+ # $XX$ substitutions should not contain just numbers.
+ --format=auto
+ _ZN4main4$99$17he714a2e23ed7db23E
+-main::$99$::he714a2e23ed7db23
++main::$99$
+ # _ at start of path should be removed.
+ # ".." translates to "::" "$GT$" to ">" and "$LT$" to "<".
+ --format=rust
+@@ -159,3 +159,7 @@ _ZN68_$LT$core..nonzero..NonZero$LT$T$GT$$u20$as$u20$core..ops..Deref$GT$5deref1
+ --format=rust
+ _ZN63_$LT$core..ptr..Unique$LT$T$GT$$u20$as$u20$core..ops..Deref$GT$5deref17h19f2ad4920655e85E
+ <core::ptr::Unique<T> as core::ops::Deref>::deref
++#
++--format=rust
++_ZN11issue_609253foo37Foo$LT$issue_60925..llv$u6d$..Foo$GT$3foo17h059a991a004536adE
++issue_60925::foo::Foo<issue_60925::llvm::Foo>::foo
+-- 
+2.25.0
+
