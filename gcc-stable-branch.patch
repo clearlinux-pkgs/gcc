@@ -35,7 +35,7 @@ Dragan Mladjenovic (4):
 Edward Smith-Rowland (1):
       Update docs for p858 - Constexpr iterator changes available since 9.1.
 
-Eric Botcazou (16):
+Eric Botcazou (17):
       re PR rtl-optimization/91347 (hppa: wrong code generated with tail call optimisation)
       re PR target/91472 (gmp testsuite segfaults with gcc-8 and gcc-9, works fine with gcc-7)
       re PR rtl-optimization/89795 (wrong code with -O2 -fno-dce -fno-forward-propagate -fno-sched-pressure)
@@ -52,6 +52,7 @@ Eric Botcazou (16):
       re PR ada/92362 (double elaboration of expression in Address aspect)
       re PR ada/92489 (internal error on Invalid_Value Attribute attribute)
       tree.c (build_array_type_1): Add SET_CANONICAL parameter and compute TYPE_CANONICAL from the element type...
+      Fix problematic TLS sequences for the Solaris linker
 
 Eric S. Raymond (1):
       Clean up references to Subversion in documentation sources.
@@ -296,7 +297,7 @@ Ilya Leoshkevich (3):
       S/390: Fix failing RTL check in s390_canonicalize_comparison
       Free dominance info at the beginning of pass_jump_after_combine
 
-Jakub Jelinek (98):
+Jakub Jelinek (99):
       * BASE-VER: Set to 9.2.1.
       baseline_symbols.txt: Update.
       re PR tree-optimization/91597 (GCC miscompiles a branch depending on a pointer tag)
@@ -395,6 +396,7 @@ Jakub Jelinek (98):
       i386: Fix k*shift* intrinsics [PR93673]
       i386: Fix up _mm*_mask_popcnt_epi* [PR93696]
       c: Fix ICE with cast to VLA [93576]
+      c++: Fix thinko in enum_min_precision [PR61414]
 
 Jan Hubicka (3):
       Backport ggc_trim 	Backport from mainline
@@ -1128,10 +1130,16 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..cfcec41c722 100644
+index 7f6557d8018..1e97432f0d5 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,1955 @@
+@@ -1,3 +1,1961 @@
++2020-02-14  Eric Botcazou  <ebotcazou@adacore.com>
++
++	PR target/93704
++	* config/sparc/sparc.c (eligible_for_call_delay): Test HAVE_GNU_LD in
++	conjunction with TARGET_GNU_TLS in early return.
++
 +2020-02-14  Alexander Monakov  <amonakov@ispras.ru>
 +
 +	Backport from mainline
@@ -3087,7 +3095,7 @@ index 7f6557d8018..cfcec41c722 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +2465,7 @@
+@@ -513,7 +2471,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -13120,10 +13128,24 @@ index 9bdae7b9faa..ef1adb69ede 100644
  extern const char *output_cbranch (rtx, rtx, int, int, int, rtx_insn *);
  extern const char *output_return (rtx_insn *);
 diff --git a/gcc/config/sparc/sparc.c b/gcc/config/sparc/sparc.c
-index 93479ab6bdc..ca783a68e2d 100644
+index 93479ab6bdc..a993aab7639 100644
 --- a/gcc/config/sparc/sparc.c
 +++ b/gcc/config/sparc/sparc.c
-@@ -4243,9 +4243,11 @@ sparc_cannot_force_const_mem (machine_mode mode, rtx x)
+@@ -3972,11 +3972,8 @@ eligible_for_call_delay (rtx_insn *trial)
+   if (get_attr_in_branch_delay (trial) == IN_BRANCH_DELAY_FALSE)
+     return 0;
+ 
+-  /* Binutils allows
+-       call __tls_get_addr, %tgd_call (foo)
+-        add %l7, %o0, %o0, %tgd_add (foo)
+-     while Sun as/ld does not.  */
+-  if (TARGET_GNU_TLS || !TARGET_TLS)
++  /* The only problematic cases are TLS sequences with Sun as/ld.  */
++  if ((TARGET_GNU_TLS && HAVE_GNU_LD) || !TARGET_TLS)
+     return 1;
+ 
+   pat = PATTERN (trial);
+@@ -4243,9 +4240,11 @@ sparc_cannot_force_const_mem (machine_mode mode, rtx x)
  }
  
  /* Global Offset Table support.  */
@@ -13137,7 +13159,7 @@ index 93479ab6bdc..ca783a68e2d 100644
  
  /* Return the SYMBOL_REF for the Global Offset Table.  */
  
-@@ -4258,27 +4260,6 @@ sparc_got (void)
+@@ -4258,27 +4257,6 @@ sparc_got (void)
    return got_symbol_rtx;
  }
  
@@ -13165,7 +13187,7 @@ index 93479ab6bdc..ca783a68e2d 100644
  /* Wrapper around the load_pcrel_sym{si,di} patterns.  */
  
  static rtx
-@@ -4298,30 +4279,78 @@ gen_load_pcrel_sym (rtx op0, rtx op1, rtx op2)
+@@ -4298,30 +4276,78 @@ gen_load_pcrel_sym (rtx op0, rtx op1, rtx op2)
    return insn;
  }
  
@@ -13250,7 +13272,7 @@ index 93479ab6bdc..ca783a68e2d 100644
  }
  
  /* Ensure that we are not using patterns that are not OK with PIC.  */
-@@ -4457,7 +4486,7 @@ sparc_pic_register_p (rtx x)
+@@ -4457,7 +4483,7 @@ sparc_pic_register_p (rtx x)
      return true;
  
    if (!HARD_REGISTER_P (pic_offset_table_rtx)
@@ -13259,7 +13281,7 @@ index 93479ab6bdc..ca783a68e2d 100644
        && ORIGINAL_REGNO (x) == REGNO (pic_offset_table_rtx))
      return true;
  
-@@ -5486,7 +5515,7 @@ save_local_or_in_reg_p (unsigned int regno, int leaf_function)
+@@ -5486,7 +5512,7 @@ save_local_or_in_reg_p (unsigned int regno, int leaf_function)
      return true;
  
    /* GOT register (%l7) if needed.  */
@@ -13268,7 +13290,7 @@ index 93479ab6bdc..ca783a68e2d 100644
      return true;
  
    /* If the function accesses prior frames, the frame pointer and the return
-@@ -12529,10 +12558,9 @@ static void
+@@ -12529,10 +12555,9 @@ static void
  sparc_file_end (void)
  {
    /* If we need to emit the special GOT helper function, do so now.  */
@@ -13280,7 +13302,7 @@ index 93479ab6bdc..ca783a68e2d 100644
  #ifdef DWARF2_UNWIND_INFO
        bool do_cfi;
  #endif
-@@ -12569,17 +12597,22 @@ sparc_file_end (void)
+@@ -12569,17 +12594,22 @@ sparc_file_end (void)
  #ifdef DWARF2_UNWIND_INFO
        do_cfi = dwarf2out_do_cfi_asm ();
        if (do_cfi)
@@ -13309,7 +13331,7 @@ index 93479ab6bdc..ca783a68e2d 100644
  #endif
      }
  
-@@ -13085,7 +13118,10 @@ sparc_init_pic_reg (void)
+@@ -13085,7 +13115,10 @@ sparc_init_pic_reg (void)
    edge entry_edge;
    rtx_insn *seq;
  
@@ -13456,10 +13478,15 @@ index ce2825580c6..8243716589f 100644
  AC_SUBST(all_languages)
  AC_SUBST(all_selected_languages)
 diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
-index c977850d067..d9bb3b5d75b 100644
+index c977850d067..6f62352a18e 100644
 --- a/gcc/cp/ChangeLog
 +++ b/gcc/cp/ChangeLog
-@@ -1,3 +1,449 @@
+@@ -1,3 +1,454 @@
++2020-02-14  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/61414
++	* class.c (enum_min_precision): Change prec type from int to int &.
++
 +2020-02-13  Jakub Jelinek  <jakub@redhat.com>
 +
 +	Backported from mainline
@@ -13909,7 +13936,7 @@ index c977850d067..d9bb3b5d75b 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -16,7 +462,7 @@
+@@ -16,7 +467,7 @@
  
  	Backported from mainline
  	2019-08-02  Marek Polacek  <polacek@redhat.com>
@@ -14256,7 +14283,7 @@ index 9e22a146a16..f365a5a7f7b 100644
  	  recompute_constructor_flags (ctor);
  	  if (decl_maybe_constant_var_p (decl) && TREE_CONSTANT (ctor))
 diff --git a/gcc/cp/class.c b/gcc/cp/class.c
-index a47777cdd9e..35b75580c33 100644
+index a47777cdd9e..46fac4ef38e 100644
 --- a/gcc/cp/class.c
 +++ b/gcc/cp/class.c
 @@ -1907,6 +1907,7 @@ fixup_type_variants (tree t)
@@ -14307,7 +14334,7 @@ index a47777cdd9e..35b75580c33 100644
 +    enum_to_min_precision = hash_map<tree, int>::create_ggc (37);
 +
 +  bool existed;
-+  int prec = enum_to_min_precision->get_or_insert (type, &existed);
++  int &prec = enum_to_min_precision->get_or_insert (type, &existed);
 +  if (existed)
 +    return prec;
 +
@@ -25887,10 +25914,15 @@ index 29f6cdc4667..33b4be79c0f 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..838f8232254 100644
+index bc11ae4ae0b..ee3fee8f4e9 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,1515 @@
+@@ -1,3 +1,1520 @@
++2020-02-14  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/61414
++	* g++.dg/cpp0x/enum39.C: New test.
++
 +2020-02-14  Richard Biener  <rguenther@suse.de>
 +
 +	Backport from mainline
@@ -27406,7 +27438,7 @@ index bc11ae4ae0b..838f8232254 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +1939,7 @@
+@@ -427,7 +1944,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -27415,7 +27447,7 @@ index bc11ae4ae0b..838f8232254 100644
  	(check_effective_target_powerpc_p8vector_ok): No support for Darwin.
  	(check_effective_target_powerpc_p9vector_ok): Likewise.
  	(check_effective_target_powerpc_float128_sw_ok): Likewise.
-@@ -720,7 +2232,7 @@
+@@ -720,7 +2237,7 @@
  
  	Backport from mainline
  	PR fortran/91077
@@ -27424,7 +27456,7 @@ index bc11ae4ae0b..838f8232254 100644
  
  2019-07-05  Szabolcs Nagy  <szabolcs.nagy@arm.com>
  
-@@ -803,7 +2315,7 @@
+@@ -803,7 +2320,7 @@
  	Backport fom mainline
  	2019-06-21  Jeff Law  <law@redhat.com>
  
@@ -27433,7 +27465,7 @@ index bc11ae4ae0b..838f8232254 100644
  	* gcc.c-torture/execute/pr90949.c: New test.
  
  2019-06-26  Martin Jambor  <mjambor@suse.cz>
-@@ -969,7 +2481,7 @@
+@@ -969,7 +2486,7 @@
         * gcc.target/i386/pr82699-6.c: Likewise
         * gcc.target/i386/returninst1.c: Likewise
         * gcc.target/i386/returninst2.c: Likewise
@@ -27442,7 +27474,7 @@ index bc11ae4ae0b..838f8232254 100644
  
  2019-05-30  Iain Sandoe  <iain@sandoe.co.uk>
  
-@@ -1131,7 +2643,7 @@
+@@ -1131,7 +2648,7 @@
  
  	Backport from trunk
  	PR fortran/90498
@@ -27451,7 +27483,7 @@ index bc11ae4ae0b..838f8232254 100644
  
  2019-05-17  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -3801,21 +5313,21 @@
+@@ -3801,21 +5318,21 @@
  2019-02-23  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88117
@@ -27480,7 +27512,7 @@ index bc11ae4ae0b..838f8232254 100644
  
  2019-02-22  David Malcolm  <dmalcolm@redhat.com>
  
-@@ -4444,7 +5956,7 @@
+@@ -4444,7 +5961,7 @@
  2019-02-09  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/89200
@@ -27489,7 +27521,7 @@ index bc11ae4ae0b..838f8232254 100644
  
  2019-02-09  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -4704,17 +6216,17 @@
+@@ -4704,17 +6221,17 @@
  2019-02-02  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88393
@@ -28491,6 +28523,27 @@ index 00000000000..f0dd8a1fc6b
 +  G j : 3;	// { dg-bogus "'S::j' is too small to hold all values of 'enum G'" }
 +  H k : 3;	// { dg-warning "'S::k' is too small to hold all values of 'enum H'" }
 +  H l : 4;	// { dg-bogus "'S::l' is too small to hold all values of 'enum H'" }
++};
+diff --git a/gcc/testsuite/g++.dg/cpp0x/enum39.C b/gcc/testsuite/g++.dg/cpp0x/enum39.C
+new file mode 100644
+index 00000000000..676cf8463de
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp0x/enum39.C
+@@ -0,0 +1,15 @@
++// PR c++/61414
++// { dg-do compile { target c++11 } }
++
++enum class E { E0 = -4, E1 = 3 };
++enum F : unsigned { F0 = 0, F1 = 15 };
++
++struct S
++{
++  E a : 2;	// { dg-warning "'S::a' is too small to hold all values of 'enum class E'" }
++  E b : 2;	// { dg-warning "'S::b' is too small to hold all values of 'enum class E'" }
++  E c : 3;	// { dg-bogus "'S::c' is too small to hold all values of 'enum class E'" }
++  F d : 3;	// { dg-warning "'S::d' is too small to hold all values of 'enum F'" }
++  F e : 3;	// { dg-warning "'S::e' is too small to hold all values of 'enum F'" }
++  F f : 4;	// { dg-bogus "'S::f' is too small to hold all values of 'enum F'" }
 +};
 diff --git a/gcc/testsuite/g++.dg/cpp0x/gen-attrs-68.C b/gcc/testsuite/g++.dg/cpp0x/gen-attrs-68.C
 new file mode 100644
