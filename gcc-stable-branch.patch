@@ -1,3 +1,6 @@
+Alexander Monakov (1):
+      sel-sched: allow negative insn priority (PR 88879)
+
 Andrea Corallo (1):
       Backport fix for PR jit/91928
 
@@ -594,7 +597,7 @@ Rainer Orth (2):
       Update Solaris baselines for GCC 9.3
       testsuite: xfail gcc.target/i386/pr91298-?.c on Solaris/x86 with as
 
-Richard Biener (11):
+Richard Biener (18):
       backport: [multiple changes]
       backport: [multiple changes]
       backport: re PR tree-optimization/90637 (ICE in vect_loop_versioning, at tree-vect-loop-manip.c:3055)
@@ -606,6 +609,13 @@ Richard Biener (11):
       revert: re PR tree-optimization/91790 (ICE: verify_ssa failed (error: definition in block 2 follows the use))
       backport: re PR tree-optimization/92222 (ice in useless_type_conversion_p, at gimple-expr.c:86)
       PR middle-end/93246 - missing alias subsets
+      middle-end/92674 delay purging EH edges when folding during inlining
+      tree-optimization/92704 fix ifcvt ICE with loops without stores
+      debug/92763 keep DIEs that might be used in DW_TAG_inlined_subroutine
+      middle-end/93054 deal with undefs in call gimplification
+      tree-optimization/93439 move clique bookkeeping to OMP expansion
+      tree-optimization/93381 fix integer offsetting in points-to analysis
+      middle-end/90648 fend off builtin calls with not enough arguments from match
 
 Richard Earnshaw (3):
       [aarch64] PR target/91386 Use copy_rtx to avoid modifying original insns in peep2 pattern
@@ -738,6 +748,9 @@ Will Schmidt (1):
 
 Xiong Hu Luo (1):
       backport: Enable math functions linking with static library for LTO
+
+liuhongt (1):
+      Intrinsic macro of vpshr* and vpshl* lack a closing parenthesis which would cause failure in O0.
 
 diff --git a/contrib/ChangeLog b/contrib/ChangeLog
 index 8565be188d9..c9b9e26ee57 100644
@@ -1115,10 +1128,85 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..b24a416a417 100644
+index 7f6557d8018..cfcec41c722 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,1880 @@
+@@ -1,3 +1,1955 @@
++2020-02-14  Alexander Monakov  <amonakov@ispras.ru>
++
++	Backport from mainline
++	PR rtl-optimization/88879
++	* sel-sched.c (sel_target_adjust_priority): Remove assert.
++
++2020-02-14  Richard Biener  <rguenther@suse.de>
++
++	Backport from mainline
++	2020-02-05  Richard Biener  <rguenther@suse.de>
++
++	PR middle-end/90648
++	* genmatch.c (dt_node::gen_kids_1): Emit number of argument
++	checks before matching calls.
++
++2020-02-14  Richard Biener  <rguenther@suse.de>
++
++	Backport from mainline
++	2020-01-22  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/93381
++	* tree-ssa-structalias.c (find_func_aliases): Assume offsetting
++	throughout, handle all conversions the same.
++
++2020-02-14  Richard Biener  <rguenther@suse.de>
++
++	Backport from mainline
++	2020-01-28  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/93439
++	* tree-parloops.c (create_loop_fn): Move clique bookkeeping...
++	* tree-cfg.c (move_sese_region_to_fn): ... here.
++	(verify_types_in_gimple_reference): Verify used cliques are
++	tracked.
++
++2020-02-14  Richard Biener  <rguenther@suse.de>
++
++	Backport from mainline
++	2020-01-09  Richard Biener  <rguenther@suse.de>
++
++	PR middle-end/93054
++	* gimplify.c (gimplify_expr): Deal with NOP definitions.
++
++2020-02-14  Richard Biener  <rguenther@suse.de>
++
++	Backport from mainline
++	2020-01-20  Richard Biener  <rguenther@suse.de>
++
++	PR debug/92763
++	* dwarf2out.c (prune_unused_types): Unconditionally mark
++	called function DIEs.
++
++2020-02-14  Richard Biener  <rguenther@suse.de>
++
++	Backport from mainline
++	2019-11-29  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/92704
++	* tree-if-conv.c (combine_blocks): Deal with virtual PHIs
++	in loops performing only loads.
++
++2020-02-14  Richard Biener  <rguenther@suse.de>
++
++	Backport from mainline
++	2019-11-27  Richard Biener  <rguenther@suse.de>
++
++	PR middle-end/92674
++	* tree-inline.c (expand_call_inline): Delay purging EH/abnormal
++	edges and instead record blocks in bitmap.
++	(gimple_expand_calls_inline): Adjust.
++	(fold_marked_statements): Delay EH cleanup until all folding is
++	done.
++	(optimize_inline_calls): Do EH/abnormal cleanup for calls after
++	inlining finished.
++
 +2020-02-13  Jakub Jelinek  <jakub@redhat.com>
 +
 +	PR target/93696
@@ -2999,7 +3087,7 @@ index 7f6557d8018..b24a416a417 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +2390,7 @@
+@@ -513,7 +2465,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -8530,6 +8618,380 @@ index 8b4fc8e3f67..8ad8586cc59 100644
  							(__mmask8) __U);
  }
  
+diff --git a/gcc/config/i386/avx512vbmi2intrin.h b/gcc/config/i386/avx512vbmi2intrin.h
+index 2b1e3386618..09ef064eefa 100644
+--- a/gcc/config/i386/avx512vbmi2intrin.h
++++ b/gcc/config/i386/avx512vbmi2intrin.h
+@@ -151,50 +151,68 @@ _mm512_maskz_shldi_epi64 (__mmask8 __A, __m512i __B, __m512i __C, int __D)
+ #else
+ #define _mm512_shrdi_epi16(A, B, C) \
+   ((__m512i) __builtin_ia32_vpshrd_v32hi ((__v32hi)(__m512i)(A), \
+-						(__v32hi)(__m512i)(B),(int)(C))
++					  (__v32hi)(__m512i)(B),(int)(C)))
+ #define _mm512_shrdi_epi32(A, B, C) \
+   ((__m512i) __builtin_ia32_vpshrd_v16si ((__v16si)(__m512i)(A), \
+-	(__v16si)(__m512i)(B),(int)(C))
++					  (__v16si)(__m512i)(B),(int)(C)))
+ #define _mm512_mask_shrdi_epi32(A, B, C, D, E) \
+   ((__m512i) __builtin_ia32_vpshrd_v16si_mask ((__v16si)(__m512i)(C), \
+-	(__v16si)(__m512i)(D), (int)(E), (__v16si)(__m512i)(A),(__mmask16)(B))
++					       (__v16si)(__m512i)(D), \
++					       (int)(E),		\
++					       (__v16si)(__m512i)(A),	\
++					       (__mmask16)(B)))
+ #define _mm512_maskz_shrdi_epi32(A, B, C, D) \
+-  ((__m512i) __builtin_ia32_vpshrd_v16si_mask ((__v16si)(__m512i)(B), \
+-	(__v16si)(__m512i)(C),(int)(D), \
+-	(__v16si)(__m512i)_mm512_setzero_si512 (), (__mmask16)(A))
++  ((__m512i) \
++   __builtin_ia32_vpshrd_v16si_mask ((__v16si)(__m512i)(B),		\
++				     (__v16si)(__m512i)(C),(int)(D),	\
++				     (__v16si)(__m512i)_mm512_setzero_si512 (), \
++				     (__mmask16)(A)))
+ #define _mm512_shrdi_epi64(A, B, C) \
+   ((__m512i) __builtin_ia32_vpshrd_v8di ((__v8di)(__m512i)(A), \
+-	(__v8di)(__m512i)(B),(int)(C))
++					 (__v8di)(__m512i)(B),(int)(C)))
+ #define _mm512_mask_shrdi_epi64(A, B, C, D, E) \
+   ((__m512i) __builtin_ia32_vpshrd_v8di_mask ((__v8di)(__m512i)(C), \
+-	(__v8di)(__m512i)(D), (int)(E), (__v8di)(__m512i)(A),(__mmask8)(B))
++					      (__v8di)(__m512i)(D), (int)(E), \
++					      (__v8di)(__m512i)(A), \
++					      (__mmask8)(B)))
+ #define _mm512_maskz_shrdi_epi64(A, B, C, D) \
+-  ((__m512i) __builtin_ia32_vpshrd_v8di_mask ((__v8di)(__m512i)(B), \
+-	(__v8di)(__m512i)(C),(int)(D), \
+-	(__v8di)(__m512i)_mm512_setzero_si512 (), (__mmask8)(A))
++  ((__m512i) \
++   __builtin_ia32_vpshrd_v8di_mask ((__v8di)(__m512i)(B),		\
++				    (__v8di)(__m512i)(C),(int)(D),	\
++				    (__v8di)(__m512i)_mm512_setzero_si512 (), \
++				    (__mmask8)(A)))
+ #define _mm512_shldi_epi16(A, B, C) \
+   ((__m512i) __builtin_ia32_vpshld_v32hi ((__v32hi)(__m512i)(A), \
+-						(__v32hi)(__m512i)(B),(int)(C))
++					  (__v32hi)(__m512i)(B),(int)(C)))
+ #define _mm512_shldi_epi32(A, B, C) \
+-  ((__m512i) __builtin_ia32_vpshld_v16si ((__v16si)(__m512i)(A), 	\
+-				(__v16si)(__m512i)(B),(int)(C))
++  ((__m512i) __builtin_ia32_vpshld_v16si ((__v16si)(__m512i)(A),	\
++					  (__v16si)(__m512i)(B),(int)(C)))
+ #define _mm512_mask_shldi_epi32(A, B, C, D, E) \
+   ((__m512i) __builtin_ia32_vpshld_v16si_mask ((__v16si)(__m512i)(C), \
+-	(__v16si)(__m512i)(D), (int)(E), (__v16si)(__m512i)(A),(__mmask16)(B))
++					       (__v16si)(__m512i)(D), \
++					       (int)(E),		\
++					       (__v16si)(__m512i)(A), \
++					       (__mmask16)(B)))
+ #define _mm512_maskz_shldi_epi32(A, B, C, D) \
+-  ((__m512i) __builtin_ia32_vpshld_v16si_mask ((__v16si)(__m512i)(B), \
+-	(__v16si)(__m512i)(C),(int)(D), \
+-	(__v16si)(__m512i)_mm512_setzero_si512 (), (__mmask16)(A))
++  ((__m512i) \
++   __builtin_ia32_vpshld_v16si_mask ((__v16si)(__m512i)(B),		\
++				     (__v16si)(__m512i)(C),(int)(D),	\
++				     (__v16si)(__m512i)_mm512_setzero_si512 (), \
++				     (__mmask16)(A)))
+ #define _mm512_shldi_epi64(A, B, C) \
+   ((__m512i) __builtin_ia32_vpshld_v8di ((__v8di)(__m512i)(A), \
+-	(__v8di)(__m512i)(B),(int)(C))
++					 (__v8di)(__m512i)(B), (int)(C)))
+ #define _mm512_mask_shldi_epi64(A, B, C, D, E) \
+   ((__m512i) __builtin_ia32_vpshld_v8di_mask ((__v8di)(__m512i)(C), \
+-	(__v8di)(__m512i)(D), (int)(E), (__v8di)(__m512i)(A),(__mmask8)(B))
++					      (__v8di)(__m512i)(D), (int)(E), \
++					      (__v8di)(__m512i)(A), \
++					      (__mmask8)(B)))
+ #define _mm512_maskz_shldi_epi64(A, B, C, D) \
+-  ((__m512i) __builtin_ia32_vpshld_v8di_mask ((__v8di)(__m512i)(B), \
+-	(__v8di)(__m512i)(C),(int)(D), \
+-	(__v8di)(__m512i)_mm512_setzero_si512 (), (__mmask8)(A))
++  ((__m512i) \
++   __builtin_ia32_vpshld_v8di_mask ((__v8di)(__m512i)(B),		\
++				    (__v8di)(__m512i)(C),(int)(D),	\
++				    (__v8di)(__m512i)_mm512_setzero_si512 (), \
++				    (__mmask8)(A)))
+ #endif
+ 
+ extern __inline __m512i
+@@ -474,18 +492,28 @@ _mm512_maskz_shldi_epi16 (__mmask32 __A, __m512i __B, __m512i __C, int __D)
+ #else
+ #define _mm512_mask_shrdi_epi16(A, B, C, D, E) \
+   ((__m512i) __builtin_ia32_vpshrd_v32hi_mask ((__v32hi)(__m512i)(C), \
+-	(__v32hi)(__m512i)(D), (int)(E), (__v32hi)(__m512i)(A),(__mmask32)(B))
++					       (__v32hi)(__m512i)(D), \
++					       (int)(E),		\
++					       (__v32hi)(__m512i)(A),	\
++					       (__mmask32)(B)))
+ #define _mm512_maskz_shrdi_epi16(A, B, C, D) \
+-  ((__m512i) __builtin_ia32_vpshrd_v32hi_mask ((__v32hi)(__m512i)(B), \
+-	(__v32hi)(__m512i)(C),(int)(D), \
+-	(__v32hi)(__m512i)_mm512_setzero_si512 (), (__mmask32)(A))
++  ((__m512i) \
++   __builtin_ia32_vpshrd_v32hi_mask ((__v32hi)(__m512i)(B),		\
++				     (__v32hi)(__m512i)(C),(int)(D),	\
++				     (__v32hi)(__m512i)_mm512_setzero_si512 (), \
++				     (__mmask32)(A)))
+ #define _mm512_mask_shldi_epi16(A, B, C, D, E) \
+   ((__m512i) __builtin_ia32_vpshld_v32hi_mask ((__v32hi)(__m512i)(C), \
+-	(__v32hi)(__m512i)(D), (int)(E), (__v32hi)(__m512i)(A),(__mmask32)(B))
++					       (__v32hi)(__m512i)(D), \
++					       (int)(E), \
++					       (__v32hi)(__m512i)(A),	\
++					       (__mmask32)(B)))
+ #define _mm512_maskz_shldi_epi16(A, B, C, D) \
+-  ((__m512i) __builtin_ia32_vpshld_v32hi_mask ((__v32hi)(__m512i)(B),   \
+-	(__v32hi)(__m512i)(C),(int)(D), 				\
+-	(__v32hi)(__m512i)_mm512_setzero_si512 (), (__mmask32)(A))
++  ((__m512i) \
++   __builtin_ia32_vpshld_v32hi_mask ((__v32hi)(__m512i)(B),		\
++				     (__v32hi)(__m512i)(C),(int)(D),	\
++				     (__v32hi)(__m512i)_mm512_setzero_si512 (), \
++				     (__mmask32)(A)))
+ #endif
+ 
+ extern __inline __m512i
+diff --git a/gcc/config/i386/avx512vbmi2vlintrin.h b/gcc/config/i386/avx512vbmi2vlintrin.h
+index d1276c8e0f2..cc4579faea4 100644
+--- a/gcc/config/i386/avx512vbmi2vlintrin.h
++++ b/gcc/config/i386/avx512vbmi2vlintrin.h
+@@ -498,124 +498,175 @@ _mm_shldi_epi64 (__m128i __A, __m128i __B, int __C)
+ #else
+ #define _mm256_shrdi_epi16(A, B, C) \
+   ((__m256i) __builtin_ia32_vpshrd_v16hi ((__v16hi)(__m256i)(A), \
+-	(__v16hi)(__m256i)(B),(int)(C))
++					  (__v16hi)(__m256i)(B),(int)(C)))
+ #define _mm256_mask_shrdi_epi16(A, B, C, D, E) \
+   ((__m256i) __builtin_ia32_vpshrd_v16hi_mask ((__v16hi)(__m256i)(C), \
+-	(__v16hi)(__m256i)(D), (int)(E), (__v16hi)(__m256i)(A),(__mmask16)(B))
++					       (__v16hi)(__m256i)(D), \
++					       (int)(E),		\
++					       (__v16hi)(__m256i)(A), \
++					       (__mmask16)(B)))
+ #define _mm256_maskz_shrdi_epi16(A, B, C, D) \
+-  ((__m256i) __builtin_ia32_vpshrd_v16hi_mask ((__v16hi)(__m256i)(B), \
+-	(__v16hi)(__m256i)(C),(int)(D), \
+-	(__v16hi)(__m256i)_mm256_setzero_si256 (), (__mmask16)(A))
++  ((__m256i) \
++   __builtin_ia32_vpshrd_v16hi_mask ((__v16hi)(__m256i)(B),		\
++				     (__v16hi)(__m256i)(C),(int)(D),	\
++				     (__v16hi)(__m256i)_mm256_setzero_si256 (), \
++				     (__mmask16)(A)))
+ #define _mm256_shrdi_epi32(A, B, C) \
+   ((__m256i) __builtin_ia32_vpshrd_v8si ((__v8si)(__m256i)(A), \
+-	(__v8si)(__m256i)(B),(int)(C))
++					 (__v8si)(__m256i)(B),(int)(C)))
+ #define _mm256_mask_shrdi_epi32(A, B, C, D, E) \
+   ((__m256i) __builtin_ia32_vpshrd_v8si_mask ((__v8si)(__m256i)(C), \
+-	(__v8si)(__m256i)(D), (int)(E), (__v8si)(__m256i)(A),(__mmask8)(B))
++					      (__v8si)(__m256i)(D), \
++					      (int)(E), \
++					      (__v8si)(__m256i)(A), \
++					      (__mmask8)(B)))
+ #define _mm256_maskz_shrdi_epi32(A, B, C, D) \
+-  ((__m256i) __builtin_ia32_vpshrd_v8si_mask ((__v8si)(__m256i)(B), \
+-	(__v8si)(__m256i)(C),(int)(D), \
+-	(__v8si)(__m256i)_mm256_setzero_si256 (), (__mmask8)(A))
++  ((__m256i) \
++   __builtin_ia32_vpshrd_v8si_mask ((__v8si)(__m256i)(B),		\
++				    (__v8si)(__m256i)(C),(int)(D),	\
++				    (__v8si)(__m256i)_mm256_setzero_si256 (), \
++				    (__mmask8)(A)))
+ #define _mm256_shrdi_epi64(A, B, C) \
+   ((__m256i) __builtin_ia32_vpshrd_v4di ((__v4di)(__m256i)(A), \
+-	(__v4di)(__m256i)(B),(int)(C))
++					 (__v4di)(__m256i)(B),(int)(C)))
+ #define _mm256_mask_shrdi_epi64(A, B, C, D, E) \
+   ((__m256i) __builtin_ia32_vpshrd_v4di_mask ((__v4di)(__m256i)(C), \
+-	(__v4di)(__m256i)(D), (int)(E), (__v4di)(__m256i)(A),(__mmask8)(B))
++					      (__v4di)(__m256i)(D), (int)(E), \
++					      (__v4di)(__m256i)(A), \
++					      (__mmask8)(B)))
+ #define _mm256_maskz_shrdi_epi64(A, B, C, D) \
+-  ((__m256i) __builtin_ia32_vpshrd_v4di_mask ((__v4di)(__m256i)(B), \
+-	(__v4di)(__m256i)(C),(int)(D), \
+-	(__v4di)(__m256i)_mm256_setzero_si256 (), (__mmask8)(A))
++  ((__m256i) \
++   __builtin_ia32_vpshrd_v4di_mask ((__v4di)(__m256i)(B),		\
++				    (__v4di)(__m256i)(C),(int)(D),	\
++				    (__v4di)(__m256i)_mm256_setzero_si256 (), \
++				    (__mmask8)(A)))
+ #define _mm_shrdi_epi16(A, B, C) \
+   ((__m128i) __builtin_ia32_vpshrd_v8hi ((__v8hi)(__m128i)(A), \
+-	(__v8hi)(__m128i)(B),(int)(C))
++					 (__v8hi)(__m128i)(B),(int)(C)))
+ #define _mm_mask_shrdi_epi16(A, B, C, D, E) \
+   ((__m128i) __builtin_ia32_vpshrd_v8hi_mask ((__v8hi)(__m128i)(C), \
+-	(__v8hi)(__m128i)(D), (int)(E), (__v8hi)(__m128i)(A),(__mmask8)(B))
++					      (__v8hi)(__m128i)(D), (int)(E), \
++					      (__v8hi)(__m128i)(A), \
++					      (__mmask8)(B)))
+ #define _mm_maskz_shrdi_epi16(A, B, C, D) \
+-  ((__m128i) __builtin_ia32_vpshrd_v8hi_mask ((__v8hi)(__m128i)(B), \
+-	(__v8hi)(__m128i)(C),(int)(D), \
+-	(__v8hi)(__m128i)_mm_setzero_si128 (), (__mmask8)(A))
++  ((__m128i) \
++   __builtin_ia32_vpshrd_v8hi_mask ((__v8hi)(__m128i)(B),		\
++				    (__v8hi)(__m128i)(C),(int)(D),	\
++				    (__v8hi)(__m128i)_mm_setzero_si128 (), \
++				    (__mmask8)(A)))
+ #define _mm_shrdi_epi32(A, B, C) \
+   ((__m128i) __builtin_ia32_vpshrd_v4si ((__v4si)(__m128i)(A), \
+-	(__v4si)(__m128i)(B),(int)(C))
++					 (__v4si)(__m128i)(B),(int)(C)))
+ #define _mm_mask_shrdi_epi32(A, B, C, D, E) \
+-  ((__m128i) __builtin_ia32_vpshrd_v4si_mask ((__v4si)(__m128i)(C), \
+-	(__v4si)(__m128i)(D), (int)(E), (__v4si)(__m128i)(A),(__mmask8)(B))
++  ((__m128i) __builtin_ia32_vpshrd_v4si_mask ((__v4si)(__m128i)(C),	\
++					      (__v4si)(__m128i)(D), (int)(E), \
++					      (__v4si)(__m128i)(A), \
++					      (__mmask8)(B)))
+ #define _mm_maskz_shrdi_epi32(A, B, C, D) \
+-  ((__m128i) __builtin_ia32_vpshrd_v4si_mask ((__v4si)(__m128i)(B), \
+-	(__v4si)(__m128i)(C),(int)(D), \
+-	(__v4si)(__m128i)_mm_setzero_si128 (), (__mmask8)(A))
++  ((__m128i) \
++   __builtin_ia32_vpshrd_v4si_mask ((__v4si)(__m128i)(B),		\
++				    (__v4si)(__m128i)(C),(int)(D),	\
++				    (__v4si)(__m128i)_mm_setzero_si128 (), \
++				    (__mmask8)(A)))
+ #define _mm_shrdi_epi64(A, B, C) \
+   ((__m128i) __builtin_ia32_vpshrd_v2di ((__v2di)(__m128i)(A), \
+-	(__v2di)(__m128i)(B),(int)(C))
++					 (__v2di)(__m128i)(B),(int)(C)))
+ #define _mm_mask_shrdi_epi64(A, B, C, D, E) \
+   ((__m128i) __builtin_ia32_vpshrd_v2di_mask ((__v2di)(__m128i)(C), \
+-	(__v2di)(__m128i)(D), (int)(E), (__v2di)(__m128i)(A),(__mmask8)(B))
++					      (__v2di)(__m128i)(D), (int)(E), \
++					      (__v2di)(__m128i)(A), \
++					      (__mmask8)(B)))
+ #define _mm_maskz_shrdi_epi64(A, B, C, D) \
+-  ((__m128i) __builtin_ia32_vpshrd_v2di_mask ((__v2di)(__m128i)(B), \
+-	(__v2di)(__m128i)(C),(int)(D), \
+-	(__v2di)(__m128i)_mm_setzero_si128 (), (__mmask8)(A))
++  ((__m128i) \
++   __builtin_ia32_vpshrd_v2di_mask ((__v2di)(__m128i)(B),		\
++				    (__v2di)(__m128i)(C),(int)(D),	\
++				    (__v2di)(__m128i)_mm_setzero_si128 (), \
++				    (__mmask8)(A)))
+ #define _mm256_shldi_epi16(A, B, C) \
+   ((__m256i) __builtin_ia32_vpshld_v16hi ((__v16hi)(__m256i)(A), \
+-						(__v16hi)(__m256i)(B),(int)(C))
++					  (__v16hi)(__m256i)(B),(int)(C)))
+ #define _mm256_mask_shldi_epi16(A, B, C, D, E) \
+   ((__m256i) __builtin_ia32_vpshld_v16hi_mask ((__v16hi)(__m256i)(C), \
+-	(__v16hi)(__m256i)(D), (int)(E), (__v16hi)(__m256i)(A),(__mmask16)(B))
++					       (__v16hi)(__m256i)(D), \
++					       (int)(E),		\
++					       (__v16hi)(__m256i)(A), \
++					       (__mmask16)(B)))
+ #define _mm256_maskz_shldi_epi16(A, B, C, D) \
+-  ((__m256i) __builtin_ia32_vpshld_v16hi_mask ((__v16hi)(__m256i)(B), \
+-	(__v16hi)(__m256i)(C),(int)(D), \
+-	(__v16hi)(__m256i)_mm256_setzero_si256 (), (__mmask16)(A))
++  ((__m256i) \
++   __builtin_ia32_vpshld_v16hi_mask ((__v16hi)(__m256i)(B),		\
++				     (__v16hi)(__m256i)(C),(int)(D),	\
++				     (__v16hi)(__m256i)_mm256_setzero_si256 (), \
++				     (__mmask16)(A)))
+ #define _mm256_shldi_epi32(A, B, C) \
+   ((__m256i) __builtin_ia32_vpshld_v8si ((__v8si)(__m256i)(A), \
+-	(__v8si)(__m256i)(B),(int)(C))
++					 (__v8si)(__m256i)(B),(int)(C)))
+ #define _mm256_mask_shldi_epi32(A, B, C, D, E) \
+   ((__m256i) __builtin_ia32_vpshld_v8si_mask ((__v8si)(__m256i)(C), \
+-	(__v8si)(__m256i)(D), (int)(E), (__v8si)(__m256i)(A),(__mmask8)(B))
++					      (__v8si)(__m256i)(D), (int)(E), \
++					      (__v8si)(__m256i)(A), \
++					      (__mmask8)(B)))
+ #define _mm256_maskz_shldi_epi32(A, B, C, D) \
+-  ((__m256i) __builtin_ia32_vpshld_v8si_mask ((__v8si)(__m256i)(B), \
+-	(__v8si)(__m256i)(C),(int)(D), \
+-	(__v8si)(__m256i)_mm256_setzero_si256 (), (__mmask8)(A))
++  ((__m256i) \
++   __builtin_ia32_vpshld_v8si_mask ((__v8si)(__m256i)(B),		\
++				    (__v8si)(__m256i)(C),(int)(D),	\
++				    (__v8si)(__m256i)_mm256_setzero_si256 (), \
++				    (__mmask8)(A)))
+ #define _mm256_shldi_epi64(A, B, C) \
+   ((__m256i) __builtin_ia32_vpshld_v4di ((__v4di)(__m256i)(A), \
+-	(__v4di)(__m256i)(B),(int)(C))
++					 (__v4di)(__m256i)(B),(int)(C)))
+ #define _mm256_mask_shldi_epi64(A, B, C, D, E) \
+   ((__m256i) __builtin_ia32_vpshld_v4di_mask ((__v4di)(__m256i)(C), \
+-	(__v4di)(__m256i)(D), (int)(E), (__v4di)(__m256i)(A),(__mmask8)(B))
++					      (__v4di)(__m256i)(D), (int)(E), \
++					      (__v4di)(__m256i)(A), \
++					      (__mmask8)(B)))
+ #define _mm256_maskz_shldi_epi64(A, B, C, D) \
+-  ((__m256i) __builtin_ia32_vpshld_v4di_mask ((__v4di)(__m256i)(B), \
+-	(__v4di)(__m256i)(C),(int)(D), \
+-	(__v4di)(__m256i)_mm256_setzero_si256 (), (__mmask8)(A))
++  ((__m256i) \
++   __builtin_ia32_vpshld_v4di_mask ((__v4di)(__m256i)(B),		\
++				    (__v4di)(__m256i)(C),(int)(D),	\
++				    (__v4di)(__m256i)_mm256_setzero_si256 (), \
++				    (__mmask8)(A)))
+ #define _mm_shldi_epi16(A, B, C) \
+   ((__m128i) __builtin_ia32_vpshld_v8hi ((__v8hi)(__m128i)(A), \
+-	(__v8hi)(__m128i)(B),(int)(C))
++					 (__v8hi)(__m128i)(B),(int)(C)))
+ #define _mm_mask_shldi_epi16(A, B, C, D, E) \
+   ((__m128i) __builtin_ia32_vpshld_v8hi_mask ((__v8hi)(__m128i)(C), \
+-	(__v8hi)(__m128i)(D), (int)(E), (__v8hi)(__m128i)(A),(__mmask8)(B))
++					      (__v8hi)(__m128i)(D), (int)(E), \
++					      (__v8hi)(__m128i)(A), \
++					      (__mmask8)(B)))
+ #define _mm_maskz_shldi_epi16(A, B, C, D) \
+-  ((__m128i) __builtin_ia32_vpshld_v8hi_mask ((__v8hi)(__m128i)(B), \
+-	(__v8hi)(__m128i)(C),(int)(D), \
+-	(__v8hi)(__m128i)_mm_setzero_si128 (), (__mmask8)(A))
++  ((__m128i) \
++   __builtin_ia32_vpshld_v8hi_mask ((__v8hi)(__m128i)(B),		\
++				    (__v8hi)(__m128i)(C),(int)(D),	\
++				    (__v8hi)(__m128i)_mm_setzero_si128 (), \
++				    (__mmask8)(A)))
+ #define _mm_shldi_epi32(A, B, C) \
+   ((__m128i) __builtin_ia32_vpshld_v4si ((__v4si)(__m128i)(A), \
+-	(__v4si)(__m128i)(B),(int)(C))
++					 (__v4si)(__m128i)(B),(int)(C)))
+ #define _mm_mask_shldi_epi32(A, B, C, D, E) \
+   ((__m128i) __builtin_ia32_vpshld_v4si_mask ((__v4si)(__m128i)(C), \
+-	(__v4si)(__m128i)(D), (int)(E), (__v4si)(__m128i)(A),(__mmask8)(B))
++					      (__v4si)(__m128i)(D), (int)(E), \
++					      (__v4si)(__m128i)(A), \
++					      (__mmask8)(B)))
+ #define _mm_maskz_shldi_epi32(A, B, C, D) \
+-  ((__m128i) __builtin_ia32_vpshld_v4si_mask ((__v4si)(__m128i)(B), \
+-	(__v4si)(__m128i)(C),(int)(D), \
+-	(__v4si)(__m128i)_mm_setzero_si128 (), (__mmask8)(A))
++  ((__m128i) \
++   __builtin_ia32_vpshld_v4si_mask ((__v4si)(__m128i)(B),		\
++				    (__v4si)(__m128i)(C),(int)(D),	\
++				    (__v4si)(__m128i)_mm_setzero_si128 (), \
++				    (__mmask8)(A)))
+ #define _mm_shldi_epi64(A, B, C) \
+   ((__m128i) __builtin_ia32_vpshld_v2di ((__v2di)(__m128i)(A), \
+-	(__v2di)(__m128i)(B),(int)(C))
++					 (__v2di)(__m128i)(B),(int)(C)))
+ #define _mm_mask_shldi_epi64(A, B, C, D, E) \
+   ((__m128i) __builtin_ia32_vpshld_v2di_mask ((__v2di)(__m128i)(C), \
+-	(__v2di)(__m128i)(D), (int)(E), (__v2di)(__m128i)(A),(__mmask8)(B))
++					      (__v2di)(__m128i)(D), (int)(E), \
++					      (__v2di)(__m128i)(A), \
++					      (__mmask8)(B)))
+ #define _mm_maskz_shldi_epi64(A, B, C, D) \
+-  ((__m128i) __builtin_ia32_vpshld_v2di_mask ((__v2di)(__m128i)(B), \
+-	(__v2di)(__m128i)(C),(int)(D), \
+-	(__v2di)(__m128i)_mm_setzero_si128 (), (__mmask8)(A))
++  ((__m128i) \
++   __builtin_ia32_vpshld_v2di_mask ((__v2di)(__m128i)(B),		\
++				    (__v2di)(__m128i)(C),(int)(D),	\
++				    (__v2di)(__m128i)_mm_setzero_si128 (), \
++				    (__mmask8)(A)))
+ #endif
+ 
+ extern __inline __m256i
 diff --git a/gcc/config/i386/avx512vpopcntdqintrin.h b/gcc/config/i386/avx512vpopcntdqintrin.h
 index 3569430baa7..119bdf41887 100644
 --- a/gcc/config/i386/avx512vpopcntdqintrin.h
@@ -15636,7 +16098,7 @@ index 6f6f768f371..4becdcf1cbb 100644
        else
  	/* Every other call, including pure functions, may read any memory
 diff --git a/gcc/dwarf2out.c b/gcc/dwarf2out.c
-index 1cec00f2b85..67a6bc92077 100644
+index 1cec00f2b85..d5b5e20c2d4 100644
 --- a/gcc/dwarf2out.c
 +++ b/gcc/dwarf2out.c
 @@ -15461,7 +15461,7 @@ mem_loc_descriptor (rtx rtl, machine_mode mode,
@@ -15709,6 +16171,29 @@ index 1cec00f2b85..67a6bc92077 100644
    dwarf_file_data **slot
      = file_table->find_slot_with_hash (file_name, htab_hash_string (file_name),
  				       INSERT);
+@@ -29582,9 +29580,9 @@ prune_unused_types (void)
+   for (i = 0; base_types.iterate (i, &base_type); i++)
+     prune_unused_types_mark (base_type, 1);
+ 
+-  /* For -fvar-tracking-assignments, also set the mark on nodes that could be
+-     referenced by DW_TAG_call_site DW_AT_call_origin (i.e. direct call
+-     callees).  */
++  /* Also set the mark on nodes that could be referenced by
++     DW_TAG_call_site DW_AT_call_origin (i.e. direct call callees) or
++     by DW_TAG_inlined_subroutine origins.  */
+   cgraph_node *cnode;
+   FOR_EACH_FUNCTION (cnode)
+     if (cnode->referred_to_p (false))
+@@ -29593,8 +29591,7 @@ prune_unused_types (void)
+ 	if (die == NULL || die->die_mark)
+ 	  continue;
+ 	for (cgraph_edge *e = cnode->callers; e; e = e->next_caller)
+-	  if (e->caller != cnode
+-	      && opt_for_fn (e->caller->decl, flag_var_tracking_assignments))
++	  if (e->caller != cnode)
+ 	    {
+ 	      prune_unused_types_mark (die, 1);
+ 	      break;
 diff --git a/gcc/expmed.c b/gcc/expmed.c
 index d7f8e9a5d76..c5f5499c013 100644
 --- a/gcc/expmed.c
@@ -19322,6 +19807,46 @@ index a46f375017b..3478cf59f91 100644
  #include "stor-layout.h"
  #include "tree-dfa.h"
  #include "builtins.h"
+diff --git a/gcc/genmatch.c b/gcc/genmatch.c
+index 7b9b09c7d8b..345e21dac40 100644
+--- a/gcc/genmatch.c
++++ b/gcc/genmatch.c
+@@ -3035,10 +3035,15 @@ dt_node::gen_kids_1 (FILE *f, int indent, bool gimple,
+ 	    {
+ 	      expr *e = as_a <expr *>(fns[i]->op);
+ 	      fprintf_indent (f, indent, "case %s:\n", e->operation->id);
+-	      fprintf_indent (f, indent, "  {\n");
+-	      fns[i]->gen (f, indent + 4, true);
+-	      fprintf_indent (f, indent, "    break;\n");
+-	      fprintf_indent (f, indent, "  }\n");
++	      /* We need to be defensive against bogus prototypes allowing
++		 calls with not enough arguments.  */
++	      fprintf_indent (f, indent,
++			      "  if (gimple_call_num_args (def) == %d)\n"
++			      "    {\n", e->ops.length ());
++	      fns[i]->gen (f, indent + 6, true);
++	      fprintf_indent (f, indent,
++			      "    }\n"
++			      "  break;\n");
+ 	    }
+ 
+ 	  fprintf_indent (f, indent, "default:;\n");
+@@ -3099,10 +3104,11 @@ dt_node::gen_kids_1 (FILE *f, int indent, bool gimple,
+ 	  gcc_assert (e->operation->kind == id_base::FN);
+ 
+ 	  fprintf_indent (f, indent, "case %s:\n", e->operation->id);
+-	  fprintf_indent (f, indent, "  {\n");
+-	  generic_fns[j]->gen (f, indent + 4, false);
+-	  fprintf_indent (f, indent, "    break;\n");
+-	  fprintf_indent (f, indent, "  }\n");
++	  fprintf_indent (f, indent, "  if (call_expr_nargs (%s) == %d)\n"
++				     "    {\n", kid_opname, e->ops.length ());
++	  generic_fns[j]->gen (f, indent + 6, false);
++	  fprintf_indent (f, indent, "    }\n"
++				     "  break;\n");
+ 	}
+       fprintf_indent (f, indent, "default:;\n");
+ 
 diff --git a/gcc/ggc-none.c b/gcc/ggc-none.c
 index 6edec27868c..737429f9e49 100644
 --- a/gcc/ggc-none.c
@@ -19664,7 +20189,7 @@ index 34b8d6fda7d..7185c07f36b 100644
  	  /* Emit the EH region holding STMT.  */
  	  region = lookup_stmt_eh_lp_fn (fn, stmt);
 diff --git a/gcc/gimplify.c b/gcc/gimplify.c
-index 98408b981dc..c57113cda1d 100644
+index 98408b981dc..f91ff3aca29 100644
 --- a/gcc/gimplify.c
 +++ b/gcc/gimplify.c
 @@ -7058,6 +7058,8 @@ omp_default_clause (struct gimplify_omp_ctx *ctx, tree decl,
@@ -19704,6 +20229,16 @@ index 98408b981dc..c57113cda1d 100644
  		}
  	    }
  	  if (outer_ctx)
+@@ -13519,7 +13525,8 @@ gimplify_expr (tree *expr_p, gimple_seq *pre_p, gimple_seq *post_p,
+ 	{
+ 	  /* Avoid the extra copy if possible.  */
+ 	  *expr_p = create_tmp_reg (TREE_TYPE (name));
+-	  gimple_set_lhs (SSA_NAME_DEF_STMT (name), *expr_p);
++	  if (!gimple_nop_p (SSA_NAME_DEF_STMT (name)))
++	    gimple_set_lhs (SSA_NAME_DEF_STMT (name), *expr_p);
+ 	  release_ssa_name (name);
+ 	}
+     }
 diff --git a/gcc/go/gofrontend/escape.cc b/gcc/go/gofrontend/escape.cc
 index e1c98094831..23fa7552f4c 100644
 --- a/gcc/go/gofrontend/escape.cc
@@ -25260,6 +25795,19 @@ index 268a38799d6..01af063a222 100644
  	      && xmode_width > inner_width)
  	    nonzero
  	      |= (GET_MODE_MASK (GET_MODE (x)) & ~GET_MODE_MASK (inner_mode));
+diff --git a/gcc/sel-sched.c b/gcc/sel-sched.c
+index f6e94bfc15c..f127ff74599 100644
+--- a/gcc/sel-sched.c
++++ b/gcc/sel-sched.c
+@@ -3331,8 +3331,6 @@ sel_target_adjust_priority (expr_t expr)
+   else
+     new_priority = priority;
+ 
+-  gcc_assert (new_priority >= 0);
+-
+   /* If the priority has changed, adjust EXPR_PRIORITY_ADJ accordingly.  */
+   EXPR_PRIORITY_ADJ (expr) = new_priority - EXPR_PRIORITY (expr);
+ 
 diff --git a/gcc/simplify-rtx.c b/gcc/simplify-rtx.c
 index 89a46a933fa..50bbb79655b 100644
 --- a/gcc/simplify-rtx.c
@@ -25339,10 +25887,58 @@ index 29f6cdc4667..33b4be79c0f 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..24e5e88d763 100644
+index bc11ae4ae0b..838f8232254 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,1467 @@
+@@ -1,3 +1,1515 @@
++2020-02-14  Richard Biener  <rguenther@suse.de>
++
++	Backport from mainline
++	2020-02-05  Richard Biener  <rguenther@suse.de>
++
++	PR middle-end/90648
++	* gcc.dg/pr90648.c: New testcase.
++
++2020-02-14  Richard Biener  <rguenther@suse.de>
++
++	Backport from mainline
++	2020-01-22  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/93381
++	* gcc.dg/torture/pr93381.c: New testcase.
++
++2020-02-14  Richard Biener  <rguenther@suse.de>
++
++	Backport from mainline
++	2020-01-28  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/93439
++	* gfortran.dg/graphite/pr93439.f90: New testcase.
++
++2020-02-14  Richard Biener  <rguenther@suse.de>
++
++	Backport from mainline
++	2020-01-09  Richard Biener  <rguenther@suse.de>
++
++	PR middle-end/93054
++	* gcc.dg/pr93054.c: New testcase.
++
++2020-02-14  Richard Biener  <rguenther@suse.de>
++
++	Backport from mainline
++	2020-01-20  Richard Biener  <rguenther@suse.de>
++
++	PR debug/92763
++	* g++.dg/debug/pr92763.C: New testcase.
++
++2020-02-14  Richard Biener  <rguenther@suse.de>
++
++	Backport from mainline
++	2019-11-29  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/92704
++	* gcc.dg/torture/pr92704.c: New testcase.
++
 +2020-02-13  Jakub Jelinek  <jakub@redhat.com>
 +
 +	PR c/93576
@@ -26810,7 +27406,7 @@ index bc11ae4ae0b..24e5e88d763 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +1891,7 @@
+@@ -427,7 +1939,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -26819,7 +27415,7 @@ index bc11ae4ae0b..24e5e88d763 100644
  	(check_effective_target_powerpc_p8vector_ok): No support for Darwin.
  	(check_effective_target_powerpc_p9vector_ok): Likewise.
  	(check_effective_target_powerpc_float128_sw_ok): Likewise.
-@@ -720,7 +2184,7 @@
+@@ -720,7 +2232,7 @@
  
  	Backport from mainline
  	PR fortran/91077
@@ -26828,7 +27424,7 @@ index bc11ae4ae0b..24e5e88d763 100644
  
  2019-07-05  Szabolcs Nagy  <szabolcs.nagy@arm.com>
  
-@@ -803,7 +2267,7 @@
+@@ -803,7 +2315,7 @@
  	Backport fom mainline
  	2019-06-21  Jeff Law  <law@redhat.com>
  
@@ -26837,7 +27433,7 @@ index bc11ae4ae0b..24e5e88d763 100644
  	* gcc.c-torture/execute/pr90949.c: New test.
  
  2019-06-26  Martin Jambor  <mjambor@suse.cz>
-@@ -969,7 +2433,7 @@
+@@ -969,7 +2481,7 @@
         * gcc.target/i386/pr82699-6.c: Likewise
         * gcc.target/i386/returninst1.c: Likewise
         * gcc.target/i386/returninst2.c: Likewise
@@ -26846,7 +27442,7 @@ index bc11ae4ae0b..24e5e88d763 100644
  
  2019-05-30  Iain Sandoe  <iain@sandoe.co.uk>
  
-@@ -1131,7 +2595,7 @@
+@@ -1131,7 +2643,7 @@
  
  	Backport from trunk
  	PR fortran/90498
@@ -26855,7 +27451,7 @@ index bc11ae4ae0b..24e5e88d763 100644
  
  2019-05-17  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -3801,21 +5265,21 @@
+@@ -3801,21 +5313,21 @@
  2019-02-23  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88117
@@ -26884,7 +27480,7 @@ index bc11ae4ae0b..24e5e88d763 100644
  
  2019-02-22  David Malcolm  <dmalcolm@redhat.com>
  
-@@ -4444,7 +5908,7 @@
+@@ -4444,7 +5956,7 @@
  2019-02-09  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/89200
@@ -26893,7 +27489,7 @@ index bc11ae4ae0b..24e5e88d763 100644
  
  2019-02-09  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -4704,17 +6168,17 @@
+@@ -4704,17 +6216,17 @@
  2019-02-02  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88393
@@ -29109,6 +29705,32 @@ index 00000000000..6cd99cc9bb8
 +template <class R, typename... Args>
 +int Bind(R(Args...), typename B<Args>::type...) { return 0; }
 +void KeepBufferRefs(A, A) { A a, b(Bind(KeepBufferRefs, a, b)); }
+diff --git a/gcc/testsuite/g++.dg/debug/pr92763.C b/gcc/testsuite/g++.dg/debug/pr92763.C
+new file mode 100644
+index 00000000000..16dccf3b56f
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/debug/pr92763.C
+@@ -0,0 +1,20 @@
++// { dg-do compile }
++// { dg-require-effective-target fopenmp }
++// { dg-additional-options "-fno-var-tracking-assignments -fopenmp" }
++
++struct A
++{
++  typedef int T;
++  #pragma omp declare reduction (y : T : [&omp_out, &omp_in]() { omp_out += omp_in; return 0; }()) initializer (omp_priv = [omp_orig]() { return omp_orig; }())
++  static void foo ();
++};
++
++void
++A::foo ()
++{
++  int r = 0, s = 0;
++  #pragma omp parallel for reduction (y : r, s)
++  for (int i = 0; i < 1; i++)
++    {
++    }
++}
 diff --git a/gcc/testsuite/g++.dg/diagnostic/pr90767-1.C b/gcc/testsuite/g++.dg/diagnostic/pr90767-1.C
 new file mode 100644
 index 00000000000..7d1cd3db398
@@ -32014,6 +32636,20 @@ index 00000000000..4ceaa433f3c
 +#endif
 +  return 0;
 +}
+diff --git a/gcc/testsuite/gcc.dg/pr90648.c b/gcc/testsuite/gcc.dg/pr90648.c
+new file mode 100644
+index 00000000000..bf1fa989478
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/pr90648.c
+@@ -0,0 +1,8 @@
++/* { dg-do compile } */
++/* { dg-options "-O" } */
++
++extern double copysign ();
++double foo (double x)
++{
++  return x * copysign (); /* { dg-warning "too few arguments" } */
++}
 diff --git a/gcc/testsuite/gcc.dg/pr90898.c b/gcc/testsuite/gcc.dg/pr90898.c
 new file mode 100644
 index 00000000000..e992ea34cd9
@@ -32355,6 +32991,22 @@ index 00000000000..04a80924650
 +/* { dg-options "-Os -fmodulo-sched -fmodulo-sched-allow-regmoves --param sms-dfa-history=8" } */
 +
 +#include "../gcc.c-torture/execute/pr61682.c"
+diff --git a/gcc/testsuite/gcc.dg/pr93054.c b/gcc/testsuite/gcc.dg/pr93054.c
+new file mode 100644
+index 00000000000..1d4680d28e6
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/pr93054.c
+@@ -0,0 +1,10 @@
++/* { dg-do compile } */
++
++__attribute__ ((returns_twice)) int
++bp (int);
++
++__attribute__ ((noreturn)) int
++cb (void)
++{
++  return bp (cb ()); /* { dg-warning "declared .noreturn." } */
++}
 diff --git a/gcc/testsuite/gcc.dg/pr93576.c b/gcc/testsuite/gcc.dg/pr93576.c
 new file mode 100644
 index 00000000000..13c34f3771f
@@ -32472,6 +33124,67 @@ index 00000000000..f48010d6d31
 +	*d++ = a[b] & 1 << e ? '1' : '0';
 +  }
 +  f();
++}
+diff --git a/gcc/testsuite/gcc.dg/torture/pr92704.c b/gcc/testsuite/gcc.dg/torture/pr92704.c
+new file mode 100644
+index 00000000000..79994a39b54
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/torture/pr92704.c
+@@ -0,0 +1,24 @@
++/* { dg-do compile } */
++/* { dg-additional-options "-fexceptions -fnon-call-exceptions -fno-tree-dce -ftree-loop-if-convert" } */
++int zr, yx;
++
++void __attribute__ ((simd))
++oj (int rd, int q7)
++{
++  int wo = (__UINTPTR_TYPE__)&rd;
++
++  while (q7 < 1)
++    {
++      int kv;
++      short int v3;
++
++      for (v3 = 0; v3 < 82; v3 += 3)
++        {
++        }
++
++      kv = zr ? 0 : v3;
++      yx = kv < rd;
++      zr = zr && yx;
++      ++q7;
++    }
++}
+diff --git a/gcc/testsuite/gcc.dg/torture/pr93381.c b/gcc/testsuite/gcc.dg/torture/pr93381.c
+new file mode 100644
+index 00000000000..cec4b5d8daa
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/torture/pr93381.c
+@@ -0,0 +1,25 @@
++/* { dg-do run } */
++
++static struct S { int *p1; int *p2; } s;
++typedef __UINTPTR_TYPE__ uintptr_t;
++int foo()
++{
++  int i = 1, j = 2;
++  struct S s;
++  int **p;
++  s.p1 = &i;
++  s.p2 = &j;
++  p = &s.p1;
++  uintptr_t pi = (uintptr_t)p;
++  pi = pi + sizeof (int *);
++  p = (int **)pi;
++  **p = 3;
++  return j;
++}
++
++int main()
++{
++  if (foo () != 3)
++    __builtin_abort ();
++  return 0;
 +}
 diff --git a/gcc/testsuite/gcc.dg/tree-ssa/gen-vect-11.c b/gcc/testsuite/gcc.dg/tree-ssa/gen-vect-11.c
 index 650e73a5ee8..dd1c0ac3eba 100644
@@ -33263,6 +33976,86 @@ index 00000000000..963823c8a78
 +  b[7] = _kshiftri_mask16 (b[7], 0x7f);
 +  b[8] = _kshiftli_mask16 (b[8], 0xff);
 +  b[9] = _kshiftri_mask16 (b[9], 0xff);
++}
+diff --git a/gcc/testsuite/gcc.target/i386/avx512vbmi2-vpshld-1.c b/gcc/testsuite/gcc.target/i386/avx512vbmi2-vpshld-1.c
+new file mode 100644
+index 00000000000..0b29923b721
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/avx512vbmi2-vpshld-1.c
+@@ -0,0 +1,34 @@
++/* { dg-do compile } */
++/* { dg-options "-mavx512vbmi2 -mavx512bw -O2" } */
++/* { dg-final { scan-assembler-times "vpshldw\[ \\t\]+\[^\{\n\]*\\\$3\[^\n\r]*%zmm\[0-9\]+\[^\n\r]*%zmm\[0-9\]+\[^\n\r]*%zmm\[0-9\]+(?:\n|\[ \\t\]+#)" 1 } } */
++/* { dg-final { scan-assembler-times "vpshldw\[ \\t\]+\[^\{\n\]*\\\$3\[^\n\r]*%zmm\[0-9\]+\[^\\n\\r]*%zmm\[0-9\]+\[^\\n\\r\]*%zmm\[0-9\]+\{%k\[1-7\]\}(?:\n|\[ \\t\]+#)" 1 } } */
++/* { dg-final { scan-assembler-times "vpshldw\[ \\t\]+\[^\{\n\]*\\\$3\[^\n\r]*%zmm\[0-9\]+\[^\\n\\r]*%zmm\[0-9\]+\[^\\n\\r\]*%zmm\[0-9\]+\{%k\[1-7\]\}\{z\}(?:\n|\[ \\t\]+#)" 1 } } */
++/* { dg-final { scan-assembler-times "vpshldd\[ \\t\]+\[^\{\n\]*\\\$3\[^\n\r]*%zmm\[0-9\]+\[^\n\r]*%zmm\[0-9\]+\[^\n\r]*%zmm\[0-9\]+(?:\n|\[ \\t\]+#)" 1 } } */
++/* { dg-final { scan-assembler-times "vpshldd\[ \\t\]+\[^\{\n\]*\\\$3\[^\n\r]*%zmm\[0-9\]+\[^\\n\\r]*%zmm\[0-9\]+\[^\\n\\r\]*%zmm\[0-9\]+\{%k\[1-7\]\}(?:\n|\[ \\t\]+#)" 1 } } */
++/* { dg-final { scan-assembler-times "vpshldd\[ \\t\]+\[^\{\n\]*\\\$3\[^\n\r]*%zmm\[0-9\]+\[^\\n\\r]*%zmm\[0-9\]+\[^\\n\\r\]*%zmm\[0-9\]+\{%k\[1-7\]\}\{z\}(?:\n|\[ \\t\]+#)" 1 } } */
++/* { dg-final { scan-assembler-times "vpshldq\[ \\t\]+\[^\{\n\]*\\\$3\[^\n\r]*%zmm\[0-9\]+\[^\n\r]*%zmm\[0-9\]+\[^\n\r]*%zmm\[0-9\]+(?:\n|\[ \\t\]+#)" 1 } } */
++/* { dg-final { scan-assembler-times "vpshldq\[ \\t\]+\[^\{\n\]*\\\$3\[^\n\r]*%zmm\[0-9\]+\[^\\n\\r]*%zmm\[0-9\]+\[^\\n\\r\]*%zmm\[0-9\]+\{%k\[1-7\]\}(?:\n|\[ \\t\]+#)" 1 } } */
++/* { dg-final { scan-assembler-times "vpshldq\[ \\t\]+\[^\{\n\]*\\\$3\[^\n\r]*%zmm\[0-9\]+\[^\\n\\r]*%zmm\[0-9\]+\[^\\n\\r\]*%zmm\[0-9\]+\{%k\[1-7\]\}\{z\}(?:\n|\[ \\t\]+#)" 1 } } */
++
++#include <immintrin.h>
++
++volatile __m512i x,y;
++volatile __mmask32 m32;
++volatile __mmask16 m16;
++volatile __mmask8 m8;
++
++void extern
++avx512f_test (void)
++{
++  x = _mm512_shldi_epi16 (x, y, 3);
++  x = _mm512_maskz_shldi_epi16 (m32, x, y, 3);
++  x = _mm512_mask_shldi_epi16 (x, m32, y, x, 3);
++
++  x = _mm512_shldi_epi32 (x, y, 3);
++  x = _mm512_maskz_shldi_epi32 (m16, x, y, 3);
++  x = _mm512_mask_shldi_epi32 (x, m16, y, x, 3);
++
++  x = _mm512_shldi_epi64 (x, y, 3);
++  x = _mm512_maskz_shldi_epi64 (m8, x, y, 3);
++  x = _mm512_mask_shldi_epi64 (x, m8, y, x, 3);
++}
+diff --git a/gcc/testsuite/gcc.target/i386/avx512vbmi2-vpshrd-1.c b/gcc/testsuite/gcc.target/i386/avx512vbmi2-vpshrd-1.c
+new file mode 100644
+index 00000000000..bb4de785244
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/avx512vbmi2-vpshrd-1.c
+@@ -0,0 +1,34 @@
++/* { dg-do compile } */
++/* { dg-options "-mavx512vbmi2 -mavx512bw -O2" } */
++/* { dg-final { scan-assembler-times "vpshrdw\[ \\t\]+\[^\{\n\]*\\\$3\[^\n\r]*%zmm\[0-9\]+\[^\n\r]*%zmm\[0-9\]+\[^\n\r]*%zmm\[0-9\]+(?:\n|\[ \\t\]+#)" 1 } } */
++/* { dg-final { scan-assembler-times "vpshrdw\[ \\t\]+\[^\{\n\]*\\\$3\[^\n\r]*%zmm\[0-9\]+\[^\\n\\r]*%zmm\[0-9\]+\[^\\n\\r\]*%zmm\[0-9\]+\{%k\[1-7\]\}(?:\n|\[ \\t\]+#)" 1 } } */
++/* { dg-final { scan-assembler-times "vpshrdw\[ \\t\]+\[^\{\n\]*\\\$3\[^\n\r]*%zmm\[0-9\]+\[^\\n\\r]*%zmm\[0-9\]+\[^\\n\\r\]*%zmm\[0-9\]+\{%k\[1-7\]\}\{z\}(?:\n|\[ \\t\]+#)" 1 } } */
++/* { dg-final { scan-assembler-times "vpshrdd\[ \\t\]+\[^\{\n\]*\\\$3\[^\n\r]*%zmm\[0-9\]+\[^\n\r]*%zmm\[0-9\]+\[^\n\r]*%zmm\[0-9\]+(?:\n|\[ \\t\]+#)" 1 } } */
++/* { dg-final { scan-assembler-times "vpshrdd\[ \\t\]+\[^\{\n\]*\\\$3\[^\n\r]*%zmm\[0-9\]+\[^\\n\\r]*%zmm\[0-9\]+\[^\\n\\r\]*%zmm\[0-9\]+\{%k\[1-7\]\}(?:\n|\[ \\t\]+#)" 1 } } */
++/* { dg-final { scan-assembler-times "vpshrdd\[ \\t\]+\[^\{\n\]*\\\$3\[^\n\r]*%zmm\[0-9\]+\[^\\n\\r]*%zmm\[0-9\]+\[^\\n\\r\]*%zmm\[0-9\]+\{%k\[1-7\]\}\{z\}(?:\n|\[ \\t\]+#)" 1 } } */
++/* { dg-final { scan-assembler-times "vpshrdq\[ \\t\]+\[^\{\n\]*\\\$3\[^\n\r]*%zmm\[0-9\]+\[^\n\r]*%zmm\[0-9\]+\[^\n\r]*%zmm\[0-9\]+(?:\n|\[ \\t\]+#)" 1 } } */
++/* { dg-final { scan-assembler-times "vpshrdq\[ \\t\]+\[^\{\n\]*\\\$3\[^\n\r]*%zmm\[0-9\]+\[^\\n\\r]*%zmm\[0-9\]+\[^\\n\\r\]*%zmm\[0-9\]+\{%k\[1-7\]\}(?:\n|\[ \\t\]+#)" 1 } } */
++/* { dg-final { scan-assembler-times "vpshrdq\[ \\t\]+\[^\{\n\]*\\\$3\[^\n\r]*%zmm\[0-9\]+\[^\\n\\r]*%zmm\[0-9\]+\[^\\n\\r\]*%zmm\[0-9\]+\{%k\[1-7\]\}\{z\}(?:\n|\[ \\t\]+#)" 1 } } */
++
++#include <immintrin.h>
++
++volatile __m512i x,y;
++volatile __mmask32 m32;
++volatile __mmask16 m16;
++volatile __mmask8 m8;
++
++void extern
++avx512f_test (void)
++{
++  x = _mm512_shrdi_epi16 (x, y, 3);
++  x = _mm512_maskz_shrdi_epi16 (m32, x, y, 3);
++  x = _mm512_mask_shrdi_epi16 (x, m32, y, x, 3);
++
++  x = _mm512_shrdi_epi32 (x, y, 3);
++  x = _mm512_maskz_shrdi_epi32 (m16, x, y, 3);
++  x = _mm512_mask_shrdi_epi32 (x, m16, y, x, 3);
++
++  x = _mm512_shrdi_epi64 (x, y, 3);
++  x = _mm512_maskz_shrdi_epi64 (m8, x, y, 3);
++  x = _mm512_mask_shrdi_epi64 (x, m8, y, x, 3);
 +}
 diff --git a/gcc/testsuite/gcc.target/i386/avx512vl-pr93009.c b/gcc/testsuite/gcc.target/i386/avx512vl-pr93009.c
 new file mode 100644
@@ -34362,6 +35155,213 @@ index 63af6741e05..3d4497000dc 100644
  /* { dg-final { scan-assembler-times {\tpause} 2 } } */
  /* { dg-final { scan-assembler-times {\tlfence} 2 } } */
  /* { dg-final { scan-assembler "call\[ \t\]*_?__x86_indirect_thunk_(r|e)ax" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/sse-12.c b/gcc/testsuite/gcc.target/i386/sse-12.c
+index f7f55f4317e..84a231fba8f 100644
+--- a/gcc/testsuite/gcc.target/i386/sse-12.c
++++ b/gcc/testsuite/gcc.target/i386/sse-12.c
+@@ -3,7 +3,7 @@
+    popcntintrin.h gfniintrin.h and mm_malloc.h are usable
+    with -O -std=c89 -pedantic-errors.  */
+ /* { dg-do compile } */
+-/* { dg-options "-O -std=c89 -pedantic-errors -march=k8 -msse4a -m3dnow -mavx -mavx2 -mfma4 -mxop -maes -mpclmul -mpopcnt -mabm -mlzcnt -mbmi -mbmi2 -mtbm -mlwp -mfsgsbase -mrdrnd -mf16c -mfma -mrtm -mrdseed -mprfchw -madx -mfxsr -mxsaveopt -mavx512f -mavx512er -mavx512cd -mavx512pf -msha -mprefetchwt1 -mxsavec -mxsaves -mclflushopt -mavx512bw -mavx512dq -mavx512vl -mavx512vbmi -mavx512ifma -mavx5124fmaps -mavx5124vnniw -mavx512vpopcntdq -mclwb -mmwaitx -mclzero -mpku -msgx -mrdpid -mgfni -mavx512bitalg -mpconfig -mwbnoinvd" } */
++/* { dg-options "-O -std=c89 -pedantic-errors -march=k8 -msse4a -m3dnow -mavx -mavx2 -mfma4 -mxop -maes -mpclmul -mpopcnt -mabm -mlzcnt -mbmi -mbmi2 -mtbm -mlwp -mfsgsbase -mrdrnd -mf16c -mfma -mrtm -mrdseed -mprfchw -madx -mfxsr -mxsaveopt -mavx512f -mavx512er -mavx512cd -mavx512pf -msha -mprefetchwt1 -mxsavec -mxsaves -mclflushopt -mavx512bw -mavx512dq -mavx512vl -mavx512vbmi -mavx512vbmi2 -mavx512ifma -mavx5124fmaps -mavx5124vnniw -mavx512vpopcntdq -mclwb -mmwaitx -mclzero -mpku -msgx -mrdpid -mgfni -mavx512bitalg -mpconfig -mwbnoinvd" } */
+ 
+ #include <x86intrin.h>
+ 
+diff --git a/gcc/testsuite/gcc.target/i386/sse-13.c b/gcc/testsuite/gcc.target/i386/sse-13.c
+index e868f6d293f..c544fbd7c15 100644
+--- a/gcc/testsuite/gcc.target/i386/sse-13.c
++++ b/gcc/testsuite/gcc.target/i386/sse-13.c
+@@ -1,5 +1,5 @@
+ /* { dg-do compile } */
+-/* { dg-options "-O2 -Werror-implicit-function-declaration -march=k8 -msse4a -m3dnow -mavx -mavx2 -mfma4 -mxop -maes -mpclmul -mpopcnt -mabm -mlzcnt -mbmi -mbmi2 -mtbm -mlwp -mfsgsbase -mrdrnd -mf16c -mfma -mrtm -mrdseed -mprfchw -madx -mfxsr -mxsaveopt -mavx512f -mavx512er -mavx512cd -mavx512pf -msha -mprefetchwt1 -mxsavec -mxsaves -mclflushopt -mavx512vl -mavx512dq -mavx512bw -mavx512vbmi -mavx512ifma -mavx5124fmaps -mavx5124vnniw -mavx512vpopcntdq -mclwb -mmwaitx -mclzero -mpku -msgx -mrdpid -mgfni -mavx512bitalg -mpconfig -mwbnoinvd" } */
++/* { dg-options "-O2 -Werror-implicit-function-declaration -march=k8 -msse4a -m3dnow -mavx -mavx2 -mfma4 -mxop -maes -mpclmul -mpopcnt -mabm -mlzcnt -mbmi -mbmi2 -mtbm -mlwp -mfsgsbase -mrdrnd -mf16c -mfma -mrtm -mrdseed -mprfchw -madx -mfxsr -mxsaveopt -mavx512f -mavx512er -mavx512cd -mavx512pf -msha -mprefetchwt1 -mxsavec -mxsaves -mclflushopt -mavx512vl -mavx512dq -mavx512bw -mavx512vbmi -mavx512vbmi2 -mavx512ifma -mavx5124fmaps -mavx5124vnniw -mavx512vpopcntdq -mclwb -mmwaitx -mclzero -mpku -msgx -mrdpid -mgfni -mavx512bitalg -mpconfig -mwbnoinvd" } */
+ /* { dg-add-options bind_pic_locally } */
+ 
+ #include <mm_malloc.h>
+diff --git a/gcc/testsuite/gcc.target/i386/sse-14.c b/gcc/testsuite/gcc.target/i386/sse-14.c
+index 748339f7d47..99719325773 100644
+--- a/gcc/testsuite/gcc.target/i386/sse-14.c
++++ b/gcc/testsuite/gcc.target/i386/sse-14.c
+@@ -1,5 +1,5 @@
+ /* { dg-do compile } */
+-/* { dg-options "-O0 -Werror-implicit-function-declaration -march=k8 -msse4a -m3dnow -mavx -mavx2 -mfma4 -mxop -maes -mpclmul -mpopcnt -mabm -mlzcnt -mbmi -mbmi2 -mtbm -mlwp -mfsgsbase -mrdrnd -mf16c -mfma -mrtm -mrdseed -mprfchw -madx -mfxsr -mxsaveopt -mavx512f -mavx512er -mavx512cd -mavx512pf -msha -mprefetchwt1 -mxsavec -mxsaves -mclflushopt -mavx512dq -mavx512bw -mavx512vl -mavx512ifma -mavx512vbmi -mavx5124fmaps -mavx5124vnniw -mavx512vpopcntdq -mclwb -mmwaitx -mclzero -mpku -msgx -mrdpid -mgfni -mpconfig -mwbnoinvd" } */
++/* { dg-options "-O0 -Werror-implicit-function-declaration -march=k8 -msse4a -m3dnow -mavx -mavx2 -mfma4 -mxop -maes -mpclmul -mpopcnt -mabm -mlzcnt -mbmi -mbmi2 -mtbm -mlwp -mfsgsbase -mrdrnd -mf16c -mfma -mrtm -mrdseed -mprfchw -madx -mfxsr -mxsaveopt -mavx512f -mavx512er -mavx512cd -mavx512pf -msha -mprefetchwt1 -mxsavec -mxsaves -mclflushopt -mavx512dq -mavx512bw -mavx512vl -mavx512ifma -mavx512vbmi -mavx512vbmi2 -mavx5124fmaps -mavx5124vnniw -mavx512vpopcntdq -mclwb -mmwaitx -mclzero -mpku -msgx -mrdpid -mgfni -mpconfig -mwbnoinvd" } */
+ /* { dg-add-options bind_pic_locally } */
+ 
+ #include <mm_malloc.h>
+@@ -315,6 +315,24 @@ test_2 (_mm_sqrt_round_sd, __m128d, __m128d, __m128d, 9)
+ test_2 (_mm_sqrt_round_ss, __m128, __m128, __m128, 9)
+ test_2 (_mm_sub_round_sd, __m128d, __m128d, __m128d, 9)
+ test_2 (_mm_sub_round_ss, __m128, __m128, __m128, 9)
++test_2 (_mm512_shrdi_epi16, __m512i, __m512i, __m512i, 1)
++test_2 (_mm512_shrdi_epi32, __m512i, __m512i, __m512i, 1)
++test_2 (_mm512_shrdi_epi64, __m512i, __m512i, __m512i, 1)
++test_2 (_mm256_shrdi_epi16, __m256i, __m256i, __m256i, 1)
++test_2 (_mm256_shrdi_epi32, __m256i, __m256i, __m256i, 1)
++test_2 (_mm256_shrdi_epi64, __m256i, __m256i, __m256i, 1)
++test_2 (_mm_shrdi_epi16, __m128i, __m128i, __m128i, 1)
++test_2 (_mm_shrdi_epi32, __m128i, __m128i, __m128i, 1)
++test_2 (_mm_shrdi_epi64, __m128i, __m128i, __m128i, 1)
++test_2 (_mm512_shldi_epi16, __m512i, __m512i, __m512i, 1)
++test_2 (_mm512_shldi_epi32, __m512i, __m512i, __m512i, 1)
++test_2 (_mm512_shldi_epi64, __m512i, __m512i, __m512i, 1)
++test_2 (_mm256_shldi_epi16, __m256i, __m256i, __m256i, 1)
++test_2 (_mm256_shldi_epi32, __m256i, __m256i, __m256i, 1)
++test_2 (_mm256_shldi_epi64, __m256i, __m256i, __m256i, 1)
++test_2 (_mm_shldi_epi16, __m128i, __m128i, __m128i, 1)
++test_2 (_mm_shldi_epi32, __m128i, __m128i, __m128i, 1)
++test_2 (_mm_shldi_epi64, __m128i, __m128i, __m128i, 1)
+ test_2x (_mm512_cmp_round_pd_mask, __mmask8, __m512d, __m512d, 1, 8)
+ test_2x (_mm512_cmp_round_ps_mask, __mmask16, __m512, __m512, 1, 8)
+ test_2x (_mm512_maskz_roundscale_round_pd, __m512d, __mmask8, __m512d, 1, 8)
+@@ -434,6 +452,24 @@ test_3 (_mm_fnmsub_round_sd, __m128d, __m128d, __m128d, __m128d, 9)
+ test_3 (_mm_fnmsub_round_ss, __m128, __m128, __m128, __m128, 9)
+ test_3 (_mm_mask_cmp_sd_mask, __mmask8, __mmask8, __m128d, __m128d, 1)
+ test_3 (_mm_mask_cmp_ss_mask, __mmask8, __mmask8, __m128, __m128, 1)
++test_3 (_mm512_maskz_shrdi_epi16, __m512i, __mmask32, __m512i, __m512i, 1)
++test_3 (_mm512_maskz_shrdi_epi32, __m512i, __mmask16, __m512i, __m512i, 1)
++test_3 (_mm512_maskz_shrdi_epi64, __m512i, __mmask8,  __m512i,__m512i, 1)
++test_3 (_mm256_maskz_shrdi_epi16, __m256i, __mmask16, __m256i, __m256i, 1)
++test_3 (_mm256_maskz_shrdi_epi32, __m256i, __mmask8,  __m256i,__m256i, 1)
++test_3 (_mm256_maskz_shrdi_epi64, __m256i, __mmask8,  __m256i,__m256i, 1)
++test_3 (_mm_maskz_shrdi_epi16, __m128i, __mmask8,  __m128i, __m128i, 1)
++test_3 (_mm_maskz_shrdi_epi32, __m128i, __mmask8,  __m128i, __m128i, 1)
++test_3 (_mm_maskz_shrdi_epi64, __m128i, __mmask8,  __m128i, __m128i, 1)
++test_3 (_mm512_maskz_shldi_epi16, __m512i, __mmask32, __m512i, __m512i, 1)
++test_3 (_mm512_maskz_shldi_epi32, __m512i, __mmask16, __m512i, __m512i, 1)
++test_3 (_mm512_maskz_shldi_epi64, __m512i, __mmask8, __m512i, __m512i, 1)
++test_3 (_mm256_maskz_shldi_epi16, __m256i, __mmask16, __m256i, __m256i, 1)
++test_3 (_mm256_maskz_shldi_epi32, __m256i, __mmask8, __m256i, __m256i, 1)
++test_3 (_mm256_maskz_shldi_epi64, __m256i, __mmask8, __m256i, __m256i, 1)
++test_3 (_mm_maskz_shldi_epi16, __m128i, __mmask8, __m128i, __m128i, 1)
++test_3 (_mm_maskz_shldi_epi32, __m128i, __mmask8, __m128i, __m128i, 1)
++test_3 (_mm_maskz_shldi_epi64, __m128i, __mmask8, __m128i, __m128i, 1)
+ test_3v (_mm512_i32scatter_epi32, void *, __m512i, __m512i, 1)
+ test_3v (_mm512_i32scatter_epi64, void *, __m256i, __m512i, 1)
+ test_3v (_mm512_i32scatter_pd, void *, __m256i, __m512d, 1)
+@@ -558,6 +594,24 @@ test_4 (_mm_mask3_fnmsub_round_sd, __m128d, __m128d, __m128d, __m128d, __mmask8,
+ test_4 (_mm_mask3_fnmsub_round_ss, __m128, __m128, __m128, __m128, __mmask8, 9)
+ test_4 (_mm_maskz_fnmsub_round_sd, __m128d, __mmask8, __m128d, __m128d, __m128d, 9)
+ test_4 (_mm_maskz_fnmsub_round_ss, __m128, __mmask8, __m128, __m128, __m128, 9)
++test_4 (_mm512_mask_shrdi_epi16, __m512i, __m512i, __mmask32, __m512i, __m512i, 1)
++test_4 (_mm512_mask_shrdi_epi32, __m512i, __m512i, __mmask16, __m512i, __m512i, 1)
++test_4 (_mm512_mask_shrdi_epi64, __m512i, __m512i, __mmask8, __m512i, __m512i, 1)
++test_4 (_mm256_mask_shrdi_epi16, __m256i, __m256i, __mmask16, __m256i, __m256i, 1)
++test_4 (_mm256_mask_shrdi_epi32, __m256i, __m256i, __mmask8, __m256i, __m256i, 1)
++test_4 (_mm256_mask_shrdi_epi64, __m256i, __m256i, __mmask8, __m256i, __m256i, 1)
++test_4 (_mm_mask_shrdi_epi16, __m128i, __m128i, __mmask8, __m128i, __m128i, 1)
++test_4 (_mm_mask_shrdi_epi32, __m128i, __m128i, __mmask8, __m128i, __m128i, 1)
++test_4 (_mm_mask_shrdi_epi64, __m128i, __m128i, __mmask8, __m128i, __m128i, 1)
++test_4 (_mm512_mask_shldi_epi16, __m512i, __m512i, __mmask32, __m512i, __m512i, 1)
++test_4 (_mm512_mask_shldi_epi32, __m512i, __m512i, __mmask16, __m512i, __m512i, 1)
++test_4 (_mm512_mask_shldi_epi64, __m512i, __m512i, __mmask8, __m512i, __m512i, 1)
++test_4 (_mm256_mask_shldi_epi16, __m256i, __m256i, __mmask16, __m256i, __m256i, 1)
++test_4 (_mm256_mask_shldi_epi32, __m256i, __m256i, __mmask8, __m256i, __m256i, 1)
++test_4 (_mm256_mask_shldi_epi64, __m256i, __m256i, __mmask8, __m256i, __m256i, 1)
++test_4 (_mm_mask_shldi_epi16, __m128i, __m128i, __mmask8, __m128i, __m128i, 1)
++test_4 (_mm_mask_shldi_epi32, __m128i, __m128i, __mmask8, __m128i, __m128i, 1)
++test_4 (_mm_mask_shldi_epi64, __m128i, __m128i, __mmask8, __m128i, __m128i, 1)
+ test_4v (_mm512_mask_i32scatter_epi32, void *, __mmask16, __m512i, __m512i, 1)
+ test_4v (_mm512_mask_i32scatter_epi64, void *, __mmask8, __m256i, __m512i, 1)
+ test_4v (_mm512_mask_i32scatter_pd, void *, __mmask8, __m256i, __m512d, 1)
+diff --git a/gcc/testsuite/gcc.target/i386/sse-22.c b/gcc/testsuite/gcc.target/i386/sse-22.c
+index 0c62f2049c2..87f71ed2e2a 100644
+--- a/gcc/testsuite/gcc.target/i386/sse-22.c
++++ b/gcc/testsuite/gcc.target/i386/sse-22.c
+@@ -101,7 +101,7 @@
+ 
+ 
+ #ifndef DIFFERENT_PRAGMAS
+-#pragma GCC target ("sse4a,3dnow,avx,avx2,fma4,xop,aes,pclmul,popcnt,abm,lzcnt,bmi,bmi2,tbm,lwp,fsgsbase,rdrnd,f16c,rtm,rdseed,prfchw,adx,fxsr,xsaveopt,avx512f,avx512er,avx512cd,avx512pf,sha,prefetchwt1,avx512vl,avx512bw,avx512dq,avx512vbmi,avx512ifma,avx5124fmaps,avx5124vnniw,avx512vpopcntdq,gfni,avx512bitalg")
++#pragma GCC target ("sse4a,3dnow,avx,avx2,fma4,xop,aes,pclmul,popcnt,abm,lzcnt,bmi,bmi2,tbm,lwp,fsgsbase,rdrnd,f16c,rtm,rdseed,prfchw,adx,fxsr,xsaveopt,avx512f,avx512er,avx512cd,avx512pf,sha,prefetchwt1,avx512vl,avx512bw,avx512dq,avx512vbmi,avx512vbmi2,avx512ifma,avx5124fmaps,avx5124vnniw,avx512vpopcntdq,gfni,avx512bitalg")
+ #endif
+ 
+ /* Following intrinsics require immediate arguments.  They
+@@ -218,7 +218,7 @@ test_4 (_mm_cmpestrz, int, __m128i, int, __m128i, int, 1)
+ 
+ /* immintrin.h (AVX/AVX2/RDRND/FSGSBASE/F16C/RTM/AVX512F/SHA) */
+ #ifdef DIFFERENT_PRAGMAS
+-#pragma GCC target ("avx,avx2,rdrnd,fsgsbase,f16c,rtm,avx512f,avx512er,avx512cd,avx512pf,sha,avx512vl,avx512bw,avx512dq,avx512ifma,avx512vbmi,avx5124fmaps,avx5124vnniw,avx512vpopcntdq,gfni,avx512bitalg")
++#pragma GCC target ("avx,avx2,rdrnd,fsgsbase,f16c,rtm,avx512f,avx512er,avx512cd,avx512pf,sha,avx512vl,avx512bw,avx512dq,avx512ifma,avx512vbmi,avx512vbmi2,avx5124fmaps,avx5124vnniw,avx512vpopcntdq,gfni,avx512bitalg")
+ #endif
+ #include <immintrin.h>
+ test_1 (_cvtss_sh, unsigned short, float, 1)
+@@ -437,6 +437,24 @@ test_2 (_mm512_sub_round_pd, __m512d, __m512d, __m512d, 9)
+ test_2 (_mm512_sub_round_ps, __m512, __m512, __m512, 9)
+ test_2 (_mm_cmp_sd_mask, __mmask8, __m128d, __m128d, 1)
+ test_2 (_mm_cmp_ss_mask, __mmask8, __m128, __m128, 1)
++test_2 (_mm512_shrdi_epi16, __m512i, __m512i, __m512i, 1)
++test_2 (_mm512_shrdi_epi32, __m512i, __m512i, __m512i, 1)
++test_2 (_mm512_shrdi_epi64, __m512i, __m512i, __m512i, 1)
++test_2 (_mm256_shrdi_epi16, __m256i, __m256i, __m256i, 1)
++test_2 (_mm256_shrdi_epi32, __m256i, __m256i, __m256i, 1)
++test_2 (_mm256_shrdi_epi64, __m256i, __m256i, __m256i, 1)
++test_2 (_mm_shrdi_epi16, __m128i, __m128i, __m128i, 1)
++test_2 (_mm_shrdi_epi32, __m128i, __m128i, __m128i, 1)
++test_2 (_mm_shrdi_epi64, __m128i, __m128i, __m128i, 1)
++test_2 (_mm512_shldi_epi16, __m512i, __m512i, __m512i, 1)
++test_2 (_mm512_shldi_epi32, __m512i, __m512i, __m512i, 1)
++test_2 (_mm512_shldi_epi64, __m512i, __m512i, __m512i, 1)
++test_2 (_mm256_shldi_epi16, __m256i, __m256i, __m256i, 1)
++test_2 (_mm256_shldi_epi32, __m256i, __m256i, __m256i, 1)
++test_2 (_mm256_shldi_epi64, __m256i, __m256i, __m256i, 1)
++test_2 (_mm_shldi_epi16, __m128i, __m128i, __m128i, 1)
++test_2 (_mm_shldi_epi32, __m128i, __m128i, __m128i, 1)
++test_2 (_mm_shldi_epi64, __m128i, __m128i, __m128i, 1)
+ #ifdef __x86_64__
+ test_2 (_mm_cvt_roundi64_sd, __m128d, __m128d, long long, 9)
+ test_2 (_mm_cvt_roundi64_ss, __m128, __m128, long long, 9)
+@@ -543,6 +561,24 @@ test_3 (_mm512_ternarylogic_epi32, __m512i, __m512i, __m512i, __m512i, 1)
+ test_3 (_mm512_ternarylogic_epi64, __m512i, __m512i, __m512i, __m512i, 1)
+ test_3 (_mm_mask_cmp_sd_mask, __mmask8, __mmask8, __m128d, __m128d, 1)
+ test_3 (_mm_mask_cmp_ss_mask, __mmask8, __mmask8, __m128, __m128, 1)
++test_3 (_mm512_maskz_shrdi_epi16, __m512i, __mmask32, __m512i, __m512i, 1)
++test_3 (_mm512_maskz_shrdi_epi32, __m512i, __mmask16, __m512i, __m512i, 1)
++test_3 (_mm512_maskz_shrdi_epi64, __m512i, __mmask8, __m512i, __m512i, 1)
++test_3 (_mm256_maskz_shrdi_epi16, __m256i, __mmask16, __m256i, __m256i, 1)
++test_3 (_mm256_maskz_shrdi_epi32, __m256i, __mmask8, __m256i, __m256i, 1)
++test_3 (_mm256_maskz_shrdi_epi64, __m256i, __mmask8, __m256i, __m256i, 1)
++test_3 (_mm_maskz_shrdi_epi16, __m128i, __mmask8, __m128i, __m128i, 1)
++test_3 (_mm_maskz_shrdi_epi32, __m128i, __mmask8, __m128i, __m128i, 1)
++test_3 (_mm_maskz_shrdi_epi64, __m128i, __mmask8, __m128i, __m128i, 1)
++test_3 (_mm512_maskz_shldi_epi16, __m512i, __mmask32, __m512i, __m512i, 1)
++test_3 (_mm512_maskz_shldi_epi32, __m512i, __mmask16, __m512i, __m512i, 1)
++test_3 (_mm512_maskz_shldi_epi64, __m512i, __mmask8, __m512i, __m512i, 1)
++test_3 (_mm256_maskz_shldi_epi16, __m256i, __mmask16, __m256i, __m256i, 1)
++test_3 (_mm256_maskz_shldi_epi32, __m256i, __mmask8, __m256i, __m256i, 1)
++test_3 (_mm256_maskz_shldi_epi64, __m256i, __mmask8, __m256i, __m256i, 1)
++test_3 (_mm_maskz_shldi_epi16, __m128i, __mmask8, __m128i, __m128i, 1)
++test_3 (_mm_maskz_shldi_epi32, __m128i, __mmask8, __m128i, __m128i, 1)
++test_3 (_mm_maskz_shldi_epi64, __m128i, __mmask8, __m128i, __m128i, 1)
+ test_3v (_mm512_i32scatter_epi32, void *, __m512i, __m512i, 1)
+ test_3v (_mm512_i32scatter_epi64, void *, __m256i, __m512i, 1)
+ test_3v (_mm512_i32scatter_pd, void *, __m256i, __m512d, 1)
+@@ -657,6 +693,24 @@ test_4 (_mm_mask3_fnmsub_round_sd, __m128d, __m128d, __m128d, __m128d, __mmask8,
+ test_4 (_mm_mask3_fnmsub_round_ss, __m128, __m128, __m128, __m128, __mmask8, 9)
+ test_4 (_mm_maskz_fnmsub_round_sd, __m128d, __mmask8, __m128d, __m128d, __m128d, 9)
+ test_4 (_mm_maskz_fnmsub_round_ss, __m128, __mmask8, __m128, __m128, __m128, 9)
++test_4 (_mm512_mask_shrdi_epi16, __m512i, __m512i, __mmask32, __m512i, __m512i, 1)
++test_4 (_mm512_mask_shrdi_epi32, __m512i, __m512i, __mmask16, __m512i, __m512i, 1)
++test_4 (_mm512_mask_shrdi_epi64, __m512i, __m512i, __mmask8, __m512i, __m512i, 1)
++test_4 (_mm256_mask_shrdi_epi16, __m256i, __m256i, __mmask16, __m256i, __m256i, 1)
++test_4 (_mm256_mask_shrdi_epi32, __m256i, __m256i, __mmask8, __m256i, __m256i, 1)
++test_4 (_mm256_mask_shrdi_epi64, __m256i, __m256i, __mmask8, __m256i, __m256i, 1)
++test_4 (_mm_mask_shrdi_epi16, __m128i, __m128i, __mmask8, __m128i, __m128i, 1)
++test_4 (_mm_mask_shrdi_epi32, __m128i, __m128i, __mmask8, __m128i, __m128i, 1)
++test_4 (_mm_mask_shrdi_epi64, __m128i, __m128i, __mmask8, __m128i, __m128i, 1)
++test_4 (_mm512_mask_shldi_epi16, __m512i, __m512i, __mmask32, __m512i, __m512i, 1)
++test_4 (_mm512_mask_shldi_epi32, __m512i, __m512i, __mmask16, __m512i, __m512i, 1)
++test_4 (_mm512_mask_shldi_epi64, __m512i, __m512i, __mmask8, __m512i, __m512i, 1)
++test_4 (_mm256_mask_shldi_epi16, __m256i, __m256i, __mmask16, __m256i, __m256i, 1)
++test_4 (_mm256_mask_shldi_epi32, __m256i, __m256i, __mmask8, __m256i, __m256i, 1)
++test_4 (_mm256_mask_shldi_epi64, __m256i, __m256i, __mmask8, __m256i, __m256i, 1)
++test_4 (_mm_mask_shldi_epi16, __m128i, __m128i, __mmask8, __m128i, __m128i, 1)
++test_4 (_mm_mask_shldi_epi32, __m128i, __m128i, __mmask8, __m128i, __m128i, 1)
++test_4 (_mm_mask_shldi_epi64, __m128i, __m128i, __mmask8, __m128i, __m128i, 1)
+ test_4v (_mm512_mask_i32scatter_epi32, void *, __mmask16, __m512i, __m512i, 1)
+ test_4v (_mm512_mask_i32scatter_epi64, void *, __mmask8, __m256i, __m512i, 1)
+ test_4v (_mm512_mask_i32scatter_pd, void *, __mmask8, __m256i, __m512d, 1)
 diff --git a/gcc/testsuite/gcc.target/mips/cfgcleanup-jalr1.c b/gcc/testsuite/gcc.target/mips/cfgcleanup-jalr1.c
 new file mode 100644
 index 00000000000..24c18262b1a
@@ -36670,6 +37670,33 @@ index 00000000000..5456bc80479
 +  do i = 1, 64
 +  end do
 +end
+diff --git a/gcc/testsuite/gfortran.dg/graphite/pr93439.f90 b/gcc/testsuite/gfortran.dg/graphite/pr93439.f90
+new file mode 100644
+index 00000000000..e815ab929e1
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/graphite/pr93439.f90
+@@ -0,0 +1,21 @@
++! { dg-additional-options "-O2 -floop-parallelize-all -floop-unroll-and-jam -ftree-parallelize-loops=2" }
++
++module ai
++  integer, parameter :: dp = 8
++contains
++  subroutine qu(ja, nq, en, p5)
++    real(kind = dp) :: nq(ja), en(ja), p5(ja)
++    call tl(ja, nq, en, p5)
++  end subroutine qu
++
++  subroutine tl(ja, nq, en, p5)
++    real(kind = dp) :: nq(9), en(9 * ja), p5(3 * ja)
++    do mc = 1, ja
++       do mb = 1, 9
++          do ma = 1, 3
++             p5((mc - 1) * 3 + ma) = p5((mc - 1) * 3 + ma) - 1
++          end do
++       end do
++    end do
++  end subroutine tl
++end module ai
 diff --git a/gcc/testsuite/gfortran.dg/inquire_pre.f90 b/gcc/testsuite/gfortran.dg/inquire_pre.f90
 new file mode 100644
 index 00000000000..c75248b4db7
@@ -38460,10 +39487,48 @@ index eaf4b964e4b..2930e46fc13 100644
 +/* { dg-final { scan-assembler     {(bl|call)[ \t]+L_bogonic\$stub\n} } } */
 +/* { dg-final { scan-assembler-not {\$non_lazy_ptr} } } */
 diff --git a/gcc/tree-cfg.c b/gcc/tree-cfg.c
-index 32be59acfb0..d27cc65f883 100644
+index 32be59acfb0..0c4ae81aa05 100644
 --- a/gcc/tree-cfg.c
 +++ b/gcc/tree-cfg.c
-@@ -9151,7 +9151,7 @@ generate_range_test (basic_block bb, tree index, tree low, tree high,
+@@ -3215,6 +3215,13 @@ verify_types_in_gimple_reference (tree expr, bool require_lvalue)
+ 	  debug_generic_stmt (expr);
+ 	  return true;
+ 	}
++      if (MR_DEPENDENCE_CLIQUE (expr) != 0
++	  && MR_DEPENDENCE_CLIQUE (expr) > cfun->last_clique)
++	{
++	  error ("invalid clique in MEM_REF");
++	  debug_generic_stmt (expr);
++	  return true;
++	}
+     }
+   else if (TREE_CODE (expr) == TARGET_MEM_REF)
+     {
+@@ -3234,6 +3241,13 @@ verify_types_in_gimple_reference (tree expr, bool require_lvalue)
+ 	  debug_generic_stmt (expr);
+ 	  return true;
+ 	}
++      if (MR_DEPENDENCE_CLIQUE (expr) != 0
++	  && MR_DEPENDENCE_CLIQUE (expr) > cfun->last_clique)
++	{
++	  error ("invalid clique in TARGET_MEM_REF");
++	  debug_generic_stmt (expr);
++	  return true;
++	}
+     }
+   else if (TREE_CODE (expr) == INDIRECT_REF)
+     {
+@@ -7677,6 +7691,9 @@ move_sese_region_to_fn (struct function *dest_cfun, basic_block entry_bb,
+       after = bb;
+     }
+ 
++  /* Adjust the maximum clique used.  */
++  dest_cfun->last_clique = saved_cfun->last_clique;
++
+   loop->aux = NULL;
+   loop0->aux = NULL;
+   /* Loop sizes are no longer correct, fix them up.  */
+@@ -9151,7 +9168,7 @@ generate_range_test (basic_block bb, tree index, tree low, tree high,
  		     tree *lhs, tree *rhs)
  {
    tree type = TREE_TYPE (index);
@@ -38531,6 +39596,162 @@ index 98810080c65..aa4ab7eb946 100644
  extern void renumber_gimple_stmt_uids_in_blocks (basic_block *, int);
  extern void dump_variable (FILE *, tree);
  extern void debug_variable (tree);
+diff --git a/gcc/tree-if-conv.c b/gcc/tree-if-conv.c
+index 98566e3fd19..2780a4b243f 100644
+--- a/gcc/tree-if-conv.c
++++ b/gcc/tree-if-conv.c
+@@ -2626,6 +2626,11 @@ combine_blocks (struct loop *loop)
+       vphi = get_virtual_phi (bb);
+       if (vphi)
+ 	{
++	  /* When there's just loads inside the loop a stray virtual
++	     PHI merging the uses can appear, update last_vdef from
++	     it.  */
++	  if (!last_vdef)
++	    last_vdef = gimple_phi_arg_def (vphi, 0);
+ 	  imm_use_iterator iter;
+ 	  use_operand_p use_p;
+ 	  gimple *use_stmt;
+@@ -2657,6 +2662,10 @@ combine_blocks (struct loop *loop)
+ 	      if (gimple_vdef (stmt))
+ 		last_vdef = gimple_vdef (stmt);
+ 	    }
++	  else
++	    /* If this is the first load we arrive at update last_vdef
++	       so we handle stray PHIs correctly.  */
++	    last_vdef = gimple_vuse (stmt);
+ 	  if (predicated[i])
+ 	    {
+ 	      ssa_op_iter i;
+diff --git a/gcc/tree-inline.c b/gcc/tree-inline.c
+index 9fe8f26a771..d115fcb1a5b 100644
+--- a/gcc/tree-inline.c
++++ b/gcc/tree-inline.c
+@@ -4499,7 +4499,8 @@ reset_debug_bindings (copy_body_data *id, gimple_stmt_iterator gsi)
+ /* If STMT is a GIMPLE_CALL, replace it with its inline expansion.  */
+ 
+ static bool
+-expand_call_inline (basic_block bb, gimple *stmt, copy_body_data *id)
++expand_call_inline (basic_block bb, gimple *stmt, copy_body_data *id,
++		    bitmap to_purge)
+ {
+   tree use_retvar;
+   tree fn;
+@@ -4644,7 +4645,7 @@ expand_call_inline (basic_block bb, gimple *stmt, copy_body_data *id)
+       gimple_call_set_fndecl (stmt, edge->callee->decl);
+       update_stmt (stmt);
+       id->src_node->remove ();
+-      expand_call_inline (bb, stmt, id);
++      expand_call_inline (bb, stmt, id, to_purge);
+       maybe_remove_unused_call_args (cfun, stmt);
+       return true;
+     }
+@@ -5002,10 +5003,7 @@ expand_call_inline (basic_block bb, gimple *stmt, copy_body_data *id)
+     }
+ 
+   if (purge_dead_abnormal_edges)
+-    {
+-      gimple_purge_dead_eh_edges (return_block);
+-      gimple_purge_dead_abnormal_call_edges (return_block);
+-    }
++    bitmap_set_bit (to_purge, return_block->index);
+ 
+   /* If the value of the new expression is ignored, that's OK.  We
+      don't warn about this for CALL_EXPRs, so we shouldn't warn about
+@@ -5043,7 +5041,8 @@ expand_call_inline (basic_block bb, gimple *stmt, copy_body_data *id)
+    in a MODIFY_EXPR.  */
+ 
+ static bool
+-gimple_expand_calls_inline (basic_block bb, copy_body_data *id)
++gimple_expand_calls_inline (basic_block bb, copy_body_data *id,
++			    bitmap to_purge)
+ {
+   gimple_stmt_iterator gsi;
+   bool inlined = false;
+@@ -5055,7 +5054,7 @@ gimple_expand_calls_inline (basic_block bb, copy_body_data *id)
+ 
+       if (is_gimple_call (stmt)
+ 	  && !gimple_call_internal_p (stmt))
+-	inlined |= expand_call_inline (bb, stmt, id);
++	inlined |= expand_call_inline (bb, stmt, id, to_purge);
+     }
+ 
+   return inlined;
+@@ -5068,6 +5067,7 @@ gimple_expand_calls_inline (basic_block bb, copy_body_data *id)
+ static void
+ fold_marked_statements (int first, hash_set<gimple *> *statements)
+ {
++  auto_bitmap to_purge;
+   for (; first < last_basic_block_for_fn (cfun); first++)
+     if (BASIC_BLOCK_FOR_FN (cfun, first))
+       {
+@@ -5079,7 +5079,8 @@ fold_marked_statements (int first, hash_set<gimple *> *statements)
+ 	  if (statements->contains (gsi_stmt (gsi)))
+ 	    {
+ 	      gimple *old_stmt = gsi_stmt (gsi);
+-	      tree old_decl = is_gimple_call (old_stmt) ? gimple_call_fndecl (old_stmt) : 0;
++	      tree old_decl
++		= is_gimple_call (old_stmt) ? gimple_call_fndecl (old_stmt) : 0;
+ 
+ 	      if (old_decl && fndecl_built_in_p (old_decl))
+ 		{
+@@ -5123,8 +5124,7 @@ fold_marked_statements (int first, hash_set<gimple *> *statements)
+ 				 is mood anyway.  */
+ 			      if (maybe_clean_or_replace_eh_stmt (old_stmt,
+ 								  new_stmt))
+-				gimple_purge_dead_eh_edges (
+-				  BASIC_BLOCK_FOR_FN (cfun, first));
++				bitmap_set_bit (to_purge, first);
+ 			      break;
+ 			    }
+ 			  gsi_next (&i2);
+@@ -5144,11 +5144,11 @@ fold_marked_statements (int first, hash_set<gimple *> *statements)
+ 						       new_stmt);
+ 
+ 		  if (maybe_clean_or_replace_eh_stmt (old_stmt, new_stmt))
+-		    gimple_purge_dead_eh_edges (BASIC_BLOCK_FOR_FN (cfun,
+-								    first));
++		    bitmap_set_bit (to_purge, first);
+ 		}
+ 	    }
+       }
++  gimple_purge_all_dead_eh_edges (to_purge);
+ }
+ 
+ /* Expand calls to inline functions in the body of FN.  */
+@@ -5194,8 +5194,9 @@ optimize_inline_calls (tree fn)
+      will split id->current_basic_block, and the new blocks will
+      follow it; we'll trudge through them, processing their CALL_EXPRs
+      along the way.  */
++  auto_bitmap to_purge;
+   FOR_EACH_BB_FN (bb, cfun)
+-    inlined_p |= gimple_expand_calls_inline (bb, &id);
++    inlined_p |= gimple_expand_calls_inline (bb, &id, to_purge);
+ 
+   pop_gimplify_context (NULL);
+ 
+@@ -5215,6 +5216,21 @@ optimize_inline_calls (tree fn)
+   fold_marked_statements (last, id.statements_to_fold);
+   delete id.statements_to_fold;
+ 
++  /* Finally purge EH and abnormal edges from the call stmts we inlined.
++     We need to do this after fold_marked_statements since that may walk
++     the SSA use-def chain.  */
++  unsigned i;
++  bitmap_iterator bi;
++  EXECUTE_IF_SET_IN_BITMAP (to_purge, 0, i, bi)
++    {
++      basic_block bb = BASIC_BLOCK_FOR_FN (cfun, i);
++      if (bb)
++	{
++	  gimple_purge_dead_eh_edges (bb);
++	  gimple_purge_dead_abnormal_call_edges (bb);
++	}
++    }
++
+   gcc_assert (!id.debug_stmts.exists ());
+ 
+   /* If we didn't inline into the function there is nothing to do.  */
 diff --git a/gcc/tree-object-size.c b/gcc/tree-object-size.c
 index f9ad7e83943..25c5ced57b7 100644
 --- a/gcc/tree-object-size.c
@@ -38545,6 +39766,18 @@ index f9ad7e83943..25c5ced57b7 100644
    if (TREE_CODE (else_) == SSA_NAME)
      reexamine |= merge_object_sizes (osi, var, else_, 0);
    else
+diff --git a/gcc/tree-parloops.c b/gcc/tree-parloops.c
+index c5629cc8089..dad6e2884db 100644
+--- a/gcc/tree-parloops.c
++++ b/gcc/tree-parloops.c
+@@ -1498,7 +1498,6 @@ create_loop_fn (location_t loc)
+   DECL_ARGUMENTS (decl) = t;
+ 
+   allocate_struct_function (decl, false);
+-  DECL_STRUCT_FUNCTION (decl)->last_clique = act_cfun->last_clique;
+ 
+   /* The call to allocate_struct_function clobbers CFUN, so we need to restore
+      it.  */
 diff --git a/gcc/tree-pass.h b/gcc/tree-pass.h
 index b27dbdd0cb7..f6c230b169c 100644
 --- a/gcc/tree-pass.h
@@ -39113,6 +40346,44 @@ index fe762f54d96..2648b24f7d5 100644
  
  	  return true;
  	}
+diff --git a/gcc/tree-ssa-structalias.c b/gcc/tree-ssa-structalias.c
+index f80b8e456b5..0ea0b461d2b 100644
+--- a/gcc/tree-ssa-structalias.c
++++ b/gcc/tree-ssa-structalias.c
+@@ -4928,10 +4928,10 @@ find_func_aliases (struct function *fn, gimple *origt)
+ 	      get_constraint_for_ptr_offset (gimple_assign_rhs1 (t),
+ 					     NULL_TREE, &rhsc);
+ 	    }
+-	  else if ((CONVERT_EXPR_CODE_P (code)
+-		    && !(POINTER_TYPE_P (gimple_expr_type (t))
+-			 && !POINTER_TYPE_P (TREE_TYPE (rhsop))))
++	  else if (CONVERT_EXPR_CODE_P (code)
+ 		   || gimple_assign_single_p (t))
++	    /* See through conversions, single RHS are handled by
++	       get_constraint_for_rhs.  */
+ 	    get_constraint_for_rhs (rhsop, &rhsc);
+ 	  else if (code == COND_EXPR)
+ 	    {
+@@ -4950,14 +4950,16 @@ find_func_aliases (struct function *fn, gimple *origt)
+ 	    ;
+ 	  else
+ 	    {
+-	      /* All other operations are merges.  */
++	      /* All other operations are possibly offsetting merges.  */
+ 	      auto_vec<ce_s, 4> tmp;
+ 	      struct constraint_expr *rhsp;
+ 	      unsigned i, j;
+-	      get_constraint_for_rhs (gimple_assign_rhs1 (t), &rhsc);
++	      get_constraint_for_ptr_offset (gimple_assign_rhs1 (t),
++					     NULL_TREE, &rhsc);
+ 	      for (i = 2; i < gimple_num_ops (t); ++i)
+ 		{
+-		  get_constraint_for_rhs (gimple_op (t, i), &tmp);
++		  get_constraint_for_ptr_offset (gimple_op (t, i),
++						 NULL_TREE, &tmp);
+ 		  FOR_EACH_VEC_ELT (tmp, j, rhsp)
+ 		    rhsc.safe_push (*rhsp);
+ 		  tmp.truncate (0);
 diff --git a/gcc/tree-switch-conversion.c b/gcc/tree-switch-conversion.c
 index c3f2baf39d7..dd6dd8064de 100644
 --- a/gcc/tree-switch-conversion.c
