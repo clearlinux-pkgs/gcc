@@ -53,7 +53,10 @@ Eric Botcazou (16):
 Eric S. Raymond (1):
       Clean up references to Subversion in documentation sources.
 
-GCC Administrator (182):
+GCC Administrator (185):
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -290,7 +293,7 @@ Ilya Leoshkevich (3):
       S/390: Fix failing RTL check in s390_canonicalize_comparison
       Free dominance info at the beginning of pass_jump_after_combine
 
-Jakub Jelinek (83):
+Jakub Jelinek (98):
       * BASE-VER: Set to 9.2.1.
       baseline_symbols.txt: Update.
       re PR tree-optimization/91597 (GCC miscompiles a branch depending on a pointer tag)
@@ -374,6 +377,21 @@ Jakub Jelinek (83):
       i386: Fix up -fdollars-in-identifiers with identifiers starting with $ in -masm=att [PR91298]
       aarch64: Fix aarch64_expand_subvti constant handling [PR93335]
       Cherry-pick 15 bugfixes from mainline
+      postreload: Fix up postreload combine [PR93402]
+      i386: Fix ix86_fold_builtin shift folding [PR93418]
+      openmp: Handle rest of EXEC_OACC_* in oacc_code_to_statement [PR93463]
+      openmp: c++: Consider typeinfo decls to be predetermined shared [PR91118]
+      combine: Punt on out of range rotate counts [PR93505]
+      openmp: Avoid ICEs with declare simd; declare simd inbranch [PR93555]
+      c++: Mark __builtin_convertvector operand as read [PR93557]
+      openmp: Notice reduction decl in outer contexts after adding it to shared [PR93515]
+      openmp: Fix handling of non-addressable shared scalars in parallel nested inside of target [PR93515]
+      i386: Make xmm16-xmm31 call used even in ms ABI [PR65782]
+      i386: Fix -mavx -mno-mavx2 ICE with VEC_COND_EXPR [PR93637]
+      i386: Fix up vec_extract_lo* patterns [PR93670]
+      i386: Fix k*shift* intrinsics [PR93673]
+      i386: Fix up _mm*_mask_popcnt_epi* [PR93696]
+      c: Fix ICE with cast to VLA [93576]
 
 Jan Hubicka (3):
       Backport ggc_trim 	Backport from mainline
@@ -1097,10 +1115,100 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..1916dab20d1 100644
+index 7f6557d8018..b24a416a417 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,1790 @@
+@@ -1,3 +1,1880 @@
++2020-02-13  Jakub Jelinek  <jakub@redhat.com>
++
++	PR target/93696
++	* config/i386/avx512bitalgintrin.h (_mm512_mask_popcnt_epi8,
++	_mm512_mask_popcnt_epi16, _mm256_mask_popcnt_epi8,
++	_mm256_mask_popcnt_epi16, _mm_mask_popcnt_epi8,
++	_mm_mask_popcnt_epi16): Rename __B argument to __A and __A to __W,
++	pass __A to the builtin followed by __W instead of __A followed by
++	__B.
++	* config/i386/avx512vpopcntdqintrin.h (_mm512_mask_popcnt_epi32,
++	_mm512_mask_popcnt_epi64): Likewise.
++	* config/i386/avx512vpopcntdqvlintrin.h (_mm_mask_popcnt_epi32,
++	_mm256_mask_popcnt_epi32, _mm_mask_popcnt_epi64,
++	_mm256_mask_popcnt_epi64): Likewise.
++
++	PR target/93673
++	* config/i386/sse.md (k<code><mode>): Drop mode from last operand and
++	use const_0_to_255_operand predicate instead of immediate_operand.
++	(avx512dq_fpclass<mode><mask_scalar_merge_name>,
++	avx512dq_vmfpclass<mode><mask_scalar_merge_name>,
++	vgf2p8affineinvqb_<mode><mask_name>,
++	vgf2p8affineqb_<mode><mask_name>): Drop mode from
++	const_0_to_255_operand predicated operands.
++
++	Backported from mainline
++	2020-02-12  Jakub Jelinek  <jakub@redhat.com>
++
++	PR target/93670
++	* config/i386/sse.md (VI48F_256_DQ): New mode iterator.
++	(avx512vl_vextractf128<mode>): Use it instead of VI48F_256.  Remove
++	TARGET_AVX512DQ from condition.
++	(vec_extract_lo_<mode><mask_name>): Use <mask_avx512dq_condition>
++	instead of <mask_mode512bit_condition> in condition.  If
++	TARGET_AVX512DQ is false, emit vextract*64x4 instead of
++	vextract*32x8.
++	(vec_extract_lo_<mode><mask_name>): Drop <mask_avx512dq_condition>
++	from condition.
++
++	2020-02-10  Jakub Jelinek  <jakub@redhat.com>
++
++	PR target/93637
++	* config/i386/sse.md (VI_256_AVX2): New mode iterator.
++	(vcond_mask_<mode><sseintvecmodelower>): Use it instead of VI_256.
++	Change condition from TARGET_AVX2 to TARGET_AVX.
++
++	2020-02-08  Uroš Bizjak  <ubizjak@gmail.com>
++		    Jakub Jelinek  <jakub@redhat.com>
++
++	PR target/65782
++	* config/i386/i386.h (CALL_USED_REGISTERS): Make
++	xmm16-xmm31 call-used even in 64-bit ms-abi.
++
++	2020-02-06  Jakub Jelinek  <jakub@redhat.com>
++
++	PR libgomp/93515
++	* omp-low.c (use_pointer_for_field): For nested constructs, also
++	look for map clauses on target construct.
++	(scan_omp_1_stmt) <case GIMPLE_OMP_TARGET>: Bump temporarily
++	taskreg_nesting_level.
++
++	PR libgomp/93515
++	* gimplify.c (gimplify_scan_omp_clauses) <do_notice>: If adding
++	shared clause, call omp_notice_variable on outer context if any.
++
++	2020-02-05  Jakub Jelinek  <jakub@redhat.com>
++
++	PR middle-end/93555
++	* omp-simd-clone.c (expand_simd_clones): If simd_clone_mangle or
++	simd_clone_create failed when i == 0, adjust clone->nargs by
++	clone->inbranch.
++
++	2020-01-30  Jakub Jelinek  <jakub@redhat.com>
++
++	PR middle-end/93505
++	* combine.c (simplify_comparison) <case ROTATE>: Punt on out of range
++	rotate counts.
++
++	2020-01-28  Jakub Jelinek  <jakub@redhat.com>
++
++	PR target/93418
++	* config/i386/i386.c (ix86_fold_builtin) <do_shift>: If mask is not
++	-1 or is_vshift is true, use new_vector with number of elts npatterns
++	rather than new_unary_operation.
++
++	2020-01-23  Jakub Jelinek  <jakub@redhat.com>
++
++	PR rtl-optimization/93402
++	* postreload.c (reload_combine_recognize_pattern): Don't try to adjust
++	USE insns.
++
 +2020-02-11  Tamar Christina  <tamar.christina@arm.com>
 +
 +	Backport from mainline
@@ -2891,7 +2999,7 @@ index 7f6557d8018..1916dab20d1 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +2300,7 @@
+@@ -513,7 +2390,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -3929,10 +4037,16 @@ index 322cf98eb02..67dce9e125a 100644
      {
        /* Check the expected alignment against the field alignment.  */
 diff --git a/gcc/c/ChangeLog b/gcc/c/ChangeLog
-index 89e5b25d020..b17ed98a9ae 100644
+index 89e5b25d020..5ba4516e114 100644
 --- a/gcc/c/ChangeLog
 +++ b/gcc/c/ChangeLog
-@@ -1,3 +1,77 @@
+@@ -1,3 +1,83 @@
++2020-02-13  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c/93576
++	* c-decl.c (grokdeclarator): If this_size_varies, only push size into
++	*expr if it has side effects.
++
 +2020-01-22  Joseph Myers  <joseph@codesourcery.com>
 +
 +	Backport from mainline:
@@ -4011,7 +4125,7 @@ index 89e5b25d020..b17ed98a9ae 100644
  
  	* GCC 9.2.0 released.
 diff --git a/gcc/c/c-decl.c b/gcc/c/c-decl.c
-index 04e0f4dc198..f77fb1739ca 100644
+index 04e0f4dc198..859a6241258 100644
 --- a/gcc/c/c-decl.c
 +++ b/gcc/c/c-decl.c
 @@ -3044,7 +3044,7 @@ pushdecl (tree x)
@@ -4063,7 +4177,27 @@ index 04e0f4dc198..f77fb1739ca 100644
  /* Performs sanity checks on the TYPE and WIDTH of the bit-field NAME,
     replacing with appropriate values if they are invalid.  */
  
-@@ -9974,6 +9941,20 @@ identifier_global_value	(tree t)
+@@ -6401,11 +6368,14 @@ grokdeclarator (const struct c_declarator *declarator,
+ 		  }
+ 		if (this_size_varies)
+ 		  {
+-		    if (*expr)
+-		      *expr = build2 (COMPOUND_EXPR, TREE_TYPE (size),
+-				      *expr, size);
+-		    else
+-		      *expr = size;
++		    if (TREE_SIDE_EFFECTS (size))
++		      {
++			if (*expr)
++			  *expr = build2 (COMPOUND_EXPR, TREE_TYPE (size),
++					  *expr, size);
++			else
++			  *expr = size;
++		      }
+ 		    *expr_const_operands &= size_maybe_const;
+ 		  }
+ 	      }
+@@ -9974,6 +9944,20 @@ identifier_global_value	(tree t)
    return NULL_TREE;
  }
  
@@ -4519,6 +4653,20 @@ index db4c9c747b9..1febb6369a0 100644
    if (error_found)
      {
        dump (stderr);
+diff --git a/gcc/combine.c b/gcc/combine.c
+index 4de759a8e6b..601943d6bb0 100644
+--- a/gcc/combine.c
++++ b/gcc/combine.c
+@@ -12424,7 +12424,8 @@ simplify_comparison (enum rtx_code code, rtx *pop0, rtx *pop1)
+ 	     bit.  This will be converted into a ZERO_EXTRACT.  */
+ 	  if (const_op == 0 && sign_bit_comparison_p
+ 	      && CONST_INT_P (XEXP (op0, 1))
+-	      && mode_width <= HOST_BITS_PER_WIDE_INT)
++	      && mode_width <= HOST_BITS_PER_WIDE_INT
++	      && UINTVAL (XEXP (op0, 1)) < mode_width)
+ 	    {
+ 	      op0 = simplify_and_const_int (NULL_RTX, mode, XEXP (op0, 0),
+ 					    (HOST_WIDE_INT_1U
 diff --git a/gcc/common/config/s390/s390-common.c b/gcc/common/config/s390/s390-common.c
 index f9c3a95f897..2e1914e3768 100644
 --- a/gcc/common/config/s390/s390-common.c
@@ -8300,6 +8448,179 @@ index 7606efdbf79..372d77f84fe 100644
  }
  
  extern __inline __m256i
+diff --git a/gcc/config/i386/avx512bitalgintrin.h b/gcc/config/i386/avx512bitalgintrin.h
+index 8b4fc8e3f67..8ad8586cc59 100644
+--- a/gcc/config/i386/avx512bitalgintrin.h
++++ b/gcc/config/i386/avx512bitalgintrin.h
+@@ -61,10 +61,10 @@ _mm512_popcnt_epi16 (__m512i __A)
+ 
+ extern __inline __m512i
+ __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+-_mm512_mask_popcnt_epi8 (__m512i __A, __mmask64 __U, __m512i __B)
++_mm512_mask_popcnt_epi8 (__m512i __W, __mmask64 __U, __m512i __A)
+ {
+   return (__m512i) __builtin_ia32_vpopcountb_v64qi_mask ((__v64qi) __A,
+-							 (__v64qi) __B,
++							 (__v64qi) __W,
+ 							 (__mmask64) __U);
+ }
+ 
+@@ -79,10 +79,10 @@ _mm512_maskz_popcnt_epi8 (__mmask64 __U, __m512i __A)
+ }
+ extern __inline __m512i
+ __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+-_mm512_mask_popcnt_epi16 (__m512i __A, __mmask32 __U, __m512i __B)
++_mm512_mask_popcnt_epi16 (__m512i __W, __mmask32 __U, __m512i __A)
+ {
+   return (__m512i) __builtin_ia32_vpopcountw_v32hi_mask ((__v32hi) __A,
+-							(__v32hi) __B,
++							(__v32hi) __W,
+ 							(__mmask32) __U);
+ }
+ 
+@@ -127,10 +127,10 @@ _mm512_mask_bitshuffle_epi64_mask (__mmask64 __M, __m512i __A, __m512i __B)
+ 
+ extern __inline __m256i
+ __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+-_mm256_mask_popcnt_epi8 (__m256i __A, __mmask32 __U, __m256i __B)
++_mm256_mask_popcnt_epi8 (__m256i __W, __mmask32 __U, __m256i __A)
+ {
+   return (__m256i) __builtin_ia32_vpopcountb_v32qi_mask ((__v32qi) __A,
+-							 (__v32qi) __B,
++							 (__v32qi) __W,
+ 							 (__mmask32) __U);
+ }
+ 
+@@ -222,10 +222,10 @@ _mm_popcnt_epi16 (__m128i __A)
+ 
+ extern __inline __m256i
+ __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+-_mm256_mask_popcnt_epi16 (__m256i __A, __mmask16 __U, __m256i __B)
++_mm256_mask_popcnt_epi16 (__m256i __W, __mmask16 __U, __m256i __A)
+ {
+   return (__m256i) __builtin_ia32_vpopcountw_v16hi_mask ((__v16hi) __A,
+-							(__v16hi) __B,
++							(__v16hi) __W,
+ 							(__mmask16) __U);
+ }
+ 
+@@ -241,10 +241,10 @@ _mm256_maskz_popcnt_epi16 (__mmask16 __U, __m256i __A)
+ 
+ extern __inline __m128i
+ __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+-_mm_mask_popcnt_epi8 (__m128i __A, __mmask16 __U, __m128i __B)
++_mm_mask_popcnt_epi8 (__m128i __W, __mmask16 __U, __m128i __A)
+ {
+   return (__m128i) __builtin_ia32_vpopcountb_v16qi_mask ((__v16qi) __A,
+-							 (__v16qi) __B,
++							 (__v16qi) __W,
+ 							 (__mmask16) __U);
+ }
+ 
+@@ -259,10 +259,10 @@ _mm_maskz_popcnt_epi8 (__mmask16 __U, __m128i __A)
+ }
+ extern __inline __m128i
+ __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+-_mm_mask_popcnt_epi16 (__m128i __A, __mmask8 __U, __m128i __B)
++_mm_mask_popcnt_epi16 (__m128i __W, __mmask8 __U, __m128i __A)
+ {
+   return (__m128i) __builtin_ia32_vpopcountw_v8hi_mask ((__v8hi) __A,
+-							(__v8hi) __B,
++							(__v8hi) __W,
+ 							(__mmask8) __U);
+ }
+ 
+diff --git a/gcc/config/i386/avx512vpopcntdqintrin.h b/gcc/config/i386/avx512vpopcntdqintrin.h
+index 3569430baa7..119bdf41887 100644
+--- a/gcc/config/i386/avx512vpopcntdqintrin.h
++++ b/gcc/config/i386/avx512vpopcntdqintrin.h
+@@ -43,10 +43,10 @@ _mm512_popcnt_epi32 (__m512i __A)
+ 
+ extern __inline __m512i
+ __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+-_mm512_mask_popcnt_epi32 (__m512i __A, __mmask16 __U, __m512i __B)
++_mm512_mask_popcnt_epi32 (__m512i __W, __mmask16 __U, __m512i __A)
+ {
+   return (__m512i) __builtin_ia32_vpopcountd_v16si_mask ((__v16si) __A,
+-							 (__v16si) __B,
++							 (__v16si) __W,
+ 							 (__mmask16) __U);
+ }
+ 
+@@ -69,10 +69,10 @@ _mm512_popcnt_epi64 (__m512i __A)
+ 
+ extern __inline __m512i
+ __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+-_mm512_mask_popcnt_epi64 (__m512i __A, __mmask8 __U, __m512i __B)
++_mm512_mask_popcnt_epi64 (__m512i __W, __mmask8 __U, __m512i __A)
+ {
+   return (__m512i) __builtin_ia32_vpopcountq_v8di_mask ((__v8di) __A,
+-							(__v8di) __B,
++							(__v8di) __W,
+ 							(__mmask8) __U);
+ }
+ 
+diff --git a/gcc/config/i386/avx512vpopcntdqvlintrin.h b/gcc/config/i386/avx512vpopcntdqvlintrin.h
+index b974d09338a..2765592f0ae 100644
+--- a/gcc/config/i386/avx512vpopcntdqvlintrin.h
++++ b/gcc/config/i386/avx512vpopcntdqvlintrin.h
+@@ -43,10 +43,10 @@ _mm_popcnt_epi32 (__m128i __A)
+ 
+ extern __inline __m128i
+ __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+-_mm_mask_popcnt_epi32 (__m128i __A, __mmask16 __U, __m128i __B)
++_mm_mask_popcnt_epi32 (__m128i __W, __mmask16 __U, __m128i __A)
+ {
+   return (__m128i) __builtin_ia32_vpopcountd_v4si_mask ((__v4si) __A,
+-							 (__v4si) __B,
++							 (__v4si) __W,
+ 							 (__mmask16) __U);
+ }
+ 
+@@ -69,10 +69,10 @@ _mm256_popcnt_epi32 (__m256i __A)
+ 
+ extern __inline __m256i
+ __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+-_mm256_mask_popcnt_epi32 (__m256i __A, __mmask16 __U, __m256i __B)
++_mm256_mask_popcnt_epi32 (__m256i __W, __mmask16 __U, __m256i __A)
+ {
+   return (__m256i) __builtin_ia32_vpopcountd_v8si_mask ((__v8si) __A,
+-							 (__v8si) __B,
++							 (__v8si) __W,
+ 							 (__mmask16) __U);
+ }
+ 
+@@ -95,10 +95,10 @@ _mm_popcnt_epi64 (__m128i __A)
+ 
+ extern __inline __m128i
+ __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+-_mm_mask_popcnt_epi64 (__m128i __A, __mmask8 __U, __m128i __B)
++_mm_mask_popcnt_epi64 (__m128i __W, __mmask8 __U, __m128i __A)
+ {
+   return (__m128i) __builtin_ia32_vpopcountq_v2di_mask ((__v2di) __A,
+-							(__v2di) __B,
++							(__v2di) __W,
+ 							(__mmask8) __U);
+ }
+ 
+@@ -121,10 +121,10 @@ _mm256_popcnt_epi64 (__m256i __A)
+ 
+ extern __inline __m256i
+ __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+-_mm256_mask_popcnt_epi64 (__m256i __A, __mmask8 __U, __m256i __B)
++_mm256_mask_popcnt_epi64 (__m256i __W, __mmask8 __U, __m256i __A)
+ {
+   return (__m256i) __builtin_ia32_vpopcountq_v4di_mask ((__v4di) __A,
+-							(__v4di) __B,
++							(__v4di) __W,
+ 							(__mmask8) __U);
+ }
+ 
+@@ -144,4 +144,3 @@ _mm256_maskz_popcnt_epi64 (__mmask8 __U, __m256i __A)
+ #endif /* __DISABLE_AVX512VPOPCNTDQVL__ */
+ 
+ #endif /* _AVX512VPOPCNTDQVLINTRIN_H_INCLUDED */
+-
 diff --git a/gcc/config/i386/avxintrin.h b/gcc/config/i386/avxintrin.h
 index 29115a11a0d..3301451e4de 100644
 --- a/gcc/config/i386/avxintrin.h
@@ -8390,7 +8711,7 @@ index 6580890edc0..5dedeb2d18b 100644
  BDESC (OPTION_MASK_ISA_SSSE3, 0, CODE_FOR_ssse3_phaddwv8hi3, "__builtin_ia32_phaddw128", IX86_BUILTIN_PHADDW128, UNKNOWN, (int) V8HI_FTYPE_V8HI_V8HI)
  BDESC (OPTION_MASK_ISA_SSSE3 | OPTION_MASK_ISA_MMX, 0, CODE_FOR_ssse3_phaddwv4hi3, "__builtin_ia32_phaddw", IX86_BUILTIN_PHADDW, UNKNOWN, (int) V4HI_FTYPE_V4HI_V4HI)
 diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
-index 2b37296e537..6ee6aea2389 100644
+index 2b37296e537..779e8111379 100644
 --- a/gcc/config/i386/i386.c
 +++ b/gcc/config/i386/i386.c
 @@ -5423,7 +5423,25 @@ ix86_valid_target_attribute_inner_p (tree args, char *p_strings[],
@@ -8514,7 +8835,23 @@ index 2b37296e537..6ee6aea2389 100644
  	output_addr_const (file, x);
        else
  	{
-@@ -44377,11 +44394,15 @@ ix86_md_asm_adjust (vec<rtx> &outputs, vec<rtx> &/*inputs*/,
+@@ -33401,8 +33418,13 @@ ix86_fold_builtin (tree fndecl, int n_args,
+ 		    countt = build_int_cst (integer_type_node, count);
+ 		}
+ 	      tree_vector_builder builder;
+-	      builder.new_unary_operation (TREE_TYPE (args[0]), args[0],
+-					   false);
++	      if (mask != HOST_WIDE_INT_M1U || is_vshift)
++		builder.new_vector (TREE_TYPE (args[0]),
++				    TYPE_VECTOR_SUBPARTS (TREE_TYPE (args[0])),
++				    1);
++	      else
++		builder.new_unary_operation (TREE_TYPE (args[0]), args[0],
++					     false);
+ 	      unsigned int cnt = builder.encoded_nelts ();
+ 	      for (unsigned int i = 0; i < cnt; ++i)
+ 		{
+@@ -44377,11 +44399,15 @@ ix86_md_asm_adjust (vec<rtx> &outputs, vec<rtx> &/*inputs*/,
  	    {
  	      x = force_reg (dest_mode, const0_rtx);
  
@@ -8534,7 +8871,7 @@ index 2b37296e537..6ee6aea2389 100644
  
        if (dest_mode != GET_MODE (dest))
 diff --git a/gcc/config/i386/i386.h b/gcc/config/i386/i386.h
-index 2cb16d9fbf6..95e1733f12a 100644
+index 2cb16d9fbf6..14e5a392f62 100644
 --- a/gcc/config/i386/i386.h
 +++ b/gcc/config/i386/i386.h
 @@ -640,7 +640,7 @@ extern tree x86_mfence;
@@ -8546,6 +8883,18 @@ index 2cb16d9fbf6..95e1733f12a 100644
  #define MACHOPIC_ATT_STUB 0
  /* (b) Macros defined in config/darwin.h  */
  #define MACHO_DYNAMIC_NO_PIC_P 0
+@@ -1082,9 +1082,9 @@ extern const char *host_detect_local_cpu (int argc, const char **argv);
+ /*xmm8,xmm9,xmm10,xmm11,xmm12,xmm13,xmm14,xmm15*/		\
+      6,   6,    6,    6,    6,    6,    6,    6,		\
+ /*xmm16,xmm17,xmm18,xmm19,xmm20,xmm21,xmm22,xmm23*/		\
+-     6,    6,     6,    6,    6,    6,    6,    6,		\
++     1,    1,     1,    1,    1,    1,    1,    1,		\
+ /*xmm24,xmm25,xmm26,xmm27,xmm28,xmm29,xmm30,xmm31*/		\
+-     6,    6,     6,    6,    6,    6,    6,    6,		\
++     1,    1,     1,    1,    1,    1,    1,    1,		\
+  /* k0,  k1,  k2,  k3,  k4,  k5,  k6,  k7*/			\
+      1,   1,   1,   1,   1,   1,   1,   1 }
+ 
 @@ -2205,6 +2205,31 @@ extern int const svr4_dbx_register_map[FIRST_PSEUDO_REGISTER];
  #define ASM_OUTPUT_FUNCTION_LABEL(FILE, NAME, DECL) \
    ix86_asm_output_function_label ((FILE), (NAME), (DECL))
@@ -8624,9 +8973,18 @@ index 2a3e912ee74..0b12edc72c1 100644
    obstack_ptr_grow (&argv_obstack, target_so_filename);
    compile_for_target (&argv_obstack);
 diff --git a/gcc/config/i386/sse.md b/gcc/config/i386/sse.md
-index 46ec4602eb7..659cbff22f3 100644
+index 46ec4602eb7..18cc39ae521 100644
 --- a/gcc/config/i386/sse.md
 +++ b/gcc/config/i386/sse.md
+@@ -1610,7 +1610,7 @@
+   [(set (match_operand:SWI1248_AVX512BWDQ 0 "register_operand" "=k")
+ 	(any_lshift:SWI1248_AVX512BWDQ
+ 	  (match_operand:SWI1248_AVX512BWDQ 1 "register_operand" "k")
+-	  (match_operand:QI 2 "immediate_operand" "n")))
++	  (match_operand 2 "const_0_to_255_operand" "n")))
+    (unspec [(const_int 0)] UNSPEC_MASKOP)]
+   "TARGET_AVX512F"
+   "k<mshift><mskmodesuffix>\t{%2, %1, %0|%0, %1, %2}"
 @@ -2625,7 +2625,7 @@
  ;; Modes handled by reduc_sm{in,ax}* patterns.
  (define_mode_iterator REDUC_SSE_SMINMAX_MODE
@@ -8636,7 +8994,32 @@ index 46ec4602eb7..659cbff22f3 100644
     (V16QI "TARGET_SSE")])
  
  (define_expand "reduc_<code>_scal_<mode>"
-@@ -3914,12 +3914,12 @@
+@@ -3180,13 +3180,19 @@
+ 	  (match_operand:<avx512fmaskmode> 3 "register_operand")))]
+   "TARGET_AVX512BW")
+ 
++;; As vcondv4div4df and vcondv8siv8sf are enabled already with TARGET_AVX,
++;; and their condition can be folded late into a constant, we need to
++;; support vcond_mask_v4div4di and vcond_mask_v8siv8si for TARGET_AVX.
++(define_mode_iterator VI_256_AVX2 [(V32QI "TARGET_AVX2") (V16HI "TARGET_AVX2")
++				   V8SI V4DI])
++
+ (define_expand "vcond_mask_<mode><sseintvecmodelower>"
+-  [(set (match_operand:VI_256 0 "register_operand")
+-	(vec_merge:VI_256
+-	  (match_operand:VI_256 1 "nonimmediate_operand")
+-	  (match_operand:VI_256 2 "nonimm_or_0_operand")
++  [(set (match_operand:VI_256_AVX2 0 "register_operand")
++	(vec_merge:VI_256_AVX2
++	  (match_operand:VI_256_AVX2 1 "nonimmediate_operand")
++	  (match_operand:VI_256_AVX2 2 "nonimm_or_0_operand")
+ 	  (match_operand:<sseintvecmode> 3 "register_operand")))]
+-  "TARGET_AVX2"
++  "TARGET_AVX"
+ {
+   ix86_expand_sse_movcc (operands[0], operands[3],
+ 			 operands[1], operands[2]);
+@@ -3914,12 +3920,12 @@
     (set_attr "mode" "<MODE>")])
  
  (define_insn "*<sd_mask_codefor>fma_fmadd_<mode><sd_maskz_name>_bcst_1"
@@ -8653,7 +9036,7 @@ index 46ec4602eb7..659cbff22f3 100644
    "TARGET_AVX512F && <sd_mask_mode512bit_condition>"
    "vfmadd213<ssemodesuffix>\t{%3<avx512bcst>, %2, %0<sd_mask_op4>|%0<sd_mask_op4>, %2, %3<avx512bcst>}"
    [(set_attr "type" "ssemuladd")
-@@ -4031,13 +4031,13 @@
+@@ -4031,13 +4037,13 @@
     (set_attr "mode" "<MODE>")])
  
  (define_insn "*<sd_mask_codefor>fma_fmsub_<mode><sd_maskz_name>_bcst_1"
@@ -8671,7 +9054,7 @@ index 46ec4602eb7..659cbff22f3 100644
    "TARGET_AVX512F && <sd_mask_mode512bit_condition>"
    "vfmsub213<ssemodesuffix>\t{%3<avx512bcst>, %2, %0<sd_mask_op4>|%0<sd_mask_op4>, %2, %3<avx512bcst>}"
    [(set_attr "type" "ssemuladd")
-@@ -4153,13 +4153,13 @@
+@@ -4153,13 +4159,13 @@
     (set_attr "mode" "<MODE>")])
  
  (define_insn "*<sd_mask_codefor>fma_fnmadd_<mode><sd_maskz_name>_bcst_1"
@@ -8689,7 +9072,7 @@ index 46ec4602eb7..659cbff22f3 100644
    "TARGET_AVX512F && <sd_mask_mode512bit_condition>"
    "vfnmadd213<ssemodesuffix>\t{%3<avx512bcst>, %2, %0<sd_mask_op4>|%0<sd_mask_op4>, %2, %3<avx512bcst>}"
    [(set_attr "type" "ssemuladd")
-@@ -4277,14 +4277,14 @@
+@@ -4277,14 +4283,14 @@
     (set_attr "mode" "<MODE>")])
  
  (define_insn "*<sd_mask_codefor>fma_fnmsub_<mode><sd_maskz_name>_bcst_1"
@@ -8708,7 +9091,57 @@ index 46ec4602eb7..659cbff22f3 100644
    "TARGET_AVX512F && <sd_mask_mode512bit_condition>"
    "vfnmsub213<ssemodesuffix>\t{%3<avx512bcst>, %2, %0<sd_mask_op4>|%0<sd_mask_op4>, %2, %3<avx512bcst>}"
    [(set_attr "type" "ssemuladd")
-@@ -16241,7 +16241,7 @@
+@@ -8214,13 +8220,16 @@
+    (set_attr "prefix" "evex")
+    (set_attr "mode" "<sseinsnmode>")])
+ 
++(define_mode_iterator VI48F_256_DQ
++  [V8SI V8SF (V4DI "TARGET_AVX512DQ") (V4DF "TARGET_AVX512DQ")])
++
+ (define_expand "avx512vl_vextractf128<mode>"
+   [(match_operand:<ssehalfvecmode> 0 "nonimmediate_operand")
+-   (match_operand:VI48F_256 1 "register_operand")
++   (match_operand:VI48F_256_DQ 1 "register_operand")
+    (match_operand:SI 2 "const_0_to_1_operand")
+    (match_operand:<ssehalfvecmode> 3 "nonimm_or_0_operand")
+    (match_operand:QI 4 "register_operand")]
+-  "TARGET_AVX512DQ && TARGET_AVX512VL"
++  "TARGET_AVX512VL"
+ {
+   rtx (*insn)(rtx, rtx, rtx, rtx);
+   rtx dest = operands[0];
+@@ -8288,14 +8297,19 @@
+                      (const_int 4) (const_int 5)
+                      (const_int 6) (const_int 7)])))]
+   "TARGET_AVX512F
+-   && <mask_mode512bit_condition>
++   && <mask_avx512dq_condition>
+    && (<mask_applied> || !(MEM_P (operands[0]) && MEM_P (operands[1])))"
+ {
+   if (<mask_applied>
+       || (!TARGET_AVX512VL
+ 	  && !REG_P (operands[0])
+ 	  && EXT_REX_SSE_REG_P (operands[1])))
+-    return "vextract<shuffletype>32x8\t{$0x0, %1, %0<mask_operand2>|%0<mask_operand2>, %1, 0x0}";
++    {
++      if (TARGET_AVX512DQ)
++	return "vextract<shuffletype>32x8\t{$0x0, %1, %0<mask_operand2>|%0<mask_operand2>, %1, 0x0}";
++      else
++	return "vextract<shuffletype>64x4\t{$0x0, %1, %0|%0, %1, 0x0}";
++    }
+   else
+     return "#";
+ }
+@@ -8405,7 +8419,7 @@
+ 	  (parallel [(const_int 0) (const_int 1)
+ 		     (const_int 2) (const_int 3)])))]
+   "TARGET_AVX
+-   && <mask_avx512vl_condition> && <mask_avx512dq_condition>
++   && <mask_avx512vl_condition>
+    && (<mask_applied> || !(MEM_P (operands[0]) && MEM_P (operands[1])))"
+ {
+   if (<mask_applied>)
+@@ -16241,7 +16255,7 @@
      }
  })
  
@@ -8717,6 +9150,42 @@ index 46ec4602eb7..659cbff22f3 100644
    [(set (match_operand:MMXMODEI 0 "register_operand" "=y")
  	(abs:MMXMODEI
  	  (match_operand:MMXMODEI 1 "nonimmediate_operand" "ym")))]
+@@ -21116,7 +21130,7 @@
+   [(set (match_operand:<avx512fmaskmode> 0 "register_operand" "=k")
+           (unspec:<avx512fmaskmode>
+             [(match_operand:VF_AVX512VL 1 "register_operand" "v")
+-             (match_operand:QI 2 "const_0_to_255_operand" "n")]
++             (match_operand 2 "const_0_to_255_operand" "n")]
+              UNSPEC_FPCLASS))]
+    "TARGET_AVX512DQ"
+    "vfpclass<ssemodesuffix>\t{%2, %1, %0<mask_scalar_merge_operand3>|%0<mask_scalar_merge_operand3>, %1, %2}";
+@@ -21130,7 +21144,7 @@
+ 	(and:<avx512fmaskmode>
+ 	  (unspec:<avx512fmaskmode>
+ 	    [(match_operand:VF_128 1 "register_operand" "v")
+-             (match_operand:QI 2 "const_0_to_255_operand" "n")]
++             (match_operand 2 "const_0_to_255_operand" "n")]
+ 	    UNSPEC_FPCLASS)
+ 	  (const_int 1)))]
+    "TARGET_AVX512DQ"
+@@ -21735,7 +21749,7 @@
+ 	(unspec:VI1_AVX512F
+ 	  [(match_operand:VI1_AVX512F 1 "register_operand" "%0,x,v")
+ 	   (match_operand:VI1_AVX512F 2 "nonimmediate_operand" "xBm,xm,vm")
+-	   (match_operand:QI 3 "const_0_to_255_operand" "n,n,n")]
++	   (match_operand 3 "const_0_to_255_operand" "n,n,n")]
+ 	  UNSPEC_GF2P8AFFINEINV))]
+   "TARGET_GFNI"
+   "@
+@@ -21753,7 +21767,7 @@
+ 	(unspec:VI1_AVX512F
+ 	  [(match_operand:VI1_AVX512F 1 "register_operand" "%0,x,v")
+ 	   (match_operand:VI1_AVX512F 2 "nonimmediate_operand" "xBm,xm,vm")
+-	   (match_operand:QI 3 "const_0_to_255_operand" "n,n,n")]
++	   (match_operand 3 "const_0_to_255_operand" "n,n,n")]
+ 	  UNSPEC_GF2P8AFFINE))]
+   "TARGET_GFNI"
+   "@
 diff --git a/gcc/config/mips/mips.c b/gcc/config/mips/mips.c
 index 2dfc7c73cce..d758fbf1be6 100644
 --- a/gcc/config/mips/mips.c
@@ -12525,10 +12994,25 @@ index ce2825580c6..8243716589f 100644
  AC_SUBST(all_languages)
  AC_SUBST(all_selected_languages)
 diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
-index c977850d067..64ca338029b 100644
+index c977850d067..d9bb3b5d75b 100644
 --- a/gcc/cp/ChangeLog
 +++ b/gcc/cp/ChangeLog
-@@ -1,3 +1,434 @@
+@@ -1,3 +1,449 @@
++2020-02-13  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from mainline
++	2020-02-05  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/93557
++	* semantics.c (cp_build_vec_convert): Call decay_conversion on arg
++	prior to passing it to c_build_vec_convert.
++
++	2020-01-29  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/91118
++	* cp-gimplify.c (cxx_omp_predetermined_sharing): Return
++	OMP_CLAUSE_DEFAULT_SHARED for typeinfo decls.
++
 +2020-01-28  Jason Merrill  <jason@redhat.com>
 +
 +	PR c++/90546
@@ -12963,7 +13447,7 @@ index c977850d067..64ca338029b 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -16,7 +447,7 @@
+@@ -16,7 +462,7 @@
  
  	Backported from mainline
  	2019-08-02  Marek Polacek  <polacek@redhat.com>
@@ -13504,7 +13988,7 @@ index f6f21b33396..f0d4cb5e8e7 100644
  
      case GOTO_EXPR:
 diff --git a/gcc/cp/cp-gimplify.c b/gcc/cp/cp-gimplify.c
-index 17d10456341..a7121b70a3b 100644
+index 17d10456341..90a315003d4 100644
 --- a/gcc/cp/cp-gimplify.c
 +++ b/gcc/cp/cp-gimplify.c
 @@ -816,6 +816,27 @@ cp_gimplify_expr (tree *expr_p, gimple_seq *pre_p, gimple_seq *post_p)
@@ -13545,6 +14029,17 @@ index 17d10456341..a7121b70a3b 100644
      }
  
    /* this may not be specified in data-sharing clauses, still we need
+@@ -2083,6 +2107,10 @@ cxx_omp_predetermined_sharing (tree decl)
+ 	   && DECL_OMP_PRIVATIZED_MEMBER (decl)))
+     return OMP_CLAUSE_DEFAULT_SHARED;
+ 
++  /* Similarly for typeinfo symbols.  */
++  if (VAR_P (decl) && DECL_ARTIFICIAL (decl) && DECL_TINFO_P (decl))
++    return OMP_CLAUSE_DEFAULT_SHARED;
++
+   return OMP_CLAUSE_DEFAULT_UNSPECIFIED;
+ }
+ 
 diff --git a/gcc/cp/cp-objcp-common.c b/gcc/cp/cp-objcp-common.c
 index 47651040008..4118ab8a31d 100644
 --- a/gcc/cp/cp-objcp-common.c
@@ -14549,7 +15044,7 @@ index a2a986b1db1..c7245efa2b2 100644
        tree tparms;
  
 diff --git a/gcc/cp/semantics.c b/gcc/cp/semantics.c
-index 6d40b145fcb..1bd014696fc 100644
+index 6d40b145fcb..0c727eaf2e7 100644
 --- a/gcc/cp/semantics.c
 +++ b/gcc/cp/semantics.c
 @@ -4338,7 +4338,7 @@ expand_or_defer_fn_1 (tree fn)
@@ -14601,6 +15096,16 @@ index 6d40b145fcb..1bd014696fc 100644
    switch (TREE_CODE (cond))
      {
      case GT_EXPR:
+@@ -10026,7 +10036,8 @@ cp_build_vec_convert (tree arg, location_t loc, tree type,
+ 
+   tree ret = NULL_TREE;
+   if (!type_dependent_expression_p (arg) && !dependent_type_p (type))
+-    ret = c_build_vec_convert (cp_expr_loc_or_loc (arg, input_location), arg,
++    ret = c_build_vec_convert (cp_expr_loc_or_loc (arg, input_location),
++			       decay_conversion (arg, complain),
+ 			       loc, type, (complain & tf_error) != 0);
+ 
+   if (!processing_template_decl)
 diff --git a/gcc/cp/tree.c b/gcc/cp/tree.c
 index 1339e9fd204..7275b7bf5b0 100644
 --- a/gcc/cp/tree.c
@@ -15273,10 +15778,19 @@ index f0e43b5fda2..9feaea9fde5 100644
    low = fold_convert_loc (loc, etype, low);
    exp = fold_convert_loc (loc, etype, exp);
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index e3073787ea9..0f5b7e60a50 100644
+index e3073787ea9..f31e052b10a 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,562 @@
+@@ -1,3 +1,571 @@
++2020-02-13  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from mainline
++	2020-01-29  Jakub Jelinek  <jakub@redhat.com>
++
++	PR fortran/93463
++	* openmp.c (oacc_code_to_statement): Handle
++	EXEC_OACC_{ROUTINE,UPDATE,WAIT,CACHE,{ENTER,EXIT}_DATA,DECLARE}.
++
 +2020-02-03  Tobias Burnus  <tobias@codesourcery.com>
 +
 +	Backported from mainline
@@ -17474,7 +17988,7 @@ index 3e1ffedd8ee..dccce4fe0a4 100644
  	    {
  	      if (m != MATCH_YES)
 diff --git a/gcc/fortran/openmp.c b/gcc/fortran/openmp.c
-index 1c7bce6c300..716dd5ec3e2 100644
+index 1c7bce6c300..83b1c4487de 100644
 --- a/gcc/fortran/openmp.c
 +++ b/gcc/fortran/openmp.c
 @@ -5757,6 +5757,81 @@ omp_code_to_statement (gfc_code *code)
@@ -17556,6 +18070,27 @@ index 1c7bce6c300..716dd5ec3e2 100644
 +    case EXEC_OMP_PARALLEL_DO_SIMD:
 +      return ST_OMP_PARALLEL_DO_SIMD;
 +
+     default:
+       gcc_unreachable ();
+     }
+@@ -5783,6 +5858,20 @@ oacc_code_to_statement (gfc_code *code)
+       return ST_OACC_LOOP;
+     case EXEC_OACC_ATOMIC:
+       return ST_OACC_ATOMIC;
++    case EXEC_OACC_ROUTINE:
++      return ST_OACC_ROUTINE;
++    case EXEC_OACC_UPDATE:
++      return ST_OACC_UPDATE;
++    case EXEC_OACC_WAIT:
++      return ST_OACC_WAIT;
++    case EXEC_OACC_CACHE:
++      return ST_OACC_CACHE;
++    case EXEC_OACC_ENTER_DATA:
++      return ST_OACC_ENTER_DATA;
++    case EXEC_OACC_EXIT_DATA:
++      return ST_OACC_EXIT_DATA;
++    case EXEC_OACC_DECLARE:
++      return ST_OACC_DECLARE;
      default:
        gcc_unreachable ();
      }
@@ -19129,7 +19664,7 @@ index 34b8d6fda7d..7185c07f36b 100644
  	  /* Emit the EH region holding STMT.  */
  	  region = lookup_stmt_eh_lp_fn (fn, stmt);
 diff --git a/gcc/gimplify.c b/gcc/gimplify.c
-index 98408b981dc..a0cb6c402bc 100644
+index 98408b981dc..c57113cda1d 100644
 --- a/gcc/gimplify.c
 +++ b/gcc/gimplify.c
 @@ -7058,6 +7058,8 @@ omp_default_clause (struct gimplify_omp_ctx *ctx, tree decl,
@@ -19152,6 +19687,23 @@ index 98408b981dc..a0cb6c402bc 100644
  			    tree d1 = OMP_CLAUSE_DECL (*sc);
  			    tree d2 = OMP_CLAUSE_DECL (c);
  			    while (TREE_CODE (d1) == ARRAY_REF)
+@@ -9079,9 +9081,13 @@ gimplify_scan_omp_clauses (tree *list_p, gimple_seq *pre_p,
+ 				  == POINTER_TYPE))))
+ 		    omp_firstprivatize_variable (outer_ctx, decl);
+ 		  else
+-		    omp_add_variable (outer_ctx, decl,
+-				      GOVD_SEEN | GOVD_SHARED);
+-		  omp_notice_variable (outer_ctx, decl, true);
++		    {
++		      omp_add_variable (outer_ctx, decl,
++					GOVD_SEEN | GOVD_SHARED);
++		      if (outer_ctx->outer_context)
++			omp_notice_variable (outer_ctx->outer_context, decl,
++					     true);
++		    }
+ 		}
+ 	    }
+ 	  if (outer_ctx)
 diff --git a/gcc/go/gofrontend/escape.cc b/gcc/go/gofrontend/escape.cc
 index e1c98094831..23fa7552f4c 100644
 --- a/gcc/go/gofrontend/escape.cc
@@ -20142,10 +20694,47 @@ index 9954ea5cfa1..059b5440123 100644
  
    if (has_conflicts)
 diff --git a/gcc/omp-low.c b/gcc/omp-low.c
-index f9ab91aafaa..81280296a24 100644
+index f9ab91aafaa..813cefd69b9 100644
 --- a/gcc/omp-low.c
 +++ b/gcc/omp-low.c
-@@ -3041,6 +3041,16 @@ check_omp_nesting_restrictions (gimple *stmt, omp_context *ctx)
+@@ -444,18 +444,30 @@ use_pointer_for_field (tree decl, omp_context *shared_ctx)
+ 	  omp_context *up;
+ 
+ 	  for (up = shared_ctx->outer; up; up = up->outer)
+-	    if (is_taskreg_ctx (up) && maybe_lookup_decl (decl, up))
++	    if ((is_taskreg_ctx (up)
++		 || (gimple_code (up->stmt) == GIMPLE_OMP_TARGET
++		     && is_gimple_omp_offloaded (up->stmt)))
++		&& maybe_lookup_decl (decl, up))
+ 	      break;
+ 
+ 	  if (up)
+ 	    {
+ 	      tree c;
+ 
+-	      for (c = gimple_omp_taskreg_clauses (up->stmt);
+-		   c; c = OMP_CLAUSE_CHAIN (c))
+-		if (OMP_CLAUSE_CODE (c) == OMP_CLAUSE_SHARED
+-		    && OMP_CLAUSE_DECL (c) == decl)
+-		  break;
++	      if (gimple_code (up->stmt) == GIMPLE_OMP_TARGET)
++		{
++		  for (c = gimple_omp_target_clauses (up->stmt);
++		       c; c = OMP_CLAUSE_CHAIN (c))
++		    if (OMP_CLAUSE_CODE (c) == OMP_CLAUSE_MAP
++			&& OMP_CLAUSE_DECL (c) == decl)
++		      break;
++		}
++	      else
++		for (c = gimple_omp_taskreg_clauses (up->stmt);
++		     c; c = OMP_CLAUSE_CHAIN (c))
++		  if (OMP_CLAUSE_CODE (c) == OMP_CLAUSE_SHARED
++		      && OMP_CLAUSE_DECL (c) == decl)
++		    break;
+ 
+ 	      if (c)
+ 		goto maybe_mark_addressable_and_ret;
+@@ -3041,6 +3053,16 @@ check_omp_nesting_restrictions (gimple *stmt, omp_context *ctx)
        }
        break;
      case GIMPLE_OMP_TEAMS:
@@ -20162,8 +20751,24 @@ index f9ab91aafaa..81280296a24 100644
        if (ctx == NULL)
  	break;
        else if (gimple_code (ctx->stmt) != GIMPLE_OMP_TARGET
+@@ -3338,7 +3360,14 @@ scan_omp_1_stmt (gimple_stmt_iterator *gsi, bool *handled_ops_p,
+       break;
+ 
+     case GIMPLE_OMP_TARGET:
+-      scan_omp_target (as_a <gomp_target *> (stmt), ctx);
++      if (is_gimple_omp_offloaded (stmt))
++	{
++	  taskreg_nesting_level++;
++	  scan_omp_target (as_a <gomp_target *> (stmt), ctx);
++	  taskreg_nesting_level--;
++	}
++      else
++	scan_omp_target (as_a <gomp_target *> (stmt), ctx);
+       break;
+ 
+     case GIMPLE_OMP_TEAMS:
 diff --git a/gcc/omp-simd-clone.c b/gcc/omp-simd-clone.c
-index 472e2025e19..845443efc59 100644
+index 472e2025e19..e865828f569 100644
 --- a/gcc/omp-simd-clone.c
 +++ b/gcc/omp-simd-clone.c
 @@ -498,7 +498,6 @@ simd_clone_adjust_return_type (struct cgraph_node *node)
@@ -20195,7 +20800,32 @@ index 472e2025e19..845443efc59 100644
    targetm.simd_clone.adjust (node);
  
    tree retval = simd_clone_adjust_return_type (node);
-@@ -1737,6 +1733,8 @@ expand_simd_clones (struct cgraph_node *node)
+@@ -1707,14 +1703,22 @@ expand_simd_clones (struct cgraph_node *node)
+ 	     already.  */
+ 	  tree id = simd_clone_mangle (node, clone);
+ 	  if (id == NULL_TREE)
+-	    continue;
++	    {
++	      if (i == 0)
++		clone->nargs += clone->inbranch;
++	      continue;
++	    }
+ 
+ 	  /* Only when we are sure we want to create the clone actually
+ 	     clone the function (or definitions) or create another
+ 	     extern FUNCTION_DECL (for prototypes without definitions).  */
+ 	  struct cgraph_node *n = simd_clone_create (node);
+ 	  if (n == NULL)
+-	    continue;
++	    {
++	      if (i == 0)
++		clone->nargs += clone->inbranch;
++	      continue;
++	    }
+ 
+ 	  n->simdclone = clone;
+ 	  clone->origin = node;
+@@ -1737,6 +1741,8 @@ expand_simd_clones (struct cgraph_node *node)
  	    simd_clone_adjust (n);
  	  else
  	    {
@@ -24578,6 +25208,21 @@ index 691cf80297d..e23ea3cd7d9 100644
  
  #: c/c-parser.c:7438
  #, fuzzy, gcc-internal-format
+diff --git a/gcc/postreload.c b/gcc/postreload.c
+index 728aa9b0ed5..b76c7b0b758 100644
+--- a/gcc/postreload.c
++++ b/gcc/postreload.c
+@@ -1081,6 +1081,10 @@ reload_combine_recognize_pattern (rtx_insn *insn)
+       struct reg_use *use = reg_state[regno].reg_use + i;
+       if (GET_MODE (*use->usep) != mode)
+ 	return false;
++      /* Don't try to adjust (use (REGX)).  */
++      if (GET_CODE (PATTERN (use->insn)) == USE
++	  && &XEXP (PATTERN (use->insn), 0) == use->usep)
++	return false;
+     }
+ 
+   /* Look for (set (REGX) (CONST_INT))
 diff --git a/gcc/predict.c b/gcc/predict.c
 index 60a19d7edd1..eaab47f992a 100644
 --- a/gcc/predict.c
@@ -24694,10 +25339,86 @@ index 29f6cdc4667..33b4be79c0f 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..1dcf894a92a 100644
+index bc11ae4ae0b..24e5e88d763 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,1391 @@
+@@ -1,3 +1,1467 @@
++2020-02-13  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c/93576
++	* gcc.dg/pr93576.c: New test.
++
++	PR target/93696
++	* gcc.target/i386/pr93696-1.c: New test.
++	* gcc.target/i386/pr93696-2.c: New test.
++	* gcc.target/i386/avx512bitalg-vpopcntw-1.c (TEST): Fix argument order
++	of _mm*_mask_popcnt_*.
++	* gcc.target/i386/avx512vpopcntdq-vpopcntq-1.c (TEST): Likewise.
++	* gcc.target/i386/avx512vpopcntdq-vpopcntd-1.c (TEST): Likewise.
++	* gcc.target/i386/avx512bitalg-vpopcntb-1.c (TEST): Likewise.
++	* gcc.target/i386/avx512bitalg-vpopcntb.c (foo): Likewise.
++	* gcc.target/i386/avx512bitalg-vpopcntbvl.c (foo): Likewise.
++	* gcc.target/i386/avx512vpopcntdq-vpopcntd.c (foo): Likewise.
++	* gcc.target/i386/avx512bitalg-vpopcntwvl.c (foo): Likewise.
++	* gcc.target/i386/avx512bitalg-vpopcntw.c (foo): Likewise.
++	* gcc.target/i386/avx512vpopcntdq-vpopcntq.c (foo): Likewise.
++
++	PR target/93673
++	* gcc.target/i386/avx512f-pr93673.c: New test.
++	* gcc.target/i386/avx512dq-pr93673.c: New test.
++	* gcc.target/i386/avx512bw-pr93673.c: New test.
++
++	Backported from mainline
++	2020-02-12  Jakub Jelinek  <jakub@redhat.com>
++
++	PR target/93670
++	* gcc.target/i386/avx512vl-pr93670.c: New test.
++
++	2020-02-10  Jakub Jelinek  <jakub@redhat.com>
++
++	PR target/93637
++	* gcc.target/i386/avx-pr93637.c: New test.
++
++	2020-02-08  Uroš Bizjak  <ubizjak@gmail.com>
++		    Jakub Jelinek  <jakub@redhat.com>
++
++	PR target/65782
++	* gcc.target/i386/pr65782.c: New test.
++
++	2020-02-05  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/93557
++	* c-c++-common/Wunused-var-17.c: New test.
++
++	PR middle-end/93555
++	* c-c++-common/gomp/pr93555-1.c: New test.
++	* c-c++-common/gomp/pr93555-2.c: New test.
++	* gfortran.dg/gomp/pr93555.f90: New test.
++
++	2020-01-30  Jakub Jelinek  <jakub@redhat.com>
++
++	PR middle-end/93505
++	* gcc.c-torture/compile/pr93505.c: New test.
++
++	2020-01-29  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/91118
++	* g++.dg/gomp/pr91118-1.C: New test.
++	* g++.dg/gomp/pr91118-2.C: New test.
++
++	PR fortran/93463
++	* gfortran.dg/goacc/pr93463.f90: New test.
++
++	2020-01-28  Jakub Jelinek  <jakub@redhat.com>
++
++	PR target/93418
++	* gcc.target/i386/avx2-pr93418.c: New test.
++
++	2020-01-23  Jakub Jelinek  <jakub@redhat.com>
++
++	PR rtl-optimization/93402
++	* gcc.c-torture/execute/pr93402.c: New test.
++
 +2020-02-11  Tamar Christina  <tamar.christina@arm.com>
 +
 +	Backport from mainline
@@ -26089,7 +26810,7 @@ index bc11ae4ae0b..1dcf894a92a 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +1815,7 @@
+@@ -427,7 +1891,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -26098,7 +26819,7 @@ index bc11ae4ae0b..1dcf894a92a 100644
  	(check_effective_target_powerpc_p8vector_ok): No support for Darwin.
  	(check_effective_target_powerpc_p9vector_ok): Likewise.
  	(check_effective_target_powerpc_float128_sw_ok): Likewise.
-@@ -720,7 +2108,7 @@
+@@ -720,7 +2184,7 @@
  
  	Backport from mainline
  	PR fortran/91077
@@ -26107,7 +26828,7 @@ index bc11ae4ae0b..1dcf894a92a 100644
  
  2019-07-05  Szabolcs Nagy  <szabolcs.nagy@arm.com>
  
-@@ -803,7 +2191,7 @@
+@@ -803,7 +2267,7 @@
  	Backport fom mainline
  	2019-06-21  Jeff Law  <law@redhat.com>
  
@@ -26116,7 +26837,7 @@ index bc11ae4ae0b..1dcf894a92a 100644
  	* gcc.c-torture/execute/pr90949.c: New test.
  
  2019-06-26  Martin Jambor  <mjambor@suse.cz>
-@@ -969,7 +2357,7 @@
+@@ -969,7 +2433,7 @@
         * gcc.target/i386/pr82699-6.c: Likewise
         * gcc.target/i386/returninst1.c: Likewise
         * gcc.target/i386/returninst2.c: Likewise
@@ -26125,7 +26846,7 @@ index bc11ae4ae0b..1dcf894a92a 100644
  
  2019-05-30  Iain Sandoe  <iain@sandoe.co.uk>
  
-@@ -1131,7 +2519,7 @@
+@@ -1131,7 +2595,7 @@
  
  	Backport from trunk
  	PR fortran/90498
@@ -26134,7 +26855,7 @@ index bc11ae4ae0b..1dcf894a92a 100644
  
  2019-05-17  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -3801,21 +5189,21 @@
+@@ -3801,21 +5265,21 @@
  2019-02-23  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88117
@@ -26163,7 +26884,7 @@ index bc11ae4ae0b..1dcf894a92a 100644
  
  2019-02-22  David Malcolm  <dmalcolm@redhat.com>
  
-@@ -4444,7 +5832,7 @@
+@@ -4444,7 +5908,7 @@
  2019-02-09  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/89200
@@ -26172,7 +26893,7 @@ index bc11ae4ae0b..1dcf894a92a 100644
  
  2019-02-09  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -4704,17 +6092,17 @@
+@@ -4704,17 +6168,17 @@
  2019-02-02  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88393
@@ -26193,6 +26914,31 @@ index bc11ae4ae0b..1dcf894a92a 100644
  
  2019-02-02  Jakub Jelinek  <jakub@redhat.com>
  
+diff --git a/gcc/testsuite/c-c++-common/Wunused-var-17.c b/gcc/testsuite/c-c++-common/Wunused-var-17.c
+new file mode 100644
+index 00000000000..ab995f8b674
+--- /dev/null
++++ b/gcc/testsuite/c-c++-common/Wunused-var-17.c
+@@ -0,0 +1,19 @@
++/* PR c++/93557 */
++/* { dg-do compile } */
++/* { dg-options "-O2 -Wunused-but-set-variable" } */
++
++typedef int VI __attribute__((vector_size (sizeof (int) * 4)));
++typedef float VF __attribute__((vector_size (sizeof (float) * 4)));
++
++void
++foo (VI *p, VF *q)
++{
++  VI a = (VI) { 1, 2, 3, 4 };			/* { dg-bogus "set but not used" } */
++  q[0] = __builtin_convertvector (a, VF);
++  VI b = p[1];					/* { dg-bogus "set but not used" } */
++  q[1] = __builtin_convertvector (b, VF);
++  VF c = (VF) { 5.0f, 6.0f, 7.0f, 8.0f };	/* { dg-bogus "set but not used" } */
++  p[2] = __builtin_convertvector (c, VI);
++  VF d = q[3];					/* { dg-bogus "set but not used" } */
++  p[3] = __builtin_convertvector (d, VI);
++}
 diff --git a/gcc/testsuite/c-c++-common/array-1.c b/gcc/testsuite/c-c++-common/array-1.c
 new file mode 100644
 index 00000000000..5de9ade4d43
@@ -26824,6 +27570,52 @@ index 00000000000..604fd5986f8
 +	f[j] += k[j];
 +    }
 +  bar (f);
++}
+diff --git a/gcc/testsuite/c-c++-common/gomp/pr93555-1.c b/gcc/testsuite/c-c++-common/gomp/pr93555-1.c
+new file mode 100644
+index 00000000000..2eb76a2d9de
+--- /dev/null
++++ b/gcc/testsuite/c-c++-common/gomp/pr93555-1.c
+@@ -0,0 +1,18 @@
++/* PR middle-end/93555 */
++/* { dg-do compile } */
++
++#pragma omp declare simd
++#pragma omp declare simd inbranch
++int
++foo (int x)
++{
++  return x;
++}
++
++#pragma omp declare simd inbranch
++#pragma omp declare simd
++int
++bar (int x)
++{
++  return x;
++}
+diff --git a/gcc/testsuite/c-c++-common/gomp/pr93555-2.c b/gcc/testsuite/c-c++-common/gomp/pr93555-2.c
+new file mode 100644
+index 00000000000..091f5bd5ff1
+--- /dev/null
++++ b/gcc/testsuite/c-c++-common/gomp/pr93555-2.c
+@@ -0,0 +1,16 @@
++/* PR middle-end/93555 */
++/* { dg-do compile } */
++
++#pragma omp declare simd
++#pragma omp declare simd inbranch
++void
++foo (void)
++{
++}
++
++#pragma omp declare simd inbranch
++#pragma omp declare simd
++void
++bar (void)
++{
 +}
 diff --git a/gcc/testsuite/c-c++-common/pr90677-2.c b/gcc/testsuite/c-c++-common/pr90677-2.c
 new file mode 100644
@@ -28517,6 +29309,44 @@ index e31c1ebecf9..e66806845b7 100644
  /* { dg-final { scan-tree-dump-times "pragma omp simd reduction\\(u\\) reduction\\(t\\) reduction\\(\\+:s\\) aligned\\(a:32\\)" 1 "original" } } */
  /* { dg-final { scan-tree-dump-times "pragma omp simd safelen\\(64\\)" 1 "original" } } */
  /* { dg-final { scan-tree-dump-not "omp parallel" "original" } } */
+diff --git a/gcc/testsuite/g++.dg/gomp/pr91118-1.C b/gcc/testsuite/g++.dg/gomp/pr91118-1.C
+new file mode 100644
+index 00000000000..f29d69db084
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/gomp/pr91118-1.C
+@@ -0,0 +1,12 @@
++// PR c++/91118
++// { dg-do compile }
++// { dg-additional-options "-fsanitize=undefined" }
++
++#include <iostream>
++
++void
++foo ()
++{
++#pragma omp parallel default(none) shared(std::cerr)
++  std::cerr << "hello" << std::endl;
++}
+diff --git a/gcc/testsuite/g++.dg/gomp/pr91118-2.C b/gcc/testsuite/g++.dg/gomp/pr91118-2.C
+new file mode 100644
+index 00000000000..80f1e3e45c4
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/gomp/pr91118-2.C
+@@ -0,0 +1,14 @@
++// PR c++/91118
++// { dg-do compile }
++
++#include <typeinfo>
++
++struct S { virtual ~S (); };
++void bar (const std::type_info &, const std::type_info &);
++
++void
++foo (S *p)
++{
++  #pragma omp parallel default (none) firstprivate (p)
++    bar (typeid (*p), typeid (S));
++}
 diff --git a/gcc/testsuite/g++.dg/gomp/pr92504.C b/gcc/testsuite/g++.dg/gomp/pr92504.C
 new file mode 100644
 index 00000000000..8df67621532
@@ -29647,6 +30477,27 @@ index 00000000000..d2edec565ee
 +{
 +  return (long int) (1 / 0);
 +}
+diff --git a/gcc/testsuite/gcc.c-torture/compile/pr93505.c b/gcc/testsuite/gcc.c-torture/compile/pr93505.c
+new file mode 100644
+index 00000000000..0627962eae5
+--- /dev/null
++++ b/gcc/testsuite/gcc.c-torture/compile/pr93505.c
+@@ -0,0 +1,15 @@
++/* PR middle-end/93505 */
++
++unsigned a;
++
++unsigned
++foo (unsigned x)
++{
++  unsigned int y = 32 - __builtin_bswap64 (-a);
++  /* This would be UB (x << 32) at runtime.  Ensure we don't
++     invoke UB in the compiler because of that (visible with
++     bootstrap-ubsan).  */
++  x = x << y | x >> (-y & 31);
++  x >>= 31;
++  return x;
++}
 diff --git a/gcc/testsuite/gcc.c-torture/execute/20190820-1.c b/gcc/testsuite/gcc.c-torture/execute/20190820-1.c
 new file mode 100644
 index 00000000000..6a06eff7571
@@ -30615,6 +31466,33 @@ index 00000000000..25cb0b8c595
 +  f14 (9, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, 0, 0.0, u.h); v.h = h; C (v);
 +  return 0;
 +}
+diff --git a/gcc/testsuite/gcc.c-torture/execute/pr93402.c b/gcc/testsuite/gcc.c-torture/execute/pr93402.c
+new file mode 100644
+index 00000000000..6487797d0aa
+--- /dev/null
++++ b/gcc/testsuite/gcc.c-torture/execute/pr93402.c
+@@ -0,0 +1,21 @@
++/* PR rtl-optimization/93402 */
++
++struct S { unsigned int a; unsigned long long b; };
++
++__attribute__((noipa)) struct S
++foo (unsigned long long x)
++{
++  struct S ret;
++  ret.a = 0;
++  ret.b = x * 11111111111ULL + 111111111111ULL;
++  return ret;
++}
++
++int
++main ()
++{
++  struct S a = foo (1);
++  if (a.a != 0 || a.b != 122222222222ULL)
++    __builtin_abort ();
++  return 0;
++}
 diff --git a/gcc/testsuite/gcc.dg/Wnonnull.c b/gcc/testsuite/gcc.dg/Wnonnull.c
 index be89a5a755c..0ed06aabe68 100644
 --- a/gcc/testsuite/gcc.dg/Wnonnull.c
@@ -31477,6 +32355,22 @@ index 00000000000..04a80924650
 +/* { dg-options "-Os -fmodulo-sched -fmodulo-sched-allow-regmoves --param sms-dfa-history=8" } */
 +
 +#include "../gcc.c-torture/execute/pr61682.c"
+diff --git a/gcc/testsuite/gcc.dg/pr93576.c b/gcc/testsuite/gcc.dg/pr93576.c
+new file mode 100644
+index 00000000000..13c34f3771f
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/pr93576.c
+@@ -0,0 +1,10 @@
++/* PR c/93576 */
++/* { dg-do compile } */
++/* { dg-options "" } */
++
++void
++foo (void)
++{
++  int b[] = { 0 };
++  (char (*)[(1, 7, 2)]) 0;
++}
 diff --git a/gcc/testsuite/gcc.dg/torture/pr90278.c b/gcc/testsuite/gcc.dg/torture/pr90278.c
 new file mode 100644
 index 00000000000..617246a6d4c
@@ -32141,6 +33035,235 @@ index 00000000000..6a303345eb9
 +    __builtin_abort ();
 +  __builtin_exit (0);
 +}
+diff --git a/gcc/testsuite/gcc.target/i386/avx-pr93637.c b/gcc/testsuite/gcc.target/i386/avx-pr93637.c
+new file mode 100644
+index 00000000000..9e7a0a7c9c1
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/avx-pr93637.c
+@@ -0,0 +1,17 @@
++/* PR target/93637 */
++/* { dg-do compile } */
++/* { dg-options "-mavx -mno-avx2 -O3 --param sccvn-max-alias-queries-per-access=3" } */
++
++double
++foo (void)
++{
++  int i;
++  double r = 7.0;
++  double a[] = { 0.0, 0.0, -0.0, 0.0, 0.0, -0.0, 1.0, 0.0, 0.0, -0.0, 1.0, 0.0, 1.0, 1.0 };
++
++  for (i = 0; i < sizeof (a) / sizeof (a[0]); ++i)
++    if (a[i] == 0.0)
++      r = a[i];
++
++  return r;
++}
+diff --git a/gcc/testsuite/gcc.target/i386/avx2-pr93418.c b/gcc/testsuite/gcc.target/i386/avx2-pr93418.c
+new file mode 100644
+index 00000000000..67ed33ddf9d
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/avx2-pr93418.c
+@@ -0,0 +1,20 @@
++/* PR target/93418 */
++/* { dg-do compile } */
++/* { dg-options "-O2 -mavx2 -fdump-tree-optimized" } */
++/* { dg-final { scan-tree-dump-not "link_error" "optimized" } } */
++
++#include <x86intrin.h>
++
++void link_error (void);
++
++void
++foo (void)
++{
++  __m128i a = _mm_set1_epi32 (0xffffffffU);
++  __m128i b = _mm_setr_epi32 (16, 31, -34, 3);
++  __m128i c = _mm_sllv_epi32 (a, b);
++  __v4su d = (__v4su) c;
++  if (d[0] != 0xffff0000U || d[1] != 0x80000000U
++      || d[2] != 0 || d[3] != 0xfffffff8U)
++    link_error ();
++}
+diff --git a/gcc/testsuite/gcc.target/i386/avx512bitalg-vpopcntb-1.c b/gcc/testsuite/gcc.target/i386/avx512bitalg-vpopcntb-1.c
+index 3dcd48f7e2a..697757b8b73 100644
+--- a/gcc/testsuite/gcc.target/i386/avx512bitalg-vpopcntb-1.c
++++ b/gcc/testsuite/gcc.target/i386/avx512bitalg-vpopcntb-1.c
+@@ -41,7 +41,7 @@ TEST (void)
+   }
+ 
+   res1.x = INTRINSIC (_popcnt_epi8)       (src.x);
+-  res2.x = INTRINSIC (_mask_popcnt_epi8)  (src.x, mask, src0.x);
++  res2.x = INTRINSIC (_mask_popcnt_epi8)  (src0.x, mask, src.x);
+   res3.x = INTRINSIC (_maskz_popcnt_epi8) (mask, src.x);
+ 
+   if (UNION_CHECK (AVX512F_LEN, i_b) (res1, res_ref))
+diff --git a/gcc/testsuite/gcc.target/i386/avx512bitalg-vpopcntb.c b/gcc/testsuite/gcc.target/i386/avx512bitalg-vpopcntb.c
+index b23da58dbaf..246f925eede 100644
+--- a/gcc/testsuite/gcc.target/i386/avx512bitalg-vpopcntb.c
++++ b/gcc/testsuite/gcc.target/i386/avx512bitalg-vpopcntb.c
+@@ -13,7 +13,7 @@ int foo ()
+   __mmask16 msk;
+   __m512i c = _mm512_popcnt_epi8 (z);
+   asm volatile ("" : "+v" (c));
+-  c = _mm512_mask_popcnt_epi8 (z, msk, z1);
++  c = _mm512_mask_popcnt_epi8 (z1, msk, z);
+   asm volatile ("" : "+v" (c));
+   c = _mm512_maskz_popcnt_epi8 (msk, z);
+   asm volatile ("" : "+v" (c));
+diff --git a/gcc/testsuite/gcc.target/i386/avx512bitalg-vpopcntbvl.c b/gcc/testsuite/gcc.target/i386/avx512bitalg-vpopcntbvl.c
+index e6d60f7596c..8c7f45fc5f7 100644
+--- a/gcc/testsuite/gcc.target/i386/avx512bitalg-vpopcntbvl.c
++++ b/gcc/testsuite/gcc.target/i386/avx512bitalg-vpopcntbvl.c
+@@ -18,13 +18,13 @@ int foo ()
+   __mmask16 msk16;
+   __m256i c256 = _mm256_popcnt_epi8 (y);
+   asm volatile ("" : "+v" (c256));
+-  c256 = _mm256_mask_popcnt_epi8 (y, msk32, y_1);
++  c256 = _mm256_mask_popcnt_epi8 (y_1, msk32, y);
+   asm volatile ("" : "+v" (c256));
+   c256 = _mm256_maskz_popcnt_epi8 (msk32, y);
+   asm volatile ("" : "+v" (c256));
+   __m128i c128 = _mm_popcnt_epi8 (x);
+   asm volatile ("" : "+v" (c128));
+-  c128 = _mm_mask_popcnt_epi8 (x, msk16, x_1);
++  c128 = _mm_mask_popcnt_epi8 (x_1, msk16, x);
+   asm volatile ("" : "+v" (c128));
+   c128 = _mm_maskz_popcnt_epi8 (msk16, x);
+   asm volatile ("" : "+v" (c128));
+diff --git a/gcc/testsuite/gcc.target/i386/avx512bitalg-vpopcntw-1.c b/gcc/testsuite/gcc.target/i386/avx512bitalg-vpopcntw-1.c
+index 4f866db2f7a..0a725fe012a 100644
+--- a/gcc/testsuite/gcc.target/i386/avx512bitalg-vpopcntw-1.c
++++ b/gcc/testsuite/gcc.target/i386/avx512bitalg-vpopcntw-1.c
+@@ -41,7 +41,7 @@ TEST (void)
+   }
+ 
+   res1.x = INTRINSIC (_popcnt_epi16)       (src.x);
+-  res2.x = INTRINSIC (_mask_popcnt_epi16)  (src.x, mask, src0.x);
++  res2.x = INTRINSIC (_mask_popcnt_epi16)  (src0.x, mask, src.x);
+   res3.x = INTRINSIC (_maskz_popcnt_epi16) (mask, src.x);
+ 
+   if (UNION_CHECK (AVX512F_LEN, i_w) (res1, res_ref))
+diff --git a/gcc/testsuite/gcc.target/i386/avx512bitalg-vpopcntw.c b/gcc/testsuite/gcc.target/i386/avx512bitalg-vpopcntw.c
+index 2c49583b597..90663f480fc 100644
+--- a/gcc/testsuite/gcc.target/i386/avx512bitalg-vpopcntw.c
++++ b/gcc/testsuite/gcc.target/i386/avx512bitalg-vpopcntw.c
+@@ -13,7 +13,7 @@ int foo ()
+   __mmask16 msk;
+   __m512i c = _mm512_popcnt_epi16 (z);
+   asm volatile ("" : "+v" (c));
+-  c = _mm512_mask_popcnt_epi16 (z, msk, z1);
++  c = _mm512_mask_popcnt_epi16 (z1, msk, z);
+   asm volatile ("" : "+v" (c));
+   c = _mm512_maskz_popcnt_epi16 (msk, z);
+   asm volatile ("" : "+v" (c));
+diff --git a/gcc/testsuite/gcc.target/i386/avx512bitalg-vpopcntwvl.c b/gcc/testsuite/gcc.target/i386/avx512bitalg-vpopcntwvl.c
+index b55adc6023a..3a646b57282 100644
+--- a/gcc/testsuite/gcc.target/i386/avx512bitalg-vpopcntwvl.c
++++ b/gcc/testsuite/gcc.target/i386/avx512bitalg-vpopcntwvl.c
+@@ -18,13 +18,13 @@ int foo ()
+   __mmask8 msk8;
+   __m256i c256 = _mm256_popcnt_epi16 (y);
+   asm volatile ("" : "+v" (c256));
+-  c256 = _mm256_mask_popcnt_epi16 (y, msk16, y_1);
++  c256 = _mm256_mask_popcnt_epi16 (y_1, msk16, y);
+   asm volatile ("" : "+v" (c256));
+   c256 = _mm256_maskz_popcnt_epi16 (msk16, y);
+   asm volatile ("" : "+v" (c256));
+   __m128i c128 = _mm_popcnt_epi16 (x);
+   asm volatile ("" : "+v" (c128));
+-  c128 = _mm_mask_popcnt_epi16 (x, msk8, x_1);
++  c128 = _mm_mask_popcnt_epi16 (x_1, msk8, x);
+   asm volatile ("" : "+v" (c128));
+   c128 = _mm_maskz_popcnt_epi16 (msk8, x);
+   asm volatile ("" : "+v" (c128));
+diff --git a/gcc/testsuite/gcc.target/i386/avx512bw-pr93673.c b/gcc/testsuite/gcc.target/i386/avx512bw-pr93673.c
+new file mode 100644
+index 00000000000..dc87ed20d1d
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/avx512bw-pr93673.c
+@@ -0,0 +1,30 @@
++/* PR target/93673 */
++/* { dg-do compile } */
++/* { dg-options "-O2 -mavx512bw" } */
++
++#include <x86intrin.h>
++
++void
++foo (__mmask32 *c, __mmask64 *d)
++{
++  c[0] = _kshiftli_mask32 (c[0], 0);
++  c[1] = _kshiftri_mask32 (c[1], 0);
++  c[2] = _kshiftli_mask32 (c[2], 1);
++  c[3] = _kshiftri_mask32 (c[3], 1);
++  c[4] = _kshiftli_mask32 (c[4], 31);
++  c[5] = _kshiftri_mask32 (c[5], 31);
++  c[6] = _kshiftli_mask32 (c[6], 0x7f);
++  c[7] = _kshiftri_mask32 (c[7], 0x7f);
++  c[8] = _kshiftli_mask32 (c[8], 0xff);
++  c[9] = _kshiftri_mask32 (c[9], 0xff);
++  d[0] = _kshiftli_mask64 (d[0], 0);
++  d[1] = _kshiftri_mask64 (d[1], 0);
++  d[2] = _kshiftli_mask64 (d[2], 1);
++  d[3] = _kshiftri_mask64 (d[3], 1);
++  d[4] = _kshiftli_mask64 (d[4], 63);
++  d[5] = _kshiftri_mask64 (d[5], 63);
++  d[6] = _kshiftli_mask64 (d[6], 0x7f);
++  d[7] = _kshiftri_mask64 (d[7], 0x7f);
++  d[8] = _kshiftli_mask64 (d[8], 0xff);
++  d[9] = _kshiftri_mask64 (d[9], 0xff);
++}
+diff --git a/gcc/testsuite/gcc.target/i386/avx512dq-pr93673.c b/gcc/testsuite/gcc.target/i386/avx512dq-pr93673.c
+new file mode 100644
+index 00000000000..3ae1674e4a4
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/avx512dq-pr93673.c
+@@ -0,0 +1,20 @@
++/* PR target/93673 */
++/* { dg-do compile } */
++/* { dg-options "-O2 -mavx512dq" } */
++
++#include <x86intrin.h>
++
++void
++foo (__mmask8 *a)
++{
++  a[0] = _kshiftli_mask8 (a[0], 0);
++  a[1] = _kshiftri_mask8 (a[1], 0);
++  a[2] = _kshiftli_mask8 (a[2], 1);
++  a[3] = _kshiftri_mask8 (a[3], 1);
++  a[4] = _kshiftli_mask8 (a[4], 7);
++  a[5] = _kshiftri_mask8 (a[5], 7);
++  a[6] = _kshiftli_mask8 (a[6], 0x7f);
++  a[7] = _kshiftri_mask8 (a[7], 0x7f);
++  a[8] = _kshiftli_mask8 (a[8], 0xff);
++  a[9] = _kshiftri_mask8 (a[9], 0xff);
++}
+diff --git a/gcc/testsuite/gcc.target/i386/avx512f-pr93673.c b/gcc/testsuite/gcc.target/i386/avx512f-pr93673.c
+new file mode 100644
+index 00000000000..963823c8a78
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/avx512f-pr93673.c
+@@ -0,0 +1,20 @@
++/* PR target/93673 */
++/* { dg-do compile } */
++/* { dg-options "-O2 -mavx512f" } */
++
++#include <x86intrin.h>
++
++void
++foo (__mmask16 *b)
++{
++  b[0] = _kshiftli_mask16 (b[0], 0);
++  b[1] = _kshiftri_mask16 (b[1], 0);
++  b[2] = _kshiftli_mask16 (b[2], 1);
++  b[3] = _kshiftri_mask16 (b[3], 1);
++  b[4] = _kshiftli_mask16 (b[4], 15);
++  b[5] = _kshiftri_mask16 (b[5], 15);
++  b[6] = _kshiftli_mask16 (b[6], 0x7f);
++  b[7] = _kshiftri_mask16 (b[7], 0x7f);
++  b[8] = _kshiftli_mask16 (b[8], 0xff);
++  b[9] = _kshiftri_mask16 (b[9], 0xff);
++}
 diff --git a/gcc/testsuite/gcc.target/i386/avx512vl-pr93009.c b/gcc/testsuite/gcc.target/i386/avx512vl-pr93009.c
 new file mode 100644
 index 00000000000..4dfc4a9f3c3
@@ -32185,6 +33308,169 @@ index 00000000000..4dfc4a9f3c3
 +  if (x[0] != 8.0 || x[1] != 13.0 || y[0] != 53.0 || y[1] != 68.0)
 +    abort ();
 +}
+diff --git a/gcc/testsuite/gcc.target/i386/avx512vl-pr93670.c b/gcc/testsuite/gcc.target/i386/avx512vl-pr93670.c
+new file mode 100644
+index 00000000000..3f232a96901
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/avx512vl-pr93670.c
+@@ -0,0 +1,77 @@
++/* PR target/93670 */
++/* { dg-do compile } */
++/* { dg-options "-O2 -mavx512vl -mno-avx512dq" } */
++
++#include <x86intrin.h>
++
++__m128i
++f1 (__m256i x)
++{
++  return _mm256_extracti32x4_epi32 (x, 0);
++}
++
++__m128i
++f2 (__m256i x, __m128i w, __mmask8 m)
++{
++  return _mm256_mask_extracti32x4_epi32 (w, m, x, 0);
++}
++
++__m128i
++f3 (__m256i x, __mmask8 m)
++{
++  return _mm256_maskz_extracti32x4_epi32 (m, x, 0);
++}
++
++__m128
++f4 (__m256 x)
++{
++  return _mm256_extractf32x4_ps (x, 0);
++}
++
++__m128
++f5 (__m256 x, __m128 w, __mmask8 m)
++{
++  return _mm256_mask_extractf32x4_ps (w, m, x, 0);
++}
++
++__m128
++f6 (__m256 x, __mmask8 m)
++{
++  return _mm256_maskz_extractf32x4_ps (m, x, 0);
++}
++
++__m128i
++f7 (__m256i x)
++{
++  return _mm256_extracti32x4_epi32 (x, 1);
++}
++
++__m128i
++f8 (__m256i x, __m128i w, __mmask8 m)
++{
++  return _mm256_mask_extracti32x4_epi32 (w, m, x, 1);
++}
++
++__m128i
++f9 (__m256i x, __mmask8 m)
++{
++  return _mm256_maskz_extracti32x4_epi32 (m, x, 1);
++}
++
++__m128
++f10 (__m256 x)
++{
++  return _mm256_extractf32x4_ps (x, 1);
++}
++
++__m128
++f11 (__m256 x, __m128 w, __mmask8 m)
++{
++  return _mm256_mask_extractf32x4_ps (w, m, x, 1);
++}
++
++__m128
++f12 (__m256 x, __mmask8 m)
++{
++  return _mm256_maskz_extractf32x4_ps (m, x, 1);
++}
+diff --git a/gcc/testsuite/gcc.target/i386/avx512vpopcntdq-vpopcntd-1.c b/gcc/testsuite/gcc.target/i386/avx512vpopcntdq-vpopcntd-1.c
+index 245dcd4d534..e7d6bb4dd53 100644
+--- a/gcc/testsuite/gcc.target/i386/avx512vpopcntdq-vpopcntd-1.c
++++ b/gcc/testsuite/gcc.target/i386/avx512vpopcntdq-vpopcntd-1.c
+@@ -40,7 +40,7 @@ TEST (void)
+   }
+ 
+   res1.x = INTRINSIC (_popcnt_epi32)       (src.x);
+-  res2.x = INTRINSIC (_mask_popcnt_epi32)  (src.x, mask, src0.x);
++  res2.x = INTRINSIC (_mask_popcnt_epi32)  (src0.x, mask, src.x);
+   res3.x = INTRINSIC (_maskz_popcnt_epi32) (mask, src.x);
+ 
+   if (UNION_CHECK (AVX512F_LEN, i_d) (res1, res_ref))
+diff --git a/gcc/testsuite/gcc.target/i386/avx512vpopcntdq-vpopcntd.c b/gcc/testsuite/gcc.target/i386/avx512vpopcntdq-vpopcntd.c
+index c70f226824e..b4d82f97032 100644
+--- a/gcc/testsuite/gcc.target/i386/avx512vpopcntdq-vpopcntd.c
++++ b/gcc/testsuite/gcc.target/i386/avx512vpopcntdq-vpopcntd.c
+@@ -22,19 +22,19 @@ int foo ()
+   __mmask8 msk8;
+   __m128i a = _mm_popcnt_epi32 (x);
+   asm volatile ("" : "+v" (a));
+-  a = _mm_mask_popcnt_epi32 (x, msk8, x_1);
++  a = _mm_mask_popcnt_epi32 (x_1, msk8, x);
+   asm volatile ("" : "+v" (a));
+   a = _mm_maskz_popcnt_epi32 (msk8, x);
+   asm volatile ("" : "+v" (a));
+   __m256i b = _mm256_popcnt_epi32 (y);
+   asm volatile ("" : "+v" (b));
+-  b = _mm256_mask_popcnt_epi32 (y, msk8, y_1);
++  b = _mm256_mask_popcnt_epi32 (y_1, msk8, y);
+   asm volatile ("" : "+v" (b));
+   b = _mm256_maskz_popcnt_epi32 (msk8, y);
+   asm volatile ("" : "+v" (b));
+   __m512i c = _mm512_popcnt_epi32 (z);
+   asm volatile ("" : "+v" (c));
+-  c = _mm512_mask_popcnt_epi32 (z, msk, z_1);
++  c = _mm512_mask_popcnt_epi32 (z_1, msk, z);
+   asm volatile ("" : "+v" (c));
+   c = _mm512_maskz_popcnt_epi32 (msk, z);
+   asm volatile ("" : "+v" (c));
+diff --git a/gcc/testsuite/gcc.target/i386/avx512vpopcntdq-vpopcntq-1.c b/gcc/testsuite/gcc.target/i386/avx512vpopcntdq-vpopcntq-1.c
+index 27555c496d6..2144cf32c0d 100644
+--- a/gcc/testsuite/gcc.target/i386/avx512vpopcntdq-vpopcntq-1.c
++++ b/gcc/testsuite/gcc.target/i386/avx512vpopcntdq-vpopcntq-1.c
+@@ -40,7 +40,7 @@ TEST (void)
+   }
+ 
+   res1.x = INTRINSIC (_popcnt_epi64)       (src.x);
+-  res2.x = INTRINSIC (_mask_popcnt_epi64)  (src.x, mask, src0.x);
++  res2.x = INTRINSIC (_mask_popcnt_epi64)  (src0.x, mask, src.x);
+   res3.x = INTRINSIC (_maskz_popcnt_epi64) (mask, src.x);
+ 
+   if (UNION_CHECK (AVX512F_LEN, i_q) (res1, res_ref))
+diff --git a/gcc/testsuite/gcc.target/i386/avx512vpopcntdq-vpopcntq.c b/gcc/testsuite/gcc.target/i386/avx512vpopcntdq-vpopcntq.c
+index 9f400c005f3..e87d6c999b6 100644
+--- a/gcc/testsuite/gcc.target/i386/avx512vpopcntdq-vpopcntq.c
++++ b/gcc/testsuite/gcc.target/i386/avx512vpopcntdq-vpopcntq.c
+@@ -21,19 +21,19 @@ int foo ()
+   __mmask8 msk; 
+   __m128i a = _mm_popcnt_epi64 (x);
+   asm volatile ("" : "+v" (a));
+-  a = _mm_mask_popcnt_epi64 (x, msk, x_1);
++  a = _mm_mask_popcnt_epi64 (x_1, msk, x);
+   asm volatile ("" : "+v" (a));
+   a = _mm_maskz_popcnt_epi64 (msk, x);
+   asm volatile ("" : "+v" (a));
+   __m256i b = _mm256_popcnt_epi64 (y);
+   asm volatile ("" : "+v" (b));
+-  b = _mm256_mask_popcnt_epi64 (y, msk, y_1);
++  b = _mm256_mask_popcnt_epi64 (y_1, msk, y);
+   asm volatile ("" : "+v" (b));
+   b = _mm256_maskz_popcnt_epi64 (msk, y);
+   asm volatile ("" : "+v" (b));
+   __m512i c = _mm512_popcnt_epi64 (z);
+   asm volatile ("" : "+v" (c));
+-  c = _mm512_mask_popcnt_epi64 (z, msk, z_1);
++  c = _mm512_mask_popcnt_epi64 (z_1, msk, z);
+   asm volatile ("" : "+v" (c));
+   c = _mm512_maskz_popcnt_epi64 (msk, z); 
+   asm volatile ("" : "+v" (c));
 diff --git a/gcc/testsuite/gcc.target/i386/indirect-thunk-1.c b/gcc/testsuite/gcc.target/i386/indirect-thunk-1.c
 index 052d24dabdf..e2914a8333c 100644
 --- a/gcc/testsuite/gcc.target/i386/indirect-thunk-1.c
@@ -32469,6 +33755,28 @@ index 75eb287fc59..767928f049e 100644
  /* Darwin m32 default to PIC but needs indirection for the weak symbol.  */
 -/* { dg-final { scan-assembler {movl[ \t]l_xxx\$non_lazy_ptr-L1\$pb\(%eax\),[ \t]%eax} { target { ia32 && *-*-darwin* } } } } */
 +/* { dg-final { scan-assembler {movl[ \t][Ll]_xxx\$non_lazy_ptr-L1\$pb\(%eax\),[ \t]%eax} { target { ia32 && *-*-darwin* } } } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr65782.c b/gcc/testsuite/gcc.target/i386/pr65782.c
+new file mode 100644
+index 00000000000..298dca1be97
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr65782.c
+@@ -0,0 +1,16 @@
++/* PR target/65782 */
++/* { dg-do assemble { target { avx512vl && { ! ia32 } } } } */
++/* { dg-options "-O2 -mavx512vl" } */
++
++void
++foo (void)
++{
++  register double x __asm ("xmm14");
++  register double y __asm ("xmm18");
++  asm ("" : "=x" (x));
++  asm ("" : "=v" (y));
++  x += y;
++  y += x;
++  asm ("" : : "x" (x));
++  asm ("" : : "v" (y));
++}
 diff --git a/gcc/testsuite/gcc.target/i386/pr85667-10.c b/gcc/testsuite/gcc.target/i386/pr85667-10.c
 new file mode 100644
 index 00000000000..e8f3026227d
@@ -32847,6 +34155,176 @@ index 00000000000..dc986cfaa80
 +/* { dg-options "-O3 -funroll-loops -fno-tree-dominator-opts -fno-tree-vrp -w" } */
 +
 +#include "pr56348.c"
+diff --git a/gcc/testsuite/gcc.target/i386/pr93696-1.c b/gcc/testsuite/gcc.target/i386/pr93696-1.c
+new file mode 100644
+index 00000000000..128bb98c066
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr93696-1.c
+@@ -0,0 +1,79 @@
++/* PR target/93696 */
++/* { dg-do compile } */
++/* { dg-options "-O2 -mavx512bitalg -mavx512vpopcntdq -mavx512vl -mavx512bw -masm=att" } */
++/* { dg-final { scan-assembler-times "vpopcnt\[bwdq]\t%\[xyz]mm1, %\[xyz]mm0\{%k\[0-7]\}\[^\{]" 12 } } */
++/* { dg-final { scan-assembler-not "vmovdq\[au]\[0-9]" } } */
++
++#include <x86intrin.h>
++
++__m128i
++f1 (__m128i x, __mmask8 m, __m128i y)
++{
++  return _mm_mask_popcnt_epi64 (x, m, y);
++}
++
++__m128i
++f2 (__m128i x, __mmask8 m, __m128i y)
++{
++  return _mm_mask_popcnt_epi32 (x, m, y);
++}
++
++__m128i
++f3 (__m128i x, __mmask8 m, __m128i y)
++{
++  return _mm_mask_popcnt_epi16 (x, m, y);
++}
++
++__m128i
++f4 (__m128i x, __mmask16 m, __m128i y)
++{
++  return _mm_mask_popcnt_epi8 (x, m, y);
++}
++
++__m256i
++f5 (__m256i x, __mmask8 m, __m256i y)
++{
++  return _mm256_mask_popcnt_epi64 (x, m, y);
++}
++
++__m256i
++f6 (__m256i x, __mmask8 m, __m256i y)
++{
++  return _mm256_mask_popcnt_epi32 (x, m, y);
++}
++
++__m256i
++f7 (__m256i x, __mmask16 m, __m256i y)
++{
++  return _mm256_mask_popcnt_epi16 (x, m, y);
++}
++
++__m256i
++f8 (__m256i x, __mmask32 m, __m256i y)
++{
++  return _mm256_mask_popcnt_epi8 (x, m, y);
++}
++
++__m512i
++f9 (__m512i x, __mmask8 m, __m512i y)
++{
++  return _mm512_mask_popcnt_epi64 (x, m, y);
++}
++
++__m512i
++f10 (__m512i x, __mmask16 m, __m512i y)
++{
++  return _mm512_mask_popcnt_epi32 (x, m, y);
++}
++
++__m512i
++f11 (__m512i x, __mmask32 m, __m512i y)
++{
++  return _mm512_mask_popcnt_epi16 (x, m, y);
++}
++
++__m512i
++f12 (__m512i x, __mmask64 m, __m512i y)
++{
++  return _mm512_mask_popcnt_epi8 (x, m, y);
++}
+diff --git a/gcc/testsuite/gcc.target/i386/pr93696-2.c b/gcc/testsuite/gcc.target/i386/pr93696-2.c
+new file mode 100644
+index 00000000000..25a298aea18
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr93696-2.c
+@@ -0,0 +1,79 @@
++/* PR target/93696 */
++/* { dg-do compile } */
++/* { dg-options "-O2 -mavx512bitalg -mavx512vpopcntdq -mavx512vl -mavx512bw -masm=att" } */
++/* { dg-final { scan-assembler-times "vpopcnt\[bwdq]\t%\[xyz]mm1, %\[xyz]mm0\{%k\[0-7]\}\{z\}" 12 } } */
++/* { dg-final { scan-assembler-not "vmovdq\[au]\[0-9]" } } */
++
++#include <x86intrin.h>
++
++__m128i
++f1 (__m128i x, __mmask8 m, __m128i y)
++{
++  return _mm_maskz_popcnt_epi64 (m, y);
++}
++
++__m128i
++f2 (__m128i x, __mmask8 m, __m128i y)
++{
++  return _mm_maskz_popcnt_epi32 (m, y);
++}
++
++__m128i
++f3 (__m128i x, __mmask8 m, __m128i y)
++{
++  return _mm_maskz_popcnt_epi16 (m, y);
++}
++
++__m128i
++f4 (__m128i x, __mmask16 m, __m128i y)
++{
++  return _mm_maskz_popcnt_epi8 (m, y);
++}
++
++__m256i
++f5 (__m256i x, __mmask8 m, __m256i y)
++{
++  return _mm256_maskz_popcnt_epi64 (m, y);
++}
++
++__m256i
++f6 (__m256i x, __mmask8 m, __m256i y)
++{
++  return _mm256_maskz_popcnt_epi32 (m, y);
++}
++
++__m256i
++f7 (__m256i x, __mmask16 m, __m256i y)
++{
++  return _mm256_maskz_popcnt_epi16 (m, y);
++}
++
++__m256i
++f8 (__m256i x, __mmask32 m, __m256i y)
++{
++  return _mm256_maskz_popcnt_epi8 (m, y);
++}
++
++__m512i
++f9 (__m512i x, __mmask8 m, __m512i y)
++{
++  return _mm512_maskz_popcnt_epi64 (m, y);
++}
++
++__m512i
++f10 (__m512i x, __mmask16 m, __m512i y)
++{
++  return _mm512_maskz_popcnt_epi32 (m, y);
++}
++
++__m512i
++f11 (__m512i x, __mmask32 m, __m512i y)
++{
++  return _mm512_maskz_popcnt_epi16 (m, y);
++}
++
++__m512i
++f12 (__m512i x, __mmask64 m, __m512i y)
++{
++  return _mm512_maskz_popcnt_epi8 (m, y);
++}
 diff --git a/gcc/testsuite/gcc.target/i386/ret-thunk-14.c b/gcc/testsuite/gcc.target/i386/ret-thunk-14.c
 index 3eaddee8c34..881f541772c 100644
 --- a/gcc/testsuite/gcc.target/i386/ret-thunk-14.c
@@ -35091,6 +36569,27 @@ index 00000000000..b277bb1243c
 +  end do
 +!$acc end kernels
 +end
+diff --git a/gcc/testsuite/gfortran.dg/goacc/pr93463.f90 b/gcc/testsuite/gfortran.dg/goacc/pr93463.f90
+new file mode 100644
+index 00000000000..920892fdcda
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/goacc/pr93463.f90
+@@ -0,0 +1,15 @@
++! PR fortran/93463
++! { dg-do compile { target fopenmp } }
++! { dg-additional-options "-fopenmp" }
++
++program pr93463
++   integer :: i, x, y, z
++   !$omp parallel do
++   do i = 1, 4
++      !$acc enter data create(x)	! { dg-error "ACC ENTER DATA directive cannot be specified within" }
++      !$acc exit data copyout(x)	! { dg-error "ACC EXIT DATA directive cannot be specified within" }
++      !$acc cache(y)			! { dg-error "ACC CACHE directive cannot be specified within" }
++      !$acc wait(1)			! { dg-error "ACC WAIT directive cannot be specified within" }
++      !$acc update self(z)		! { dg-error "ACC UPDATE directive cannot be specified within" }
++   end do
++end
 diff --git a/gcc/testsuite/gfortran.dg/gomp/pr87752.f90 b/gcc/testsuite/gfortran.dg/gomp/pr87752.f90
 new file mode 100644
 index 00000000000..072de218253
@@ -35129,6 +36628,23 @@ index 00000000000..0c31f470a94
 +    integer, intent(in) :: x
 +    f = x
 +  end
++end
+diff --git a/gcc/testsuite/gfortran.dg/gomp/pr93555.f90 b/gcc/testsuite/gfortran.dg/gomp/pr93555.f90
+new file mode 100644
+index 00000000000..4a97fee07a7
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/gomp/pr93555.f90
+@@ -0,0 +1,11 @@
++! PR middle-end/93555
++! { dg-do compile }
++
++subroutine foo
++  !$omp declare simd(foo)
++  !$omp declare simd(foo) inbranch
++end
++subroutine bar
++  !$omp declare simd(bar) inbranch
++  !$omp declare simd(bar)
 +end
 diff --git a/gcc/testsuite/gfortran.dg/gomp/target-parallel1.f90 b/gcc/testsuite/gfortran.dg/gomp/target-parallel1.f90
 new file mode 100644
@@ -39921,10 +41437,18 @@ index c9dd8d494a9..f086c507e07 100755
  fi
  if ! echo "$statfs" | grep f_flags; then
 diff --git a/libgomp/ChangeLog b/libgomp/ChangeLog
-index 958572a54c0..86af79021ed 100644
+index 958572a54c0..b90fddf3ee2 100644
 --- a/libgomp/ChangeLog
 +++ b/libgomp/ChangeLog
-@@ -1,3 +1,53 @@
+@@ -1,3 +1,61 @@
++2020-02-13  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from mainline
++	2020-02-06  Jakub Jelinek  <jakub@redhat.com>
++
++	PR libgomp/93515
++	* testsuite/libgomp.c-c++-common/pr93515.c: New test.
++
 +2020-01-22  Jakub Jelinek  <jakub@redhat.com>
 +
 +	Backported from mainline
@@ -40190,6 +41714,48 @@ index 00000000000..9ec655718fd
 +{
 +  A::foo ();
 +  B<short>::foo ();
++}
+diff --git a/libgomp/testsuite/libgomp.c-c++-common/pr93515.c b/libgomp/testsuite/libgomp.c-c++-common/pr93515.c
+new file mode 100644
+index 00000000000..8a69088ccec
+--- /dev/null
++++ b/libgomp/testsuite/libgomp.c-c++-common/pr93515.c
+@@ -0,0 +1,36 @@
++/* PR libgomp/93515 */
++
++#include <omp.h>
++#include <stdlib.h>
++
++int
++main ()
++{
++  int i;
++  int a = 42;
++#pragma omp target teams distribute parallel for defaultmap(tofrom: scalar)
++  for (i = 0; i < 64; ++i)
++    if (omp_get_team_num () == 0)
++      if (omp_get_thread_num () == 0)
++	a = 142;
++  if (a != 142)
++    __builtin_abort ();
++  a = 42;
++#pragma omp target parallel for defaultmap(tofrom: scalar)
++  for (i = 0; i < 64; ++i)
++    if (omp_get_thread_num () == 0)
++      a = 143;
++  if (a != 143)
++    __builtin_abort ();
++  a = 42;
++#pragma omp target firstprivate(a)
++  {
++    #pragma omp parallel for
++    for (i = 0; i < 64; ++i)
++      if (omp_get_thread_num () == 0)
++	a = 144;
++    if (a != 144)
++      abort ();
++  }
++  return 0;
 +}
 diff --git a/libgomp/testsuite/libgomp.fortran/atomic1.f90 b/libgomp/testsuite/libgomp.fortran/atomic1.f90
 new file mode 100644
