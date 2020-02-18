@@ -57,7 +57,11 @@ Eric Botcazou (17):
 Eric S. Raymond (1):
       Clean up references to Subversion in documentation sources.
 
-GCC Administrator (185):
+GCC Administrator (189):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -297,7 +301,7 @@ Ilya Leoshkevich (3):
       S/390: Fix failing RTL check in s390_canonicalize_comparison
       Free dominance info at the beginning of pass_jump_after_combine
 
-Jakub Jelinek (99):
+Jakub Jelinek (100):
       * BASE-VER: Set to 9.2.1.
       baseline_symbols.txt: Update.
       re PR tree-optimization/91597 (GCC miscompiles a branch depending on a pointer tag)
@@ -397,6 +401,7 @@ Jakub Jelinek (99):
       i386: Fix up _mm*_mask_popcnt_epi* [PR93696]
       c: Fix ICE with cast to VLA [93576]
       c++: Fix thinko in enum_min_precision [PR61414]
+      match.pd: Disallow side-effects in GENERIC for non-COND_EXPR to COND_EXPR simplifications [PR93744]
 
 Jan Hubicka (3):
       Backport ggc_trim 	Backport from mainline
@@ -730,13 +735,14 @@ Tobias Burnus (15):
 Tom Honermann (1):
       PR c++/88095, CTAD for literal operator templates per P0732
 
-Uros Bizjak (6):
+Uros Bizjak (7):
       test_summary: Do not escape "=".
       baseline_symbols.txt: Update.
       re PR target/91533 (abs pattern generates MMX instructions but fails to call EMMS)
       re PR target/92022 (ICE in alpha_handle_trap_shadows, at config/alpha/alpha.c:8847)
       re PR target/92225 (ice in gen_smaxv2di3, at config/i386/sse.md:12225)
       PR target/93254 - -msse generates sse2 instructions
+      i386: Fix atan2l argument order [PR93743]
 
 Ville Voutilainen (1):
       re PR c++/85254 (boost::is_final does not work for template types)
@@ -751,8 +757,9 @@ Will Schmidt (1):
 Xiong Hu Luo (1):
       backport: Enable math functions linking with static library for LTO
 
-liuhongt (1):
+liuhongt (2):
       Intrinsic macro of vpshr* and vpshl* lack a closing parenthesis which would cause failure in O0.
+      Add Changelog entries to relavent Changelog files for my last commit.
 
 diff --git a/contrib/ChangeLog b/contrib/ChangeLog
 index 8565be188d9..c9b9e26ee57 100644
@@ -1130,10 +1137,57 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..1e97432f0d5 100644
+index 7f6557d8018..812e4f08b32 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,1961 @@
+@@ -1,3 +1,2008 @@
++2020-02-14 Hongtao Liu  <hongtao.liu@intel.com>
++
++	PR target/93724
++	* config/i386/avx512vbmi2intrin.h
++	(_mm512_shrdi_epi16, _mm512_mask_shrdi_epi16,
++	_mm512_maskz_shrdi_epi16, _mm512_shrdi_epi32,
++	_mm512_mask_shrdi_epi32, _mm512_maskz_shrdi_epi32,
++	_m512_shrdi_epi64, _m512_mask_shrdi_epi64,
++	_m512_maskz_shrdi_epi64, _mm512_shldi_epi16,
++	_mm512_mask_shldi_epi16, _mm512_maskz_shldi_epi16,
++	_mm512_shldi_epi32, _mm512_mask_shldi_epi32,
++	_mm512_maskz_shldi_epi32, _mm512_shldi_epi64,
++	_mm512_mask_shldi_epi64, _mm512_maskz_shldi_epi64): Fix typo
++	of lacking a closing parenthesis.
++	* config/i386/avx512vbmi2vlintrin.h
++	(_mm256_shrdi_epi16, _mm256_mask_shrdi_epi16,
++	_mm256_maskz_shrdi_epi16, _mm256_shrdi_epi32,
++	_mm256_mask_shrdi_epi32, _mm256_maskz_shrdi_epi32,
++	_m256_shrdi_epi64, _m256_mask_shrdi_epi64,
++	_m256_maskz_shrdi_epi64, _mm256_shldi_epi16,
++	_mm256_mask_shldi_epi16, _mm256_maskz_shldi_epi16,
++	_mm256_shldi_epi32, _mm256_mask_shldi_epi32,
++	_mm256_maskz_shldi_epi32, _mm256_shldi_epi64,
++	_mm256_mask_shldi_epi64, _mm256_maskz_shldi_epi64,
++	_mm_shrdi_epi16, _mm_mask_shrdi_epi16,
++	_mm_maskz_shrdi_epi16, _mm_shrdi_epi32,
++	_mm_mask_shrdi_epi32, _mm_maskz_shrdi_epi32,
++	_mm_shrdi_epi64, _mm_mask_shrdi_epi64,
++	_m_maskz_shrdi_epi64, _mm_shldi_epi16,
++	_mm_mask_shldi_epi16, _mm_maskz_shldi_epi16,
++	_mm_shldi_epi32, _mm_mask_shldi_epi32,
++	_mm_maskz_shldi_epi32, _mm_shldi_epi64,
++	_mm_mask_shldi_epi64, _mm_maskz_shldi_epi64): Ditto.
++
++2020-02-16  Uroš Bizjak  <ubizjak@gmail.com>
++
++	PR target/93743
++	* config/i386/i386.md (atan2xf3): Swap operands 1 and 2.
++	(atan2<mode>3): Update operand order in the call to gen_atan2xf3.
++
++2020-02-15  Jakub Jelinek  <jakub@redhat.com>
++
++	PR tree-optimization/93744
++	* match.pd (((m1 >/</>=/<= m2) * d -> (m1 >/</>=/<= m2) ? d : 0): For
++	GENERIC, make sure @2 in the first and @1 in the other patterns has no
++	side-effects.
++
 +2020-02-14  Eric Botcazou  <ebotcazou@adacore.com>
 +
 +	PR target/93704
@@ -3095,7 +3149,7 @@ index 7f6557d8018..1e97432f0d5 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +2471,7 @@
+@@ -513,7 +2518,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -9407,7 +9461,7 @@ index 2cb16d9fbf6..14e5a392f62 100644
    | PTA_WBNOINVD;
  const wide_int_bitmask PTA_KNL = PTA_BROADWELL | PTA_AVX512PF | PTA_AVX512ER
 diff --git a/gcc/config/i386/i386.md b/gcc/config/i386/i386.md
-index f8915440ff3..e7f692e6a21 100644
+index f8915440ff3..698c31a0a97 100644
 --- a/gcc/config/i386/i386.md
 +++ b/gcc/config/i386/i386.md
 @@ -3653,7 +3653,7 @@
@@ -9419,6 +9473,29 @@ index f8915440ff3..e7f692e6a21 100644
  	      (const_string "sse2")
  	   ]
  	   (const_string "*")))
+@@ -15422,10 +15422,10 @@
+ 
+ (define_insn "atan2xf3"
+   [(set (match_operand:XF 0 "register_operand" "=f")
+-        (unspec:XF [(match_operand:XF 1 "register_operand" "0")
+-	            (match_operand:XF 2 "register_operand" "f")]
++        (unspec:XF [(match_operand:XF 2 "register_operand" "0")
++	            (match_operand:XF 1 "register_operand" "f")]
+ 	           UNSPEC_FPATAN))
+-   (clobber (match_scratch:XF 3 "=2"))]
++   (clobber (match_scratch:XF 3 "=1"))]
+   "TARGET_USE_FANCY_MATH_387
+    && flag_unsafe_math_optimizations"
+   "fpatan"
+@@ -15449,7 +15449,7 @@
+   emit_insn (gen_extend<mode>xf2 (op2, operands[2]));
+   emit_insn (gen_extend<mode>xf2 (op1, operands[1]));
+ 
+-  emit_insn (gen_atan2xf3 (op0, op2, op1));
++  emit_insn (gen_atan2xf3 (op0, op1, op2));
+   emit_insn (gen_truncxf<mode>2 (operands[0], op0));
+   DONE;
+ })
 diff --git a/gcc/config/i386/intelmic-mkoffload.c b/gcc/config/i386/intelmic-mkoffload.c
 index 2a3e912ee74..0b12edc72c1 100644
 --- a/gcc/config/i386/intelmic-mkoffload.c
@@ -21019,10 +21096,20 @@ index 4367928a515..4dde8c001e1 100644
    blen = strlen (ltrans_output_list);
    temp_filename = (char *) xmalloc (blen + sizeof ("2147483648.o"));
 diff --git a/gcc/match.pd b/gcc/match.pd
-index 039ddacfed1..bd3e3bf1ae9 100644
+index 039ddacfed1..f7e192d9b73 100644
 --- a/gcc/match.pd
 +++ b/gcc/match.pd
-@@ -1519,8 +1519,6 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
+@@ -1419,7 +1419,8 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
+ (for cmp (gt lt ge le)
+ (simplify
+  (mult (convert (cmp @0 @1)) @2)
+-  (cond (cmp @0 @1) @2 { build_zero_cst (type); })))
++  (if (GIMPLE || !TREE_SIDE_EFFECTS (@2))
++   (cond (cmp @0 @1) @2 { build_zero_cst (type); }))))
+ 
+ /* For integral types with undefined overflow and C != 0 fold
+    x * C EQ/NE y * C into x EQ/NE y.  */
+@@ -1519,8 +1520,6 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
  	tree etype = range_check_type (TREE_TYPE (@0));
  	if (etype)
  	  {
@@ -21031,7 +21118,7 @@ index 039ddacfed1..bd3e3bf1ae9 100644
  	    hi = fold_convert (etype, hi);
  	    lo = fold_convert (etype, lo);
  	    hi = const_binop (MINUS_EXPR, etype, hi, lo);
-@@ -3381,8 +3379,7 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
+@@ -3381,8 +3380,7 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
       (cmp { tem; } @1)))))
  
   /* Fold comparisons against built-in math functions.  */
@@ -21041,7 +21128,7 @@ index 039ddacfed1..bd3e3bf1ae9 100644
    (for sq (SQRT)
     (simplify
      (cmp (sq @0) REAL_CST@1)
-@@ -3417,56 +3414,108 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
+@@ -3417,56 +3415,108 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
  	  if x is negative or NaN.  Due to -funsafe-math-optimizations,
  	  the results for other x follow from natural arithmetic.  */
         (cmp @0 @1)))
@@ -25914,10 +26001,31 @@ index 29f6cdc4667..33b4be79c0f 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..ee3fee8f4e9 100644
+index bc11ae4ae0b..179c18da199 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,1520 @@
+@@ -1,3 +1,1541 @@
++2020-02-14 Hongtao Liu  <hongtao.liu@intel.com>
++
++	* gcc.target/i386/avx512vbmi2-vpshld-1.c: New test.
++	* gcc.target/i386/avx512vbmi2-vpshrd-1.c: Ditto.
++	* gcc.target/i386/sse-12.c: Add -mavx512vbmi2.
++	* gcc.target/i386/sse-13.c: Ditto.
++	* gcc.target/i386/sse-14.c: Add -mavx512vbmi2 and tests.
++	* gcc.target/i386/sse-22.c: Ditto.
++
++2020-02-16  Uroš Bizjak  <ubizjak@gmail.com>
++
++	PR target/93743
++	* gcc.target/i386/pr93743.c : New test.
++
++2020-02-15  Jakub Jelinek  <jakub@redhat.com>
++
++	PR tree-optimization/93744
++	* gcc.c-torture/execute/pr93744-1.c: New test.
++	* gcc.c-torture/execute/pr93744-2.c: New test.
++	* gcc.c-torture/execute/pr93744-3.c: New test.
++
 +2020-02-14  Jakub Jelinek  <jakub@redhat.com>
 +
 +	PR c++/61414
@@ -27438,7 +27546,7 @@ index bc11ae4ae0b..ee3fee8f4e9 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +1944,7 @@
+@@ -427,7 +1965,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -27447,7 +27555,7 @@ index bc11ae4ae0b..ee3fee8f4e9 100644
  	(check_effective_target_powerpc_p8vector_ok): No support for Darwin.
  	(check_effective_target_powerpc_p9vector_ok): Likewise.
  	(check_effective_target_powerpc_float128_sw_ok): Likewise.
-@@ -720,7 +2237,7 @@
+@@ -720,7 +2258,7 @@
  
  	Backport from mainline
  	PR fortran/91077
@@ -27456,7 +27564,7 @@ index bc11ae4ae0b..ee3fee8f4e9 100644
  
  2019-07-05  Szabolcs Nagy  <szabolcs.nagy@arm.com>
  
-@@ -803,7 +2320,7 @@
+@@ -803,7 +2341,7 @@
  	Backport fom mainline
  	2019-06-21  Jeff Law  <law@redhat.com>
  
@@ -27465,7 +27573,7 @@ index bc11ae4ae0b..ee3fee8f4e9 100644
  	* gcc.c-torture/execute/pr90949.c: New test.
  
  2019-06-26  Martin Jambor  <mjambor@suse.cz>
-@@ -969,7 +2486,7 @@
+@@ -969,7 +2507,7 @@
         * gcc.target/i386/pr82699-6.c: Likewise
         * gcc.target/i386/returninst1.c: Likewise
         * gcc.target/i386/returninst2.c: Likewise
@@ -27474,7 +27582,7 @@ index bc11ae4ae0b..ee3fee8f4e9 100644
  
  2019-05-30  Iain Sandoe  <iain@sandoe.co.uk>
  
-@@ -1131,7 +2648,7 @@
+@@ -1131,7 +2669,7 @@
  
  	Backport from trunk
  	PR fortran/90498
@@ -27483,7 +27591,7 @@ index bc11ae4ae0b..ee3fee8f4e9 100644
  
  2019-05-17  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -3801,21 +5318,21 @@
+@@ -3801,21 +5339,21 @@
  2019-02-23  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88117
@@ -27512,7 +27620,7 @@ index bc11ae4ae0b..ee3fee8f4e9 100644
  
  2019-02-22  David Malcolm  <dmalcolm@redhat.com>
  
-@@ -4444,7 +5961,7 @@
+@@ -4444,7 +5982,7 @@
  2019-02-09  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/89200
@@ -27521,7 +27629,7 @@ index bc11ae4ae0b..ee3fee8f4e9 100644
  
  2019-02-09  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -4704,17 +6221,17 @@
+@@ -4704,17 +6242,17 @@
  2019-02-02  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88393
@@ -32168,6 +32276,80 @@ index 00000000000..6487797d0aa
 +    __builtin_abort ();
 +  return 0;
 +}
+diff --git a/gcc/testsuite/gcc.c-torture/execute/pr93744-1.c b/gcc/testsuite/gcc.c-torture/execute/pr93744-1.c
+new file mode 100644
+index 00000000000..3229c9b2bd6
+--- /dev/null
++++ b/gcc/testsuite/gcc.c-torture/execute/pr93744-1.c
+@@ -0,0 +1,14 @@
++/* PR tree-optimization/93744 */
++
++typedef int I;
++
++int
++main ()
++{
++  int a = 0;
++  I b = 0;
++  (a > 0) * (b |= 2);
++  if (b != 2)
++    __builtin_abort ();
++  return 0;
++}
+diff --git a/gcc/testsuite/gcc.c-torture/execute/pr93744-2.c b/gcc/testsuite/gcc.c-torture/execute/pr93744-2.c
+new file mode 100644
+index 00000000000..0c1baaac77b
+--- /dev/null
++++ b/gcc/testsuite/gcc.c-torture/execute/pr93744-2.c
+@@ -0,0 +1,21 @@
++/* PR tree-optimization/93744 */
++
++int w;
++
++int
++foo (int x, int y, int z)
++{
++  int r = z - ((z - w++) & -(x < y));
++  return r;
++}
++
++int
++main ()
++{
++  w = 4;
++  if (foo (5, 7, 12) != 4 || w != 5)
++    __builtin_abort ();
++  if (foo (7, 5, 12) != 12 || w != 6)
++    __builtin_abort ();
++  return 0;
++}
+diff --git a/gcc/testsuite/gcc.c-torture/execute/pr93744-3.c b/gcc/testsuite/gcc.c-torture/execute/pr93744-3.c
+new file mode 100644
+index 00000000000..8542c7c53ba
+--- /dev/null
++++ b/gcc/testsuite/gcc.c-torture/execute/pr93744-3.c
+@@ -0,0 +1,21 @@
++/* PR tree-optimization/93744 */
++
++int w;
++
++int
++foo (int x, int y, int z)
++{
++  int r = z + ((w++ - z) & -(x < y));
++  return r;
++}
++
++int
++main ()
++{
++  w = 4;
++  if (foo (5, 7, 12) != 4 || w != 5)
++    __builtin_abort ();
++  if (foo (7, 5, 12) != 12 || w != 6)
++    __builtin_abort ();
++  return 0;
++}
 diff --git a/gcc/testsuite/gcc.dg/Wnonnull.c b/gcc/testsuite/gcc.dg/Wnonnull.c
 index be89a5a755c..0ed06aabe68 100644
 --- a/gcc/testsuite/gcc.dg/Wnonnull.c
@@ -35170,6 +35352,42 @@ index 00000000000..25a298aea18
 +f12 (__m512i x, __mmask64 m, __m512i y)
 +{
 +  return _mm512_maskz_popcnt_epi8 (m, y);
++}
+diff --git a/gcc/testsuite/gcc.target/i386/pr93743.c b/gcc/testsuite/gcc.target/i386/pr93743.c
+new file mode 100644
+index 00000000000..c0e9d2c3e2c
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr93743.c
+@@ -0,0 +1,30 @@
++/* { dg-do run } */
++/* { dg-options "-O2 -ffast-math -mfpmath=387" } */
++
++void
++__attribute__((noinline))
++test (long double x, long double y)
++{
++  long double ldbl_n = __builtin_atan2l (x, y);
++  long double ldbl_s = __builtin_atan2l (y, x);  // arguments swapped
++
++  if (ldbl_n < 1.L ||  1.L < ldbl_s)
++    __builtin_abort ();
++
++  double dbl_n = __builtin_atan2  (x, y);
++  double dbl_s = __builtin_atan2  (y, x);  // arguments swapped
++
++  if (dbl_n < 1. ||  1. < dbl_s)
++    __builtin_abort ();
++}
++
++int
++main ()
++{
++  long double x = 0.922766L;
++  long double y = 0.080466L;
++
++  test (x, y);
++
++  return 0;
 +}
 diff --git a/gcc/testsuite/gcc.target/i386/ret-thunk-14.c b/gcc/testsuite/gcc.target/i386/ret-thunk-14.c
 index 3eaddee8c34..881f541772c 100644
