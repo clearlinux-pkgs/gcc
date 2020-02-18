@@ -540,9 +540,10 @@ Marek Polacek (13):
       * decl.c (reshape_init_r): Add missing space.
       PR c++/90998 - ICE with copy elision in init by ctor and -Wconversion.
 
-Mark Eggleston (2):
+Mark Eggleston (3):
       Fortran: PR93263 -fno-automatic and RECURSIVE
       PR Fortran/93263 Correct test case
+      [fortran] ICE in gfc_validate_kind(): Got bad kind [PR93580]
 
 Martin Jambor (2):
       IPA-CP: Remove bogus static keyword (PR 92971)
@@ -596,6 +597,9 @@ Peter Bergner (3):
       [rs6000] PR70010, avoid no-vsx function to be inlined to vsx function
       Backport fix for PR92090.
 
+Prathamesh Kulkarni (1):
+      re PR target/90724 (ICE with __sync_bool_compare_and_swap with -march=armv8.2-a+sve)
+
 Przemyslaw Wirkus (2):
       backport: arm: fix v[78]-r multilibs when configured with --with-multlib-list=aprofile
       backport: arm: Fix rmprofile multilibs when architecture includes +mp or +sec (PR target/93188)
@@ -628,6 +632,13 @@ Richard Earnshaw (3):
       [aarch64] PR target/91386 Use copy_rtx to avoid modifying original insns in peep2 pattern
       [arm]  PR target/89400 fix thumb1 unaligned access expansion
       [arm][PR88167] Fix __builtin_return_address returns invalid address
+
+Richard Sandiford (5):
+      Fix SLP downward group access classification [PR92420]
+      Don't pass booleans as mask types to simd clones [PR92710]
+      predcom: Fix invalid store-store commoning [PR93434]
+      Reject tail calls that read from an escaped RESULT_DECL [PR90313]
+      Check for bitwise identity when encoding VECTOR_CSTs [PR92768]
 
 Roman Zhuykov (2):
       modulo-sched: backport PR92591 fix from mainline
@@ -1137,10 +1148,67 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..812e4f08b32 100644
+index 7f6557d8018..5cad2832d93 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,2008 @@
+@@ -1,3 +1,2065 @@
++2020-02-18  Richard Sandiford  <richard.sandiford@arm.com>
++
++	Backport from mainline
++	2019-12-05  Richard Sandiford  <richard.sandiford@arm.com>
++
++	PR middle-end/92768
++	* tree-core.h (OEP_BITWISE): New flag.
++	* fold-const.c (operand_compare::operand_equal_p): Handle it.
++	* tree-vector-builder.h (tree_vector_builder::equal_p): Pass it.
++
++2020-02-18  Richard Sandiford  <richard.sandiford@arm.com>
++
++	Backport from mainline
++	2019-08-09  Richard Sandiford  <richard.sandiford@arm.com>
++
++	PR middle-end/90313
++	* tree-tailcall.c (find_tail_calls): Reject calls that might
++	read from an escaped RESULT_DECL.
++
++2020-02-18  Richard Sandiford  <richard.sandiford@arm.com>
++
++	Backport from mainline
++	2020-01-28  Richard Sandiford  <richard.sandiford@arm.com>
++
++	PR tree-optimization/93434
++	* tree-predcom.c (split_data_refs_to_components): Record which
++	components have had aliasing loads removed.  Prevent store-store
++	commoning for all such components.
++
++2020-02-18  Richard Sandiford  <richard.sandiford@arm.com>
++
++	Backport from mainline
++	2019-11-29  Richard Sandiford  <richard.sandiford@arm.com>
++
++	PR tree-optimization/92710
++	* tree-vect-stmts.c (vectorizable_simd_clone_call): Reject
++	vector mask arguments.
++
++2020-02-18  Richard Sandiford  <richard.sandiford@arm.com>
++
++	Backport from mainline
++	2019-11-11  Richard Sandiford  <richard.sandiford@arm.com>
++
++	PR tree-optimization/92420
++	* tree-vect-stmts.c (get_negative_load_store_type): Move further
++	up file.
++	(get_group_load_store_type): Use it for reversed SLP accesses.
++
++2020-02-18  Richard Sandiford  <richard.sandiford@arm.com>
++
++	Backport from mainline
++	2019-08-21  Prathamesh Kulkarni  <prathamesh.kulkarni@linaro.org>
++
++	PR target/90724
++	* config/aarch64/aarch64.c (aarch64_gen_compare_reg_maybe_ze): Force y
++	in reg if it fails aarch64_plus_operand predicate.
++
 +2020-02-14 Hongtao Liu  <hongtao.liu@intel.com>
 +
 +	PR target/93724
@@ -3149,7 +3217,7 @@ index 7f6557d8018..812e4f08b32 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +2518,7 @@
+@@ -513,7 +2575,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -4889,10 +4957,20 @@ index 53dcd03590d..010fd3ccf76 100644
  /* Enabling "sve" also enables "fp16", "fp" and "simd".
     Disabling "sve" just disables "sve".  */
 diff --git a/gcc/config/aarch64/aarch64.c b/gcc/config/aarch64/aarch64.c
-index 6b25d9cbfae..26a28570be9 100644
+index 6b25d9cbfae..b452a53af99 100644
 --- a/gcc/config/aarch64/aarch64.c
 +++ b/gcc/config/aarch64/aarch64.c
-@@ -15343,6 +15343,34 @@ aarch64_declare_function_name (FILE *stream, const char* name,
+@@ -1910,6 +1910,9 @@ aarch64_gen_compare_reg_maybe_ze (RTX_CODE code, rtx x, rtx y,
+ 	}
+     }
+ 
++  if (!aarch64_plus_operand (y, y_mode))
++    y = force_reg (y_mode, y);
++
+   return aarch64_gen_compare_reg (code, x, y);
+ }
+ 
+@@ -15343,6 +15346,34 @@ aarch64_declare_function_name (FILE *stream, const char* name,
    /* Don't forget the type directive for ELF.  */
    ASM_OUTPUT_TYPE_DIRECTIVE (stream, name, "function");
    ASM_OUTPUT_LABEL (stream, name);
@@ -4927,7 +5005,7 @@ index 6b25d9cbfae..26a28570be9 100644
  }
  
  /* Implement ASM_OUTPUT_DEF_FROM_DECLS.  Output .variant_pcs for aliases.  */
-@@ -15504,6 +15532,9 @@ aarch64_emit_post_barrier (enum memmodel model)
+@@ -15504,6 +15535,9 @@ aarch64_emit_post_barrier (enum memmodel model)
  void
  aarch64_split_compare_and_swap (rtx operands[])
  {
@@ -4937,7 +5015,7 @@ index 6b25d9cbfae..26a28570be9 100644
    rtx rval, mem, oldval, newval, scratch;
    machine_mode mode;
    bool is_weak;
-@@ -15620,6 +15651,9 @@ void
+@@ -15620,6 +15654,9 @@ void
  aarch64_split_atomic_op (enum rtx_code code, rtx old_out, rtx new_out, rtx mem,
  			 rtx value, rtx model_rtx, rtx cond)
  {
@@ -4947,7 +5025,7 @@ index 6b25d9cbfae..26a28570be9 100644
    machine_mode mode = GET_MODE (mem);
    machine_mode wmode = (mode == DImode ? DImode : SImode);
    const enum memmodel model = memmodel_from_int (INTVAL (model_rtx));
-@@ -17247,14 +17281,15 @@ aarch64_expand_subvti (rtx op0, rtx low_dest, rtx low_in1,
+@@ -17247,14 +17284,15 @@ aarch64_expand_subvti (rtx op0, rtx low_dest, rtx low_in1,
      }
    else
      {
@@ -4969,7 +5047,7 @@ index 6b25d9cbfae..26a28570be9 100644
  
        if (unsigned_p)
  	emit_insn (gen_usubdi3_carryinC (high_dest, high_in1, high_in2));
-@@ -18162,19 +18197,21 @@ aarch64_gen_adjusted_ldpstp (rtx *operands, bool load,
+@@ -18162,19 +18200,21 @@ aarch64_gen_adjusted_ldpstp (rtx *operands, bool load,
    /* Sort the operands.  */
    qsort (temp_operands, 4, 2 * sizeof (rtx *), aarch64_ldrstr_offset_compare);
  
@@ -4999,7 +5077,7 @@ index 6b25d9cbfae..26a28570be9 100644
        gcc_assert (code == UNKNOWN);
      }
  
-@@ -18944,6 +18981,9 @@ aarch64_run_selftests (void)
+@@ -18944,6 +18984,9 @@ aarch64_run_selftests (void)
  #undef TARGET_ASM_TRAMPOLINE_TEMPLATE
  #define TARGET_ASM_TRAMPOLINE_TEMPLATE aarch64_asm_trampoline_template
  
@@ -16331,10 +16409,55 @@ index d7f8e9a5d76..c5f5499c013 100644
  	op0 = gen_lowpart (op0_mode.require (), op0);
      }
 diff --git a/gcc/fold-const.c b/gcc/fold-const.c
-index f0e43b5fda2..9feaea9fde5 100644
+index f0e43b5fda2..c717f24501e 100644
 --- a/gcc/fold-const.c
 +++ b/gcc/fold-const.c
-@@ -4935,10 +4935,9 @@ range_check_type (tree etype)
+@@ -2932,6 +2932,11 @@ combine_comparisons (location_t loc,
+    If OEP_LEXICOGRAPHIC is set, then also handle expressions with side-effects
+    such as MODIFY_EXPR, RETURN_EXPR, as well as STATEMENT_LISTs.
+ 
++   If OEP_BITWISE is set, then require the values to be bitwise identical
++   rather than simply numerically equal.  Do not take advantage of things
++   like math-related flags or undefined behavior; only return true for
++   values that are provably bitwise identical in all circumstances.
++
+    Unless OEP_MATCH_SIDE_EFFECTS is set, the function returns false on
+    any operand with side effect.  This is unnecesarily conservative in the
+    case we know that arg0 and arg1 are in disjoint code paths (such as in
+@@ -2978,6 +2983,11 @@ operand_equal_p (const_tree arg0, const_tree arg1, unsigned int flags)
+   if (!TREE_TYPE (arg0) || !TREE_TYPE (arg1))
+     return 0;
+ 
++  /* Bitwise identity makes no sense if the values have different layouts.  */
++  if ((flags & OEP_BITWISE)
++      && !tree_nop_conversion_p (TREE_TYPE (arg0), TREE_TYPE (arg1)))
++    return 0;
++
+   /* We cannot consider pointers to different address space equal.  */
+   if (POINTER_TYPE_P (TREE_TYPE (arg0))
+       && POINTER_TYPE_P (TREE_TYPE (arg1))
+@@ -3110,8 +3120,7 @@ operand_equal_p (const_tree arg0, const_tree arg1, unsigned int flags)
+ 	if (real_identical (&TREE_REAL_CST (arg0), &TREE_REAL_CST (arg1)))
+ 	  return 1;
+ 
+-
+-	if (!HONOR_SIGNED_ZEROS (arg0))
++	if (!(flags & OEP_BITWISE) && !HONOR_SIGNED_ZEROS (arg0))
+ 	  {
+ 	    /* If we do not distinguish between signed and unsigned zero,
+ 	       consider them equal.  */
+@@ -3163,7 +3172,9 @@ operand_equal_p (const_tree arg0, const_tree arg1, unsigned int flags)
+ 	break;
+       }
+ 
+-  if (flags & OEP_ONLY_CONST)
++  /* Don't handle more cases for OEP_BITWISE, since we can't guarantee that
++     two instances of undefined behavior will give identical results.  */
++  if (flags & (OEP_ONLY_CONST | OEP_BITWISE))
+     return 0;
+ 
+ /* Define macros to test an operand from arg0 and arg1 for equality and a
+@@ -4935,10 +4946,9 @@ range_check_type (tree etype)
    /* First make sure that arithmetics in this type is valid, then make sure
       that it wraps around.  */
    if (TREE_CODE (etype) == ENUMERAL_TYPE || TREE_CODE (etype) == BOOLEAN_TYPE)
@@ -16347,7 +16470,7 @@ index f0e43b5fda2..9feaea9fde5 100644
      {
        tree utype, minv, maxv;
  
-@@ -4956,6 +4955,8 @@ range_check_type (tree etype)
+@@ -4956,6 +4966,8 @@ range_check_type (tree etype)
        else
  	return NULL_TREE;
      }
@@ -16356,7 +16479,7 @@ index f0e43b5fda2..9feaea9fde5 100644
    return etype;
  }
  
-@@ -5046,9 +5047,6 @@ build_range_check (location_t loc, tree type, tree exp, int in_p,
+@@ -5046,9 +5058,6 @@ build_range_check (location_t loc, tree type, tree exp, int in_p,
    if (etype == NULL_TREE)
      return NULL_TREE;
  
@@ -16367,10 +16490,22 @@ index f0e43b5fda2..9feaea9fde5 100644
    low = fold_convert_loc (loc, etype, low);
    exp = fold_convert_loc (loc, etype, exp);
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index e3073787ea9..f31e052b10a 100644
+index e3073787ea9..c4257c1c7f7 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,571 @@
+@@ -1,3 +1,583 @@
++2020-02-18  Mark Eggleston  <markeggleston@gcc.gnu.org>
++
++	Backported from mainline
++	2020-02-18  Steven G. Kargl  <kargl@gcc.gnu.org>
++	            Mark Eggleston  <markeggleston@gcc.gnu.org>
++
++	PR fortran/93580
++	* primary.c (gfc_match_varspec): If the symbol following %
++	is re or im and the primary expression type is not BT_COMPLEX
++	issue an error. If the symbol is len and the primary
++	expression type is not BT_CHARACTER is an error.
++
 +2020-02-13  Jakub Jelinek  <jakub@redhat.com>
 +
 +	Backported from mainline
@@ -18761,7 +18896,7 @@ index 66d84b4118f..9e662a66126 100644
        st = next_statement ();
      }
 diff --git a/gcc/fortran/primary.c b/gcc/fortran/primary.c
-index e918372ef85..8408e9c3d0d 100644
+index e918372ef85..ff93698f478 100644
 --- a/gcc/fortran/primary.c
 +++ b/gcc/fortran/primary.c
 @@ -1990,6 +1990,7 @@ gfc_match_varspec (gfc_expr *primary, int equiv_flag, bool sub_flag,
@@ -18772,7 +18907,7 @@ index e918372ef85..8408e9c3d0d 100644
    locus old_loc;
    char sep;
  
-@@ -2194,11 +2195,15 @@ gfc_match_varspec (gfc_expr *primary, int equiv_flag, bool sub_flag,
+@@ -2194,11 +2195,35 @@ gfc_match_varspec (gfc_expr *primary, int equiv_flag, bool sub_flag,
        if (m != MATCH_YES)
  	return MATCH_ERROR;
  
@@ -18783,12 +18918,32 @@ index e918372ef85..8408e9c3d0d 100644
  	  if (inquiry)
  	    sym = NULL;
 +
-+	  if (sep == '%' && primary->ts.type != BT_UNKNOWN)
-+	    intrinsic = true;
++	  if (sep == '%')
++	    {
++	      if (tmp)
++		{
++		  if ((tmp->u.i == INQUIRY_RE || tmp->u.i == INQUIRY_IM)
++		      && primary->ts.type != BT_COMPLEX)
++		    {
++			gfc_error ("The RE or IM part_ref at %C must be "
++				   "applied to a COMPLEX expression");
++			return MATCH_ERROR;
++		    }
++		  else if (tmp->u.i == INQUIRY_LEN
++			   && primary->ts.type != BT_CHARACTER)
++		    {
++			gfc_error ("The LEN part_ref at %C must be applied "
++				   "to a CHARACTER expression");
++			return MATCH_ERROR;
++		    }
++		}
++	      if (primary->ts.type != BT_UNKNOWN)
++		intrinsic = true;
++	    }
  	}
        else
  	inquiry = false;
-@@ -2258,12 +2263,16 @@ gfc_match_varspec (gfc_expr *primary, int equiv_flag, bool sub_flag,
+@@ -2258,12 +2283,16 @@ gfc_match_varspec (gfc_expr *primary, int equiv_flag, bool sub_flag,
  	  break;
  	}
  
@@ -18807,7 +18962,7 @@ index e918372ef85..8408e9c3d0d 100644
  	return MATCH_ERROR;
  
        /* Extend the reference chain determined by gfc_find_component or
-@@ -2284,6 +2293,8 @@ gfc_match_varspec (gfc_expr *primary, int equiv_flag, bool sub_flag,
+@@ -2284,6 +2313,8 @@ gfc_match_varspec (gfc_expr *primary, int equiv_flag, bool sub_flag,
  
        if (tmp && tmp->type == REF_INQUIRY)
  	{
@@ -18816,7 +18971,7 @@ index e918372ef85..8408e9c3d0d 100644
  	  gfc_simplify_expr (primary, 0);
  
  	  if (primary->expr_type == EXPR_CONSTANT)
-@@ -2559,12 +2570,10 @@ gfc_variable_attr (gfc_expr *expr, gfc_typespec *ts)
+@@ -2559,12 +2590,10 @@ gfc_variable_attr (gfc_expr *expr, gfc_typespec *ts)
  	    break;
  
  	  case AR_UNKNOWN:
@@ -26001,10 +26156,43 @@ index 29f6cdc4667..33b4be79c0f 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..179c18da199 100644
+index bc11ae4ae0b..4a17cbdf03d 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,1541 @@
+@@ -1,3 +1,1574 @@
++2020-02-18  Richard Sandiford  <richard.sandiford@arm.com>
++
++	PR middle-end/92768
++	* gcc.dg/pr92768.c: New test.
++
++2020-02-18  Richard Sandiford  <richard.sandiford@arm.com>
++
++	PR middle-end/90313
++	* g++.dg/torture/pr90313.cc: New test.
++
++2020-02-18  Mark Eggleston <markeggleston@gcc.gnu.org>
++
++	Back-ported from mainline
++	2020-02-18 Mark Eggleston <markeggleston@gcc.gnu.org>
++
++	PR fortran/93580
++	* gfortran.dg/dg/pr93580.f90: New test.
++
++2020-02-18  Richard Sandiford  <richard.sandiford@arm.com>
++
++	PR tree-optimization/93434
++	* gcc.c-torture/execute/pr93434.c: New test.
++
++2020-02-18  Richard Sandiford  <richard.sandiford@arm.com>
++
++	PR tree-optimization/92710
++	* gcc.dg/vect/pr92710.c: New test.
++
++2020-02-18  Richard Sandiford  <richard.sandiford@arm.com>
++
++	PR tree-optimization/92420
++	* gcc.dg/vect/pr92420.c: New test.
++
 +2020-02-14 Hongtao Liu  <hongtao.liu@intel.com>
 +
 +	* gcc.target/i386/avx512vbmi2-vpshld-1.c: New test.
@@ -27546,7 +27734,7 @@ index bc11ae4ae0b..179c18da199 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +1965,7 @@
+@@ -427,7 +1998,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -27555,7 +27743,7 @@ index bc11ae4ae0b..179c18da199 100644
  	(check_effective_target_powerpc_p8vector_ok): No support for Darwin.
  	(check_effective_target_powerpc_p9vector_ok): Likewise.
  	(check_effective_target_powerpc_float128_sw_ok): Likewise.
-@@ -720,7 +2258,7 @@
+@@ -720,7 +2291,7 @@
  
  	Backport from mainline
  	PR fortran/91077
@@ -27564,7 +27752,7 @@ index bc11ae4ae0b..179c18da199 100644
  
  2019-07-05  Szabolcs Nagy  <szabolcs.nagy@arm.com>
  
-@@ -803,7 +2341,7 @@
+@@ -803,7 +2374,7 @@
  	Backport fom mainline
  	2019-06-21  Jeff Law  <law@redhat.com>
  
@@ -27573,7 +27761,7 @@ index bc11ae4ae0b..179c18da199 100644
  	* gcc.c-torture/execute/pr90949.c: New test.
  
  2019-06-26  Martin Jambor  <mjambor@suse.cz>
-@@ -969,7 +2507,7 @@
+@@ -969,7 +2540,7 @@
         * gcc.target/i386/pr82699-6.c: Likewise
         * gcc.target/i386/returninst1.c: Likewise
         * gcc.target/i386/returninst2.c: Likewise
@@ -27582,7 +27770,7 @@ index bc11ae4ae0b..179c18da199 100644
  
  2019-05-30  Iain Sandoe  <iain@sandoe.co.uk>
  
-@@ -1131,7 +2669,7 @@
+@@ -1131,7 +2702,7 @@
  
  	Backport from trunk
  	PR fortran/90498
@@ -27591,7 +27779,7 @@ index bc11ae4ae0b..179c18da199 100644
  
  2019-05-17  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -3801,21 +5339,21 @@
+@@ -3801,21 +5372,21 @@
  2019-02-23  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88117
@@ -27620,7 +27808,7 @@ index bc11ae4ae0b..179c18da199 100644
  
  2019-02-22  David Malcolm  <dmalcolm@redhat.com>
  
-@@ -4444,7 +5982,7 @@
+@@ -4444,7 +6015,7 @@
  2019-02-09  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/89200
@@ -27629,7 +27817,7 @@ index bc11ae4ae0b..179c18da199 100644
  
  2019-02-09  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -4704,17 +6242,17 @@
+@@ -4704,17 +6275,17 @@
  2019-02-02  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88393
@@ -30565,6 +30753,45 @@ index 00000000000..066d984ffc5
 +  for (; b;)
 +    d = e;
 +}
+diff --git a/gcc/testsuite/g++.dg/torture/pr90313.cc b/gcc/testsuite/g++.dg/torture/pr90313.cc
+new file mode 100644
+index 00000000000..d9f183a2939
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/torture/pr90313.cc
+@@ -0,0 +1,33 @@
++// { dg-do run }
++
++#include <stddef.h>
++
++namespace std {
++  template<typename T, size_t N> struct array {
++    T elems[N];
++    const T &operator[](size_t i) const { return elems[i]; }
++  };
++}
++
++using Coordinates = std::array<double, 3>;
++
++Coordinates map(const Coordinates &c, size_t level)
++{
++  Coordinates result{ c[1], c[2], c[0] };
++
++  if (level != 0)
++    result = map (result, level - 1);
++
++  return result;
++}
++
++int main()
++{
++  Coordinates vecOfCoordinates = { 1.0, 2.0, 3.0 };
++
++  auto result = map(vecOfCoordinates, 1);
++  if (result[0] != 3 || result[1] != 1 || result[2] != 2)
++    __builtin_abort ();
++
++  return 0;
++}
 diff --git a/gcc/testsuite/g++.dg/torture/pr91155.C b/gcc/testsuite/g++.dg/torture/pr91155.C
 new file mode 100644
 index 00000000000..04e4f7ab41b
@@ -32276,6 +32503,48 @@ index 00000000000..6487797d0aa
 +    __builtin_abort ();
 +  return 0;
 +}
+diff --git a/gcc/testsuite/gcc.c-torture/execute/pr93434.c b/gcc/testsuite/gcc.c-torture/execute/pr93434.c
+new file mode 100644
+index 00000000000..e786252794b
+--- /dev/null
++++ b/gcc/testsuite/gcc.c-torture/execute/pr93434.c
+@@ -0,0 +1,36 @@
++typedef struct creal_T {
++  double re;
++  double im;
++} creal_T;
++
++#define N 16
++int main() {
++  int k;
++  int i;
++  int j;
++  creal_T t2[N];
++  double inval;
++
++  inval = 1.0;
++  for (j = 0; j < N; ++j) {
++    t2[j].re = 0;
++    t2[j].im = 0;
++  }
++
++  for (j = 0; j < N/4; j++) {
++    i = j * 4;
++    t2[i].re = inval;
++    t2[i].im = inval;
++    k = i + 3;
++    t2[k].re = inval;
++    t2[k].im = inval;
++    t2[i] = t2[k];
++    t2[k].re = inval;
++  }
++
++  for (i = 0; i < 2; ++i)
++    if (t2[i].re != !i || t2[i].im != !i)
++      __builtin_abort ();
++
++  return 0;
++}
 diff --git a/gcc/testsuite/gcc.c-torture/execute/pr93744-1.c b/gcc/testsuite/gcc.c-torture/execute/pr93744-1.c
 new file mode 100644
 index 00000000000..3229c9b2bd6
@@ -33226,6 +33495,19 @@ index 00000000000..04a80924650
 +/* { dg-options "-Os -fmodulo-sched -fmodulo-sched-allow-regmoves --param sms-dfa-history=8" } */
 +
 +#include "../gcc.c-torture/execute/pr61682.c"
+diff --git a/gcc/testsuite/gcc.dg/pr92768.c b/gcc/testsuite/gcc.dg/pr92768.c
+new file mode 100644
+index 00000000000..e2a3f9ccacc
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/pr92768.c
+@@ -0,0 +1,7 @@
++/* PR tree-optimization/92768 */
++/* { dg-options "-O2 -fno-signed-zeros -fdump-tree-optimized -w -Wno-psabi" } */
++
++typedef float v4sf __attribute__((vector_size(16)));
++v4sf f () { return (v4sf) { 0.0, -0.0, 0.0, -0.0 }; }
++
++/* { dg-final { scan-tree-dump {{ 0\.0, -0\.0, 0\.0, -0\.0 }} "optimized" } } */
 diff --git a/gcc/testsuite/gcc.dg/pr93054.c b/gcc/testsuite/gcc.dg/pr93054.c
 new file mode 100644
 index 00000000000..1d4680d28e6
@@ -33656,6 +33938,78 @@ index 00000000000..6b69ea030b1
 +  x = 1;
 +  while (x != 0)
 +    x += ++y || (*p = x);
++}
+diff --git a/gcc/testsuite/gcc.dg/vect/pr92420.c b/gcc/testsuite/gcc.dg/vect/pr92420.c
+new file mode 100644
+index 00000000000..e43539fbbd7
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/vect/pr92420.c
+@@ -0,0 +1,48 @@
++/* { dg-additional-options "-mavx2" { target avx_runtime } } */
++
++#include "tree-vect.h"
++
++#define N 16
++struct C { int r, i; };
++struct C a[N], b[N], c[N], d[N], e[N];
++
++__attribute__((noipa)) static void
++foo (struct C *__restrict x, struct C *__restrict y, struct C *__restrict z, int w)
++{
++  int i;
++  for (int i = 0; i < w; i++)
++    {
++      z[i].r = x[i].r * y[-1 - i].r - x[i].i * y[-1 - i].i;
++      z[i].i = x[i].i * y[-1 - i].r + x[i].r * y[-1 - i].i;
++    }
++}
++
++__attribute__((noipa)) static void
++bar (struct C *__restrict x, struct C *__restrict y, struct C *__restrict z, int w)
++{
++  int i;
++  for (int i = 0; i < w; i++)
++    {
++      z[i].r = x[i].r * y[i].r - x[i].i * y[i].i;
++      z[i].i = x[i].i * y[i].r + x[i].r * y[i].i;
++    }
++}
++
++int
++main ()
++{
++  check_vect ();
++  int i;
++  for (i = 0; i < N; ++i)
++    {
++      a[i].r = N - i; a[i].i = i - N;
++      b[i].r = i - N; b[i].i = i + N;
++      c[i].r = -1 - i; c[i].i = 2 * N - 1 - i;
++    }
++  foo (a, b + N, d, N);
++  bar (a, c, e, N);
++  for (i = 0; i < N; ++i)
++    if (d[i].r != e[i].r || d[i].i != e[i].i)
++      __builtin_abort ();
++  return 0;
++}
+diff --git a/gcc/testsuite/gcc.dg/vect/pr92710.c b/gcc/testsuite/gcc.dg/vect/pr92710.c
+new file mode 100644
+index 00000000000..2986d4ce06a
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/vect/pr92710.c
+@@ -0,0 +1,12 @@
++/* { dg-do compile } */
++/* { dg-additional-options "-fopenmp-simd" } */
++
++#pragma omp declare simd
++_Bool foo (_Bool) __attribute__((const));
++
++void
++f (_Bool *restrict x, char *restrict y, char *restrict z)
++{
++  for (int i = 0; i < 128; ++i)
++    x[i] = foo (y[i] == z[i]);
 +}
 diff --git a/gcc/testsuite/gcc.dg/vect/pr92723.c b/gcc/testsuite/gcc.dg/vect/pr92723.c
 new file mode 100644
@@ -39452,6 +39806,25 @@ index 00000000000..fd353c6b548
 +  end subroutine
 +end
 +
+diff --git a/gcc/testsuite/gfortran.dg/pr93580.f90 b/gcc/testsuite/gfortran.dg/pr93580.f90
+new file mode 100644
+index 00000000000..4feaa112914
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr93580.f90
+@@ -0,0 +1,13 @@
++! { dg-do compile }
++! PR fortran/93580
++
++program p
++   integer, parameter :: n = 4
++   complex(n%re) :: x    ! { dg-error "The RE or IM part_ref at" }
++   complex(n%im) :: y    ! { dg-error "The RE or IM part_ref at" }
++   complex(n%len) :: z   ! { dg-error "The LEN part_ref at" }
++   character(n%im) :: a  ! { dg-error "The RE or IM part_ref at" }
++   character(n%re) :: b  ! { dg-error "The RE or IM part_ref at" }
++   character(n%len) :: c ! { dg-error "The LEN part_ref at" }
++end
++
 diff --git a/gcc/testsuite/gfortran.dg/spread_size_limit_2.f90 b/gcc/testsuite/gfortran.dg/spread_size_limit_2.f90
 new file mode 100644
 index 00000000000..3ea064e267f
@@ -39821,6 +40194,20 @@ index 183b491ab1d..4bac38ab00c 100644
        generate_range_test (bb, index, low, high, &lhs, &rhs);
        cond = gimple_build_cond (LE_EXPR, lhs, rhs, NULL_TREE, NULL_TREE);
      }
+diff --git a/gcc/tree-core.h b/gcc/tree-core.h
+index fbed0c379b2..41d05294936 100644
+--- a/gcc/tree-core.h
++++ b/gcc/tree-core.h
+@@ -851,7 +851,8 @@ enum operand_equal_flag {
+   /* Internal within inchash::add_expr:  */
+   OEP_HASH_CHECK = 32,
+   /* Makes operand_equal_p handle more expressions:  */
+-  OEP_LEXICOGRAPHIC = 64
++  OEP_LEXICOGRAPHIC = 64,
++  OEP_BITWISE = 128
+ };
+ 
+ /* Enum and arrays used for tree allocation stats.
 diff --git a/gcc/tree-dfa.c b/gcc/tree-dfa.c
 index 9ba627c90b5..64991ba92fa 100644
 --- a/gcc/tree-dfa.c
@@ -40069,6 +40456,66 @@ index b27dbdd0cb7..f6c230b169c 100644
  extern rtl_opt_pass *make_pass_postreload_cse (gcc::context *ctxt);
  extern rtl_opt_pass *make_pass_gcse2 (gcc::context *ctxt);
  extern rtl_opt_pass *make_pass_split_after_reload (gcc::context *ctxt);
+diff --git a/gcc/tree-predcom.c b/gcc/tree-predcom.c
+index 8e83a715a24..dd66cdc12ca 100644
+--- a/gcc/tree-predcom.c
++++ b/gcc/tree-predcom.c
+@@ -767,6 +767,7 @@ split_data_refs_to_components (struct loop *loop,
+   /* Don't do store elimination if loop has multiple exit edges.  */
+   bool eliminate_store_p = single_exit (loop) != NULL;
+   basic_block last_always_executed = last_always_executed_block (loop);
++  auto_bitmap no_store_store_comps;
+ 
+   FOR_EACH_VEC_ELT (datarefs, i, dr)
+     {
+@@ -838,9 +839,13 @@ split_data_refs_to_components (struct loop *loop,
+       else if (DR_IS_READ (dra) && ib != bad)
+ 	{
+ 	  if (ia == bad)
+-	    continue;
++	    {
++	      bitmap_set_bit (no_store_store_comps, ib);
++	      continue;
++	    }
+ 	  else if (!determine_offset (dra, drb, &dummy_off))
+ 	    {
++	      bitmap_set_bit (no_store_store_comps, ib);
+ 	      merge_comps (comp_father, comp_size, bad, ia);
+ 	      continue;
+ 	    }
+@@ -848,9 +853,13 @@ split_data_refs_to_components (struct loop *loop,
+       else if (DR_IS_READ (drb) && ia != bad)
+ 	{
+ 	  if (ib == bad)
+-	    continue;
++	    {
++	      bitmap_set_bit (no_store_store_comps, ia);
++	      continue;
++	    }
+ 	  else if (!determine_offset (dra, drb, &dummy_off))
+ 	    {
++	      bitmap_set_bit (no_store_store_comps, ia);
+ 	      merge_comps (comp_father, comp_size, bad, ib);
+ 	      continue;
+ 	    }
+@@ -908,6 +917,17 @@ split_data_refs_to_components (struct loop *loop,
+       comp->refs.quick_push (dataref);
+     }
+ 
++  if (eliminate_store_p)
++    {
++      bitmap_iterator bi;
++      EXECUTE_IF_SET_IN_BITMAP (no_store_store_comps, 0, ia, bi)
++	{
++	  ca = component_of (comp_father, ia);
++	  if (ca != bad)
++	    comps[ca]->eliminate_store_p = false;
++	}
++    }
++
+   for (i = 0; i < n; i++)
+     {
+       comp = comps[i];
 diff --git a/gcc/tree-ssa-alias.c b/gcc/tree-ssa-alias.c
 index 2be10e199ba..6ed5c8a1d23 100644
 --- a/gcc/tree-ssa-alias.c
@@ -40717,6 +41164,46 @@ index c3f2baf39d7..dd6dd8064de 100644
      return false;
  
    /* Find the default case target label.  */
+diff --git a/gcc/tree-tailcall.c b/gcc/tree-tailcall.c
+index e0265b22dd5..255575f1198 100644
+--- a/gcc/tree-tailcall.c
++++ b/gcc/tree-tailcall.c
+@@ -479,6 +479,35 @@ find_tail_calls (basic_block bb, struct tailcall **ret)
+       && !stmt_can_throw_external (cfun, stmt))
+     return;
+ 
++  /* If the function returns a value, then at present, the tail call
++     must return the same type of value.  There is conceptually a copy
++     between the object returned by the tail call candidate and the
++     object returned by CFUN itself.
++
++     This means that if we have:
++
++	 lhs = f (&<retval>);    // f reads from <retval>
++				 // (lhs is usually also <retval>)
++
++     there is a copy between the temporary object returned by f and lhs,
++     meaning that any use of <retval> in f occurs before the assignment
++     to lhs begins.  Thus the <retval> that is live on entry to the call
++     to f is really an independent local variable V that happens to be
++     stored in the RESULT_DECL rather than a local VAR_DECL.
++
++     Turning this into a tail call would remove the copy and make the
++     lifetimes of the return value and V overlap.  The same applies to
++     tail recursion, since if f can read from <retval>, we have to assume
++     that CFUN might already have written to <retval> before the call.
++
++     The problem doesn't apply when <retval> is passed by value, but that
++     isn't a case we handle anyway.  */
++  tree result_decl = DECL_RESULT (cfun->decl);
++  if (result_decl
++      && may_be_aliased (result_decl)
++      && ref_maybe_used_by_stmt_p (call, result_decl))
++    return;
++
+   /* We found the call, check whether it is suitable.  */
+   tail_recursion = false;
+   func = gimple_call_fndecl (call);
 diff --git a/gcc/tree-vect-loop.c b/gcc/tree-vect-loop.c
 index 337e078df00..0308b26b808 100644
 --- a/gcc/tree-vect-loop.c
@@ -40906,10 +41393,141 @@ index 017bfa873f7..2abf480270c 100644
      dump_printf_loc (metadata, user_loc, "\tstmt %d %G", i, stmt_info->stmt);
    if (SLP_TREE_CHILDREN (node).is_empty ())
 diff --git a/gcc/tree-vect-stmts.c b/gcc/tree-vect-stmts.c
-index 17769c88b6a..baabdb03b5d 100644
+index 17769c88b6a..507f81b0a0e 100644
 --- a/gcc/tree-vect-stmts.c
 +++ b/gcc/tree-vect-stmts.c
-@@ -3279,7 +3279,7 @@ vectorizable_call (stmt_vec_info stmt_info, gimple_stmt_iterator *gsi,
+@@ -2166,6 +2166,56 @@ perm_mask_for_reverse (tree vectype)
+   return vect_gen_perm_mask_checked (vectype, indices);
+ }
+ 
++/* A subroutine of get_load_store_type, with a subset of the same
++   arguments.  Handle the case where STMT_INFO is a load or store that
++   accesses consecutive elements with a negative step.  */
++
++static vect_memory_access_type
++get_negative_load_store_type (stmt_vec_info stmt_info, tree vectype,
++			      vec_load_store_type vls_type,
++			      unsigned int ncopies)
++{
++  dr_vec_info *dr_info = STMT_VINFO_DR_INFO (stmt_info);
++  dr_alignment_support alignment_support_scheme;
++
++  if (ncopies > 1)
++    {
++      if (dump_enabled_p ())
++	dump_printf_loc (MSG_MISSED_OPTIMIZATION, vect_location,
++			 "multiple types with negative step.\n");
++      return VMAT_ELEMENTWISE;
++    }
++
++  alignment_support_scheme = vect_supportable_dr_alignment (dr_info, false);
++  if (alignment_support_scheme != dr_aligned
++      && alignment_support_scheme != dr_unaligned_supported)
++    {
++      if (dump_enabled_p ())
++	dump_printf_loc (MSG_MISSED_OPTIMIZATION, vect_location,
++			 "negative step but alignment required.\n");
++      return VMAT_ELEMENTWISE;
++    }
++
++  if (vls_type == VLS_STORE_INVARIANT)
++    {
++      if (dump_enabled_p ())
++	dump_printf_loc (MSG_NOTE, vect_location,
++			 "negative step with invariant source;"
++			 " no permute needed.\n");
++      return VMAT_CONTIGUOUS_DOWN;
++    }
++
++  if (!perm_mask_for_reverse (vectype))
++    {
++      if (dump_enabled_p ())
++	dump_printf_loc (MSG_MISSED_OPTIMIZATION, vect_location,
++			 "negative step and reversing not supported.\n");
++      return VMAT_ELEMENTWISE;
++    }
++
++  return VMAT_CONTIGUOUS_REVERSE;
++}
++
+ /* STMT_INFO is either a masked or unconditional store.  Return the value
+    being stored.  */
+ 
+@@ -2268,7 +2318,15 @@ get_group_load_store_type (stmt_vec_info stmt_info, tree vectype, bool slp,
+ 				 "Peeling for outer loop is not supported\n");
+ 	      return false;
+ 	    }
+-	  *memory_access_type = VMAT_CONTIGUOUS;
++	  int cmp = compare_step_with_zero (stmt_info);
++	  if (cmp < 0)
++	    *memory_access_type = get_negative_load_store_type
++	      (stmt_info, vectype, vls_type, 1);
++	  else
++	    {
++	      gcc_assert (!loop_vinfo || cmp > 0);
++	      *memory_access_type = VMAT_CONTIGUOUS;
++	    }
+ 	}
+     }
+   else
+@@ -2370,56 +2428,6 @@ get_group_load_store_type (stmt_vec_info stmt_info, tree vectype, bool slp,
+   return true;
+ }
+ 
+-/* A subroutine of get_load_store_type, with a subset of the same
+-   arguments.  Handle the case where STMT_INFO is a load or store that
+-   accesses consecutive elements with a negative step.  */
+-
+-static vect_memory_access_type
+-get_negative_load_store_type (stmt_vec_info stmt_info, tree vectype,
+-			      vec_load_store_type vls_type,
+-			      unsigned int ncopies)
+-{
+-  dr_vec_info *dr_info = STMT_VINFO_DR_INFO (stmt_info);
+-  dr_alignment_support alignment_support_scheme;
+-
+-  if (ncopies > 1)
+-    {
+-      if (dump_enabled_p ())
+-	dump_printf_loc (MSG_MISSED_OPTIMIZATION, vect_location,
+-			 "multiple types with negative step.\n");
+-      return VMAT_ELEMENTWISE;
+-    }
+-
+-  alignment_support_scheme = vect_supportable_dr_alignment (dr_info, false);
+-  if (alignment_support_scheme != dr_aligned
+-      && alignment_support_scheme != dr_unaligned_supported)
+-    {
+-      if (dump_enabled_p ())
+-	dump_printf_loc (MSG_MISSED_OPTIMIZATION, vect_location,
+-			 "negative step but alignment required.\n");
+-      return VMAT_ELEMENTWISE;
+-    }
+-
+-  if (vls_type == VLS_STORE_INVARIANT)
+-    {
+-      if (dump_enabled_p ())
+-	dump_printf_loc (MSG_NOTE, vect_location,
+-			 "negative step with invariant source;"
+-			 " no permute needed.\n");
+-      return VMAT_CONTIGUOUS_DOWN;
+-    }
+-
+-  if (!perm_mask_for_reverse (vectype))
+-    {
+-      if (dump_enabled_p ())
+-	dump_printf_loc (MSG_MISSED_OPTIMIZATION, vect_location,
+-			 "negative step and reversing not supported.\n");
+-      return VMAT_ELEMENTWISE;
+-    }
+-
+-  return VMAT_CONTIGUOUS_REVERSE;
+-}
+-
+ /* Analyze load or store statement STMT_INFO of type VLS_TYPE.  Return true
+    if there is a memory access type that the vectorized form can use,
+    storing it in *MEMORY_ACCESS_TYPE if so.  If we decide to use gathers
+@@ -3279,7 +3287,7 @@ vectorizable_call (stmt_vec_info stmt_info, gimple_stmt_iterator *gsi,
        if (!vectype_in)
  	vectype_in = vectypes[i];
        else if (vectypes[i]
@@ -40918,7 +41536,25 @@ index 17769c88b6a..baabdb03b5d 100644
  	{
  	  if (dump_enabled_p ())
  	    dump_printf_loc (MSG_MISSED_OPTIMIZATION, vect_location,
-@@ -8272,18 +8272,27 @@ vectorizable_load (stmt_vec_info stmt_info, gimple_stmt_iterator *gsi,
+@@ -3907,7 +3915,16 @@ vectorizable_simd_clone_call (stmt_vec_info stmt_info,
+ 	  || thisarginfo.dt == vect_external_def)
+ 	gcc_assert (thisarginfo.vectype == NULL_TREE);
+       else
+-	gcc_assert (thisarginfo.vectype != NULL_TREE);
++	{
++	  gcc_assert (thisarginfo.vectype != NULL_TREE);
++	  if (VECTOR_BOOLEAN_TYPE_P (thisarginfo.vectype))
++	    {
++	      if (dump_enabled_p ())
++		dump_printf_loc (MSG_MISSED_OPTIMIZATION, vect_location,
++				 "vector mask arguments are not supported\n");
++	      return false;
++	    }
++	}
+ 
+       /* For linear arguments, the analyze phase should have saved
+ 	 the base and step in STMT_VINFO_SIMD_CLONE_INFO.  */
+@@ -8272,18 +8289,27 @@ vectorizable_load (stmt_vec_info stmt_info, gimple_stmt_iterator *gsi,
        compute_in_loop = true;
      }
  
@@ -40949,7 +41585,7 @@ index 17769c88b6a..baabdb03b5d 100644
  	}
      }
    else
-@@ -8339,8 +8348,7 @@ vectorizable_load (stmt_vec_info stmt_info, gimple_stmt_iterator *gsi,
+@@ -8339,8 +8365,7 @@ vectorizable_load (stmt_vec_info stmt_info, gimple_stmt_iterator *gsi,
  	      dataref_ptr = unshare_expr (DR_BASE_ADDRESS (first_dr_info->dr));
  	      dataref_offset = build_int_cst (ref_type, 0);
  	    }
@@ -40959,7 +41595,7 @@ index 17769c88b6a..baabdb03b5d 100644
  	    {
  	      dataref_ptr
  		= vect_create_data_ref_ptr (first_stmt_info_for_drptr,
-@@ -8357,6 +8365,14 @@ vectorizable_load (stmt_vec_info stmt_info, gimple_stmt_iterator *gsi,
+@@ -8357,6 +8382,14 @@ vectorizable_load (stmt_vec_info stmt_info, gimple_stmt_iterator *gsi,
  					    DR_INIT (ptrdr)));
  	      dataref_ptr = bump_vector_ptr (dataref_ptr, ptr_incr, gsi,
  					     stmt_info, diff);
@@ -40974,6 +41610,19 @@ index 17769c88b6a..baabdb03b5d 100644
  	    }
  	  else if (STMT_VINFO_GATHER_SCATTER_P (stmt_info))
  	    vect_get_gather_scatter_ops (loop, stmt_info, &gs_info,
+diff --git a/gcc/tree-vector-builder.h b/gcc/tree-vector-builder.h
+index 0e36cd17139..13af74ad834 100644
+--- a/gcc/tree-vector-builder.h
++++ b/gcc/tree-vector-builder.h
+@@ -82,7 +82,7 @@ tree_vector_builder::new_vector (tree type, unsigned int npatterns,
+ inline bool
+ tree_vector_builder::equal_p (const_tree elt1, const_tree elt2) const
+ {
+-  return operand_equal_p (elt1, elt2, 0);
++  return operand_equal_p (elt1, elt2, OEP_BITWISE);
+ }
+ 
+ /* Return true if a stepped representation is OK.  We don't allow
 diff --git a/gcc/tree-vectorizer.c b/gcc/tree-vectorizer.c
 index d27104933a9..d89ec3b7c76 100644
 --- a/gcc/tree-vectorizer.c
