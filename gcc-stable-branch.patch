@@ -57,7 +57,8 @@ Eric Botcazou (17):
 Eric S. Raymond (1):
       Clean up references to Subversion in documentation sources.
 
-GCC Administrator (189):
+GCC Administrator (190):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -540,10 +541,11 @@ Marek Polacek (13):
       * decl.c (reshape_init_r): Add missing space.
       PR c++/90998 - ICE with copy elision in init by ctor and -Wconversion.
 
-Mark Eggleston (3):
+Mark Eggleston (4):
       Fortran: PR93263 -fno-automatic and RECURSIVE
       PR Fortran/93263 Correct test case
       [fortran] ICE in gfc_validate_kind(): Got bad kind [PR93580]
+      [Fortran] ICE assign character pointer to non target PR93714
 
 Martin Jambor (2):
       IPA-CP: Remove bogus static keyword (PR 92971)
@@ -768,9 +770,10 @@ Will Schmidt (1):
 Xiong Hu Luo (1):
       backport: Enable math functions linking with static library for LTO
 
-liuhongt (2):
+liuhongt (3):
       Intrinsic macro of vpshr* and vpshl* lack a closing parenthesis which would cause failure in O0.
       Add Changelog entries to relavent Changelog files for my last commit.
+      Add -mavx512vbmi2 to i386-2.C and i386-3.C
 
 diff --git a/contrib/ChangeLog b/contrib/ChangeLog
 index 8565be188d9..c9b9e26ee57 100644
@@ -16490,10 +16493,20 @@ index f0e43b5fda2..c717f24501e 100644
    low = fold_convert_loc (loc, etype, low);
    exp = fold_convert_loc (loc, etype, exp);
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index e3073787ea9..c4257c1c7f7 100644
+index e3073787ea9..8fccf0db5cc 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,583 @@
+@@ -1,3 +1,593 @@
++2020-02-19  Mark Eggleston  <markeggleston@gcc.gnu.org>
++
++	Backported from mainline
++	2020-02-18  Mark Eggleston  <markeggleston@gcc.gnu.org>
++
++	PR fortran/93714
++	* expr.c (gfc_check_pointer_assign): Move check for
++	matching character length to after checking the lvalue
++	attributes for target or pointer.
++
 +2020-02-18  Mark Eggleston  <markeggleston@gcc.gnu.org>
 +
 +	Backported from mainline
@@ -17823,7 +17836,7 @@ index cf09420cfbe..abff4af9f67 100644
 +  return MATCH_ERROR;
 +}
 diff --git a/gcc/fortran/expr.c b/gcc/fortran/expr.c
-index 2aeea92b8fb..5663d91fe0f 100644
+index 2aeea92b8fb..94f9eb00f71 100644
 --- a/gcc/fortran/expr.c
 +++ b/gcc/fortran/expr.c
 @@ -1780,11 +1780,15 @@ find_inquiry_ref (gfc_expr *p, gfc_expr **newp)
@@ -17989,6 +18002,34 @@ index 2aeea92b8fb..5663d91fe0f 100644
      }
  
    return MATCH_YES;
+@@ -4176,13 +4196,6 @@ gfc_check_pointer_assign (gfc_expr *lvalue, gfc_expr *rvalue,
+   if (rvalue->expr_type == EXPR_NULL)
+     return true;
+ 
+-  if (lvalue->ts.type == BT_CHARACTER)
+-    {
+-      bool t = gfc_check_same_strlen (lvalue, rvalue, "pointer assignment");
+-      if (!t)
+-	return false;
+-    }
+-
+   if (rvalue->expr_type == EXPR_VARIABLE && is_subref_array (rvalue))
+     lvalue->symtree->n.sym->attr.subref_array_pointer = 1;
+ 
+@@ -4238,6 +4251,13 @@ gfc_check_pointer_assign (gfc_expr *lvalue, gfc_expr *rvalue,
+ 	}
+     }
+ 
++  if (lvalue->ts.type == BT_CHARACTER)
++    {
++      bool t = gfc_check_same_strlen (lvalue, rvalue, "pointer assignment");
++      if (!t)
++	return false;
++    }
++
+   if (is_pure && gfc_impure_variable (rvalue->symtree->n.sym))
+     {
+       gfc_error ("Bad target in pointer assignment in PURE "
 diff --git a/gcc/fortran/frontend-passes.c b/gcc/fortran/frontend-passes.c
 index d4264dafa6f..a6e710beb33 100644
 --- a/gcc/fortran/frontend-passes.c
@@ -26156,10 +26197,26 @@ index 29f6cdc4667..33b4be79c0f 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..4a17cbdf03d 100644
+index bc11ae4ae0b..54beb3d5b0a 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,1574 @@
+@@ -1,3 +1,1590 @@
++2020-02-19  Mark Eggleston <markeggleston@gcc.gnu.org>
++
++	Backported from mainline
++	2020-02-18  Mark Eggleston  <markeggleston@gcc.gnu.org>
++
++	PR fortran/93714
++	* gfortran.dg/char_pointer_assign_6.f90: Look for no target
++	message instead of length mismatch.
++	* gfortran.dg/pr93714_1.f90
++	* gfortran.dg/pr93714_2.f90
++
++2020-02-18  Hongtao Liu  <hongtao.liu@intel.com>
++
++	* g++.dg/other/i386-2.C: Add -mavx512vbmi2.
++	* g++.dg/other/i386-3.C: Ditto.
++
 +2020-02-18  Richard Sandiford  <richard.sandiford@arm.com>
 +
 +	PR middle-end/92768
@@ -27734,7 +27791,7 @@ index bc11ae4ae0b..4a17cbdf03d 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +1998,7 @@
+@@ -427,7 +2014,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -27743,7 +27800,7 @@ index bc11ae4ae0b..4a17cbdf03d 100644
  	(check_effective_target_powerpc_p8vector_ok): No support for Darwin.
  	(check_effective_target_powerpc_p9vector_ok): Likewise.
  	(check_effective_target_powerpc_float128_sw_ok): Likewise.
-@@ -720,7 +2291,7 @@
+@@ -720,7 +2307,7 @@
  
  	Backport from mainline
  	PR fortran/91077
@@ -27752,7 +27809,7 @@ index bc11ae4ae0b..4a17cbdf03d 100644
  
  2019-07-05  Szabolcs Nagy  <szabolcs.nagy@arm.com>
  
-@@ -803,7 +2374,7 @@
+@@ -803,7 +2390,7 @@
  	Backport fom mainline
  	2019-06-21  Jeff Law  <law@redhat.com>
  
@@ -27761,7 +27818,7 @@ index bc11ae4ae0b..4a17cbdf03d 100644
  	* gcc.c-torture/execute/pr90949.c: New test.
  
  2019-06-26  Martin Jambor  <mjambor@suse.cz>
-@@ -969,7 +2540,7 @@
+@@ -969,7 +2556,7 @@
         * gcc.target/i386/pr82699-6.c: Likewise
         * gcc.target/i386/returninst1.c: Likewise
         * gcc.target/i386/returninst2.c: Likewise
@@ -27770,7 +27827,7 @@ index bc11ae4ae0b..4a17cbdf03d 100644
  
  2019-05-30  Iain Sandoe  <iain@sandoe.co.uk>
  
-@@ -1131,7 +2702,7 @@
+@@ -1131,7 +2718,7 @@
  
  	Backport from trunk
  	PR fortran/90498
@@ -27779,7 +27836,7 @@ index bc11ae4ae0b..4a17cbdf03d 100644
  
  2019-05-17  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -3801,21 +5372,21 @@
+@@ -3801,21 +5388,21 @@
  2019-02-23  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88117
@@ -27808,7 +27865,7 @@ index bc11ae4ae0b..4a17cbdf03d 100644
  
  2019-02-22  David Malcolm  <dmalcolm@redhat.com>
  
-@@ -4444,7 +6015,7 @@
+@@ -4444,7 +6031,7 @@
  2019-02-09  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/89200
@@ -27817,7 +27874,7 @@ index bc11ae4ae0b..4a17cbdf03d 100644
  
  2019-02-09  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -4704,17 +6275,17 @@
+@@ -4704,17 +6291,17 @@
  2019-02-02  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88393
@@ -30678,6 +30735,28 @@ index 00000000000..2f8a86f1fdb
 +
 +inline auto foo () { return nullptr; }
 +int bar () { return foo () ? 1 : 0; }
+diff --git a/gcc/testsuite/g++.dg/other/i386-2.C b/gcc/testsuite/g++.dg/other/i386-2.C
+index a70d9f413a6..866768787ec 100644
+--- a/gcc/testsuite/g++.dg/other/i386-2.C
++++ b/gcc/testsuite/g++.dg/other/i386-2.C
+@@ -1,5 +1,5 @@
+ /* { dg-do compile { target i?86-*-* x86_64-*-* } } */
+-/* { dg-options "-O -pedantic-errors -march=k8 -msse4a -m3dnow -mavx -mavx2 -mfma4 -mxop -maes -mpclmul -mpopcnt -mabm -mlzcnt -mbmi -mbmi2 -mtbm -mlwp -mfsgsbase -mrdrnd -mf16c -mfma -mrtm -mrdseed -mprfchw -madx -mfxsr -mxsaveopt -mavx512f -mavx512er -mavx512cd -mavx512pf -msha -mprefetchwt1 -mxsavec -mxsaves -mclflushopt  -mavx512dq -mavx512bw -mavx512vl -mavx512ifma -mavx512vbmi -mavx5124fmaps -mavx5124vnniw -mavx512vpopcntdq -mclwb -mmwaitx -mclzero -mpku -msgx -mrdpid -mgfni -mavx512bitalg -mpconfig -mwbnoinvd" } */
++/* { dg-options "-O -pedantic-errors -march=k8 -msse4a -m3dnow -mavx -mavx2 -mfma4 -mxop -maes -mpclmul -mpopcnt -mabm -mlzcnt -mbmi -mbmi2 -mtbm -mlwp -mfsgsbase -mrdrnd -mf16c -mfma -mrtm -mrdseed -mprfchw -madx -mfxsr -mxsaveopt -mavx512f -mavx512er -mavx512cd -mavx512pf -msha -mprefetchwt1 -mxsavec -mxsaves -mclflushopt  -mavx512dq -mavx512bw -mavx512vl -mavx512ifma -mavx512vbmi -mavx512vbmi2 -mavx5124fmaps -mavx5124vnniw -mavx512vpopcntdq -mclwb -mmwaitx -mclzero -mpku -msgx -mrdpid -mgfni -mavx512bitalg -mpconfig -mwbnoinvd" } */
+ 
+ /* Test that {,x,e,p,t,s,w,a,b,i}mmintrin.h, mm3dnow.h, fma4intrin.h,
+    xopintrin.h, abmintrin.h, bmiintrin.h, tbmintrin.h, lwpintrin.h,
+diff --git a/gcc/testsuite/g++.dg/other/i386-3.C b/gcc/testsuite/g++.dg/other/i386-3.C
+index 73eb5e74c9a..3bc880e2500 100644
+--- a/gcc/testsuite/g++.dg/other/i386-3.C
++++ b/gcc/testsuite/g++.dg/other/i386-3.C
+@@ -1,5 +1,5 @@
+ /* { dg-do compile { target i?86-*-* x86_64-*-* } } */
+-/* { dg-options "-O -fkeep-inline-functions -march=k8 -msse4a -m3dnow -mavx -mavx2 -mfma4 -mxop -maes -mpclmul -mpopcnt -mabm -mlzcnt -mbmi -mbmi2 -mtbm -mlwp -mfsgsbase -mrdrnd -mf16c -mfma -mrtm -mrdseed -mprfchw -madx -mfxsr -mxsaveopt -mavx512f -mavx512er -mavx512cd -mavx512pf -msha -mprefetchwt1 -mxsavec -mxsaves -mclflushopt -mavx512dq -mavx512bw -mavx512vl -mavx512ifma -mavx512vbmi -mavx5124fmaps -mavx5124vnniw -mavx512vpopcntdq -mclwb -mmwaitx -mclzero -mpku -msgx -mrdpid -mgfni -mavx512bitalg -mpconfig -mwbnoinvd" } */
++/* { dg-options "-O -fkeep-inline-functions -march=k8 -msse4a -m3dnow -mavx -mavx2 -mfma4 -mxop -maes -mpclmul -mpopcnt -mabm -mlzcnt -mbmi -mbmi2 -mtbm -mlwp -mfsgsbase -mrdrnd -mf16c -mfma -mrtm -mrdseed -mprfchw -madx -mfxsr -mxsaveopt -mavx512f -mavx512er -mavx512cd -mavx512pf -msha -mprefetchwt1 -mxsavec -mxsaves -mclflushopt -mavx512dq -mavx512bw -mavx512vl -mavx512ifma -mavx512vbmi -mavx512vbmi2 -mavx5124fmaps -mavx5124vnniw -mavx512vpopcntdq -mclwb -mmwaitx -mclzero -mpku -msgx -mrdpid -mgfni -mavx512bitalg -mpconfig -mwbnoinvd" } */
+ 
+ /* Test that {,x,e,p,t,s,w,a,b,i}mmintrin.h, mm3dnow.h, fma4intrin.h,
+    xopintrin.h, abmintrin.h, bmiintrin.h, tbmintrin.h, lwpintrin.h,
 diff --git a/gcc/testsuite/g++.dg/other/pr92201.C b/gcc/testsuite/g++.dg/other/pr92201.C
 new file mode 100644
 index 00000000000..15ba1a12525
@@ -37551,6 +37630,19 @@ index 00000000000..07d1a033c5a
 +  for(i=0; i<ub[0]-lb[0]+1; i++) auxp[i]=i;
 +  return;
 +}
+diff --git a/gcc/testsuite/gfortran.dg/char_pointer_assign_6.f90 b/gcc/testsuite/gfortran.dg/char_pointer_assign_6.f90
+index cd90bfc06e3..e0e116074ae 100644
+--- a/gcc/testsuite/gfortran.dg/char_pointer_assign_6.f90
++++ b/gcc/testsuite/gfortran.dg/char_pointer_assign_6.f90
+@@ -6,6 +6,6 @@ program main
+   character (len=4) :: c
+   s1 = 'abcd'
+   p1 => s1(2:3) ! { dg-error "Unequal character lengths \\(20/2\\)" }
+-  p1 => c(1:) ! { dg-error "Unequal character lengths \\(20/4\\)" }
+-  p1 => c(:4) ! { dg-error "Unequal character lengths \\(20/4\\)" }
++  p1 => c(1:) ! { dg-error "Pointer assignment target" }
++  p1 => c(:4) ! { dg-error "Pointer assignment target" }
+ end
 diff --git a/gcc/testsuite/gfortran.dg/char_result_19.f90 b/gcc/testsuite/gfortran.dg/char_result_19.f90
 new file mode 100644
 index 00000000000..e66ebdcda53
@@ -39825,6 +39917,40 @@ index 00000000000..4feaa112914
 +   character(n%len) :: c ! { dg-error "The LEN part_ref at" }
 +end
 +
+diff --git a/gcc/testsuite/gfortran.dg/pr93714_1.f90 b/gcc/testsuite/gfortran.dg/pr93714_1.f90
+new file mode 100644
+index 00000000000..40f4a4bf89f
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr93714_1.f90
+@@ -0,0 +1,11 @@
++! { dg-do compile }
++! PR 93714
++! Original test case from G. Steinmetz
++
++program test
++   character((1.)) :: a
++   character, pointer :: b => a
++end program
++
++! { dg-error "must be of INTEGER type" " " { target *-*-* } 6 }
++! { dg-error "does not have the TARGET attribute" " " { target *-*-* } 7 }
+diff --git a/gcc/testsuite/gfortran.dg/pr93714_2.f90 b/gcc/testsuite/gfortran.dg/pr93714_2.f90
+new file mode 100644
+index 00000000000..86658f28859
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr93714_2.f90
+@@ -0,0 +1,11 @@
++! { dg-do compile }
++! PR 93714
++! Original test case from G. Steinmetz
++
++program test
++   character((9.)) :: a
++   character(:), pointer :: b => a
++end program
++
++! { dg-error "must be of INTEGER type" " " { target *-*-* } 6 }
++! { dg-error "does not have the TARGET attribute" " " { target *-*-* } 7 }
 diff --git a/gcc/testsuite/gfortran.dg/spread_size_limit_2.f90 b/gcc/testsuite/gfortran.dg/spread_size_limit_2.f90
 new file mode 100644
 index 00000000000..3ea064e267f
