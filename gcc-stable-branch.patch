@@ -57,7 +57,8 @@ Eric Botcazou (17):
 Eric S. Raymond (1):
       Clean up references to Subversion in documentation sources.
 
-GCC Administrator (191):
+GCC Administrator (192):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -751,7 +752,7 @@ Tobias Burnus (15):
 Tom Honermann (1):
       PR c++/88095, CTAD for literal operator templates per P0732
 
-Uros Bizjak (7):
+Uros Bizjak (8):
       test_summary: Do not escape "=".
       baseline_symbols.txt: Update.
       re PR target/91533 (abs pattern generates MMX instructions but fails to call EMMS)
@@ -759,6 +760,7 @@ Uros Bizjak (7):
       re PR target/92225 (ice in gen_smaxv2di3, at config/i386/sse.md:12225)
       PR target/93254 - -msse generates sse2 instructions
       i386: Fix atan2l argument order [PR93743]
+      i386: Fix *vec_extractv2sf_1 and *vec_extractv2sf_1 shufps alternative [PR93828]
 
 Ville Voutilainen (1):
       re PR c++/85254 (boost::is_final does not work for template types)
@@ -1154,10 +1156,17 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..9680a1afb40 100644
+index 7f6557d8018..a9042799a97 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,2074 @@
+@@ -1,3 +1,2081 @@
++2020-02-20  Uroš Bizjak  <ubizjak@gmail.com>
++
++	PR target/93828
++	* config/i386/mmx.md (*vec_extractv2sf_1): Match source operand
++	to destination operand for shufps alternative.
++	(*vec_extractv2si_1): Ditto.
++
 +2020-02-20  H.J. Lu  <hongjiu.lu@intel.com>
 +
 +	Backport from master
@@ -3232,7 +3241,7 @@ index 7f6557d8018..9680a1afb40 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +2584,7 @@
+@@ -513,7 +2591,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -9628,6 +9637,42 @@ index 2a3e912ee74..0b12edc72c1 100644
    obstack_ptr_grow (&argv_obstack, "-o");
    obstack_ptr_grow (&argv_obstack, target_so_filename);
    compile_for_target (&argv_obstack);
+diff --git a/gcc/config/i386/mmx.md b/gcc/config/i386/mmx.md
+index b566cc80020..15e4c84b54f 100644
+--- a/gcc/config/i386/mmx.md
++++ b/gcc/config/i386/mmx.md
+@@ -626,13 +626,13 @@
+ (define_insn "*vec_extractv2sf_1"
+   [(set (match_operand:SF 0 "nonimmediate_operand"     "=y,x,x,y,x,f,r")
+ 	(vec_select:SF
+-	  (match_operand:V2SF 1 "nonimmediate_operand" " 0,x,x,o,o,o,o")
++	  (match_operand:V2SF 1 "nonimmediate_operand" " 0,x,0,o,o,o,o")
+ 	  (parallel [(const_int 1)])))]
+   "TARGET_MMX && !(MEM_P (operands[0]) && MEM_P (operands[1]))"
+   "@
+    punpckhdq\t%0, %0
+    %vmovshdup\t{%1, %0|%0, %1}
+-   shufps\t{$0xe5, %1, %0|%0, %1, 0xe5}
++   shufps\t{$0xe5, %0, %0|%0, %0, 0xe5}
+    #
+    #
+    #
+@@ -1320,13 +1320,13 @@
+ (define_insn "*vec_extractv2si_1"
+   [(set (match_operand:SI 0 "nonimmediate_operand"     "=y,x,x,y,x,r")
+ 	(vec_select:SI
+-	  (match_operand:V2SI 1 "nonimmediate_operand" " 0,x,x,o,o,o")
++	  (match_operand:V2SI 1 "nonimmediate_operand" " 0,x,0,o,o,o")
+ 	  (parallel [(const_int 1)])))]
+   "TARGET_MMX && !(MEM_P (operands[0]) && MEM_P (operands[1]))"
+   "@
+    punpckhdq\t%0, %0
+    %vpshufd\t{$0xe5, %1, %0|%0, %1, 0xe5}
+-   shufps\t{$0xe5, %1, %0|%0, %1, 0xe5}
++   shufps\t{$0xe5, %0, %0|%0, %0, 0xe5}
+    #
+    #
+    #"
 diff --git a/gcc/config/i386/sse.md b/gcc/config/i386/sse.md
 index 46ec4602eb7..18cc39ae521 100644
 --- a/gcc/config/i386/sse.md
