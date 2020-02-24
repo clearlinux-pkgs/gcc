@@ -13,10 +13,11 @@ Andreas Krebbel (7):
       IBM Z: gen-vect-26/28: Vectorizing without peeling is ok for Z
       Fix PR92950: Wrong code emitted for movv1qi
 
-Bernd Edlinger (3):
+Bernd Edlinger (4):
       backport: re PR tree-optimization/91109 ([arm] gcc.c-torture/execute/20040709-1.c fails since r273135)
       backport: re PR tree-optimization/91109 ([arm] gcc.c-torture/execute/20040709-1.c fails since r273135)
       backport: re PR fortran/91716 (ICE in output_constant, at varasm.c:5026)
+      Avoid collect2 calling signal unsafe functions and/or unlink with uninitialized memory
 
 Bill Schmidt (2):
       backport: re PR target/91275 (__builtin_crypto_vpmsumd gives different results -O[123] vs -O0)
@@ -57,7 +58,10 @@ Eric Botcazou (17):
 Eric S. Raymond (1):
       Clean up references to Subversion in documentation sources.
 
-GCC Administrator (192):
+GCC Administrator (195):
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -441,7 +445,7 @@ Jerry DeLisle (2):
 Jiufu Guo (1):
       backport: re PR target/70010 (powerpc: -flto forgets 'no-vsx' function attributes)
 
-John David Anglin (15):
+John David Anglin (16):
       pa.c (pa_trampoline_init): Remove spurious extended character.
       lib2funcs.S (__gcc_plt_call): Load branch target to %r21.
       pa.c (pa_output_call): Load descriptor address to register %r22.
@@ -457,6 +461,7 @@ John David Anglin (15):
       re PR target/67834 (Local references inside comdat groups)
       pa.md: Revert change to use ordered_comparison_operator instead of...
       Fix ICE in pa_elf_select_rtx_section.
+      Fix handling of floating-point homogeneous aggregates.
 
 Jonathan Wakely (37):
       PR libstdc++/90361 add missing macro definition
@@ -576,6 +581,10 @@ Max Filippov (1):
 Michael Matz (1):
       re PR middle-end/90796 (GCC: O2 vs O3 output differs on simple test)
 
+Michael Meissner (2):
+      Fix bad code of vector extract of PC-relative address with variable element #.
+      Adjust how variable vector extraction is done.
+
 Mihail Ionescu (1):
       [arm] Backport -- Fix multilibs for Armv7-R
 
@@ -598,10 +607,11 @@ Paul Thomas (5):
       re PR fortran/91926 (assumed rank optional)
       re PR fortran/92753 (ICE in gfc_trans_call, at fortran/trans-stmt.c:392)
 
-Peter Bergner (3):
+Peter Bergner (4):
       backport: config.gcc: Move -L usage from LINK_OS_EXTRA_SPEC32 and LINK_OS_EXTRA_SPEC64 to...
       [rs6000] PR70010, avoid no-vsx function to be inlined to vsx function
       Backport fix for PR92090.
+      rs6000: Fix infinite loop building ghostscript and icu [PR93658]
 
 Prathamesh Kulkarni (1):
       re PR target/90724 (ICE with __sync_bool_compare_and_swap with -march=armv8.2-a+sve)
@@ -721,6 +731,9 @@ Thomas Koenig (12):
       backport: re PR fortran/91783 (ICE in gfc_dep_resolver, at fortran/dependency.c:2111)
       Catch division by zero errors in array sizes.
       backport: re PR fortran/92961 (ICE in gfc_zero_size_array, at fortran/arith.c:1680)
+
+Thomas König (1):
+      Use au->lock exclusively for locking in async I/O.
 
 Thomas Rodgers (1):
       Restore enable_if lost during original import of pstl
@@ -1156,10 +1169,69 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..a9042799a97 100644
+index 7f6557d8018..a79889e1bf2 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,2081 @@
+@@ -1,3 +1,2140 @@
++2020-02-24  Bernd Edlinger  <bernd.edlinger@hotmail.de>
++
++	* collect2.c (tool_cleanup): Avoid calling not signal-safe
++	functions.
++	(maybe_run_lto_and_relink): Avoid possible signal handler
++	access to unintialzed memory (lto_o_files).
++
++2020-02-23  Peter Bergner <bergner@linux.ibm.com>
++
++	Backport from master
++	2020-02-20  Peter Bergner  <bergner@linux.ibm.com>
++
++	PR target/93658
++	* config/rs6000/rs6000.c (rs6000_legitimate_address_p): Handle VSX
++	vector modes.
++
++2020-02-23  Peter Bergner <bergner@linux.ibm.com>
++
++	Backport from master
++	2020-02-05  Michael Meissner  <meissner@linux.ibm.com>
++
++	PR target/93568
++	* config/rs6000/rs6000.c (get_vector_offset): Fix Q constraint assert
++	to use "mem".
++
++	Backport from master
++	2020-02-03  Michael Meissner  <meissner@linux.ibm.com>
++
++	* config/rs6000/rs6000.c (get_vector_offset): New helper function
++	to calculate the offset in memory from the start of a vector of a
++	particular element.  Add code to keep the element number in
++	bounds if the element number is variable.
++	(rs6000_adjust_vec_address): Move calculation of offset of the
++	vector element to get_vector_offset.
++	(rs6000_split_vec_extract_var): Do not do the initial AND of
++	element here, move the code to get_vector_offset.
++
++2020-02-23  Peter Bergner <bergner@linux.ibm.com>
++
++	Backport from master
++	2020-01-06  Michael Meissner  <meissner@linux.ibm.com>
++
++	* config/rs6000/vsx.md (vsx_extract_<mode>_var, VSX_D iterator):
++	Use 'Q' for doing vector extract from memory.
++	(vsx_extract_v4sf_var): Use 'Q' for doing vector extract from
++	memory.
++	(vsx_extract_<mode>_var, VSX_EXTRACT_I iterator): Use 'Q' for
++	doing vector extract from memory.
++	(vsx_extract_<mode>_<VS_scalar>mode_var): Use 'Q' for doing vector
++	extract from memory.
++
++2020-02-21  John David Anglin  <danglin@gcc.gnu.org>
++
++	* gcc/config/pa/pa.c (pa_function_value): Fix check for word and
++	double-word size when handling aggregate return values.
++	* gcc/config/pa/som.h (ASM_DECLARE_FUNCTION_NAME): Fix to indicate
++	that homogeneous SFmode and DFmode aggregates are passed and returned
++	in general registers.
++
 +2020-02-20  Uroš Bizjak  <ubizjak@gmail.com>
 +
 +	PR target/93828
@@ -3241,7 +3313,7 @@ index 7f6557d8018..a9042799a97 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +2591,7 @@
+@@ -513,7 +2650,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -4895,6 +4967,33 @@ index db4c9c747b9..1febb6369a0 100644
    if (error_found)
      {
        dump (stderr);
+diff --git a/gcc/collect2.c b/gcc/collect2.c
+index eb84f84639b..8f092e7539e 100644
+--- a/gcc/collect2.c
++++ b/gcc/collect2.c
+@@ -384,6 +384,10 @@ static void scan_prog_file (const char *, scanpass, scanfilter);
+ void
+ tool_cleanup (bool from_signal)
+ {
++  /* maybe_unlink may call notice, which is not signal safe.  */
++  if (from_signal)
++    verbose = false;
++
+   if (c_file != 0 && c_file[0])
+     maybe_unlink (c_file);
+ 
+@@ -743,7 +747,10 @@ maybe_run_lto_and_relink (char **lto_ld_argv, char **object_lst,
+ 	      ++num_files;
+ 	  }
+ 
+-	lto_o_files = XNEWVEC (char *, num_files + 1);
++	/* signal handler may access uninitialized memory
++	   and delete whatever it points to, if lto_o_files
++	   is not allocated with calloc.  */
++	lto_o_files = XCNEWVEC (char *, num_files + 1);
+ 	lto_o_files[num_files] = NULL;
+ 	start = XOBFINISH (&temporary_obstack, char *);
+ 	for (i = 0; i < num_files; ++i)
 diff --git a/gcc/combine.c b/gcc/combine.c
 index 4de759a8e6b..601943d6bb0 100644
 --- a/gcc/combine.c
@@ -9988,7 +10087,7 @@ index 9dec57d67ae..88671652707 100644
    else                                                                  \
      switch_to_section (bss_section);					\
 diff --git a/gcc/config/pa/pa.c b/gcc/config/pa/pa.c
-index 707ae5822c3..3546846956e 100644
+index 707ae5822c3..84a8cae22e4 100644
 --- a/gcc/config/pa/pa.c
 +++ b/gcc/config/pa/pa.c
 @@ -206,6 +206,7 @@ static bool pa_hard_regno_mode_ok (unsigned int, machine_mode);
@@ -10198,6 +10297,15 @@ index 707ae5822c3..3546846956e 100644
    /* We need a long PIC call to $$dyncall.  */
    xoperands[0] = gen_rtx_SYMBOL_REF (Pmode, "$$dyncall");
    xoperands[1] = gen_rtx_REG (Pmode, 2);
+@@ -9366,7 +9343,7 @@ pa_function_value (const_tree valtype,
+       HOST_WIDE_INT valsize = int_size_in_bytes (valtype);
+ 
+       /* Handle aggregates that fit exactly in a word or double word.  */
+-      if ((valsize & (UNITS_PER_WORD - 1)) == 0)
++      if (valsize == UNITS_PER_WORD || valsize == 2 * UNITS_PER_WORD)
+ 	return gen_rtx_REG (TYPE_MODE (valtype), 28);
+ 
+       if (TARGET_64BIT)
 @@ -9871,6 +9848,26 @@ pa_select_section (tree exp, int reloc,
      return data_section;
  }
@@ -10722,6 +10830,51 @@ index 90b578ed984..25247f1f0e8 100644
  
  (define_predicate "cmpib_comparison_operator"
    (match_code "eq,ne,lt,le,leu,gt,gtu,ge"))
+diff --git a/gcc/config/pa/som.h b/gcc/config/pa/som.h
+index adefc99a1e3..3ef543428ff 100644
+--- a/gcc/config/pa/som.h
++++ b/gcc/config/pa/som.h
+@@ -98,8 +98,8 @@ do {								\
+ 
+ 
+ #define ASM_DECLARE_FUNCTION_NAME(FILE, NAME, DECL) \
+-    do { tree fntype = TREE_TYPE (TREE_TYPE (DECL));			\
+-	 tree tree_type = TREE_TYPE (DECL);				\
++    do { tree tree_type = TREE_TYPE (DECL);				\
++	 tree fntype = TREE_TYPE (tree_type);				\
+ 	 tree parm;							\
+ 	 int i;								\
+ 	 if (TREE_PUBLIC (DECL) || TARGET_GAS)				\
+@@ -121,9 +121,11 @@ do {								\
+ 	       {							\
+ 		 tree type = DECL_ARG_TYPE (parm);			\
+ 		 machine_mode mode = TYPE_MODE (type);			\
+-		 if (mode == SFmode && ! TARGET_SOFT_FLOAT)		\
++		 if (!AGGREGATE_TYPE_P (type)				\
++		     && mode == SFmode && ! TARGET_SOFT_FLOAT)		\
+ 		   fprintf (FILE, ",ARGW%d=FR", i++);			\
+-		 else if (mode == DFmode && ! TARGET_SOFT_FLOAT)	\
++		 else if (!AGGREGATE_TYPE_P (type)			\
++			  && mode == DFmode && ! TARGET_SOFT_FLOAT)	\
+ 		   {							\
+ 		     if (i <= 2)					\
+ 		       {						\
+@@ -158,9 +160,13 @@ do {								\
+ 		 for (; i < 4; i++)					\
+ 		   fprintf (FILE, ",ARGW%d=GR", i);			\
+ 	       }							\
+-	     if (TYPE_MODE (fntype) == DFmode && ! TARGET_SOFT_FLOAT)	\
++	     if (!AGGREGATE_TYPE_P (fntype)				\
++		 && TYPE_MODE (fntype) == DFmode			\
++		 && ! TARGET_SOFT_FLOAT)				\
+ 	       fputs (DFMODE_RETURN_STRING, FILE);			\
+-	     else if (TYPE_MODE (fntype) == SFmode && ! TARGET_SOFT_FLOAT) \
++	     else if (!AGGREGATE_TYPE_P (fntype)			\
++		      && TYPE_MODE (fntype) == SFmode			\
++		      && ! TARGET_SOFT_FLOAT)				\
+ 	       fputs (SFMODE_RETURN_STRING, FILE);			\
+ 	     else if (fntype != void_type_node)				\
+ 	       fputs (",RTNVAL=GR", FILE);				\
 diff --git a/gcc/config/riscv/riscv-protos.h b/gcc/config/riscv/riscv-protos.h
 index 8b510f87df8..1bfc65e6d9f 100644
 --- a/gcc/config/riscv/riscv-protos.h
@@ -11650,10 +11803,118 @@ index c3b98315503..d30e5dec980 100644
        }
  
 diff --git a/gcc/config/rs6000/rs6000.c b/gcc/config/rs6000/rs6000.c
-index cb8d737976b..87d60078bb0 100644
+index cb8d737976b..1d93570e7a5 100644
 --- a/gcc/config/rs6000/rs6000.c
 +++ b/gcc/config/rs6000/rs6000.c
-@@ -7671,6 +7671,104 @@ address_offset (rtx op)
+@@ -7017,10 +7017,53 @@ rs6000_expand_vector_extract (rtx target, rtx vec, rtx elt)
+     }
+ }
+ 
++/* Return the offset within a memory object (MEM) of a vector type to a given
++   element within the vector (ELEMENT) with an element size (SCALAR_SIZE).  If
++   the element is constant, we return a constant integer.
++
++   Otherwise, we use a base register temporary to calculate the offset after
++   masking it to fit within the bounds of the vector and scaling it.  The
++   masking is required by the 64-bit ELF version 2 ABI for the vec_extract
++   built-in function.  */
++
++static rtx
++get_vector_offset (rtx mem, rtx element, rtx base_tmp, unsigned scalar_size)
++{
++  if (CONST_INT_P (element))
++    return GEN_INT (INTVAL (element) * scalar_size);
++
++  /* All insns should use the 'Q' constraint (address is a single register) if
++     the element number is not a constant.  */
++  gcc_assert (satisfies_constraint_Q (mem));
++
++  /* Mask the element to make sure the element number is between 0 and the
++     maximum number of elements - 1 so that we don't generate an address
++     outside the vector.  */
++  rtx num_ele_m1 = GEN_INT (GET_MODE_NUNITS (GET_MODE (mem)) - 1);
++  rtx and_op = gen_rtx_AND (Pmode, element, num_ele_m1);
++  emit_insn (gen_rtx_SET (base_tmp, and_op));
++
++  /* Shift the element to get the byte offset from the element number.  */
++  int shift = exact_log2 (scalar_size);
++  gcc_assert (shift >= 0);
++
++  if (shift > 0)
++    {
++      rtx shift_op = gen_rtx_ASHIFT (Pmode, base_tmp, GEN_INT (shift));
++      emit_insn (gen_rtx_SET (base_tmp, shift_op));
++    }
++
++  return base_tmp;
++}
++
+ /* Adjust a memory address (MEM) of a vector type to point to a scalar field
+    within the vector (ELEMENT) with a mode (SCALAR_MODE).  Use a base register
+    temporary (BASE_TMP) to fixup the address.  Return the new memory address
+-   that is valid for reads or writes to a given register (SCALAR_REG).  */
++   that is valid for reads or writes to a given register (SCALAR_REG).
++
++   This function is expected to be called after reload is completed when we are
++   splitting insns.  The temporary BASE_TMP might be set multiple times with
++   this code.  */
+ 
+ rtx
+ rs6000_adjust_vec_address (rtx scalar_reg,
+@@ -7031,7 +7074,6 @@ rs6000_adjust_vec_address (rtx scalar_reg,
+ {
+   unsigned scalar_size = GET_MODE_SIZE (scalar_mode);
+   rtx addr = XEXP (mem, 0);
+-  rtx element_offset;
+   rtx new_addr;
+   bool valid_addr_p;
+ 
+@@ -7040,26 +7082,7 @@ rs6000_adjust_vec_address (rtx scalar_reg,
+ 
+   /* Calculate what we need to add to the address to get the element
+      address.  */
+-  if (CONST_INT_P (element))
+-    element_offset = GEN_INT (INTVAL (element) * scalar_size);
+-  else
+-    {
+-      int byte_shift = exact_log2 (scalar_size);
+-      gcc_assert (byte_shift >= 0);
+-
+-      if (byte_shift == 0)
+-	element_offset = element;
+-
+-      else
+-	{
+-	  if (TARGET_POWERPC64)
+-	    emit_insn (gen_ashldi3 (base_tmp, element, GEN_INT (byte_shift)));
+-	  else
+-	    emit_insn (gen_ashlsi3 (base_tmp, element, GEN_INT (byte_shift)));
+-
+-	  element_offset = base_tmp;
+-	}
+-    }
++  rtx element_offset = get_vector_offset (mem, element, base_tmp, scalar_size);
+ 
+   /* Create the new address pointing to the element within the vector.  If we
+      are adding 0, we don't have to change the address.  */
+@@ -7194,13 +7217,9 @@ rs6000_split_vec_extract_var (rtx dest, rtx src, rtx element, rtx tmp_gpr,
+      systems.  */
+   if (MEM_P (src))
+     {
+-      int num_elements = GET_MODE_NUNITS (mode);
+-      rtx num_ele_m1 = GEN_INT (num_elements - 1);
+-
+-      emit_insn (gen_anddi3 (element, element, num_ele_m1));
+-      gcc_assert (REG_P (tmp_gpr));
+-      emit_move_insn (dest, rs6000_adjust_vec_address (dest, src, element,
+-						       tmp_gpr, scalar_mode));
++      emit_move_insn (dest,
++		      rs6000_adjust_vec_address (dest, src, element, tmp_gpr,
++						 scalar_mode));
+       return;
+     }
+ 
+@@ -7671,6 +7690,104 @@ address_offset (rtx op)
    return NULL_RTX;
  }
  
@@ -11758,7 +12019,7 @@ index cb8d737976b..87d60078bb0 100644
  /* Return true if the MEM operand is a memory operand suitable for use
     with a (full width, possibly multiple) gpr load/store.  On
     powerpc64 this means the offset must be divisible by 4.
-@@ -7705,7 +7803,13 @@ mem_operand_gpr (rtx op, machine_mode mode)
+@@ -7705,7 +7822,13 @@ mem_operand_gpr (rtx op, machine_mode mode)
        && legitimate_indirect_address_p (XEXP (addr, 0), false))
      return true;
  
@@ -11773,7 +12034,16 @@ index cb8d737976b..87d60078bb0 100644
    if (!rs6000_offsettable_memref_p (op, mode, false))
      return false;
  
-@@ -21330,7 +21434,7 @@ print_operand (FILE *file, rtx x, int code)
+@@ -9235,7 +9358,7 @@ rs6000_legitimate_address_p (machine_mode mode, rtx x, bool reg_ok_strict)
+   bool quad_offset_p = mode_supports_dq_form (mode);
+ 
+   /* If this is an unaligned stvx/ldvx type address, discard the outer AND.  */
+-  if (VECTOR_MEM_ALTIVEC_P (mode)
++  if (VECTOR_MEM_ALTIVEC_OR_VSX_P (mode)
+       && GET_CODE (x) == AND
+       && CONST_INT_P (XEXP (x, 1))
+       && INTVAL (XEXP (x, 1)) == -16)
+@@ -21330,7 +21453,7 @@ print_operand (FILE *file, rtx x, int code)
  	{
  	  const char *name = XSTR (x, 0);
  #if TARGET_MACHO
@@ -11782,7 +12052,7 @@ index cb8d737976b..87d60078bb0 100644
  	      && MACHOPIC_INDIRECT
  	      && machopic_classify_symbol (x) == MACHOPIC_UNDEFINED_FUNCTION)
  	    name = machopic_indirection_name (x, /*stub_p=*/true);
-@@ -23151,6 +23255,11 @@ rs6000_emit_cmove (rtx dest, rtx op, rtx true_cond, rtx false_cond)
+@@ -23151,6 +23274,11 @@ rs6000_emit_cmove (rtx dest, rtx op, rtx true_cond, rtx false_cond)
  
    /* At this point we know we can use fsel.  */
  
@@ -11794,7 +12064,7 @@ index cb8d737976b..87d60078bb0 100644
    /* Reduce the comparison to a comparison against zero.  */
    if (! is_against_zero)
      {
-@@ -25729,10 +25838,14 @@ rs6000_emit_allocate_stack (HOST_WIDE_INT size, rtx copy_reg, int copy_off)
+@@ -25729,10 +25857,14 @@ rs6000_emit_allocate_stack (HOST_WIDE_INT size, rtx copy_reg, int copy_off)
  						    stack_limit_rtx,
  						    GEN_INT (size)));
  
@@ -11813,7 +12083,7 @@ index cb8d737976b..87d60078bb0 100644
  	}
        else
  	warning (0, "stack limit expression is not supported");
-@@ -37762,25 +37875,31 @@ rs6000_can_inline_p (tree caller, tree callee)
+@@ -37762,25 +37894,31 @@ rs6000_can_inline_p (tree caller, tree callee)
    tree caller_tree = DECL_FUNCTION_SPECIFIC_TARGET (caller);
    tree callee_tree = DECL_FUNCTION_SPECIFIC_TARGET (callee);
  
@@ -11857,7 +12127,7 @@ index cb8d737976b..87d60078bb0 100644
  	ret = true;
      }
  
-@@ -38273,7 +38392,8 @@ rs6000_call_darwin_1 (rtx value, rtx func_desc, rtx tlsarg,
+@@ -38273,7 +38411,8 @@ rs6000_call_darwin_1 (rtx value, rtx func_desc, rtx tlsarg,
    if ((cookie_val & CALL_LONG) != 0
        && GET_CODE (func_desc) == SYMBOL_REF)
      {
@@ -12268,6 +12538,46 @@ index 70bcfe02e22..0b62dd04bde 100644
  (define_expand "vector_eq<mode>"
    [(set (match_operand:VEC_C 0 "vlogical_operand")
  	(eq:VEC_C (match_operand:VEC_C 1 "vlogical_operand")
+diff --git a/gcc/config/rs6000/vsx.md b/gcc/config/rs6000/vsx.md
+index 607c0cd33f2..5973e0a399d 100644
+--- a/gcc/config/rs6000/vsx.md
++++ b/gcc/config/rs6000/vsx.md
+@@ -3295,7 +3295,7 @@
+ ;; Variable V2DI/V2DF extract
+ (define_insn_and_split "vsx_extract_<mode>_var"
+   [(set (match_operand:<VS_scalar> 0 "gpc_reg_operand" "=v,<VSa>,r")
+-	(unspec:<VS_scalar> [(match_operand:VSX_D 1 "input_operand" "v,m,m")
++	(unspec:<VS_scalar> [(match_operand:VSX_D 1 "input_operand" "v,Q,Q")
+ 			     (match_operand:DI 2 "gpc_reg_operand" "r,r,r")]
+ 			    UNSPEC_VSX_EXTRACT))
+    (clobber (match_scratch:DI 3 "=r,&b,&b"))
+@@ -3364,7 +3364,7 @@
+ ;; Variable V4SF extract
+ (define_insn_and_split "vsx_extract_v4sf_var"
+   [(set (match_operand:SF 0 "gpc_reg_operand" "=ww,ww,?r")
+-	(unspec:SF [(match_operand:V4SF 1 "input_operand" "v,m,m")
++	(unspec:SF [(match_operand:V4SF 1 "input_operand" "v,Q,Q")
+ 		    (match_operand:DI 2 "gpc_reg_operand" "r,r,r")]
+ 		   UNSPEC_VSX_EXTRACT))
+    (clobber (match_scratch:DI 3 "=r,&b,&b"))
+@@ -3724,7 +3724,7 @@
+ (define_insn_and_split "vsx_extract_<mode>_var"
+   [(set (match_operand:<VS_scalar> 0 "gpc_reg_operand" "=r,r,r")
+ 	(unspec:<VS_scalar>
+-	 [(match_operand:VSX_EXTRACT_I 1 "input_operand" "wK,v,m")
++	 [(match_operand:VSX_EXTRACT_I 1 "input_operand" "wK,v,Q")
+ 	  (match_operand:DI 2 "gpc_reg_operand" "r,r,r")]
+ 	 UNSPEC_VSX_EXTRACT))
+    (clobber (match_scratch:DI 3 "=r,r,&b"))
+@@ -3743,7 +3743,7 @@
+   [(set (match_operand:<VS_scalar> 0 "gpc_reg_operand" "=r,r,r")
+ 	(zero_extend:<VS_scalar>
+ 	 (unspec:<VSX_EXTRACT_I:VS_scalar>
+-	  [(match_operand:VSX_EXTRACT_I 1 "input_operand" "wK,v,m")
++	  [(match_operand:VSX_EXTRACT_I 1 "input_operand" "wK,v,Q")
+ 	   (match_operand:DI 2 "gpc_reg_operand" "r,r,r")]
+ 	  UNSPEC_VSX_EXTRACT)))
+    (clobber (match_scratch:DI 3 "=r,r,&b"))
 diff --git a/gcc/config/s390/8561.md b/gcc/config/s390/8561.md
 index e5a345f4dba..2442349271b 100644
 --- a/gcc/config/s390/8561.md
@@ -26270,10 +26580,18 @@ index 29f6cdc4667..33b4be79c0f 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..9344d00e38a 100644
+index bc11ae4ae0b..f02a9415230 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,1602 @@
+@@ -1,3 +1,1610 @@
++2020-02-23  Peter Bergner  <bergner@linux.ibm.com>
++
++	Backport from master
++	2020-02-20  Peter Bergner  <bergner@linux.ibm.com>
++
++	PR target/93658
++	* gcc.target/powerpc/pr93658.c: New test.
++
 +2020-02-20  H.J. Lu  <hongjiu.lu@intel.com>
 +
 +	Backport from master
@@ -27876,7 +28194,7 @@ index bc11ae4ae0b..9344d00e38a 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +2026,7 @@
+@@ -427,7 +2034,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -27885,7 +28203,7 @@ index bc11ae4ae0b..9344d00e38a 100644
  	(check_effective_target_powerpc_p8vector_ok): No support for Darwin.
  	(check_effective_target_powerpc_p9vector_ok): Likewise.
  	(check_effective_target_powerpc_float128_sw_ok): Likewise.
-@@ -720,7 +2319,7 @@
+@@ -720,7 +2327,7 @@
  
  	Backport from mainline
  	PR fortran/91077
@@ -27894,7 +28212,7 @@ index bc11ae4ae0b..9344d00e38a 100644
  
  2019-07-05  Szabolcs Nagy  <szabolcs.nagy@arm.com>
  
-@@ -803,7 +2402,7 @@
+@@ -803,7 +2410,7 @@
  	Backport fom mainline
  	2019-06-21  Jeff Law  <law@redhat.com>
  
@@ -27903,7 +28221,7 @@ index bc11ae4ae0b..9344d00e38a 100644
  	* gcc.c-torture/execute/pr90949.c: New test.
  
  2019-06-26  Martin Jambor  <mjambor@suse.cz>
-@@ -969,7 +2568,7 @@
+@@ -969,7 +2576,7 @@
         * gcc.target/i386/pr82699-6.c: Likewise
         * gcc.target/i386/returninst1.c: Likewise
         * gcc.target/i386/returninst2.c: Likewise
@@ -27912,7 +28230,7 @@ index bc11ae4ae0b..9344d00e38a 100644
  
  2019-05-30  Iain Sandoe  <iain@sandoe.co.uk>
  
-@@ -1131,7 +2730,7 @@
+@@ -1131,7 +2738,7 @@
  
  	Backport from trunk
  	PR fortran/90498
@@ -27921,7 +28239,7 @@ index bc11ae4ae0b..9344d00e38a 100644
  
  2019-05-17  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -3801,21 +5400,21 @@
+@@ -3801,21 +5408,21 @@
  2019-02-23  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88117
@@ -27950,7 +28268,7 @@ index bc11ae4ae0b..9344d00e38a 100644
  
  2019-02-22  David Malcolm  <dmalcolm@redhat.com>
  
-@@ -4444,7 +6043,7 @@
+@@ -4444,7 +6051,7 @@
  2019-02-09  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/89200
@@ -27959,7 +28277,7 @@ index bc11ae4ae0b..9344d00e38a 100644
  
  2019-02-09  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -4704,17 +6303,17 @@
+@@ -4704,17 +6311,17 @@
  2019-02-02  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88393
@@ -36843,6 +37161,32 @@ index 00000000000..6a0a4731148
 +	bar ();
 +    }
 +}
+diff --git a/gcc/testsuite/gcc.target/powerpc/pr93658.c b/gcc/testsuite/gcc.target/powerpc/pr93658.c
+new file mode 100644
+index 00000000000..0170d34d259
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/powerpc/pr93658.c
+@@ -0,0 +1,20 @@
++/* { dg-do compile } */
++/* { dg-options "-O3 -fstack-protector-strong -mcpu=power8" } */
++/* { dg-require-effective-target powerpc_vsx_ok } */
++
++/* PR93658: Failure compiling this test is an infinite loop in LRA's
++   process_address(), so set a short timeout limit.  */
++/* { dg-timeout 5 } */
++
++void bar();
++char b;
++void
++foo (void)
++{
++  char a;
++  int d = b;
++  char *e = &a;
++  while (d)
++    *e++ = --d;
++  bar ();
++}
 diff --git a/gcc/testsuite/gcc.target/powerpc/pure-builtin-redundant-load.c b/gcc/testsuite/gcc.target/powerpc/pure-builtin-redundant-load.c
 new file mode 100644
 index 00000000000..16ab6abfc3b
@@ -43114,10 +43458,35 @@ index 8340ea2bfe4..3b5e3428958 100644
 -	$(crt_compile) $(DARWIN_EXTRA_CRT_BUILD_CFLAGS) -mmacosx-version-min=10.6 -c $<
 +	$(crt_compile) -mmacosx-version-min=10.6 -c $<
 diff --git a/libgfortran/ChangeLog b/libgfortran/ChangeLog
-index 48f9886896e..340396dea07 100644
+index 48f9886896e..ce75fe80636 100644
 --- a/libgfortran/ChangeLog
 +++ b/libgfortran/ChangeLog
-@@ -1,3 +1,54 @@
+@@ -1,3 +1,79 @@
++2020-02-22  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	Backport from trunk
++	PR fortran/93599
++	* io/async.c (destroy_adv_cond): Do not destroy lock.
++	(async_io): Make sure au->lock is locked for finishing of thread.
++	Do not lock/unlock around signalling emptysignal. Unlock au->lock
++	before return.
++	(init_adv_cond): Do not initialize lock.
++	(enqueue_transfer): Unlock after signal.
++	(enqueue_done_id): Likewise.
++	(enqueue_done): Likewise.
++	(enqueue_close): Likewise.
++	(enqueue_data_transfer): Likewise.
++	(async_wait_id): Do not lock/unlock around signalling au->work.
++	(async_wait): Unlock after signal.
++	* io/async.h (SIGNAL): Add comment about needed au->lock.
++	Remove locking/unlocking of advcond->lock.
++	(WAIT_SIGNAL_MUTEX): Add comment. Remove locking/unlocking of
++	advcond->lock.  Unlock mutex only at the end.  Loop on
++	__ghread_cond_wait returning zero.
++	(REVOKE_SIGNAL): Add comment. Remove locking/unlocking of
++	advcond->lock.
++	(struct adv_cond): Remove mutex from struct.
++
 +2020-01-21  Jerry DeLisle  <jvdelisle@gcc.gnu.org>
 +
 +        Backport from mainline
@@ -43172,7 +43541,7 @@ index 48f9886896e..340396dea07 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -24,12 +75,12 @@
+@@ -24,12 +100,12 @@
  2019-05-20  Janne Blomqvist  <jb@gcc.gnu.org>
  
  	Backport from trunk
@@ -43285,6 +43654,211 @@ index 7476439647c..5d81bcba74a 100644
        njumps = 0;
        master_init = true;
      }
+diff --git a/libgfortran/io/async.c b/libgfortran/io/async.c
+index e3d1d01122e..28b84f6613a 100644
+--- a/libgfortran/io/async.c
++++ b/libgfortran/io/async.c
+@@ -80,7 +80,6 @@ update_pdt (st_parameter_dt **old, st_parameter_dt *new) {
+ static void
+ destroy_adv_cond (struct adv_cond *ac)
+ {
+-  T_ERROR (__gthread_mutex_destroy, &ac->lock);
+   T_ERROR (__gthread_cond_destroy, &ac->signal);
+ }
+ 
+@@ -156,6 +155,7 @@ async_io (void *arg)
+ 
+ 		case AIO_CLOSE:
+ 		  NOTE ("Received AIO_CLOSE");
++		  LOCK (&au->lock);
+ 		  goto finish_thread;
+ 
+ 		default:
+@@ -175,7 +175,6 @@ async_io (void *arg)
+ 	      else if (ctq->type == AIO_CLOSE)
+ 		{
+ 		  NOTE ("Received AIO_CLOSE during error condition");
+-		  UNLOCK (&au->lock);
+ 		  goto finish_thread;
+ 		}
+ 	    }
+@@ -189,9 +188,7 @@ async_io (void *arg)
+       au->tail = NULL;
+       au->head = NULL;
+       au->empty = 1;
+-      UNLOCK (&au->lock);
+       SIGNAL (&au->emptysignal);
+-      LOCK (&au->lock);
+     }
+  finish_thread:
+   au->tail = NULL;
+@@ -199,6 +196,7 @@ async_io (void *arg)
+   au->empty = 1;
+   SIGNAL (&au->emptysignal);
+   free (ctq);
++  UNLOCK (&au->lock);
+   return NULL;
+ }
+ 
+@@ -223,7 +221,6 @@ static void
+ init_adv_cond (struct adv_cond *ac)
+ {
+   ac->pending = 0;
+-  __GTHREAD_MUTEX_INIT_FUNCTION (&ac->lock);
+   __GTHREAD_COND_INIT_FUNCTION (&ac->signal);
+ }
+ 
+@@ -279,8 +276,8 @@ enqueue_transfer (async_unit *au, transfer_args *arg, enum aio_do type)
+   au->tail = tq;
+   REVOKE_SIGNAL (&(au->emptysignal));
+   au->empty = false;
+-  UNLOCK (&au->lock);
+   SIGNAL (&au->work);
++  UNLOCK (&au->lock);
+ }
+ 
+ /* Enqueue an st_write_done or st_read_done which contains an ID.  */
+@@ -303,8 +300,8 @@ enqueue_done_id (async_unit *au, enum aio_do type)
+   au->empty = false;
+   ret = au->id.high++;
+   NOTE ("Enqueue id: %d", ret);
+-  UNLOCK (&au->lock);
+   SIGNAL (&au->work);
++  UNLOCK (&au->lock);
+   return ret;
+ }
+ 
+@@ -324,8 +321,8 @@ enqueue_done (async_unit *au, enum aio_do type)
+   au->tail = tq;
+   REVOKE_SIGNAL (&(au->emptysignal));
+   au->empty = false;
+-  UNLOCK (&au->lock);
+   SIGNAL (&au->work);
++  UNLOCK (&au->lock);
+ }
+ 
+ /* Enqueue a CLOSE statement.  */
+@@ -344,8 +341,8 @@ enqueue_close (async_unit *au)
+   au->tail = tq;
+   REVOKE_SIGNAL (&(au->emptysignal));
+   au->empty = false;
+-  UNLOCK (&au->lock);
+   SIGNAL (&au->work);
++  UNLOCK (&au->lock);
+ }
+ 
+ /* The asynchronous unit keeps the currently active PDT around.
+@@ -374,9 +371,9 @@ enqueue_data_transfer_init (async_unit *au, st_parameter_dt *dt, int read_flag)
+     au->tail->next = tq;
+   au->tail = tq;
+   REVOKE_SIGNAL (&(au->emptysignal));
+-  au->empty = 0;
+-  UNLOCK (&au->lock);
++  au->empty = false;
+   SIGNAL (&au->work);
++  UNLOCK (&au->lock);
+ }
+ 
+ /* Collect the errors that may have happened asynchronously.  Return true if
+@@ -430,9 +427,7 @@ async_wait_id (st_parameter_common *cmp, async_unit *au, int i)
+   NOTE ("Waiting for id %d", i);
+   if (au->id.waiting < i)
+     au->id.waiting = i;
+-  UNLOCK (&au->lock);
+   SIGNAL (&(au->work));
+-  LOCK (&au->lock);
+   WAIT_SIGNAL_MUTEX (&(au->id.done),
+ 		     (au->id.low >= au->id.waiting || au->empty), &au->lock);
+   LOCK (&au->lock);
+@@ -454,8 +449,8 @@ async_wait (st_parameter_common *cmp, async_unit *au)
+   if (cmp == NULL)
+     cmp = au->error.cmp;
+ 
+-  SIGNAL (&(au->work));
+   LOCK (&(au->lock));
++  SIGNAL (&(au->work));
+ 
+   if (au->empty)
+     {
+diff --git a/libgfortran/io/async.h b/libgfortran/io/async.h
+index 3ac51772502..0fe407945c3 100644
+--- a/libgfortran/io/async.h
++++ b/libgfortran/io/async.h
+@@ -229,44 +229,44 @@
+ 
+ #if ASYNC_IO
+ 
++/* au->lock has to be held when calling this macro.  */
++
+ #define SIGNAL(advcond) do{						\
+-    INTERN_LOCK (&(advcond)->lock);					\
+     (advcond)->pending = 1;						\
+     DEBUG_PRINTF ("%s%-75s %20s():%-5d %18p\n", aio_prefix, DEBUG_ORANGE "SIGNAL: " DEBUG_NORM \
+ 		 #advcond, __FUNCTION__, __LINE__, (void *) advcond);	\
+-    T_ERROR (__gthread_cond_broadcast, &(advcond)->signal);		\
+-    INTERN_UNLOCK (&(advcond)->lock);					\
++    T_ERROR (__gthread_cond_broadcast, &(advcond)->signal);			\
+   } while (0)
+ 
++/* Has to be entered with mutex locked.  */
++
+ #define WAIT_SIGNAL_MUTEX(advcond, condition, mutex) do{		\
+     __label__ finish;		       					\
+-    INTERN_LOCK (&((advcond)->lock));					\
+     DEBUG_PRINTF ("%s%-75s %20s():%-5d %18p\n", aio_prefix, DEBUG_BLUE "WAITING: " DEBUG_NORM \
+ 		 #advcond, __FUNCTION__, __LINE__, (void *) advcond);	\
+-    if ((advcond)->pending || (condition)){				\
+-      UNLOCK (mutex);							\
++    if ((advcond)->pending || (condition))				\
+       goto finish;							\
+-    }									\
+-    UNLOCK (mutex);							\
+-     while (!__gthread_cond_wait(&(advcond)->signal, &(advcond)->lock)) {	\
+-       { int cond;							\
+-	 LOCK (mutex); cond = condition; UNLOCK (mutex);	\
+-	   if (cond){							\
+-	     DEBUG_PRINTF ("%s%-75s %20s():%-5d %18p\n", aio_prefix, DEBUG_ORANGE "REC: " DEBUG_NORM \
+-		  #advcond,  __FUNCTION__, __LINE__, (void *)advcond);	\
+-	   break;				      			\
+-        }							\
++    while (1)								\
++      {									\
++	int err_ret = __gthread_cond_wait(&(advcond)->signal, mutex);	\
++	if (err_ret) internal_error (NULL, "WAIT_SIGNAL_MUTEX failed");	\
++	if (condition)							\
++	  {								\
++	    DEBUG_PRINTF ("%s%-75s %20s():%-5d %18p\n", aio_prefix, DEBUG_ORANGE \
++			  "REC: " DEBUG_NORM				\
++			  #advcond,  __FUNCTION__, __LINE__, (void *)advcond); \
++	    break;				      			\
++	  }								\
+       }									\
+-    }									\
+   finish:								\
+-		 (advcond)->pending = 0;				\
+-		 INTERN_UNLOCK (&((advcond)->lock));			\
+-		 } while (0)
++    (advcond)->pending = 0;						\
++    UNLOCK (mutex);							\
++  } while (0)
++
++/* au->lock has to be held when calling this macro.  */
+ 
+ #define REVOKE_SIGNAL(advcond) do{		\
+-    INTERN_LOCK (&(advcond)->lock);		\
+     (advcond)->pending = 0;			\
+-    INTERN_UNLOCK (&(advcond)->lock);		\
+   } while (0)
+ 
+ #else
+@@ -330,7 +330,6 @@ struct adv_cond
+ {
+ #if ASYNC_IO
+   int pending;
+-  __gthread_mutex_t lock;
+   __gthread_cond_t signal;
+ #endif
+ };
 diff --git a/libgfortran/io/transfer.c b/libgfortran/io/transfer.c
 index c43360f6332..28e403fedf2 100644
 --- a/libgfortran/io/transfer.c
