@@ -549,12 +549,13 @@ Marek Polacek (13):
       * decl.c (reshape_init_r): Add missing space.
       PR c++/90998 - ICE with copy elision in init by ctor and -Wconversion.
 
-Mark Eggleston (5):
+Mark Eggleston (6):
       Fortran: PR93263 -fno-automatic and RECURSIVE
       PR Fortran/93263 Correct test case
       [fortran] ICE in gfc_validate_kind(): Got bad kind [PR93580]
       [Fortran] ICE assign character pointer to non target PR93714
       [fortran] xfail no longer necessary in typebound_call_22.f03
+      fortran: ICE using SHAPE with FINDLOC PR93835
 
 Martin Jambor (2):
       IPA-CP: Remove bogus static keyword (PR 92971)
@@ -19653,7 +19654,7 @@ index e54d483baff..40c06b6b674 100644
    gfc_file *f;
  
 diff --git a/gcc/fortran/simplify.c b/gcc/fortran/simplify.c
-index 6c1f4bd4fce..e26027edfae 100644
+index 6c1f4bd4fce..2b4581e1236 100644
 --- a/gcc/fortran/simplify.c
 +++ b/gcc/fortran/simplify.c
 @@ -169,8 +169,10 @@ convert_mpz_to_unsigned (mpz_t x, int bitsize)
@@ -19684,6 +19685,36 @@ index 6c1f4bd4fce..e26027edfae 100644
  
    if (!mask->rank || !is_constant_array_expr (mask)
        || !is_constant_array_expr (tsource) || !is_constant_array_expr (fsource))
+@@ -5533,7 +5539,7 @@ simplify_findloc_nodim (gfc_expr *result, gfc_expr *value, gfc_expr *array,
+   bool continue_loop;
+   bool ma;
+ 
+-  for (i = 0; i<array->rank; i++)
++  for (i = 0; i < array->rank; i++)
+     res[i] = -1;
+ 
+   /* Shortcut for constant .FALSE. MASK.  */
+@@ -5576,7 +5582,7 @@ simplify_findloc_nodim (gfc_expr *result, gfc_expr *value, gfc_expr *array,
+ 
+ 	  if (ma && gfc_compare_expr (a, value, INTRINSIC_EQ) == 0)
+ 	    {
+-	      for (i = 0; i<array->rank; i++)
++	      for (i = 0; i < array->rank; i++)
+ 		res[i] = count[i];
+ 	      if (!back_val)
+ 		goto finish;
+@@ -5601,9 +5607,9 @@ simplify_findloc_nodim (gfc_expr *result, gfc_expr *value, gfc_expr *array,
+ 	} while (count[n] == extent[n]);
+     }
+ 
+- finish:
++finish:
+   result_ctor = gfc_constructor_first (result->value.constructor);
+-  for (i = 0; i<array->rank; i++)
++  for (i = 0; i < array->rank; i++)
+     {
+       gfc_expr *r_expr;
+       r_expr = result_ctor->expr;
 @@ -6684,6 +6690,9 @@ gfc_simplify_reshape (gfc_expr *source, gfc_expr *shape_exp,
    mpz_init (index);
    rank = 0;
@@ -19750,7 +19781,25 @@ index 6c1f4bd4fce..e26027edfae 100644
  	  x[order[i]] = 1;
  	}
      }
-@@ -7630,7 +7672,7 @@ gfc_simplify_spread (gfc_expr *source, gfc_expr *dim_expr, gfc_expr *ncopies_exp
+@@ -7213,6 +7255,8 @@ gfc_simplify_shape (gfc_expr *source, gfc_expr *kind)
+     return NULL;
+ 
+   result = gfc_get_array_expr (BT_INTEGER, k, &source->where);
++  result->shape = gfc_get_shape (1);
++  mpz_init (result->shape[0]);
+ 
+   if (source->rank == 0)
+     return result;
+@@ -7269,6 +7313,8 @@ gfc_simplify_shape (gfc_expr *source, gfc_expr *kind)
+   if (t)
+     gfc_clear_shape (shape, source->rank);
+ 
++  mpz_set_si (result->shape[0], source->rank);
++
+   return result;
+ }
+ 
+@@ -7630,7 +7676,7 @@ gfc_simplify_spread (gfc_expr *source, gfc_expr *dim_expr, gfc_expr *ncopies_exp
    nelem = mpz_get_si (size) * ncopies;
    if (nelem > flag_max_array_constructor)
      {
@@ -19759,7 +19808,7 @@ index 6c1f4bd4fce..e26027edfae 100644
  	{
  	  gfc_error ("The number of elements (%d) in the array constructor "
  		     "at %L requires an increase of the allowed %d upper "
-@@ -8494,6 +8536,12 @@ gfc_convert_constant (gfc_expr *e, bt type, int kind)
+@@ -8494,6 +8540,12 @@ gfc_convert_constant (gfc_expr *e, bt type, int kind)
  	    {
  	      if (c->expr->expr_type == EXPR_ARRAY)
  		tmp = gfc_convert_constant (c->expr, type, kind);
@@ -26580,10 +26629,19 @@ index 29f6cdc4667..33b4be79c0f 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..f02a9415230 100644
+index bc11ae4ae0b..812ae834d70 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,1610 @@
+@@ -1,3 +1,1619 @@
++2020-02-24  Mark Eggleston  <mark.eggleston@codethink.com>
++
++	Backported from master
++	2020-02-24  Mark Eggleston  <markeggleston@gcc.gnu.org>
++
++	PR fortran/93835
++	* gfortran.dg/pr77351.f90 : Check for one error instead of two.
++	* gfortran.dg/pr93835.f08 : New test.
++
 +2020-02-23  Peter Bergner  <bergner@linux.ibm.com>
 +
 +	Backport from master
@@ -28194,7 +28252,7 @@ index bc11ae4ae0b..f02a9415230 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +2034,7 @@
+@@ -427,7 +2043,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -28203,7 +28261,7 @@ index bc11ae4ae0b..f02a9415230 100644
  	(check_effective_target_powerpc_p8vector_ok): No support for Darwin.
  	(check_effective_target_powerpc_p9vector_ok): Likewise.
  	(check_effective_target_powerpc_float128_sw_ok): Likewise.
-@@ -720,7 +2327,7 @@
+@@ -720,7 +2336,7 @@
  
  	Backport from mainline
  	PR fortran/91077
@@ -28212,7 +28270,7 @@ index bc11ae4ae0b..f02a9415230 100644
  
  2019-07-05  Szabolcs Nagy  <szabolcs.nagy@arm.com>
  
-@@ -803,7 +2410,7 @@
+@@ -803,7 +2419,7 @@
  	Backport fom mainline
  	2019-06-21  Jeff Law  <law@redhat.com>
  
@@ -28221,7 +28279,7 @@ index bc11ae4ae0b..f02a9415230 100644
  	* gcc.c-torture/execute/pr90949.c: New test.
  
  2019-06-26  Martin Jambor  <mjambor@suse.cz>
-@@ -969,7 +2576,7 @@
+@@ -969,7 +2585,7 @@
         * gcc.target/i386/pr82699-6.c: Likewise
         * gcc.target/i386/returninst1.c: Likewise
         * gcc.target/i386/returninst2.c: Likewise
@@ -28230,7 +28288,7 @@ index bc11ae4ae0b..f02a9415230 100644
  
  2019-05-30  Iain Sandoe  <iain@sandoe.co.uk>
  
-@@ -1131,7 +2738,7 @@
+@@ -1131,7 +2747,7 @@
  
  	Backport from trunk
  	PR fortran/90498
@@ -28239,7 +28297,7 @@ index bc11ae4ae0b..f02a9415230 100644
  
  2019-05-17  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -3801,21 +5408,21 @@
+@@ -3801,21 +5417,21 @@
  2019-02-23  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88117
@@ -28268,7 +28326,7 @@ index bc11ae4ae0b..f02a9415230 100644
  
  2019-02-22  David Malcolm  <dmalcolm@redhat.com>
  
-@@ -4444,7 +6051,7 @@
+@@ -4444,7 +6060,7 @@
  2019-02-09  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/89200
@@ -28277,7 +28335,7 @@ index bc11ae4ae0b..f02a9415230 100644
  
  2019-02-09  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -4704,17 +6311,17 @@
+@@ -4704,17 +6320,17 @@
  2019-02-02  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88393
@@ -39162,6 +39220,21 @@ index f20b7687e6f..c01389acfcf 100644
     RETURN
  END SUBROUTINE Compiler_Options
  
+diff --git a/gcc/testsuite/gfortran.dg/pr77351.f90 b/gcc/testsuite/gfortran.dg/pr77351.f90
+index 76ce5c528b2..e3e8bc4f64b 100644
+--- a/gcc/testsuite/gfortran.dg/pr77351.f90
++++ b/gcc/testsuite/gfortran.dg/pr77351.f90
+@@ -1,6 +1,8 @@
+ ! { dg-do compile }
++!
++! PR93835 resulted in different but valid error message
+ program p
+    integer :: z(4) = [1, 2, 3, 4]
+-   print *, any(shape(z) /= [4,1])  ! { dg-error "shape for elemental binary" }
++   print *, any(shape(z) /= [4,1])  ! { dg-error "Shapes for operands at .1. and .2. are not conformable" }
+ end
+-! { dg-excess-errors "operands are incommensurate" }
++
 diff --git a/gcc/testsuite/gfortran.dg/pr78719_1.f90 b/gcc/testsuite/gfortran.dg/pr78719_1.f90
 new file mode 100644
 index 00000000000..f5a99c23eee
@@ -40390,6 +40463,20 @@ index 00000000000..86658f28859
 +
 +! { dg-error "must be of INTEGER type" " " { target *-*-* } 6 }
 +! { dg-error "does not have the TARGET attribute" " " { target *-*-* } 7 }
+diff --git a/gcc/testsuite/gfortran.dg/pr93835.f08 b/gcc/testsuite/gfortran.dg/pr93835.f08
+new file mode 100644
+index 00000000000..933e249e632
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr93835.f08
+@@ -0,0 +1,8 @@
++! {dg-do run }
++!
++! PR fortran/93835 - the following code resulted in an ICE
++!
++program p
++  if (any(findloc(shape(1), 1) .ne. 0)) stop 1
++end
++
 diff --git a/gcc/testsuite/gfortran.dg/spread_size_limit_2.f90 b/gcc/testsuite/gfortran.dg/spread_size_limit_2.f90
 new file mode 100644
 index 00000000000..3ea064e267f
