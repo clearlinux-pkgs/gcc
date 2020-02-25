@@ -36,7 +36,7 @@ Dragan Mladjenovic (4):
 Edward Smith-Rowland (1):
       Update docs for p858 - Constexpr iterator changes available since 9.1.
 
-Eric Botcazou (17):
+Eric Botcazou (18):
       re PR rtl-optimization/91347 (hppa: wrong code generated with tail call optimisation)
       re PR target/91472 (gmp testsuite segfaults with gcc-8 and gcc-9, works fine with gcc-7)
       re PR rtl-optimization/89795 (wrong code with -O2 -fno-dce -fno-forward-propagate -fno-sched-pressure)
@@ -54,11 +54,13 @@ Eric Botcazou (17):
       re PR ada/92489 (internal error on Invalid_Value Attribute attribute)
       tree.c (build_array_type_1): Add SET_CANONICAL parameter and compute TYPE_CANONICAL from the element type...
       Fix problematic TLS sequences for the Solaris linker
+      Fix link failure with debug info in LTO mode
 
 Eric S. Raymond (1):
       Clean up references to Subversion in documentation sources.
 
-GCC Administrator (195):
+GCC Administrator (196):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -309,7 +311,7 @@ Ilya Leoshkevich (3):
       S/390: Fix failing RTL check in s390_canonicalize_comparison
       Free dominance info at the beginning of pass_jump_after_combine
 
-Jakub Jelinek (100):
+Jakub Jelinek (101):
       * BASE-VER: Set to 9.2.1.
       baseline_symbols.txt: Update.
       re PR tree-optimization/91597 (GCC miscompiles a branch depending on a pointer tag)
@@ -410,6 +412,7 @@ Jakub Jelinek (100):
       c: Fix ICE with cast to VLA [93576]
       c++: Fix thinko in enum_min_precision [PR61414]
       match.pd: Disallow side-effects in GENERIC for non-COND_EXPR to COND_EXPR simplifications [PR93744]
+      combine: Fix find_split_point handling of constant store into ZERO_EXTRACT [PR93908]
 
 Jan Hubicka (3):
       Backport ggc_trim 	Backport from mainline
@@ -658,9 +661,10 @@ Richard Sandiford (6):
       Check for bitwise identity when encoding VECTOR_CSTs [PR92768]
       vect: Fix offset calculation for -ve strides [PR93767]
 
-Roman Zhuykov (2):
+Roman Zhuykov (3):
       modulo-sched: backport PR92591 fix from mainline
       Backport: rename tests to reference the correct PR
+      doc: backport proper description of --enable-checking behavior
 
 Sandra Loosemore (1):
       Fix bugs relating to flexibly-sized objects in nios2 backend.
@@ -1171,10 +1175,29 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..3c604f07c69 100644
+index 7f6557d8018..ce5216020fa 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,2149 @@
+@@ -1,3 +1,2168 @@
++2020-02-25  Jakub Jelinek  <jakub@redhat.com>
++
++	PR rtl-optimization/93908
++	* combine.c (find_split_point): For store into ZERO_EXTRACT, and src
++	with mask.
++
++2019-02-25  Eric Botcazou  <ebotcazou@adacore.com>
++
++	* dwarf2out.c (dwarf2out_size_function): Run in early-DWARF mode.
++
++2020-02-25  Roman Zhuykov  <zhroma@ispras.ru>
++
++	Backport from master
++	2020-02-24  Roman Zhuykov  <zhroma@ispras.ru>
++
++	* doc/install.texi (--enable-checking): Properly document current
++	behavior.
++	(--enable-stage1-checking): Minor clarification about bootstrap.
++
 +2020-02-24  Richard Sandiford  <richard.sandiford@arm.com>
 +
 +	Backport from mainline
@@ -3324,7 +3347,7 @@ index 7f6557d8018..3c604f07c69 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +2659,7 @@
+@@ -513,7 +2678,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -5006,10 +5029,23 @@ index eb84f84639b..8f092e7539e 100644
  	start = XOBFINISH (&temporary_obstack, char *);
  	for (i = 0; i < num_files; ++i)
 diff --git a/gcc/combine.c b/gcc/combine.c
-index 4de759a8e6b..601943d6bb0 100644
+index 4de759a8e6b..48a60eb0206 100644
 --- a/gcc/combine.c
 +++ b/gcc/combine.c
-@@ -12424,7 +12424,8 @@ simplify_comparison (enum rtx_code code, rtx *pop0, rtx *pop1)
+@@ -5138,10 +5138,9 @@ find_split_point (rtx *loc, rtx_insn *insn, bool set_src)
+ 	{
+ 	  HOST_WIDE_INT pos = INTVAL (XEXP (SET_DEST (x), 2));
+ 	  unsigned HOST_WIDE_INT len = INTVAL (XEXP (SET_DEST (x), 1));
+-	  unsigned HOST_WIDE_INT src = INTVAL (SET_SRC (x));
+ 	  rtx dest = XEXP (SET_DEST (x), 0);
+-	  unsigned HOST_WIDE_INT mask
+-	    = (HOST_WIDE_INT_1U << len) - 1;
++	  unsigned HOST_WIDE_INT mask = (HOST_WIDE_INT_1U << len) - 1;
++	  unsigned HOST_WIDE_INT src = INTVAL (SET_SRC (x)) & mask;
+ 	  rtx or_mask;
+ 
+ 	  if (BITS_BIG_ENDIAN)
+@@ -12424,7 +12423,8 @@ simplify_comparison (enum rtx_code code, rtx *pop0, rtx *pop1)
  	     bit.  This will be converted into a ZERO_EXTRACT.  */
  	  if (const_op == 0 && sign_bit_comparison_p
  	      && CONST_INT_P (XEXP (op0, 1))
@@ -16463,7 +16499,7 @@ index 91679e8b9ba..5e5e8aa87e5 100644
  @item aligned
  @itemx aligned (@var{alignment})
 diff --git a/gcc/doc/install.texi b/gcc/doc/install.texi
-index 911875f9578..d14a9a8dda3 100644
+index 911875f9578..0d08696c207 100644
 --- a/gcc/doc/install.texi
 +++ b/gcc/doc/install.texi
 @@ -335,8 +335,9 @@ and up works.
@@ -16548,16 +16584,88 @@ index 911875f9578..d14a9a8dda3 100644
  or from one of our snapshots, those generated files are placed in your
  build directory, which allows for the source to be in a readonly
  directory.
-@@ -1812,7 +1813,7 @@ consistency checks of the requested complexity.  This does not change the
- generated code, but adds error checking within the compiler.  This will
- slow down the compiler and may only work properly if you are building
- the compiler with GCC@.  This is @samp{yes,extra} by default when building
+@@ -1806,41 +1807,50 @@ final releases.  The specific files which get @option{-Werror} are
+ controlled by the Makefiles.
+ 
+ @item --enable-checking
++@itemx --disable-checking
+ @itemx --enable-checking=@var{list}
+-When you specify this option, the compiler is built to perform internal
+-consistency checks of the requested complexity.  This does not change the
+-generated code, but adds error checking within the compiler.  This will
+-slow down the compiler and may only work properly if you are building
+-the compiler with GCC@.  This is @samp{yes,extra} by default when building
 -from SVN or snapshots, but @samp{release} for releases.  The default
-+from the source repository or snapshots, but @samp{release} for releases.  The default
- for building the stage1 compiler is @samp{yes}.  More control
- over the checks may be had by specifying @var{list}.  The categories of
- checks available are @samp{yes} (most common checks
-@@ -2129,7 +2130,7 @@ specifying paths @var{path1}, @dots{}, @var{pathN}.
+-for building the stage1 compiler is @samp{yes}.  More control
+-over the checks may be had by specifying @var{list}.  The categories of
+-checks available are @samp{yes} (most common checks
+-@samp{assert,misc,tree,gc,rtlflag,runtime}), @samp{no} (no checks at
+-all), @samp{all} (all but @samp{valgrind}), @samp{release} (cheapest
+-checks @samp{assert,runtime}) or @samp{none} (same as @samp{no}).
+-Individual checks can be enabled with these flags @samp{assert},
+-@samp{df}, @samp{fold}, @samp{gc}, @samp{gcac}, @samp{misc}, @samp{rtl},
+-@samp{rtlflag}, @samp{runtime}, @samp{tree}, @samp{extra} and @samp{valgrind}.
+-@samp{extra} adds for @samp{misc} checking extra checks that might affect
+-code generation and should therefore not differ between stage1 and later
+-stages.
+-
+-The @samp{valgrind} check requires the external @command{valgrind}
+-simulator, available from @uref{http://valgrind.org/}.  The
+-@samp{df}, @samp{rtl}, @samp{gcac} and @samp{valgrind} checks are very expensive.
+-To disable all checking, @samp{--disable-checking} or
+-@samp{--enable-checking=none} must be explicitly requested.  Disabling
+-assertions will make the compiler and runtime slightly faster but
+-increase the risk of undetected internal errors causing wrong code to be
+-generated.
++This option controls performing internal consistency checks in the compiler.
++It does not change the generated code, but adds error checking of the
++requested complexity.  This slows down the compiler and may only work
++properly if you are building the compiler with GCC@.
++
++When the option is not specified, the active set of checks depends on context.
++Namely, bootstrap stage 1 defaults to @samp{--enable-checking=yes}, builds
++from release branches or release archives default to
++@samp{--enable-checking=release}, and otherwise
++@samp{--enable-checking=yes,extra} is used.  When the option is
++specified without a @var{list}, the result is the same as
++@samp{--enable-checking=yes}.  Likewise, @samp{--disable-checking} is
++equivalent to @samp{--enable-checking=no}.
++
++The categories of checks available in @var{list} are @samp{yes} (most common
++checks @samp{assert,misc,gc,gimple,rtlflag,runtime,tree,types}), @samp{no}
++(no checks at all), @samp{all} (all but @samp{valgrind}), @samp{release}
++(cheapest checks @samp{assert,runtime}) or @samp{none} (same as @samp{no}).
++@samp{release} checks are always on and to disable them
++@samp{--disable-checking} or @samp{--enable-checking=no[,<other checks>]}
++must be explicitly requested.  Disabling assertions makes the compiler and
++runtime slightly faster but increases the risk of undetected internal errors
++causing wrong code to be generated.
++
++Individual checks can be enabled with these flags: @samp{assert}, @samp{df},
++@samp{extra}, @samp{fold}, @samp{gc}, @samp{gcac}, @samp{gimple},
++@samp{misc}, @samp{rtl}, @samp{rtlflag}, @samp{runtime}, @samp{tree},
++@samp{types} and @samp{valgrind}.  @samp{extra} extends @samp{misc}
++checking with extra checks that might affect code generation and should
++therefore not differ between stage1 and later stages in bootstrap.
++
++The @samp{valgrind} check requires the external @command{valgrind} simulator,
++available from @uref{http://valgrind.org/}.  The @samp{rtl} checks are
++expensive and the @samp{df}, @samp{gcac} and @samp{valgrind} checks are very
++expensive.
+ 
+ @item --disable-stage1-checking
+ @itemx --enable-stage1-checking
+ @itemx --enable-stage1-checking=@var{list}
+-If no @option{--enable-checking} option is specified the stage1
+-compiler will be built with @samp{yes} checking enabled, otherwise
+-the stage1 checking flags are the same as specified by
++This option affects only bootstrap build.  If no @option{--enable-checking}
++option is specified the stage1 compiler is built with @samp{yes} checking
++enabled, otherwise the stage1 checking flags are the same as specified by
+ @option{--enable-checking}.  To build the stage1 compiler with
+ different checking options use @option{--enable-stage1-checking}.
+ The list of checking options is the same as for @option{--enable-checking}.
+@@ -2129,7 +2139,7 @@ specifying paths @var{path1}, @dots{}, @var{pathN}.
  
  @smallexample
  % @var{srcdir}/configure \
@@ -16566,7 +16674,7 @@ index 911875f9578..d14a9a8dda3 100644
  @end smallexample
  
  If @samp{hsa} is specified as one of the targets, the compiler will be
-@@ -2408,7 +2409,7 @@ that type mismatches occur, this could be the cause.
+@@ -2408,7 +2418,7 @@ that type mismatches occur, this could be the cause.
  
  The solution is not to use such a directory for building GCC@.
  
@@ -16575,7 +16683,7 @@ index 911875f9578..d14a9a8dda3 100644
  @file{*.l} files, you need the Flex lexical analyzer generator
  installed.  If you do not modify @file{*.l} files, releases contain
  the Flex-generated files and you do not need Flex installed to build
-@@ -2416,7 +2417,7 @@ them.  There is still one Flex-based lexical analyzer (part of the
+@@ -2416,7 +2426,7 @@ them.  There is still one Flex-based lexical analyzer (part of the
  build machinery, not of GCC itself) that is used even if you only
  build the C front end.
  
@@ -16677,7 +16785,7 @@ index 6f6f768f371..4becdcf1cbb 100644
        else
  	/* Every other call, including pure functions, may read any memory
 diff --git a/gcc/dwarf2out.c b/gcc/dwarf2out.c
-index 1cec00f2b85..d5b5e20c2d4 100644
+index 1cec00f2b85..30c4c7007ee 100644
 --- a/gcc/dwarf2out.c
 +++ b/gcc/dwarf2out.c
 @@ -15461,7 +15461,7 @@ mem_loc_descriptor (rtx rtl, machine_mode mode,
@@ -16750,7 +16858,15 @@ index 1cec00f2b85..d5b5e20c2d4 100644
    dwarf_file_data **slot
      = file_table->find_slot_with_hash (file_name, htab_hash_string (file_name),
  				       INSERT);
-@@ -29582,9 +29580,9 @@ prune_unused_types (void)
+@@ -27687,6 +27685,7 @@ dwarf2out_inline_entry (tree block)
+ static void
+ dwarf2out_size_function (tree decl)
+ {
++  set_early_dwarf s;
+   function_to_dwarf_procedure (decl);
+ }
+ 
+@@ -29582,9 +29581,9 @@ prune_unused_types (void)
    for (i = 0; base_types.iterate (i, &base_type); i++)
      prune_unused_types_mark (base_type, 1);
  
@@ -16763,7 +16879,7 @@ index 1cec00f2b85..d5b5e20c2d4 100644
    cgraph_node *cnode;
    FOR_EACH_FUNCTION (cnode)
      if (cnode->referred_to_p (false))
-@@ -29593,8 +29591,7 @@ prune_unused_types (void)
+@@ -29593,8 +29592,7 @@ prune_unused_types (void)
  	if (die == NULL || die->die_mark)
  	  continue;
  	for (cgraph_edge *e = cnode->callers; e; e = e->next_caller)
@@ -26639,10 +26755,21 @@ index 29f6cdc4667..33b4be79c0f 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..90ad38699c3 100644
+index bc11ae4ae0b..d3cdd122e14 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,1627 @@
+@@ -1,3 +1,1638 @@
++2020-02-25  Jakub Jelinek  <jakub@redhat.com>
++
++	PR rtl-optimization/93908
++	* gcc.c-torture/execute/pr93908.c: New test.
++
++2019-02-25  Eric Botcazou  <ebotcazou@adacore.com>
++
++	* gnat.dg/lto24.adb: New test.
++	* gnat.dg/lto24_pkg1.ads: New helper.
++	* gnat.dg/lto24_pkg2.ad[sb]: Likewise.
++
 +2020-02-24  Richard Sandiford  <richard.sandiford@arm.com>
 +
 +	Backport from mainline
@@ -28270,7 +28397,7 @@ index bc11ae4ae0b..90ad38699c3 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +2051,7 @@
+@@ -427,7 +2062,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -28279,7 +28406,7 @@ index bc11ae4ae0b..90ad38699c3 100644
  	(check_effective_target_powerpc_p8vector_ok): No support for Darwin.
  	(check_effective_target_powerpc_p9vector_ok): Likewise.
  	(check_effective_target_powerpc_float128_sw_ok): Likewise.
-@@ -720,7 +2344,7 @@
+@@ -720,7 +2355,7 @@
  
  	Backport from mainline
  	PR fortran/91077
@@ -28288,7 +28415,7 @@ index bc11ae4ae0b..90ad38699c3 100644
  
  2019-07-05  Szabolcs Nagy  <szabolcs.nagy@arm.com>
  
-@@ -803,7 +2427,7 @@
+@@ -803,7 +2438,7 @@
  	Backport fom mainline
  	2019-06-21  Jeff Law  <law@redhat.com>
  
@@ -28297,7 +28424,7 @@ index bc11ae4ae0b..90ad38699c3 100644
  	* gcc.c-torture/execute/pr90949.c: New test.
  
  2019-06-26  Martin Jambor  <mjambor@suse.cz>
-@@ -969,7 +2593,7 @@
+@@ -969,7 +2604,7 @@
         * gcc.target/i386/pr82699-6.c: Likewise
         * gcc.target/i386/returninst1.c: Likewise
         * gcc.target/i386/returninst2.c: Likewise
@@ -28306,7 +28433,7 @@ index bc11ae4ae0b..90ad38699c3 100644
  
  2019-05-30  Iain Sandoe  <iain@sandoe.co.uk>
  
-@@ -1131,7 +2755,7 @@
+@@ -1131,7 +2766,7 @@
  
  	Backport from trunk
  	PR fortran/90498
@@ -28315,7 +28442,7 @@ index bc11ae4ae0b..90ad38699c3 100644
  
  2019-05-17  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -3801,21 +5425,21 @@
+@@ -3801,21 +5436,21 @@
  2019-02-23  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88117
@@ -28344,7 +28471,7 @@ index bc11ae4ae0b..90ad38699c3 100644
  
  2019-02-22  David Malcolm  <dmalcolm@redhat.com>
  
-@@ -4444,7 +6068,7 @@
+@@ -4444,7 +6079,7 @@
  2019-02-09  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/89200
@@ -28353,7 +28480,7 @@ index bc11ae4ae0b..90ad38699c3 100644
  
  2019-02-09  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -4704,17 +6328,17 @@
+@@ -4704,17 +6339,17 @@
  2019-02-02  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88393
@@ -33177,6 +33304,66 @@ index 00000000000..8542c7c53ba
 +    __builtin_abort ();
 +  return 0;
 +}
+diff --git a/gcc/testsuite/gcc.c-torture/execute/pr93908.c b/gcc/testsuite/gcc.c-torture/execute/pr93908.c
+new file mode 100644
+index 00000000000..cb6e3dda2ea
+--- /dev/null
++++ b/gcc/testsuite/gcc.c-torture/execute/pr93908.c
+@@ -0,0 +1,54 @@
++/* PR rtl-optimization/93908 */
++
++struct T
++{
++  int b;
++  int c;
++  unsigned short d;
++  unsigned e:1, f:1, g:1, h:2, i:1, j:1;
++  signed int k:2;
++};
++
++struct S
++{
++  struct T s;
++  char c[64];
++} buf[2];
++
++__attribute__ ((noipa)) void *
++baz (void)
++{
++  static int cnt;
++  return (void *) &buf[cnt++];
++}
++
++static inline __attribute__ ((always_inline)) struct T *
++bar (const char *a)
++{
++  struct T *s;
++  s = baz ();
++  s->b = 1;
++  s->k = -1;
++  return s;
++}
++
++__attribute__ ((noipa)) void
++foo (const char *x, struct T **y)
++{
++  struct T *l = bar (x);
++  struct T *m = bar (x);
++  y[0] = l;
++  y[1] = m;
++}
++
++int
++main ()
++{
++  struct T *r[2];
++  foo ("foo", r);
++  if (r[0]->e || r[0]->f || r[0]->g || r[0]->h || r[0]->i || r[0]->j || r[0]->k != -1)
++    __builtin_abort ();
++  if (r[1]->e || r[1]->f || r[1]->g || r[1]->h || r[1]->i || r[1]->j || r[1]->k != -1)
++    __builtin_abort ();
++  return 0;
++}
 diff --git a/gcc/testsuite/gcc.dg/Wnonnull.c b/gcc/testsuite/gcc.dg/Wnonnull.c
 index be89a5a755c..0ed06aabe68 100644
 --- a/gcc/testsuite/gcc.dg/Wnonnull.c
@@ -37417,6 +37604,17 @@ index 00000000000..5b2ae89a471
 +  return u.s.b;
 +}
 +/* { dg-final { scan-assembler "srliw" } } */
+diff --git a/gcc/testsuite/gcc.target/s390/pr93908.c b/gcc/testsuite/gcc.target/s390/pr93908.c
+new file mode 100644
+index 00000000000..e5949050a08
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/s390/pr93908.c
+@@ -0,0 +1,5 @@
++/* PR rtl-optimization/93908 */
++/* { dg-do run { target s390_zEC12_hw } } */
++/* { dg-options "-O2 -march=zEC12 -mtune=z13" } */
++
++#include "../../gcc.c-torture/execute/pr93908.c"
 diff --git a/gcc/testsuite/gcc.target/s390/s390.exp b/gcc/testsuite/gcc.target/s390/s390.exp
 index 86f7e4398eb..ee94a806766 100644
 --- a/gcc/testsuite/gcc.target/s390/s390.exp
@@ -40703,6 +40901,70 @@ index 00000000000..88615c9a6c1
 +begin
 +  null;
 +end;
+diff --git a/gcc/testsuite/gnat.dg/lto24.adb b/gcc/testsuite/gnat.dg/lto24.adb
+new file mode 100644
+index 00000000000..998b4478254
+--- /dev/null
++++ b/gcc/testsuite/gnat.dg/lto24.adb
+@@ -0,0 +1,10 @@
++-- { dg-do link }
++-- { dg-options "-O -g -flto" { target lto } }
++
++with Lto24_Pkg1;
++
++procedure Lto24 is
++  R : Lto24_Pkg1.Rec (False);
++begin
++  R.Empty := True;
++end;
+diff --git a/gcc/testsuite/gnat.dg/lto24_pkg1.ads b/gcc/testsuite/gnat.dg/lto24_pkg1.ads
+new file mode 100644
+index 00000000000..abe7e911787
+--- /dev/null
++++ b/gcc/testsuite/gnat.dg/lto24_pkg1.ads
+@@ -0,0 +1,17 @@
++with Lto24_Pkg2;
++
++package Lto24_Pkg1 is
++
++  Max_Elem : constant Natural := Lto24_Pkg2.Get;
++
++  type Arr is array (Natural range <>) of Boolean;
++
++  type Rec (B : Boolean) is record
++     I : Integer;
++     case B is
++       when True => A : Arr (1 .. Max_Elem);
++       when False => Empty : Boolean;
++     end case;
++  end record;
++
++end Lto24_Pkg1;
+diff --git a/gcc/testsuite/gnat.dg/lto24_pkg2.adb b/gcc/testsuite/gnat.dg/lto24_pkg2.adb
+new file mode 100644
+index 00000000000..12fb34e5750
+--- /dev/null
++++ b/gcc/testsuite/gnat.dg/lto24_pkg2.adb
+@@ -0,0 +1,8 @@
++package body Lto24_Pkg2 is
++
++  function Get return Natural is
++  begin
++    return 16;
++  end;
++
++end Lto24_Pkg2;
+diff --git a/gcc/testsuite/gnat.dg/lto24_pkg2.ads b/gcc/testsuite/gnat.dg/lto24_pkg2.ads
+new file mode 100644
+index 00000000000..79a916ea0b7
+--- /dev/null
++++ b/gcc/testsuite/gnat.dg/lto24_pkg2.ads
+@@ -0,0 +1,5 @@
++package Lto24_Pkg2 is
++
++  function Get return Natural;
++
++end Lto24_Pkg2;
 diff --git a/gcc/testsuite/obj-c++.dg/stubify-1.mm b/gcc/testsuite/obj-c++.dg/stubify-1.mm
 index c2355437afc..e8f21882de9 100644
 --- a/gcc/testsuite/obj-c++.dg/stubify-1.mm
