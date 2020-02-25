@@ -23,6 +23,10 @@ Bill Schmidt (2):
       backport: re PR target/91275 (__builtin_crypto_vpmsumd gives different results -O[123] vs -O0)
       backport: re PR testsuite/92093 (New test case gcc.target/powerpc/pr91275.c from r276410 fails on BE)
 
+Christophe Lyon (2):
+      ARM: Add support for -mpure-code in thumb-1 (v6m)
+      ARM: Fix -mpure-code for v6m
+
 Claudiu Zissulescu (2):
       [ARC] Backport from mainline r278056,r278057
       [ARC] Enable using DCMPF for hard float comparisons (backports)
@@ -1175,10 +1179,38 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..ce5216020fa 100644
+index 7f6557d8018..c8dd6d0c613 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,2168 @@
+@@ -1,3 +1,2196 @@
++2020-02-25  Christophe Lyon  <christophe.lyon@linaro.org>
++
++	Backport from mainline
++	2020-02-25  Christophe Lyon  <christophe.lyon@linaro.org>
++
++	* config/arm/arm.md (required_for_purecode): New attribute.
++	(enabled): Handle required_for_purecode.
++	* config/arm/thumb1.md (thumb1_movsi_insn): Add alternative to
++	work with -mpure-code.
++
++2020-02-25  Christophe Lyon  <christophe.lyon@linaro.org>
++
++	Backport from mainline
++	2019-12-17  Christophe Lyon  <christophe.lyon@linaro.org>
++
++	* config/arm/arm-protos.h (thumb1_gen_const_int): Add new prototype.
++	* config/arm/arm.c (arm_option_check_internal): Remove restriction
++	on MOVT for -mpure-code.
++	(thumb1_gen_const_int): New function.
++	(thumb1_legitimate_address_p): Support -mpure-code.
++	(thumb1_rtx_costs): Likewise.
++	(thumb1_size_rtx_costs): Likewise.
++	(arm_thumb1_mi_thunk): Likewise.
++	* config/arm/arm.h (CASE_VECTOR_PC_RELATIVE): Likewise.
++	* config/arm/thumb1.md (thumb1_movsi_symbol_ref): New.
++	(*thumb1_movhf): Support -mpure-code.
++	* doc/invoke.texi (-mpure-code): Remove restriction on MOVT.
++
 +2020-02-25  Jakub Jelinek  <jakub@redhat.com>
 +
 +	PR rtl-optimization/93908
@@ -3347,7 +3379,7 @@ index 7f6557d8018..ce5216020fa 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +2678,7 @@
+@@ -513,7 +2706,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -5613,11 +5645,124 @@ index 72fbf2a8528..7d31ad9f99e 100644
        return 1;
      case E_CC_FPU_UNEQmode:
        return 1;
+diff --git a/gcc/config/arm/arm-protos.h b/gcc/config/arm/arm-protos.h
+index 485bc68a618..98beb6109b9 100644
+--- a/gcc/config/arm/arm-protos.h
++++ b/gcc/config/arm/arm-protos.h
+@@ -66,6 +66,7 @@ extern bool arm_small_register_classes_for_mode_p (machine_mode);
+ extern int const_ok_for_arm (HOST_WIDE_INT);
+ extern int const_ok_for_op (HOST_WIDE_INT, enum rtx_code);
+ extern int const_ok_for_dimode_op (HOST_WIDE_INT, enum rtx_code);
++extern void thumb1_gen_const_int (rtx, HOST_WIDE_INT);
+ extern int arm_split_constant (RTX_CODE, machine_mode, rtx,
+ 			       HOST_WIDE_INT, rtx, rtx, int);
+ extern int legitimate_pic_operand_p (rtx);
 diff --git a/gcc/config/arm/arm.c b/gcc/config/arm/arm.c
-index 45abcd89963..91bb65130b8 100644
+index 45abcd89963..cdfc0f9e72f 100644
 --- a/gcc/config/arm/arm.c
 +++ b/gcc/config/arm/arm.c
-@@ -19670,6 +19670,35 @@ arm_compute_save_core_reg_mask (void)
+@@ -2904,13 +2904,18 @@ arm_option_check_internal (struct gcc_options *opts)
+     {
+       const char *flag = (target_pure_code ? "-mpure-code" :
+ 					     "-mslow-flash-data");
++      bool common_unsupported_modes = arm_arch_notm || flag_pic || TARGET_NEON;
+ 
+-      /* We only support -mpure-code and -mslow-flash-data on M-profile targets
+-	 with MOVT.  */
+-      if (!TARGET_HAVE_MOVT || arm_arch_notm || flag_pic || TARGET_NEON)
++      /* We only support -mslow-flash-data on M-profile targets with
++	 MOVT.  */
++      if (target_slow_flash_data && (!TARGET_HAVE_MOVT || common_unsupported_modes))
+ 	error ("%s only supports non-pic code on M-profile targets with the "
+ 	       "MOVT instruction", flag);
+ 
++      /* We only support -mpure-code on M-profile targets.  */
++      if (target_pure_code && common_unsupported_modes)
++	error ("%s only supports non-pic code on M-profile targets", flag);
++
+       /* Cannot load addresses: -mslow-flash-data forbids literal pool and
+ 	 -mword-relocations forbids relocation of MOVT/MOVW.  */
+       if (target_word_relocations)
+@@ -4316,6 +4321,38 @@ const_ok_for_dimode_op (HOST_WIDE_INT i, enum rtx_code code)
+     }
+ }
+ 
++/* Emit a sequence of movs/adds/shift to produce a 32-bit constant.
++   Avoid generating useless code when one of the bytes is zero.  */
++void
++thumb1_gen_const_int (rtx op0, HOST_WIDE_INT op1)
++{
++  bool mov_done_p = false;
++  int i;
++
++  /* Emit upper 3 bytes if needed.  */
++  for (i = 0; i < 3; i++)
++    {
++      int byte = (op1 >> (8 * (3 - i))) & 0xff;
++
++      if (byte)
++	{
++	  emit_set_insn (op0, mov_done_p
++			 ? gen_rtx_PLUS (SImode,op0, GEN_INT (byte))
++			 : GEN_INT (byte));
++	  mov_done_p = true;
++	}
++
++      if (mov_done_p)
++	emit_set_insn (op0, gen_rtx_ASHIFT (SImode, op0, GEN_INT (8)));
++    }
++
++  /* Emit lower byte if needed.  */
++  if (!mov_done_p)
++    emit_set_insn (op0, GEN_INT (op1 & 0xff));
++  else if (op1 & 0xff)
++    emit_set_insn (op0, gen_rtx_PLUS (SImode, op0, GEN_INT (op1 & 0xff)));
++}
++
+ /* Emit a sequence of insns to handle a large constant.
+    CODE is the code of the operation required, it can be any of SET, PLUS,
+    IOR, AND, XOR, MINUS;
+@@ -8325,7 +8362,8 @@ thumb1_legitimate_address_p (machine_mode mode, rtx x, int strict_p)
+   /* This is PC relative data before arm_reorg runs.  */
+   else if (GET_MODE_SIZE (mode) >= 4 && CONSTANT_P (x)
+ 	   && GET_CODE (x) == SYMBOL_REF
+-           && CONSTANT_POOL_ADDRESS_P (x) && !flag_pic)
++	   && CONSTANT_POOL_ADDRESS_P (x) && !flag_pic
++	   && !arm_disable_literal_pool)
+     return 1;
+ 
+   /* This is PC relative data after arm_reorg runs.  */
+@@ -8393,6 +8431,7 @@ thumb1_legitimate_address_p (machine_mode mode, rtx x, int strict_p)
+ 	   && GET_MODE_SIZE (mode) == 4
+ 	   && GET_CODE (x) == SYMBOL_REF
+ 	   && CONSTANT_POOL_ADDRESS_P (x)
++	   && !arm_disable_literal_pool
+ 	   && ! (flag_pic
+ 		 && symbol_mentioned_p (get_pool_constant (x))
+ 		 && ! pcrel_constant_p (get_pool_constant (x))))
+@@ -9028,7 +9067,9 @@ thumb1_rtx_costs (rtx x, enum rtx_code code, enum rtx_code outer)
+ 	    return 0;
+ 	  if (thumb_shiftable_const (INTVAL (x)))
+ 	    return COSTS_N_INSNS (2);
+-	  return COSTS_N_INSNS (3);
++	  return arm_disable_literal_pool
++	    ? COSTS_N_INSNS (8)
++	    : COSTS_N_INSNS (3);
+ 	}
+       else if ((outer == PLUS || outer == COMPARE)
+ 	       && INTVAL (x) < 256 && INTVAL (x) > -256)
+@@ -9185,7 +9226,9 @@ thumb1_size_rtx_costs (rtx x, enum rtx_code code, enum rtx_code outer)
+ 	  /* See split "TARGET_THUMB1 && satisfies_constraint_K".  */
+           if (thumb_shiftable_const (INTVAL (x)))
+             return COSTS_N_INSNS (2);
+-          return COSTS_N_INSNS (3);
++	  return arm_disable_literal_pool
++	    ? COSTS_N_INSNS (8)
++	    : COSTS_N_INSNS (3);
+         }
+       else if ((outer == PLUS || outer == COMPARE)
+                && INTVAL (x) < 256 && INTVAL (x) > -256)
+@@ -19670,6 +19713,35 @@ arm_compute_save_core_reg_mask (void)
    return save_reg_mask;
  }
  
@@ -5653,7 +5798,7 @@ index 45abcd89963..91bb65130b8 100644
  /* Compute a bit mask of which core registers need to be
     saved on the stack for the current function.  */
  static unsigned long
-@@ -19701,10 +19730,19 @@ thumb1_compute_save_core_reg_mask (void)
+@@ -19701,10 +19773,19 @@ thumb1_compute_save_core_reg_mask (void)
    if (mask & 0xff || thumb_force_lr_save ())
      mask |= (1 << LR_REGNUM);
  
@@ -5676,7 +5821,7 @@ index 45abcd89963..91bb65130b8 100644
        && ((mask & 0x0f00) || TARGET_BACKTRACE))
      {
        /* Use thumb_find_work_register to choose which register
-@@ -24930,12 +24968,7 @@ thumb1_unexpanded_epilogue (void)
+@@ -24930,12 +25011,7 @@ thumb1_unexpanded_epilogue (void)
        unsigned long mask = live_regs_mask & 0xff;
        int next_hi_reg;
  
@@ -5690,7 +5835,7 @@ index 45abcd89963..91bb65130b8 100644
  
        if (mask == 0)
  	/* Oh dear!  We have no low registers into which we can pop
-@@ -24943,7 +24976,7 @@ thumb1_unexpanded_epilogue (void)
+@@ -24943,7 +25019,7 @@ thumb1_unexpanded_epilogue (void)
  	internal_error
  	  ("no low registers available for popping high registers");
  
@@ -5699,7 +5844,7 @@ index 45abcd89963..91bb65130b8 100644
  	if (live_regs_mask & (1 << next_hi_reg))
  	  break;
  
-@@ -24951,7 +24984,7 @@ thumb1_unexpanded_epilogue (void)
+@@ -24951,7 +25027,7 @@ thumb1_unexpanded_epilogue (void)
  	{
  	  /* Find lo register(s) into which the high register(s) can
               be popped.  */
@@ -5708,7 +5853,7 @@ index 45abcd89963..91bb65130b8 100644
  	    {
  	      if (mask & (1 << regno))
  		high_regs_pushed--;
-@@ -24959,20 +24992,22 @@ thumb1_unexpanded_epilogue (void)
+@@ -24959,20 +25035,22 @@ thumb1_unexpanded_epilogue (void)
  		break;
  	    }
  
@@ -5734,7 +5879,7 @@ index 45abcd89963..91bb65130b8 100644
  		    if (live_regs_mask & (1 << next_hi_reg))
  		      break;
  		}
-@@ -25354,10 +25389,20 @@ thumb1_expand_prologue (void)
+@@ -25354,10 +25432,20 @@ thumb1_expand_prologue (void)
  	  break;
  
        /* Here we need to mask out registers used for passing arguments
@@ -5758,7 +5903,7 @@ index 45abcd89963..91bb65130b8 100644
  	pushable_regs &= ~(1 << LR_REGNUM);
  
        if (pushable_regs == 0)
-@@ -25398,6 +25443,11 @@ thumb1_expand_prologue (void)
+@@ -25398,6 +25486,11 @@ thumb1_expand_prologue (void)
  	      push_mask |= 1 << LR_REGNUM;
  	      real_regs_mask |= 1 << LR_REGNUM;
  	      lr_needs_saving = false;
@@ -5770,11 +5915,98 @@ index 45abcd89963..91bb65130b8 100644
  	    }
  
  	  insn = thumb1_emit_multi_reg_push (push_mask, real_regs_mask);
+@@ -26782,14 +26875,41 @@ arm_thumb1_mi_thunk (FILE *file, tree, HOST_WIDE_INT delta,
+ 	  /* push r3 so we can use it as a temporary.  */
+ 	  /* TODO: Omit this save if r3 is not used.  */
+ 	  fputs ("\tpush {r3}\n", file);
+-	  fputs ("\tldr\tr3, ", file);
++
++	  /* With -mpure-code, we cannot load the address from the
++	     constant pool: we build it explicitly.  */
++	  if (target_pure_code)
++	    {
++	      fputs ("\tmovs\tr3, #:upper8_15:#", file);
++	      assemble_name (file, XSTR (XEXP (DECL_RTL (function), 0), 0));
++	      fputc ('\n', file);
++	      fputs ("\tlsls r3, #8\n", file);
++	      fputs ("\tadds\tr3, #:upper0_7:#", file);
++	      assemble_name (file, XSTR (XEXP (DECL_RTL (function), 0), 0));
++	      fputc ('\n', file);
++	      fputs ("\tlsls r3, #8\n", file);
++	      fputs ("\tadds\tr3, #:lower8_15:#", file);
++	      assemble_name (file, XSTR (XEXP (DECL_RTL (function), 0), 0));
++	      fputc ('\n', file);
++	      fputs ("\tlsls r3, #8\n", file);
++	      fputs ("\tadds\tr3, #:lower0_7:#", file);
++	      assemble_name (file, XSTR (XEXP (DECL_RTL (function), 0), 0));
++	      fputc ('\n', file);
++	    }
++	  else
++	    fputs ("\tldr\tr3, ", file);
+ 	}
+       else
+ 	{
+ 	  fputs ("\tldr\tr12, ", file);
+ 	}
+-      assemble_name (file, label);
+-      fputc ('\n', file);
++
++      if (!target_pure_code)
++	{
++	  assemble_name (file, label);
++	  fputc ('\n', file);
++	}
++
+       if (flag_pic)
+ 	{
+ 	  /* If we are generating PIC, the ldr instruction below loads
+diff --git a/gcc/config/arm/arm.h b/gcc/config/arm/arm.h
+index 4866e1e4b7d..9ee6a4eb524 100644
+--- a/gcc/config/arm/arm.h
++++ b/gcc/config/arm/arm.h
+@@ -1854,9 +1854,11 @@ enum arm_auto_incmodes
+    for the index in the tablejump instruction.  */
+ #define CASE_VECTOR_MODE Pmode
+ 
+-#define CASE_VECTOR_PC_RELATIVE (TARGET_THUMB2				\
+-				 || (TARGET_THUMB1			\
+-				     && (optimize_size || flag_pic)))
++#define CASE_VECTOR_PC_RELATIVE ((TARGET_THUMB2				\
++				  || (TARGET_THUMB1			\
++				      && (optimize_size || flag_pic)))	\
++				 && (!target_pure_code))
++
+ 
+ #define CASE_VECTOR_SHORTEN_MODE(min, max, body)			\
+   (TARGET_THUMB1							\
 diff --git a/gcc/config/arm/arm.md b/gcc/config/arm/arm.md
-index 0aecd03891c..ae582172ab9 100644
+index 0aecd03891c..efa2d31317b 100644
 --- a/gcc/config/arm/arm.md
 +++ b/gcc/config/arm/arm.md
-@@ -4483,62 +4483,78 @@
+@@ -94,6 +94,11 @@
+ ; an IT block in their expansion which is not a short IT.
+ (define_attr "enabled_for_short_it" "no,yes" (const_string "yes"))
+ 
++; Mark an instruction sequence as the required way of loading a
++; constant when -mpure-code is enabled (which implies
++; arm_disable_literal_pool)
++(define_attr "required_for_purecode" "no,yes" (const_string "no"))
++
+ ;; Operand number of an input operand that is shifted.  Zero if the
+ ;; given instruction does not shift one of its input operands.
+ (define_attr "shift" "" (const_int 0))
+@@ -237,6 +242,10 @@
+ 	       (match_test "arm_restrict_it"))
+ 	  (const_string "no")
+ 
++	  (and (eq_attr "required_for_purecode" "yes")
++	       (not (match_test "arm_disable_literal_pool")))
++	  (const_string "no")
++
+ 	  (eq_attr "arch_enabled" "no")
+ 	  (const_string "no")]
+ 	 (const_string "yes")))
+@@ -4483,62 +4492,78 @@
  ; ARMv6+ unaligned load/store instructions (used for packed structure accesses).
  
  (define_insn "unaligned_loadsi"
@@ -6047,6 +6279,136 @@ index 08526302283..87069f71ecc 100644
  			       mthumb/march.$(ARCH)/mfloat-abi.soft=m$(MODE)/march.$(ARCH)/mfloat-abi.softfp))
  
 -endif		# Not APROFILE.
+diff --git a/gcc/config/arm/thumb1.md b/gcc/config/arm/thumb1.md
+index cefd6cfcdcd..041e2db343f 100644
+--- a/gcc/config/arm/thumb1.md
++++ b/gcc/config/arm/thumb1.md
+@@ -43,6 +43,41 @@
+ 
+ 
+ 
++(define_insn "thumb1_movsi_symbol_ref"
++  [(set (match_operand:SI 0 "register_operand" "=l")
++	(match_operand:SI 1 "general_operand" ""))
++   ]
++  "TARGET_THUMB1
++   && arm_disable_literal_pool
++   && GET_CODE (operands[1]) == SYMBOL_REF"
++  "*
++  output_asm_insn (\"movs\\t%0, #:upper8_15:%1\", operands);
++  output_asm_insn (\"lsls\\t%0, #8\", operands);
++  output_asm_insn (\"adds\\t%0, #:upper0_7:%1\", operands);
++  output_asm_insn (\"lsls\\t%0, #8\", operands);
++  output_asm_insn (\"adds\\t%0, #:lower8_15:%1\", operands);
++  output_asm_insn (\"lsls\\t%0, #8\", operands);
++  output_asm_insn (\"adds\\t%0, #:lower0_7:%1\", operands);
++  return \"\";
++  "
++  [(set_attr "length" "14")
++   (set_attr "conds" "clob")]
++)
++
++(define_split
++  [(set (match_operand:SI 0 "register_operand" "")
++	(match_operand:SI 1 "immediate_operand" ""))]
++  "TARGET_THUMB1
++   && arm_disable_literal_pool
++   && GET_CODE (operands[1]) == CONST_INT
++   && !satisfies_constraint_I (operands[1])"
++  [(clobber (const_int 0))]
++  "
++    thumb1_gen_const_int (operands[0], INTVAL (operands[1]));
++    DONE;
++  "
++)
++
+ (define_insn "*thumb1_adddi3"
+   [(set (match_operand:DI          0 "register_operand" "=l")
+ 	(plus:DI (match_operand:DI 1 "register_operand" "%0")
+@@ -656,8 +691,8 @@
+ )
+ 
+ (define_insn "*thumb1_movsi_insn"
+-  [(set (match_operand:SI 0 "nonimmediate_operand" "=l,l,r,l,l,l,>,l, m,*l*h*k")
+-	(match_operand:SI 1 "general_operand"      "l, I,j,J,K,>,l,mi,l,*l*h*k"))]
++  [(set (match_operand:SI 0 "nonimmediate_operand" "=l,l,r,l,l,l,>,l, l, m,*l*h*k")
++	(match_operand:SI 1 "general_operand"      "l, I,j,J,K,>,l,i, mi,l,*l*h*k"))]
+   "TARGET_THUMB1
+    && (   register_operand (operands[0], SImode)
+        || register_operand (operands[1], SImode))"
+@@ -669,14 +704,16 @@
+    #
+    ldmia\\t%1, {%0}
+    stmia\\t%0, {%1}
++   movs\\t%0, #:upper8_15:%1; lsls\\t%0, #8; adds\\t%0, #:upper0_7:%1; lsls\\t%0, #8; adds\\t%0, #:lower8_15:%1; lsls\\t%0, #8; adds\\t%0, #:lower0_7:%1
+    ldr\\t%0, %1
+    str\\t%1, %0
+    mov\\t%0, %1"
+-  [(set_attr "length" "2,2,4,4,4,2,2,2,2,2")
+-   (set_attr "type" "mov_reg,mov_imm,mov_imm,multiple,multiple,load_4,store_4,load_4,store_4,mov_reg")
+-   (set_attr "pool_range" "*,*,*,*,*,*,*,1018,*,*")
+-   (set_attr "arch" "t1,t1,v8mb,t1,t1,t1,t1,t1,t1,t1")
+-   (set_attr "conds" "set,clob,nocond,*,*,nocond,nocond,nocond,nocond,nocond")])
++  [(set_attr "length" "2,2,4,4,4,2,2,14,2,2,2")
++   (set_attr "type" "mov_reg,mov_imm,mov_imm,multiple,multiple,load_4,store_4,alu_sreg,load_4,store_4,mov_reg")
++   (set_attr "pool_range" "*,*,*,*,*,*,*, *,1018,*,*")
++   (set_attr "arch" "t1,t1,v8mb,t1,t1,t1,t1,t1,t1,t1,t1")
++   (set_attr "required_for_purecode" "no,no,no,no,no,no,no,yes,no,no,no")
++   (set_attr "conds" "set,clob,nocond,*,*,nocond,nocond,nocond,nocond,nocond,nocond")])
+ 
+ ; Split the load of 64-bit constant into two loads for high and low 32-bit parts respectively
+ ; to see if we can load them in fewer instructions or fewer cycles.
+@@ -829,8 +866,8 @@
+    (set_attr "conds" "clob,nocond,nocond,nocond,nocond,clob")])
+ 
+ (define_insn "*thumb1_movhf"
+-  [(set (match_operand:HF     0 "nonimmediate_operand" "=l,l,m,*r,*h")
+-	(match_operand:HF     1 "general_operand"      "l,mF,l,*h,*r"))]
++  [(set (match_operand:HF     0 "nonimmediate_operand" "=l,l,l,m,*r,*h")
++	(match_operand:HF     1 "general_operand"      "l, m,F,l,*h,*r"))]
+   "TARGET_THUMB1
+    && (	  s_register_operand (operands[0], HFmode)
+        || s_register_operand (operands[1], HFmode))"
+@@ -855,14 +892,34 @@
+ 	  }
+ 	return \"ldrh\\t%0, %1\";
+       }
+-    case 2: return \"strh\\t%1, %0\";
++    case 2:
++    {
++      int bits;
++      int high;
++      rtx ops[3];
++
++      bits = real_to_target (NULL, CONST_DOUBLE_REAL_VALUE (operands[1]),
++			     HFmode);
++      ops[0] = operands[0];
++      high = (bits >> 8) & 0xff;
++      ops[1] = GEN_INT (high);
++      ops[2] = GEN_INT (bits & 0xff);
++      if (high != 0)
++	output_asm_insn (\"movs\\t%0, %1\;lsls\\t%0, #8\;adds\\t%0, %2\", ops);
++      else
++	output_asm_insn (\"movs\\t%0, %2\", ops);
++
++      return \"\";
++    }
++    case 3: return \"strh\\t%1, %0\";
+     default: return \"mov\\t%0, %1\";
+     }
+   "
+-  [(set_attr "length" "2")
+-   (set_attr "type" "mov_reg,load_4,store_4,mov_reg,mov_reg")
+-   (set_attr "pool_range" "*,1018,*,*,*")
+-   (set_attr "conds" "clob,nocond,nocond,nocond,nocond")])
++  [(set_attr "length" "2,2,6,2,2,2")
++   (set_attr "type" "mov_reg,load_4,mov_reg,store_4,mov_reg,mov_reg")
++   (set_attr "pool_range" "*,1018,*,*,*,*")
++   (set_attr "conds" "clob,nocond,nocond,nocond,nocond,nocond")])
++
+ ;;; ??? This should have alternatives for constants.
+ (define_insn "*thumb1_movsf_insn"
+   [(set (match_operand:SF     0 "nonimmediate_operand" "=l,l,>,l, m,*r,*h")
 diff --git a/gcc/config/avr/avr-arch.h b/gcc/config/avr/avr-arch.h
 index 7624b2614f8..e6ae9d9cd04 100644
 --- a/gcc/config/avr/avr-arch.h
@@ -16693,7 +17055,7 @@ index 911875f9578..0d08696c207 100644
  want Info documentation to be regenerated.  Releases contain Info
  documentation pre-built for the unmodified documentation in the release.
 diff --git a/gcc/doc/invoke.texi b/gcc/doc/invoke.texi
-index 6ef36ce02aa..7d8c0802c08 100644
+index 6ef36ce02aa..0ab6c9c6449 100644
 --- a/gcc/doc/invoke.texi
 +++ b/gcc/doc/invoke.texi
 @@ -292,6 +292,7 @@ Objective-C and Objective-C++ Dialects}.
@@ -16737,7 +17099,17 @@ index 6ef36ce02aa..7d8c0802c08 100644
  @opindex ginternal-reset-location-views
  @opindex gno-internal-reset-location-views
  Attempt to determine location views that can be omitted from location
-@@ -18083,6 +18092,13 @@ Allow to use truncation instead of rounding towards zero for fractional fixed-po
+@@ -17911,8 +17920,7 @@ provided for use in debugging the compiler.
+ Do not allow constant data to be placed in code sections.
+ Additionally, when compiling for ELF object format give all text sections the
+ ELF processor-specific section attribute @code{SHF_ARM_PURECODE}.  This option
+-is only available when generating non-pic code for M-profile targets with the
+-MOVT instruction.
++is only available when generating non-pic code for M-profile targets.
+ 
+ @item -mcmse
+ @opindex mcmse
+@@ -18083,6 +18091,13 @@ Allow to use truncation instead of rounding towards zero for fractional fixed-po
  @opindex nodevicelib
  Don't link against AVR-LibC's device specific library @code{lib<mcu>.a}.
  
@@ -26755,10 +27127,23 @@ index 29f6cdc4667..33b4be79c0f 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..d3cdd122e14 100644
+index bc11ae4ae0b..8536c83b480 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,1638 @@
+@@ -1,3 +1,1651 @@
++2020-02-25  Christophe Lyon  <christophe.lyon@linaro.org>
++
++	Backport from mainline
++	2019-12-17  Christophe Lyon  <christophe.lyon@linaro.org>
++
++	* gcc.target/arm/pr45701-1.c: Adjust for -mpure-code.
++	* gcc.target/arm/pr45701-2.c: Likewise.
++	* gcc.target/arm/pure-code/no-literal-pool.c: Add tests for
++	__fp16.
++	* gcc.target/arm/pure-code/pure-code.exp: Remove thumb2 and movt
++	conditions.
++	* gcc.target/arm/thumb1-Os-mult.c: Skip if -mpure-code is used.
++
 +2020-02-25  Jakub Jelinek  <jakub@redhat.com>
 +
 +	PR rtl-optimization/93908
@@ -28397,7 +28782,7 @@ index bc11ae4ae0b..d3cdd122e14 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +2062,7 @@
+@@ -427,7 +2075,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -28406,7 +28791,7 @@ index bc11ae4ae0b..d3cdd122e14 100644
  	(check_effective_target_powerpc_p8vector_ok): No support for Darwin.
  	(check_effective_target_powerpc_p9vector_ok): Likewise.
  	(check_effective_target_powerpc_float128_sw_ok): Likewise.
-@@ -720,7 +2355,7 @@
+@@ -720,7 +2368,7 @@
  
  	Backport from mainline
  	PR fortran/91077
@@ -28415,7 +28800,7 @@ index bc11ae4ae0b..d3cdd122e14 100644
  
  2019-07-05  Szabolcs Nagy  <szabolcs.nagy@arm.com>
  
-@@ -803,7 +2438,7 @@
+@@ -803,7 +2451,7 @@
  	Backport fom mainline
  	2019-06-21  Jeff Law  <law@redhat.com>
  
@@ -28424,7 +28809,7 @@ index bc11ae4ae0b..d3cdd122e14 100644
  	* gcc.c-torture/execute/pr90949.c: New test.
  
  2019-06-26  Martin Jambor  <mjambor@suse.cz>
-@@ -969,7 +2604,7 @@
+@@ -969,7 +2617,7 @@
         * gcc.target/i386/pr82699-6.c: Likewise
         * gcc.target/i386/returninst1.c: Likewise
         * gcc.target/i386/returninst2.c: Likewise
@@ -28433,7 +28818,7 @@ index bc11ae4ae0b..d3cdd122e14 100644
  
  2019-05-30  Iain Sandoe  <iain@sandoe.co.uk>
  
-@@ -1131,7 +2766,7 @@
+@@ -1131,7 +2779,7 @@
  
  	Backport from trunk
  	PR fortran/90498
@@ -28442,7 +28827,7 @@ index bc11ae4ae0b..d3cdd122e14 100644
  
  2019-05-17  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -3801,21 +5436,21 @@
+@@ -3801,21 +5449,21 @@
  2019-02-23  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88117
@@ -28471,7 +28856,7 @@ index bc11ae4ae0b..d3cdd122e14 100644
  
  2019-02-22  David Malcolm  <dmalcolm@redhat.com>
  
-@@ -4444,7 +6079,7 @@
+@@ -4444,7 +6092,7 @@
  2019-02-09  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/89200
@@ -28480,7 +28865,7 @@ index bc11ae4ae0b..d3cdd122e14 100644
  
  2019-02-09  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -4704,17 +6339,17 @@
+@@ -4704,17 +6352,17 @@
  2019-02-02  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88393
@@ -35056,6 +35441,32 @@ index d82306ed630..2df3f9c3117 100644
      } {
  	check_multi_dir $opts $dir
      }
+diff --git a/gcc/testsuite/gcc.target/arm/pr45701-1.c b/gcc/testsuite/gcc.target/arm/pr45701-1.c
+index 01db15abfd0..2060ae464b3 100644
+--- a/gcc/testsuite/gcc.target/arm/pr45701-1.c
++++ b/gcc/testsuite/gcc.target/arm/pr45701-1.c
+@@ -2,7 +2,7 @@
+ /* { dg-skip-if "" { ! { arm_thumb1_ok || arm_thumb2_ok } } } */
+ /* { dg-options "-mthumb -Os" }  */
+ /* { dg-final { scan-assembler "push\t\{r3" } } */
+-/* { dg-final { scan-assembler-not "\[^\-\]r8" } } */
++/* { dg-final { scan-assembler-not "\[^\-e\]r8" } } */
+ 
+ extern int hist_verify;
+ extern int a1;
+diff --git a/gcc/testsuite/gcc.target/arm/pr45701-2.c b/gcc/testsuite/gcc.target/arm/pr45701-2.c
+index ce66d7509d1..23ca21319a4 100644
+--- a/gcc/testsuite/gcc.target/arm/pr45701-2.c
++++ b/gcc/testsuite/gcc.target/arm/pr45701-2.c
+@@ -2,7 +2,7 @@
+ /* { dg-skip-if "" { ! { arm_thumb1_ok || arm_thumb2_ok } } } */
+ /* { dg-options "-mthumb -Os" }  */
+ /* { dg-final { scan-assembler "push\t\{r3" } } */
+-/* { dg-final { scan-assembler-not "\[^\-\]r8" } } */
++/* { dg-final { scan-assembler-not "\[^\-e\]r8" } } */
+ 
+ extern int hist_verify;
+ extern int a1;
 diff --git a/gcc/testsuite/gcc.target/arm/pr88167-1.c b/gcc/testsuite/gcc.target/arm/pr88167-1.c
 new file mode 100644
 index 00000000000..517a86d6e4b
@@ -35101,6 +35512,72 @@ index 00000000000..6a303345eb9
 +    __builtin_abort ();
 +  __builtin_exit (0);
 +}
+diff --git a/gcc/testsuite/gcc.target/arm/pure-code/no-literal-pool.c b/gcc/testsuite/gcc.target/arm/pure-code/no-literal-pool.c
+index 4b893fd32f7..3de162091d9 100644
+--- a/gcc/testsuite/gcc.target/arm/pure-code/no-literal-pool.c
++++ b/gcc/testsuite/gcc.target/arm/pure-code/no-literal-pool.c
+@@ -1,12 +1,24 @@
+ /* { dg-do compile } */
+-/* { dg-options "-mpure-code" } */
++/* { dg-options "-mpure-code -mfp16-format=ieee" } */
+ /* { dg-skip-if "" { *-*-* } { "-g" "-fpic" "-fPIC" } { "" } } */
+ 
++__fp16 hf;
+ float sf;
+ double df;
+ long long l;
+ static char *p = "Hello World";
+ 
++__fp16
++testsfp16 (__fp16 *p)
++{
++  hf = 1.3;
++  *p += hf;
++  if (*p > 1.1234f)
++    return 2.1234f;
++  else
++    return 3.1234f;
++}
++
+ float
+ testsf (float *p)
+ {
+diff --git a/gcc/testsuite/gcc.target/arm/pure-code/pure-code.exp b/gcc/testsuite/gcc.target/arm/pure-code/pure-code.exp
+index bf7e4add03f..b05cfd6a28c 100644
+--- a/gcc/testsuite/gcc.target/arm/pure-code/pure-code.exp
++++ b/gcc/testsuite/gcc.target/arm/pure-code/pure-code.exp
+@@ -25,11 +25,8 @@ if ![info exists DEFAULT_CFLAGS] then {
+     set DEFAULT_CFLAGS " -ansi -pedantic-errors"
+ }
+ 
+-# The -mpure-code option is only available for M-profile targets that support
+-# the MOVT instruction.
+-if {([check_effective_target_arm_thumb2_ok]
+-     || [check_effective_target_arm_thumb1_movt_ok])
+-    && [check_effective_target_arm_cortex_m]} then {
++# The -mpure-code option is only available for M-profile targets.
++if {[check_effective_target_arm_cortex_m]} then {
+ # Initialize `dg'.
+ dg-init
+ 
+@@ -56,4 +53,4 @@ set LTO_TORTURE_OPTIONS ${saved-lto_torture_options}
+ 
+ # All done.
+ dg-finish
+-}
++#}
+diff --git a/gcc/testsuite/gcc.target/arm/thumb1-Os-mult.c b/gcc/testsuite/gcc.target/arm/thumb1-Os-mult.c
+index b989c420830..92772d414a7 100644
+--- a/gcc/testsuite/gcc.target/arm/thumb1-Os-mult.c
++++ b/gcc/testsuite/gcc.target/arm/thumb1-Os-mult.c
+@@ -1,6 +1,7 @@
+ /* { dg-do compile } */
+ /* { dg-require-effective-target arm_thumb1_ok } */
+ /* { dg-options "-Os" } */
++/* { dg-skip-if "-mpure-code generates an inline multiplication code sequence" { *-*-* } { "-mpure-code" } } */
+ /* { dg-skip-if "" { ! { arm_thumb1 } } } */
+ 
+ int
 diff --git a/gcc/testsuite/gcc.target/i386/avx-pr93637.c b/gcc/testsuite/gcc.target/i386/avx-pr93637.c
 new file mode 100644
 index 00000000000..9e7a0a7c9c1
