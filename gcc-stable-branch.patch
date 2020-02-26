@@ -63,7 +63,8 @@ Eric Botcazou (18):
 Eric S. Raymond (1):
       Clean up references to Subversion in documentation sources.
 
-GCC Administrator (196):
+GCC Administrator (197):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -315,7 +316,7 @@ Ilya Leoshkevich (3):
       S/390: Fix failing RTL check in s390_canonicalize_comparison
       Free dominance info at the beginning of pass_jump_after_combine
 
-Jakub Jelinek (101):
+Jakub Jelinek (103):
       * BASE-VER: Set to 9.2.1.
       baseline_symbols.txt: Update.
       re PR tree-optimization/91597 (GCC miscompiles a branch depending on a pointer tag)
@@ -417,6 +418,8 @@ Jakub Jelinek (101):
       c++: Fix thinko in enum_min_precision [PR61414]
       match.pd: Disallow side-effects in GENERIC for non-COND_EXPR to COND_EXPR simplifications [PR93744]
       combine: Fix find_split_point handling of constant store into ZERO_EXTRACT [PR93908]
+      c++: Fix rejects-valid bug in cxx_eval_outermost_constant_expr [PR93905]
+      store-merging: Fix coalesce_immediate_stores [PR93820]
 
 Jan Hubicka (3):
       Backport ggc_trim 	Backport from mainline
@@ -449,8 +452,9 @@ Jerry DeLisle (2):
       backport: re PR libfortran/92100 (Formatted stream IO irreproducible read with binary data in file)
       Bug 93234 - INQUIRE on pre-assigned files of ROUND and SIGN properties fails
 
-Jiufu Guo (1):
+Jiufu Guo (2):
       backport: re PR target/70010 (powerpc: -flto forgets 'no-vsx' function attributes)
+      rs6000: mark clobber for registers changed by untpyed_call
 
 John David Anglin (16):
       pa.c (pa_trampoline_init): Remove spurious extended character.
@@ -470,7 +474,7 @@ John David Anglin (16):
       Fix ICE in pa_elf_select_rtx_section.
       Fix handling of floating-point homogeneous aggregates.
 
-Jonathan Wakely (37):
+Jonathan Wakely (40):
       PR libstdc++/90361 add missing macro definition
       PR c++/91436 fix C++ dialect for std::make_unique fix-it hint
       Implement new serial algorithms from Parallelism TS (P0024R2)
@@ -508,6 +512,9 @@ Jonathan Wakely (37):
       Build filesystem library with large file support
       libstdc++: Fix recent documentation changes
       libstdc++: Simplify makefile rule for largefile-config.h (PR91947)
+      PR libstdc++/78552 only construct std::locale for C locale once
+      libstdc++: Fix freestanding build (PR 92376)
+      libstdc++: Fix regressions in unique_ptr::swap (PR 93562)
 
 Joseph Myers (14):
       * zh_CN.po: Update.
@@ -1179,10 +1186,25 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..c8dd6d0c613 100644
+index 7f6557d8018..fedf2aa77d5 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,2196 @@
+@@ -1,3 +1,2211 @@
++2020-02-26  Jiufu Guo  <guojiufu@linux.ibm.com>
++
++	PR target/93047
++	* config/rs6000/rs6000.md (untyped_call): Add emit_clobber.
++
++2020-02-26  Jakub Jelinek  <jakub@redhat.com>
++
++	PR tree-optimization/93820
++	* gimple-ssa-store-merging.c (check_no_overlap): Change RHS_CODE
++	argument to ALL_INTEGER_CST_P boolean.
++	(imm_store_chain_info::try_coalesce_bswap): Adjust caller.
++	(imm_store_chain_info::coalesce_immediate_stores): Likewise.  Handle
++	adjacent INTEGER_CST store into merged_store->only_constants like
++	overlapping one.
++
 +2020-02-25  Christophe Lyon  <christophe.lyon@linaro.org>
 +
 +	Backport from mainline
@@ -3379,7 +3401,7 @@ index 7f6557d8018..c8dd6d0c613 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +2706,7 @@
+@@ -513,7 +2721,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -12547,7 +12569,7 @@ index cb8d737976b..1d93570e7a5 100644
        else
  	{
 diff --git a/gcc/config/rs6000/rs6000.md b/gcc/config/rs6000/rs6000.md
-index ad80592765d..32da805a32d 100644
+index ad80592765d..a768f5dd511 100644
 --- a/gcc/config/rs6000/rs6000.md
 +++ b/gcc/config/rs6000/rs6000.md
 @@ -137,6 +137,9 @@
@@ -12615,7 +12637,18 @@ index ad80592765d..32da805a32d 100644
  
  ;;		MR           LA           LWZ          LFIWZX       LXSIWZX
  ;;		STW          STFIWX       STXSIWX      LI           LIS
-@@ -14322,7 +14315,225 @@
+@@ -10662,6 +10655,10 @@
+ 
+   emit_call_insn (gen_call (operands[0], const0_rtx, const0_rtx));
+ 
++  for (int i = 0; i < XVECLEN (operands[2], 0); i++)
++    emit_clobber (SET_SRC (XVECEXP (operands[2], 0, i)));
++  emit_insn (gen_blockage ());
++
+   for (i = 0; i < XVECLEN (operands[2], 0); i++)
+     {
+       rtx set = XVECEXP (operands[2], 0, i);
+@@ -14322,7 +14319,225 @@
     "xscmpuqp %0,%1,%2"
    [(set_attr "type" "veccmp")
     (set_attr "size" "128")])
@@ -12714,7 +12747,7 @@ index ad80592765d..32da805a32d 100644
 +  "TARGET_P9_MISC"
 +  "setb %0,%1"
 +  [(set_attr "type" "logical")])
- 
++
 +(define_insn "setb_unsigned"
 +   [(set (match_operand:SI 0 "gpc_reg_operand" "=r")
 +	 (if_then_else:SI (ltu (match_operand:CCUNS 1 "cc_reg_operand" "y")
@@ -12782,7 +12815,7 @@ index ad80592765d..32da805a32d 100644
 +  "TARGET_P9_MISC"
 +  "cmprb %0,1,%1,%2"
 +  [(set_attr "type" "logical")])
-+
+ 
 +;; Test byte membership within set of 8 bytes.
 +;;
 +;; The bytes of operand 1 are organized as xx:xx:xx:vv, where xx
@@ -21369,6 +21402,91 @@ index 90ddbf37b07..236349e36ba 100644
        else if (removed * 100 / datarefs.length ()
  	  < (unsigned)PARAM_VALUE (PARAM_UNROLL_JAM_MIN_PERCENT))
  	profit_unroll = 1;
+diff --git a/gcc/gimple-ssa-store-merging.c b/gcc/gimple-ssa-store-merging.c
+index 4a8cf6f847f..550f782813b 100644
+--- a/gcc/gimple-ssa-store-merging.c
++++ b/gcc/gimple-ssa-store-merging.c
+@@ -2375,8 +2375,9 @@ gather_bswap_load_refs (vec<tree> *refs, tree val)
+ /* Check if there are any stores in M_STORE_INFO after index I
+    (where M_STORE_INFO must be sorted by sort_by_bitpos) that overlap
+    a potential group ending with END that have their order
+-   smaller than LAST_ORDER.  RHS_CODE is the kind of store in the
+-   group.  Return true if there are no such stores.
++   smaller than LAST_ORDER.  ALL_INTEGER_CST_P is true if
++   all the stores already merged and the one under consideration
++   have rhs_code of INTEGER_CST.  Return true if there are no such stores.
+    Consider:
+      MEM[(long long int *)p_28] = 0;
+      MEM[(long long int *)p_28 + 8B] = 0;
+@@ -2399,13 +2400,13 @@ gather_bswap_load_refs (vec<tree> *refs, tree val)
+    the MEM[(long long int *)p_28 + 8B] = 0; would now be before it,
+    so we need to refuse merging MEM[(long long int *)p_28 + 8B] = 0;
+    into the group.  That way it will be its own store group and will
+-   not be touched.  If RHS_CODE is INTEGER_CST and there are overlapping
++   not be touched.  If ALL_INTEGER_CST_P and there are overlapping
+    INTEGER_CST stores, those are mergeable using merge_overlapping,
+    so don't return false for those.  */
+ 
+ static bool
+ check_no_overlap (vec<store_immediate_info *> m_store_info, unsigned int i,
+-		  enum tree_code rhs_code, unsigned int last_order,
++		  bool all_integer_cst_p, unsigned int last_order,
+ 		  unsigned HOST_WIDE_INT end)
+ {
+   unsigned int len = m_store_info.length ();
+@@ -2415,7 +2416,7 @@ check_no_overlap (vec<store_immediate_info *> m_store_info, unsigned int i,
+       if (info->bitpos >= end)
+ 	break;
+       if (info->order < last_order
+-	  && (rhs_code != INTEGER_CST || info->rhs_code != INTEGER_CST))
++	  && (!all_integer_cst_p || info->rhs_code != INTEGER_CST))
+ 	return false;
+     }
+   return true;
+@@ -2568,7 +2569,7 @@ imm_store_chain_info::try_coalesce_bswap (merged_store_group *merged_store,
+   if (n.base_addr == NULL_TREE && !is_gimple_val (n.src))
+     return false;
+ 
+-  if (!check_no_overlap (m_store_info, last, LROTATE_EXPR, last_order, end))
++  if (!check_no_overlap (m_store_info, last, false, last_order, end))
+     return false;
+ 
+   /* Don't handle memory copy this way if normal non-bswap processing
+@@ -2709,7 +2710,14 @@ imm_store_chain_info::coalesce_immediate_stores ()
+ 	       |---store 2---|
+ 	 Overlapping stores.  */
+       else if (IN_RANGE (info->bitpos, merged_store->start,
+-			 merged_store->start + merged_store->width - 1))
++			 merged_store->start + merged_store->width - 1)
++	       /* |---store 1---||---store 2---|
++		  Handle also the consecutive INTEGER_CST stores case here,
++		  as we have here the code to deal with overlaps.  */
++	       || (info->bitregion_start <= merged_store->bitregion_end
++		   && info->rhs_code == INTEGER_CST
++		   && merged_store->only_constants
++		   && merged_store->can_be_merged_into (info)))
+ 	{
+ 	  /* Only allow overlapping stores of constants.  */
+ 	  if (info->rhs_code == INTEGER_CST && merged_store->only_constants)
+@@ -2719,8 +2727,7 @@ imm_store_chain_info::coalesce_immediate_stores ()
+ 	      unsigned HOST_WIDE_INT end
+ 		= MAX (merged_store->start + merged_store->width,
+ 		       info->bitpos + info->bitsize);
+-	      if (check_no_overlap (m_store_info, i, INTEGER_CST,
+-				    last_order, end))
++	      if (check_no_overlap (m_store_info, i, true, last_order, end))
+ 		{
+ 		  /* check_no_overlap call above made sure there are no
+ 		     overlapping stores with non-INTEGER_CST rhs_code
+@@ -2873,7 +2880,7 @@ imm_store_chain_info::coalesce_immediate_stores ()
+ 	      std::swap (info->ops[0], info->ops[1]);
+ 	      info->ops_swapped_p = true;
+ 	    }
+-	  if (check_no_overlap (m_store_info, i, info->rhs_code,
++	  if (check_no_overlap (m_store_info, i, false,
+ 				MAX (merged_store->last_order, info->order),
+ 				MAX (merged_store->start + merged_store->width,
+ 				     info->bitpos + info->bitsize)))
 diff --git a/gcc/gimple-streamer-out.c b/gcc/gimple-streamer-out.c
 index 34b8d6fda7d..7185c07f36b 100644
 --- a/gcc/gimple-streamer-out.c
@@ -27127,10 +27245,25 @@ index 29f6cdc4667..33b4be79c0f 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..8536c83b480 100644
+index bc11ae4ae0b..31c7e4dc7a8 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,1651 @@
+@@ -1,3 +1,1666 @@
++2020-02-26  Jiufu Guo  <guojiufu@linux.ibm.com>
++
++	PR target/93047
++	* gcc.dg/torture/stackalign/builtin-return-2.c: New test case.
++
++2020-02-26  Jakub Jelinek  <jakub@redhat.com>
++
++	PR tree-optimization/93820
++	* gcc.dg/pr93820.c: New test.
++
++2020-02-26  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/93905
++	* g++.dg/cpp0x/pr93905.C: New test.
++
 +2020-02-25  Christophe Lyon  <christophe.lyon@linaro.org>
 +
 +	Backport from mainline
@@ -28782,7 +28915,7 @@ index bc11ae4ae0b..8536c83b480 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +2075,7 @@
+@@ -427,7 +2090,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -28791,7 +28924,7 @@ index bc11ae4ae0b..8536c83b480 100644
  	(check_effective_target_powerpc_p8vector_ok): No support for Darwin.
  	(check_effective_target_powerpc_p9vector_ok): Likewise.
  	(check_effective_target_powerpc_float128_sw_ok): Likewise.
-@@ -720,7 +2368,7 @@
+@@ -720,7 +2383,7 @@
  
  	Backport from mainline
  	PR fortran/91077
@@ -28800,7 +28933,7 @@ index bc11ae4ae0b..8536c83b480 100644
  
  2019-07-05  Szabolcs Nagy  <szabolcs.nagy@arm.com>
  
-@@ -803,7 +2451,7 @@
+@@ -803,7 +2466,7 @@
  	Backport fom mainline
  	2019-06-21  Jeff Law  <law@redhat.com>
  
@@ -28809,7 +28942,7 @@ index bc11ae4ae0b..8536c83b480 100644
  	* gcc.c-torture/execute/pr90949.c: New test.
  
  2019-06-26  Martin Jambor  <mjambor@suse.cz>
-@@ -969,7 +2617,7 @@
+@@ -969,7 +2632,7 @@
         * gcc.target/i386/pr82699-6.c: Likewise
         * gcc.target/i386/returninst1.c: Likewise
         * gcc.target/i386/returninst2.c: Likewise
@@ -28818,7 +28951,7 @@ index bc11ae4ae0b..8536c83b480 100644
  
  2019-05-30  Iain Sandoe  <iain@sandoe.co.uk>
  
-@@ -1131,7 +2779,7 @@
+@@ -1131,7 +2794,7 @@
  
  	Backport from trunk
  	PR fortran/90498
@@ -28827,7 +28960,7 @@ index bc11ae4ae0b..8536c83b480 100644
  
  2019-05-17  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -3801,21 +5449,21 @@
+@@ -3801,21 +5464,21 @@
  2019-02-23  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88117
@@ -28856,7 +28989,7 @@ index bc11ae4ae0b..8536c83b480 100644
  
  2019-02-22  David Malcolm  <dmalcolm@redhat.com>
  
-@@ -4444,7 +6092,7 @@
+@@ -4444,7 +6107,7 @@
  2019-02-09  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/89200
@@ -28865,7 +28998,7 @@ index bc11ae4ae0b..8536c83b480 100644
  
  2019-02-09  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -4704,17 +6352,17 @@
+@@ -4704,17 +6367,17 @@
  2019-02-02  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88393
@@ -30201,6 +30334,30 @@ index 00000000000..ffbcd8f9f3a
 +{
 +  A a;
 +  B{a};
++}
+diff --git a/gcc/testsuite/g++.dg/cpp0x/pr93905.C b/gcc/testsuite/g++.dg/cpp0x/pr93905.C
+new file mode 100644
+index 00000000000..81c6266a795
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp0x/pr93905.C
+@@ -0,0 +1,18 @@
++// PR c++/93905
++// { dg-do compile { target c++11 } }
++
++enum class E { VALUE };
++
++struct B {
++  E e{E::VALUE};
++protected:
++  ~B () = default;  
++};
++
++struct D : B {};
++
++int
++main ()
++{
++  D d{};
 +}
 diff --git a/gcc/testsuite/g++.dg/cpp0x/range-for19.C b/gcc/testsuite/g++.dg/cpp0x/range-for19.C
 index e3f446f3700..6afaee577f2 100644
@@ -34670,6 +34827,38 @@ index 00000000000..13c34f3771f
 +  int b[] = { 0 };
 +  (char (*)[(1, 7, 2)]) 0;
 +}
+diff --git a/gcc/testsuite/gcc.dg/pr93820.c b/gcc/testsuite/gcc.dg/pr93820.c
+new file mode 100644
+index 00000000000..98d8c20a178
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/pr93820.c
+@@ -0,0 +1,26 @@
++/* PR tree-optimization/93820 */
++/* { dg-do run } */
++/* { dg-options "-O2 -fno-tree-dse" } */
++
++typedef int v4si __attribute__((vector_size(4 * sizeof (int))));
++int a[10];
++
++__attribute__((noipa)) int
++foo (int *p)
++{
++  a[6] = *p;
++  a[4] = 1;
++  *(((v4si *)&a[0]) + 1) = (v4si) { 0, 0, 0, 0 };
++  a[3] = 0;
++}
++
++int
++main ()
++{
++  int i = 0;
++  foo (&i);
++  for (i = 0; i < 10; i++)
++    if (a[i])
++      __builtin_abort ();
++  return 0;
++}
 diff --git a/gcc/testsuite/gcc.dg/torture/pr90278.c b/gcc/testsuite/gcc.dg/torture/pr90278.c
 new file mode 100644
 index 00000000000..617246a6d4c
@@ -34833,6 +35022,52 @@ index 00000000000..cec4b5d8daa
 +    __builtin_abort ();
 +  return 0;
 +}
+diff --git a/gcc/testsuite/gcc.dg/torture/stackalign/builtin-return-2.c b/gcc/testsuite/gcc.dg/torture/stackalign/builtin-return-2.c
+new file mode 100644
+index 00000000000..771910971d6
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/torture/stackalign/builtin-return-2.c
+@@ -0,0 +1,40 @@
++/* PR target/93047 */
++/* Originator: Andrew Church <gcczilla@achurch.org> */
++/* { dg-do run } */
++/* { dg-additional-options "-O3 -frename-registers" } */
++/* { dg-require-effective-target untyped_assembly } */
++
++#ifdef __MMIX__
++/* No parameters on stack for bar.  */
++#define STACK_ARGUMENTS_SIZE 0
++#else
++#define STACK_ARGUMENTS_SIZE 64
++#endif
++
++extern void abort(void);
++
++int foo(int n)
++{
++  return n+1;
++}
++
++int bar(int n)
++{
++  __builtin_return(__builtin_apply((void (*)(void))foo, __builtin_apply_args(),
++				   STACK_ARGUMENTS_SIZE));
++}
++
++int main(void)
++{
++  /* Allocate 64 bytes on the stack to make sure that __builtin_apply
++     can read at least 64 bytes above the return address.  */
++  char dummy[64];
++
++  __asm__ ("" : : "" (dummy));
++
++  if (bar(1) != 2)
++    abort();
++
++  return 0;
++}
++
 diff --git a/gcc/testsuite/gcc.dg/tree-ssa/gen-vect-11.c b/gcc/testsuite/gcc.dg/tree-ssa/gen-vect-11.c
 index 650e73a5ee8..dd1c0ac3eba 100644
 --- a/gcc/testsuite/gcc.dg/tree-ssa/gen-vect-11.c
@@ -45922,10 +46157,37 @@ index 73af92af1e8..6a673a7c995 100644
      unsigned short __pad2;
  #if defined(__x86_64__) && !defined(_LP64)
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
-index 8ac50251005..60f21017664 100644
+index 8ac50251005..075442c124a 100644
 --- a/libstdc++-v3/ChangeLog
 +++ b/libstdc++-v3/ChangeLog
-@@ -1,3 +1,453 @@
+@@ -1,3 +1,480 @@
++2020-02-26  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backport from mainline
++	2020-02-04  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/93562
++	* include/bits/unique_ptr.h (__uniq_ptr_impl::swap): Define.
++	(unique_ptr::swap, unique_ptr<T[], D>::swap): Call it.
++	* testsuite/20_util/unique_ptr/modifiers/93562.cc: New test.
++
++	Backport from mainline
++	2020-01-17  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/92376
++	* include/bits/c++config: Only do PSTL config when the header is
++	present, to fix freestanding.
++	* libsupc++/new_opa.cc [!_GLIBCXX_HOSTED]: Declare allocation
++	functions if they were detected by configure.
++
++	Backport from mainline
++	2019-10-09  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/78552
++	* src/c++98/locale_init.cc (locale::classic()): Do not construct a new
++	locale object for every call.
++	(locale::_S_initialize_once()): Construct C locale here.
++
 +2020-01-24  Jonathan Wakely  <jwakely@redhat.com>
 +
 +	Backport from mainline
@@ -50372,6 +50634,28 @@ index 40e051aa9e3..5e47fffe86e 100644
     * @ingroup sorting_algorithms
     *
     * These algorithms are common set operations performed on sequences
+diff --git a/libstdc++-v3/include/bits/c++config b/libstdc++-v3/include/bits/c++config
+index 7a7e78819ba..7e0962edd19 100644
+--- a/libstdc++-v3/include/bits/c++config
++++ b/libstdc++-v3/include/bits/c++config
+@@ -668,6 +668,8 @@ namespace std
+ // PSTL configuration
+ 
+ #if __cplusplus >= 201703L
++// This header is not installed for freestanding:
++#if __has_include(<pstl/pstl_config.h>)
+ // Preserved here so we have some idea which version of upstream we've pulled in
+ // #define PSTL_VERSION 104
+ // #define PSTL_VERSION_MAJOR (PSTL_VERSION/100)
+@@ -686,6 +688,7 @@ namespace std
+ # define __PSTL_ASSERT_MSG(_Condition, _Message) __glibcxx_assert(_Condition)
+ 
+ #include <pstl/pstl_config.h>
++#endif // __has_include
++#endif // C++17
+ 
+-#endif
+ // End of prewritten config; the settings discovered at configure time follow.
 diff --git a/libstdc++-v3/include/bits/fs_path.h b/libstdc++-v3/include/bits/fs_path.h
 index e56a0a7f138..5dc624dbb1e 100644
 --- a/libstdc++-v3/include/bits/fs_path.h
@@ -50713,6 +50997,47 @@ index 0d42b253df1..f5ca74329e2 100644
        const bool __assignable = is_copy_assignable<_ValueType>::value;
  #endif
        return __uninitialized_fill_n<__is_trivial(_ValueType) && __assignable>::
+diff --git a/libstdc++-v3/include/bits/unique_ptr.h b/libstdc++-v3/include/bits/unique_ptr.h
+index d8129747eb5..c934873a722 100644
+--- a/libstdc++-v3/include/bits/unique_ptr.h
++++ b/libstdc++-v3/include/bits/unique_ptr.h
+@@ -155,6 +155,14 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       _Dp&       _M_deleter() { return std::get<1>(_M_t); }
+       const _Dp& _M_deleter() const { return std::get<1>(_M_t); }
+ 
++      void
++      swap(__uniq_ptr_impl& __rhs) noexcept
++      {
++	using std::swap;
++	swap(this->_M_ptr(), __rhs._M_ptr());
++	swap(this->_M_deleter(), __rhs._M_deleter());
++      }
++
+     private:
+       tuple<pointer, _Dp> _M_t;
+     };
+@@ -398,8 +406,8 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       void
+       swap(unique_ptr& __u) noexcept
+       {
+-	using std::swap;
+-	swap(_M_t, __u._M_t);
++	static_assert(__is_swappable<_Dp>::value, "deleter must be swappable");
++	_M_t.swap(__u._M_t);
+       }
+ 
+       // Disable copy from lvalue.
+@@ -673,8 +681,8 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       void
+       swap(unique_ptr& __u) noexcept
+       {
+-	using std::swap;
+-	swap(_M_t, __u._M_t);
++	static_assert(__is_swappable<_Dp>::value, "deleter must be swappable");
++	_M_t.swap(__u._M_t);
+       }
+ 
+       // Disable copy from lvalue.
 diff --git a/libstdc++-v3/include/experimental/internet b/libstdc++-v3/include/experimental/internet
 index 467bdfda3ed..3b397737bb6 100644
 --- a/libstdc++-v3/include/experimental/internet
@@ -52289,10 +52614,32 @@ index 6acae0593ac..d5f24ea1000 100644
  #if ATOMIC_POINTER_LOCK_FREE > 1
    __atomic_exchange (&__unexpected_handler, &func, &old, __ATOMIC_ACQ_REL);
 diff --git a/libstdc++-v3/libsupc++/new_opa.cc b/libstdc++-v3/libsupc++/new_opa.cc
-index 0303ecde6bd..8143c129bc6 100644
+index 0303ecde6bd..9c7f53d7073 100644
 --- a/libstdc++-v3/libsupc++/new_opa.cc
 +++ b/libstdc++-v3/libsupc++/new_opa.cc
-@@ -114,9 +114,10 @@ operator new (std::size_t sz, std::align_val_t al)
+@@ -43,6 +43,21 @@ extern "C" void *memalign(std::size_t boundary, std::size_t size);
+ using std::new_handler;
+ using std::bad_alloc;
+ 
++#if ! _GLIBCXX_HOSTED
++extern "C"
++{
++# if _GLIBCXX_HAVE_ALIGNED_ALLOC
++  void *aligned_alloc(size_t alignment, size_t size);
++# elif _GLIBCXX_HAVE__ALIGNED_MALLOC
++  void *_aligned_malloc(size_t size, size_t alignment);
++# elif _GLIBCXX_HAVE_POSIX_MEMALIGN
++  void *posix_memalign(void **, size_t alignment, size_t size);
++# elif _GLIBCXX_HAVE_MEMALIGN
++  void *memalign(size_t alignment, size_t size);
++# endif
++}
++#endif
++
+ namespace __gnu_cxx {
+ #if _GLIBCXX_HAVE_ALIGNED_ALLOC
+ using ::aligned_alloc;
+@@ -114,9 +129,10 @@ operator new (std::size_t sz, std::align_val_t al)
      sz = 1;
  
  #if _GLIBCXX_HAVE_ALIGNED_ALLOC
@@ -52440,6 +52787,27 @@ index c095a90587e..4dc0a9ca449 100644
  #include <string>
  
  namespace std _GLIBCXX_VISIBILITY(default)
+diff --git a/libstdc++-v3/src/c++98/locale_init.cc b/libstdc++-v3/src/c++98/locale_init.cc
+index e5e9d74379f..07d95dc09fd 100644
+--- a/libstdc++-v3/src/c++98/locale_init.cc
++++ b/libstdc++-v3/src/c++98/locale_init.cc
+@@ -303,7 +303,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+   locale::classic()
+   {
+     _S_initialize();
+-    return *(new (&c_locale) locale(_S_classic));
++    return *(const locale*)c_locale;
+   }
+ 
+   void
+@@ -313,6 +313,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+     // One reference for _S_classic, one for _S_global
+     _S_classic = new (&c_locale_impl) _Impl(2);
+     _S_global = _S_classic;
++    new (&c_locale) locale(_S_classic);
+   }
+ 
+   void
 diff --git a/libstdc++-v3/src/filesystem/dir.cc b/libstdc++-v3/src/filesystem/dir.cc
 index 3e6e598fa64..ac3bd3aafb3 100644
 --- a/libstdc++-v3/src/filesystem/dir.cc
@@ -53169,6 +53537,110 @@ index 00000000000..a2d7dc7a338
 +  std::uninitialized_fill_n(p, 1, x); // { dg-error "here" }
 +}
 +// { dg-error "must be constructible" "" { target *-*-* } 0 }
+diff --git a/libstdc++-v3/testsuite/20_util/unique_ptr/modifiers/93562.cc b/libstdc++-v3/testsuite/20_util/unique_ptr/modifiers/93562.cc
+new file mode 100644
+index 00000000000..8ed236333ac
+--- /dev/null
++++ b/libstdc++-v3/testsuite/20_util/unique_ptr/modifiers/93562.cc
+@@ -0,0 +1,98 @@
++// Copyright (C) 2020 Free Software Foundation, Inc.
++//
++// This file is part of the GNU ISO C++ Library.  This library is free
++// software; you can redistribute it and/or modify it under the
++// terms of the GNU General Public License as published by the
++// Free Software Foundation; either version 3, or (at your option)
++// any later version.
++
++// This library is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++
++// You should have received a copy of the GNU General Public License along
++// with this library; see the file COPYING3.  If not see
++// <http://www.gnu.org/licenses/>.
++
++// { dg-do run { target c++11 } }
++
++#include <memory>
++#include <testsuite_hooks.h>
++
++struct incomplete;
++
++// This function isn't called, we just need to check it compiles.
++void
++test01(std::unique_ptr<incomplete>& p1, std::unique_ptr<incomplete>& p2)
++{
++  // PR libstdc++/93562
++  p1.swap(p2);
++  swap(p1, p2);
++}
++
++// This function isn't called, we just need to check it compiles.
++void
++test02(std::unique_ptr<incomplete[]>& p1, std::unique_ptr<incomplete[]>& p2)
++{
++  // PR libstdc++/93562
++  p1.swap(p2);
++  swap(p1, p2);
++}
++
++namespace A
++{
++  struct Deleter
++  {
++    Deleter& operator=(const Deleter&) = delete;
++
++    void operator()(int* p) const noexcept { delete p; }
++
++    // found by ADL
++    friend void swap(Deleter& lhs, Deleter& rhs) noexcept
++    { std::swap(lhs.id, rhs.id); }
++
++    int id;
++  };
++
++  static_assert(!std::is_move_assignable<Deleter>::value, "not assignable");
++#if __cplusplus >= 201703L
++  static_assert(std::is_swappable_v<Deleter>, "but swappable");
++#endif
++} // namespace A
++
++void
++test03()
++{
++  std::unique_ptr<int, A::Deleter> p1(new int(1), { -1 });
++  std::unique_ptr<int, A::Deleter> p2(new int(2), { -2 });
++  int* const pi1 = p1.get();
++  int* const pi2 = p2.get();
++  // This type must swappable even though the deleter is not move-assignable:
++  swap(p1, p2);
++  VERIFY(p1.get() == pi2);
++  VERIFY(p1.get_deleter().id == -2);
++  VERIFY(p2.get() == pi1);
++  VERIFY(p2.get_deleter().id == -1);
++}
++
++void
++test04()
++{
++  std::unique_ptr<int[], A::Deleter> p1(new int[1]{1}, { -1 });
++  std::unique_ptr<int[], A::Deleter> p2(new int[2]{2, 2}, { -2 });
++  int* const pi1 = p1.get();
++  int* const pi2 = p2.get();
++  // This type must swappable even though the deleter is not move-assignable:
++  swap(p1, p2);
++  VERIFY(p1.get() == pi2);
++  VERIFY(p1.get_deleter().id == -2);
++  VERIFY(p2.get() == pi1);
++  VERIFY(p2.get_deleter().id == -1);
++}
++
++int main()
++{
++  test03();
++  test04();
++}
 diff --git a/libstdc++-v3/testsuite/23_containers/deque/requirements/dr438/assign_neg.cc b/libstdc++-v3/testsuite/23_containers/deque/requirements/dr438/assign_neg.cc
 index 0be1e965103..fdb03865e3d 100644
 --- a/libstdc++-v3/testsuite/23_containers/deque/requirements/dr438/assign_neg.cc
