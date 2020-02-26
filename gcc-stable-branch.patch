@@ -430,7 +430,7 @@ Janne Blomqvist (2):
       PR fortran/91414 Improve initialization of PRNG
       PR fortran/91414 Correctly fill master_state from os_seed.
 
-Jason Merrill (16):
+Jason Merrill (20):
       PR c++/90538 - multiple expansions of capture packs
       PR c++/91378 - ICE with noexcept and auto return type.
       PR c++/90393 - ICE with throw in ?:
@@ -447,6 +447,10 @@ Jason Merrill (16):
       c++: Function declared with typedef with eh-specification.
       c++: Allow template rvalue-ref conv to bind to lvalue ref.
       c++: Drop alignas restriction for stack variables.
+      c++: Preserve location in maybe_constant_value.
+      c++: Fix decltype of empty pack expansion of parm.
+      c++: Fix constexpr vs. omitted aggregate init.
+      cgraph: A COMDAT decl always has non-zero address.
 
 Jerry DeLisle (2):
       backport: re PR libfortran/92100 (Formatted stream IO irreproducible read with binary data in file)
@@ -474,7 +478,7 @@ John David Anglin (16):
       Fix ICE in pa_elf_select_rtx_section.
       Fix handling of floating-point homogeneous aggregates.
 
-Jonathan Wakely (41):
+Jonathan Wakely (43):
       PR libstdc++/90361 add missing macro definition
       PR c++/91436 fix C++ dialect for std::make_unique fix-it hint
       Implement new serial algorithms from Parallelism TS (P0024R2)
@@ -516,8 +520,10 @@ Jonathan Wakely (41):
       libstdc++: Fix freestanding build (PR 92376)
       libstdc++: Fix regressions in unique_ptr::swap (PR 93562)
       libstdc++: Replace glibc-specific check for clock_gettime (PR 93325)
+      libstdc++: Fix description of std::ios::trunc (PR 92886)
+      libstdc++: Fix undefined behaviour in random dist serialization (PR93205)
 
-Joseph Myers (14):
+Joseph Myers (15):
       * zh_CN.po: Update.
       Fix libstdc++ lstat missing return type for Windows target.
       * es.po: Update.
@@ -532,6 +538,7 @@ Joseph Myers (14):
       Fix setting of DECL_CONTEXT in pushdecl (PR c/93072).
       Update GCC zh_TW.po.
       Fix ICE with cast of division by zero (PR c/93348).
+      Revert "setup branch"
 
 Kewen Lin (1):
       Fix PR91790 by considering different first_stmt_info for realign
@@ -549,7 +556,7 @@ Kyrylo Tkachov (3):
 Li Jia He (1):
       [rs6000]Fix PR92098 by backporting vec_cmp and vcond_mask supports to gcc-9-branch
 
-Marek Polacek (13):
+Marek Polacek (14):
       PR c++/81429 - wrong parsing of constructor with C++11 attribute.
       PR c++/87519 - bogus warning with -Wsign-conversion.
       PR c++/90473 - wrong code with nullptr in default argument.
@@ -563,6 +570,7 @@ Marek Polacek (13):
       PR c++/92062 - ODR-use ignored for static member of class template.
       * decl.c (reshape_init_r): Add missing space.
       PR c++/90998 - ICE with copy elision in init by ctor and -Wconversion.
+      PR c++/92745 - bogus error when initializing array of vectors.
 
 Mark Eggleston (6):
       Fortran: PR93263 -fno-automatic and RECURSIVE
@@ -600,9 +608,10 @@ Max Filippov (1):
 Michael Matz (1):
       re PR middle-end/90796 (GCC: O2 vs O3 output differs on simple test)
 
-Michael Meissner (2):
+Michael Meissner (3):
       Fix bad code of vector extract of PC-relative address with variable element #.
       Adjust how variable vector extraction is done.
+      setup branch
 
 Mihail Ionescu (1):
       [arm] Backport -- Fix multilibs for Armv7-R
@@ -1210,10 +1219,16 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..fedf2aa77d5 100644
+index 7f6557d8018..c4124fab747 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,2211 @@
+@@ -1,3 +1,2217 @@
++2020-02-26  Jason Merrill  <jason@redhat.com>
++
++	PR c++/92003
++	* symtab.c (symtab_node::nonzero_address): A DECL_COMDAT decl has
++	non-zero address even if weak and not yet defined.
++
 +2020-02-26  Jiufu Guo  <guojiufu@linux.ibm.com>
 +
 +	PR target/93047
@@ -3425,7 +3440,7 @@ index 7f6557d8018..fedf2aa77d5 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +2721,7 @@
+@@ -513,7 +2727,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -14485,10 +14500,34 @@ index ce2825580c6..8243716589f 100644
  AC_SUBST(all_languages)
  AC_SUBST(all_selected_languages)
 diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
-index c977850d067..6f62352a18e 100644
+index c977850d067..8032f1c13fe 100644
 --- a/gcc/cp/ChangeLog
 +++ b/gcc/cp/ChangeLog
-@@ -1,3 +1,454 @@
+@@ -1,3 +1,478 @@
++2020-02-26  Marek Polacek  <polacek@redhat.com>
++
++	PR c++/92745 - bogus error when initializing array of vectors.
++	* decl.c (reshape_init_r): For a nested compound literal, do
++	call reshape_init_{class,array,vector}.
++
++2020-02-26  Jason Merrill  <jason@redhat.com>
++
++	PR c++/90951
++	* constexpr.c (cxx_eval_array_reference): {}-initialize missing
++	elements instead of value-initializing them.
++
++2020-02-26  Jason Merrill  <jason@redhat.com>
++
++	PR c++/93140
++	* pt.c (tsubst_decl) [PARM_DECL]: Check cp_unevaluated_operand in
++	handling of TREE_CHAIN for empty pack.
++
++2020-02-26  Jason Merrill  <jason@redhat.com>
++
++	PR c++/92852
++	* constexpr.c (maybe_constant_value): Don't unshare if the cached
++	value is the same as the argument.
++
 +2020-02-14  Jakub Jelinek  <jakub@redhat.com>
 +
 +	PR c++/61414
@@ -14943,7 +14982,7 @@ index c977850d067..6f62352a18e 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -16,7 +467,7 @@
+@@ -16,7 +491,7 @@
  
  	Backported from mainline
  	2019-08-02  Marek Polacek  <polacek@redhat.com>
@@ -15387,7 +15426,7 @@ index a47777cdd9e..46fac4ef38e 100644
  	    warning_at (DECL_SOURCE_LOCATION (field), 0,
  			"%qD is too small to hold all values of %q#T",
 diff --git a/gcc/cp/constexpr.c b/gcc/cp/constexpr.c
-index f6f21b33396..f0d4cb5e8e7 100644
+index f6f21b33396..bc2476f94f9 100644
 --- a/gcc/cp/constexpr.c
 +++ b/gcc/cp/constexpr.c
 @@ -1419,6 +1419,28 @@ cxx_bind_parameters_in_call (const constexpr_ctx *ctx, tree t,
@@ -15419,7 +15458,26 @@ index f6f21b33396..f0d4cb5e8e7 100644
  	  *p = build_tree_list (parms, arg);
  	  p = &TREE_CHAIN (*p);
  	}
-@@ -2703,7 +2725,10 @@ cxx_eval_component_reference (const constexpr_ctx *ctx, tree t,
+@@ -2640,8 +2662,16 @@ cxx_eval_array_reference (const constexpr_ctx *ctx, tree t,
+     }
+ 
+   /* If it's within the array bounds but doesn't have an explicit
+-     initializer, it's value-initialized.  */
+-  tree val = build_value_init (elem_type, tf_warning_or_error);
++     initializer, it's initialized from {}.  But use build_value_init
++     directly for non-aggregates to avoid creating a garbage CONSTRUCTOR.  */
++  tree val;
++  if (CP_AGGREGATE_TYPE_P (elem_type))
++    {
++      tree empty_ctor = build_constructor (init_list_type_node, NULL);
++      val = digest_init (elem_type, empty_ctor, tf_warning_or_error);
++    }
++  else
++    val = build_value_init (elem_type, tf_warning_or_error);
+   return cxx_eval_constant_expression (ctx, val, lval, non_constant_p,
+ 				       overflow_p);
+ }
+@@ -2703,7 +2733,10 @@ cxx_eval_component_reference (const constexpr_ctx *ctx, tree t,
  	  : field == part)
  	{
  	  if (value)
@@ -15431,7 +15489,7 @@ index f6f21b33396..f0d4cb5e8e7 100644
  	  else
  	    /* We're in the middle of initializing it.  */
  	    break;
-@@ -2793,6 +2818,7 @@ cxx_eval_bit_field_ref (const constexpr_ctx *ctx, tree t,
+@@ -2793,6 +2826,7 @@ cxx_eval_bit_field_ref (const constexpr_ctx *ctx, tree t,
    FOR_EACH_CONSTRUCTOR_ELT (CONSTRUCTOR_ELTS (whole), i, field, value)
      {
        tree bitpos = bit_position (field);
@@ -15439,7 +15497,7 @@ index f6f21b33396..f0d4cb5e8e7 100644
        if (bitpos == start && DECL_SIZE (field) == TREE_OPERAND (t, 1))
  	return value;
        if (TREE_CODE (TREE_TYPE (field)) == INTEGER_TYPE
-@@ -3973,6 +3999,10 @@ cxx_eval_increment_expression (const constexpr_ctx *ctx, tree t,
+@@ -3973,6 +4007,10 @@ cxx_eval_increment_expression (const constexpr_ctx *ctx, tree t,
    tree offset = TREE_OPERAND (t, 1);
    gcc_assert (TREE_CONSTANT (offset));
  
@@ -15450,7 +15508,7 @@ index f6f21b33396..f0d4cb5e8e7 100644
    /* The operand as an lvalue.  */
    op = cxx_eval_constant_expression (ctx, op, true,
  				     non_constant_p, overflow_p);
-@@ -5116,6 +5146,7 @@ cxx_eval_constant_expression (const constexpr_ctx *ctx, tree t,
+@@ -5116,6 +5154,7 @@ cxx_eval_constant_expression (const constexpr_ctx *ctx, tree t,
  	tree obj = OBJ_TYPE_REF_OBJECT (t);
  	obj = cxx_eval_constant_expression (ctx, obj, lval, non_constant_p,
  					    overflow_p);
@@ -15458,16 +15516,24 @@ index f6f21b33396..f0d4cb5e8e7 100644
  	/* We expect something in the form of &x.D.2103.D.2094; get x. */
  	if (TREE_CODE (obj) != ADDR_EXPR
  	    || !DECL_P (get_base_address (TREE_OPERAND (obj, 0))))
-@@ -5551,7 +5582,7 @@ maybe_constant_value (tree t, tree decl, bool manifestly_const_eval)
+@@ -5551,7 +5590,15 @@ maybe_constant_value (tree t, tree decl, bool manifestly_const_eval)
    if (cv_cache == NULL)
      cv_cache = hash_map<tree, tree>::create_ggc (101);
    if (tree *cached = cv_cache->get (t))
 -    return *cached;
-+    return unshare_expr_without_location (*cached);
++    {
++      r = *cached;
++      if (r != t)
++	{
++	  r = unshare_expr_without_location (r);
++	  protected_set_expr_location (r, EXPR_LOCATION (t));
++	}
++      return r;
++    }
  
    r = cxx_eval_outermost_constant_expr (t, true, true, false, decl);
    gcc_checking_assert (r == t
-@@ -5917,6 +5948,7 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
+@@ -5917,6 +5964,7 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
      case LABEL_DECL:
      case LABEL_EXPR:
      case CASE_LABEL_EXPR:
@@ -15475,7 +15541,7 @@ index f6f21b33396..f0d4cb5e8e7 100644
      case CONST_DECL:
      case SIZEOF_EXPR:
      case ALIGNOF_EXPR:
-@@ -6751,7 +6783,6 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
+@@ -6751,7 +6799,6 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
  
      case CLEANUP_STMT:
      case EMPTY_CLASS_EXPR:
@@ -15619,7 +15685,7 @@ index ff4ce068a83..f7c3eea4cdf 100644
  /* in ptree.c */
  extern void cxx_print_xnode			(FILE *, tree, int);
 diff --git a/gcc/cp/decl.c b/gcc/cp/decl.c
-index b57ded813b6..b106d8f44ad 100644
+index b57ded813b6..39d55589ef3 100644
 --- a/gcc/cp/decl.c
 +++ b/gcc/cp/decl.c
 @@ -4474,13 +4474,27 @@ cp_fname_init (const char* name, tree *type_p)
@@ -15673,7 +15739,29 @@ index b57ded813b6..b106d8f44ad 100644
  		           "for type %qT", type);
  		  init = error_mark_node;
  		}
-@@ -8407,14 +8421,14 @@ expand_static_init (tree decl, tree init)
+@@ -6210,14 +6224,13 @@ reshape_init_r (tree type, reshape_iter *d, bool first_initializer_p,
+ 	       by the front end.  Here we have e.g. {.__pfn=0B, .__delta=0},
+ 	       which is missing outermost braces.  We should warn below, and
+ 	       one of the routines below will wrap it in additional { }.  */;
+-	  /* For a nested compound literal, there is no need to reshape since
+-	     we called reshape_init in finish_compound_literal, before calling
+-	     digest_init.  */
+-	  else if (COMPOUND_LITERAL_P (stripped_init)
+-		   /* Similarly, a CONSTRUCTOR of the target's type is a
+-		      previously digested initializer.  */
+-		   || same_type_ignoring_top_level_qualifiers_p (type,
+-								 init_type))
++	  /* For a nested compound literal, proceed to specialized routines,
++	     to handle initialization of arrays and similar.  */
++	  else if (COMPOUND_LITERAL_P (stripped_init))
++	    gcc_assert (!BRACE_ENCLOSED_INITIALIZER_P (stripped_init));
++	  /* A CONSTRUCTOR of the target's type is a previously
++	     digested initializer.  */
++	  else if (same_type_ignoring_top_level_qualifiers_p (type, init_type))
+ 	    {
+ 	      ++d->cur;
+ 	      gcc_assert (!BRACE_ENCLOSED_INITIALIZER_P (stripped_init));
+@@ -8407,14 +8420,14 @@ expand_static_init (tree decl, tree init)
  	      (acquire_name, build_function_type_list (integer_type_node,
  						       TREE_TYPE (guard_addr),
  						       NULL_TREE),
@@ -15690,7 +15778,7 @@ index b57ded813b6..b106d8f44ad 100644
  	  if (!abort_fn)
  	    abort_fn = push_library_fn (abort_name, vfntype, NULL_TREE,
  					ECF_NOTHROW | ECF_LEAF);
-@@ -9539,10 +9553,12 @@ build_ptrmemfunc_type (tree type)
+@@ -9539,10 +9552,12 @@ build_ptrmemfunc_type (tree type)
    TYPE_PTRMEMFUNC_FLAG (t) = 1;
  
    field = build_decl (input_location, FIELD_DECL, pfn_identifier, type);
@@ -15703,7 +15791,7 @@ index b57ded813b6..b106d8f44ad 100644
    DECL_CHAIN (field) = fields;
    fields = field;
  
-@@ -11435,6 +11451,8 @@ grokdeclarator (const cp_declarator *declarator,
+@@ -11435,6 +11450,8 @@ grokdeclarator (const cp_declarator *declarator,
  		else if (late_return_type
  			 && sfk != sfk_conversion)
  		  {
@@ -15712,7 +15800,7 @@ index b57ded813b6..b106d8f44ad 100644
  		    if (cxx_dialect < cxx11)
  		      /* Not using maybe_warn_cpp0x because this should
  			 always be an error.  */
-@@ -12163,6 +12181,7 @@ grokdeclarator (const cp_declarator *declarator,
+@@ -12163,6 +12180,7 @@ grokdeclarator (const cp_declarator *declarator,
  	  memfn_quals |= type_memfn_quals (type);
  	  rqual = type_memfn_rqual (type);
  	  type_quals = TYPE_UNQUALIFIED;
@@ -15720,7 +15808,7 @@ index b57ded813b6..b106d8f44ad 100644
  	}
      }
  
-@@ -13042,7 +13061,9 @@ check_default_argument (tree decl, tree arg, tsubst_flags_t complain)
+@@ -13042,7 +13060,9 @@ check_default_argument (tree decl, tree arg, tsubst_flags_t complain)
    /* Avoid redundant -Wzero-as-null-pointer-constant warnings at
       the call sites.  */
    if (TYPE_PTR_OR_PTRMEM_P (decl_type)
@@ -15731,7 +15819,7 @@ index b57ded813b6..b106d8f44ad 100644
      return nullptr_node;
  
    /* [dcl.fct.default]
-@@ -15612,7 +15633,8 @@ start_preparsed_function (tree decl1, tree attrs, int flags)
+@@ -15612,7 +15632,8 @@ start_preparsed_function (tree decl1, tree attrs, int flags)
        && !implicit_default_ctor_p (decl1))
      cp_ubsan_maybe_initialize_vtbl_ptrs (current_class_ptr);
  
@@ -15741,7 +15829,7 @@ index b57ded813b6..b106d8f44ad 100644
  
    return true;
  }
-@@ -16020,7 +16042,8 @@ finish_function (bool inline_p)
+@@ -16020,7 +16041,8 @@ finish_function (bool inline_p)
    if (fndecl == NULL_TREE)
      return error_mark_node;
  
@@ -15751,7 +15839,7 @@ index b57ded813b6..b106d8f44ad 100644
  
    if (c_dialect_objc ())
      objc_finish_function ();
-@@ -16137,7 +16160,7 @@ finish_function (bool inline_p)
+@@ -16137,7 +16159,7 @@ finish_function (bool inline_p)
      invoke_plugin_callbacks (PLUGIN_PRE_GENERICIZE, fndecl);
  
    /* Perform delayed folding before NRV transformation.  */
@@ -15760,7 +15848,7 @@ index b57ded813b6..b106d8f44ad 100644
      cp_fold_function (fndecl);
  
    /* Set up the named return value optimization, if we can.  Candidate
-@@ -16260,7 +16283,8 @@ finish_function (bool inline_p)
+@@ -16260,7 +16282,8 @@ finish_function (bool inline_p)
    if (!processing_template_decl)
      {
        struct language_function *f = DECL_SAVED_FUNCTION_DATA (fndecl);
@@ -16173,7 +16261,7 @@ index a7218e752b1..3e9950bcbed 100644
    cp_lexer_get_preprocessor_token (NULL, first_token);
    if (first_token->type == CPP_STRING)
 diff --git a/gcc/cp/pt.c b/gcc/cp/pt.c
-index a2a986b1db1..c7245efa2b2 100644
+index a2a986b1db1..c7ca7e419ea 100644
 --- a/gcc/cp/pt.c
 +++ b/gcc/cp/pt.c
 @@ -3875,7 +3875,7 @@ find_parameter_packs_r (tree *tp, int *walk_subtrees, void* data)
@@ -16240,6 +16328,15 @@ index a2a986b1db1..c7245efa2b2 100644
    /* Substitute into the PATTERN with the (possibly altered)
       arguments.  */
    if (pattern == in_decl)
+@@ -13508,7 +13495,7 @@ tsubst_decl (tree t, tree args, tsubst_flags_t complain)
+ 
+                 /* Zero-length parameter packs are boring. Just substitute
+                    into the chain.  */
+-                if (len == 0)
++		if (len == 0 && !cp_unevaluated_operand)
+                   RETURN (tsubst (TREE_CHAIN (t), args, complain,
+ 				  TREE_CHAIN (t)));
+               }
 @@ -14758,6 +14745,71 @@ tsubst (tree t, tree args, tsubst_flags_t complain, tree in_decl)
  	if (t == void_list_node)
  	  return t;
@@ -27242,9 +27339,37 @@ index 0219f3a81ea..74544fbf879 100644
  }
  
 diff --git a/gcc/symtab.c b/gcc/symtab.c
-index 29f6cdc4667..33b4be79c0f 100644
+index 29f6cdc4667..9a6a1eadd2d 100644
 --- a/gcc/symtab.c
 +++ b/gcc/symtab.c
+@@ -1955,22 +1955,22 @@ symtab_node::nonzero_address ()
+      bind to NULL. This is on by default on embedded targets only.
+ 
+      Otherwise all non-WEAK symbols must be defined and thus non-NULL or
+-     linking fails.  Important case of WEAK we want to do well are comdats.
+-     Those are handled by later check for definition.
++     linking fails.  Important case of WEAK we want to do well are comdats,
++     which also must be defined somewhere.
+ 
+      When parsing, beware the cases when WEAK attribute is added later.  */
+-  if (!DECL_WEAK (decl)
++  if ((!DECL_WEAK (decl) || DECL_COMDAT (decl))
+       && flag_delete_null_pointer_checks)
+     {
+       refuse_visibility_changes = true;
+       return true;
+     }
+ 
+-  /* If target is defined and either comdat or not extern, we know it will be
++  /* If target is defined and not extern, we know it will be
+      output and thus it will bind to non-NULL.
+      Play safe for flag_delete_null_pointer_checks where weak definition may
+      be re-defined by NULL.  */
+-  if (definition && (!DECL_EXTERNAL (decl) || DECL_COMDAT (decl))
++  if (definition && !DECL_EXTERNAL (decl)
+       && (flag_delete_null_pointer_checks || !DECL_WEAK (decl)))
+     {
+       if (!DECL_WEAK (decl))
 @@ -2328,10 +2328,18 @@ symtab_node::output_to_lto_symbol_table_p (void)
       first place.  */
    if (VAR_P (decl) && DECL_HARD_REGISTER (decl))
@@ -27269,10 +27394,17 @@ index 29f6cdc4667..33b4be79c0f 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..31c7e4dc7a8 100644
+index bc11ae4ae0b..845976a9a3d 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,1666 @@
+@@ -1,3 +1,1673 @@
++2020-02-26  Marek Polacek  <polacek@redhat.com>
++	    Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/92745 - bogus error when initializing array of vectors.
++	* g++.dg/cpp0x/initlist118.C: New test.
++	* g++.dg/cpp0x/initlist118.C: Add -Wno-psabi -w to dg-options.
++
 +2020-02-26  Jiufu Guo  <guojiufu@linux.ibm.com>
 +
 +	PR target/93047
@@ -28939,7 +29071,7 @@ index bc11ae4ae0b..31c7e4dc7a8 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +2090,7 @@
+@@ -427,7 +2097,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -28948,7 +29080,7 @@ index bc11ae4ae0b..31c7e4dc7a8 100644
  	(check_effective_target_powerpc_p8vector_ok): No support for Darwin.
  	(check_effective_target_powerpc_p9vector_ok): Likewise.
  	(check_effective_target_powerpc_float128_sw_ok): Likewise.
-@@ -720,7 +2383,7 @@
+@@ -720,7 +2390,7 @@
  
  	Backport from mainline
  	PR fortran/91077
@@ -28957,7 +29089,7 @@ index bc11ae4ae0b..31c7e4dc7a8 100644
  
  2019-07-05  Szabolcs Nagy  <szabolcs.nagy@arm.com>
  
-@@ -803,7 +2466,7 @@
+@@ -803,7 +2473,7 @@
  	Backport fom mainline
  	2019-06-21  Jeff Law  <law@redhat.com>
  
@@ -28966,7 +29098,7 @@ index bc11ae4ae0b..31c7e4dc7a8 100644
  	* gcc.c-torture/execute/pr90949.c: New test.
  
  2019-06-26  Martin Jambor  <mjambor@suse.cz>
-@@ -969,7 +2632,7 @@
+@@ -969,7 +2639,7 @@
         * gcc.target/i386/pr82699-6.c: Likewise
         * gcc.target/i386/returninst1.c: Likewise
         * gcc.target/i386/returninst2.c: Likewise
@@ -28975,7 +29107,7 @@ index bc11ae4ae0b..31c7e4dc7a8 100644
  
  2019-05-30  Iain Sandoe  <iain@sandoe.co.uk>
  
-@@ -1131,7 +2794,7 @@
+@@ -1131,7 +2801,7 @@
  
  	Backport from trunk
  	PR fortran/90498
@@ -28984,7 +29116,7 @@ index bc11ae4ae0b..31c7e4dc7a8 100644
  
  2019-05-17  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -3801,21 +5464,21 @@
+@@ -3801,21 +5471,21 @@
  2019-02-23  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88117
@@ -29013,7 +29145,7 @@ index bc11ae4ae0b..31c7e4dc7a8 100644
  
  2019-02-22  David Malcolm  <dmalcolm@redhat.com>
  
-@@ -4444,7 +6107,7 @@
+@@ -4444,7 +6114,7 @@
  2019-02-09  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/89200
@@ -29022,7 +29154,7 @@ index bc11ae4ae0b..31c7e4dc7a8 100644
  
  2019-02-09  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -4704,17 +6367,17 @@
+@@ -4704,17 +6374,17 @@
  2019-02-02  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88393
@@ -29933,6 +30065,22 @@ index 00000000000..60f288ee993
 +struct S2 { char c[6] = "hello"; };
 +static_assert (S1{}.c[0] == 'h', "");
 +static_assert (S2{}.c[0] == 'h', "");
+diff --git a/gcc/testsuite/g++.dg/cpp0x/constexpr-array24.C b/gcc/testsuite/g++.dg/cpp0x/constexpr-array24.C
+new file mode 100644
+index 00000000000..538969830ba
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp0x/constexpr-array24.C
+@@ -0,0 +1,10 @@
++// PR c++/90951
++// { dg-do compile { target c++11 } }
++
++#define assert(expr) static_assert (expr, #expr)
++
++struct S { const char a[2]; };
++
++constexpr struct S a[1][1][1] = { };
++
++assert ('\0' == *a[0][0][0].a);
 diff --git a/gcc/testsuite/g++.dg/cpp0x/constexpr-odr1.C b/gcc/testsuite/g++.dg/cpp0x/constexpr-odr1.C
 new file mode 100644
 index 00000000000..cf3f95f0565
@@ -29983,6 +30131,29 @@ index 00000000000..0927488e569
 +  if (g != 42)
 +    __builtin_abort ();
 +}
+diff --git a/gcc/testsuite/g++.dg/cpp0x/constexpr-static13.C b/gcc/testsuite/g++.dg/cpp0x/constexpr-static13.C
+new file mode 100644
+index 00000000000..644f9f7f893
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp0x/constexpr-static13.C
+@@ -0,0 +1,17 @@
++// PR c++/92003
++// { dg-do compile { target c++11 } }
++// { dg-prune-output "narrowing conversion" }
++
++constexpr char const* get_c_str() { return "abc"; }
++constexpr bool use_get_c_str_in_constexpr_context{get_c_str()}; // works
++
++template <char... Cs>
++struct string {
++  static constexpr char const* c_str() { return c; }
++
++ private:
++  static constexpr char c[]{Cs..., '\0'};
++};
++
++constexpr char const* cstr{string<'a', 'b', 'c'>::c_str()};
++constexpr bool use_cstr_in_constexpr_context{cstr}; // doesn't work
 diff --git a/gcc/testsuite/g++.dg/cpp0x/enum23.C b/gcc/testsuite/g++.dg/cpp0x/enum23.C
 index b2378e1b366..53ad990bf93 100644
 --- a/gcc/testsuite/g++.dg/cpp0x/enum23.C
@@ -30191,6 +30362,38 @@ index 00000000000..439b8dabacb
 +  new X;    // OK
 +  new X();  // OK
 +  new X{};  // { dg-bogus "" }
++}
+diff --git a/gcc/testsuite/g++.dg/cpp0x/initlist118.C b/gcc/testsuite/g++.dg/cpp0x/initlist118.C
+new file mode 100644
+index 00000000000..a2267661532
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp0x/initlist118.C
+@@ -0,0 +1,26 @@
++// PR c++/92745 - bogus error when initializing array of vectors.
++// { dg-do compile { target c++11 } }
++// { dg-options "-Wno-psabi -w" }
++
++template <typename a, int b> struct c {
++  typedef a d[b];
++};
++
++template <typename a, int b> struct array {
++  typename c<a, b>::d e;
++  a operator[](long);
++};
++
++template<class T>
++using vec4_t __attribute__((vector_size(4*sizeof(T)))) = float;
++
++array<vec4_t<float>, 4>
++transpose(array<vec4_t<float>, 4> col)
++{
++  array<vec4_t<float>, 4>
++    ret{vec4_t<float>{col[0][0], col[1][0], col[2][0], col[3][0]},
++        vec4_t<float>{col[0][1], col[1][1], col[2][1], col[3][1]},
++        vec4_t<float>{col[0][2], col[1][2], col[2][2], col[3][2]},
++        vec4_t<float>{col[0][3], col[1][3], col[2][3], col[3][3]}};
++  return ret;
 +}
 diff --git a/gcc/testsuite/g++.dg/cpp0x/lambda/lambda-template16.C b/gcc/testsuite/g++.dg/cpp0x/lambda/lambda-template16.C
 new file mode 100644
@@ -30458,6 +30661,29 @@ index 00000000000..0b904e3ffbc
 +  foo (false, true);
 +  foo (false, false);
 +}
+diff --git a/gcc/testsuite/g++.dg/cpp0x/variadic-parm1.C b/gcc/testsuite/g++.dg/cpp0x/variadic-parm1.C
+new file mode 100644
+index 00000000000..4300c781400
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp0x/variadic-parm1.C
+@@ -0,0 +1,17 @@
++// PR c++/93140
++// { dg-do compile { target c++11 } }
++
++int
++bar ()
++{
++  return 42;
++}
++
++template <typename... R>
++void foo (R... r, decltype (bar (r...)) x = 0) {}
++
++int
++main ()
++{
++  foo (3);
++}
 diff --git a/gcc/testsuite/g++.dg/cpp1y/attr-deprecated-3.C b/gcc/testsuite/g++.dg/cpp1y/attr-deprecated-3.C
 new file mode 100644
 index 00000000000..16e5018f9cf
@@ -30710,46 +30936,6 @@ index 00000000000..74db03ff569
 +void ky () noexcept ([]{}); // IFNDR
 +// Optional error: void(*)() to bool conv in converted constant expression
 +// { dg-prune-output "converted constant expression" }
-diff --git a/gcc/testsuite/g++.dg/cpp1z/decomp48.C b/gcc/testsuite/g++.dg/cpp1z/decomp48.C
-index 3c50b02a6c2..35413c79a9d 100644
---- a/gcc/testsuite/g++.dg/cpp1z/decomp48.C
-+++ b/gcc/testsuite/g++.dg/cpp1z/decomp48.C
-@@ -18,7 +18,7 @@ f2 ()
- {
-   S v {1, 2};
-   auto& [s, t] = v;	// { dg-warning "structured bindings only available with" "" { target c++14_down } }
--  return s;		// { dg-warning "reference to local variable 'v' returned" "" { target *-*-* } .-1 }
-+  return s;		// { dg-warning "reference to local variable 'v' returned" }
- }
- 
- int &
-@@ -33,7 +33,7 @@ f4 ()
- {
-   int a[3] = {1, 2, 3};
-   auto& [s, t, u] = a;	// { dg-warning "structured bindings only available with" "" { target c++14_down } }
--  return s;		// { dg-warning "reference to local variable 'a' returned" "" { target *-*-* } .-1 }
-+  return s;		// { dg-warning "reference to local variable 'a' returned" }
- }
- 
- int &
-@@ -78,7 +78,7 @@ f10 ()
- {
-   S v {1, 2};
-   auto& [s, t] = v;	// { dg-warning "structured bindings only available with" "" { target c++14_down } }
--  return &s;		// { dg-warning "address of local variable 'v' returned" "" { target *-*-* } .-1 }
-+  return &s;		// { dg-warning "address of local variable 'v' returned" }
- }
- 
- int *
-@@ -93,7 +93,7 @@ f12 ()
- {
-   int a[3] = {1, 2, 3};
-   auto& [s, t, u] = a;	// { dg-warning "structured bindings only available with" "" { target c++14_down } }
--  return &s;		// { dg-warning "address of local variable 'a' returned" "" { target *-*-* } .-1 }
-+  return &s;		// { dg-warning "address of local variable 'a' returned" }
- }
- 
- int *
 diff --git a/gcc/testsuite/g++.dg/cpp1z/decomp50.C b/gcc/testsuite/g++.dg/cpp1z/decomp50.C
 new file mode 100644
 index 00000000000..5400a826948
@@ -46181,11 +46367,26 @@ index 73af92af1e8..6a673a7c995 100644
      unsigned short __pad2;
  #if defined(__x86_64__) && !defined(_LP64)
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
-index 8ac50251005..9f563dde665 100644
+index 8ac50251005..a0dc8ee05f9 100644
 --- a/libstdc++-v3/ChangeLog
 +++ b/libstdc++-v3/ChangeLog
-@@ -1,3 +1,488 @@
+@@ -1,3 +1,503 @@
 +2020-02-26  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backport from mainline
++	2020-01-09  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/93205
++	* include/bits/random.h (operator>>): Check stream operation succeeds.
++	* include/bits/random.tcc (operator>>): Likewise.
++	(__extract_params): New function to fill a vector from a stream.
++	* testsuite/26_numerics/random/pr60037-neg.cc: Adjust dg-error line.
++
++	Backport from mainline
++	2019-12-10  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/92886
++	* include/bits/ios_base.h (std::ios_base::trunc): Fix comment.
 +
 +	Backport from mainline
 +	2020-01-28  Jonathan Wakely  <jwakely@redhat.com>
@@ -50892,6 +51093,19 @@ index e56a0a7f138..5dc624dbb1e 100644
    struct path::_Cmpt : path
    {
      _Cmpt(basic_string_view<value_type> __s, _Type __t, size_t __pos)
+diff --git a/libstdc++-v3/include/bits/ios_base.h b/libstdc++-v3/include/bits/ios_base.h
+index 06a3e0870f3..be908b3ffd2 100644
+--- a/libstdc++-v3/include/bits/ios_base.h
++++ b/libstdc++-v3/include/bits/ios_base.h
+@@ -445,7 +445,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+     /// Open for output.  Default for @c ofstream and fstream.
+     static const openmode out =		_S_out;
+ 
+-    /// Open for input.  Default for @c ofstream.
++    /// Truncate an existing stream when opening.  Default for @c ofstream.
+     static const openmode trunc =	_S_trunc;
+ 
+     // 27.4.2.1.5  Type ios_base::seekdir
 diff --git a/libstdc++-v3/include/bits/memoryfwd.h b/libstdc++-v3/include/bits/memoryfwd.h
 index 8b1664a398d..732ac805322 100644
 --- a/libstdc++-v3/include/bits/memoryfwd.h
@@ -50908,6 +51122,371 @@ index 8b1664a398d..732ac805322 100644
  
    /// @} group memory
  
+diff --git a/libstdc++-v3/include/bits/random.h b/libstdc++-v3/include/bits/random.h
+index 2b1df4cb59e..14f680f50c4 100644
+--- a/libstdc++-v3/include/bits/random.h
++++ b/libstdc++-v3/include/bits/random.h
+@@ -3715,8 +3715,8 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+ 	       std::bernoulli_distribution& __x)
+     {
+       double __p;
+-      __is >> __p;
+-      __x.param(bernoulli_distribution::param_type(__p));
++      if (__is >> __p)
++	__x.param(bernoulli_distribution::param_type(__p));
+       return __is;
+     }
+ 
+diff --git a/libstdc++-v3/include/bits/random.tcc b/libstdc++-v3/include/bits/random.tcc
+index b80ab82ba15..9e0f1322f33 100644
+--- a/libstdc++-v3/include/bits/random.tcc
++++ b/libstdc++-v3/include/bits/random.tcc
+@@ -905,9 +905,9 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       __is.flags(__ios_base::dec | __ios_base::skipws);
+ 
+       _IntType __a, __b;
+-      __is >> __a >> __b;
+-      __x.param(typename uniform_int_distribution<_IntType>::
+-		param_type(__a, __b));
++      if (__is >> __a >> __b)
++	__x.param(typename uniform_int_distribution<_IntType>::
++		  param_type(__a, __b));
+ 
+       __is.flags(__flags);
+       return __is;
+@@ -967,9 +967,9 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       __is.flags(__ios_base::skipws);
+ 
+       _RealType __a, __b;
+-      __is >> __a >> __b;
+-      __x.param(typename uniform_real_distribution<_RealType>::
+-		param_type(__a, __b));
++      if (__is >> __a >> __b)
++	__x.param(typename uniform_real_distribution<_RealType>::
++		  param_type(__a, __b));
+ 
+       __is.flags(__flags);
+       return __is;
+@@ -1111,8 +1111,8 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       __is.flags(__ios_base::skipws);
+ 
+       double __p;
+-      __is >> __p;
+-      __x.param(typename geometric_distribution<_IntType>::param_type(__p));
++      if (__is >> __p)
++	__x.param(typename geometric_distribution<_IntType>::param_type(__p));
+ 
+       __is.flags(__flags);
+       return __is;
+@@ -1228,9 +1228,9 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+ 
+       _IntType __k;
+       double __p;
+-      __is >> __k >> __p >> __x._M_gd;
+-      __x.param(typename negative_binomial_distribution<_IntType>::
+-		param_type(__k, __p));
++      if (__is >> __k >> __p >> __x._M_gd)
++	__x.param(typename negative_binomial_distribution<_IntType>::
++		  param_type(__k, __p));
+ 
+       __is.flags(__flags);
+       return __is;
+@@ -1438,8 +1438,8 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       __is.flags(__ios_base::skipws);
+ 
+       double __mean;
+-      __is >> __mean >> __x._M_nd;
+-      __x.param(typename poisson_distribution<_IntType>::param_type(__mean));
++      if (__is >> __mean >> __x._M_nd)
++	__x.param(typename poisson_distribution<_IntType>::param_type(__mean));
+ 
+       __is.flags(__flags);
+       return __is;
+@@ -1707,9 +1707,9 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+ 
+       _IntType __t;
+       double __p;
+-      __is >> __t >> __p >> __x._M_nd;
+-      __x.param(typename binomial_distribution<_IntType>::
+-		param_type(__t, __p));
++      if (__is >> __t >> __p >> __x._M_nd)
++	__x.param(typename binomial_distribution<_IntType>::
++		  param_type(__t, __p));
+ 
+       __is.flags(__flags);
+       return __is;
+@@ -1767,9 +1767,9 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       __is.flags(__ios_base::dec | __ios_base::skipws);
+ 
+       _RealType __lambda;
+-      __is >> __lambda;
+-      __x.param(typename exponential_distribution<_RealType>::
+-		param_type(__lambda));
++      if (__is >> __lambda)
++	__x.param(typename exponential_distribution<_RealType>::
++		  param_type(__lambda));
+ 
+       __is.flags(__flags);
+       return __is;
+@@ -1938,12 +1938,16 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       __is.flags(__ios_base::dec | __ios_base::skipws);
+ 
+       double __mean, __stddev;
+-      __is >> __mean >> __stddev
+-	   >> __x._M_saved_available;
+-      if (__x._M_saved_available)
+-	__is >> __x._M_saved;
+-      __x.param(typename normal_distribution<_RealType>::
+-		param_type(__mean, __stddev));
++      bool __saved_avail;
++      if (__is >> __mean >> __stddev >> __saved_avail)
++	{
++	  if (__saved_avail && (__is >> __x._M_saved))
++	    {
++	      __x._M_saved_available = __saved_avail;
++	      __x.param(typename normal_distribution<_RealType>::
++			param_type(__mean, __stddev));
++	    }
++	}
+ 
+       __is.flags(__flags);
+       return __is;
+@@ -2001,9 +2005,9 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       __is.flags(__ios_base::dec | __ios_base::skipws);
+ 
+       _RealType __m, __s;
+-      __is >> __m >> __s >> __x._M_nd;
+-      __x.param(typename lognormal_distribution<_RealType>::
+-		param_type(__m, __s));
++      if (__is >> __m >> __s >> __x._M_nd)
++	__x.param(typename lognormal_distribution<_RealType>::
++		  param_type(__m, __s));
+ 
+       __is.flags(__flags);
+       return __is;
+@@ -2073,9 +2077,9 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       __is.flags(__ios_base::dec | __ios_base::skipws);
+ 
+       _RealType __n;
+-      __is >> __n >> __x._M_gd;
+-      __x.param(typename chi_squared_distribution<_RealType>::
+-		param_type(__n));
++      if (__is >> __n >> __x._M_gd)
++	__x.param(typename chi_squared_distribution<_RealType>::
++		  param_type(__n));
+ 
+       __is.flags(__flags);
+       return __is;
+@@ -2160,9 +2164,9 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       __is.flags(__ios_base::dec | __ios_base::skipws);
+ 
+       _RealType __a, __b;
+-      __is >> __a >> __b;
+-      __x.param(typename cauchy_distribution<_RealType>::
+-		param_type(__a, __b));
++      if (__is >> __a >> __b)
++	__x.param(typename cauchy_distribution<_RealType>::
++		  param_type(__a, __b));
+ 
+       __is.flags(__flags);
+       return __is;
+@@ -2238,9 +2242,9 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       __is.flags(__ios_base::dec | __ios_base::skipws);
+ 
+       _RealType __m, __n;
+-      __is >> __m >> __n >> __x._M_gd_x >> __x._M_gd_y;
+-      __x.param(typename fisher_f_distribution<_RealType>::
+-		param_type(__m, __n));
++      if (__is >> __m >> __n >> __x._M_gd_x >> __x._M_gd_y)
++	__x.param(typename fisher_f_distribution<_RealType>::
++		  param_type(__m, __n));
+ 
+       __is.flags(__flags);
+       return __is;
+@@ -2312,8 +2316,8 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       __is.flags(__ios_base::dec | __ios_base::skipws);
+ 
+       _RealType __n;
+-      __is >> __n >> __x._M_nd >> __x._M_gd;
+-      __x.param(typename student_t_distribution<_RealType>::param_type(__n));
++      if (__is >> __n >> __x._M_nd >> __x._M_gd)
++	__x.param(typename student_t_distribution<_RealType>::param_type(__n));
+ 
+       __is.flags(__flags);
+       return __is;
+@@ -2482,9 +2486,9 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       __is.flags(__ios_base::dec | __ios_base::skipws);
+ 
+       _RealType __alpha_val, __beta_val;
+-      __is >> __alpha_val >> __beta_val >> __x._M_nd;
+-      __x.param(typename gamma_distribution<_RealType>::
+-		param_type(__alpha_val, __beta_val));
++      if (__is >> __alpha_val >> __beta_val >> __x._M_nd)
++	__x.param(typename gamma_distribution<_RealType>::
++		  param_type(__alpha_val, __beta_val));
+ 
+       __is.flags(__flags);
+       return __is;
+@@ -2559,9 +2563,9 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       __is.flags(__ios_base::dec | __ios_base::skipws);
+ 
+       _RealType __a, __b;
+-      __is >> __a >> __b;
+-      __x.param(typename weibull_distribution<_RealType>::
+-		param_type(__a, __b));
++      if (__is >> __a >> __b)
++	__x.param(typename weibull_distribution<_RealType>::
++		  param_type(__a, __b));
+ 
+       __is.flags(__flags);
+       return __is;
+@@ -2635,9 +2639,9 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       __is.flags(__ios_base::dec | __ios_base::skipws);
+ 
+       _RealType __a, __b;
+-      __is >> __a >> __b;
+-      __x.param(typename extreme_value_distribution<_RealType>::
+-		param_type(__a, __b));
++      if (__is >> __a >> __b)
++	__x.param(typename extreme_value_distribution<_RealType>::
++		  param_type(__a, __b));
+ 
+       __is.flags(__flags);
+       return __is;
+@@ -2762,6 +2766,26 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       return __os;
+     }
+ 
++namespace __detail
++{
++  template<typename _ValT, typename _CharT, typename _Traits>
++    basic_istream<_CharT, _Traits>&
++    __extract_params(basic_istream<_CharT, _Traits>& __is,
++		     vector<_ValT>& __vals, size_t __n)
++    {
++      __vals.reserve(__n);
++      while (__n--)
++	{
++	  _ValT __val;
++	  if (__is >> __val)
++	    __vals.push_back(__val);
++	  else
++	    break;
++	}
++      return __is;
++    }
++} // namespace __detail
++
+   template<typename _IntType, typename _CharT, typename _Traits>
+     std::basic_istream<_CharT, _Traits>&
+     operator>>(std::basic_istream<_CharT, _Traits>& __is,
+@@ -2774,20 +2798,13 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       __is.flags(__ios_base::dec | __ios_base::skipws);
+ 
+       size_t __n;
+-      __is >> __n;
+-
+-      std::vector<double> __prob_vec;
+-      __prob_vec.reserve(__n);
+-      for (; __n != 0; --__n)
++      if (__is >> __n)
+ 	{
+-	  double __prob;
+-	  __is >> __prob;
+-	  __prob_vec.push_back(__prob);
++	  std::vector<double> __prob_vec;
++	  if (__detail::__extract_params(__is, __prob_vec, __n))
++	    __x.param({__prob_vec.begin(), __prob_vec.end()});
+ 	}
+ 
+-      __x.param(typename discrete_distribution<_IntType>::
+-		param_type(__prob_vec.begin(), __prob_vec.end()));
+-
+       __is.flags(__flags);
+       return __is;
+     }
+@@ -2989,29 +3006,20 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       __is.flags(__ios_base::dec | __ios_base::skipws);
+ 
+       size_t __n;
+-      __is >> __n;
+-
+-      std::vector<_RealType> __int_vec;
+-      __int_vec.reserve(__n + 1);
+-      for (size_t __i = 0; __i <= __n; ++__i)
+-	{
+-	  _RealType __int;
+-	  __is >> __int;
+-	  __int_vec.push_back(__int);
+-	}
+-
+-      std::vector<double> __den_vec;
+-      __den_vec.reserve(__n);
+-      for (size_t __i = 0; __i < __n; ++__i)
++      if (__is >> __n)
+ 	{
+-	  double __den;
+-	  __is >> __den;
+-	  __den_vec.push_back(__den);
++	  std::vector<_RealType> __int_vec;
++	  if (__detail::__extract_params(__is, __int_vec, __n + 1))
++	    {
++	      std::vector<double> __den_vec;
++	      if (__detail::__extract_params(__is, __den_vec, __n))
++		{
++		  __x.param({ __int_vec.begin(), __int_vec.end(),
++			      __den_vec.begin() });
++		}
++	    }
+ 	}
+ 
+-      __x.param(typename piecewise_constant_distribution<_RealType>::
+-	  param_type(__int_vec.begin(), __int_vec.end(), __den_vec.begin()));
+-
+       __is.flags(__flags);
+       return __is;
+     }
+@@ -3205,29 +3213,19 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       __is.flags(__ios_base::dec | __ios_base::skipws);
+ 
+       size_t __n;
+-      __is >> __n;
+-
+-      std::vector<_RealType> __int_vec;
+-      __int_vec.reserve(__n + 1);
+-      for (size_t __i = 0; __i <= __n; ++__i)
++      if (__is >> __n)
+ 	{
+-	  _RealType __int;
+-	  __is >> __int;
+-	  __int_vec.push_back(__int);
+-	}
+-
+-      std::vector<double> __den_vec;
+-      __den_vec.reserve(__n + 1);
+-      for (size_t __i = 0; __i <= __n; ++__i)
+-	{
+-	  double __den;
+-	  __is >> __den;
+-	  __den_vec.push_back(__den);
++	  vector<_RealType> __int_vec;
++	  if (__detail::__extract_params(__is, __int_vec, __n + 1))
++	    {
++	      vector<double> __den_vec;
++	      if (__detail::__extract_params(__is, __den_vec, __n + 1))
++		{
++		  __x.param({ __int_vec.begin(), __int_vec.end(),
++			      __den_vec.begin() });
++		}
++	    }
+ 	}
+-
+-      __x.param(typename piecewise_linear_distribution<_RealType>::
+-	  param_type(__int_vec.begin(), __int_vec.end(), __den_vec.begin()));
+-
+       __is.flags(__flags);
+       return __is;
+     }
 diff --git a/libstdc++-v3/include/bits/std_function.h b/libstdc++-v3/include/bits/std_function.h
 index b70ed564d11..b59f6978971 100644
 --- a/libstdc++-v3/include/bits/std_function.h
@@ -54831,6 +55410,16 @@ index 00000000000..68f1578928c
 +  test02();
 +  test03();
 +}
+diff --git a/libstdc++-v3/testsuite/26_numerics/random/pr60037-neg.cc b/libstdc++-v3/testsuite/26_numerics/random/pr60037-neg.cc
+index f365337e789..b360203adf4 100644
+--- a/libstdc++-v3/testsuite/26_numerics/random/pr60037-neg.cc
++++ b/libstdc++-v3/testsuite/26_numerics/random/pr60037-neg.cc
+@@ -12,4 +12,4 @@ auto x = std::generate_canonical<std::size_t,
+ 
+ // { dg-error "static assertion failed: template argument must be a floating point type" "" { target *-*-* } 156 }
+ 
+-// { dg-error "static assertion failed: template argument must be a floating point type" "" { target *-*-* } 3320 }
++// { dg-error "static assertion failed: template argument must be a floating point type" "" { target *-*-* } 3318 }
 diff --git a/libstdc++-v3/testsuite/26_numerics/reduce/1.cc b/libstdc++-v3/testsuite/26_numerics/reduce/1.cc
 new file mode 100644
 index 00000000000..0434d2ecf49
