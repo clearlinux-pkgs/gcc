@@ -641,11 +641,12 @@ Paul Thomas (5):
       re PR fortran/91926 (assumed rank optional)
       re PR fortran/92753 (ICE in gfc_trans_call, at fortran/trans-stmt.c:392)
 
-Peter Bergner (4):
+Peter Bergner (5):
       backport: config.gcc: Move -L usage from LINK_OS_EXTRA_SPEC32 and LINK_OS_EXTRA_SPEC64 to...
       [rs6000] PR70010, avoid no-vsx function to be inlined to vsx function
       Backport fix for PR92090.
       rs6000: Fix infinite loop building ghostscript and icu [PR93658]
+      rs6000: Fix more testsuite fallout from rs6000_legitimate_address_p() fix. [PR93913]
 
 Prathamesh Kulkarni (1):
       re PR target/90724 (ICE with __sync_bool_compare_and_swap with -march=armv8.2-a+sve)
@@ -27449,10 +27450,19 @@ index 29f6cdc4667..9a6a1eadd2d 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..934a50cfe4c 100644
+index bc11ae4ae0b..aadce370916 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,1683 @@
+@@ -1,3 +1,1692 @@
++2020-02-26  Peter Bergner  <bergner@linux.ibm.com>
++
++	PR target/93913
++	* gcc.target/powerpc/fold-vec-st-char.c (scan-assembler-times): Allow
++	stxv and stxvx instructions as well.
++	* gcc.target/powerpc/fold-vec-st-float.c: Likewise.
++	* gcc.target/powerpc/fold-vec-st-int.c: Likewise.
++	* gcc.target/powerpc/fold-vec-st-short.c: Likewise.
++
 +2020-02-27  Jakub Jelinek  <jakub@redhat.com>
 +
 +	PR c/93949
@@ -29136,7 +29146,7 @@ index bc11ae4ae0b..934a50cfe4c 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +2107,7 @@
+@@ -427,7 +2116,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -29145,7 +29155,7 @@ index bc11ae4ae0b..934a50cfe4c 100644
  	(check_effective_target_powerpc_p8vector_ok): No support for Darwin.
  	(check_effective_target_powerpc_p9vector_ok): Likewise.
  	(check_effective_target_powerpc_float128_sw_ok): Likewise.
-@@ -720,7 +2400,7 @@
+@@ -720,7 +2409,7 @@
  
  	Backport from mainline
  	PR fortran/91077
@@ -29154,7 +29164,7 @@ index bc11ae4ae0b..934a50cfe4c 100644
  
  2019-07-05  Szabolcs Nagy  <szabolcs.nagy@arm.com>
  
-@@ -803,7 +2483,7 @@
+@@ -803,7 +2492,7 @@
  	Backport fom mainline
  	2019-06-21  Jeff Law  <law@redhat.com>
  
@@ -29163,7 +29173,7 @@ index bc11ae4ae0b..934a50cfe4c 100644
  	* gcc.c-torture/execute/pr90949.c: New test.
  
  2019-06-26  Martin Jambor  <mjambor@suse.cz>
-@@ -969,7 +2649,7 @@
+@@ -969,7 +2658,7 @@
         * gcc.target/i386/pr82699-6.c: Likewise
         * gcc.target/i386/returninst1.c: Likewise
         * gcc.target/i386/returninst2.c: Likewise
@@ -29172,7 +29182,7 @@ index bc11ae4ae0b..934a50cfe4c 100644
  
  2019-05-30  Iain Sandoe  <iain@sandoe.co.uk>
  
-@@ -1131,7 +2811,7 @@
+@@ -1131,7 +2820,7 @@
  
  	Backport from trunk
  	PR fortran/90498
@@ -29181,7 +29191,7 @@ index bc11ae4ae0b..934a50cfe4c 100644
  
  2019-05-17  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -3801,21 +5481,21 @@
+@@ -3801,21 +5490,21 @@
  2019-02-23  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88117
@@ -29210,7 +29220,7 @@ index bc11ae4ae0b..934a50cfe4c 100644
  
  2019-02-22  David Malcolm  <dmalcolm@redhat.com>
  
-@@ -4444,7 +6124,7 @@
+@@ -4444,7 +6133,7 @@
  2019-02-09  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/89200
@@ -29219,7 +29229,7 @@ index bc11ae4ae0b..934a50cfe4c 100644
  
  2019-02-09  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -4704,17 +6384,17 @@
+@@ -4704,17 +6393,17 @@
  2019-02-02  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88393
@@ -37957,6 +37967,47 @@ index 00000000000..477901fde70
 +}
 +
 +/* { dg-final { scan-assembler-times {(?n)\mdarn .*,0\M} 4 } } */
+diff --git a/gcc/testsuite/gcc.target/powerpc/fold-vec-st-char.c b/gcc/testsuite/gcc.target/powerpc/fold-vec-st-char.c
+index 4c4582780c2..d8de63fdeba 100644
+--- a/gcc/testsuite/gcc.target/powerpc/fold-vec-st-char.c
++++ b/gcc/testsuite/gcc.target/powerpc/fold-vec-st-char.c
+@@ -91,4 +91,4 @@ testst_cst7 (vector bool char vbc1, int i1, signed char * vscp)
+ 	return vec_st(vbc1, 36, vscp);
+ }
+ 
+-/* { dg-final { scan-assembler-times {\mstvx\M} 14 } } */
++/* { dg-final { scan-assembler-times {\m(?:stvx|stxv|stxvx)\M} 14 } } */
+diff --git a/gcc/testsuite/gcc.target/powerpc/fold-vec-st-float.c b/gcc/testsuite/gcc.target/powerpc/fold-vec-st-float.c
+index 5a8fc6670a6..61780fb308b 100644
+--- a/gcc/testsuite/gcc.target/powerpc/fold-vec-st-float.c
++++ b/gcc/testsuite/gcc.target/powerpc/fold-vec-st-float.c
+@@ -31,4 +31,4 @@ testst_cst2 (vector float vf1, int i1, float * fp)
+ 	return vec_st(vf1, 24, fp);
+ }
+ 
+-/* { dg-final { scan-assembler-times {\mstvx\M}  4 } } */
++/* { dg-final { scan-assembler-times {\m(?:stvx|stxv|stxvx)\M} 4 } } */
+diff --git a/gcc/testsuite/gcc.target/powerpc/fold-vec-st-int.c b/gcc/testsuite/gcc.target/powerpc/fold-vec-st-int.c
+index 4db35f0dd94..4155a8f130f 100644
+--- a/gcc/testsuite/gcc.target/powerpc/fold-vec-st-int.c
++++ b/gcc/testsuite/gcc.target/powerpc/fold-vec-st-int.c
+@@ -80,5 +80,5 @@ testst_cst7 (vector bool int vbi1, int i1, signed int * vsip)
+ 	return vec_st(vbi1, 36, vsip);
+ }
+ 
+-/* { dg-final { scan-assembler-times {\mstvx\M}  14 } } */
++/* { dg-final { scan-assembler-times {\m(?:stvx|stxv|stxvx)\M} 14 } } */
+ 
+diff --git a/gcc/testsuite/gcc.target/powerpc/fold-vec-st-short.c b/gcc/testsuite/gcc.target/powerpc/fold-vec-st-short.c
+index ba8397eef26..d9b7a0754a6 100644
+--- a/gcc/testsuite/gcc.target/powerpc/fold-vec-st-short.c
++++ b/gcc/testsuite/gcc.target/powerpc/fold-vec-st-short.c
+@@ -80,4 +80,4 @@ testst_cst7 (vector bool short vbs1, int i1, signed short * vssp)
+ 	return vec_st(vbs1, 36, vssp);
+ }
+ 
+-/* { dg-final { scan-assembler-times {\mstvx\M} 14} } */
++/* { dg-final { scan-assembler-times {\m(?:stvx|stxv|stxvx)\M} 14} } */
 diff --git a/gcc/testsuite/gcc.target/powerpc/pr70010-1.c b/gcc/testsuite/gcc.target/powerpc/pr70010-1.c
 new file mode 100644
 index 00000000000..4b3abb7d8fe
