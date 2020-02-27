@@ -320,7 +320,7 @@ Ilya Leoshkevich (3):
       S/390: Fix failing RTL check in s390_canonicalize_comparison
       Free dominance info at the beginning of pass_jump_after_combine
 
-Jakub Jelinek (103):
+Jakub Jelinek (105):
       * BASE-VER: Set to 9.2.1.
       baseline_symbols.txt: Update.
       re PR tree-optimization/91597 (GCC miscompiles a branch depending on a pointer tag)
@@ -424,6 +424,8 @@ Jakub Jelinek (103):
       combine: Fix find_split_point handling of constant store into ZERO_EXTRACT [PR93908]
       c++: Fix rejects-valid bug in cxx_eval_outermost_constant_expr [PR93905]
       store-merging: Fix coalesce_immediate_stores [PR93820]
+      sccvn: Punt on ref->size not multiple of 8 for memset (, 123, ) in 9.x [PR93945]
+      gimplify: Don't optimize register const vars to static [PR93949]
 
 Jan Hubicka (3):
       Backport ggc_trim 	Backport from mainline
@@ -1223,10 +1225,22 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..d09456d27fa 100644
+index 7f6557d8018..9477068b051 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,2229 @@
+@@ -1,3 +1,2241 @@
++2020-02-27  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c/93949
++	* gimplify.c (gimplify_init_constructor): Don't promote readonly
++	DECL_REGISTER variables to TREE_STATIC.
++
++2020-02-27  Jakub Jelinek  <jakub@redhat.com>
++
++	PR tree-optimization/93945
++	* tree-ssa-sccvn.c (vn_reference_lookup_3): For memset with non-zero
++	second operand, require ref->size to be a multiple of BITS_PER_UNIT.
++
 +2020-02-26  Carl Love  <cel@us.ibm.com>
 +
 +	PR target/91276
@@ -3456,7 +3470,7 @@ index 7f6557d8018..d09456d27fa 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +2739,7 @@
+@@ -513,7 +2751,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -21691,10 +21705,18 @@ index 34b8d6fda7d..7185c07f36b 100644
  	  /* Emit the EH region holding STMT.  */
  	  region = lookup_stmt_eh_lp_fn (fn, stmt);
 diff --git a/gcc/gimplify.c b/gcc/gimplify.c
-index 98408b981dc..f91ff3aca29 100644
+index 98408b981dc..bd8bd6d7e06 100644
 --- a/gcc/gimplify.c
 +++ b/gcc/gimplify.c
-@@ -7058,6 +7058,8 @@ omp_default_clause (struct gimplify_omp_ctx *ctx, tree decl,
+@@ -4831,6 +4831,7 @@ gimplify_init_constructor (tree *expr_p, gimple_seq *pre_p, gimple_seq *post_p,
+ 	    && num_nonzero_elements > 1
+ 	    && TREE_READONLY (object)
+ 	    && VAR_P (object)
++	    && !DECL_REGISTER (object)
+ 	    && (flag_merge_constants >= 2 || !TREE_ADDRESSABLE (object))
+ 	    /* For ctors that have many repeated nonzero elements
+ 	       represented through RANGE_EXPRs, prefer initializing
+@@ -7058,6 +7059,8 @@ omp_default_clause (struct gimplify_omp_ctx *ctx, tree decl,
    kind = lang_hooks.decls.omp_predetermined_sharing (decl);
    if (kind != OMP_CLAUSE_DEFAULT_UNSPECIFIED)
      default_kind = kind;
@@ -21703,7 +21725,7 @@ index 98408b981dc..f91ff3aca29 100644
  
    switch (default_kind)
      {
-@@ -8716,8 +8718,8 @@ gimplify_scan_omp_clauses (tree *list_p, gimple_seq *pre_p,
+@@ -8716,8 +8719,8 @@ gimplify_scan_omp_clauses (tree *list_p, gimple_seq *pre_p,
  			      break;
  			    if (scp)
  			      continue;
@@ -21714,7 +21736,7 @@ index 98408b981dc..f91ff3aca29 100644
  			    tree d1 = OMP_CLAUSE_DECL (*sc);
  			    tree d2 = OMP_CLAUSE_DECL (c);
  			    while (TREE_CODE (d1) == ARRAY_REF)
-@@ -9079,9 +9081,13 @@ gimplify_scan_omp_clauses (tree *list_p, gimple_seq *pre_p,
+@@ -9079,9 +9082,13 @@ gimplify_scan_omp_clauses (tree *list_p, gimple_seq *pre_p,
  				  == POINTER_TYPE))))
  		    omp_firstprivatize_variable (outer_ctx, decl);
  		  else
@@ -21731,7 +21753,7 @@ index 98408b981dc..f91ff3aca29 100644
  		}
  	    }
  	  if (outer_ctx)
-@@ -13519,7 +13525,8 @@ gimplify_expr (tree *expr_p, gimple_seq *pre_p, gimple_seq *post_p,
+@@ -13519,7 +13526,8 @@ gimplify_expr (tree *expr_p, gimple_seq *pre_p, gimple_seq *post_p,
  	{
  	  /* Avoid the extra copy if possible.  */
  	  *expr_p = create_tmp_reg (TREE_TYPE (name));
@@ -27427,10 +27449,20 @@ index 29f6cdc4667..9a6a1eadd2d 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..845976a9a3d 100644
+index bc11ae4ae0b..934a50cfe4c 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,1673 @@
+@@ -1,3 +1,1683 @@
++2020-02-27  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c/93949
++	* gcc.c-torture/compile/pr93949.c: New test.
++
++2020-02-27  Jakub Jelinek  <jakub@redhat.com>
++
++	PR tree-optimization/93945
++	* gcc.c-torture/execute/pr93945.c: New test.
++
 +2020-02-26  Marek Polacek  <polacek@redhat.com>
 +	    Jakub Jelinek  <jakub@redhat.com>
 +
@@ -29104,7 +29136,7 @@ index bc11ae4ae0b..845976a9a3d 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +2097,7 @@
+@@ -427,7 +2107,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -29113,7 +29145,7 @@ index bc11ae4ae0b..845976a9a3d 100644
  	(check_effective_target_powerpc_p8vector_ok): No support for Darwin.
  	(check_effective_target_powerpc_p9vector_ok): Likewise.
  	(check_effective_target_powerpc_float128_sw_ok): Likewise.
-@@ -720,7 +2390,7 @@
+@@ -720,7 +2400,7 @@
  
  	Backport from mainline
  	PR fortran/91077
@@ -29122,7 +29154,7 @@ index bc11ae4ae0b..845976a9a3d 100644
  
  2019-07-05  Szabolcs Nagy  <szabolcs.nagy@arm.com>
  
-@@ -803,7 +2473,7 @@
+@@ -803,7 +2483,7 @@
  	Backport fom mainline
  	2019-06-21  Jeff Law  <law@redhat.com>
  
@@ -29131,7 +29163,7 @@ index bc11ae4ae0b..845976a9a3d 100644
  	* gcc.c-torture/execute/pr90949.c: New test.
  
  2019-06-26  Martin Jambor  <mjambor@suse.cz>
-@@ -969,7 +2639,7 @@
+@@ -969,7 +2649,7 @@
         * gcc.target/i386/pr82699-6.c: Likewise
         * gcc.target/i386/returninst1.c: Likewise
         * gcc.target/i386/returninst2.c: Likewise
@@ -29140,7 +29172,7 @@ index bc11ae4ae0b..845976a9a3d 100644
  
  2019-05-30  Iain Sandoe  <iain@sandoe.co.uk>
  
-@@ -1131,7 +2801,7 @@
+@@ -1131,7 +2811,7 @@
  
  	Backport from trunk
  	PR fortran/90498
@@ -29149,7 +29181,7 @@ index bc11ae4ae0b..845976a9a3d 100644
  
  2019-05-17  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -3801,21 +5471,21 @@
+@@ -3801,21 +5481,21 @@
  2019-02-23  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88117
@@ -29178,7 +29210,7 @@ index bc11ae4ae0b..845976a9a3d 100644
  
  2019-02-22  David Malcolm  <dmalcolm@redhat.com>
  
-@@ -4444,7 +6114,7 @@
+@@ -4444,7 +6124,7 @@
  2019-02-09  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/89200
@@ -29187,7 +29219,7 @@ index bc11ae4ae0b..845976a9a3d 100644
  
  2019-02-09  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -4704,17 +6374,17 @@
+@@ -4704,17 +6384,17 @@
  2019-02-02  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88393
@@ -32978,6 +33010,19 @@ index 00000000000..0627962eae5
 +  x >>= 31;
 +  return x;
 +}
+diff --git a/gcc/testsuite/gcc.c-torture/compile/pr93949.c b/gcc/testsuite/gcc.c-torture/compile/pr93949.c
+new file mode 100644
+index 00000000000..bbda0209802
+--- /dev/null
++++ b/gcc/testsuite/gcc.c-torture/compile/pr93949.c
+@@ -0,0 +1,7 @@
++/* PR c/93949 */
++
++void
++foo (void)
++{
++  register const double d[3] = { 0., 1., 2. };
++}
 diff --git a/gcc/testsuite/gcc.c-torture/execute/20190820-1.c b/gcc/testsuite/gcc.c-torture/execute/20190820-1.c
 new file mode 100644
 index 00000000000..6a06eff7571
@@ -34146,6 +34191,57 @@ index 00000000000..cb6e3dda2ea
 +  if (r[0]->e || r[0]->f || r[0]->g || r[0]->h || r[0]->i || r[0]->j || r[0]->k != -1)
 +    __builtin_abort ();
 +  if (r[1]->e || r[1]->f || r[1]->g || r[1]->h || r[1]->i || r[1]->j || r[1]->k != -1)
++    __builtin_abort ();
++  return 0;
++}
+diff --git a/gcc/testsuite/gcc.c-torture/execute/pr93945.c b/gcc/testsuite/gcc.c-torture/execute/pr93945.c
+new file mode 100644
+index 00000000000..99e455cce52
+--- /dev/null
++++ b/gcc/testsuite/gcc.c-torture/execute/pr93945.c
+@@ -0,0 +1,45 @@
++/* PR tree-optimization/93945 */
++
++union U { char a[8]; struct S { unsigned int b : 8, c : 13, d : 11; } e; } u;
++
++__attribute__((noipa)) int
++foo (void)
++{
++  __builtin_memset (&u.a, 0xf4, sizeof (u.a));
++  return u.e.c;
++}
++
++__attribute__((noipa)) int
++bar (void)
++{
++  asm volatile ("" : : "g" (&u) : "memory");
++  return u.e.c;
++}
++
++__attribute__((noipa)) int
++baz (void)
++{
++  __builtin_memset (&u.a, 0xf4, sizeof (u.a));
++  return u.e.d;
++}
++
++__attribute__((noipa)) int
++qux (void)
++{
++  asm volatile ("" : : "g" (&u) : "memory");
++  return u.e.d;
++}
++
++int
++main ()
++{
++  int a = foo ();
++  int b = bar ();
++  if (a != b)
++    __builtin_abort ();
++  a = baz ();
++  b = qux ();
++  if (a != b)
 +    __builtin_abort ();
 +  return 0;
 +}
@@ -42690,7 +42786,7 @@ index 7161c4c36c3..6794fbde29e 100644
                      {
                        /* When there are three operands left, we want
 diff --git a/gcc/tree-ssa-sccvn.c b/gcc/tree-ssa-sccvn.c
-index 9529d1669c9..aea11bdebba 100644
+index 9529d1669c9..32f45c95cdf 100644
 --- a/gcc/tree-ssa-sccvn.c
 +++ b/gcc/tree-ssa-sccvn.c
 @@ -132,8 +132,6 @@ along with GCC; see the file COPYING3.  If not see
@@ -42801,7 +42897,17 @@ index 9529d1669c9..aea11bdebba 100644
      return (void *)-1;
  
    /* If we cannot constrain the size of the reference we cannot
-@@ -2342,7 +2358,7 @@ vn_reference_lookup_3 (ao_ref *ref, tree vuse, void *vr_,
+@@ -2097,7 +2113,8 @@ vn_reference_lookup_3 (ao_ref *ref, tree vuse, void *vr_,
+ 	       || (INTEGRAL_TYPE_P (vr->type) && known_eq (ref->size, 8)))
+ 	      && CHAR_BIT == 8 && BITS_PER_UNIT == 8
+ 	      && offset.is_constant (&offseti)
+-	      && offseti % BITS_PER_UNIT == 0))
++	      && offseti % BITS_PER_UNIT == 0
++	      && multiple_p (ref->size, BITS_PER_UNIT)))
+       && poly_int_tree_p (gimple_call_arg (def_stmt, 2))
+       && (TREE_CODE (gimple_call_arg (def_stmt, 0)) == ADDR_EXPR
+ 	  || TREE_CODE (gimple_call_arg (def_stmt, 0)) == SSA_NAME))
+@@ -2342,7 +2359,7 @@ vn_reference_lookup_3 (ao_ref *ref, tree vuse, void *vr_,
  
    /* 5) For aggregate copies translate the reference through them if
       the copy kills ref.  */
@@ -42810,7 +42916,7 @@ index 9529d1669c9..aea11bdebba 100644
  	   && gimple_assign_single_p (def_stmt)
  	   && (DECL_P (gimple_assign_rhs1 (def_stmt))
  	       || TREE_CODE (gimple_assign_rhs1 (def_stmt)) == MEM_REF
-@@ -2462,7 +2478,7 @@ vn_reference_lookup_3 (ao_ref *ref, tree vuse, void *vr_,
+@@ -2462,7 +2479,7 @@ vn_reference_lookup_3 (ao_ref *ref, tree vuse, void *vr_,
        *ref = r;
  
        /* Do not update last seen VUSE after translating.  */
@@ -42819,7 +42925,7 @@ index 9529d1669c9..aea11bdebba 100644
  
        /* Keep looking for the adjusted *REF / VR pair.  */
        return NULL;
-@@ -2470,7 +2486,7 @@ vn_reference_lookup_3 (ao_ref *ref, tree vuse, void *vr_,
+@@ -2470,7 +2487,7 @@ vn_reference_lookup_3 (ao_ref *ref, tree vuse, void *vr_,
  
    /* 6) For memcpy copies translate the reference through them if
       the copy kills ref.  */
@@ -42828,7 +42934,7 @@ index 9529d1669c9..aea11bdebba 100644
  	   && is_gimple_reg_type (vr->type)
  	   /* ???  Handle BCOPY as well.  */
  	   && (gimple_call_builtin_p (def_stmt, BUILT_IN_MEMCPY)
-@@ -2620,7 +2636,7 @@ vn_reference_lookup_3 (ao_ref *ref, tree vuse, void *vr_,
+@@ -2620,7 +2637,7 @@ vn_reference_lookup_3 (ao_ref *ref, tree vuse, void *vr_,
        *ref = r;
  
        /* Do not update last seen VUSE after translating.  */
@@ -42837,7 +42943,7 @@ index 9529d1669c9..aea11bdebba 100644
  
        /* Keep looking for the adjusted *REF / VR pair.  */
        return NULL;
-@@ -2681,13 +2697,13 @@ vn_reference_lookup_pieces (tree vuse, alias_set_type set, tree type,
+@@ -2681,13 +2698,13 @@ vn_reference_lookup_pieces (tree vuse, alias_set_type set, tree type,
      {
        ao_ref r;
        unsigned limit = PARAM_VALUE (PARAM_SCCVN_MAX_ALIAS_QUERIES_PER_ACCESS);
@@ -42854,7 +42960,7 @@ index 9529d1669c9..aea11bdebba 100644
        gcc_checking_assert (vr1.operands == shared_lookup_references);
      }
  
-@@ -2702,11 +2718,12 @@ vn_reference_lookup_pieces (tree vuse, alias_set_type set, tree type,
+@@ -2702,11 +2719,12 @@ vn_reference_lookup_pieces (tree vuse, alias_set_type set, tree type,
     not exist in the hash table or if the result field of the structure
     was NULL..  VNRESULT will be filled in with the vn_reference_t
     stored in the hashtable if one exists.  When TBAA_P is false assume
@@ -42869,7 +42975,7 @@ index 9529d1669c9..aea11bdebba 100644
  {
    vec<vn_reference_op_s> operands;
    struct vn_reference_s vr1;
-@@ -2720,7 +2737,7 @@ vn_reference_lookup (tree op, tree vuse, vn_lookup_kind kind,
+@@ -2720,7 +2738,7 @@ vn_reference_lookup (tree op, tree vuse, vn_lookup_kind kind,
    vr1.operands = operands
      = valueize_shared_reference_ops_from_ref (op, &valuezied_anything);
    vr1.type = TREE_TYPE (op);
@@ -42878,7 +42984,7 @@ index 9529d1669c9..aea11bdebba 100644
    vr1.hashcode = vn_reference_compute_hash (&vr1);
    if ((cst = fully_constant_vn_reference_p (&vr1)))
      return cst;
-@@ -2737,14 +2754,12 @@ vn_reference_lookup (tree op, tree vuse, vn_lookup_kind kind,
+@@ -2737,14 +2755,12 @@ vn_reference_lookup (tree op, tree vuse, vn_lookup_kind kind,
  	  || !ao_ref_init_from_vn_reference (&r, vr1.set, vr1.type,
  					     vr1.operands))
  	ao_ref_init (&r, op);
@@ -42896,7 +43002,7 @@ index 9529d1669c9..aea11bdebba 100644
        gcc_checking_assert (vr1.operands == shared_lookup_references);
        if (wvnresult)
  	{
-@@ -4099,10 +4114,8 @@ visit_reference_op_load (tree lhs, tree op, gimple *stmt)
+@@ -4099,10 +4115,8 @@ visit_reference_op_load (tree lhs, tree op, gimple *stmt)
    tree result;
  
    last_vuse = gimple_vuse (stmt);
