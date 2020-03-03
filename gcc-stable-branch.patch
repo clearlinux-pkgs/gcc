@@ -66,7 +66,12 @@ Eric Botcazou (18):
 Eric S. Raymond (1):
       Clean up references to Subversion in documentation sources.
 
-GCC Administrator (198):
+GCC Administrator (203):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -272,18 +277,20 @@ Georg-Johann Lay (4):
       backport: re PR target/92545 (avr: support ATmega devices from the 0-series)
       backport: Add -nodevicespecs option for avr.
 
-H.J. Lu (4):
+H.J. Lu (6):
       [PR87833] x86: Put -fPIC and -shared the last to create offload image
       x86-64: Pass aggregates with only float/double in GPRs for MS_ABI
       i386: Properly pop restore token in signal frame
       i386: Skip ENDBR32 at the target function entry
+      x32: Update baseline_symbols.txt
+      lto: Also copy .note.gnu.property section
 
 Harald Anlauf (3):
       backport: re PR fortran/91496 (!GCC$ directives error if mistyped or unknown)
       backport: re PR fortran/92629 (internal compiler error: in convert_mpz_to_unsigned, at fortran/simplify.c:173)
       backport: re PR fortran/92898 (ICE in gfc_check_is_contiguous, at fortran/check.c:7157)
 
-Iain Sandoe (24):
+Iain Sandoe (25):
       Darwin, libsanitizer - remove reference to __cxa_rethrow_primary_exception.
       [Darwin, PPC] Fix fail of cpp/assert4.c
       [Darwin, fixincludes] Backport fix for PR83531
@@ -308,6 +315,7 @@ Iain Sandoe (24):
       [objective-c/c++, testsuite] Fix stubify tests for -fnext-runtime.
       [Darwin, PPC] Use Darwin9 bundle header for Rosetta builds.
       [testsuite, Darwin] Fix failing darwin-version-1.c.
+      Darwin, libsanitizer: Update minimum supported system version.
 
 Ian Lance Taylor (4):
       go/internal/gccgoimporter: support embedded field in pointer loop
@@ -320,7 +328,7 @@ Ilya Leoshkevich (3):
       S/390: Fix failing RTL check in s390_canonicalize_comparison
       Free dominance info at the beginning of pass_jump_after_combine
 
-Jakub Jelinek (105):
+Jakub Jelinek (106):
       * BASE-VER: Set to 9.2.1.
       baseline_symbols.txt: Update.
       re PR tree-optimization/91597 (GCC miscompiles a branch depending on a pointer tag)
@@ -426,6 +434,7 @@ Jakub Jelinek (105):
       store-merging: Fix coalesce_immediate_stores [PR93820]
       sccvn: Punt on ref->size not multiple of 8 for memset (, 123, ) in 9.x [PR93945]
       gimplify: Don't optimize register const vars to static [PR93949]
+      explow: Fix ICE caused by plus_constant [PR94002]
 
 Jan Hubicka (3):
       Backport ggc_trim 	Backport from mainline
@@ -436,7 +445,7 @@ Janne Blomqvist (2):
       PR fortran/91414 Improve initialization of PRNG
       PR fortran/91414 Correctly fill master_state from os_seed.
 
-Jason Merrill (20):
+Jason Merrill (27):
       PR c++/90538 - multiple expansions of capture packs
       PR c++/91378 - ICE with noexcept and auto return type.
       PR c++/90393 - ICE with throw in ?:
@@ -457,6 +466,13 @@ Jason Merrill (20):
       c++: Fix decltype of empty pack expansion of parm.
       c++: Fix constexpr vs. omitted aggregate init.
       cgraph: A COMDAT decl always has non-zero address.
+      c++: Fix attributes with lambda and trailing return type.
+      PR c++/90732 - ICE with VLA capture and generic lambda.
+      c++: Fix return deduction of lambda in discarded stmt.
+      checking: avoid verify_type_variant crash on incomplete type.
+      c++: Fix cast to pointer to VLA.
+      c++: Allow parm of empty class type in constexpr.
+      c++: Fix ({ ... }) array mem-initializer.
 
 Jerry DeLisle (2):
       backport: re PR libfortran/92100 (Formatted stream IO irreproducible read with binary data in file)
@@ -466,7 +482,7 @@ Jiufu Guo (2):
       backport: re PR target/70010 (powerpc: -flto forgets 'no-vsx' function attributes)
       rs6000: mark clobber for registers changed by untpyed_call
 
-John David Anglin (16):
+John David Anglin (20):
       pa.c (pa_trampoline_init): Remove spurious extended character.
       lib2funcs.S (__gcc_plt_call): Load branch target to %r21.
       pa.c (pa_output_call): Load descriptor address to register %r22.
@@ -483,6 +499,10 @@ John David Anglin (16):
       pa.md: Revert change to use ordered_comparison_operator instead of...
       Fix ICE in pa_elf_select_rtx_section.
       Fix handling of floating-point homogeneous aggregates.
+      Disable gnat.dg/socket1.adb on hppa*-*-hpux*.
+      Skip charset.cc tests on *-*-hpux*.
+      Fix libbacktrace build on hppa-hpux.
+      Fix/skip various tests for hppa*-*-hpux*.
 
 Jonathan Wakely (43):
       PR libstdc++/90361 add missing macro definition
@@ -590,7 +610,7 @@ Martin Jambor (2):
       IPA-CP: Remove bogus static keyword (PR 92971)
       IPA: Avoid segfault in devirtualization_time_bonus (PR 93223)
 
-Martin Liska (10):
+Martin Liska (11):
       Backport r274502
       Backport r274503
       Backport r274504
@@ -601,6 +621,7 @@ Martin Liska (10):
       Backport r278210
       Backport r279306
       Backport f48c6014133c8989702458f9082e34ba6dd326d4
+      Backport 08bf7bde9f2987b1c623d272cc71fc14a1622442
 
 Martin Sebor (1):
       backport: re PR c++/90947 (Simple lookup table of array of strings is miscompiled)
@@ -641,12 +662,17 @@ Paul Thomas (5):
       re PR fortran/91926 (assumed rank optional)
       re PR fortran/92753 (ICE in gfc_trans_call, at fortran/trans-stmt.c:392)
 
-Peter Bergner (5):
+Peter Bergner (10):
       backport: config.gcc: Move -L usage from LINK_OS_EXTRA_SPEC32 and LINK_OS_EXTRA_SPEC64 to...
       [rs6000] PR70010, avoid no-vsx function to be inlined to vsx function
       Backport fix for PR92090.
       rs6000: Fix infinite loop building ghostscript and icu [PR93658]
       rs6000: Fix more testsuite fallout from rs6000_legitimate_address_p() fix. [PR93913]
+      Revert "rs6000: Fix more testsuite fallout from rs6000_legitimate_address_p() fix. [PR93913]"
+      Revert "rs6000: Fix infinite loop building ghostscript and icu [PR93658]"
+      Revert "Adjust how variable vector extraction is done."
+      Revert "Fix bad code of vector extract of PC-relative address with variable element #."
+      Readd ChangeLog entries for
 
 Prathamesh Kulkarni (1):
       re PR target/90724 (ICE with __sync_bool_compare_and_swap with -march=armv8.2-a+sve)
@@ -1226,10 +1252,70 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..9477068b051 100644
+index 7f6557d8018..640d64180f8 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,2241 @@
+@@ -1,3 +1,2301 @@
++2020-03-03  Jakub Jelinek  <jakub@redhat.com>
++
++	PR rtl-optimization/94002
++	* explow.c (plus_constant): Punt if cst has VOIDmode and
++	get_pool_mode is different from mode.
++
++2020-03-02  Jason Merrill  <jason@redhat.com>
++
++	PR c++/92601
++	* tree.c (verify_type_variant): Only verify TYPE_NEEDS_CONSTRUCTING
++	of complete types.
++
++2020-02-29  Peter Bergner <bergner@linux.ibm.com>
++
++	Revert
++	2020-02-20  Peter Bergner  <bergner@linux.ibm.com>
++
++	PR target/93658
++	* config/rs6000/rs6000.c (rs6000_legitimate_address_p): Handle VSX
++	vector modes.
++
++	2020-02-05  Michael Meissner  <meissner@linux.ibm.com>
++
++	PR target/93568
++	* config/rs6000/rs6000.c (get_vector_offset): Fix Q constraint assert
++	to use "mem".
++
++	Backport from master
++	2020-02-03  Michael Meissner  <meissner@linux.ibm.com>
++
++	* config/rs6000/rs6000.c (get_vector_offset): New helper function
++	to calculate the offset in memory from the start of a vector of a
++	particular element.  Add code to keep the element number in
++	bounds if the element number is variable.
++	(rs6000_adjust_vec_address): Move calculation of offset of the
++	vector element to get_vector_offset.
++	(rs6000_split_vec_extract_var): Do not do the initial AND of
++	element here, move the code to get_vector_offset.
++
++	2020-01-06  Michael Meissner  <meissner@linux.ibm.com>
++
++	* config/rs6000/vsx.md (vsx_extract_<mode>_var, VSX_D iterator):
++	Use 'Q' for doing vector extract from memory.
++	(vsx_extract_v4sf_var): Use 'Q' for doing vector extract from
++	memory.
++	(vsx_extract_<mode>_var, VSX_EXTRACT_I iterator): Use 'Q' for
++	doing vector extract from memory.
++	(vsx_extract_<mode>_<VS_scalar>mode_var): Use 'Q' for doing vector
++	extract from memory.
++
++2020-02-28  Martin Liska  <mliska@suse.cz>
++
++	Backport from mainline
++	2020-02-28  Martin Liska  <mliska@suse.cz>
++
++	PR other/93965
++	* configure.ac: Improve detection of ld_date by requiring
++	either two dashes or none.
++	* configure: Regenerate.
++
 +2020-02-27  Jakub Jelinek  <jakub@redhat.com>
 +
 +	PR c/93949
@@ -3471,7 +3557,7 @@ index 7f6557d8018..9477068b051 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +2751,7 @@
+@@ -513,7 +2811,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -12304,118 +12390,10 @@ index c3b98315503..d30e5dec980 100644
        }
  
 diff --git a/gcc/config/rs6000/rs6000.c b/gcc/config/rs6000/rs6000.c
-index cb8d737976b..1d93570e7a5 100644
+index cb8d737976b..87d60078bb0 100644
 --- a/gcc/config/rs6000/rs6000.c
 +++ b/gcc/config/rs6000/rs6000.c
-@@ -7017,10 +7017,53 @@ rs6000_expand_vector_extract (rtx target, rtx vec, rtx elt)
-     }
- }
- 
-+/* Return the offset within a memory object (MEM) of a vector type to a given
-+   element within the vector (ELEMENT) with an element size (SCALAR_SIZE).  If
-+   the element is constant, we return a constant integer.
-+
-+   Otherwise, we use a base register temporary to calculate the offset after
-+   masking it to fit within the bounds of the vector and scaling it.  The
-+   masking is required by the 64-bit ELF version 2 ABI for the vec_extract
-+   built-in function.  */
-+
-+static rtx
-+get_vector_offset (rtx mem, rtx element, rtx base_tmp, unsigned scalar_size)
-+{
-+  if (CONST_INT_P (element))
-+    return GEN_INT (INTVAL (element) * scalar_size);
-+
-+  /* All insns should use the 'Q' constraint (address is a single register) if
-+     the element number is not a constant.  */
-+  gcc_assert (satisfies_constraint_Q (mem));
-+
-+  /* Mask the element to make sure the element number is between 0 and the
-+     maximum number of elements - 1 so that we don't generate an address
-+     outside the vector.  */
-+  rtx num_ele_m1 = GEN_INT (GET_MODE_NUNITS (GET_MODE (mem)) - 1);
-+  rtx and_op = gen_rtx_AND (Pmode, element, num_ele_m1);
-+  emit_insn (gen_rtx_SET (base_tmp, and_op));
-+
-+  /* Shift the element to get the byte offset from the element number.  */
-+  int shift = exact_log2 (scalar_size);
-+  gcc_assert (shift >= 0);
-+
-+  if (shift > 0)
-+    {
-+      rtx shift_op = gen_rtx_ASHIFT (Pmode, base_tmp, GEN_INT (shift));
-+      emit_insn (gen_rtx_SET (base_tmp, shift_op));
-+    }
-+
-+  return base_tmp;
-+}
-+
- /* Adjust a memory address (MEM) of a vector type to point to a scalar field
-    within the vector (ELEMENT) with a mode (SCALAR_MODE).  Use a base register
-    temporary (BASE_TMP) to fixup the address.  Return the new memory address
--   that is valid for reads or writes to a given register (SCALAR_REG).  */
-+   that is valid for reads or writes to a given register (SCALAR_REG).
-+
-+   This function is expected to be called after reload is completed when we are
-+   splitting insns.  The temporary BASE_TMP might be set multiple times with
-+   this code.  */
- 
- rtx
- rs6000_adjust_vec_address (rtx scalar_reg,
-@@ -7031,7 +7074,6 @@ rs6000_adjust_vec_address (rtx scalar_reg,
- {
-   unsigned scalar_size = GET_MODE_SIZE (scalar_mode);
-   rtx addr = XEXP (mem, 0);
--  rtx element_offset;
-   rtx new_addr;
-   bool valid_addr_p;
- 
-@@ -7040,26 +7082,7 @@ rs6000_adjust_vec_address (rtx scalar_reg,
- 
-   /* Calculate what we need to add to the address to get the element
-      address.  */
--  if (CONST_INT_P (element))
--    element_offset = GEN_INT (INTVAL (element) * scalar_size);
--  else
--    {
--      int byte_shift = exact_log2 (scalar_size);
--      gcc_assert (byte_shift >= 0);
--
--      if (byte_shift == 0)
--	element_offset = element;
--
--      else
--	{
--	  if (TARGET_POWERPC64)
--	    emit_insn (gen_ashldi3 (base_tmp, element, GEN_INT (byte_shift)));
--	  else
--	    emit_insn (gen_ashlsi3 (base_tmp, element, GEN_INT (byte_shift)));
--
--	  element_offset = base_tmp;
--	}
--    }
-+  rtx element_offset = get_vector_offset (mem, element, base_tmp, scalar_size);
- 
-   /* Create the new address pointing to the element within the vector.  If we
-      are adding 0, we don't have to change the address.  */
-@@ -7194,13 +7217,9 @@ rs6000_split_vec_extract_var (rtx dest, rtx src, rtx element, rtx tmp_gpr,
-      systems.  */
-   if (MEM_P (src))
-     {
--      int num_elements = GET_MODE_NUNITS (mode);
--      rtx num_ele_m1 = GEN_INT (num_elements - 1);
--
--      emit_insn (gen_anddi3 (element, element, num_ele_m1));
--      gcc_assert (REG_P (tmp_gpr));
--      emit_move_insn (dest, rs6000_adjust_vec_address (dest, src, element,
--						       tmp_gpr, scalar_mode));
-+      emit_move_insn (dest,
-+		      rs6000_adjust_vec_address (dest, src, element, tmp_gpr,
-+						 scalar_mode));
-       return;
-     }
- 
-@@ -7671,6 +7690,104 @@ address_offset (rtx op)
+@@ -7671,6 +7671,104 @@ address_offset (rtx op)
    return NULL_RTX;
  }
  
@@ -12520,7 +12498,7 @@ index cb8d737976b..1d93570e7a5 100644
  /* Return true if the MEM operand is a memory operand suitable for use
     with a (full width, possibly multiple) gpr load/store.  On
     powerpc64 this means the offset must be divisible by 4.
-@@ -7705,7 +7822,13 @@ mem_operand_gpr (rtx op, machine_mode mode)
+@@ -7705,7 +7803,13 @@ mem_operand_gpr (rtx op, machine_mode mode)
        && legitimate_indirect_address_p (XEXP (addr, 0), false))
      return true;
  
@@ -12535,16 +12513,7 @@ index cb8d737976b..1d93570e7a5 100644
    if (!rs6000_offsettable_memref_p (op, mode, false))
      return false;
  
-@@ -9235,7 +9358,7 @@ rs6000_legitimate_address_p (machine_mode mode, rtx x, bool reg_ok_strict)
-   bool quad_offset_p = mode_supports_dq_form (mode);
- 
-   /* If this is an unaligned stvx/ldvx type address, discard the outer AND.  */
--  if (VECTOR_MEM_ALTIVEC_P (mode)
-+  if (VECTOR_MEM_ALTIVEC_OR_VSX_P (mode)
-       && GET_CODE (x) == AND
-       && CONST_INT_P (XEXP (x, 1))
-       && INTVAL (XEXP (x, 1)) == -16)
-@@ -21330,7 +21453,7 @@ print_operand (FILE *file, rtx x, int code)
+@@ -21330,7 +21434,7 @@ print_operand (FILE *file, rtx x, int code)
  	{
  	  const char *name = XSTR (x, 0);
  #if TARGET_MACHO
@@ -12553,7 +12522,7 @@ index cb8d737976b..1d93570e7a5 100644
  	      && MACHOPIC_INDIRECT
  	      && machopic_classify_symbol (x) == MACHOPIC_UNDEFINED_FUNCTION)
  	    name = machopic_indirection_name (x, /*stub_p=*/true);
-@@ -23151,6 +23274,11 @@ rs6000_emit_cmove (rtx dest, rtx op, rtx true_cond, rtx false_cond)
+@@ -23151,6 +23255,11 @@ rs6000_emit_cmove (rtx dest, rtx op, rtx true_cond, rtx false_cond)
  
    /* At this point we know we can use fsel.  */
  
@@ -12565,7 +12534,7 @@ index cb8d737976b..1d93570e7a5 100644
    /* Reduce the comparison to a comparison against zero.  */
    if (! is_against_zero)
      {
-@@ -25729,10 +25857,14 @@ rs6000_emit_allocate_stack (HOST_WIDE_INT size, rtx copy_reg, int copy_off)
+@@ -25729,10 +25838,14 @@ rs6000_emit_allocate_stack (HOST_WIDE_INT size, rtx copy_reg, int copy_off)
  						    stack_limit_rtx,
  						    GEN_INT (size)));
  
@@ -12584,7 +12553,7 @@ index cb8d737976b..1d93570e7a5 100644
  	}
        else
  	warning (0, "stack limit expression is not supported");
-@@ -37762,25 +37894,31 @@ rs6000_can_inline_p (tree caller, tree callee)
+@@ -37762,25 +37875,31 @@ rs6000_can_inline_p (tree caller, tree callee)
    tree caller_tree = DECL_FUNCTION_SPECIFIC_TARGET (caller);
    tree callee_tree = DECL_FUNCTION_SPECIFIC_TARGET (callee);
  
@@ -12628,7 +12597,7 @@ index cb8d737976b..1d93570e7a5 100644
  	ret = true;
      }
  
-@@ -38273,7 +38411,8 @@ rs6000_call_darwin_1 (rtx value, rtx func_desc, rtx tlsarg,
+@@ -38273,7 +38392,8 @@ rs6000_call_darwin_1 (rtx value, rtx func_desc, rtx tlsarg,
    if ((cookie_val & CALL_LONG) != 0
        && GET_CODE (func_desc) == SYMBOL_REF)
      {
@@ -13050,46 +13019,6 @@ index 70bcfe02e22..0b62dd04bde 100644
  (define_expand "vector_eq<mode>"
    [(set (match_operand:VEC_C 0 "vlogical_operand")
  	(eq:VEC_C (match_operand:VEC_C 1 "vlogical_operand")
-diff --git a/gcc/config/rs6000/vsx.md b/gcc/config/rs6000/vsx.md
-index 607c0cd33f2..5973e0a399d 100644
---- a/gcc/config/rs6000/vsx.md
-+++ b/gcc/config/rs6000/vsx.md
-@@ -3295,7 +3295,7 @@
- ;; Variable V2DI/V2DF extract
- (define_insn_and_split "vsx_extract_<mode>_var"
-   [(set (match_operand:<VS_scalar> 0 "gpc_reg_operand" "=v,<VSa>,r")
--	(unspec:<VS_scalar> [(match_operand:VSX_D 1 "input_operand" "v,m,m")
-+	(unspec:<VS_scalar> [(match_operand:VSX_D 1 "input_operand" "v,Q,Q")
- 			     (match_operand:DI 2 "gpc_reg_operand" "r,r,r")]
- 			    UNSPEC_VSX_EXTRACT))
-    (clobber (match_scratch:DI 3 "=r,&b,&b"))
-@@ -3364,7 +3364,7 @@
- ;; Variable V4SF extract
- (define_insn_and_split "vsx_extract_v4sf_var"
-   [(set (match_operand:SF 0 "gpc_reg_operand" "=ww,ww,?r")
--	(unspec:SF [(match_operand:V4SF 1 "input_operand" "v,m,m")
-+	(unspec:SF [(match_operand:V4SF 1 "input_operand" "v,Q,Q")
- 		    (match_operand:DI 2 "gpc_reg_operand" "r,r,r")]
- 		   UNSPEC_VSX_EXTRACT))
-    (clobber (match_scratch:DI 3 "=r,&b,&b"))
-@@ -3724,7 +3724,7 @@
- (define_insn_and_split "vsx_extract_<mode>_var"
-   [(set (match_operand:<VS_scalar> 0 "gpc_reg_operand" "=r,r,r")
- 	(unspec:<VS_scalar>
--	 [(match_operand:VSX_EXTRACT_I 1 "input_operand" "wK,v,m")
-+	 [(match_operand:VSX_EXTRACT_I 1 "input_operand" "wK,v,Q")
- 	  (match_operand:DI 2 "gpc_reg_operand" "r,r,r")]
- 	 UNSPEC_VSX_EXTRACT))
-    (clobber (match_scratch:DI 3 "=r,r,&b"))
-@@ -3743,7 +3743,7 @@
-   [(set (match_operand:<VS_scalar> 0 "gpc_reg_operand" "=r,r,r")
- 	(zero_extend:<VS_scalar>
- 	 (unspec:<VSX_EXTRACT_I:VS_scalar>
--	  [(match_operand:VSX_EXTRACT_I 1 "input_operand" "wK,v,m")
-+	  [(match_operand:VSX_EXTRACT_I 1 "input_operand" "wK,v,Q")
- 	   (match_operand:DI 2 "gpc_reg_operand" "r,r,r")]
- 	  UNSPEC_VSX_EXTRACT)))
-    (clobber (match_scratch:DI 3 "=r,r,&b"))
 diff --git a/gcc/config/s390/8561.md b/gcc/config/s390/8561.md
 index e5a345f4dba..2442349271b 100644
 --- a/gcc/config/s390/8561.md
@@ -14445,7 +14374,7 @@ index 19bd616d67f..ee5612441e2 100644
  	  rtx tmp_reg = gen_rtx_REG (Pmode, A9_REG);
  	  emit_move_insn (tmp_reg, GEN_INT (total_size -
 diff --git a/gcc/configure b/gcc/configure
-index 481071b4265..b4d80d140b5 100755
+index 481071b4265..a065ba23728 100755
 --- a/gcc/configure
 +++ b/gcc/configure
 @@ -701,6 +701,7 @@ build_exeext
@@ -14474,6 +14403,15 @@ index 481071b4265..b4d80d140b5 100755
  #include "confdefs.h"
  
  #if HAVE_DLFCN_H
+@@ -23045,7 +23046,7 @@ if test $in_tree_ld != yes ; then
+       ld_vers=`echo $ld_ver | sed -n \
+ 	  -e 's,^.*[	 ]\([0-9][0-9]*\.[0-9][0-9]*.*\)$,\1,p'`
+     fi
+-    ld_date=`echo $ld_ver | sed -n 's,^.*\([2-9][0-9][0-9][0-9]\)[-]*\([01][0-9]\)[-]*\([0-3][0-9]\).*$,\1\2\3,p'`
++    ld_date=`echo $ld_ver | sed -n 's,^.*\([2-9][0-9][0-9][0-9]\)\(-*\)\([01][0-9]\)\2\([0-3][0-9]\).*$,\1\3\4,p'`
+     ld_vers_major=`expr "$ld_vers" : '\([0-9]*\)'`
+     ld_vers_minor=`expr "$ld_vers" : '[0-9]*\.\([0-9]*\)'`
+     ld_vers_patch=`expr "$ld_vers" : '[0-9]*\.[0-9]*\.\([0-9]*\)'`
 @@ -29559,7 +29560,8 @@ lang_tree_files=
  all_languages=
  all_compilers=
@@ -14501,9 +14439,18 @@ index 481071b4265..b4d80d140b5 100755
  
  # Echo link setup.
 diff --git a/gcc/configure.ac b/gcc/configure.ac
-index ce2825580c6..8243716589f 100644
+index ce2825580c6..3a7251102ef 100644
 --- a/gcc/configure.ac
 +++ b/gcc/configure.ac
+@@ -2658,7 +2658,7 @@ if test $in_tree_ld != yes ; then
+       ld_vers=`echo $ld_ver | sed -n \
+ 	  -e 's,^.*[	 ]\([0-9][0-9]*\.[0-9][0-9]*.*\)$,\1,p'`
+     fi
+-    ld_date=`echo $ld_ver | sed -n 's,^.*\([2-9][0-9][0-9][0-9]\)[-]*\([01][0-9]\)[-]*\([0-3][0-9]\).*$,\1\2\3,p'`
++    ld_date=`echo $ld_ver | sed -n 's,^.*\([2-9][0-9][0-9][0-9]\)\(-*\)\([01][0-9]\)\2\([0-3][0-9]\).*$,\1\3\4,p'`
+     ld_vers_major=`expr "$ld_vers" : '\([0-9]*\)'`
+     ld_vers_minor=`expr "$ld_vers" : '[0-9]*\.\([0-9]*\)'`
+     ld_vers_patch=`expr "$ld_vers" : '[0-9]*\.[0-9]*\.\([0-9]*\)'`
 @@ -6188,7 +6188,8 @@ lang_tree_files=
  all_languages=
  all_compilers=
@@ -14531,10 +14478,49 @@ index ce2825580c6..8243716589f 100644
  AC_SUBST(all_languages)
  AC_SUBST(all_selected_languages)
 diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
-index c977850d067..8032f1c13fe 100644
+index c977850d067..614844ef906 100644
 --- a/gcc/cp/ChangeLog
 +++ b/gcc/cp/ChangeLog
-@@ -1,3 +1,478 @@
+@@ -1,3 +1,517 @@
++2020-03-02  Jason Merrill  <jason@redhat.com>
++
++	PR c++/86917
++	* constexpr.c (cxx_eval_vec_init_1): Handle CONSTRUCTOR.
++
++2020-03-02  Jason Merrill  <jason@redhat.com>
++
++	PR c++/91953
++	* constexpr.c (potential_constant_expression_1) [PARM_DECL]: Allow
++	empty class type.
++	[COMPONENT_REF]: A member function reference doesn't use the object
++	as an rvalue.
++
++2020-03-02  Jason Merrill  <jason@redhat.com>
++
++	PR c++/88256
++	* cp-gimplify.c (predeclare_vla): New.
++	(cp_genericize_r) [NOP_EXPR]: Call it.
++
++2020-03-02  Jason Merrill  <jason@redhat.com>
++
++	PR c++/93442
++	* parser.c (cp_parser_lambda_expression): Clear in_discarded_stmt.
++
++2020-03-02  Jason Merrill  <jason@redhat.com>
++
++	PR c++/90732 - ICE with VLA capture and generic lambda.
++	* pt.c (tsubst_lambda_expr): Repeat add_capture for VLAs.
++
++2020-03-02  Jason Merrill  <jason@redhat.com>
++
++	PR c++/90333
++	PR c++/89640
++	PR c++/60503
++	* parser.c (cp_parser_type_specifier_seq): Don't parse attributes in
++	a trailing return type.
++	(cp_parser_lambda_declarator_opt): Parse C++11 attributes before
++	parens.
++
 +2020-02-26  Marek Polacek  <polacek@redhat.com>
 +
 +	PR c++/92745 - bogus error when initializing array of vectors.
@@ -15013,7 +14999,7 @@ index c977850d067..8032f1c13fe 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -16,7 +491,7 @@
+@@ -16,7 +530,7 @@
  
  	Backported from mainline
  	2019-08-02  Marek Polacek  <polacek@redhat.com>
@@ -15457,7 +15443,7 @@ index a47777cdd9e..46fac4ef38e 100644
  	    warning_at (DECL_SOURCE_LOCATION (field), 0,
  			"%qD is too small to hold all values of %q#T",
 diff --git a/gcc/cp/constexpr.c b/gcc/cp/constexpr.c
-index f6f21b33396..bc2476f94f9 100644
+index f6f21b33396..8fd5e4f2126 100644
 --- a/gcc/cp/constexpr.c
 +++ b/gcc/cp/constexpr.c
 @@ -1419,6 +1419,28 @@ cxx_bind_parameters_in_call (const constexpr_ctx *ctx, tree t,
@@ -15528,7 +15514,18 @@ index f6f21b33396..bc2476f94f9 100644
        if (bitpos == start && DECL_SIZE (field) == TREE_OPERAND (t, 1))
  	return value;
        if (TREE_CODE (TREE_TYPE (field)) == INTEGER_TYPE
-@@ -3973,6 +4007,10 @@ cxx_eval_increment_expression (const constexpr_ctx *ctx, tree t,
+@@ -3101,6 +3135,10 @@ cxx_eval_vec_init_1 (const constexpr_ctx *ctx, tree atype, tree init,
+   unsigned HOST_WIDE_INT i;
+   tsubst_flags_t complain = ctx->quiet ? tf_none : tf_warning_or_error;
+ 
++  if (init && TREE_CODE (init) == CONSTRUCTOR)
++    return cxx_eval_bare_aggregate (ctx, init, lval,
++				    non_constant_p, overflow_p);
++
+   /* For the default constructor, build up a call to the default
+      constructor of the element type.  We only need to handle class types
+      here, as for a constructor to be constexpr, all members must be
+@@ -3973,6 +4011,10 @@ cxx_eval_increment_expression (const constexpr_ctx *ctx, tree t,
    tree offset = TREE_OPERAND (t, 1);
    gcc_assert (TREE_CONSTANT (offset));
  
@@ -15539,7 +15536,7 @@ index f6f21b33396..bc2476f94f9 100644
    /* The operand as an lvalue.  */
    op = cxx_eval_constant_expression (ctx, op, true,
  				     non_constant_p, overflow_p);
-@@ -5116,6 +5154,7 @@ cxx_eval_constant_expression (const constexpr_ctx *ctx, tree t,
+@@ -5116,6 +5158,7 @@ cxx_eval_constant_expression (const constexpr_ctx *ctx, tree t,
  	tree obj = OBJ_TYPE_REF_OBJECT (t);
  	obj = cxx_eval_constant_expression (ctx, obj, lval, non_constant_p,
  					    overflow_p);
@@ -15547,7 +15544,7 @@ index f6f21b33396..bc2476f94f9 100644
  	/* We expect something in the form of &x.D.2103.D.2094; get x. */
  	if (TREE_CODE (obj) != ADDR_EXPR
  	    || !DECL_P (get_base_address (TREE_OPERAND (obj, 0))))
-@@ -5551,7 +5590,15 @@ maybe_constant_value (tree t, tree decl, bool manifestly_const_eval)
+@@ -5551,7 +5594,15 @@ maybe_constant_value (tree t, tree decl, bool manifestly_const_eval)
    if (cv_cache == NULL)
      cv_cache = hash_map<tree, tree>::create_ggc (101);
    if (tree *cached = cv_cache->get (t))
@@ -15564,7 +15561,7 @@ index f6f21b33396..bc2476f94f9 100644
  
    r = cxx_eval_outermost_constant_expr (t, true, true, false, decl);
    gcc_checking_assert (r == t
-@@ -5917,6 +5964,7 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
+@@ -5917,6 +5968,7 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
      case LABEL_DECL:
      case LABEL_EXPR:
      case CASE_LABEL_EXPR:
@@ -15572,7 +15569,49 @@ index f6f21b33396..bc2476f94f9 100644
      case CONST_DECL:
      case SIZEOF_EXPR:
      case ALIGNOF_EXPR:
-@@ -6751,7 +6799,6 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
+@@ -5948,8 +6000,13 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
+       return true;
+ 
+     case PARM_DECL:
+-      if (now)
++      if (now && want_rval)
+ 	{
++	  tree type = TREE_TYPE (t);
++	  if (dependent_type_p (type)
++	      || is_really_empty_class (type, /*ignore_vptr*/false))
++	    /* An empty class has no data to read.  */
++	    return true;
+ 	  if (flags & tf_error)
+ 	    error ("%qE is not a constant expression", t);
+ 	  return false;
+@@ -6190,10 +6247,7 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
+ #endif
+       return RECUR (t, any);
+ 
+-    case REALPART_EXPR:
+-    case IMAGPART_EXPR:
+     case COMPONENT_REF:
+-    case BIT_FIELD_REF:
+     case ARROW_EXPR:
+     case OFFSET_REF:
+       /* -- a class member access unless its postfix-expression is
+@@ -6202,6 +6256,15 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
+ 	 postfix-expression being a potential constant expression.  */
+       if (type_unknown_p (t))
+ 	return true;
++      if (is_overloaded_fn (t))
++	/* In a template, a COMPONENT_REF of a function expresses ob.fn(),
++	   which uses ob as an lvalue.  */
++	want_rval = false;
++      gcc_fallthrough ();
++
++    case REALPART_EXPR:
++    case IMAGPART_EXPR:
++    case BIT_FIELD_REF:
+       return RECUR (TREE_OPERAND (t, 0), want_rval);
+ 
+     case EXPR_PACK_EXPANSION:
+@@ -6751,7 +6814,6 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
  
      case CLEANUP_STMT:
      case EMPTY_CLASS_EXPR:
@@ -15581,7 +15620,7 @@ index f6f21b33396..bc2476f94f9 100644
  
      case GOTO_EXPR:
 diff --git a/gcc/cp/cp-gimplify.c b/gcc/cp/cp-gimplify.c
-index 17d10456341..90a315003d4 100644
+index 17d10456341..4be45abca88 100644
 --- a/gcc/cp/cp-gimplify.c
 +++ b/gcc/cp/cp-gimplify.c
 @@ -816,6 +816,27 @@ cp_gimplify_expr (tree *expr_p, gimple_seq *pre_p, gimple_seq *post_p)
@@ -15612,7 +15651,52 @@ index 17d10456341..90a315003d4 100644
        if (!CALL_EXPR_FN (*expr_p))
  	/* Internal function call.  */;
        else if (CALL_EXPR_REVERSE_ARGS (*expr_p))
-@@ -2050,6 +2071,9 @@ cxx_omp_predetermined_sharing_1 (tree decl)
+@@ -1110,6 +1131,36 @@ cp_fold_function (tree fndecl)
+   cp_walk_tree (&DECL_SAVED_TREE (fndecl), cp_fold_r, &pset, NULL);
+ }
+ 
++/* If EXPR involves an anonymous VLA type, prepend a DECL_EXPR for that type
++   to trigger gimplify_type_sizes; otherwise a cast to pointer-to-VLA confuses
++   the middle-end (c++/88256).  */
++
++static tree
++predeclare_vla (tree expr)
++{
++  tree type = TREE_TYPE (expr);
++  if (type == error_mark_node)
++    return expr;
++
++  /* We need to strip pointers for gimplify_type_sizes.  */
++  tree vla = type;
++  while (POINTER_TYPE_P (vla))
++    {
++      if (TYPE_NAME (vla))
++	return expr;
++      vla = TREE_TYPE (vla);
++    }
++  if (TYPE_NAME (vla) || !variably_modified_type_p (vla, NULL_TREE))
++    return expr;
++
++  tree decl = build_decl (input_location, TYPE_DECL, NULL_TREE, vla);
++  DECL_ARTIFICIAL (decl) = 1;
++  TYPE_NAME (vla) = decl;
++  tree dexp = build_stmt (input_location, DECL_EXPR, decl);
++  expr = build2 (COMPOUND_EXPR, type, dexp, expr);
++  return expr;
++}
++
+ /* Perform any pre-gimplification lowering of C++ front end trees to
+    GENERIC.  */
+ 
+@@ -1563,6 +1614,7 @@ cp_genericize_r (tree *stmt_p, int *walk_subtrees, void *data)
+       break;
+ 
+     case NOP_EXPR:
++      *stmt_p = predeclare_vla (*stmt_p);
+       if (!wtd->no_sanitize_p
+ 	  && sanitize_flags_p (SANITIZE_NULL | SANITIZE_ALIGNMENT)
+ 	  && TYPE_REF_P (TREE_TYPE (stmt)))
+@@ -2050,6 +2102,9 @@ cxx_omp_predetermined_sharing_1 (tree decl)
        tree ctx = CP_DECL_CONTEXT (decl);
        if (TYPE_P (ctx) && MAYBE_CLASS_TYPE_P (ctx))
  	return OMP_CLAUSE_DEFAULT_SHARED;
@@ -15622,7 +15706,7 @@ index 17d10456341..90a315003d4 100644
      }
  
    /* this may not be specified in data-sharing clauses, still we need
-@@ -2083,6 +2107,10 @@ cxx_omp_predetermined_sharing (tree decl)
+@@ -2083,6 +2138,10 @@ cxx_omp_predetermined_sharing (tree decl)
  	   && DECL_OMP_PRIVATIZED_MEMBER (decl)))
      return OMP_CLAUSE_DEFAULT_SHARED;
  
@@ -16101,7 +16185,7 @@ index 4ca976c812d..8999c5ad4a7 100644
        if (attr)
  	TREE_VALUE (attr) = bindings;
 diff --git a/gcc/cp/parser.c b/gcc/cp/parser.c
-index a7218e752b1..3e9950bcbed 100644
+index a7218e752b1..e1c02d7b718 100644
 --- a/gcc/cp/parser.c
 +++ b/gcc/cp/parser.c
 @@ -2650,6 +2650,7 @@ static bool cp_parser_init_statement_p
@@ -16112,7 +16196,46 @@ index a7218e752b1..3e9950bcbed 100644
  
  /* Concept-related syntactic transformations */
  
-@@ -13998,6 +13999,10 @@ cp_parser_decl_specifier_seq (cp_parser* parser,
+@@ -10452,6 +10453,10 @@ cp_parser_lambda_expression (cp_parser* parser)
+     parser->implicit_template_scope = 0;
+     parser->auto_is_implicit_function_template_parm_p = false;
+ 
++    /* The body of a lambda in a discarded statement is not discarded.  */
++    bool discarded = in_discarded_stmt;
++    in_discarded_stmt = 0;
++
+     /* By virtue of defining a local class, a lambda expression has access to
+        the private variables of enclosing classes.  */
+ 
+@@ -10482,6 +10487,8 @@ cp_parser_lambda_expression (cp_parser* parser)
+ 
+     type = finish_struct (type, /*attributes=*/NULL_TREE);
+ 
++    in_discarded_stmt = discarded;
++
+     parser->num_template_parameter_lists = saved_num_template_parameter_lists;
+     parser->in_statement = in_statement;
+     parser->in_switch_statement_p = in_switch_statement_p;
+@@ -10851,6 +10858,9 @@ cp_parser_lambda_declarator_opt (cp_parser* parser, tree lambda_expr)
+       ++parser->num_template_parameter_lists;
+     }
+ 
++  /* Committee discussion supports allowing attributes here.  */
++  lambda_specs.attributes = cp_parser_attributes_opt (parser);
++
+   /* The parameter-declaration-clause is optional (unless
+      template-parameter-list was given), but must begin with an
+      opening parenthesis if present.  */
+@@ -10960,7 +10970,7 @@ cp_parser_lambda_declarator_opt (cp_parser* parser, tree lambda_expr)
+ 
+     fco = grokmethod (&return_type_specs,
+ 		      declarator,
+-		      gnu_attrs);
++		      chainon (gnu_attrs, lambda_specs.attributes));
+     if (fco != error_mark_node)
+       {
+ 	DECL_INITIALIZED_IN_CLASS_P (fco) = 1;
+@@ -13998,6 +14008,10 @@ cp_parser_decl_specifier_seq (cp_parser* parser,
          case RID_CONCEPT:
            ds = ds_concept;
            cp_lexer_consume_token (parser->lexer);
@@ -16123,7 +16246,7 @@ index a7218e752b1..3e9950bcbed 100644
  	  /* In C++20 a concept definition is just 'concept name = expr;'
  	     Support that syntax by pretending we've seen 'bool'.  */
  	  if (cp_lexer_next_token_is (parser->lexer, CPP_NAME)
-@@ -14025,6 +14030,10 @@ cp_parser_decl_specifier_seq (cp_parser* parser,
+@@ -14025,6 +14039,10 @@ cp_parser_decl_specifier_seq (cp_parser* parser,
  	  ds = ds_typedef;
  	  /* Consume the token.  */
  	  cp_lexer_consume_token (parser->lexer);
@@ -16134,7 +16257,7 @@ index a7218e752b1..3e9950bcbed 100644
  	  /* A constructor declarator cannot appear in a typedef.  */
  	  constructor_possible_p = false;
  	  /* The "typedef" keyword can only occur in a declaration; we
-@@ -14120,6 +14129,9 @@ cp_parser_decl_specifier_seq (cp_parser* parser,
+@@ -14120,6 +14138,9 @@ cp_parser_decl_specifier_seq (cp_parser* parser,
  	  bool is_cv_qualifier;
  	  tree type_spec;
  
@@ -16144,7 +16267,7 @@ index a7218e752b1..3e9950bcbed 100644
  	  type_spec
  	    = cp_parser_type_specifier (parser, flags,
  					decl_specs,
-@@ -16720,7 +16732,17 @@ cp_parser_template_name (cp_parser* parser,
+@@ -16720,7 +16741,17 @@ cp_parser_template_name (cp_parser* parser,
      {
        if (TREE_DEPRECATED (decl)
  	  && deprecated_state != DEPRECATED_SUPPRESS)
@@ -16163,7 +16286,26 @@ index a7218e752b1..3e9950bcbed 100644
      }
    else
      {
-@@ -26178,6 +26200,17 @@ cp_parser_std_attribute (cp_parser *parser, tree attr_ns)
+@@ -21970,6 +22001,18 @@ cp_parser_type_specifier_seq (cp_parser* parser,
+       /* Check for attributes first.  */
+       if (cp_next_tokens_can_be_attribute_p (parser))
+ 	{
++	  /* GNU attributes at the end of a declaration apply to the
++	     declaration as a whole, not to the trailing return type.  So look
++	     ahead to see if these attributes are at the end.  */
++	  if (seen_type_specifier && is_trailing_return
++	      && cp_next_tokens_can_be_gnu_attribute_p (parser))
++	    {
++	      size_t n = cp_parser_skip_attributes_opt (parser, 1);
++	      cp_token *tok = cp_lexer_peek_nth_token (parser->lexer, n);
++	      if (tok->type == CPP_SEMICOLON || tok->type == CPP_COMMA
++		  || tok->type == CPP_EQ || tok->type == CPP_OPEN_BRACE)
++		break;
++	    }
+ 	  type_specifier_seq->attributes
+ 	    = attr_chainon (type_specifier_seq->attributes,
+ 			    cp_parser_attributes_opt (parser));
+@@ -26178,6 +26221,17 @@ cp_parser_std_attribute (cp_parser *parser, tree attr_ns)
        /* A GNU attribute that takes an identifier in parameter.  */
        attr_flag = id_attr;
  
@@ -16181,7 +16323,7 @@ index a7218e752b1..3e9950bcbed 100644
      vec = cp_parser_parenthesized_expression_list
        (parser, attr_flag, /*cast_p=*/false,
         /*allow_expansion_p=*/true,
-@@ -27596,12 +27629,29 @@ cp_parser_constructor_declarator_p (cp_parser *parser, cp_parser_flags flags,
+@@ -27596,12 +27650,29 @@ cp_parser_constructor_declarator_p (cp_parser *parser, cp_parser_flags flags,
  	  /* A parameter declaration begins with a decl-specifier,
  	     which is either the "attribute" keyword, a storage class
  	     specifier, or (usually) a type-specifier.  */
@@ -16212,7 +16354,7 @@ index a7218e752b1..3e9950bcbed 100644
  	  /* Names appearing in the type-specifier should be looked up
  	     in the scope of the class.  */
  	  if (current_class_type)
-@@ -27911,7 +27961,10 @@ cp_parser_template_declaration_after_parameters (cp_parser* parser,
+@@ -27911,7 +27982,10 @@ cp_parser_template_declaration_after_parameters (cp_parser* parser,
  	    {
  	      tree parm_list = TREE_VEC_ELT (parameter_list, 0);
  	      tree parm = INNERMOST_TEMPLATE_PARMS (parm_list);
@@ -16224,7 +16366,7 @@ index a7218e752b1..3e9950bcbed 100644
  		/* OK, C++20 string literal operator template.  We don't need
  		   to warn in lower dialects here because we will have already
  		   warned about the template parameter.  */;
-@@ -27925,7 +27978,7 @@ cp_parser_template_declaration_after_parameters (cp_parser* parser,
+@@ -27925,7 +27999,7 @@ cp_parser_template_declaration_after_parameters (cp_parser* parser,
  	      tree type = INNERMOST_TEMPLATE_PARMS (parm_type);
  	      tree parm_list = TREE_VEC_ELT (parameter_list, 1);
  	      tree parm = INNERMOST_TEMPLATE_PARMS (parm_list);
@@ -16233,7 +16375,7 @@ index a7218e752b1..3e9950bcbed 100644
  		  || TREE_TYPE (parm) != TREE_TYPE (type)
  		  || !TEMPLATE_PARM_PARAMETER_PACK (DECL_INITIAL (parm)))
  		ok = false;
-@@ -32463,6 +32516,14 @@ cp_parser_omp_var_list_no_open (cp_parser *parser, enum omp_clause_code kind,
+@@ -32463,6 +32537,14 @@ cp_parser_omp_var_list_no_open (cp_parser *parser, enum omp_clause_code kind,
  	    decl = TREE_OPERAND (decl, 0);
  	  cp_lexer_consume_token (parser->lexer);
  	}
@@ -16248,7 +16390,7 @@ index a7218e752b1..3e9950bcbed 100644
        else
  	{
  	  name = cp_parser_id_expression (parser, /*template_p=*/false,
-@@ -34891,8 +34952,10 @@ cp_parser_omp_clause_dist_schedule (cp_parser *parser, tree list,
+@@ -34891,8 +34973,10 @@ cp_parser_omp_clause_dist_schedule (cp_parser *parser, tree list,
    else if (!cp_parser_require (parser, CPP_CLOSE_PAREN, RT_COMMA_CLOSE_PAREN))
      goto resync_fail;
  
@@ -16261,7 +16403,7 @@ index a7218e752b1..3e9950bcbed 100644
    OMP_CLAUSE_CHAIN (c) = list;
    return c;
  
-@@ -39438,6 +39501,8 @@ cp_parser_omp_declare_reduction_exprs (tree fndecl, cp_parser *parser)
+@@ -39438,6 +39522,8 @@ cp_parser_omp_declare_reduction_exprs (tree fndecl, cp_parser *parser)
    combiner = cp_parser_expression (parser);
    finish_expr_stmt (combiner);
    block = finish_omp_structured_block (block);
@@ -16270,7 +16412,7 @@ index a7218e752b1..3e9950bcbed 100644
    add_stmt (block);
  
    if (!cp_parser_require (parser, CPP_CLOSE_PAREN, RT_CLOSE_PAREN))
-@@ -39542,6 +39607,8 @@ cp_parser_omp_declare_reduction_exprs (tree fndecl, cp_parser *parser)
+@@ -39542,6 +39628,8 @@ cp_parser_omp_declare_reduction_exprs (tree fndecl, cp_parser *parser)
  
        block = finish_omp_structured_block (block);
        cp_walk_tree (&block, cp_remove_omp_priv_cleanup_stmt, omp_priv, NULL);
@@ -16279,7 +16421,7 @@ index a7218e752b1..3e9950bcbed 100644
        add_stmt (block);
  
        if (ctor)
-@@ -40746,7 +40813,10 @@ cp_parser_initial_pragma (cp_token *first_token)
+@@ -40746,7 +40834,10 @@ cp_parser_initial_pragma (cp_token *first_token)
  
    cp_lexer_get_preprocessor_token (NULL, first_token);
    if (cp_parser_pragma_kind (first_token) != PRAGMA_GCC_PCH_PREPROCESS)
@@ -16292,7 +16434,7 @@ index a7218e752b1..3e9950bcbed 100644
    cp_lexer_get_preprocessor_token (NULL, first_token);
    if (first_token->type == CPP_STRING)
 diff --git a/gcc/cp/pt.c b/gcc/cp/pt.c
-index a2a986b1db1..c7ca7e419ea 100644
+index a2a986b1db1..f233e78cc45 100644
 --- a/gcc/cp/pt.c
 +++ b/gcc/cp/pt.c
 @@ -3875,7 +3875,7 @@ find_parameter_packs_r (tree *tp, int *walk_subtrees, void* data)
@@ -16545,7 +16687,57 @@ index a2a986b1db1..c7ca7e419ea 100644
    LAMBDA_EXPR_LOCATION (r)
      = LAMBDA_EXPR_LOCATION (t);
    LAMBDA_EXPR_DEFAULT_CAPTURE_MODE (r)
-@@ -18088,15 +18157,15 @@ tsubst_lambda_expr (tree t, tree args, tsubst_flags_t complain, tree in_decl)
+@@ -18061,6 +18130,36 @@ tsubst_lambda_expr (tree t, tree args, tsubst_flags_t complain, tree in_decl)
+        cap = TREE_CHAIN (cap))
+     {
+       tree ofield = TREE_PURPOSE (cap);
++      tree init = TREE_VALUE (cap);
++      if (PACK_EXPANSION_P (init))
++	init = tsubst_pack_expansion (init, args, complain, in_decl);
++      else
++	init = tsubst_copy_and_build (init, args, complain, in_decl,
++				      /*fn*/false, /*constexpr*/false);
++
++      if (init == error_mark_node)
++	return error_mark_node;
++
++      if (init && TREE_CODE (init) == TREE_LIST)
++	init = build_x_compound_expr_from_list (init, ELK_INIT, complain);
++
++      if (!processing_template_decl
++	  && init && TREE_CODE (init) != TREE_VEC
++	  && variably_modified_type_p (TREE_TYPE (init), NULL_TREE))
++	{
++	  /* For a VLA, simply tsubsting the field type won't work, we need to
++	     go through add_capture again.  XXX do we want to do this for all
++	     captures?  */
++	  tree name = (get_identifier
++		       (IDENTIFIER_POINTER (DECL_NAME (ofield)) + 2));
++	  tree ftype = TREE_TYPE (ofield);
++	  bool by_ref = (TYPE_REF_P (ftype)
++			 || (TREE_CODE (ftype) == DECLTYPE_TYPE
++			     && DECLTYPE_FOR_REF_CAPTURE (ftype)));
++	  add_capture (r, name, init, by_ref, !DECL_NORMAL_CAPTURE_P (ofield));
++	  continue;
++	}
++
+       if (PACK_EXPANSION_P (ofield))
+ 	ofield = PACK_EXPANSION_PATTERN (ofield);
+       tree field = tsubst_decl (ofield, args, complain);
+@@ -18075,28 +18174,21 @@ tsubst_lambda_expr (tree t, tree args, tsubst_flags_t complain, tree in_decl)
+       if (field == error_mark_node)
+ 	return error_mark_node;
+ 
+-      tree init = TREE_VALUE (cap);
+-      if (PACK_EXPANSION_P (init))
+-	init = tsubst_pack_expansion (init, args, complain, in_decl);
+-      else
+-	init = tsubst_copy_and_build (init, args, complain, in_decl,
+-				      /*fn*/false, /*constexpr*/false);
+-
+       if (TREE_CODE (field) == TREE_VEC)
+ 	{
+ 	  int len = TREE_VEC_LENGTH (field);
  	  gcc_assert (TREE_CODE (init) == TREE_VEC
  		      && TREE_VEC_LENGTH (init) == len);
  	  for (int i = 0; i < len; ++i)
@@ -16567,7 +16759,7 @@ index a2a986b1db1..c7ca7e419ea 100644
  
  	  if (id_equal (DECL_NAME (field), "__this"))
  	    LAMBDA_EXPR_THIS_CAPTURE (r) = field;
-@@ -19525,13 +19594,8 @@ tsubst_copy_and_build (tree t,
+@@ -19525,13 +19617,8 @@ tsubst_copy_and_build (tree t,
        {
  	tree type1 = tsubst (TRAIT_EXPR_TYPE1 (t), args,
  			     complain, in_decl);
@@ -16583,7 +16775,7 @@ index a2a986b1db1..c7ca7e419ea 100644
  	RETURN (finish_trait_expr (TRAIT_EXPR_KIND (t), type1, type2));
        }
  
-@@ -20571,7 +20635,7 @@ static bool
+@@ -20571,7 +20658,7 @@ static bool
  deducible_expression (tree expr)
  {
    /* Strip implicit conversions.  */
@@ -16592,7 +16784,7 @@ index a2a986b1db1..c7ca7e419ea 100644
      expr = TREE_OPERAND (expr, 0);
    return (TREE_CODE (expr) == TEMPLATE_PARM_INDEX);
  }
-@@ -22041,8 +22105,9 @@ unify (tree tparms, tree targs, tree parm, tree arg, int strict,
+@@ -22041,8 +22128,9 @@ unify (tree tparms, tree targs, tree parm, tree arg, int strict,
    /* I don't think this will do the right thing with respect to types.
       But the only case I've seen it in so far has been array bounds, where
       signedness is the only information lost, and I think that will be
@@ -16604,7 +16796,7 @@ index a2a986b1db1..c7ca7e419ea 100644
      parm = TREE_OPERAND (parm, 0);
  
    if (arg == error_mark_node)
-@@ -24321,12 +24386,11 @@ maybe_instantiate_noexcept (tree fn, tsubst_flags_t complain)
+@@ -24321,12 +24409,11 @@ maybe_instantiate_noexcept (tree fn, tsubst_flags_t complain)
  	}
        else if (push_tinst_level (fn))
  	{
@@ -16618,7 +16810,7 @@ index a2a986b1db1..c7ca7e419ea 100644
  	  /* If needed, set current_class_ptr for the benefit of
  	     tsubst_copy/PARM_DECL.  */
  	  tree tdecl = DECL_TEMPLATE_RESULT (DECL_TI_TEMPLATE (fn));
-@@ -24352,9 +24416,6 @@ maybe_instantiate_noexcept (tree fn, tsubst_flags_t complain)
+@@ -24352,9 +24439,6 @@ maybe_instantiate_noexcept (tree fn, tsubst_flags_t complain)
  					/*function_p=*/false,
  					/*i_c_e_p=*/true);
  
@@ -16628,7 +16820,7 @@ index a2a986b1db1..c7ca7e419ea 100644
  	  /* Build up the noexcept-specification.  */
  	  spec = build_noexcept_spec (noex, tf_warning_or_error);
  
-@@ -24364,6 +24425,7 @@ maybe_instantiate_noexcept (tree fn, tsubst_flags_t complain)
+@@ -24364,6 +24448,7 @@ maybe_instantiate_noexcept (tree fn, tsubst_flags_t complain)
  	  pop_deferring_access_checks ();
  	  pop_access_scope (fn);
  	  pop_tinst_level ();
@@ -16636,7 +16828,7 @@ index a2a986b1db1..c7ca7e419ea 100644
  	}
        else
  	spec = noexcept_false_spec;
-@@ -25232,8 +25294,9 @@ invalid_nontype_parm_type_p (tree type, tsubst_flags_t complain)
+@@ -25232,8 +25317,9 @@ invalid_nontype_parm_type_p (tree type, tsubst_flags_t complain)
      {
        if (cxx_dialect < cxx2a)
  	{
@@ -16648,7 +16840,7 @@ index a2a986b1db1..c7ca7e419ea 100644
  	  return true;
  	}
        if (dependent_type_p (type))
-@@ -26715,7 +26778,7 @@ build_non_dependent_expr (tree expr)
+@@ -26715,7 +26801,7 @@ build_non_dependent_expr (tree expr)
    if (TREE_CODE (expr) == COND_EXPR)
      return build3 (COND_EXPR,
  		   TREE_TYPE (expr),
@@ -16657,7 +16849,7 @@ index a2a986b1db1..c7ca7e419ea 100644
  		   (TREE_OPERAND (expr, 1)
  		    ? build_non_dependent_expr (TREE_OPERAND (expr, 1))
  		    : build_non_dependent_expr (TREE_OPERAND (expr, 0))),
-@@ -27615,6 +27678,9 @@ do_auto_deduction (tree type, tree init, tree auto_node,
+@@ -27615,6 +27701,9 @@ do_auto_deduction (tree type, tree init, tree auto_node,
      }
    else
      {
@@ -17463,6 +17655,20 @@ index 1cec00f2b85..30c4c7007ee 100644
  	    {
  	      prune_unused_types_mark (die, 1);
  	      break;
+diff --git a/gcc/explow.c b/gcc/explow.c
+index aea7118af1e..ea22ecf0939 100644
+--- a/gcc/explow.c
++++ b/gcc/explow.c
+@@ -128,6 +128,9 @@ plus_constant (machine_mode mode, rtx x, poly_int64 c, bool inplace)
+ 	      cst = gen_lowpart (mode, cst);
+ 	      gcc_assert (cst);
+ 	    }
++	  else if (GET_MODE (cst) == VOIDmode
++		   && get_pool_mode (XEXP (x, 0)) != mode)
++	    break;
+ 	  if (GET_MODE (cst) == VOIDmode || GET_MODE (cst) == mode)
+ 	    {
+ 	      tem = plus_constant (mode, cst, c);
 diff --git a/gcc/expmed.c b/gcc/expmed.c
 index d7f8e9a5d76..c5f5499c013 100644
 --- a/gcc/expmed.c
@@ -27450,10 +27656,41 @@ index 29f6cdc4667..9a6a1eadd2d 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..aadce370916 100644
+index bc11ae4ae0b..dc562bc4c8a 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,1692 @@
+@@ -1,3 +1,1723 @@
++2020-03-03  Jakub Jelinek  <jakub@redhat.com>
++
++	PR rtl-optimization/94002
++	* gcc.dg/pr94002.c: New test.
++
++2020-02-29  Peter Bergner  <bergner@linux.ibm.com>
++
++	Revert
++	2020-02-26  Peter Bergner  <bergner@linux.ibm.com>
++
++	PR target/93913
++	* gcc.target/powerpc/fold-vec-st-char.c (scan-assembler-times): Allow
++	stxv and stxvx instructions as well.
++	* gcc.target/powerpc/fold-vec-st-float.c: Likewise.
++	* gcc.target/powerpc/fold-vec-st-int.c: Likewise.
++	* gcc.target/powerpc/fold-vec-st-short.c: Likewise.
++
++	2020-02-20  Peter Bergner  <bergner@linux.ibm.com>
++
++	PR target/93658
++	* gcc.target/powerpc/pr93658.c: New test.
++
++2020-02-29  John David Anglin  <danglin@gcc.gnu.org>
++
++	* gcc.dg/pr90756.c: Add -fno-common option on hppa*-*-hpux*.
++	* gcc.dg/torture/20190327-1.c: Likewise.
++	* gcc.dg/torture/pr90020.c: Skip on hppa*-*-hpux*.
++
++	PR ada/91100
++	* gnat.dg/socket1.adb: Disable on hppa*-*-hpux*.
++
 +2020-02-26  Peter Bergner  <bergner@linux.ibm.com>
 +
 +	PR target/93913
@@ -29146,7 +29383,7 @@ index bc11ae4ae0b..aadce370916 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +2116,7 @@
+@@ -427,7 +2147,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -29155,7 +29392,7 @@ index bc11ae4ae0b..aadce370916 100644
  	(check_effective_target_powerpc_p8vector_ok): No support for Darwin.
  	(check_effective_target_powerpc_p9vector_ok): Likewise.
  	(check_effective_target_powerpc_float128_sw_ok): Likewise.
-@@ -720,7 +2409,7 @@
+@@ -720,7 +2440,7 @@
  
  	Backport from mainline
  	PR fortran/91077
@@ -29164,7 +29401,7 @@ index bc11ae4ae0b..aadce370916 100644
  
  2019-07-05  Szabolcs Nagy  <szabolcs.nagy@arm.com>
  
-@@ -803,7 +2492,7 @@
+@@ -803,7 +2523,7 @@
  	Backport fom mainline
  	2019-06-21  Jeff Law  <law@redhat.com>
  
@@ -29173,7 +29410,7 @@ index bc11ae4ae0b..aadce370916 100644
  	* gcc.c-torture/execute/pr90949.c: New test.
  
  2019-06-26  Martin Jambor  <mjambor@suse.cz>
-@@ -969,7 +2658,7 @@
+@@ -969,7 +2689,7 @@
         * gcc.target/i386/pr82699-6.c: Likewise
         * gcc.target/i386/returninst1.c: Likewise
         * gcc.target/i386/returninst2.c: Likewise
@@ -29182,7 +29419,7 @@ index bc11ae4ae0b..aadce370916 100644
  
  2019-05-30  Iain Sandoe  <iain@sandoe.co.uk>
  
-@@ -1131,7 +2820,7 @@
+@@ -1131,7 +2851,7 @@
  
  	Backport from trunk
  	PR fortran/90498
@@ -29191,7 +29428,7 @@ index bc11ae4ae0b..aadce370916 100644
  
  2019-05-17  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -3801,21 +5490,21 @@
+@@ -3801,21 +5521,21 @@
  2019-02-23  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88117
@@ -29220,7 +29457,7 @@ index bc11ae4ae0b..aadce370916 100644
  
  2019-02-22  David Malcolm  <dmalcolm@redhat.com>
  
-@@ -4444,7 +6133,7 @@
+@@ -4444,7 +6164,7 @@
  2019-02-09  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/89200
@@ -29229,7 +29466,7 @@ index bc11ae4ae0b..aadce370916 100644
  
  2019-02-09  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -4704,17 +6393,17 @@
+@@ -4704,17 +6424,17 @@
  2019-02-02  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88393
@@ -29953,6 +30190,19 @@ index 00000000000..091f5bd5ff1
 +bar (void)
 +{
 +}
+diff --git a/gcc/testsuite/gcc.c-torture/compile/pr84305.c b/gcc/testsuite/c-c++-common/pr84305.c
+similarity index 78%
+rename from gcc/testsuite/gcc.c-torture/compile/pr84305.c
+rename to gcc/testsuite/c-c++-common/pr84305.c
+index 374fa67f593..27150dd5328 100644
+--- a/gcc/testsuite/gcc.c-torture/compile/pr84305.c
++++ b/gcc/testsuite/c-c++-common/pr84305.c
+@@ -1,3 +1,5 @@
++// { dg-additional-options -O3 }
++
+ int res, a, b;
+ void *foo;
+ static void f2 (int arg) { res = ((int (*)[arg][b]) foo)[0][0][0]; }
 diff --git a/gcc/testsuite/c-c++-common/pr90677-2.c b/gcc/testsuite/c-c++-common/pr90677-2.c
 new file mode 100644
 index 00000000000..1d125e01586
@@ -30140,6 +30390,36 @@ index 00000000000..60f288ee993
 +struct S2 { char c[6] = "hello"; };
 +static_assert (S1{}.c[0] == 'h', "");
 +static_assert (S2{}.c[0] == 'h', "");
+diff --git a/gcc/testsuite/g++.dg/cpp0x/constexpr-array23.C b/gcc/testsuite/g++.dg/cpp0x/constexpr-array23.C
+new file mode 100644
+index 00000000000..e94695efa2a
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp0x/constexpr-array23.C
+@@ -0,0 +1,24 @@
++// PR c++/86917
++// { dg-do compile { target c++11 } }
++
++struct A
++{
++  constexpr A () : c (0) {}
++  static const A z;
++  unsigned c;
++};
++
++struct B
++{				// This should really be target { ! c++2a }
++  typedef A W[4];		// { dg-error "paren" "" { xfail *-*-* } .+1 }
++  constexpr B () : w ({ A::z, A::z, A::z, A::z }) {} // { dg-error "constant" "" { xfail *-*-* } }
++  W w;
++};
++
++struct C
++{
++  C ();
++  B w[1];
++};
++
++C::C () { }
 diff --git a/gcc/testsuite/g++.dg/cpp0x/constexpr-array24.C b/gcc/testsuite/g++.dg/cpp0x/constexpr-array24.C
 new file mode 100644
 index 00000000000..538969830ba
@@ -30156,6 +30436,22 @@ index 00000000000..538969830ba
 +constexpr struct S a[1][1][1] = { };
 +
 +assert ('\0' == *a[0][0][0].a);
+diff --git a/gcc/testsuite/g++.dg/cpp0x/constexpr-empty14.C b/gcc/testsuite/g++.dg/cpp0x/constexpr-empty14.C
+new file mode 100644
+index 00000000000..ca4f9a55e5f
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp0x/constexpr-empty14.C
+@@ -0,0 +1,10 @@
++// PR c++/91953
++// { dg-do compile { target c++11 } }
++
++struct S {};
++
++template <class T> void
++foo (S s)
++{
++  constexpr S x = s;
++}
 diff --git a/gcc/testsuite/g++.dg/cpp0x/constexpr-odr1.C b/gcc/testsuite/g++.dg/cpp0x/constexpr-odr1.C
 new file mode 100644
 index 00000000000..cf3f95f0565
@@ -30939,6 +31235,28 @@ index 0a40ebbee0f..6b4ed347eee 100644
  }
  
  int main ()
+diff --git a/gcc/testsuite/g++.dg/cpp1y/lambda-vla1.C b/gcc/testsuite/g++.dg/cpp1y/lambda-vla1.C
+new file mode 100644
+index 00000000000..c9025c79aa7
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp1y/lambda-vla1.C
+@@ -0,0 +1,16 @@
++// PR c++/90732
++// { dg-do compile { target c++14 } }
++// { dg-additional-options "-Wno-vla" }
++
++/*const*/ int SIZE = 100;
++
++template<typename T>
++int foo(T t) {
++  char buf[SIZE] = { 24 };
++  return [&buf](auto x){ return buf[x]; }(t);
++}
++
++int main() {
++  if (foo(0) != 24)
++    __builtin_abort();
++}
 diff --git a/gcc/testsuite/g++.dg/cpp1y/nontype1.C b/gcc/testsuite/g++.dg/cpp1y/nontype1.C
 new file mode 100644
 index 00000000000..a37e996a3ff
@@ -30998,6 +31316,47 @@ index 00000000000..a65f53b2963
 +
 +constexpr bool f(const char*) { return true; }
 +template<typename T> const char c = "FOO"[f("BAR") ? 1 : 0];
+diff --git a/gcc/testsuite/g++.dg/cpp1z/constexpr-if-lambda1.C b/gcc/testsuite/g++.dg/cpp1z/constexpr-if-lambda1.C
+new file mode 100644
+index 00000000000..64c4cd27fe6
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp1z/constexpr-if-lambda1.C
+@@ -0,0 +1,16 @@
++// PR c++/93442
++// { dg-do compile { target c++17 } }
++
++struct bar {
++    int foo(){return 0;}
++};
++
++int foobar() {
++    if constexpr(true) {
++        return 0;
++    } else {
++        return [](){
++            return bar{};
++        }().foo();
++    }
++}
+diff --git a/gcc/testsuite/g++.dg/cpp1z/constexpr-if12.C b/gcc/testsuite/g++.dg/cpp1z/constexpr-if12.C
+index f21a9896ff2..005aa80fc09 100644
+--- a/gcc/testsuite/g++.dg/cpp1z/constexpr-if12.C
++++ b/gcc/testsuite/g++.dg/cpp1z/constexpr-if12.C
+@@ -2,12 +2,13 @@
+ // { dg-do compile { target c++17 } }
+ 
+ struct T {
++  int i;
+   constexpr auto foo() { return false; }
+ };
+ 
+ template <class MustBeTemplate>
+ constexpr auto bf(T t) {
+-    if constexpr(t.foo()) {	// { dg-error "constant expression" }
++    if constexpr(t.foo()) {
+         return false;
+     }
+     return true;
 diff --git a/gcc/testsuite/g++.dg/cpp1z/constexpr-lambda25.C b/gcc/testsuite/g++.dg/cpp1z/constexpr-lambda25.C
 new file mode 100644
 index 00000000000..74db03ff569
@@ -31570,6 +31929,76 @@ index 00000000000..16dccf3b56f
 +    {
 +    }
 +}
+diff --git a/gcc/testsuite/g++.dg/debug/verify1.C b/gcc/testsuite/g++.dg/debug/verify1.C
+new file mode 100644
+index 00000000000..67e407251a1
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/debug/verify1.C
+@@ -0,0 +1,64 @@
++// PR c++/92601
++// { dg-additional-options "-g -fchecking -std=c++17" }
++
++typedef int size_t;
++template <typename, int __v> struct integral_constant {
++  static constexpr int value = __v;
++};
++template <typename> struct A;
++template <typename _Tp> using __remove_cv_t = typename A<_Tp>::type;
++template <typename _Tp, typename _Up>
++struct B : integral_constant<bool, __is_same_as(_Tp, _Up)> {};
++template <typename...> class tuple;
++template <typename> struct A {
++  using type = tuple<const char *, const char *>;
++};
++template <typename> struct C { typedef __remove_cv_t<int> __type; };
++template <typename _Tp> class D {
++public:
++  typedef typename C<_Tp>::__type type;
++};
++template <bool> struct enable_if;
++template <int> struct F {};
++template <typename, typename> class G {
++public:
++  int operator*();
++  void operator++();
++};
++template <typename _Iterator, typename _Container>
++bool operator!=(G<_Iterator, _Container>, G<_Iterator, _Container>);
++template <typename> class H;
++template <typename = H<tuple<const char *, const char *>>> class vector {
++public:
++  typedef G<int, vector> iterator;
++  iterator begin();
++  iterator end();
++};
++template <typename> struct pack_c { typedef pack_c type; };
++template <typename, typename> struct make_index_pack_join;
++template <size_t... Left, size_t... Right>
++struct make_index_pack_join<pack_c<size_t, Left...>, pack_c<size_t, Right...>>
++    : pack_c<size_t> {};
++template <int N>
++struct I
++    : make_index_pack_join<typename I<N / 2>::type, typename I<N / 2>::type> {};
++template <> struct I<1> : pack_c<size_t> {};
++template <typename TTuple, typename>
++struct are_tuples_compatible_not_same
++    : F<B<typename D<TTuple>::type, int>::value> {};
++template <typename...> struct tuple_impl;
++template <size_t... Is, typename... Ts>
++struct tuple_impl<pack_c<size_t, Is...>, Ts...> {
++  template <typename UTuple, typename enable_if<are_tuples_compatible_not_same<
++                                 tuple<>, UTuple>::value>::type>
++  tuple_impl(UTuple &&);
++};
++template <typename... Ts> class tuple {
++  tuple_impl<typename I<sizeof...(Ts)>::type> _impl;
++  tuple(tuple &) = default;
++};
++vector message_handler_registrations;
++void fn1() {
++  for (auto t : message_handler_registrations)
++    ;
++}
 diff --git a/gcc/testsuite/g++.dg/diagnostic/pr90767-1.C b/gcc/testsuite/g++.dg/diagnostic/pr90767-1.C
 new file mode 100644
 index 00000000000..7d1cd3db398
@@ -31661,6 +32090,26 @@ index 00000000000..796828b25c0
 +  foo();
 +  if (c != d)
 +    __builtin_abort();
++}
+diff --git a/gcc/testsuite/g++.dg/ext/attr-trailing1.C b/gcc/testsuite/g++.dg/ext/attr-trailing1.C
+new file mode 100644
+index 00000000000..ff3fb901ddd
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/ext/attr-trailing1.C
+@@ -0,0 +1,14 @@
++// PR c++/90333
++// { dg-do compile { target c++11 } }
++
++auto l = [] [[nodiscard]] () -> int { return 0; };
++auto l2 = []() -> int __attribute ((warn_unused_result)) { return 0; };
++auto f() -> int __attribute ((warn_unused_result));
++auto f() -> int { return 0; }
++
++int main()
++{
++  l();				// { dg-warning "nodiscard" }
++  l2();				// { dg-warning "unused_result" }
++  f();				// { dg-warning "unused_result" }
 +}
 diff --git a/gcc/testsuite/g++.dg/ext/attrib61.C b/gcc/testsuite/g++.dg/ext/attrib61.C
 new file mode 100644
@@ -34790,6 +35239,18 @@ index 00000000000..bf1fa989478
 +{
 +  return x * copysign (); /* { dg-warning "too few arguments" } */
 +}
+diff --git a/gcc/testsuite/gcc.dg/pr90756.c b/gcc/testsuite/gcc.dg/pr90756.c
+index 3507aa29e70..a4ba64acd72 100644
+--- a/gcc/testsuite/gcc.dg/pr90756.c
++++ b/gcc/testsuite/gcc.dg/pr90756.c
+@@ -2,6 +2,7 @@
+ /* { dg-do compile } */
+ /* { dg-options "-O2 -Wno-psabi" } */
+ /* { dg-additional-options "-mno-sse" { target ia32 } } */
++/* { dg-additional-options "-fno-common" { target hppa*-*-hpux* } } */
+ 
+ typedef float B __attribute__((vector_size(4 * sizeof (float))));
+ typedef unsigned long long C __attribute__((vector_size(4 * sizeof (long long))));
 diff --git a/gcc/testsuite/gcc.dg/pr90898.c b/gcc/testsuite/gcc.dg/pr90898.c
 new file mode 100644
 index 00000000000..e992ea34cd9
@@ -35208,6 +35669,45 @@ index 00000000000..98d8c20a178
 +      __builtin_abort ();
 +  return 0;
 +}
+diff --git a/gcc/testsuite/gcc.dg/pr94002.c b/gcc/testsuite/gcc.dg/pr94002.c
+new file mode 100644
+index 00000000000..05a02f3f15b
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/pr94002.c
+@@ -0,0 +1,13 @@
++/* PR rtl-optimization/94002 */
++/* { dg-do compile } */
++/* { dg-options "-O1 -fno-tree-dce -fno-tree-reassoc" } */
++/* { dg-additional-options "-fPIC" { target fpic } } */
++
++unsigned a, b;
++
++void
++foo (void)
++{
++  __builtin_sub_overflow (b, 44852956282LL, &a);
++  a += ~b;
++}
+diff --git a/gcc/testsuite/gcc.dg/torture/20190327-1.c b/gcc/testsuite/gcc.dg/torture/20190327-1.c
+index bb20e7fba99..45093da768c 100644
+--- a/gcc/testsuite/gcc.dg/torture/20190327-1.c
++++ b/gcc/testsuite/gcc.dg/torture/20190327-1.c
+@@ -1,4 +1,5 @@
+ /* { dg-do run } */
++/* { dg-additional-options "-fno-common" { target hppa*-*-hpux* } } */
+ 
+ typedef long v2di __attribute__((vector_size(16)));
+ v2di v;
+diff --git a/gcc/testsuite/gcc.dg/torture/pr90020.c b/gcc/testsuite/gcc.dg/torture/pr90020.c
+index 1748243852a..27d1ea41ddd 100644
+--- a/gcc/testsuite/gcc.dg/torture/pr90020.c
++++ b/gcc/testsuite/gcc.dg/torture/pr90020.c
+@@ -1,4 +1,5 @@
+ /* { dg-do run } */
++/* { dg-skip-if "No undefined weak" { hppa*-*-hpux* } } */
+ /* { dg-require-weak "" } */
+ /* { dg-additional-options "-Wl,-undefined,dynamic_lookup" { target *-*-darwin* } } */
+ /* { dg-additional-options "-Wl,-flat_namespace" { target *-*-darwin[89]* } } */
 diff --git a/gcc/testsuite/gcc.dg/torture/pr90278.c b/gcc/testsuite/gcc.dg/torture/pr90278.c
 new file mode 100644
 index 00000000000..617246a6d4c
@@ -37967,47 +38467,6 @@ index 00000000000..477901fde70
 +}
 +
 +/* { dg-final { scan-assembler-times {(?n)\mdarn .*,0\M} 4 } } */
-diff --git a/gcc/testsuite/gcc.target/powerpc/fold-vec-st-char.c b/gcc/testsuite/gcc.target/powerpc/fold-vec-st-char.c
-index 4c4582780c2..d8de63fdeba 100644
---- a/gcc/testsuite/gcc.target/powerpc/fold-vec-st-char.c
-+++ b/gcc/testsuite/gcc.target/powerpc/fold-vec-st-char.c
-@@ -91,4 +91,4 @@ testst_cst7 (vector bool char vbc1, int i1, signed char * vscp)
- 	return vec_st(vbc1, 36, vscp);
- }
- 
--/* { dg-final { scan-assembler-times {\mstvx\M} 14 } } */
-+/* { dg-final { scan-assembler-times {\m(?:stvx|stxv|stxvx)\M} 14 } } */
-diff --git a/gcc/testsuite/gcc.target/powerpc/fold-vec-st-float.c b/gcc/testsuite/gcc.target/powerpc/fold-vec-st-float.c
-index 5a8fc6670a6..61780fb308b 100644
---- a/gcc/testsuite/gcc.target/powerpc/fold-vec-st-float.c
-+++ b/gcc/testsuite/gcc.target/powerpc/fold-vec-st-float.c
-@@ -31,4 +31,4 @@ testst_cst2 (vector float vf1, int i1, float * fp)
- 	return vec_st(vf1, 24, fp);
- }
- 
--/* { dg-final { scan-assembler-times {\mstvx\M}  4 } } */
-+/* { dg-final { scan-assembler-times {\m(?:stvx|stxv|stxvx)\M} 4 } } */
-diff --git a/gcc/testsuite/gcc.target/powerpc/fold-vec-st-int.c b/gcc/testsuite/gcc.target/powerpc/fold-vec-st-int.c
-index 4db35f0dd94..4155a8f130f 100644
---- a/gcc/testsuite/gcc.target/powerpc/fold-vec-st-int.c
-+++ b/gcc/testsuite/gcc.target/powerpc/fold-vec-st-int.c
-@@ -80,5 +80,5 @@ testst_cst7 (vector bool int vbi1, int i1, signed int * vsip)
- 	return vec_st(vbi1, 36, vsip);
- }
- 
--/* { dg-final { scan-assembler-times {\mstvx\M}  14 } } */
-+/* { dg-final { scan-assembler-times {\m(?:stvx|stxv|stxvx)\M} 14 } } */
- 
-diff --git a/gcc/testsuite/gcc.target/powerpc/fold-vec-st-short.c b/gcc/testsuite/gcc.target/powerpc/fold-vec-st-short.c
-index ba8397eef26..d9b7a0754a6 100644
---- a/gcc/testsuite/gcc.target/powerpc/fold-vec-st-short.c
-+++ b/gcc/testsuite/gcc.target/powerpc/fold-vec-st-short.c
-@@ -80,4 +80,4 @@ testst_cst7 (vector bool short vbs1, int i1, signed short * vssp)
- 	return vec_st(vbs1, 36, vssp);
- }
- 
--/* { dg-final { scan-assembler-times {\mstvx\M} 14} } */
-+/* { dg-final { scan-assembler-times {\m(?:stvx|stxv|stxvx)\M} 14} } */
 diff --git a/gcc/testsuite/gcc.target/powerpc/pr70010-1.c b/gcc/testsuite/gcc.target/powerpc/pr70010-1.c
 new file mode 100644
 index 00000000000..4b3abb7d8fe
@@ -38544,32 +39003,6 @@ index 00000000000..6a0a4731148
 +      if (a == 0.0)
 +	bar ();
 +    }
-+}
-diff --git a/gcc/testsuite/gcc.target/powerpc/pr93658.c b/gcc/testsuite/gcc.target/powerpc/pr93658.c
-new file mode 100644
-index 00000000000..0170d34d259
---- /dev/null
-+++ b/gcc/testsuite/gcc.target/powerpc/pr93658.c
-@@ -0,0 +1,20 @@
-+/* { dg-do compile } */
-+/* { dg-options "-O3 -fstack-protector-strong -mcpu=power8" } */
-+/* { dg-require-effective-target powerpc_vsx_ok } */
-+
-+/* PR93658: Failure compiling this test is an infinite loop in LRA's
-+   process_address(), so set a short timeout limit.  */
-+/* { dg-timeout 5 } */
-+
-+void bar();
-+char b;
-+void
-+foo (void)
-+{
-+  char a;
-+  int d = b;
-+  char *e = &a;
-+  while (d)
-+    *e++ = --d;
-+  bar ();
 +}
 diff --git a/gcc/testsuite/gcc.target/powerpc/pure-builtin-redundant-load.c b/gcc/testsuite/gcc.target/powerpc/pure-builtin-redundant-load.c
 new file mode 100644
@@ -42067,6 +42500,16 @@ index 00000000000..79a916ea0b7
 +  function Get return Natural;
 +
 +end Lto24_Pkg2;
+diff --git a/gcc/testsuite/gnat.dg/socket1.adb b/gcc/testsuite/gnat.dg/socket1.adb
+index a6bdade304b..154a7aff190 100644
+--- a/gcc/testsuite/gnat.dg/socket1.adb
++++ b/gcc/testsuite/gnat.dg/socket1.adb
+@@ -1,4 +1,4 @@
+--- { dg-do run { target { ! "*-*-solaris2*" } } }
++-- { dg-do run { target { ! { hppa*-*-hpux* *-*-solaris2* } } } }
+ 
+ with GNAT.Sockets; use GNAT.Sockets;
+ procedure socket1 is
 diff --git a/gcc/testsuite/obj-c++.dg/stubify-1.mm b/gcc/testsuite/obj-c++.dg/stubify-1.mm
 index c2355437afc..e8f21882de9 100644
 --- a/gcc/testsuite/obj-c++.dg/stubify-1.mm
@@ -43798,7 +44241,7 @@ index 795d7184a65..2140101d7d2 100644
  					 wmin, wmax, min_ovf, max_ovf);
  	  if (type == VR_VARYING)
 diff --git a/gcc/tree.c b/gcc/tree.c
-index 73102c4e75b..4a20f5a0074 100644
+index 73102c4e75b..32e94e48132 100644
 --- a/gcc/tree.c
 +++ b/gcc/tree.c
 @@ -265,7 +265,7 @@ static void print_type_hash_statistics (void);
@@ -43932,6 +44375,17 @@ index 73102c4e75b..4a20f5a0074 100644
  }
  
  /* Return a representation of ELT_TYPE[NELTS], using indices of type
+@@ -13861,9 +13866,9 @@ verify_type_variant (const_tree t, tree tv)
+ 	  debug_tree (TYPE_SIZE_UNIT (t));
+ 	  return false;
+ 	}
++      verify_variant_match (TYPE_NEEDS_CONSTRUCTING);
+     }
+   verify_variant_match (TYPE_PRECISION);
+-  verify_variant_match (TYPE_NEEDS_CONSTRUCTING);
+   if (RECORD_OR_UNION_TYPE_P (t))
+     verify_variant_match (TYPE_TRANSPARENT_AGGR);
+   else if (TREE_CODE (t) == ARRAY_TYPE)
 @@ -14972,6 +14977,41 @@ default_is_empty_record (const_tree type)
    return default_is_empty_type (TYPE_MAIN_VARIANT (type));
  }
@@ -44063,6 +44517,52 @@ index cb43248ec49..8f006dcff67 100644
  }
  
  /* Allocate SIZE bytes writable static space with a gensym name
+diff --git a/libbacktrace/ChangeLog b/libbacktrace/ChangeLog
+index 93fcf483153..3fa0caa6f67 100644
+--- a/libbacktrace/ChangeLog
++++ b/libbacktrace/ChangeLog
+@@ -1,3 +1,13 @@
++2020-02-29  John David Anglin  <danglin@gcc.gnu.org>
++
++	Backport from mainline
++	2019-09-26  Ian Lance Taylor  <iant@golang.org>
++
++	PR libbacktrace/91908
++	* pecoff.c (backtrace_initialize): Explicitly cast unchecked
++	__sync_bool_compare_and_swap to void.
++	* xcoff.c (backtrace_initialize): Likewise.
++
+ 2019-08-12  Release Manager
+ 
+ 	* GCC 9.2.0 released.
+diff --git a/libbacktrace/pecoff.c b/libbacktrace/pecoff.c
+index da1982fd3ca..fcf9508d488 100644
+--- a/libbacktrace/pecoff.c
++++ b/libbacktrace/pecoff.c
+@@ -922,7 +922,8 @@ backtrace_initialize (struct backtrace_state *state,
+       if (found_sym)
+ 	backtrace_atomic_store_pointer (&state->syminfo_fn, coff_syminfo);
+       else
+-	__sync_bool_compare_and_swap (&state->syminfo_fn, NULL, coff_nosyms);
++	(void) __sync_bool_compare_and_swap (&state->syminfo_fn, NULL,
++					     coff_nosyms);
+     }
+ 
+   if (!state->threaded)
+diff --git a/libbacktrace/xcoff.c b/libbacktrace/xcoff.c
+index d50b5bc517e..bc60962fe04 100644
+--- a/libbacktrace/xcoff.c
++++ b/libbacktrace/xcoff.c
+@@ -1592,7 +1592,8 @@ backtrace_initialize (struct backtrace_state *state,
+       if (found_sym)
+ 	backtrace_atomic_store_pointer (&state->syminfo_fn, xcoff_syminfo);
+       else
+-	__sync_bool_compare_and_swap (&state->syminfo_fn, NULL, xcoff_nosyms);
++	(void) __sync_bool_compare_and_swap (&state->syminfo_fn, NULL,
++					     xcoff_nosyms);
+     }
+ 
+   if (!state->threaded)
 diff --git a/libcpp/ChangeLog b/libcpp/ChangeLog
 index 99e2386de14..68c9237cf03 100644
 --- a/libcpp/ChangeLog
@@ -46317,6 +46817,37 @@ index f58a95fe670..1009f4a81e5 100644
    integer :: i
  
    do i = 1, N
+diff --git a/libiberty/ChangeLog b/libiberty/ChangeLog
+index 7bbc0dec6c8..0be41b24d13 100644
+--- a/libiberty/ChangeLog
++++ b/libiberty/ChangeLog
+@@ -1,3 +1,12 @@
++2020-03-02  H.J. Lu  <hongjiu.lu@intel.com>
++
++	Backport from master
++	2020-03-02  H.J. Lu  <hongjiu.lu@intel.com>
++
++	PR lto/93966
++	* simple-object.c (handle_lto_debug_sections): Also copy
++	.note.gnu.property section.
++
+ 2019-08-12  Release Manager
+ 
+ 	* GCC 9.2.0 released.
+diff --git a/libiberty/simple-object.c b/libiberty/simple-object.c
+index b00c265128c..7fdb30f3416 100644
+--- a/libiberty/simple-object.c
++++ b/libiberty/simple-object.c
+@@ -293,6 +293,9 @@ handle_lto_debug_sections (const char *name, int rename)
+   /* Copy over .note.GNU-stack section under the same name if present.  */
+   else if (strcmp (name, ".note.GNU-stack") == 0)
+     return strcpy (newname, name);
++  /* Copy over .note.gnu.property section under the same name if present.  */
++  else if (strcmp (name, ".note.gnu.property") == 0)
++    return strcpy (newname, name);
+   /* Copy over .comment section under the same name if present.  Solaris
+      ld uses them to relax its checking of ELF gABI access rules for
+      COMDAT sections in objects produced by GCC.  */
 diff --git a/libphobos/ChangeLog b/libphobos/ChangeLog
 index 24de0ab9bd8..becd8b1ec86 100644
 --- a/libphobos/ChangeLog
@@ -46426,10 +46957,16 @@ index 76275b51b62..81eb957d2fa 100644
  #define __quadmath_extern_inline \
    extern inline __attribute__ ((__gnu_inline__))
 diff --git a/libsanitizer/ChangeLog b/libsanitizer/ChangeLog
-index c7d3cf4f562..e96f13b4ae6 100644
+index c7d3cf4f562..53b8343a189 100644
 --- a/libsanitizer/ChangeLog
 +++ b/libsanitizer/ChangeLog
-@@ -1,3 +1,34 @@
+@@ -1,3 +1,40 @@
++2020-03-03  Iain Sandoe  <iain@sandoe.co.uk>
++
++	* configure.tgt (x86_64-*-darwin*, i?86-*-darwin*): Enable by
++	default only for Darwin versions greater than equal to 11
++	(macOS 10.7).
++
 +2019-12-20  Jakub Jelinek  <jakub@redhat.com>
 +
 +	Backported from mainline
@@ -46508,6 +47045,19 @@ index b599ebb0ba9..beb1dc9532b 100644
  # if defined(_GLIBCXX_SJLJ_EXCEPTIONS) || (SANITIZER_IOS && defined(__arm__))
  #  define ASAN_INTERCEPT__UNWIND_SJLJ_RAISEEXCEPTION 1
  # else
+diff --git a/libsanitizer/configure.tgt b/libsanitizer/configure.tgt
+index b241ddbfec4..424fb17a45c 100644
+--- a/libsanitizer/configure.tgt
++++ b/libsanitizer/configure.tgt
+@@ -60,7 +60,7 @@ case "${target}" in
+ 		TSAN_TARGET_DEPENDENT_OBJECTS=tsan_rtl_aarch64.lo
+ 	fi
+ 	;;
+-  x86_64-*-darwin[1]* | i?86-*-darwin[1]*)
++  x86_64-*-darwin1[1-9]* | i?86-*-darwin1[1-9]*)
+ 	TSAN_SUPPORTED=no
+ 	;;
+   x86_64-*-solaris2.11* | i?86-*-solaris2.11*)
 diff --git a/libsanitizer/sanitizer_common/sanitizer_platform_limits_posix.cc b/libsanitizer/sanitizer_common/sanitizer_platform_limits_posix.cc
 index 6cd4a5bac8b..d823a12190c 100644
 --- a/libsanitizer/sanitizer_common/sanitizer_platform_limits_posix.cc
@@ -46557,10 +47107,22 @@ index 73af92af1e8..6a673a7c995 100644
      unsigned short __pad2;
  #if defined(__x86_64__) && !defined(_LP64)
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
-index 8ac50251005..a0dc8ee05f9 100644
+index 8ac50251005..bcac85143f2 100644
 --- a/libstdc++-v3/ChangeLog
 +++ b/libstdc++-v3/ChangeLog
-@@ -1,3 +1,503 @@
+@@ -1,3 +1,515 @@
++2020-03-01  H.J. Lu  <hongjiu.lu@intel.com>
++
++	* config/abi/post/x86_64-linux-gnu/x32/baseline_symbols.txt: Updated.
++
++2020-02-29  John David Anglin  <danglin@gcc.gnu.org>
++
++	* testsuite/17_intro/headers/c++1998/charset.cc: Skip on *-*-hpux*.
++	* testsuite/17_intro/headers/c++2011/charset.cc: Likewise.
++	* testsuite/17_intro/headers/c++2014/charset.cc: Likewise.
++	* testsuite/17_intro/headers/c++2017/charset.cc: Likewise.
++	* testsuite/17_intro/headers/c++2020/charset.cc: Likewise.
++
 +2020-02-26  Jonathan Wakely  <jwakely@redhat.com>
 +
 +	Backport from mainline
@@ -50012,6 +50574,52 @@ diff --git a/libstdc++-v3/config/abi/post/x86_64-linux-gnu/baseline_symbols.txt 
 index 871afd61294..a403f4b660a 100644
 --- a/libstdc++-v3/config/abi/post/x86_64-linux-gnu/baseline_symbols.txt
 +++ b/libstdc++-v3/config/abi/post/x86_64-linux-gnu/baseline_symbols.txt
+@@ -1829,6 +1829,7 @@ FUNC:_ZNSt10filesystem28recursive_directory_iteratorC2ERKNS_4pathENS_17directory
+ FUNC:_ZNSt10filesystem28recursive_directory_iteratorD1Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem28recursive_directory_iteratorD2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem28recursive_directory_iteratoraSEOS0_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem28recursive_directory_iteratoraSERKS0_@@GLIBCXX_3.4.27
+ FUNC:_ZNSt10filesystem28recursive_directory_iteratorppEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem4copyERKNS_4pathES2_NS_12copy_optionsE@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem4copyERKNS_4pathES2_NS_12copy_optionsERSt10error_code@@GLIBCXX_3.4.26
+@@ -1885,6 +1886,7 @@ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorC2ERKNS0_4pathENS_17
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorD1Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorD2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratoraSEOS1_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratoraSERKS1_@@GLIBCXX_3.4.27
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorppEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx114path14_M_split_cmptsEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx114path14_S_convert_locEPKcS3_RKSt6locale@@GLIBCXX_3.4.26
+@@ -2060,13 +2062,17 @@ FUNC:_ZNSt12__basic_fileIcED1Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt12__basic_fileIcED2Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1EOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC1EOS4_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEaSEOS4_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1EOS6_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC1EOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEaSEOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12bad_weak_ptrD0Ev@@GLIBCXX_3.4.15
+ FUNC:_ZNSt12bad_weak_ptrD1Ev@@GLIBCXX_3.4.15
+@@ -4402,6 +4408,7 @@ OBJECT:0:GLIBCXX_3.4.23
+ OBJECT:0:GLIBCXX_3.4.24
+ OBJECT:0:GLIBCXX_3.4.25
+ OBJECT:0:GLIBCXX_3.4.26
++OBJECT:0:GLIBCXX_3.4.27
+ OBJECT:0:GLIBCXX_3.4.3
+ OBJECT:0:GLIBCXX_3.4.4
+ OBJECT:0:GLIBCXX_3.4.5
+diff --git a/libstdc++-v3/config/abi/post/x86_64-linux-gnu/x32/baseline_symbols.txt b/libstdc++-v3/config/abi/post/x86_64-linux-gnu/x32/baseline_symbols.txt
+index 7bea5e94608..990abf00d70 100644
+--- a/libstdc++-v3/config/abi/post/x86_64-linux-gnu/x32/baseline_symbols.txt
++++ b/libstdc++-v3/config/abi/post/x86_64-linux-gnu/x32/baseline_symbols.txt
 @@ -1829,6 +1829,7 @@ FUNC:_ZNSt10filesystem28recursive_directory_iteratorC2ERKNS_4pathENS_17directory
  FUNC:_ZNSt10filesystem28recursive_directory_iteratorD1Ev@@GLIBCXX_3.4.26
  FUNC:_ZNSt10filesystem28recursive_directory_iteratorD2Ev@@GLIBCXX_3.4.26
@@ -53799,6 +54407,61 @@ index 36b5d2c24f6..5c5d6b9ef26 100644
      }
  
    if (fs::remove(p, ec))
+diff --git a/libstdc++-v3/testsuite/17_intro/headers/c++1998/charset.cc b/libstdc++-v3/testsuite/17_intro/headers/c++1998/charset.cc
+index 4425e1cf63e..e76edea1559 100644
+--- a/libstdc++-v3/testsuite/17_intro/headers/c++1998/charset.cc
++++ b/libstdc++-v3/testsuite/17_intro/headers/c++1998/charset.cc
+@@ -1,5 +1,5 @@
+ // { dg-options "-finput-charset=ascii" }
+ // { dg-do compile }
+-// { dg-skip-if "non-ascii in system headers" { *-*-darwin10*  *-*-darwin[89]* } }
++// { dg-skip-if "non-ascii in system headers" { *-*-hpux* *-*-darwin10*  *-*-darwin[89]* } }
+ 
+ #include <bits/extc++.h>
+diff --git a/libstdc++-v3/testsuite/17_intro/headers/c++2011/charset.cc b/libstdc++-v3/testsuite/17_intro/headers/c++2011/charset.cc
+index 4425e1cf63e..e76edea1559 100644
+--- a/libstdc++-v3/testsuite/17_intro/headers/c++2011/charset.cc
++++ b/libstdc++-v3/testsuite/17_intro/headers/c++2011/charset.cc
+@@ -1,5 +1,5 @@
+ // { dg-options "-finput-charset=ascii" }
+ // { dg-do compile }
+-// { dg-skip-if "non-ascii in system headers" { *-*-darwin10*  *-*-darwin[89]* } }
++// { dg-skip-if "non-ascii in system headers" { *-*-hpux* *-*-darwin10*  *-*-darwin[89]* } }
+ 
+ #include <bits/extc++.h>
+diff --git a/libstdc++-v3/testsuite/17_intro/headers/c++2014/charset.cc b/libstdc++-v3/testsuite/17_intro/headers/c++2014/charset.cc
+index 4425e1cf63e..e76edea1559 100644
+--- a/libstdc++-v3/testsuite/17_intro/headers/c++2014/charset.cc
++++ b/libstdc++-v3/testsuite/17_intro/headers/c++2014/charset.cc
+@@ -1,5 +1,5 @@
+ // { dg-options "-finput-charset=ascii" }
+ // { dg-do compile }
+-// { dg-skip-if "non-ascii in system headers" { *-*-darwin10*  *-*-darwin[89]* } }
++// { dg-skip-if "non-ascii in system headers" { *-*-hpux* *-*-darwin10*  *-*-darwin[89]* } }
+ 
+ #include <bits/extc++.h>
+diff --git a/libstdc++-v3/testsuite/17_intro/headers/c++2017/charset.cc b/libstdc++-v3/testsuite/17_intro/headers/c++2017/charset.cc
+index 4425e1cf63e..e76edea1559 100644
+--- a/libstdc++-v3/testsuite/17_intro/headers/c++2017/charset.cc
++++ b/libstdc++-v3/testsuite/17_intro/headers/c++2017/charset.cc
+@@ -1,5 +1,5 @@
+ // { dg-options "-finput-charset=ascii" }
+ // { dg-do compile }
+-// { dg-skip-if "non-ascii in system headers" { *-*-darwin10*  *-*-darwin[89]* } }
++// { dg-skip-if "non-ascii in system headers" { *-*-hpux* *-*-darwin10*  *-*-darwin[89]* } }
+ 
+ #include <bits/extc++.h>
+diff --git a/libstdc++-v3/testsuite/17_intro/headers/c++2020/charset.cc b/libstdc++-v3/testsuite/17_intro/headers/c++2020/charset.cc
+index 4425e1cf63e..e76edea1559 100644
+--- a/libstdc++-v3/testsuite/17_intro/headers/c++2020/charset.cc
++++ b/libstdc++-v3/testsuite/17_intro/headers/c++2020/charset.cc
+@@ -1,5 +1,5 @@
+ // { dg-options "-finput-charset=ascii" }
+ // { dg-do compile }
+-// { dg-skip-if "non-ascii in system headers" { *-*-darwin10*  *-*-darwin[89]* } }
++// { dg-skip-if "non-ascii in system headers" { *-*-hpux* *-*-darwin10*  *-*-darwin[89]* } }
+ 
+ #include <bits/extc++.h>
 diff --git a/libstdc++-v3/testsuite/17_intro/names.cc b/libstdc++-v3/testsuite/17_intro/names.cc
 index 66c639ff3a3..a47d53503e3 100644
 --- a/libstdc++-v3/testsuite/17_intro/names.cc
