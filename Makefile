@@ -24,3 +24,8 @@ update:
 	$(MAKE) bumpnogit
 	git commit -m "stable update to `cat REVISION`" -a
 	test -n "$(NO_KOJI)" || $(MAKE) koji-nowait
+	cp gcc-stable-branch ../libgfortran-avx
+	pushd ../libgfortran-avx
+	git commit -m "stable update to `cat REVISION`" -a
+	test -n "$(NO_KOJI)" || $(MAKE) koji-nowait
+	popd
