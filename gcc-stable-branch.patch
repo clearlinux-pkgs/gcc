@@ -66,7 +66,8 @@ Eric Botcazou (18):
 Eric S. Raymond (1):
       Clean up references to Subversion in documentation sources.
 
-GCC Administrator (203):
+GCC Administrator (204):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -328,7 +329,7 @@ Ilya Leoshkevich (3):
       S/390: Fix failing RTL check in s390_canonicalize_comparison
       Free dominance info at the beginning of pass_jump_after_combine
 
-Jakub Jelinek (106):
+Jakub Jelinek (107):
       * BASE-VER: Set to 9.2.1.
       baseline_symbols.txt: Update.
       re PR tree-optimization/91597 (GCC miscompiles a branch depending on a pointer tag)
@@ -435,6 +436,7 @@ Jakub Jelinek (106):
       sccvn: Punt on ref->size not multiple of 8 for memset (, 123, ) in 9.x [PR93945]
       gimplify: Don't optimize register const vars to static [PR93949]
       explow: Fix ICE caused by plus_constant [PR94002]
+      maintainer-scripts: Speed up git clone in gcc_release
 
 Jan Hubicka (3):
       Backport ggc_trim 	Backport from mainline
@@ -57709,10 +57711,14 @@ index 4636d9995c1..ac646a59cb8 100644
  }
  #endif
 diff --git a/maintainer-scripts/ChangeLog b/maintainer-scripts/ChangeLog
-index 280c506b9c3..b4112007ee5 100644
+index 280c506b9c3..c50e6c284e2 100644
 --- a/maintainer-scripts/ChangeLog
 +++ b/maintainer-scripts/ChangeLog
-@@ -1,3 +1,15 @@
+@@ -1,3 +1,19 @@
++2020-02-27  Jakub Jelinek  <jakub@redhat.com>
++
++	* gcc_release: Add support for -b local-git-repo argument.
++
 +2020-01-13  Joseph Myers  <joseph@codesourcery.com>
 +
 +	Backport:
@@ -57729,10 +57735,19 @@ index 280c506b9c3..b4112007ee5 100644
  
  	* GCC 9.2.0 released.
 diff --git a/maintainer-scripts/gcc_release b/maintainer-scripts/gcc_release
-index bfb6b037bb1..8be870154f7 100755
+index bfb6b037bb1..74cce1af18d 100755
 --- a/maintainer-scripts/gcc_release
 +++ b/maintainer-scripts/gcc_release
-@@ -64,19 +64,19 @@ inform() {
+@@ -9,7 +9,7 @@
+ # Contents:
+ #   Script to create a GCC release.
+ #
+-# Copyright (c) 2001-2018 Free Software Foundation.
++# Copyright (c) 2001-2020 Free Software Foundation.
+ #
+ # This file is part of GCC.
+ #
+@@ -64,20 +64,21 @@ inform() {
  usage() {
  cat <<EOF
  gcc_release -r release [-f] [further options]
@@ -57753,15 +57768,23 @@ index bfb6b037bb1..8be870154f7 100755
 -  -t tag               Tag to mark the release in SVN.
 +  -t tag               Tag to mark the release in git.
    -u username          Username for upload operations.
++  -b local-git-repo    Local git repository to speed up cloning.
  EOF
      exit 1
-@@ -102,14 +102,15 @@ build_sources() {
+ }
+@@ -102,14 +103,21 @@ build_sources() {
      || error "Could not create \`${WORKING_DIRECTORY}'"
    changedir "${WORKING_DIRECTORY}"
  
 +  # Check out the sources.
-+  ${GIT} clone -q -b "${GITBRANCH}" "${GITROOT}" "`basename ${SOURCE_DIRECTORY}`" || \
-+      error "Could not check out release sources"
++  if [ -n "${GIT_REFERENCE}" ]; then
++    ${GIT} clone -q --dissociate --reference "${GIT_REFERENCE}" \
++		 -b "${GITBRANCH}" "${GITROOT}" "`basename ${SOURCE_DIRECTORY}`" || \
++        error "Could not check out release sources"
++  else
++    ${GIT} clone -q -b "${GITBRANCH}" "${GITROOT}" "`basename ${SOURCE_DIRECTORY}`" || \
++        error "Could not check out release sources"
++  fi
 +
    # If this is a final release, make sure that the ChangeLogs
    # and version strings are updated.
@@ -57774,7 +57797,7 @@ index bfb6b037bb1..8be870154f7 100755
      grep -q "gcc-${RELEASE_MAJOR}/index.html gcc-${RELEASE_MAJOR}/changes.html" \
  	 ${SOURCE_DIRECTORY}/contrib/gennews ||\
  	   error "New release not listed in contrib/gennews"
-@@ -139,7 +140,7 @@ build_sources() {
+@@ -139,7 +147,7 @@ build_sources() {
  
      rm -f NEWS
  
@@ -57783,7 +57806,7 @@ index bfb6b037bb1..8be870154f7 100755
      for x in `changedir ${SOURCE_DIRECTORY} && \
  	      find . -name ChangeLog`; do
        # Update this ChangeLog file only if it does not yet contain the
-@@ -154,7 +155,7 @@ ${LONG_DATE}  Release Manager
+@@ -154,7 +162,7 @@ ${LONG_DATE}  Release Manager
  EOF
  	mv ${SOURCE_DIRECTORY}/${x}.new ${SOURCE_DIRECTORY}/${x} \
  	  || error "Could not update ${x}"
@@ -57792,7 +57815,7 @@ index bfb6b037bb1..8be870154f7 100755
        fi
      done
  
-@@ -169,7 +170,7 @@ EOF
+@@ -169,7 +177,7 @@ EOF
  	(changedir ${SOURCE_DIRECTORY}/gcc && \
  	 echo ${RELEASE} > BASE-VER) || \
  	error "Could not update BASE-VER"
@@ -57801,7 +57824,7 @@ index bfb6b037bb1..8be870154f7 100755
        else
  	error "Release number ${RELEASE} does not immediately follow BASE-VER"
        fi
-@@ -177,16 +178,15 @@ EOF
+@@ -177,16 +185,15 @@ EOF
      (changedir ${SOURCE_DIRECTORY}/gcc && \
       : > DEV-PHASE) || \
      error "Could not update DEV-PHASE"
@@ -57822,7 +57845,7 @@ index bfb6b037bb1..8be870154f7 100755
    fi
  
    # Tag the sources.
-@@ -195,30 +195,43 @@ EOF
+@@ -195,30 +202,43 @@ EOF
      # We don't want to overwrite an existing tag.  So, if the tag
      # already exists, issue an error message; the release manager can
      # manually remove the tag if appropriate.
@@ -57878,7 +57901,7 @@ index bfb6b037bb1..8be870154f7 100755
    changedir "${SOURCE_DIRECTORY}"
    if [ $SNAPSHOT -ne 1 ]; then
      # Generate the documentation.
-@@ -430,11 +443,11 @@ announce_snapshot() {
+@@ -430,11 +450,11 @@ announce_snapshot() {
    changedir "${SNAPSHOTS_DIR}"
    echo \
  "Snapshot gcc-"${RELEASE}" is now available on
@@ -57893,7 +57916,7 @@ index bfb6b037bb1..8be870154f7 100755
  
  You'll find:
  " > ${SNAPSHOT_README}
-@@ -457,8 +470,8 @@ for testing purposes.</p>
+@@ -457,8 +477,8 @@ for testing purposes.</p>
  we highly recommend you join the GCC developers list.  Details for
  how to sign up can be found on the GCC project home page.</p>
  
@@ -57904,7 +57927,7 @@ index bfb6b037bb1..8be870154f7 100755
  
  <table>" > ${SNAPSHOT_INDEX}
         
-@@ -511,13 +524,13 @@ export LC_ALL
+@@ -511,13 +531,13 @@ export LC_ALL
  DATE=`date "+%Y%m%d"`
  LONG_DATE=`date "+%Y-%m-%d"`
  
@@ -57923,7 +57946,7 @@ index bfb6b037bb1..8be870154f7 100755
  
  # The machine to which files will be uploaded.
  GCC_HOSTNAME="gcc.gnu.org"
-@@ -546,7 +559,7 @@ BRANCH=""
+@@ -546,7 +566,7 @@ BRANCH=""
  
  # The name of the branch from which the release should be made, as used
  # for our version control system.
@@ -57932,7 +57955,23 @@ index bfb6b037bb1..8be870154f7 100755
  
  # The tag to apply to the sources used for the release.
  TAG=""
-@@ -605,11 +618,11 @@ while getopts "d:fr:u:t:p:s:l" ARG; do
+@@ -554,6 +574,9 @@ TAG=""
+ # The old tarballs from which to generate diffs.
+ OLD_TARS=""
+ 
++# Local gcc git checkout to speed up git cloning.
++GIT_REFERENCE=""
++
+ # The directory that will be used to construct the release.  The
+ # release itself will be placed in a subdirectory of this directory.
+ DESTINATION=${HOME}
+@@ -600,16 +623,16 @@ TAR="${TAR:-tar}"
+ ########################################################################
+ 
+ # Parse the options.
+-while getopts "d:fr:u:t:p:s:l" ARG; do
++while getopts "d:fr:u:t:p:s:lb:" ARG; do
+     case $ARG in
      d)    DESTINATION="${OPTARG}";;
      r)    RELEASE="${OPTARG}";;
      t)    TAG="${OPTARG}";;
@@ -57946,7 +57985,15 @@ index bfb6b037bb1..8be870154f7 100755
            ;;
      l)    LOCAL=1
  	  SCP=cp
-@@ -643,7 +656,7 @@ while [ $# -ne 0 ]; do
+@@ -618,6 +641,7 @@ while getopts "d:fr:u:t:p:s:l" ARG; do
+           if [ ! -f ${OPTARG} ]; then
+ 	    error "-p argument must name a tarball"
+ 	  fi;;
++    b)    GIT_REFERENCE="${OPTARG}";;
+     \?)   usage;;
+     esac
+ done
+@@ -643,7 +667,7 @@ while [ $# -ne 0 ]; do
  done
  
  # Perform consistency checking.
@@ -57955,7 +58002,7 @@ index bfb6b037bb1..8be870154f7 100755
    error "No username specified"
  fi
  
-@@ -673,12 +686,8 @@ if [ $SNAPSHOT -eq 0 ]; then
+@@ -673,12 +697,8 @@ if [ $SNAPSHOT -eq 0 ]; then
    fi
  
    # Compute the name of the branch, which is based solely on the major
@@ -57970,7 +58017,7 @@ index bfb6b037bb1..8be870154f7 100755
  
    # If this is not a final release, set various parameters accordingly.
    if [ ${FINAL} -ne 1 ]; then
-@@ -707,13 +716,13 @@ fi
+@@ -707,13 +727,13 @@ fi
  WORKING_DIRECTORY="${DESTINATION}/gcc-${RELEASE}"
  SOURCE_DIRECTORY="${WORKING_DIRECTORY}/gcc-${RELEASE}"
  
