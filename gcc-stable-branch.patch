@@ -447,7 +447,7 @@ Janne Blomqvist (2):
       PR fortran/91414 Improve initialization of PRNG
       PR fortran/91414 Correctly fill master_state from os_seed.
 
-Jason Merrill (27):
+Jason Merrill (29):
       PR c++/90538 - multiple expansions of capture packs
       PR c++/91378 - ICE with noexcept and auto return type.
       PR c++/90393 - ICE with throw in ?:
@@ -475,6 +475,8 @@ Jason Merrill (27):
       c++: Fix cast to pointer to VLA.
       c++: Allow parm of empty class type in constexpr.
       c++: Fix ({ ... }) array mem-initializer.
+      c++: avoid ICE with __builtin_memset (PR90997).
+      c++: Fix [[no_unique_address]] and default mem-init [PR90432]
 
 Jerry DeLisle (2):
       backport: re PR libfortran/92100 (Formatted stream IO irreproducible read with binary data in file)
@@ -584,7 +586,7 @@ Kyrylo Tkachov (3):
 Li Jia He (1):
       [rs6000]Fix PR92098 by backporting vec_cmp and vcond_mask supports to gcc-9-branch
 
-Marek Polacek (14):
+Marek Polacek (18):
       PR c++/81429 - wrong parsing of constructor with C++11 attribute.
       PR c++/87519 - bogus warning with -Wsign-conversion.
       PR c++/90473 - wrong code with nullptr in default argument.
@@ -599,6 +601,10 @@ Marek Polacek (14):
       * decl.c (reshape_init_r): Add missing space.
       PR c++/90998 - ICE with copy elision in init by ctor and -Wconversion.
       PR c++/92745 - bogus error when initializing array of vectors.
+      c++: Fix mismatch in template argument deduction [PR90505]
+      c++: Fix value-init crash in template [PR93676]
+      sanopt: Avoid crash on anonymous parameter [PR93436]
+      c++: Fix ICE in tsubst_copy with parenthesized expression [PR93299]
 
 Mark Eggleston (6):
       Fortran: PR93263 -fno-automatic and RECURSIVE
@@ -847,8 +853,9 @@ Wilco Dijkstra (2):
       [AArch64] Fix PR81800
       [AArch64] Fix shrinkwrapping interactions with atomics (PR92692)
 
-Will Schmidt (1):
+Will Schmidt (2):
       backport: rs6000-builtin.def: (LVSL...
+      Remove unnecessary XFAILs from existing testcase 20050603-3.c.
 
 Xiong Hu Luo (1):
       backport: Enable math functions linking with static library for LTO
@@ -1254,10 +1261,19 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..640d64180f8 100644
+index 7f6557d8018..e73e1d0fb20 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,2301 @@
+@@ -1,3 +1,2310 @@
++2020-03-04  Marek Polacek  <polacek@redhat.com>
++
++	Backport from mainline
++	2020-01-26  Marek Polacek  <polacek@redhat.com>
++
++	PR sanitizer/93436
++	* sanopt.c (sanitize_rewrite_addressable_params): Avoid crash on
++	null DECL_NAME.
++
 +2020-03-03  Jakub Jelinek  <jakub@redhat.com>
 +
 +	PR rtl-optimization/94002
@@ -3559,7 +3575,7 @@ index 7f6557d8018..640d64180f8 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +2811,7 @@
+@@ -513,7 +2820,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -14480,10 +14496,47 @@ index ce2825580c6..3a7251102ef 100644
  AC_SUBST(all_languages)
  AC_SUBST(all_selected_languages)
 diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
-index c977850d067..614844ef906 100644
+index c977850d067..a9236063159 100644
 --- a/gcc/cp/ChangeLog
 +++ b/gcc/cp/ChangeLog
-@@ -1,3 +1,517 @@
+@@ -1,3 +1,554 @@
++2020-03-04  Marek Polacek  <polacek@redhat.com>
++
++	Backported from mainline
++	2020-01-24  Marek Polacek  <polacek@redhat.com>
++
++	PR c++/93299 - ICE in tsubst_copy with parenthesized expression.
++	* pt.c (tsubst_copy): Handle a REF_PARENTHESIZED_P VIEW_CONVERT_EXPR.
++
++2020-03-04  Marek Polacek  <polacek@redhat.com>
++
++	Backported from mainline
++	2020-02-26  Marek Polacek  <polacek@redhat.com>
++
++	PR c++/93676 - value-init crash in template.
++	* init.c (build_new_1): Don't call build_vec_init in a template.
++
++2020-03-04  Jason Merrill  <jason@redhat.com>
++	    Marek Polacek  <polacek@redhat.com>
++
++	PR c++/90505 - mismatch in template argument deduction.
++	* pt.c (tsubst): Don't reduce the template level of template
++	parameters when tf_partial.
++
++2020-03-04  Jason Merrill  <jason@redhat.com>
++
++	PR c++/90432
++	* init.c (perform_member_init): Don't do aggregate initialization of
++	empty field.
++	* constexpr.c (cx_check_missing_mem_inits): Don't enforce
++	initialization of empty field.
++
++2020-03-04  Jason Merrill  <jason@redhat.com>
++
++	PR c++/90997
++	* semantics.c (finish_call_expr): Don't call
++	instantiate_non_dependent_expr before warn_for_memset.
++
 +2020-03-02  Jason Merrill  <jason@redhat.com>
 +
 +	PR c++/86917
@@ -15001,7 +15054,7 @@ index c977850d067..614844ef906 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -16,7 +530,7 @@
+@@ -16,7 +567,7 @@
  
  	Backported from mainline
  	2019-08-02  Marek Polacek  <polacek@redhat.com>
@@ -15445,10 +15498,20 @@ index a47777cdd9e..46fac4ef38e 100644
  	    warning_at (DECL_SOURCE_LOCATION (field), 0,
  			"%qD is too small to hold all values of %q#T",
 diff --git a/gcc/cp/constexpr.c b/gcc/cp/constexpr.c
-index f6f21b33396..8fd5e4f2126 100644
+index f6f21b33396..b9b387ca7e9 100644
 --- a/gcc/cp/constexpr.c
 +++ b/gcc/cp/constexpr.c
-@@ -1419,6 +1419,28 @@ cxx_bind_parameters_in_call (const constexpr_ctx *ctx, tree t,
+@@ -821,6 +821,9 @@ cx_check_missing_mem_inits (tree ctype, tree body, bool complain)
+ 		return true;
+ 	      continue;
+ 	    }
++	  if (DECL_SIZE (field) && integer_zerop (DECL_SIZE (field)))
++	    /* An empty field doesn't need an initializer.  */
++	    continue;
+ 	  ftype = strip_array_types (TREE_TYPE (field));
+ 	  if (type_has_constexpr_default_constructor (ftype))
+ 	    {
+@@ -1419,6 +1422,28 @@ cxx_bind_parameters_in_call (const constexpr_ctx *ctx, tree t,
  	    arg = adjust_temp_type (type, arg);
  	  if (!TREE_CONSTANT (arg))
  	    *non_constant_args = true;
@@ -15477,7 +15540,7 @@ index f6f21b33396..8fd5e4f2126 100644
  	  *p = build_tree_list (parms, arg);
  	  p = &TREE_CHAIN (*p);
  	}
-@@ -2640,8 +2662,16 @@ cxx_eval_array_reference (const constexpr_ctx *ctx, tree t,
+@@ -2640,8 +2665,16 @@ cxx_eval_array_reference (const constexpr_ctx *ctx, tree t,
      }
  
    /* If it's within the array bounds but doesn't have an explicit
@@ -15496,7 +15559,7 @@ index f6f21b33396..8fd5e4f2126 100644
    return cxx_eval_constant_expression (ctx, val, lval, non_constant_p,
  				       overflow_p);
  }
-@@ -2703,7 +2733,10 @@ cxx_eval_component_reference (const constexpr_ctx *ctx, tree t,
+@@ -2703,7 +2736,10 @@ cxx_eval_component_reference (const constexpr_ctx *ctx, tree t,
  	  : field == part)
  	{
  	  if (value)
@@ -15508,7 +15571,7 @@ index f6f21b33396..8fd5e4f2126 100644
  	  else
  	    /* We're in the middle of initializing it.  */
  	    break;
-@@ -2793,6 +2826,7 @@ cxx_eval_bit_field_ref (const constexpr_ctx *ctx, tree t,
+@@ -2793,6 +2829,7 @@ cxx_eval_bit_field_ref (const constexpr_ctx *ctx, tree t,
    FOR_EACH_CONSTRUCTOR_ELT (CONSTRUCTOR_ELTS (whole), i, field, value)
      {
        tree bitpos = bit_position (field);
@@ -15516,7 +15579,7 @@ index f6f21b33396..8fd5e4f2126 100644
        if (bitpos == start && DECL_SIZE (field) == TREE_OPERAND (t, 1))
  	return value;
        if (TREE_CODE (TREE_TYPE (field)) == INTEGER_TYPE
-@@ -3101,6 +3135,10 @@ cxx_eval_vec_init_1 (const constexpr_ctx *ctx, tree atype, tree init,
+@@ -3101,6 +3138,10 @@ cxx_eval_vec_init_1 (const constexpr_ctx *ctx, tree atype, tree init,
    unsigned HOST_WIDE_INT i;
    tsubst_flags_t complain = ctx->quiet ? tf_none : tf_warning_or_error;
  
@@ -15527,7 +15590,7 @@ index f6f21b33396..8fd5e4f2126 100644
    /* For the default constructor, build up a call to the default
       constructor of the element type.  We only need to handle class types
       here, as for a constructor to be constexpr, all members must be
-@@ -3973,6 +4011,10 @@ cxx_eval_increment_expression (const constexpr_ctx *ctx, tree t,
+@@ -3973,6 +4014,10 @@ cxx_eval_increment_expression (const constexpr_ctx *ctx, tree t,
    tree offset = TREE_OPERAND (t, 1);
    gcc_assert (TREE_CONSTANT (offset));
  
@@ -15538,7 +15601,7 @@ index f6f21b33396..8fd5e4f2126 100644
    /* The operand as an lvalue.  */
    op = cxx_eval_constant_expression (ctx, op, true,
  				     non_constant_p, overflow_p);
-@@ -5116,6 +5158,7 @@ cxx_eval_constant_expression (const constexpr_ctx *ctx, tree t,
+@@ -5116,6 +5161,7 @@ cxx_eval_constant_expression (const constexpr_ctx *ctx, tree t,
  	tree obj = OBJ_TYPE_REF_OBJECT (t);
  	obj = cxx_eval_constant_expression (ctx, obj, lval, non_constant_p,
  					    overflow_p);
@@ -15546,7 +15609,7 @@ index f6f21b33396..8fd5e4f2126 100644
  	/* We expect something in the form of &x.D.2103.D.2094; get x. */
  	if (TREE_CODE (obj) != ADDR_EXPR
  	    || !DECL_P (get_base_address (TREE_OPERAND (obj, 0))))
-@@ -5551,7 +5594,15 @@ maybe_constant_value (tree t, tree decl, bool manifestly_const_eval)
+@@ -5551,7 +5597,15 @@ maybe_constant_value (tree t, tree decl, bool manifestly_const_eval)
    if (cv_cache == NULL)
      cv_cache = hash_map<tree, tree>::create_ggc (101);
    if (tree *cached = cv_cache->get (t))
@@ -15563,7 +15626,7 @@ index f6f21b33396..8fd5e4f2126 100644
  
    r = cxx_eval_outermost_constant_expr (t, true, true, false, decl);
    gcc_checking_assert (r == t
-@@ -5917,6 +5968,7 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
+@@ -5917,6 +5971,7 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
      case LABEL_DECL:
      case LABEL_EXPR:
      case CASE_LABEL_EXPR:
@@ -15571,7 +15634,7 @@ index f6f21b33396..8fd5e4f2126 100644
      case CONST_DECL:
      case SIZEOF_EXPR:
      case ALIGNOF_EXPR:
-@@ -5948,8 +6000,13 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
+@@ -5948,8 +6003,13 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
        return true;
  
      case PARM_DECL:
@@ -15586,7 +15649,7 @@ index f6f21b33396..8fd5e4f2126 100644
  	  if (flags & tf_error)
  	    error ("%qE is not a constant expression", t);
  	  return false;
-@@ -6190,10 +6247,7 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
+@@ -6190,10 +6250,7 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
  #endif
        return RECUR (t, any);
  
@@ -15597,7 +15660,7 @@ index f6f21b33396..8fd5e4f2126 100644
      case ARROW_EXPR:
      case OFFSET_REF:
        /* -- a class member access unless its postfix-expression is
-@@ -6202,6 +6256,15 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
+@@ -6202,6 +6259,15 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
  	 postfix-expression being a potential constant expression.  */
        if (type_unknown_p (t))
  	return true;
@@ -15613,7 +15676,7 @@ index f6f21b33396..8fd5e4f2126 100644
        return RECUR (TREE_OPERAND (t, 0), want_rval);
  
      case EXPR_PACK_EXPANSION:
-@@ -6751,7 +6814,6 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
+@@ -6751,7 +6817,6 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
  
      case CLEANUP_STMT:
      case EMPTY_CLASS_EXPR:
@@ -15994,10 +16057,42 @@ index 6f23ee1cd3f..a46cbce08f4 100644
      note_vague_linkage_fn (decl);
  
 diff --git a/gcc/cp/init.c b/gcc/cp/init.c
-index 59e1f351fc6..6cd32d98448 100644
+index 59e1f351fc6..fcc91fc9172 100644
 --- a/gcc/cp/init.c
 +++ b/gcc/cp/init.c
-@@ -3512,7 +3512,7 @@ build_new_1 (vec<tree, va_gc> **placement, tree type, tree nelts,
+@@ -860,6 +860,11 @@ perform_member_init (tree member, tree init)
+ 	}
+       if (init == error_mark_node)
+ 	return;
++      if (DECL_SIZE (member) && integer_zerop (DECL_SIZE (member))
++	  && !TREE_SIDE_EFFECTS (init))
++	/* Don't add trivial initialization of an empty base/field, as they
++	   might not be ordered the way the back-end expects.  */
++	return;
+       /* A FIELD_DECL doesn't really have a suitable lifetime, but
+ 	 make_temporary_var_for_ref_to_temp will treat it as automatic and
+ 	 set_up_extended_ref_temp wants to use the decl in a warning.  */
+@@ -3443,13 +3448,17 @@ build_new_1 (vec<tree, va_gc> **placement, tree type, tree nelts,
+ 	  explicit_value_init_p = true;
+ 	}
+ 
+-      if (processing_template_decl && explicit_value_init_p)
++      if (processing_template_decl)
+ 	{
++	  /* Avoid an ICE when converting to a base in build_simple_base_path.
++	     We'll throw this all away anyway, and build_new will create
++	     a NEW_EXPR.  */
++	  tree t = fold_convert (build_pointer_type (elt_type), data_addr);
+ 	  /* build_value_init doesn't work in templates, and we don't need
+ 	     the initializer anyway since we're going to throw it away and
+ 	     rebuild it at instantiation time, so just build up a single
+ 	     constructor call to get any appropriate diagnostics.  */
+-	  init_expr = cp_build_fold_indirect_ref (data_addr);
++	  init_expr = cp_build_fold_indirect_ref (t);
+ 	  if (type_build_ctor_call (elt_type))
+ 	    init_expr = build_special_member_call (init_expr,
+ 						   complete_ctor_identifier,
+@@ -3512,7 +3521,7 @@ build_new_1 (vec<tree, va_gc> **placement, tree type, tree nelts,
  						     complete_ctor_identifier,
  						     init, elt_type,
  						     LOOKUP_NORMAL,
@@ -16436,7 +16531,7 @@ index a7218e752b1..e1c02d7b718 100644
    cp_lexer_get_preprocessor_token (NULL, first_token);
    if (first_token->type == CPP_STRING)
 diff --git a/gcc/cp/pt.c b/gcc/cp/pt.c
-index a2a986b1db1..f233e78cc45 100644
+index a2a986b1db1..43d9660ebda 100644
 --- a/gcc/cp/pt.c
 +++ b/gcc/cp/pt.c
 @@ -3875,7 +3875,7 @@ find_parameter_packs_r (tree *tp, int *walk_subtrees, void* data)
@@ -16512,7 +16607,19 @@ index a2a986b1db1..f233e78cc45 100644
                    RETURN (tsubst (TREE_CHAIN (t), args, complain,
  				  TREE_CHAIN (t)));
                }
-@@ -14758,6 +14745,71 @@ tsubst (tree t, tree args, tsubst_flags_t complain, tree in_decl)
+@@ -14643,6 +14630,11 @@ tsubst (tree t, tree args, tsubst_flags_t complain, tree in_decl)
+ 	     about the template parameter in question.  */
+ 	  return t;
+ 
++	/* Like with 'auto', don't reduce the level of template parameters
++	   to avoid mismatches when deducing their types.  */
++	if (complain & tf_partial)
++	  return t;
++
+ 	/* If we get here, we must have been looking at a parm for a
+ 	   more deeply nested template.  Make a new version of this
+ 	   template parameter, but with a lower level.  */
+@@ -14758,6 +14750,71 @@ tsubst (tree t, tree args, tsubst_flags_t complain, tree in_decl)
  	if (t == void_list_node)
  	  return t;
  
@@ -16584,7 +16691,7 @@ index a2a986b1db1..f233e78cc45 100644
  	purpose = TREE_PURPOSE (t);
  	if (purpose)
  	  {
-@@ -15130,24 +15182,12 @@ tsubst (tree t, tree args, tsubst_flags_t complain, tree in_decl)
+@@ -15130,24 +15187,12 @@ tsubst (tree t, tree args, tsubst_flags_t complain, tree in_decl)
  				      /*function_p*/false,
  				      /*integral_constant_expression*/false);
  
@@ -16610,7 +16717,22 @@ index a2a986b1db1..f233e78cc45 100644
  					    DECLTYPE_FOR_REF_CAPTURE (t));
  	else if (DECLTYPE_FOR_LAMBDA_PROXY (t))
  	  type = lambda_proxy_type (type);
-@@ -16147,7 +16187,6 @@ tsubst_copy (tree t, tree args, tsubst_flags_t complain, tree in_decl)
+@@ -15789,6 +15834,14 @@ tsubst_copy (tree t, tree args, tsubst_flags_t complain, tree in_decl)
+ 		  return op;
+ 		}
+ 	    }
++	  /* force_paren_expr can also create a VIEW_CONVERT_EXPR.  */
++	  else if (code == VIEW_CONVERT_EXPR && REF_PARENTHESIZED_P (t))
++	    {
++	      op = tsubst_copy (op, args, complain, in_decl);
++	      op = build1 (code, TREE_TYPE (op), op);
++	      REF_PARENTHESIZED_P (op) = true;
++	      return op;
++	    }
+ 	  /* We shouldn't see any other uses of these in templates.  */
+ 	  gcc_unreachable ();
+ 	}
+@@ -16147,7 +16200,6 @@ tsubst_copy (tree t, tree args, tsubst_flags_t complain, tree in_decl)
  
      case INTEGER_CST:
      case REAL_CST:
@@ -16618,7 +16740,7 @@ index a2a986b1db1..f233e78cc45 100644
      case COMPLEX_CST:
        {
  	/* Instantiate any typedefs in the type.  */
-@@ -16157,6 +16196,18 @@ tsubst_copy (tree t, tree args, tsubst_flags_t complain, tree in_decl)
+@@ -16157,6 +16209,18 @@ tsubst_copy (tree t, tree args, tsubst_flags_t complain, tree in_decl)
  	return r;
        }
  
@@ -16637,7 +16759,7 @@ index a2a986b1db1..f233e78cc45 100644
      case PTRMEM_CST:
        /* These can sometimes show up in a partial instantiation, but never
  	 involve template parms.  */
-@@ -18014,6 +18065,33 @@ tsubst_non_call_postfix_expression (tree t, tree args,
+@@ -18014,6 +18078,33 @@ tsubst_non_call_postfix_expression (tree t, tree args,
    return t;
  }
  
@@ -16671,7 +16793,7 @@ index a2a986b1db1..f233e78cc45 100644
  /* T is a LAMBDA_EXPR.  Generate a new LAMBDA_EXPR for the current
     instantiation context.  Instantiating a pack expansion containing a lambda
     might result in multiple lambdas all based on the same lambda in the
-@@ -18025,17 +18103,8 @@ tsubst_lambda_expr (tree t, tree args, tsubst_flags_t complain, tree in_decl)
+@@ -18025,17 +18116,8 @@ tsubst_lambda_expr (tree t, tree args, tsubst_flags_t complain, tree in_decl)
    tree oldfn = lambda_function (t);
    in_decl = oldfn;
  
@@ -16689,7 +16811,7 @@ index a2a986b1db1..f233e78cc45 100644
    LAMBDA_EXPR_LOCATION (r)
      = LAMBDA_EXPR_LOCATION (t);
    LAMBDA_EXPR_DEFAULT_CAPTURE_MODE (r)
-@@ -18061,6 +18130,36 @@ tsubst_lambda_expr (tree t, tree args, tsubst_flags_t complain, tree in_decl)
+@@ -18061,6 +18143,36 @@ tsubst_lambda_expr (tree t, tree args, tsubst_flags_t complain, tree in_decl)
         cap = TREE_CHAIN (cap))
      {
        tree ofield = TREE_PURPOSE (cap);
@@ -16726,7 +16848,7 @@ index a2a986b1db1..f233e78cc45 100644
        if (PACK_EXPANSION_P (ofield))
  	ofield = PACK_EXPANSION_PATTERN (ofield);
        tree field = tsubst_decl (ofield, args, complain);
-@@ -18075,28 +18174,21 @@ tsubst_lambda_expr (tree t, tree args, tsubst_flags_t complain, tree in_decl)
+@@ -18075,28 +18187,21 @@ tsubst_lambda_expr (tree t, tree args, tsubst_flags_t complain, tree in_decl)
        if (field == error_mark_node)
  	return error_mark_node;
  
@@ -16761,7 +16883,7 @@ index a2a986b1db1..f233e78cc45 100644
  
  	  if (id_equal (DECL_NAME (field), "__this"))
  	    LAMBDA_EXPR_THIS_CAPTURE (r) = field;
-@@ -19525,13 +19617,8 @@ tsubst_copy_and_build (tree t,
+@@ -19525,13 +19630,8 @@ tsubst_copy_and_build (tree t,
        {
  	tree type1 = tsubst (TRAIT_EXPR_TYPE1 (t), args,
  			     complain, in_decl);
@@ -16777,7 +16899,7 @@ index a2a986b1db1..f233e78cc45 100644
  	RETURN (finish_trait_expr (TRAIT_EXPR_KIND (t), type1, type2));
        }
  
-@@ -20571,7 +20658,7 @@ static bool
+@@ -20571,7 +20671,7 @@ static bool
  deducible_expression (tree expr)
  {
    /* Strip implicit conversions.  */
@@ -16786,7 +16908,7 @@ index a2a986b1db1..f233e78cc45 100644
      expr = TREE_OPERAND (expr, 0);
    return (TREE_CODE (expr) == TEMPLATE_PARM_INDEX);
  }
-@@ -22041,8 +22128,9 @@ unify (tree tparms, tree targs, tree parm, tree arg, int strict,
+@@ -22041,8 +22141,9 @@ unify (tree tparms, tree targs, tree parm, tree arg, int strict,
    /* I don't think this will do the right thing with respect to types.
       But the only case I've seen it in so far has been array bounds, where
       signedness is the only information lost, and I think that will be
@@ -16798,7 +16920,7 @@ index a2a986b1db1..f233e78cc45 100644
      parm = TREE_OPERAND (parm, 0);
  
    if (arg == error_mark_node)
-@@ -24321,12 +24409,11 @@ maybe_instantiate_noexcept (tree fn, tsubst_flags_t complain)
+@@ -24321,12 +24422,11 @@ maybe_instantiate_noexcept (tree fn, tsubst_flags_t complain)
  	}
        else if (push_tinst_level (fn))
  	{
@@ -16812,7 +16934,7 @@ index a2a986b1db1..f233e78cc45 100644
  	  /* If needed, set current_class_ptr for the benefit of
  	     tsubst_copy/PARM_DECL.  */
  	  tree tdecl = DECL_TEMPLATE_RESULT (DECL_TI_TEMPLATE (fn));
-@@ -24352,9 +24439,6 @@ maybe_instantiate_noexcept (tree fn, tsubst_flags_t complain)
+@@ -24352,9 +24452,6 @@ maybe_instantiate_noexcept (tree fn, tsubst_flags_t complain)
  					/*function_p=*/false,
  					/*i_c_e_p=*/true);
  
@@ -16822,7 +16944,7 @@ index a2a986b1db1..f233e78cc45 100644
  	  /* Build up the noexcept-specification.  */
  	  spec = build_noexcept_spec (noex, tf_warning_or_error);
  
-@@ -24364,6 +24448,7 @@ maybe_instantiate_noexcept (tree fn, tsubst_flags_t complain)
+@@ -24364,6 +24461,7 @@ maybe_instantiate_noexcept (tree fn, tsubst_flags_t complain)
  	  pop_deferring_access_checks ();
  	  pop_access_scope (fn);
  	  pop_tinst_level ();
@@ -16830,7 +16952,7 @@ index a2a986b1db1..f233e78cc45 100644
  	}
        else
  	spec = noexcept_false_spec;
-@@ -25232,8 +25317,9 @@ invalid_nontype_parm_type_p (tree type, tsubst_flags_t complain)
+@@ -25232,8 +25330,9 @@ invalid_nontype_parm_type_p (tree type, tsubst_flags_t complain)
      {
        if (cxx_dialect < cxx2a)
  	{
@@ -16842,7 +16964,7 @@ index a2a986b1db1..f233e78cc45 100644
  	  return true;
  	}
        if (dependent_type_p (type))
-@@ -26715,7 +26801,7 @@ build_non_dependent_expr (tree expr)
+@@ -26715,7 +26814,7 @@ build_non_dependent_expr (tree expr)
    if (TREE_CODE (expr) == COND_EXPR)
      return build3 (COND_EXPR,
  		   TREE_TYPE (expr),
@@ -16851,7 +16973,7 @@ index a2a986b1db1..f233e78cc45 100644
  		   (TREE_OPERAND (expr, 1)
  		    ? build_non_dependent_expr (TREE_OPERAND (expr, 1))
  		    : build_non_dependent_expr (TREE_OPERAND (expr, 0))),
-@@ -27615,6 +27701,9 @@ do_auto_deduction (tree type, tree init, tree auto_node,
+@@ -27615,6 +27714,9 @@ do_auto_deduction (tree type, tree init, tree auto_node,
      }
    else
      {
@@ -16862,10 +16984,18 @@ index a2a986b1db1..f233e78cc45 100644
        tree tparms;
  
 diff --git a/gcc/cp/semantics.c b/gcc/cp/semantics.c
-index 6d40b145fcb..0c727eaf2e7 100644
+index 6d40b145fcb..4bfb5d15293 100644
 --- a/gcc/cp/semantics.c
 +++ b/gcc/cp/semantics.c
-@@ -4338,7 +4338,7 @@ expand_or_defer_fn_1 (tree fn)
+@@ -2577,7 +2577,6 @@ finish_call_expr (tree fn, vec<tree, va_gc> **args, bool disallow_virtual,
+ 	      tree arg2 = (*orig_args)[2];
+ 	      int literal_mask = ((literal_integer_zerop (arg1) << 1)
+ 				  | (literal_integer_zerop (arg2) << 2));
+-	      arg2 = instantiate_non_dependent_expr (arg2);
+ 	      warn_for_memset (input_location, arg0, arg2, literal_mask);
+ 	    }
+ 
+@@ -4338,7 +4337,7 @@ expand_or_defer_fn_1 (tree fn)
        if (DECL_INTERFACE_KNOWN (fn))
  	/* We've already made a decision as to how this function will
  	   be handled.  */;
@@ -16874,7 +17004,7 @@ index 6d40b145fcb..0c727eaf2e7 100644
  	tentative_decl_linkage (fn);
        else
  	import_export_decl (fn);
-@@ -4349,6 +4349,7 @@ expand_or_defer_fn_1 (tree fn)
+@@ -4349,6 +4348,7 @@ expand_or_defer_fn_1 (tree fn)
  	 be emitted; there may be callers in other DLLs.  */
        if (DECL_DECLARED_INLINE_P (fn)
  	  && !DECL_REALLY_EXTERN (fn)
@@ -16882,7 +17012,7 @@ index 6d40b145fcb..0c727eaf2e7 100644
  	  && (flag_keep_inline_functions
  	      || (flag_keep_inline_dllexport
  		  && lookup_attribute ("dllexport", DECL_ATTRIBUTES (fn)))))
-@@ -4381,6 +4382,9 @@ expand_or_defer_fn_1 (tree fn)
+@@ -4381,6 +4381,9 @@ expand_or_defer_fn_1 (tree fn)
        return false;
      }
  
@@ -16892,7 +17022,7 @@ index 6d40b145fcb..0c727eaf2e7 100644
    return true;
  }
  
-@@ -7790,6 +7794,13 @@ finish_omp_clauses (tree clauses, enum c_omp_region_type ort)
+@@ -7790,6 +7793,13 @@ finish_omp_clauses (tree clauses, enum c_omp_region_type ort)
  	    case OMP_CLAUSE_DEFAULT_UNSPECIFIED:
  	      break;
  	    case OMP_CLAUSE_DEFAULT_SHARED:
@@ -16906,7 +17036,7 @@ index 6d40b145fcb..0c727eaf2e7 100644
  	      if (VAR_P (t)
  		  && OMP_CLAUSE_CODE (c) == OMP_CLAUSE_FIRSTPRIVATE
  		  && TREE_STATIC (t)
-@@ -8187,7 +8198,6 @@ handle_omp_for_class_iterator (int i, location_t locus, enum tree_code code,
+@@ -8187,7 +8197,6 @@ handle_omp_for_class_iterator (int i, location_t locus, enum tree_code code,
    if (init && EXPR_HAS_LOCATION (init))
      elocus = EXPR_LOCATION (init);
  
@@ -16914,7 +17044,7 @@ index 6d40b145fcb..0c727eaf2e7 100644
    switch (TREE_CODE (cond))
      {
      case GT_EXPR:
-@@ -10026,7 +10036,8 @@ cp_build_vec_convert (tree arg, location_t loc, tree type,
+@@ -10026,7 +10035,8 @@ cp_build_vec_convert (tree arg, location_t loc, tree type,
  
    tree ret = NULL_TREE;
    if (!type_dependent_expression_p (arg) && !dependent_type_p (type))
@@ -27538,6 +27668,26 @@ index 268a38799d6..01af063a222 100644
  	      && xmode_width > inner_width)
  	    nonzero
  	      |= (GET_MODE_MASK (GET_MODE (x)) & ~GET_MODE_MASK (inner_mode));
+diff --git a/gcc/sanopt.c b/gcc/sanopt.c
+index 5cb98e1b50e..159d720bc19 100644
+--- a/gcc/sanopt.c
++++ b/gcc/sanopt.c
+@@ -1170,9 +1170,12 @@ sanitize_rewrite_addressable_params (function *fun)
+ 	    continue;
+ 
+ 	  if (dump_file)
+-	    fprintf (dump_file,
+-		     "Rewriting parameter whose address is taken: %s\n",
+-		     IDENTIFIER_POINTER (DECL_NAME (arg)));
++	    {
++	      fprintf (dump_file,
++		       "Rewriting parameter whose address is taken: ");
++	      print_generic_expr (dump_file, arg, dump_flags);
++	      fputc ('\n', dump_file);
++	    }
+ 
+ 	  SET_DECL_PT_UID (var, DECL_PT_UID (arg));
+ 
 diff --git a/gcc/sel-sched.c b/gcc/sel-sched.c
 index f6e94bfc15c..f127ff74599 100644
 --- a/gcc/sel-sched.c
@@ -27658,10 +27808,14 @@ index 29f6cdc4667..9a6a1eadd2d 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..dc562bc4c8a 100644
+index bc11ae4ae0b..db531c727e5 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,1723 @@
+@@ -1,3 +1,1727 @@
++2020-03-04  Will Schmidt  <will_schmidt@vnet.ibm.com>
++
++	* gcc.target/powerpc/20050603-3.c: Remove XFAILS.
++
 +2020-03-03  Jakub Jelinek  <jakub@redhat.com>
 +
 +	PR rtl-optimization/94002
@@ -29385,7 +29539,7 @@ index bc11ae4ae0b..dc562bc4c8a 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +2147,7 @@
+@@ -427,7 +2151,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -29394,7 +29548,7 @@ index bc11ae4ae0b..dc562bc4c8a 100644
  	(check_effective_target_powerpc_p8vector_ok): No support for Darwin.
  	(check_effective_target_powerpc_p9vector_ok): Likewise.
  	(check_effective_target_powerpc_float128_sw_ok): Likewise.
-@@ -720,7 +2440,7 @@
+@@ -720,7 +2444,7 @@
  
  	Backport from mainline
  	PR fortran/91077
@@ -29403,7 +29557,7 @@ index bc11ae4ae0b..dc562bc4c8a 100644
  
  2019-07-05  Szabolcs Nagy  <szabolcs.nagy@arm.com>
  
-@@ -803,7 +2523,7 @@
+@@ -803,7 +2527,7 @@
  	Backport fom mainline
  	2019-06-21  Jeff Law  <law@redhat.com>
  
@@ -29412,7 +29566,7 @@ index bc11ae4ae0b..dc562bc4c8a 100644
  	* gcc.c-torture/execute/pr90949.c: New test.
  
  2019-06-26  Martin Jambor  <mjambor@suse.cz>
-@@ -969,7 +2689,7 @@
+@@ -969,7 +2693,7 @@
         * gcc.target/i386/pr82699-6.c: Likewise
         * gcc.target/i386/returninst1.c: Likewise
         * gcc.target/i386/returninst2.c: Likewise
@@ -29421,7 +29575,7 @@ index bc11ae4ae0b..dc562bc4c8a 100644
  
  2019-05-30  Iain Sandoe  <iain@sandoe.co.uk>
  
-@@ -1131,7 +2851,7 @@
+@@ -1131,7 +2855,7 @@
  
  	Backport from trunk
  	PR fortran/90498
@@ -29430,7 +29584,7 @@ index bc11ae4ae0b..dc562bc4c8a 100644
  
  2019-05-17  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -3801,21 +5521,21 @@
+@@ -3801,21 +5525,21 @@
  2019-02-23  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88117
@@ -29459,7 +29613,7 @@ index bc11ae4ae0b..dc562bc4c8a 100644
  
  2019-02-22  David Malcolm  <dmalcolm@redhat.com>
  
-@@ -4444,7 +6164,7 @@
+@@ -4444,7 +6168,7 @@
  2019-02-09  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/89200
@@ -29468,7 +29622,7 @@ index bc11ae4ae0b..dc562bc4c8a 100644
  
  2019-02-09  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -4704,17 +6424,17 @@
+@@ -4704,17 +6428,17 @@
  2019-02-02  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88393
@@ -30834,6 +30988,25 @@ index 00000000000..c31134581aa
 +
 +struct S {};
 +static_assert(!is_integral_<S>(42), "");
+diff --git a/gcc/testsuite/g++.dg/cpp0x/nsdmi-template19.C b/gcc/testsuite/g++.dg/cpp0x/nsdmi-template19.C
+new file mode 100644
+index 00000000000..f3e2cb87fd6
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp0x/nsdmi-template19.C
+@@ -0,0 +1,13 @@
++// PR c++/93676 - value-init crash in template.
++// { dg-do compile { target c++11 } }
++
++struct P {
++  int x = 0;
++};
++
++template<class T>
++struct S {
++  S() { new P[2][2]; }
++};
++
++S<int> s;
 diff --git a/gcc/testsuite/g++.dg/cpp0x/nullptr42.C b/gcc/testsuite/g++.dg/cpp0x/nullptr42.C
 new file mode 100644
 index 00000000000..2fb628df6d7
@@ -31307,6 +31480,24 @@ index 00000000000..a37e996a3ff
 +{
 +  foo<10>();
 +}
+diff --git a/gcc/testsuite/g++.dg/cpp1y/paren5.C b/gcc/testsuite/g++.dg/cpp1y/paren5.C
+new file mode 100644
+index 00000000000..86a51356465
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp1y/paren5.C
+@@ -0,0 +1,12 @@
++// PR c++/93299 - ICE in tsubst_copy with parenthesized expression.
++// { dg-do compile { target c++14 } }
++
++template <typename> struct A {
++  enum { b = 8 };
++};
++
++template <int> struct __attribute__((aligned((A<int>::b)))) D { };
++struct S : D<0> { };
++
++template <int N> struct __attribute__((aligned((A<int>::b) + N))) D2 { };
++struct S2 : D2<0> { };
 diff --git a/gcc/testsuite/g++.dg/cpp1y/var-templ63.C b/gcc/testsuite/g++.dg/cpp1y/var-templ63.C
 new file mode 100644
 index 00000000000..a65f53b2963
@@ -31590,6 +31781,28 @@ index 00000000000..cb55aa3bb56
 +struct B : A { constexpr int get() override { return 10; } };
 +struct D { B b[2]; A* c{&(b[0])}; };
 +static_assert(D{}.c->get() == 10);
+diff --git a/gcc/testsuite/g++.dg/cpp2a/no_unique_address3.C b/gcc/testsuite/g++.dg/cpp2a/no_unique_address3.C
+new file mode 100644
+index 00000000000..07108b8b715
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp2a/no_unique_address3.C
+@@ -0,0 +1,16 @@
++// PR c++/90432
++// { dg-do compile { target c++11 } }
++
++struct empty {};
++
++struct has_empty {
++  [[no_unique_address]] empty brace_or_equal_initialized{};
++};
++
++struct has_value {
++  int non_zero = 1;
++};
++
++struct pair : has_empty, has_value {};
++
++pair a;
 diff --git a/gcc/testsuite/g++.dg/cpp2a/nontype-class23.C b/gcc/testsuite/g++.dg/cpp2a/nontype-class23.C
 new file mode 100644
 index 00000000000..ab9e80fd335
@@ -32145,6 +32358,16 @@ index 00000000000..231830616ea
 +  U u (5);
 +  U v = u.corge (3);
 +}
+diff --git a/gcc/testsuite/g++.dg/ext/builtin14.C b/gcc/testsuite/g++.dg/ext/builtin14.C
+new file mode 100644
+index 00000000000..38d5a39fd73
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/ext/builtin14.C
+@@ -0,0 +1,4 @@
++// PR c++/90997
++
++template<class> void f ()
++{ __builtin_memset (0, 0, int(0.)); }
 diff --git a/gcc/testsuite/g++.dg/ext/is_constructible4.C b/gcc/testsuite/g++.dg/ext/is_constructible4.C
 new file mode 100644
 index 00000000000..6dfe3c01661
@@ -32716,6 +32939,91 @@ index 00000000000..066d984ffc5
 +  for (; b;)
 +    d = e;
 +}
+diff --git a/gcc/testsuite/g++.dg/template/deduce4.C b/gcc/testsuite/g++.dg/template/deduce4.C
+new file mode 100644
+index 00000000000..e2c165dc788
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/template/deduce4.C
+@@ -0,0 +1,17 @@
++// PR c++/90505 - mismatch in template argument deduction.
++// { dg-do compile }
++
++template <typename T>
++struct S {
++  template <typename U, typename V>
++  static void foo(V) { }
++
++  void bar () { foo<int>(10); }
++};
++
++void
++test ()
++{
++  S<int> s;
++  s.bar ();
++}
+diff --git a/gcc/testsuite/g++.dg/template/deduce5.C b/gcc/testsuite/g++.dg/template/deduce5.C
+new file mode 100644
+index 00000000000..9d382bfe03a
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/template/deduce5.C
+@@ -0,0 +1,17 @@
++// PR c++/90505 - mismatch in template argument deduction.
++// { dg-do compile { target c++11 } }
++
++template <typename T>
++struct S {
++  template <typename U, typename V = void>
++  static void foo(U) { }
++
++  void bar () { foo<int>(10); }
++};
++
++void
++test ()
++{
++  S<int> s;
++  s.bar ();
++}
+diff --git a/gcc/testsuite/g++.dg/template/deduce6.C b/gcc/testsuite/g++.dg/template/deduce6.C
+new file mode 100644
+index 00000000000..8fee6124f5a
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/template/deduce6.C
+@@ -0,0 +1,17 @@
++// PR c++/90505 - mismatch in template argument deduction.
++// { dg-do compile { target c++11 } }
++
++template <typename T>
++struct S {
++  template <typename U = int, typename V>
++  static void foo(V) { }
++
++  void bar () { foo<>(10); }
++};
++
++void
++test ()
++{
++  S<int> s;
++  s.bar ();
++}
+diff --git a/gcc/testsuite/g++.dg/template/deduce7.C b/gcc/testsuite/g++.dg/template/deduce7.C
+new file mode 100644
+index 00000000000..fbc28e5150d
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/template/deduce7.C
+@@ -0,0 +1,10 @@
++// PR c++/90505 - mismatch in template argument deduction.
++// { dg-do compile { target c++11 } }
++
++template <typename> class a {
++  using b = int;
++  using c = int;
++  b d;
++  void e() { g<c>(d); }
++  template <typename... f> static void g(f...);
++};
 diff --git a/gcc/testsuite/g++.dg/torture/pr90313.cc b/gcc/testsuite/g++.dg/torture/pr90313.cc
 new file mode 100644
 index 00000000000..d9f183a2939
@@ -38447,6 +38755,22 @@ index 00000000000..c9ad70d7f75
 +
 +/* { dg-final { scan-assembler-not "lw\t\\\$4,0\\(\\\$5\\)\n\tlw\t\\\$5,4\\(\\\$5\\)\n\tldc1\t\\\$.*,0\\(\\\$5\\)" } } */
 +/* { dg-final { scan-assembler "lw\t\\\$4,0\\(\\\$5\\)\n\tlw\t\\\$5,4\\(\\\$5\\)\n\tmtc1\t\\\$4,\\\$.*\n\tmthc1\t\\\$5,\\\$.*" } } */
+diff --git a/gcc/testsuite/gcc.target/powerpc/20050603-3.c b/gcc/testsuite/gcc.target/powerpc/20050603-3.c
+index 1884241f316..4017d34f429 100644
+--- a/gcc/testsuite/gcc.target/powerpc/20050603-3.c
++++ b/gcc/testsuite/gcc.target/powerpc/20050603-3.c
+@@ -12,9 +12,8 @@ void rotins (unsigned int x)
+   b.y = (x<<12) | (x>>20);
+ }
+ 
+-/* The XFAILs are PR68803.  */
+-/* { dg-final { scan-assembler-not {\mrlwinm} { xfail powerpc64le-*-* } } } */
++/* { dg-final { scan-assembler-not {\mrlwinm} } } */
+ /* { dg-final { scan-assembler-not {\mrldic} } } */
+ /* { dg-final { scan-assembler-not {\mrot[lr]} } } */
+ /* { dg-final { scan-assembler-not {\ms[lr][wd]} } } */
+-/* { dg-final { scan-assembler-times {\mrl[wd]imi} 1 { xfail powerpc64le-*-* } } } */
++/* { dg-final { scan-assembler-times {\mrl[wd]imi} 1 } } */
 diff --git a/gcc/testsuite/gcc.target/powerpc/darn-3.c b/gcc/testsuite/gcc.target/powerpc/darn-3.c
 new file mode 100644
 index 00000000000..477901fde70
