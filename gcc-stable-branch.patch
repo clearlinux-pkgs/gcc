@@ -66,7 +66,8 @@ Eric Botcazou (18):
 Eric S. Raymond (1):
       Clean up references to Subversion in documentation sources.
 
-GCC Administrator (204):
+GCC Administrator (205):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -447,7 +448,7 @@ Janne Blomqvist (2):
       PR fortran/91414 Improve initialization of PRNG
       PR fortran/91414 Correctly fill master_state from os_seed.
 
-Jason Merrill (29):
+Jason Merrill (31):
       PR c++/90538 - multiple expansions of capture packs
       PR c++/91378 - ICE with noexcept and auto return type.
       PR c++/90393 - ICE with throw in ?:
@@ -477,6 +478,8 @@ Jason Merrill (29):
       c++: Fix ({ ... }) array mem-initializer.
       c++: avoid ICE with __builtin_memset (PR90997).
       c++: Fix [[no_unique_address]] and default mem-init [PR90432]
+      c++: Fix constexpr ICE from const mismatch [PR91607]
+      c++: Fix SFINAE for invalid non-type tparm types.
 
 Jerry DeLisle (2):
       backport: re PR libfortran/92100 (Formatted stream IO irreproducible read with binary data in file)
@@ -631,8 +634,10 @@ Martin Liska (11):
       Backport f48c6014133c8989702458f9082e34ba6dd326d4
       Backport 08bf7bde9f2987b1c623d272cc71fc14a1622442
 
-Martin Sebor (1):
+Martin Sebor (3):
       backport: re PR c++/90947 (Simple lookup table of array of strings is miscompiled)
+      PR c++/90938 - Initializing array with {1} works, but not {0}
+      Backport fix for PR c++/93753 from trunk.
 
 Matheus Castanho (1):
       rs6000: fixinc: Skip machine_name fix for powerpc*-*-linux*
@@ -663,12 +668,13 @@ Oleg Endo (4):
       backport: re PR c++/88562 (Incorrect pointer incrementing on SH4)
       backport: re PR target/88630 (Incorrect float negating together with convertion to int on ST-40)
 
-Paul Thomas (5):
+Paul Thomas (6):
       re PR fortran/91589 (ICE in gfc_conv_component_ref, at fortran/trans-expr.c:2447)
       backport: re PR fortran/91588 (ICE in check_inquiry, at fortran/expr.c:2673)
       backport: re PR fortran/86248 (LEN_TRIM in specification expression causes link failure)
       re PR fortran/91926 (assumed rank optional)
       re PR fortran/92753 (ICE in gfc_trans_call, at fortran/trans-stmt.c:392)
+      Fix ICE in trans_associate_var
 
 Peter Bergner (10):
       backport: config.gcc: Move -L usage from LINK_OS_EXTRA_SPEC32 and LINK_OS_EXTRA_SPEC64 to...
@@ -836,7 +842,7 @@ Tobias Burnus (15):
 Tom Honermann (1):
       PR c++/88095, CTAD for literal operator templates per P0732
 
-Uros Bizjak (8):
+Uros Bizjak (9):
       test_summary: Do not escape "=".
       baseline_symbols.txt: Update.
       re PR target/91533 (abs pattern generates MMX instructions but fails to call EMMS)
@@ -845,6 +851,7 @@ Uros Bizjak (8):
       PR target/93254 - -msse generates sse2 instructions
       i386: Fix atan2l argument order [PR93743]
       i386: Fix *vec_extractv2sf_1 and *vec_extractv2sf_1 shufps alternative [PR93828]
+      testsuite: Compile asan_test.C with -Wno-alloc-size-larger-than
 
 Ville Voutilainen (1):
       re PR c++/85254 (boost::is_final does not work for template types)
@@ -14496,10 +14503,37 @@ index ce2825580c6..3a7251102ef 100644
  AC_SUBST(all_languages)
  AC_SUBST(all_selected_languages)
 diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
-index c977850d067..a9236063159 100644
+index c977850d067..437df4d0829 100644
 --- a/gcc/cp/ChangeLog
 +++ b/gcc/cp/ChangeLog
-@@ -1,3 +1,554 @@
+@@ -1,3 +1,581 @@
++2020-03-05  Martin Sebor  <msebor@redhat.com>
++
++	Backport from trunk.
++	2020-02-21  Martin Sebor  <msebor@redhat.com>
++
++	PR gcov-profile/93753
++	* class.c (check_flexarrays): Tighten up a test for potential members
++	of anonymous structs or unions.
++
++2020-03-05  Jason Merrill  <jason@redhat.com>
++
++	PR c++/90338
++	* pt.c (invalid_nontype_parm_type_p): Check complain for non-literal
++	and mutable errors.
++
++2020-03-04  Jason Merrill  <jason@redhat.com>
++
++	PR c++/91607
++	* constexpr.c (constexpr_call_hasher::equal): Use
++	same_type_ignoring_top_level_qualifiers_p.
++
++2020-03-04  Martin Sebor  <msebor@redhat.com>
++
++	PR c++/90938
++	* tree.c (type_initializer_zero_p): Fail for structs initialized
++	with non-structs.
++
 +2020-03-04  Marek Polacek  <polacek@redhat.com>
 +
 +	Backported from mainline
@@ -15054,7 +15088,7 @@ index c977850d067..a9236063159 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -16,7 +567,7 @@
+@@ -16,7 +594,7 @@
  
  	Backported from mainline
  	2019-08-02  Marek Polacek  <polacek@redhat.com>
@@ -15401,7 +15435,7 @@ index 9e22a146a16..f365a5a7f7b 100644
  	  recompute_constructor_flags (ctor);
  	  if (decl_maybe_constant_var_p (decl) && TREE_CONSTANT (ctor))
 diff --git a/gcc/cp/class.c b/gcc/cp/class.c
-index a47777cdd9e..46fac4ef38e 100644
+index a47777cdd9e..6b57184e081 100644
 --- a/gcc/cp/class.c
 +++ b/gcc/cp/class.c
 @@ -1907,6 +1907,7 @@ fixup_type_variants (tree t)
@@ -15497,8 +15531,17 @@ index a47777cdd9e..46fac4ef38e 100644
  	  if (compare_tree_int (w, prec) < 0)
  	    warning_at (DECL_SOURCE_LOCATION (field), 0,
  			"%qD is too small to hold all values of %q#T",
+@@ -6882,6 +6937,8 @@ check_flexarrays (tree t, flexmems_t *fmem /* = NULL */,
+   /* Is the type unnamed (and therefore a member of it potentially
+      an anonymous struct or union)?  */
+   bool maybe_anon_p = TYPE_UNNAMED_P (t);
++  if (tree ctx = maybe_anon_p ? TYPE_CONTEXT (t) : NULL_TREE)
++    maybe_anon_p = RECORD_OR_UNION_TYPE_P (ctx);
+ 
+   /* Search the members of the current (possibly derived) class, skipping
+      unnamed structs and unions since those could be anonymous.  */
 diff --git a/gcc/cp/constexpr.c b/gcc/cp/constexpr.c
-index f6f21b33396..b9b387ca7e9 100644
+index f6f21b33396..bab5935a4eb 100644
 --- a/gcc/cp/constexpr.c
 +++ b/gcc/cp/constexpr.c
 @@ -821,6 +821,9 @@ cx_check_missing_mem_inits (tree ctype, tree body, bool complain)
@@ -15511,7 +15554,17 @@ index f6f21b33396..b9b387ca7e9 100644
  	  ftype = strip_array_types (TREE_TYPE (field));
  	  if (type_has_constexpr_default_constructor (ftype))
  	    {
-@@ -1419,6 +1422,28 @@ cxx_bind_parameters_in_call (const constexpr_ctx *ctx, tree t,
+@@ -1085,7 +1088,8 @@ constexpr_call_hasher::equal (constexpr_call *lhs, constexpr_call *rhs)
+     {
+       tree lhs_arg = TREE_VALUE (lhs_bindings);
+       tree rhs_arg = TREE_VALUE (rhs_bindings);
+-      gcc_assert (same_type_p (TREE_TYPE (lhs_arg), TREE_TYPE (rhs_arg)));
++      gcc_assert (same_type_ignoring_top_level_qualifiers_p
++		  (TREE_TYPE (lhs_arg), TREE_TYPE (rhs_arg)));
+       if (!cp_tree_equal (lhs_arg, rhs_arg))
+         return false;
+       lhs_bindings = TREE_CHAIN (lhs_bindings);
+@@ -1419,6 +1423,28 @@ cxx_bind_parameters_in_call (const constexpr_ctx *ctx, tree t,
  	    arg = adjust_temp_type (type, arg);
  	  if (!TREE_CONSTANT (arg))
  	    *non_constant_args = true;
@@ -15540,7 +15593,7 @@ index f6f21b33396..b9b387ca7e9 100644
  	  *p = build_tree_list (parms, arg);
  	  p = &TREE_CHAIN (*p);
  	}
-@@ -2640,8 +2665,16 @@ cxx_eval_array_reference (const constexpr_ctx *ctx, tree t,
+@@ -2640,8 +2666,16 @@ cxx_eval_array_reference (const constexpr_ctx *ctx, tree t,
      }
  
    /* If it's within the array bounds but doesn't have an explicit
@@ -15559,7 +15612,7 @@ index f6f21b33396..b9b387ca7e9 100644
    return cxx_eval_constant_expression (ctx, val, lval, non_constant_p,
  				       overflow_p);
  }
-@@ -2703,7 +2736,10 @@ cxx_eval_component_reference (const constexpr_ctx *ctx, tree t,
+@@ -2703,7 +2737,10 @@ cxx_eval_component_reference (const constexpr_ctx *ctx, tree t,
  	  : field == part)
  	{
  	  if (value)
@@ -15571,7 +15624,7 @@ index f6f21b33396..b9b387ca7e9 100644
  	  else
  	    /* We're in the middle of initializing it.  */
  	    break;
-@@ -2793,6 +2829,7 @@ cxx_eval_bit_field_ref (const constexpr_ctx *ctx, tree t,
+@@ -2793,6 +2830,7 @@ cxx_eval_bit_field_ref (const constexpr_ctx *ctx, tree t,
    FOR_EACH_CONSTRUCTOR_ELT (CONSTRUCTOR_ELTS (whole), i, field, value)
      {
        tree bitpos = bit_position (field);
@@ -15579,7 +15632,7 @@ index f6f21b33396..b9b387ca7e9 100644
        if (bitpos == start && DECL_SIZE (field) == TREE_OPERAND (t, 1))
  	return value;
        if (TREE_CODE (TREE_TYPE (field)) == INTEGER_TYPE
-@@ -3101,6 +3138,10 @@ cxx_eval_vec_init_1 (const constexpr_ctx *ctx, tree atype, tree init,
+@@ -3101,6 +3139,10 @@ cxx_eval_vec_init_1 (const constexpr_ctx *ctx, tree atype, tree init,
    unsigned HOST_WIDE_INT i;
    tsubst_flags_t complain = ctx->quiet ? tf_none : tf_warning_or_error;
  
@@ -15590,7 +15643,7 @@ index f6f21b33396..b9b387ca7e9 100644
    /* For the default constructor, build up a call to the default
       constructor of the element type.  We only need to handle class types
       here, as for a constructor to be constexpr, all members must be
-@@ -3973,6 +4014,10 @@ cxx_eval_increment_expression (const constexpr_ctx *ctx, tree t,
+@@ -3973,6 +4015,10 @@ cxx_eval_increment_expression (const constexpr_ctx *ctx, tree t,
    tree offset = TREE_OPERAND (t, 1);
    gcc_assert (TREE_CONSTANT (offset));
  
@@ -15601,7 +15654,7 @@ index f6f21b33396..b9b387ca7e9 100644
    /* The operand as an lvalue.  */
    op = cxx_eval_constant_expression (ctx, op, true,
  				     non_constant_p, overflow_p);
-@@ -5116,6 +5161,7 @@ cxx_eval_constant_expression (const constexpr_ctx *ctx, tree t,
+@@ -5116,6 +5162,7 @@ cxx_eval_constant_expression (const constexpr_ctx *ctx, tree t,
  	tree obj = OBJ_TYPE_REF_OBJECT (t);
  	obj = cxx_eval_constant_expression (ctx, obj, lval, non_constant_p,
  					    overflow_p);
@@ -15609,7 +15662,7 @@ index f6f21b33396..b9b387ca7e9 100644
  	/* We expect something in the form of &x.D.2103.D.2094; get x. */
  	if (TREE_CODE (obj) != ADDR_EXPR
  	    || !DECL_P (get_base_address (TREE_OPERAND (obj, 0))))
-@@ -5551,7 +5597,15 @@ maybe_constant_value (tree t, tree decl, bool manifestly_const_eval)
+@@ -5551,7 +5598,15 @@ maybe_constant_value (tree t, tree decl, bool manifestly_const_eval)
    if (cv_cache == NULL)
      cv_cache = hash_map<tree, tree>::create_ggc (101);
    if (tree *cached = cv_cache->get (t))
@@ -15626,7 +15679,7 @@ index f6f21b33396..b9b387ca7e9 100644
  
    r = cxx_eval_outermost_constant_expr (t, true, true, false, decl);
    gcc_checking_assert (r == t
-@@ -5917,6 +5971,7 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
+@@ -5917,6 +5972,7 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
      case LABEL_DECL:
      case LABEL_EXPR:
      case CASE_LABEL_EXPR:
@@ -15634,7 +15687,7 @@ index f6f21b33396..b9b387ca7e9 100644
      case CONST_DECL:
      case SIZEOF_EXPR:
      case ALIGNOF_EXPR:
-@@ -5948,8 +6003,13 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
+@@ -5948,8 +6004,13 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
        return true;
  
      case PARM_DECL:
@@ -15649,7 +15702,7 @@ index f6f21b33396..b9b387ca7e9 100644
  	  if (flags & tf_error)
  	    error ("%qE is not a constant expression", t);
  	  return false;
-@@ -6190,10 +6250,7 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
+@@ -6190,10 +6251,7 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
  #endif
        return RECUR (t, any);
  
@@ -15660,7 +15713,7 @@ index f6f21b33396..b9b387ca7e9 100644
      case ARROW_EXPR:
      case OFFSET_REF:
        /* -- a class member access unless its postfix-expression is
-@@ -6202,6 +6259,15 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
+@@ -6202,6 +6260,15 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
  	 postfix-expression being a potential constant expression.  */
        if (type_unknown_p (t))
  	return true;
@@ -15676,7 +15729,7 @@ index f6f21b33396..b9b387ca7e9 100644
        return RECUR (TREE_OPERAND (t, 0), want_rval);
  
      case EXPR_PACK_EXPANSION:
-@@ -6751,7 +6817,6 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
+@@ -6751,7 +6818,6 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
  
      case CLEANUP_STMT:
      case EMPTY_CLASS_EXPR:
@@ -16531,7 +16584,7 @@ index a7218e752b1..e1c02d7b718 100644
    cp_lexer_get_preprocessor_token (NULL, first_token);
    if (first_token->type == CPP_STRING)
 diff --git a/gcc/cp/pt.c b/gcc/cp/pt.c
-index a2a986b1db1..43d9660ebda 100644
+index a2a986b1db1..4787747b6ff 100644
 --- a/gcc/cp/pt.c
 +++ b/gcc/cp/pt.c
 @@ -3875,7 +3875,7 @@ find_parameter_packs_r (tree *tp, int *walk_subtrees, void* data)
@@ -16964,7 +17017,33 @@ index a2a986b1db1..43d9660ebda 100644
  	  return true;
  	}
        if (dependent_type_p (type))
-@@ -26715,7 +26814,7 @@ build_non_dependent_expr (tree expr)
+@@ -25242,15 +25341,20 @@ invalid_nontype_parm_type_p (tree type, tsubst_flags_t complain)
+ 	return true;
+       if (!literal_type_p (type))
+ 	{
+-	  error ("%qT is not a valid type for a template non-type parameter "
+-		 "because it is not literal", type);
+-	  explain_non_literal_class (type);
++	  if (complain & tf_error)
++	    {
++	      auto_diagnostic_group d;
++	      error ("%qT is not a valid type for a template non-type parameter "
++		     "because it is not literal", type);
++	      explain_non_literal_class (type);
++	    }
+ 	  return true;
+ 	}
+       if (cp_has_mutable_p (type))
+ 	{
+-	  error ("%qT is not a valid type for a template non-type parameter "
+-		 "because it has a mutable member", type);
++	  if (complain & tf_error)
++	    error ("%qT is not a valid type for a template non-type parameter "
++		   "because it has a mutable member", type);
+ 	  return true;
+ 	}
+       /* FIXME check op<=> and strong structural equality once spaceship is
+@@ -26715,7 +26819,7 @@ build_non_dependent_expr (tree expr)
    if (TREE_CODE (expr) == COND_EXPR)
      return build3 (COND_EXPR,
  		   TREE_TYPE (expr),
@@ -16973,7 +17052,7 @@ index a2a986b1db1..43d9660ebda 100644
  		   (TREE_OPERAND (expr, 1)
  		    ? build_non_dependent_expr (TREE_OPERAND (expr, 1))
  		    : build_non_dependent_expr (TREE_OPERAND (expr, 0))),
-@@ -27615,6 +27714,9 @@ do_auto_deduction (tree type, tree init, tree auto_node,
+@@ -27615,6 +27719,9 @@ do_auto_deduction (tree type, tree init, tree auto_node,
      }
    else
      {
@@ -17055,7 +17134,7 @@ index 6d40b145fcb..4bfb5d15293 100644
  
    if (!processing_template_decl)
 diff --git a/gcc/cp/tree.c b/gcc/cp/tree.c
-index 1339e9fd204..7275b7bf5b0 100644
+index 1339e9fd204..3f3583c825d 100644
 --- a/gcc/cp/tree.c
 +++ b/gcc/cp/tree.c
 @@ -3123,6 +3123,11 @@ replace_placeholders_r (tree* t, int* walk_subtrees, void* data_)
@@ -17070,7 +17149,7 @@ index 1339e9fd204..7275b7bf5b0 100644
  	    if (TREE_CODE (*valp) == CONSTRUCTOR
  		&& AGGREGATE_TYPE_P (type))
  	      {
-@@ -5487,6 +5492,68 @@ maybe_warn_zero_as_null_pointer_constant (tree expr, location_t loc)
+@@ -5487,6 +5492,76 @@ maybe_warn_zero_as_null_pointer_constant (tree expr, location_t loc)
    return false;
  }
  
@@ -17091,7 +17170,15 @@ index 1339e9fd204..7275b7bf5b0 100644
 +    return TREE_CODE (init) != STRING_CST && initializer_zerop (init);
 +
 +  if (TREE_CODE (init) != CONSTRUCTOR)
-+    return initializer_zerop (init);
++    {
++      /* A class can only be initialized by a non-class type if it has
++	 a ctor that converts from that type.  Such classes are excluded
++	 since their semantics are unknown.  */
++      if (RECORD_OR_UNION_TYPE_P (type)
++	  && !RECORD_OR_UNION_TYPE_P (TREE_TYPE (init)))
++	return false;
++      return initializer_zerop (init);
++    }
 +
 +  if (TREE_CODE (type) == ARRAY_TYPE)
 +    {
@@ -17915,10 +18002,18 @@ index f0e43b5fda2..c717f24501e 100644
    low = fold_convert_loc (loc, etype, low);
    exp = fold_convert_loc (loc, etype, exp);
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index e3073787ea9..8fccf0db5cc 100644
+index e3073787ea9..b3ccda4cf46 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,593 @@
+@@ -1,3 +1,601 @@
++2020-03-05  Paul Thomas  <pault@gcc.gnu.org>
++
++	Backport from trunk
++	PR fortran/92976
++	* match.c (select_type_set_tmp): Variable 'selector' to replace
++	select_type_stack->selector. If the selector array spec has
++	explicit bounds, make the temporary's bounds deferred.
++
 +2020-02-19  Mark Eggleston  <markeggleston@gcc.gnu.org>
 +
 +	Backported from mainline
@@ -20006,7 +20101,7 @@ index 9828897852a..b9a29a0f932 100644
        new_st.expr1 = inquire->iolength;
        new_st.ext.inquire = inquire;
 diff --git a/gcc/fortran/match.c b/gcc/fortran/match.c
-index 156d7a05f6b..efc0c2d7bc3 100644
+index 156d7a05f6b..088b69f8ec9 100644
 --- a/gcc/fortran/match.c
 +++ b/gcc/fortran/match.c
 @@ -4219,6 +4219,12 @@ gfc_match_allocate (void)
@@ -20092,6 +20187,52 @@ index 156d7a05f6b..efc0c2d7bc3 100644
    sym->value = expr;
  
    if ((gfc_current_state () == COMP_FUNCTION
+@@ -6118,6 +6165,7 @@ select_type_set_tmp (gfc_typespec *ts)
+ {
+   char name[GFC_MAX_SYMBOL_LEN];
+   gfc_symtree *tmp = NULL;
++  gfc_symbol *selector = select_type_stack->selector;
+ 
+   if (!ts)
+     {
+@@ -6139,22 +6187,27 @@ select_type_set_tmp (gfc_typespec *ts)
+       gfc_get_sym_tree (name, gfc_current_ns, &tmp, false);
+       gfc_add_type (tmp->n.sym, ts, NULL);
+ 
+-      if (select_type_stack->selector->ts.type == BT_CLASS
+-	&& select_type_stack->selector->attr.class_ok)
++      if (selector->ts.type == BT_CLASS && selector->attr.class_ok)
+ 	{
+-	  tmp->n.sym->attr.pointer
+-		= CLASS_DATA (select_type_stack->selector)->attr.class_pointer;
++	  tmp->n.sym->attr.pointer = CLASS_DATA (selector)->attr.class_pointer;
+ 
+ 	  /* Copy across the array spec to the selector.  */
+-	  if (CLASS_DATA (select_type_stack->selector)->attr.dimension
+-	      || CLASS_DATA (select_type_stack->selector)->attr.codimension)
++	  if (CLASS_DATA (selector)->attr.dimension
++	      || CLASS_DATA (selector)->attr.codimension)
+ 	    {
+ 	      tmp->n.sym->attr.dimension
+-		    = CLASS_DATA (select_type_stack->selector)->attr.dimension;
++		    = CLASS_DATA (selector)->attr.dimension;
+ 	      tmp->n.sym->attr.codimension
+-		    = CLASS_DATA (select_type_stack->selector)->attr.codimension;
+-	      tmp->n.sym->as
+-	    = gfc_copy_array_spec (CLASS_DATA (select_type_stack->selector)->as);
++		    = CLASS_DATA (selector)->attr.codimension;
++	      if (CLASS_DATA (selector)->as->type != AS_EXPLICIT)
++		tmp->n.sym->as
++			= gfc_copy_array_spec (CLASS_DATA (selector)->as);
++	      else
++		{
++		  tmp->n.sym->as = gfc_get_array_spec();
++		  tmp->n.sym->as->rank = CLASS_DATA (selector)->as->rank;
++		  tmp->n.sym->as->type = AS_DEFERRED;
++		}
+ 	    }
+     }
+ 
 diff --git a/gcc/fortran/match.h b/gcc/fortran/match.h
 index ac47d992f4a..29854ee9000 100644
 --- a/gcc/fortran/match.h
@@ -27808,10 +27949,36 @@ index 29f6cdc4667..9a6a1eadd2d 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..db531c727e5 100644
+index bc11ae4ae0b..720fa1ec987 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,1727 @@
+@@ -1,3 +1,1753 @@
++2020-03-05  Uroš Bizjak  <ubizjak@gmail.com>
++
++	* g++.dg/asan/asan_test.C (dg-options): Add
++	-Wno-alloc-size-larger-than.
++
++2020-03-05  Martin Sebor  <msebor@redhat.com>
++
++	Backport from trunk.
++	2020-02-21  Martin Sebor  <msebor@redhat.com>
++
++	PR gcov-profile/93753
++	* g++.dg/ext/flexary36.C: New test.
++
++2020-03-05  Paul Thomas  <pault@gcc.gnu.org>
++
++	Backport from trunk
++	PR fortran/92976
++	* gfortran.dg/select_type_48.f90 : New test.
++
++2020-03-04  Martin Sebor  <msebor@redhat.com>
++
++	PR c++/90938
++	* g++.dg/init/array55.C: New test.
++	* g++.dg/init/array56.C: New test.
++	* g++.dg/cpp2a/nontype-class33.C: New test.
++
 +2020-03-04  Will Schmidt  <will_schmidt@vnet.ibm.com>
 +
 +	* gcc.target/powerpc/20050603-3.c: Remove XFAILS.
@@ -29539,7 +29706,7 @@ index bc11ae4ae0b..db531c727e5 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +2151,7 @@
+@@ -427,7 +2177,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -29548,7 +29715,7 @@ index bc11ae4ae0b..db531c727e5 100644
  	(check_effective_target_powerpc_p8vector_ok): No support for Darwin.
  	(check_effective_target_powerpc_p9vector_ok): Likewise.
  	(check_effective_target_powerpc_float128_sw_ok): Likewise.
-@@ -720,7 +2444,7 @@
+@@ -720,7 +2470,7 @@
  
  	Backport from mainline
  	PR fortran/91077
@@ -29557,7 +29724,7 @@ index bc11ae4ae0b..db531c727e5 100644
  
  2019-07-05  Szabolcs Nagy  <szabolcs.nagy@arm.com>
  
-@@ -803,7 +2527,7 @@
+@@ -803,7 +2553,7 @@
  	Backport fom mainline
  	2019-06-21  Jeff Law  <law@redhat.com>
  
@@ -29566,7 +29733,7 @@ index bc11ae4ae0b..db531c727e5 100644
  	* gcc.c-torture/execute/pr90949.c: New test.
  
  2019-06-26  Martin Jambor  <mjambor@suse.cz>
-@@ -969,7 +2693,7 @@
+@@ -969,7 +2719,7 @@
         * gcc.target/i386/pr82699-6.c: Likewise
         * gcc.target/i386/returninst1.c: Likewise
         * gcc.target/i386/returninst2.c: Likewise
@@ -29575,7 +29742,7 @@ index bc11ae4ae0b..db531c727e5 100644
  
  2019-05-30  Iain Sandoe  <iain@sandoe.co.uk>
  
-@@ -1131,7 +2855,7 @@
+@@ -1131,7 +2881,7 @@
  
  	Backport from trunk
  	PR fortran/90498
@@ -29584,7 +29751,7 @@ index bc11ae4ae0b..db531c727e5 100644
  
  2019-05-17  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -3801,21 +5525,21 @@
+@@ -3801,21 +5551,21 @@
  2019-02-23  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88117
@@ -29613,7 +29780,7 @@ index bc11ae4ae0b..db531c727e5 100644
  
  2019-02-22  David Malcolm  <dmalcolm@redhat.com>
  
-@@ -4444,7 +6168,7 @@
+@@ -4444,7 +6194,7 @@
  2019-02-09  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/89200
@@ -29622,7 +29789,7 @@ index bc11ae4ae0b..db531c727e5 100644
  
  2019-02-09  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -4704,17 +6428,17 @@
+@@ -4704,17 +6454,17 @@
  2019-02-02  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88393
@@ -30492,6 +30659,19 @@ index 00000000000..2a5322a37c3
 +
 +void d_s_s_zs_s_z (DS_S_ZS_S_Z) { }
 +// { dg-final { scan-assembler "_Z12d_s_s_zs_s_z1DIXtl1CEEE" } }
+diff --git a/gcc/testsuite/g++.dg/asan/asan_test.C b/gcc/testsuite/g++.dg/asan/asan_test.C
+index f3f7626ef3b..a151979946a 100644
+--- a/gcc/testsuite/g++.dg/asan/asan_test.C
++++ b/gcc/testsuite/g++.dg/asan/asan_test.C
+@@ -2,7 +2,7 @@
+ // { dg-skip-if "" { *-*-* } { "*" } { "-O2" } }
+ // { dg-skip-if "" { *-*-* } { "-flto" } { "" } }
+ // { dg-additional-sources "asan_globals_test-wrapper.cc" }
+-// { dg-options "-std=c++11 -fsanitize=address -fno-builtin -Wall -Werror -g -DASAN_UAR=0 -DASAN_HAS_EXCEPTIONS=1 -DASAN_HAS_BLACKLIST=0 -DSANITIZER_USE_DEJAGNU_GTEST=1 -lasan -lpthread -ldl" }
++// { dg-options "-std=c++11 -fsanitize=address -fno-builtin -Wall -Werror -Wno-alloc-size-larger-than -g -DASAN_UAR=0 -DASAN_HAS_EXCEPTIONS=1 -DASAN_HAS_BLACKLIST=0 -DSANITIZER_USE_DEJAGNU_GTEST=1 -lasan -lpthread -ldl" }
+ // { dg-additional-options "-DASAN_NEEDS_SEGV=1" { target { ! arm*-*-* } } }
+ // { dg-additional-options "-DASAN_LOW_MEMORY=1 -DASAN_NEEDS_SEGV=0" { target arm*-*-* } }
+ // { dg-additional-options "-DASAN_AVOID_EXPENSIVE_TESTS=1" { target { ! run_expensive_tests } } }
 diff --git a/gcc/testsuite/g++.dg/conversion/packed2.C b/gcc/testsuite/g++.dg/conversion/packed2.C
 new file mode 100644
 index 00000000000..7df74dc110b
@@ -31955,6 +32135,48 @@ index 00000000000..315e0ac2309
 +{
 +  return f (qq {});
 +}
+diff --git a/gcc/testsuite/g++.dg/cpp2a/nontype-class33.C b/gcc/testsuite/g++.dg/cpp2a/nontype-class33.C
+new file mode 100644
+index 00000000000..1b9dfb88918
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp2a/nontype-class33.C
+@@ -0,0 +1,36 @@
++// PR c++/90938 - Initializing array with {1} works, but not {0}
++// { dg-do compile { target c++2a } }
++// { dg-options "-Wall" }
++
++struct A { int i; };
++struct B { A a[2]; };
++
++static const constexpr A a0 = { 0 };
++static const constexpr A a_ = { };
++
++template <B> struct X { };
++
++typedef X<B{ }>             XB;
++typedef X<B{{A{ }}}>        XB;
++typedef X<B{{A{ 0 }}}>      XB;
++typedef X<B{{a_}}>          XB;
++typedef X<B{{a0}}>          XB;
++typedef X<B{{a_, A{ }}}>    XB;
++typedef X<B{{a_, A{ 0 }}}>  XB;
++typedef X<B{{a_, a_}}>      XB;
++typedef X<B{{a_, a0}}>      XB;
++
++
++struct C { constexpr C () = default; };
++struct D { C c[2]; };
++
++static const constexpr C c_ = { };
++
++template <D> struct Y { };
++
++typedef Y<D{ }>             YD;
++typedef Y<D{C { }}>         YD;
++typedef Y<D{{c_}}>          YD;
++typedef Y<D{C{ }, C{ }}>    YD;
++typedef Y<D{C{ }, c_}>      YD;
++typedef Y<D{{c_, c_}}>      YD;
 diff --git a/gcc/testsuite/g++.dg/cpp2a/udlit-class-nttp-ctad-neg.C b/gcc/testsuite/g++.dg/cpp2a/udlit-class-nttp-ctad-neg.C
 new file mode 100644
 index 00000000000..437fa9b5ab8
@@ -32368,6 +32590,135 @@ index 00000000000..38d5a39fd73
 +
 +template<class> void f ()
 +{ __builtin_memset (0, 0, int(0.)); }
+diff --git a/gcc/testsuite/g++.dg/ext/flexary36.C b/gcc/testsuite/g++.dg/ext/flexary36.C
+new file mode 100644
+index 00000000000..5bb827cfd0e
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/ext/flexary36.C
+@@ -0,0 +1,123 @@
++/* PR c++/93753 - ICE on a flexible array followed by a member in
++   an anonymous struct with an initializer
++   { dg-do compile }
++   { dg-options "-Wall -Wno-unused-variable" } */
++
++struct {
++  int a[];          // { dg-error "flexible array member '<unnamed struct>::a' not at end of 'struct<unnamed>'" }
++  int b;
++} ax;
++
++struct {
++  int a[];          // { dg-error "flexible array member '<unnamed struct>::a' not at end of 'struct<unnamed>'" }
++  int b;
++} bx = { };
++
++struct {
++  int a[];          // { dg-error "flexible array member '<unnamed struct>::a' not at end of 'struct<unnamed>'" }
++  int b;
++} cx = { 0 };
++
++struct {
++  int a[];          // { dg-error "flexible array member '<unnamed struct>::a' not at end of 'struct<unnamed>'" }
++  int b;
++} dx = { 1 };
++
++
++union {
++  int a[];          // { dg-error "flexible array member in union" }
++  int b;
++} du = { 1 };
++
++
++struct A {
++  int a[];          // { dg-error "flexible array member 'A::a' not at end of 'struct A'" }
++  int b;
++} a;
++
++struct B {
++  int a[];          // { dg-error "flexible array member 'B::a' not at end of 'struct B'" }
++  int b;
++} b = { };
++
++struct C {
++  int a[];          // { dg-error "flexible array member 'C::a' not at end of 'struct C'" }
++  int b;
++} c = { 0 };
++
++struct D {
++  int a[];          // { dg-error "flexible array member 'D::a' not at end of 'struct D'" }
++  int b;
++} d = { 1 };
++
++
++struct E {
++  struct {
++    int a[];        // { dg-error " not at end " }
++    int b;
++  } e = { 1 };      // { dg-error "non-static initialization of a flexible array member" }
++};
++
++struct G {
++  struct {
++    int a[];        // { dg-error " not at end " }
++    int b;
++  };
++} g = { 1 };        // { dg-error "initialization of flexible array member in a nested context" }
++
++struct H {
++  int i;
++  struct {
++    int a[];        // { dg-error " not at end " }
++    int b;
++  };
++} h = { 1 };
++
++namespace {
++
++struct {
++  int a[];          // { dg-error " not at end of " }
++  int b;
++} ax;
++
++struct {
++  int a[];          // { dg-error " not at end " }
++  int b;
++} bx = { };
++
++struct {
++  int a[];          // { dg-error " not at end " }
++  int b;
++} cx = { 0 };
++
++struct {
++  int a[];          // { dg-error " not at end " }
++  int b;
++} dx = { 1 };
++
++
++struct A {
++  int a[];          // { dg-error " not at end of 'struct {anonymous}::A'" }
++  int b;
++} a;
++
++struct B {
++  int a[];          // { dg-error " not at end of 'struct {anonymous}::B'" }
++  int b;
++} b = { };
++
++struct C {
++  int a[];          // { dg-error " not at end of 'struct {anonymous}::C'" }
++  int b;
++} c = { 0 };
++
++struct D {
++  int a[];          // { dg-error " not at end of 'struct {anonymous}::D'" }
++  int b;
++} d = { 1 };
++
++}
++
++// { dg-prune-output "unnamed type with no linkage used to declare variable" }
++// { dg-prune-output "non-static data member initializers" }
++// { dg-prune-output "extended initializer lists" }
 diff --git a/gcc/testsuite/g++.dg/ext/is_constructible4.C b/gcc/testsuite/g++.dg/ext/is_constructible4.C
 new file mode 100644
 index 00000000000..6dfe3c01661
@@ -32575,6 +32926,152 @@ index 00000000000..f6be350ba72
 +  if (a[0].load () != 1)
 +    __builtin_abort ();
 +}
+diff --git a/gcc/testsuite/g++.dg/init/array55.C b/gcc/testsuite/g++.dg/init/array55.C
+new file mode 100644
+index 00000000000..70fb183b897
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/init/array55.C
+@@ -0,0 +1,27 @@
++/* PR c++/90938 - Initializing array with {1} works, but not {0}
++   { dg-do compile { target c++11 } } */
++
++struct A
++{
++  A () = delete;
++  A (int) = delete;
++};
++
++A a_[] = { 0 };            // { dg-error "use of deleted function 'A::A\\\(int\\\)'" }
++
++A a1[1] = { 0 };           // { dg-error "use of deleted function 'A::A\\\(int\\\)'" }
++
++
++struct B
++{
++  B () = delete;
++  B (int) = delete;
++  B (long);
++};
++
++B b_[] = { 0 };            // { dg-error "use of deleted function 'B::B\\\(int\\\)'" }
++
++B b1[1] = { 0 };           // { dg-error "use of deleted function 'B::B\\\(int\\\)'" }
++
++B b2[] = { 0L };
++B b3[1] = { 0L };
+diff --git a/gcc/testsuite/g++.dg/init/array56.C b/gcc/testsuite/g++.dg/init/array56.C
+new file mode 100644
+index 00000000000..63e16663ec1
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/init/array56.C
+@@ -0,0 +1,107 @@
++/* PR c++/90938 - Initializing array with {1} works, but not {0}
++   { dg-do compile { target c++11 } }
++   { dg-options "-O -Wall -fdump-tree-optimized" } */
++
++#define assert(e)						\
++  ((e) ? (void)0						\
++   : (__builtin_printf ("assertion failed on line %i: %s\n",	\
++			__LINE__, #e),				\
++      __builtin_abort ()))
++
++namespace A {
++
++struct X
++{
++  X () = default;
++  X (int n) : n (n + 1) { }
++  int n;
++};
++
++static_assert (__is_trivial (X), "X is trivial");
++
++static void test ()
++{
++  {
++    X x[] { 0 };
++    assert (1 == x->n);
++  }
++
++  {
++    X x[1] { 0 };
++    assert (1 == x->n);                     // fails
++  }
++
++  {
++    X x[2] { 0 };
++    assert (1 == x[0].n && 0 == x[1].n);    // fails
++  }
++
++  {
++    X x[] { 1, 0 };
++    assert (2 == x[0].n && 1 == x[1].n);    // passes
++  }
++
++  {
++    X x[2] { 1, 0 };
++    assert (2 == x[0].n && 1 == x[1].n);    // fails
++  }
++}
++
++}
++
++namespace B {
++
++struct X
++{
++  X () = default;
++  X (int *p) : p (p ? p : new int (1)) { }
++  int *p;
++};
++
++static_assert (__is_trivial (X), "X is trivial");
++
++static void test ()
++{
++  X x[1] { nullptr };
++  assert (*x->p == 1);   // fails
++
++  X y[1] { 0 };
++  assert (*y->p == 1);   // fails
++}
++
++}
++
++namespace C {
++
++static const char *vector_swizzle (int vecsize, int index)
++{
++  static const char *swizzle[4][4] =
++    {
++     { ".x", ".y", ".z", ".w" },
++     { ".xy", ".yz", ".zw", nullptr },
++     { ".xyz", ".yzw", nullptr, nullptr },
++     { "", nullptr, nullptr, nullptr },
++    };
++
++  assert (vecsize >= 1 && vecsize <= 4);
++  assert (index >= 0 && index < 4);
++  assert (swizzle[vecsize - 1][index]);
++
++  return swizzle[vecsize - 1][index];
++}
++
++static void test ()
++{
++  assert (!*vector_swizzle(4, 0));
++}
++
++}
++
++int main ()
++{
++  A::test ();
++  B::test ();
++  C::test ();
++}
++
++// { dg-final { scan-tree-dump-not "abort" "optimized" } }
 diff --git a/gcc/testsuite/g++.dg/ipa/pr93223.C b/gcc/testsuite/g++.dg/ipa/pr93223.C
 new file mode 100644
 index 00000000000..87f98b5e244
@@ -42573,6 +43070,43 @@ index 00000000000..933e249e632
 +  if (any(findloc(shape(1), 1) .ne. 0)) stop 1
 +end
 +
+diff --git a/gcc/testsuite/gfortran.dg/select_type_48.f90 b/gcc/testsuite/gfortran.dg/select_type_48.f90
+new file mode 100644
+index 00000000000..d9ad01ce4f6
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/select_type_48.f90
+@@ -0,0 +1,31 @@
++! { dg-do run }
++!
++! Test the fix for PR92976, in which the TYPE IS statement caused an ICE
++! because of the explicit bounds of 'x'.
++!
++! Contributed by Gerhard Steinmetz  <gscfq@t-online.de>
++!
++program p
++   type t
++      integer :: i
++   end type
++   class(t), allocatable :: c(:)
++   allocate (c, source = [t(1111),t(2222),t(3333)])
++   call s(c)
++   if (sum (c%i) .ne. 3333) stop 1
++contains
++   subroutine s(x)
++      class(t) :: x(2)
++      select type (x)
++! ICE as compiler attempted to assign descriptor to an array
++         type is (t)
++            x%i = 0
++! Make sure that bounds are correctly translated.
++            call counter (x)
++      end select
++   end
++   subroutine counter (arg)
++     type(t) :: arg(:)
++     if (size (arg, 1) .ne. 2) stop 2
++   end
++end
 diff --git a/gcc/testsuite/gfortran.dg/spread_size_limit_2.f90 b/gcc/testsuite/gfortran.dg/spread_size_limit_2.f90
 new file mode 100644
 index 00000000000..3ea064e267f
