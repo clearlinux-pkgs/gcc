@@ -330,7 +330,7 @@ Ilya Leoshkevich (3):
       S/390: Fix failing RTL check in s390_canonicalize_comparison
       Free dominance info at the beginning of pass_jump_after_combine
 
-Jakub Jelinek (107):
+Jakub Jelinek (108):
       * BASE-VER: Set to 9.2.1.
       baseline_symbols.txt: Update.
       re PR tree-optimization/91597 (GCC miscompiles a branch depending on a pointer tag)
@@ -438,6 +438,7 @@ Jakub Jelinek (107):
       gimplify: Don't optimize register const vars to static [PR93949]
       explow: Fix ICE caused by plus_constant [PR94002]
       maintainer-scripts: Speed up git clone in gcc_release
+      i386: Fix some -O0 avx2intrin.h and xopintrin.h intrinsic macros [PR94046]
 
 Jan Hubicka (3):
       Backport ggc_trim 	Backport from mainline
@@ -448,7 +449,7 @@ Janne Blomqvist (2):
       PR fortran/91414 Improve initialization of PRNG
       PR fortran/91414 Correctly fill master_state from os_seed.
 
-Jason Merrill (31):
+Jason Merrill (32):
       PR c++/90538 - multiple expansions of capture packs
       PR c++/91378 - ICE with noexcept and auto return type.
       PR c++/90393 - ICE with throw in ?:
@@ -480,6 +481,7 @@ Jason Merrill (31):
       c++: Fix [[no_unique_address]] and default mem-init [PR90432]
       c++: Fix constexpr ICE from const mismatch [PR91607]
       c++: Fix SFINAE for invalid non-type tparm types.
+      c++: Avoid ICE on infinite recursion with concepts.
 
 Jerry DeLisle (2):
       backport: re PR libfortran/92100 (Formatted stream IO irreproducible read with binary data in file)
@@ -511,7 +513,7 @@ John David Anglin (20):
       Fix libbacktrace build on hppa-hpux.
       Fix/skip various tests for hppa*-*-hpux*.
 
-Jonathan Wakely (43):
+Jonathan Wakely (48):
       PR libstdc++/90361 add missing macro definition
       PR c++/91436 fix C++ dialect for std::make_unique fix-it hint
       Implement new serial algorithms from Parallelism TS (P0024R2)
@@ -555,6 +557,11 @@ Jonathan Wakely (43):
       libstdc++: Replace glibc-specific check for clock_gettime (PR 93325)
       libstdc++: Fix description of std::ios::trunc (PR 92886)
       libstdc++: Fix undefined behaviour in random dist serialization (PR93205)
+      libstdc++: Avoid using sizeof with function types (PR 93470)
+      libstdc++: make negative count safe with std::for_each_n
+      Add 'noexcept' to std::lerp
+      PR libstdc++/91910 fix data race in Debug Mode destructors
+      libstdc++: Fix some warnings in filesystem tests
 
 Joseph Myers (15):
       * zh_CN.po: Update.
@@ -719,10 +726,11 @@ Richard Biener (18):
       tree-optimization/93381 fix integer offsetting in points-to analysis
       middle-end/90648 fend off builtin calls with not enough arguments from match
 
-Richard Earnshaw (3):
+Richard Earnshaw (4):
       [aarch64] PR target/91386 Use copy_rtx to avoid modifying original insns in peep2 pattern
       [arm]  PR target/89400 fix thumb1 unaligned access expansion
       [arm][PR88167] Fix __builtin_return_address returns invalid address
+      arm: Fix incorrect modes with 'borrow' operations [PR90311]
 
 Richard Sandiford (6):
       Fix SLP downward group access classification [PR92420]
@@ -1268,10 +1276,51 @@ index deeb3d66ef0..45acc9e6670 100644
 -9.2.0
 +9.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..e73e1d0fb20 100644
+index 7f6557d8018..f6069066c2f 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,2310 @@
+@@ -1,3 +1,2351 @@
++2020-03-05  Jakub Jelinek  <jakub@redhat.com>
++
++	PR target/94046
++	* config/i386/avx2intrin.h (_mm_mask_i32gather_ps): Fix first cast of
++	SRC and MASK arguments to __m128 from __m128d.
++	(_mm256_mask_i32gather_ps): Fix first cast of MASK argument to __m256
++	from __m256d.
++	(_mm_mask_i64gather_ps): Fix first cast of MASK argument to __m128
++	from __m128d.
++	* config/i386/xopintrin.h (_mm_permute2_pd): Fix first cast of C
++	argument to __m128i from __m128d.
++	(_mm256_permute2_pd): Fix first cast of C argument to __m256i from
++	__m256d.
++	(_mm_permute2_ps): Fix first cast of C argument to __m128i from __m128.
++	(_mm256_permute2_ps): Fix first cast of C argument to __m256i from
++	__m256.
++
++2020-03-05  Richard Earnshaw  <rearnsha@arm.com>
++
++	PR target/90311
++	Backport from master
++	2019-07-18  Richard Earnshaw  <rearnsha@arm.com>
++
++	* config/arm/predicates.md (arm_borrow_operation): New predicate.
++	* config/arm/arm.c (subdi3_compare1): Use CCmode for the split.
++	(arm_subdi3, subdi_di_zesidi, subdi_di_sesidi): Likewise.
++	(subdi_zesidi_zesidi): Likewise.
++	(negdi2_compare, negdi2_insn): Likewise.
++	(negdi_extensidi): Likewise.
++	(negdi_zero_extendsidi): Likewise.
++	(arm_cmpdi_insn): Likewise.
++	(subsi3_carryin): Use arm_borrow_operation.
++	(subsi3_carryin_const): Likewise.
++	(subsi3_carryin_const0): Likewise.
++	(subsi3_carryin_compare): Likewise.
++	(subsi3_carryin_compare_const): Likewise.
++	(subsi3_carryin_compare_const0): Likewise.
++	(subsi3_carryin_shift): Likewise.
++	(rsbsi3_carryin_shift): Likewise.
++	(negsi2_carryin_compare): Likewise.
++
 +2020-03-04  Marek Polacek  <polacek@redhat.com>
 +
 +	Backport from mainline
@@ -3582,7 +3631,7 @@ index 7f6557d8018..e73e1d0fb20 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +2820,7 @@
+@@ -513,7 +2861,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -6183,7 +6232,7 @@ index 4866e1e4b7d..9ee6a4eb524 100644
  #define CASE_VECTOR_SHORTEN_MODE(min, max, body)			\
    (TARGET_THUMB1							\
 diff --git a/gcc/config/arm/arm.md b/gcc/config/arm/arm.md
-index 0aecd03891c..efa2d31317b 100644
+index 0aecd03891c..53e54874c12 100644
 --- a/gcc/config/arm/arm.md
 +++ b/gcc/config/arm/arm.md
 @@ -94,6 +94,11 @@
@@ -6209,7 +6258,195 @@ index 0aecd03891c..efa2d31317b 100644
  	  (eq_attr "arch_enabled" "no")
  	  (const_string "no")]
  	 (const_string "yes")))
-@@ -4483,62 +4492,78 @@
+@@ -1110,7 +1119,7 @@
+    (parallel [(set (reg:CC CC_REGNUM)
+ 		   (compare:CC (match_dup 4) (match_dup 5)))
+ 	     (set (match_dup 3) (minus:SI (minus:SI (match_dup 4) (match_dup 5))
+-			       (ltu:SI (reg:CC_C CC_REGNUM) (const_int 0))))])]
++			       (ltu:SI (reg:CC CC_REGNUM) (const_int 0))))])]
+   {
+     operands[3] = gen_highpart (SImode, operands[0]);
+     operands[0] = gen_lowpart (SImode, operands[0]);
+@@ -1141,7 +1150,7 @@
+   [(set (match_operand:SI 0 "s_register_operand" "=r,r,r")
+ 	(minus:SI (minus:SI (match_operand:SI 1 "reg_or_int_operand" "r,I,Pz")
+ 			    (match_operand:SI 2 "s_register_operand" "r,r,r"))
+-		  (ltu:SI (reg:CC_C CC_REGNUM) (const_int 0))))]
++		  (match_operand:SI 3 "arm_borrow_operation" "")))]
+   "TARGET_32BIT"
+   "@
+    sbc%?\\t%0, %1, %2
+@@ -1155,9 +1164,10 @@
+ 
+ (define_insn "*subsi3_carryin_const"
+   [(set (match_operand:SI 0 "s_register_operand" "=r")
+-        (minus:SI (plus:SI (match_operand:SI 1 "s_register_operand" "r")
+-                           (match_operand:SI 2 "arm_neg_immediate_operand" "L"))
+-                  (ltu:SI (reg:CC_C CC_REGNUM) (const_int 0))))]
++	(minus:SI (plus:SI
++		   (match_operand:SI 1 "s_register_operand" "r")
++		   (match_operand:SI 2 "arm_neg_immediate_operand" "L"))
++		  (match_operand:SI 3 "arm_borrow_operation" "")))]
+   "TARGET_32BIT"
+   "sbc\\t%0, %1, #%n2"
+   [(set_attr "conds" "use")
+@@ -1166,8 +1176,8 @@
+ 
+ (define_insn "*subsi3_carryin_const0"
+   [(set (match_operand:SI 0 "s_register_operand" "=r")
+-        (minus:SI (match_operand:SI 1 "s_register_operand" "r")
+-                  (ltu:SI (reg:CC_C CC_REGNUM) (const_int 0))))]
++	(minus:SI (match_operand:SI 1 "s_register_operand" "r")
++		  (match_operand:SI 2 "arm_borrow_operation" "")))]
+   "TARGET_32BIT"
+   "sbc\\t%0, %1, #0"
+   [(set_attr "conds" "use")
+@@ -1176,12 +1186,11 @@
+ 
+ (define_insn "*subsi3_carryin_compare"
+   [(set (reg:CC CC_REGNUM)
+-        (compare:CC (match_operand:SI 1 "s_register_operand" "r")
+-                    (match_operand:SI 2 "s_register_operand" "r")))
++	(compare:CC (match_operand:SI 1 "s_register_operand" "r")
++		    (match_operand:SI 2 "s_register_operand" "r")))
+    (set (match_operand:SI 0 "s_register_operand" "=r")
+-        (minus:SI (minus:SI (match_dup 1)
+-                            (match_dup 2))
+-                  (ltu:SI (reg:CC_C CC_REGNUM) (const_int 0))))]
++	(minus:SI (minus:SI (match_dup 1) (match_dup 2))
++		  (match_operand:SI 3 "arm_borrow_operation" "")))]
+   "TARGET_32BIT"
+   "sbcs\\t%0, %1, %2"
+   [(set_attr "conds" "set")
+@@ -1190,12 +1199,13 @@
+ 
+ (define_insn "*subsi3_carryin_compare_const"
+   [(set (reg:CC CC_REGNUM)
+-        (compare:CC (match_operand:SI 1 "reg_or_int_operand" "r")
+-                    (match_operand:SI 2 "const_int_I_operand" "I")))
++	(compare:CC (match_operand:SI 1 "reg_or_int_operand" "r")
++		    (match_operand:SI 2 "const_int_I_operand" "I")))
+    (set (match_operand:SI 0 "s_register_operand" "=r")
+-        (minus:SI (plus:SI (match_dup 1)
+-                           (match_operand:SI 3 "arm_neg_immediate_operand" "L"))
+-                  (ltu:SI (reg:CC_C CC_REGNUM) (const_int 0))))]
++	(minus:SI (plus:SI
++		   (match_dup 1)
++		   (match_operand:SI 3 "arm_neg_immediate_operand" "L"))
++		  (match_operand:SI 4 "arm_borrow_operation" "")))]
+   "TARGET_32BIT
+    && (INTVAL (operands[2])
+        == trunc_int_for_mode (-INTVAL (operands[3]), SImode))"
+@@ -1206,11 +1216,11 @@
+ 
+ (define_insn "*subsi3_carryin_compare_const0"
+   [(set (reg:CC CC_REGNUM)
+-        (compare:CC (match_operand:SI 1 "reg_or_int_operand" "r")
++	(compare:CC (match_operand:SI 1 "reg_or_int_operand" "r")
+ 		    (const_int 0)))
+    (set (match_operand:SI 0 "s_register_operand" "=r")
+-        (minus:SI (match_dup 1)
+-                  (ltu:SI (reg:CC_C CC_REGNUM) (const_int 0))))]
++	(minus:SI (match_dup 1)
++		  (match_operand:SI 2 "arm_borrow_operation" "")))]
+   "TARGET_32BIT"
+   "sbcs\\t%0, %1, #0"
+   [(set_attr "conds" "set")
+@@ -1220,28 +1230,28 @@
+ (define_insn "*subsi3_carryin_shift"
+   [(set (match_operand:SI 0 "s_register_operand" "=r")
+ 	(minus:SI (minus:SI
+-		  (match_operand:SI 1 "s_register_operand" "r")
+-                  (match_operator:SI 2 "shift_operator"
+-                   [(match_operand:SI 3 "s_register_operand" "r")
+-                    (match_operand:SI 4 "reg_or_int_operand" "rM")]))
+-                 (ltu:SI (reg:CC_C CC_REGNUM) (const_int 0))))]
++		   (match_operand:SI 1 "s_register_operand" "r")
++		   (match_operator:SI 2 "shift_operator"
++		    [(match_operand:SI 3 "s_register_operand" "r")
++		     (match_operand:SI 4 "reg_or_int_operand" "rM")]))
++		  (match_operand:SI 5 "arm_borrow_operation" "")))]
+   "TARGET_32BIT"
+   "sbc%?\\t%0, %1, %3%S2"
+   [(set_attr "conds" "use")
+    (set_attr "predicable" "yes")
+    (set (attr "type") (if_then_else (match_operand 4 "const_int_operand" "")
+-		      (const_string "alu_shift_imm")
+-                     (const_string "alu_shift_reg")))]
++				    (const_string "alu_shift_imm")
++				    (const_string "alu_shift_reg")))]
+ )
+ 
+ (define_insn "*rsbsi3_carryin_shift"
+   [(set (match_operand:SI 0 "s_register_operand" "=r")
+ 	(minus:SI (minus:SI
+-                  (match_operator:SI 2 "shift_operator"
+-                   [(match_operand:SI 3 "s_register_operand" "r")
+-                    (match_operand:SI 4 "reg_or_int_operand" "rM")])
++		   (match_operator:SI 2 "shift_operator"
++		    [(match_operand:SI 3 "s_register_operand" "r")
++		     (match_operand:SI 4 "reg_or_int_operand" "rM")])
+ 		   (match_operand:SI 1 "s_register_operand" "r"))
+-                 (ltu:SI (reg:CC_C CC_REGNUM) (const_int 0))))]
++		  (match_operand:SI 5 "arm_borrow_operation" "")))]
+   "TARGET_ARM"
+   "rsc%?\\t%0, %1, %3%S2"
+   [(set_attr "conds" "use")
+@@ -1311,7 +1321,7 @@
+ 		   (compare:CC (match_dup 1) (match_dup 2)))
+ 	      (set (match_dup 0) (minus:SI (match_dup 1) (match_dup 2)))])
+    (set (match_dup 3) (minus:SI (minus:SI (match_dup 4) (match_dup 5))
+-			       (ltu:SI (reg:CC_C CC_REGNUM) (const_int 0))))]
++			       (ltu:SI (reg:CC CC_REGNUM) (const_int 0))))]
+   {
+     operands[3] = gen_highpart (SImode, operands[0]);
+     operands[0] = gen_lowpart (SImode, operands[0]);
+@@ -1338,7 +1348,7 @@
+ 		   (compare:CC (match_dup 1) (match_dup 2)))
+ 	      (set (match_dup 0) (minus:SI (match_dup 1) (match_dup 2)))])
+    (set (match_dup 3) (minus:SI (match_dup 4)
+-                                (ltu:SI (reg:CC_C CC_REGNUM) (const_int 0))))]
++				(ltu:SI (reg:CC CC_REGNUM) (const_int 0))))]
+   {
+     operands[3] = gen_highpart (SImode, operands[0]);
+     operands[0] = gen_lowpart (SImode, operands[0]);
+@@ -1365,7 +1375,7 @@
+    (set (match_dup 3) (minus:SI (minus:SI (match_dup 4)
+                                          (ashiftrt:SI (match_dup 2)
+                                                       (const_int 31)))
+-                                (ltu:SI (reg:CC_C CC_REGNUM) (const_int 0))))]
++                                (ltu:SI (reg:CC CC_REGNUM) (const_int 0))))]
+   {
+     operands[3] = gen_highpart (SImode, operands[0]);
+     operands[0] = gen_lowpart (SImode, operands[0]);
+@@ -1392,7 +1402,7 @@
+ 		   (compare:CC (match_dup 2) (match_dup 1)))
+ 	      (set (match_dup 0) (minus:SI (match_dup 2) (match_dup 1)))])
+    (set (match_dup 3) (minus:SI (minus:SI (const_int 0) (match_dup 4))
+-			       (ltu:SI (reg:CC_C CC_REGNUM) (const_int 0))))]
++			       (ltu:SI (reg:CC CC_REGNUM) (const_int 0))))]
+   {
+     operands[3] = gen_highpart (SImode, operands[0]);
+     operands[0] = gen_lowpart (SImode, operands[0]);
+@@ -1422,7 +1432,7 @@
+                                 (ashiftrt:SI (match_dup 2)
+                                              (const_int 31))
+                                 (match_dup 4))
+-			       (ltu:SI (reg:CC_C CC_REGNUM) (const_int 0))))]
++			       (ltu:SI (reg:CC CC_REGNUM) (const_int 0))))]
+   {
+     operands[3] = gen_highpart (SImode, operands[0]);
+     operands[0] = gen_lowpart (SImode, operands[0]);
+@@ -1448,7 +1458,7 @@
+ 		   (compare:CC (match_dup 1) (match_dup 2)))
+ 	      (set (match_dup 0) (minus:SI (match_dup 1) (match_dup 2)))])
+    (set (match_dup 3) (minus:SI (minus:SI (match_dup 1) (match_dup 1))
+-			       (ltu:SI (reg:CC_C CC_REGNUM) (const_int 0))))]
++			       (ltu:SI (reg:CC CC_REGNUM) (const_int 0))))]
+   {
+        operands[3] = gen_highpart (SImode, operands[0]);
+        operands[0] = gen_lowpart (SImode, operands[0]);
+@@ -4483,62 +4493,78 @@
  ; ARMv6+ unaligned load/store instructions (used for packed structure accesses).
  
  (define_insn "unaligned_loadsi"
@@ -6317,6 +6554,74 @@ index 0aecd03891c..efa2d31317b 100644
     (set_attr "type" "store_4")])
  
  
+@@ -4645,7 +4671,7 @@
+ 	     (set (match_dup 2)
+ 		  (minus:SI
+ 		   (minus:SI (const_int 0) (match_dup 3))
+-		   (ltu:SI (reg:CC_C CC_REGNUM)
++		   (ltu:SI (reg:CC CC_REGNUM)
+ 			   (const_int 0))))])]
+   {
+     operands[2] = gen_highpart (SImode, operands[0]);
+@@ -4687,7 +4713,7 @@
+ 		   (compare:CC (const_int 0) (match_dup 1)))
+ 	      (set (match_dup 0) (minus:SI (const_int 0) (match_dup 1)))])
+    (set (match_dup 2) (minus:SI (minus:SI (const_int 0) (match_dup 3))
+-                                (ltu:SI (reg:CC_C CC_REGNUM) (const_int 0))))]
++                                (ltu:SI (reg:CC CC_REGNUM) (const_int 0))))]
+   {
+     operands[2] = gen_highpart (SImode, operands[0]);
+     operands[0] = gen_lowpart (SImode, operands[0]);
+@@ -4706,7 +4732,7 @@
+    (set (match_operand:SI 0 "s_register_operand" "=r")
+ 	(minus:SI (minus:SI (const_int 0)
+ 			    (match_dup 1))
+-		  (ltu:SI (reg:CC_C CC_REGNUM) (const_int 0))))]
++		  (match_operand:SI 2 "arm_borrow_operation" "")))]
+   "TARGET_ARM"
+   "rscs\\t%0, %1, #0"
+   [(set_attr "conds" "set")
+@@ -4783,7 +4809,7 @@
+ 		asr	Rhi, Rin, #31
+ 		rsbs	Rlo, Rin, #0
+ 		rsc	Rhi, Rhi, #0 (thumb2: sbc Rhi, Rhi, Rhi, lsl #1).  */
+-	rtx cc_reg = gen_rtx_REG (CC_Cmode, CC_REGNUM);
++	rtx cc_reg = gen_rtx_REG (CCmode, CC_REGNUM);
+ 
+ 	emit_insn (gen_rtx_SET (high,
+ 				gen_rtx_ASHIFTRT (SImode, operands[1],
+@@ -4845,10 +4871,10 @@
+       ;; since we just need to propagate the carry.
+   "&& reload_completed"
+   [(parallel [(set (reg:CC CC_REGNUM)
+-                   (compare:CC (const_int 0) (match_dup 1)))
+-              (set (match_dup 0) (minus:SI (const_int 0) (match_dup 1)))])
++		   (compare:CC (const_int 0) (match_dup 1)))
++	      (set (match_dup 0) (minus:SI (const_int 0) (match_dup 1)))])
+    (set (match_dup 2) (minus:SI (minus:SI (match_dup 2) (match_dup 2))
+-                                (ltu:SI (reg:CC_C CC_REGNUM) (const_int 0))))]
++				(ltu:SI (reg:CC CC_REGNUM) (const_int 0))))]
+   {
+     operands[2] = gen_highpart (SImode, operands[0]);
+     operands[0] = gen_lowpart (SImode, operands[0]);
+@@ -7429,12 +7455,12 @@
+   "#"   ; "cmp\\t%Q0, %Q1\;sbcs\\t%2, %R0, %R1"
+   "&& reload_completed"
+   [(set (reg:CC CC_REGNUM)
+-        (compare:CC (match_dup 0) (match_dup 1)))
++	(compare:CC (match_dup 0) (match_dup 1)))
+    (parallel [(set (reg:CC CC_REGNUM)
+-                   (compare:CC (match_dup 3) (match_dup 4)))
+-              (set (match_dup 2)
+-                   (minus:SI (match_dup 5)
+-			     (ltu:SI (reg:CC_C CC_REGNUM) (const_int 0))))])]
++		   (compare:CC (match_dup 3) (match_dup 4)))
++	      (set (match_dup 2)
++		   (minus:SI (match_dup 5)
++			     (ltu:SI (reg:CC CC_REGNUM) (const_int 0))))])]
+   {
+     operands[3] = gen_highpart (SImode, operands[0]);
+     operands[0] = gen_lowpart (SImode, operands[0]);
 diff --git a/gcc/config/arm/arm.opt b/gcc/config/arm/arm.opt
 index 9067d491b9c..78f3878e037 100644
 --- a/gcc/config/arm/arm.opt
@@ -6375,6 +6680,38 @@ index 2c7acc698ea..6857ab1787d 100644
  #pragma GCC pop_options
  
  #ifdef __cplusplus
+diff --git a/gcc/config/arm/predicates.md b/gcc/config/arm/predicates.md
+index f53378a250e..25f86471ded 100644
+--- a/gcc/config/arm/predicates.md
++++ b/gcc/config/arm/predicates.md
+@@ -358,6 +358,27 @@
+ (define_special_predicate "lt_ge_comparison_operator"
+   (match_code "lt,ge"))
+ 
++;; Match a "borrow" operation for use with SBC.  The precise code will
++;; depend on the form of the comparison.  This is generally the inverse of
++;; a carry operation, since the logic of SBC uses "not borrow" in it's
++;; calculation.
++(define_special_predicate "arm_borrow_operation"
++  (match_code "geu,ltu")
++  {
++    if (XEXP (op, 1) != const0_rtx)
++      return false;
++    rtx op0 = XEXP (op, 0);
++    if (!REG_P (op0) || REGNO (op0) != CC_REGNUM)
++      return false;
++    machine_mode ccmode = GET_MODE (op0);
++    if (ccmode == CC_Cmode)
++      return GET_CODE (op) == GEU;
++    else if (ccmode == CCmode)
++      return GET_CODE (op) == LTU;
++    return false;
++  }
++)
++
+ ;; The vsel instruction only accepts the ARM condition codes listed below.
+ (define_special_predicate "arm_vsel_comparison_operator"
+   (and (match_operand 0 "expandable_comparison_operator")
 diff --git a/gcc/config/arm/t-multilib b/gcc/config/arm/t-multilib
 index 08526302283..87069f71ecc 100644
 --- a/gcc/config/arm/t-multilib
@@ -9399,7 +9736,7 @@ index ca5c51718c8..1fd1604aed8 100644
     yet generate dwarf.)  */
  
 diff --git a/gcc/config/i386/avx2intrin.h b/gcc/config/i386/avx2intrin.h
-index 7606efdbf79..372d77f84fe 100644
+index 7606efdbf79..c9b6f9bc868 100644
 --- a/gcc/config/i386/avx2intrin.h
 +++ b/gcc/config/i386/avx2intrin.h
 @@ -258,7 +258,7 @@ extern __inline __m256i
@@ -9411,6 +9748,37 @@ index 7606efdbf79..372d77f84fe 100644
  }
  
  extern __inline __m256i
+@@ -1736,10 +1736,10 @@ _mm256_mask_i64gather_epi32 (__m128i __src, int const *__base,
+ 					(int)SCALE)
+ 
+ #define _mm_mask_i32gather_ps(SRC, BASE, INDEX, MASK, SCALE)	 \
+-  (__m128) __builtin_ia32_gathersiv4sf ((__v4sf)(__m128d)SRC,	 \
++  (__m128) __builtin_ia32_gathersiv4sf ((__v4sf)(__m128)SRC,	 \
+ 					(float const *)BASE,	 \
+ 					(__v4si)(__m128i)INDEX,	 \
+-					(__v4sf)(__m128d)MASK,	 \
++					(__v4sf)(__m128)MASK,	 \
+ 					(int)SCALE)
+ 
+ #define _mm256_i32gather_ps(BASE, INDEX, SCALE)			       \
+@@ -1754,7 +1754,7 @@ _mm256_mask_i64gather_epi32 (__m128i __src, int const *__base,
+   (__m256) __builtin_ia32_gathersiv8sf ((__v8sf)(__m256)SRC,	\
+ 					(float const *)BASE,	\
+ 					(__v8si)(__m256i)INDEX, \
+-					(__v8sf)(__m256d)MASK,	\
++					(__v8sf)(__m256)MASK,	\
+ 					(int)SCALE)
+ 
+ #define _mm_i64gather_ps(BASE, INDEX, SCALE)				\
+@@ -1769,7 +1769,7 @@ _mm256_mask_i64gather_epi32 (__m128i __src, int const *__base,
+   (__m128) __builtin_ia32_gatherdiv4sf ((__v4sf)(__m128)SRC,	 \
+ 					(float const *)BASE,	 \
+ 					(__v2di)(__m128i)INDEX,	 \
+-					(__v4sf)(__m128d)MASK,	 \
++					(__v4sf)(__m128)MASK,	 \
+ 					(int)SCALE)
+ 
+ #define _mm256_i64gather_ps(BASE, INDEX, SCALE)				\
 diff --git a/gcc/config/i386/avx512bitalgintrin.h b/gcc/config/i386/avx512bitalgintrin.h
 index 8b4fc8e3f67..8ad8586cc59 100644
 --- a/gcc/config/i386/avx512bitalgintrin.h
@@ -10598,6 +10966,40 @@ index 46ec4602eb7..18cc39ae521 100644
  	  UNSPEC_GF2P8AFFINE))]
    "TARGET_GFNI"
    "@
+diff --git a/gcc/config/i386/xopintrin.h b/gcc/config/i386/xopintrin.h
+index d1d1e061cdd..d2726154f33 100644
+--- a/gcc/config/i386/xopintrin.h
++++ b/gcc/config/i386/xopintrin.h
+@@ -814,25 +814,25 @@ _mm256_permute2_ps (__m256 __X, __m256 __Y, __m256i __C, const int __I)
+ #define _mm_permute2_pd(X, Y, C, I)					\
+   ((__m128d) __builtin_ia32_vpermil2pd ((__v2df)(__m128d)(X),		\
+ 					(__v2df)(__m128d)(Y),		\
+-					(__v2di)(__m128d)(C),		\
++					(__v2di)(__m128i)(C),		\
+ 					(int)(I)))
+ 
+ #define _mm256_permute2_pd(X, Y, C, I)					\
+   ((__m256d) __builtin_ia32_vpermil2pd256 ((__v4df)(__m256d)(X),	\
+ 					   (__v4df)(__m256d)(Y),	\
+-					   (__v4di)(__m256d)(C),	\
++					   (__v4di)(__m256i)(C),	\
+ 					   (int)(I)))
+ 
+ #define _mm_permute2_ps(X, Y, C, I)					\
+   ((__m128) __builtin_ia32_vpermil2ps ((__v4sf)(__m128)(X),		\
+ 				       (__v4sf)(__m128)(Y),		\
+-				       (__v4si)(__m128)(C),		\
++				       (__v4si)(__m128i)(C),		\
+ 				       (int)(I)))
+ 
+ #define _mm256_permute2_ps(X, Y, C, I)					\
+   ((__m256) __builtin_ia32_vpermil2ps256 ((__v8sf)(__m256)(X),		\
+ 					  (__v8sf)(__m256)(Y),  	\
+-					  (__v8si)(__m256)(C),		\
++					  (__v8si)(__m256i)(C),		\
+  					  (int)(I)))
+ #endif /* __OPTIMIZE__ */
+ 
 diff --git a/gcc/config/mips/mips.c b/gcc/config/mips/mips.c
 index 2dfc7c73cce..d758fbf1be6 100644
 --- a/gcc/config/mips/mips.c
@@ -14503,10 +14905,16 @@ index ce2825580c6..3a7251102ef 100644
  AC_SUBST(all_languages)
  AC_SUBST(all_selected_languages)
 diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
-index c977850d067..437df4d0829 100644
+index c977850d067..c697ff3a442 100644
 --- a/gcc/cp/ChangeLog
 +++ b/gcc/cp/ChangeLog
-@@ -1,3 +1,581 @@
+@@ -1,3 +1,587 @@
++2020-03-05  Jason Merrill  <jason@redhat.com>
++
++	PR c++/88395
++	PR c++/93551
++	* constraint.cc (constraints_satisfied_p): Use push_tinst_level.
++
 +2020-03-05  Martin Sebor  <msebor@redhat.com>
 +
 +	Backport from trunk.
@@ -15088,7 +15496,7 @@ index c977850d067..437df4d0829 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -16,7 +594,7 @@
+@@ -16,7 +600,7 @@
  
  	Backported from mainline
  	2019-08-02  Marek Polacek  <polacek@redhat.com>
@@ -15737,6 +16145,22 @@ index f6f21b33396..bab5935a4eb 100644
        return false;
  
      case GOTO_EXPR:
+diff --git a/gcc/cp/constraint.cc b/gcc/cp/constraint.cc
+index 9884eb0db50..cbd9c141809 100644
+--- a/gcc/cp/constraint.cc
++++ b/gcc/cp/constraint.cc
+@@ -2390,7 +2390,11 @@ constraints_satisfied_p (tree decl)
+       ci = get_constraints (decl);
+     }
+ 
++  if (!push_tinst_level (decl))
++    return true;
+   tree eval = satisfy_associated_constraints (ci, args);
++  pop_tinst_level ();
++
+   return eval == boolean_true_node;
+ }
+ 
 diff --git a/gcc/cp/cp-gimplify.c b/gcc/cp/cp-gimplify.c
 index 17d10456341..4be45abca88 100644
 --- a/gcc/cp/cp-gimplify.c
@@ -27949,10 +28373,22 @@ index 29f6cdc4667..9a6a1eadd2d 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..720fa1ec987 100644
+index bc11ae4ae0b..cb0d46f50c0 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,1753 @@
+@@ -1,3 +1,1765 @@
++2020-03-05  Jakub Jelinek  <jakub@redhat.com>
++
++	PR target/94046
++	* g++.target/i386/pr94046-1.C: New test.
++	* g++.target/i386/pr94046-2.C: New test.
++
++2020-03-05  Jakub Jelinek  <jakub@redhat.com>
++
++	Backport from master
++	PR target/90311
++	* gcc.c-torture/execute/pr90311.c: New test.
++
 +2020-03-05  Uroš Bizjak  <ubizjak@gmail.com>
 +
 +	* g++.dg/asan/asan_test.C (dg-options): Add
@@ -29706,7 +30142,7 @@ index bc11ae4ae0b..720fa1ec987 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +2177,7 @@
+@@ -427,7 +2189,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -29715,7 +30151,7 @@ index bc11ae4ae0b..720fa1ec987 100644
  	(check_effective_target_powerpc_p8vector_ok): No support for Darwin.
  	(check_effective_target_powerpc_p9vector_ok): Likewise.
  	(check_effective_target_powerpc_float128_sw_ok): Likewise.
-@@ -720,7 +2470,7 @@
+@@ -720,7 +2482,7 @@
  
  	Backport from mainline
  	PR fortran/91077
@@ -29724,7 +30160,7 @@ index bc11ae4ae0b..720fa1ec987 100644
  
  2019-07-05  Szabolcs Nagy  <szabolcs.nagy@arm.com>
  
-@@ -803,7 +2553,7 @@
+@@ -803,7 +2565,7 @@
  	Backport fom mainline
  	2019-06-21  Jeff Law  <law@redhat.com>
  
@@ -29733,7 +30169,7 @@ index bc11ae4ae0b..720fa1ec987 100644
  	* gcc.c-torture/execute/pr90949.c: New test.
  
  2019-06-26  Martin Jambor  <mjambor@suse.cz>
-@@ -969,7 +2719,7 @@
+@@ -969,7 +2731,7 @@
         * gcc.target/i386/pr82699-6.c: Likewise
         * gcc.target/i386/returninst1.c: Likewise
         * gcc.target/i386/returninst2.c: Likewise
@@ -29742,7 +30178,7 @@ index bc11ae4ae0b..720fa1ec987 100644
  
  2019-05-30  Iain Sandoe  <iain@sandoe.co.uk>
  
-@@ -1131,7 +2881,7 @@
+@@ -1131,7 +2893,7 @@
  
  	Backport from trunk
  	PR fortran/90498
@@ -29751,7 +30187,7 @@ index bc11ae4ae0b..720fa1ec987 100644
  
  2019-05-17  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -3801,21 +5551,21 @@
+@@ -3801,21 +5563,21 @@
  2019-02-23  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88117
@@ -29780,7 +30216,7 @@ index bc11ae4ae0b..720fa1ec987 100644
  
  2019-02-22  David Malcolm  <dmalcolm@redhat.com>
  
-@@ -4444,7 +6194,7 @@
+@@ -4444,7 +6206,7 @@
  2019-02-09  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/89200
@@ -29789,7 +30225,7 @@ index bc11ae4ae0b..720fa1ec987 100644
  
  2019-02-09  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -4704,17 +6454,17 @@
+@@ -4704,17 +6466,17 @@
  2019-02-02  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88393
@@ -30672,6 +31108,35 @@ index f3f7626ef3b..a151979946a 100644
  // { dg-additional-options "-DASAN_NEEDS_SEGV=1" { target { ! arm*-*-* } } }
  // { dg-additional-options "-DASAN_LOW_MEMORY=1 -DASAN_NEEDS_SEGV=0" { target arm*-*-* } }
  // { dg-additional-options "-DASAN_AVOID_EXPENSIVE_TESTS=1" { target { ! run_expensive_tests } } }
+diff --git a/gcc/testsuite/g++.dg/concepts/concepts-pr88395.C b/gcc/testsuite/g++.dg/concepts/concepts-pr88395.C
+new file mode 100644
+index 00000000000..da5834bcc07
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/concepts/concepts-pr88395.C
+@@ -0,0 +1,23 @@
++// { dg-options "-std=c++17 -fconcepts" }
++
++template <class T, class U>
++concept Concept2 = requires (T t, U u)
++{
++    t += u; // { dg-error "template instantiation depth" }
++};
++
++template <class T>
++concept Concept = Concept2 <T, T>;
++
++struct S
++{
++    template <Concept T>
++    constexpr S& operator += (T o);
++};
++
++constexpr S operator * (S a, S b)
++{
++    return a += b;
++}
++
++// { dg-prune-output "compilation terminated" }
 diff --git a/gcc/testsuite/g++.dg/conversion/packed2.C b/gcc/testsuite/g++.dg/conversion/packed2.C
 new file mode 100644
 index 00000000000..7df74dc110b
@@ -34003,6 +34468,78 @@ index 00000000000..e2b5afe78cb
 +
 +  return func1 ();
 +}
+diff --git a/gcc/testsuite/g++.target/i386/pr94046-1.C b/gcc/testsuite/g++.target/i386/pr94046-1.C
+new file mode 100644
+index 00000000000..f2d472442d7
+--- /dev/null
++++ b/gcc/testsuite/g++.target/i386/pr94046-1.C
+@@ -0,0 +1,55 @@
++// PR target/94046
++// { dg-do compile }
++// { dg-options "-O2 -mavx2 -mxop" }
++
++#include <x86intrin.h>
++
++#define S(x) struct x { operator __##x (); };
++S (m128)
++S (m128d)
++S (m128i)
++S (m256)
++S (m256d)
++S (m256i)
++
++__m128
++f1 (m128 src, float const *base, m128i idx, m128 mask)
++{
++  return _mm_mask_i32gather_ps (src, base, idx, mask, 2);
++}
++
++__m256
++f2 (m256 src, float const *base, m256i idx, m256 mask)
++{
++  return _mm256_mask_i32gather_ps (src, base, idx, mask, 2);
++}
++
++__m128
++f3 (m128 src, float const *base, m128i idx, m128 mask)
++{
++  return _mm_mask_i64gather_ps (src, base, idx, mask, 2);
++}
++
++__m128d
++f4 (m128d x, m128d y, m128i c)
++{
++  return _mm_permute2_pd (x, y, c, 3);
++}
++
++__m128
++f5 (m128 x, m128 y, m128i c)
++{
++  return _mm_permute2_ps (x, y, c, 3);
++}
++
++__m256d
++f6 (m256d x, m256d y, m256i c)
++{
++  return _mm256_permute2_pd (x, y, c, 3);
++}
++
++__m256
++f7 (m256 x, m256 y, m256i c)
++{
++  return _mm256_permute2_ps (x, y, c, 3);
++}
+diff --git a/gcc/testsuite/g++.target/i386/pr94046-2.C b/gcc/testsuite/g++.target/i386/pr94046-2.C
+new file mode 100644
+index 00000000000..abc8c3ee1ec
+--- /dev/null
++++ b/gcc/testsuite/g++.target/i386/pr94046-2.C
+@@ -0,0 +1,5 @@
++// PR target/94046
++// { dg-do compile }
++// { dg-options "-O0 -mavx2 -mxop" }
++
++#include "pr94046-1.C"
 diff --git a/gcc/testsuite/gcc.c-torture/compile/20191108-1.c b/gcc/testsuite/gcc.c-torture/compile/20191108-1.c
 new file mode 100644
 index 00000000000..7929751bb06
@@ -34526,6 +35063,28 @@ index 00000000000..3811ebca151
 +    e = 1;
 +    a();
 +    return 0;
++}
+diff --git a/gcc/testsuite/gcc.c-torture/execute/pr90311.c b/gcc/testsuite/gcc.c-torture/execute/pr90311.c
+new file mode 100644
+index 00000000000..af8cde6d0f0
+--- /dev/null
++++ b/gcc/testsuite/gcc.c-torture/execute/pr90311.c
+@@ -0,0 +1,16 @@
++/* PR rtl-optimization/90311 */
++
++int a, b;
++
++int
++main ()
++{
++  unsigned long long x;
++  unsigned int c;
++  __builtin_add_overflow ((unsigned char) a, b, &c);
++  b -= c < (unsigned char) a;
++  x = b;
++  if (x)
++    __builtin_abort ();
++  return 0;
 +}
 diff --git a/gcc/testsuite/gcc.c-torture/execute/pr91450-1.c b/gcc/testsuite/gcc.c-torture/execute/pr91450-1.c
 new file mode 100644
@@ -47967,10 +48526,56 @@ index 73af92af1e8..6a673a7c995 100644
      unsigned short __pad2;
  #if defined(__x86_64__) && !defined(_LP64)
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
-index 8ac50251005..bcac85143f2 100644
+index 8ac50251005..2f36d845098 100644
 --- a/libstdc++-v3/ChangeLog
 +++ b/libstdc++-v3/ChangeLog
-@@ -1,3 +1,515 @@
+@@ -1,3 +1,561 @@
++2020-03-05  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backport from mainline
++	2020-03-05  Jonathan Wakely  <jwakely@redhat.com>
++
++	* testsuite/27_io/filesystem/operations/all.cc: Mark unused variable.
++	* testsuite/27_io/filesystem/operations/copy.cc: Fix typo.
++	* testsuite/experimental/filesystem/operations/copy.cc: Likewise.
++	* testsuite/27_io/filesystem/operations/file_size.cc: Use correct type
++	for return value, and in comparison.
++	* testsuite/experimental/filesystem/operations/file_size.cc: Likewise.
++
++	Backport from mainline
++	2019-09-27  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/91910
++	* src/c++11/debug.cc (_Safe_iterator_base::_M_detach()): Load pointer
++	atomically and lock the mutex before accessing the sequence.
++	(_Safe_local_iterator_base::_M_detach()): Likewise.
++	(_Safe_iterator_base::_M_reset()): Clear _M_sequence atomically.
++
++	Backport from mainline
++	2019-06-17  Jonathan Wakely  <jwakely@redhat.com>
++
++	* include/c_global/cmath (__lerp, lerp): Add noexcept (LWG 3201).
++
++	Backport from mainline
++	2019-11-07  Jonathan Wakely  <jwakely@redhat.com>
++
++	* include/bits/stl_algo.h (for_each_n): Handle negative count.
++	* testsuite/25_algorithms/for_each/for_each_n_debug.cc: New test.
++
++	Backport from mainline
++	2020-01-28  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/93470
++	* include/bits/refwrap.h (reference_wrapper::operator()): Restrict
++	static assertion to object types.
++
++2020-01-28  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/93325
++	* acinclude.m4 (GLIBCXX_ENABLE_LIBSTDCXX_TIME): Use AC_SEARCH_LIBS for
++	clock_gettime instead of explicit glibc version check.
++	* configure: Regenerate.
++
 +2020-03-01  H.J. Lu  <hongjiu.lu@intel.com>
 +
 +	* config/abi/post/x86_64-linux-gnu/x32/baseline_symbols.txt: Updated.
@@ -53145,6 +53750,20 @@ index b80ab82ba15..9e0f1322f33 100644
        __is.flags(__flags);
        return __is;
      }
+diff --git a/libstdc++-v3/include/bits/refwrap.h b/libstdc++-v3/include/bits/refwrap.h
+index 6b4335a22ac..d95f7c57172 100644
+--- a/libstdc++-v3/include/bits/refwrap.h
++++ b/libstdc++-v3/include/bits/refwrap.h
+@@ -334,7 +334,8 @@ _GLIBCXX_MEM_FN_TRAITS(&& noexcept, false_type, true_type)
+ 	operator()(_Args&&... __args) const
+ 	{
+ #if __cplusplus > 201703L
+-	  static_assert(sizeof(type), "type must be complete");
++	  if constexpr (is_object_v<type>)
++	    static_assert(sizeof(type), "type must be complete");
+ #endif
+ 	  return std::__invoke(get(), std::forward<_Args>(__args)...);
+ 	}
 diff --git a/libstdc++-v3/include/bits/std_function.h b/libstdc++-v3/include/bits/std_function.h
 index b70ed564d11..b59f6978971 100644
 --- a/libstdc++-v3/include/bits/std_function.h
@@ -53174,10 +53793,10 @@ index b70ed564d11..b59f6978971 100644
        // Used so the return type convertibility checks aren't done when
        // performing overload resolution for copy construction/assignment.
 diff --git a/libstdc++-v3/include/bits/stl_algo.h b/libstdc++-v3/include/bits/stl_algo.h
-index 3411a63b1a3..4746d91c217 100644
+index 3411a63b1a3..61319d1fd15 100644
 --- a/libstdc++-v3/include/bits/stl_algo.h
 +++ b/libstdc++-v3/include/bits/stl_algo.h
-@@ -3877,6 +3877,43 @@ _GLIBCXX_BEGIN_NAMESPACE_ALGO
+@@ -3877,6 +3877,45 @@ _GLIBCXX_BEGIN_NAMESPACE_ALGO
        return __f; // N.B. [alg.foreach] says std::move(f) but it's redundant.
      }
  
@@ -53202,6 +53821,8 @@ index 3411a63b1a3..4746d91c217 100644
 +      using _Cat = typename iterator_traits<_InputIterator>::iterator_category;
 +      if constexpr (is_base_of_v<random_access_iterator_tag, _Cat>)
 +	{
++	  if (__n2 <= 0)
++	    return __first;
 +	  auto __last = __first + __n2;
 +	  std::for_each(__first, __last, std::move(__f));
 +	  return __last;
@@ -53427,6 +54048,38 @@ index d8129747eb5..c934873a722 100644
        }
  
        // Disable copy from lvalue.
+diff --git a/libstdc++-v3/include/c_global/cmath b/libstdc++-v3/include/c_global/cmath
+index b843c18f1da..01e56a559fe 100644
+--- a/libstdc++-v3/include/c_global/cmath
++++ b/libstdc++-v3/include/c_global/cmath
+@@ -1891,7 +1891,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+ 
+   template<typename _Fp>
+     constexpr _Fp
+-    __lerp(_Fp __a, _Fp __b, _Fp __t)
++    __lerp(_Fp __a, _Fp __b, _Fp __t) noexcept
+     {
+       if (__a <= 0 && __b >= 0 || __a >= 0 && __b <= 0)
+ 	return __t * __b + (1 - __t) * __a;
+@@ -1908,15 +1908,15 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+     }
+ 
+   constexpr float
+-  lerp(float __a, float __b, float __t)
++  lerp(float __a, float __b, float __t) noexcept
+   { return std::__lerp(__a, __b, __t); }
+ 
+   constexpr double
+-  lerp(double __a, double __b, double __t)
++  lerp(double __a, double __b, double __t) noexcept
+   { return std::__lerp(__a, __b, __t); }
+ 
+   constexpr long double
+-  lerp(long double __a, long double __b, long double __t)
++  lerp(long double __a, long double __b, long double __t) noexcept
+   { return std::__lerp(__a, __b, __t); }
+ #endif // C++20
+ 
 diff --git a/libstdc++-v3/include/experimental/internet b/libstdc++-v3/include/experimental/internet
 index 467bdfda3ed..3b397737bb6 100644
 --- a/libstdc++-v3/include/experimental/internet
@@ -55054,6 +55707,54 @@ index c405d8a25d5..85285ea5096 100644
          return refcounts['_M_use_count'] if refcounts else 0
  
  class SharedPtrUniqueWorker(SharedPtrUseCountWorker):
+diff --git a/libstdc++-v3/src/c++11/debug.cc b/libstdc++-v3/src/c++11/debug.cc
+index f5a49992efa..efd1a9e0254 100644
+--- a/libstdc++-v3/src/c++11/debug.cc
++++ b/libstdc++-v3/src/c++11/debug.cc
+@@ -381,10 +381,17 @@ namespace __gnu_debug
+   _Safe_iterator_base::
+   _M_detach()
+   {
+-    if (_M_sequence)
++    // This function can run concurrently with the sequence destructor,
++    // so there is a TOCTTOU race here: the sequence could be destroyed
++    // after we check that _M_sequence is not null. Use the pointer value
++    // to acquire the mutex (rather than via _M_sequence->_M_get_mutex()).
++    // If the sequence destructor runs between loading the pointer and
++    // locking the mutex, it will detach this iterator and set _M_sequence
++    // to null, and then _M_detach_single() will do nothing.
++    if (auto seq = __atomic_load_n(&_M_sequence, __ATOMIC_ACQUIRE))
+       {
+-	_M_sequence->_M_detach(this);
+-	_M_reset();
++	__gnu_cxx::__scoped_lock sentry(get_safe_base_mutex(seq));
++	_M_detach_single();
+       }
+   }
+ 
+@@ -403,7 +410,7 @@ namespace __gnu_debug
+   _Safe_iterator_base::
+   _M_reset() throw ()
+   {
+-    _M_sequence = 0;
++    __atomic_store_n(&_M_sequence, (_Safe_sequence_base*)0, __ATOMIC_RELEASE);
+     _M_version = 0;
+     _M_prior = 0;
+     _M_next = 0;
+@@ -466,10 +473,10 @@ namespace __gnu_debug
+   _Safe_local_iterator_base::
+   _M_detach()
+   {
+-    if (_M_sequence)
++    if (auto seq = __atomic_load_n(&_M_sequence, __ATOMIC_ACQUIRE))
+       {
+-	_M_get_container()->_M_detach_local(this);
+-	_M_reset();
++	__gnu_cxx::__scoped_lock sentry(get_safe_base_mutex(seq));
++	_M_detach_single();
+       }
+   }
+ 
 diff --git a/libstdc++-v3/src/c++17/fs_dir.cc b/libstdc++-v3/src/c++17/fs_dir.cc
 index d8c48f6d6d8..bcbcd7ba6b3 100644
 --- a/libstdc++-v3/src/c++17/fs_dir.cc
@@ -56485,6 +57186,56 @@ index 00000000000..016ff57cb28
 +  test01();
 +  test02();
 +}
+diff --git a/libstdc++-v3/testsuite/25_algorithms/for_each/for_each_n_debug.cc b/libstdc++-v3/testsuite/25_algorithms/for_each/for_each_n_debug.cc
+new file mode 100644
+index 00000000000..24c14efbbf9
+--- /dev/null
++++ b/libstdc++-v3/testsuite/25_algorithms/for_each/for_each_n_debug.cc
+@@ -0,0 +1,44 @@
++// Copyright (C) 2019 Free Software Foundation, Inc.
++//
++// This file is part of the GNU ISO C++ Library.  This library is free
++// software; you can redistribute it and/or modify it under the
++// terms of the GNU General Public License as published by the
++// Free Software Foundation; either version 3, or (at your option)
++// any later version.
++
++// This library is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++
++// You should have received a copy of the GNU General Public License along
++// with this library; see the file COPYING3.  If not see
++// <http://www.gnu.org/licenses/>.
++
++// { dg-options "-std=gnu++17" }
++// { dg-do run { target c++17 } }
++
++#include <algorithm>
++#include <debug/vector>
++#include <debug/list>
++
++void
++test01()
++{
++  __gnu_debug::vector<int> v{1, 2, 3};
++  std::for_each_n(v.begin(), -2, [](int){});
++}
++
++void
++test02()
++{
++  __gnu_debug::list<int> l{1, 2, 3};
++  std::for_each_n(l.begin(), -2, [](int){});
++}
++
++int
++main()
++{
++  test01();
++  test02();
++}
 diff --git a/libstdc++-v3/testsuite/26_numerics/complex/proj.cc b/libstdc++-v3/testsuite/26_numerics/complex/proj.cc
 new file mode 100644
 index 00000000000..64e0dec7129
@@ -57613,6 +58364,78 @@ index 54172d9f20b..39fbc7b5d96 100644
 +  test03();
 +  test04();
  }
+diff --git a/libstdc++-v3/testsuite/27_io/filesystem/operations/all.cc b/libstdc++-v3/testsuite/27_io/filesystem/operations/all.cc
+index 026aa57bc39..075906ea6fe 100644
+--- a/libstdc++-v3/testsuite/27_io/filesystem/operations/all.cc
++++ b/libstdc++-v3/testsuite/27_io/filesystem/operations/all.cc
+@@ -39,7 +39,7 @@ main()
+   const std::filesystem::perm_options permopts{};
+   std::filesystem::space_info sp;
+   std::error_code ec;
+-  bool b;
++  bool b [[maybe_unused]];
+   std::uintmax_t size;
+ 
+   std::filesystem::absolute(p);
+diff --git a/libstdc++-v3/testsuite/27_io/filesystem/operations/copy.cc b/libstdc++-v3/testsuite/27_io/filesystem/operations/copy.cc
+index b19b0f4d626..9513ecf2648 100644
+--- a/libstdc++-v3/testsuite/27_io/filesystem/operations/copy.cc
++++ b/libstdc++-v3/testsuite/27_io/filesystem/operations/copy.cc
+@@ -57,7 +57,7 @@ test01()
+   VERIFY( !exists(to) );
+ 
+   ec.clear();
+-  opts != fs::copy_options::recursive;
++  opts |= fs::copy_options::recursive;
+   fs::copy("/", to, opts, ec);
+   VERIFY( ec == std::make_error_code(std::errc::is_a_directory) );
+   VERIFY( !exists(to) );
+diff --git a/libstdc++-v3/testsuite/27_io/filesystem/operations/file_size.cc b/libstdc++-v3/testsuite/27_io/filesystem/operations/file_size.cc
+index 57c9e96e4dc..4c55aa0cced 100644
+--- a/libstdc++-v3/testsuite/27_io/filesystem/operations/file_size.cc
++++ b/libstdc++-v3/testsuite/27_io/filesystem/operations/file_size.cc
+@@ -29,9 +29,9 @@ void
+ test01()
+ {
+   std::error_code ec;
+-  size_t size = fs::file_size(".", ec);
++  auto size = fs::file_size(".", ec);
+   VERIFY( ec == std::errc::is_a_directory );
+-  VERIFY( size == -1 );
++  VERIFY( size == (std::uintmax_t)-1 );
+ 
+   try {
+     size = fs::file_size(".");
+@@ -40,7 +40,7 @@ test01()
+     ec = e.code();
+   }
+   VERIFY( ec == std::errc::is_a_directory );
+-  VERIFY( size == -1 );
++  VERIFY( size == (std::uintmax_t)-1 );
+ }
+ 
+ void
+@@ -49,9 +49,9 @@ test02()
+   fs::path p = __gnu_test::nonexistent_path();
+ 
+   std::error_code ec;
+-  size_t size = fs::file_size(p, ec);
++  auto size = fs::file_size(p, ec);
+   VERIFY( ec );
+-  VERIFY( size == -1 );
++  VERIFY( size == (std::uintmax_t)-1 );
+ 
+   try {
+     size = fs::file_size(p);
+@@ -60,7 +60,7 @@ test02()
+     ec = e.code();
+   }
+   VERIFY( ec );
+-  VERIFY( size == -1 );
++  VERIFY( size == (std::uintmax_t)-1 );
+ }
+ 
+ int
 diff --git a/libstdc++-v3/testsuite/27_io/filesystem/operations/remove_all.cc b/libstdc++-v3/testsuite/27_io/filesystem/operations/remove_all.cc
 index a19bac9c5f6..b0b176fc656 100644
 --- a/libstdc++-v3/testsuite/27_io/filesystem/operations/remove_all.cc
@@ -57804,6 +58627,65 @@ index 80ce25ef119..f51707b171c 100644
    test03();
 +  test04();
  }
+diff --git a/libstdc++-v3/testsuite/experimental/filesystem/operations/copy.cc b/libstdc++-v3/testsuite/experimental/filesystem/operations/copy.cc
+index 61028111fc3..477ec2a52bc 100644
+--- a/libstdc++-v3/testsuite/experimental/filesystem/operations/copy.cc
++++ b/libstdc++-v3/testsuite/experimental/filesystem/operations/copy.cc
+@@ -57,7 +57,7 @@ test01()
+   VERIFY( !exists(to) );
+ 
+   ec.clear();
+-  opts != fs::copy_options::recursive;
++  opts |= fs::copy_options::recursive;
+   fs::copy("/", to, opts, ec);
+   VERIFY( ec == std::make_error_code(std::errc::is_a_directory) );
+   VERIFY( !exists(to) );
+diff --git a/libstdc++-v3/testsuite/experimental/filesystem/operations/file_size.cc b/libstdc++-v3/testsuite/experimental/filesystem/operations/file_size.cc
+index b54776aa33f..7acd1efda05 100644
+--- a/libstdc++-v3/testsuite/experimental/filesystem/operations/file_size.cc
++++ b/libstdc++-v3/testsuite/experimental/filesystem/operations/file_size.cc
+@@ -29,9 +29,9 @@ void
+ test01()
+ {
+   std::error_code ec;
+-  size_t size = fs::file_size(".", ec);
++  auto size = fs::file_size(".", ec);
+   VERIFY( ec == std::errc::is_a_directory );
+-  VERIFY( size == -1 );
++  VERIFY( size == (std::uintmax_t)-1 );
+ 
+   try {
+     size = fs::file_size(".");
+@@ -40,7 +40,7 @@ test01()
+     ec = e.code();
+   }
+   VERIFY( ec == std::errc::is_a_directory );
+-  VERIFY( size == -1 );
++  VERIFY( size == (std::uintmax_t)-1 );
+ }
+ 
+ void
+@@ -49,9 +49,9 @@ test02()
+   fs::path p = __gnu_test::nonexistent_path();
+ 
+   std::error_code ec;
+-  size_t size = fs::file_size(p, ec);
++  auto size = fs::file_size(p, ec);
+   VERIFY( ec );
+-  VERIFY( size == -1 );
++  VERIFY( size == (std::uintmax_t)-1 );
+ 
+   try {
+     size = fs::file_size(p);
+@@ -60,7 +60,7 @@ test02()
+     ec = e.code();
+   }
+   VERIFY( ec );
+-  VERIFY( size == -1 );
++  VERIFY( size == (std::uintmax_t)-1 );
+ }
+ 
+ int
 diff --git a/libstdc++-v3/testsuite/experimental/filesystem/operations/remove_all.cc b/libstdc++-v3/testsuite/experimental/filesystem/operations/remove_all.cc
 index 99fb14a71d7..9d51a66c71f 100644
 --- a/libstdc++-v3/testsuite/experimental/filesystem/operations/remove_all.cc
