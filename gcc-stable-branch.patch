@@ -737,11 +737,12 @@ Richard Biener (18):
       tree-optimization/93381 fix integer offsetting in points-to analysis
       middle-end/90648 fend off builtin calls with not enough arguments from match
 
-Richard Earnshaw (4):
+Richard Earnshaw (5):
       [aarch64] PR target/91386 Use copy_rtx to avoid modifying original insns in peep2 pattern
       [arm]  PR target/89400 fix thumb1 unaligned access expansion
       [arm][PR88167] Fix __builtin_return_address returns invalid address
       arm: Fix incorrect modes with 'borrow' operations [PR90311]
+      arm: correct constraints on movsi_compare0 [PR91913]
 
 Richard Sandiford (6):
       Fix SLP downward group access classification [PR92420]
@@ -1358,10 +1359,20 @@ index deeb3d66ef0..3b74042132a 100644
 -9.2.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..c141669d941 100644
+index 7f6557d8018..603294bcd72 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,2369 @@
+@@ -1,3 +1,2379 @@
++2020-03-12  Richard Earnshaw  <rearnsha@arm.com>
++
++	Backport from master
++	2020-02-10  Richard Earnshaw  <rearnsha@arm.com>
++
++	PR target/91913
++	* config/arm/arm.md (movsi_compare0): Allow SP as a source register
++	in Thumb state and also as a destination in Arm state.  Add T16
++	variants.
++
 +2020-03-12  Martin Liska  <mliska@suse.cz>
 +
 +	Backport from mainline
@@ -3731,7 +3742,7 @@ index 7f6557d8018..c141669d941 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +2879,7 @@
+@@ -513,7 +2889,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -6387,7 +6398,7 @@ index 4866e1e4b7d..9ee6a4eb524 100644
  #define CASE_VECTOR_SHORTEN_MODE(min, max, body)			\
    (TARGET_THUMB1							\
 diff --git a/gcc/config/arm/arm.md b/gcc/config/arm/arm.md
-index 0aecd03891c..53e54874c12 100644
+index 0aecd03891c..bfb03f1b96d 100644
 --- a/gcc/config/arm/arm.md
 +++ b/gcc/config/arm/arm.md
 @@ -94,6 +94,11 @@
@@ -6759,7 +6770,32 @@ index 0aecd03891c..53e54874c12 100644
    {
      operands[2] = gen_highpart (SImode, operands[0]);
      operands[0] = gen_lowpart (SImode, operands[0]);
-@@ -7429,12 +7455,12 @@
+@@ -6336,16 +6362,21 @@
+ 
+ (define_insn "*movsi_compare0"
+   [(set (reg:CC CC_REGNUM)
+-	(compare:CC (match_operand:SI 1 "s_register_operand" "0,r")
++	(compare:CC (match_operand:SI 1 "s_register_operand" "0,0,l,rk,rk")
+ 		    (const_int 0)))
+-   (set (match_operand:SI 0 "s_register_operand" "=r,r")
++   (set (match_operand:SI 0 "s_register_operand" "=l,rk,l,r,rk")
+ 	(match_dup 1))]
+   "TARGET_32BIT"
+   "@
+    cmp%?\\t%0, #0
++   cmp%?\\t%0, #0
++   subs%?\\t%0, %1, #0
++   subs%?\\t%0, %1, #0
+    subs%?\\t%0, %1, #0"
+   [(set_attr "conds" "set")
+-   (set_attr "type" "alus_imm,alus_imm")]
++   (set_attr "arch" "t2,*,t2,t2,a")
++   (set_attr "type" "alus_imm")
++   (set_attr "length" "2,4,2,4,4")]
+ )
+ 
+ ;; Subroutine to store a half word from a register into memory.
+@@ -7429,12 +7460,12 @@
    "#"   ; "cmp\\t%Q0, %Q1\;sbcs\\t%2, %R0, %R1"
    "&& reload_completed"
    [(set (reg:CC CC_REGNUM)
@@ -28616,10 +28652,18 @@ index 29f6cdc4667..9a6a1eadd2d 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..ce957685132 100644
+index bc11ae4ae0b..b96c9b9ab1c 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,1796 @@
+@@ -1,3 +1,1804 @@
++2020-03-12  Richard Earnshaw  <rearnsha@arm.com>
++
++	Backport from master
++	2020-02-10  Jakub Jelinek  <jakub@redhat.com>
++
++	PR target/91913
++	* gfortran.dg/pr91913.f90: New test.
++
 +2020-03-12  Martin Liska  <mliska@suse.cz>
 +
 +	Backport from mainline
@@ -30416,7 +30460,7 @@ index bc11ae4ae0b..ce957685132 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +2220,7 @@
+@@ -427,7 +2228,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -30425,7 +30469,7 @@ index bc11ae4ae0b..ce957685132 100644
  	(check_effective_target_powerpc_p8vector_ok): No support for Darwin.
  	(check_effective_target_powerpc_p9vector_ok): Likewise.
  	(check_effective_target_powerpc_float128_sw_ok): Likewise.
-@@ -720,7 +2513,7 @@
+@@ -720,7 +2521,7 @@
  
  	Backport from mainline
  	PR fortran/91077
@@ -30434,7 +30478,7 @@ index bc11ae4ae0b..ce957685132 100644
  
  2019-07-05  Szabolcs Nagy  <szabolcs.nagy@arm.com>
  
-@@ -803,7 +2596,7 @@
+@@ -803,7 +2604,7 @@
  	Backport fom mainline
  	2019-06-21  Jeff Law  <law@redhat.com>
  
@@ -30443,7 +30487,7 @@ index bc11ae4ae0b..ce957685132 100644
  	* gcc.c-torture/execute/pr90949.c: New test.
  
  2019-06-26  Martin Jambor  <mjambor@suse.cz>
-@@ -969,7 +2762,7 @@
+@@ -969,7 +2770,7 @@
         * gcc.target/i386/pr82699-6.c: Likewise
         * gcc.target/i386/returninst1.c: Likewise
         * gcc.target/i386/returninst2.c: Likewise
@@ -30452,7 +30496,7 @@ index bc11ae4ae0b..ce957685132 100644
  
  2019-05-30  Iain Sandoe  <iain@sandoe.co.uk>
  
-@@ -1131,7 +2924,7 @@
+@@ -1131,7 +2932,7 @@
  
  	Backport from trunk
  	PR fortran/90498
@@ -30461,7 +30505,7 @@ index bc11ae4ae0b..ce957685132 100644
  
  2019-05-17  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -3801,21 +5594,21 @@
+@@ -3801,21 +5602,21 @@
  2019-02-23  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88117
@@ -30490,7 +30534,7 @@ index bc11ae4ae0b..ce957685132 100644
  
  2019-02-22  David Malcolm  <dmalcolm@redhat.com>
  
-@@ -4444,7 +6237,7 @@
+@@ -4444,7 +6245,7 @@
  2019-02-09  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/89200
@@ -30499,7 +30543,7 @@ index bc11ae4ae0b..ce957685132 100644
  
  2019-02-09  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -4704,17 +6497,17 @@
+@@ -4704,17 +6505,17 @@
  2019-02-02  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88393
@@ -43655,6 +43699,17 @@ index 00000000000..a17187dcdc0
 +   integer :: stat
 +   deallocate (x, stat%kind=stat)   ! { dg-error "Unexpected constant" }
 +end
+diff --git a/gcc/testsuite/gfortran.dg/pr91913.f90 b/gcc/testsuite/gfortran.dg/pr91913.f90
+new file mode 100644
+index 00000000000..7d5477ac0c3
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr91913.f90
+@@ -0,0 +1,5 @@
++! PR target/91913
++! { dg-do compile }
++! { dg-options "-std=legacy -Ofast --param max-cse-insns=0 -fno-schedule-insns -fsanitize=null" }
++
++include 'string_ctor_1.f90'
 diff --git a/gcc/testsuite/gfortran.dg/pr91942.f90 b/gcc/testsuite/gfortran.dg/pr91942.f90
 new file mode 100644
 index 00000000000..cd237d38660
