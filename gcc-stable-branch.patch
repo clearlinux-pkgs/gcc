@@ -67,7 +67,8 @@ Eric Botcazou (19):
 Eric S. Raymond (1):
       Clean up references to Subversion in documentation sources.
 
-GCC Administrator (210):
+GCC Administrator (211):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -336,7 +337,7 @@ Ilya Leoshkevich (3):
       S/390: Fix failing RTL check in s390_canonicalize_comparison
       Free dominance info at the beginning of pass_jump_after_combine
 
-Jakub Jelinek (108):
+Jakub Jelinek (110):
       * BASE-VER: Set to 9.2.1.
       baseline_symbols.txt: Update.
       re PR tree-optimization/91597 (GCC miscompiles a branch depending on a pointer tag)
@@ -445,6 +446,8 @@ Jakub Jelinek (108):
       explow: Fix ICE caused by plus_constant [PR94002]
       maintainer-scripts: Speed up git clone in gcc_release
       i386: Fix some -O0 avx2intrin.h and xopintrin.h intrinsic macros [PR94046]
+      Update ChangeLog and version files for release
+      Bump BASE-VER to 9.3.1.
 
 Jan Hubicka (3):
       Backport ggc_trim 	Backport from mainline
@@ -635,7 +638,7 @@ Martin Jambor (2):
       IPA-CP: Remove bogus static keyword (PR 92971)
       IPA: Avoid segfault in devirtualization_time_bonus (PR 93223)
 
-Martin Liska (11):
+Martin Liska (12):
       Backport r274502
       Backport r274503
       Backport r274504
@@ -647,6 +650,7 @@ Martin Liska (11):
       Backport r279306
       Backport f48c6014133c8989702458f9082e34ba6dd326d4
       Backport 08bf7bde9f2987b1c623d272cc71fc14a1622442
+      Backport 314b91220a07bd63f13c58e37f1b5b9430a3702b
 
 Martin Sebor (3):
       backport: re PR c++/90947 (Simple lookup table of array of strings is miscompiled)
@@ -890,14 +894,78 @@ liuhongt (3):
       Add Changelog entries to relavent Changelog files for my last commit.
       Add -mavx512vbmi2 to i386-2.C and i386-3.C
 
+diff --git a/ChangeLog b/ChangeLog
+index f41b95e0b0f..9605d767a80 100644
+--- a/ChangeLog
++++ b/ChangeLog
+@@ -1,3 +1,7 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
+ 2019-08-12  Release Manager
+ 
+ 	* GCC 9.2.0 released.
+diff --git a/config/ChangeLog b/config/ChangeLog
+index 6ded2760c37..4f761b81dd3 100644
+--- a/config/ChangeLog
++++ b/config/ChangeLog
+@@ -1,3 +1,7 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
+ 2019-08-12  Release Manager
+ 
+ 	* GCC 9.2.0 released.
 diff --git a/contrib/ChangeLog b/contrib/ChangeLog
-index 8565be188d9..c9b9e26ee57 100644
+index 8565be188d9..fde2d2b76eb 100644
 --- a/contrib/ChangeLog
 +++ b/contrib/ChangeLog
-@@ -1,3 +1,7 @@
+@@ -1,3 +1,11 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
 +2019-08-16  Uros Bizjak  <ubizjak@gmail.com>
 +
 +	* test_summary: Do not escape "=".
++
+ 2019-08-12  Release Manager
+ 
+ 	* GCC 9.2.0 released.
+diff --git a/contrib/header-tools/ChangeLog b/contrib/header-tools/ChangeLog
+index b7204300bfd..e2924194447 100644
+--- a/contrib/header-tools/ChangeLog
++++ b/contrib/header-tools/ChangeLog
+@@ -1,3 +1,7 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
+ 2019-08-12  Release Manager
+ 
+ 	* GCC 9.2.0 released.
+diff --git a/contrib/reghunt/ChangeLog b/contrib/reghunt/ChangeLog
+index 775ed0a7e12..7989f839e15 100644
+--- a/contrib/reghunt/ChangeLog
++++ b/contrib/reghunt/ChangeLog
+@@ -1,3 +1,7 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
+ 2019-08-12  Release Manager
+ 
+ 	* GCC 9.2.0 released.
+diff --git a/contrib/regression/ChangeLog b/contrib/regression/ChangeLog
+index 49f731dbbce..c77f2f9423a 100644
+--- a/contrib/regression/ChangeLog
++++ b/contrib/regression/ChangeLog
+@@ -1,3 +1,7 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
 +
  2019-08-12  Release Manager
  
@@ -916,10 +984,14 @@ index 3560a64c4f1..5760b053ec2 100755
  /^(XPASS|FAIL|UNRESOLVED|WARNING|ERROR|# of )/ { sub ("\r", ""); print; }
  /^using:/ { print ""; print; print ""; }
 diff --git a/fixincludes/ChangeLog b/fixincludes/ChangeLog
-index 829d91dac87..1ac63fe5f6a 100644
+index 829d91dac87..66a27403fcc 100644
 --- a/fixincludes/ChangeLog
 +++ b/fixincludes/ChangeLog
-@@ -1,3 +1,33 @@
+@@ -1,3 +1,37 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
 +2020-02-26  Segher Boessenkool  <segher@kernel.crashing.org>
 +
 +	Backport from trunk
@@ -1279,17 +1351,35 @@ index 00000000000..e8696b14acd
 +
 +#endif  /* DARWIN_API_AVAILABILITY_CHECK */
 diff --git a/gcc/BASE-VER b/gcc/BASE-VER
-index deeb3d66ef0..45acc9e6670 100644
+index deeb3d66ef0..3b74042132a 100644
 --- a/gcc/BASE-VER
 +++ b/gcc/BASE-VER
 @@ -1 +1 @@
 -9.2.0
-+9.2.1
++9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..f6069066c2f 100644
+index 7f6557d8018..c141669d941 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,2351 @@
+@@ -1,3 +1,2369 @@
++2020-03-12  Martin Liska  <mliska@suse.cz>
++
++	Backport from mainline
++	2020-03-09  Martin Liska  <mliska@suse.cz>
++
++	PR target/93800
++	* config/rs6000/rs6000.c (rs6000_option_override_internal):
++	Remove set of str_align_loops and str_align_jumps as these
++	should be set in previous 2 conditions in the function.
++
++2020-03-12  Jakub Jelinek  <jakub@redhat.com>
++
++	* BASE-VER: Set to 9.3.1.
++
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
 +2020-03-05  Jakub Jelinek  <jakub@redhat.com>
 +
 +	PR target/94046
@@ -3641,7 +3731,7 @@ index 7f6557d8018..f6069066c2f 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +2861,7 @@
+@@ -513,7 +2879,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -3672,10 +3762,14 @@ index 5f43d9de00e..abae872cd63 100644
  	  echo You must configure gcc.  Look at http://gcc.gnu.org/install/ for details.; \
  	  false; \
 diff --git a/gcc/ada/ChangeLog b/gcc/ada/ChangeLog
-index 22cd00956dc..d5cb3fb1f6f 100644
+index 22cd00956dc..a819f57a2bf 100644
 --- a/gcc/ada/ChangeLog
 +++ b/gcc/ada/ChangeLog
-@@ -1,3 +1,62 @@
+@@ -1,3 +1,66 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
 +2020-03-11  Richard Wai  <richard@annexi-strayline.com>
 +
 +	* gcc-interface/decl.c (gnat_to_gnu_entity): Also test Is_Public on
@@ -4213,6 +4307,18 @@ index b64e3ea264d..053c3494e79 100644
  /* Allocate an alias set for use in storing and reading from the varargs
     spill area.  */
  
+diff --git a/gcc/brig/ChangeLog b/gcc/brig/ChangeLog
+index fd6b5f58321..bbfe327058c 100644
+--- a/gcc/brig/ChangeLog
++++ b/gcc/brig/ChangeLog
+@@ -1,3 +1,7 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
+ 2019-08-12  Release Manager
+ 
+ 	* GCC 9.2.0 released.
 diff --git a/gcc/builtins.c b/gcc/builtins.c
 index 9bcb310c015..ed11f79ff0b 100644
 --- a/gcc/builtins.c
@@ -4320,10 +4426,14 @@ index 1ffb491d785..66c9295ff4a 100644
  
  #endif /* GCC_BUILTINS_H */
 diff --git a/gcc/c-family/ChangeLog b/gcc/c-family/ChangeLog
-index acdfe79894e..f5e10a9e430 100644
+index acdfe79894e..1baceaa1bd5 100644
 --- a/gcc/c-family/ChangeLog
 +++ b/gcc/c-family/ChangeLog
-@@ -1,3 +1,69 @@
+@@ -1,3 +1,73 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
 +2020-01-29  Jason Merrill  <jason@redhat.com>
 +
 +	PR c++/89357
@@ -4710,10 +4820,14 @@ index 322cf98eb02..67dce9e125a 100644
      {
        /* Check the expected alignment against the field alignment.  */
 diff --git a/gcc/c/ChangeLog b/gcc/c/ChangeLog
-index 89e5b25d020..5ba4516e114 100644
+index 89e5b25d020..c38f1d73605 100644
 --- a/gcc/c/ChangeLog
 +++ b/gcc/c/ChangeLog
-@@ -1,3 +1,83 @@
+@@ -1,3 +1,87 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
 +2020-02-13  Jakub Jelinek  <jakub@redhat.com>
 +
 +	PR c/93576
@@ -12858,10 +12972,22 @@ index c3b98315503..d30e5dec980 100644
        }
  
 diff --git a/gcc/config/rs6000/rs6000.c b/gcc/config/rs6000/rs6000.c
-index cb8d737976b..87d60078bb0 100644
+index cb8d737976b..d45294302cb 100644
 --- a/gcc/config/rs6000/rs6000.c
 +++ b/gcc/config/rs6000/rs6000.c
-@@ -7671,6 +7671,104 @@ address_offset (rtx op)
+@@ -4715,11 +4715,6 @@ rs6000_option_override_internal (bool global_init_p)
+ 		  str_align_loops = "16";
+ 		}
+ 	    }
+-
+-	  if (flag_align_jumps && !str_align_jumps)
+-	    str_align_jumps = "16";
+-	  if (flag_align_loops && !str_align_loops)
+-	    str_align_loops = "16";
+ 	}
+ 
+       /* Arrange to save and restore machine status around nested functions.  */
+@@ -7671,6 +7666,104 @@ address_offset (rtx op)
    return NULL_RTX;
  }
  
@@ -12966,7 +13092,7 @@ index cb8d737976b..87d60078bb0 100644
  /* Return true if the MEM operand is a memory operand suitable for use
     with a (full width, possibly multiple) gpr load/store.  On
     powerpc64 this means the offset must be divisible by 4.
-@@ -7705,7 +7803,13 @@ mem_operand_gpr (rtx op, machine_mode mode)
+@@ -7705,7 +7798,13 @@ mem_operand_gpr (rtx op, machine_mode mode)
        && legitimate_indirect_address_p (XEXP (addr, 0), false))
      return true;
  
@@ -12981,7 +13107,7 @@ index cb8d737976b..87d60078bb0 100644
    if (!rs6000_offsettable_memref_p (op, mode, false))
      return false;
  
-@@ -21330,7 +21434,7 @@ print_operand (FILE *file, rtx x, int code)
+@@ -21330,7 +21429,7 @@ print_operand (FILE *file, rtx x, int code)
  	{
  	  const char *name = XSTR (x, 0);
  #if TARGET_MACHO
@@ -12990,7 +13116,7 @@ index cb8d737976b..87d60078bb0 100644
  	      && MACHOPIC_INDIRECT
  	      && machopic_classify_symbol (x) == MACHOPIC_UNDEFINED_FUNCTION)
  	    name = machopic_indirection_name (x, /*stub_p=*/true);
-@@ -23151,6 +23255,11 @@ rs6000_emit_cmove (rtx dest, rtx op, rtx true_cond, rtx false_cond)
+@@ -23151,6 +23250,11 @@ rs6000_emit_cmove (rtx dest, rtx op, rtx true_cond, rtx false_cond)
  
    /* At this point we know we can use fsel.  */
  
@@ -13002,7 +13128,7 @@ index cb8d737976b..87d60078bb0 100644
    /* Reduce the comparison to a comparison against zero.  */
    if (! is_against_zero)
      {
-@@ -25729,10 +25838,14 @@ rs6000_emit_allocate_stack (HOST_WIDE_INT size, rtx copy_reg, int copy_off)
+@@ -25729,10 +25833,14 @@ rs6000_emit_allocate_stack (HOST_WIDE_INT size, rtx copy_reg, int copy_off)
  						    stack_limit_rtx,
  						    GEN_INT (size)));
  
@@ -13021,7 +13147,7 @@ index cb8d737976b..87d60078bb0 100644
  	}
        else
  	warning (0, "stack limit expression is not supported");
-@@ -37762,25 +37875,31 @@ rs6000_can_inline_p (tree caller, tree callee)
+@@ -37762,25 +37870,31 @@ rs6000_can_inline_p (tree caller, tree callee)
    tree caller_tree = DECL_FUNCTION_SPECIFIC_TARGET (caller);
    tree callee_tree = DECL_FUNCTION_SPECIFIC_TARGET (callee);
  
@@ -13065,7 +13191,7 @@ index cb8d737976b..87d60078bb0 100644
  	ret = true;
      }
  
-@@ -38273,7 +38392,8 @@ rs6000_call_darwin_1 (rtx value, rtx func_desc, rtx tlsarg,
+@@ -38273,7 +38387,8 @@ rs6000_call_darwin_1 (rtx value, rtx func_desc, rtx tlsarg,
    if ((cookie_val & CALL_LONG) != 0
        && GET_CODE (func_desc) == SYMBOL_REF)
      {
@@ -14946,10 +15072,14 @@ index ce2825580c6..3a7251102ef 100644
  AC_SUBST(all_languages)
  AC_SUBST(all_selected_languages)
 diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
-index c977850d067..c697ff3a442 100644
+index c977850d067..6441d647a54 100644
 --- a/gcc/cp/ChangeLog
 +++ b/gcc/cp/ChangeLog
-@@ -1,3 +1,587 @@
+@@ -1,3 +1,591 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
 +2020-03-05  Jason Merrill  <jason@redhat.com>
 +
 +	PR c++/88395
@@ -15537,7 +15667,7 @@ index c977850d067..c697ff3a442 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -16,7 +600,7 @@
+@@ -16,7 +604,7 @@
  
  	Backported from mainline
  	2019-08-02  Marek Polacek  <polacek@redhat.com>
@@ -17789,6 +17919,18 @@ index bdb98f84435..b406368a5d6 100644
    int flags = LOOKUP_IMPLICIT;
    if (DIRECT_LIST_INIT_P (init))
      {
+diff --git a/gcc/d/ChangeLog b/gcc/d/ChangeLog
+index b833e54abc1..f8268e87d4d 100644
+--- a/gcc/d/ChangeLog
++++ b/gcc/d/ChangeLog
+@@ -1,3 +1,7 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
+ 2019-08-12  Release Manager
+ 
+ 	* GCC 9.2.0 released.
 diff --git a/gcc/doc/avr-mmcu.texi b/gcc/doc/avr-mmcu.texi
 index ea0161ecccb..8c8d4dad663 100644
 --- a/gcc/doc/avr-mmcu.texi
@@ -18467,10 +18609,14 @@ index f0e43b5fda2..c717f24501e 100644
    low = fold_convert_loc (loc, etype, low);
    exp = fold_convert_loc (loc, etype, exp);
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index e3073787ea9..b3ccda4cf46 100644
+index e3073787ea9..8fefea2b63d 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,601 @@
+@@ -1,3 +1,605 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
 +2020-03-05  Paul Thomas  <pault@gcc.gnu.org>
 +
 +	Backport from trunk
@@ -22708,6 +22854,18 @@ index 98408b981dc..bd8bd6d7e06 100644
  	  release_ssa_name (name);
  	}
      }
+diff --git a/gcc/go/ChangeLog b/gcc/go/ChangeLog
+index 1581ac0a219..22a8e0b64d5 100644
+--- a/gcc/go/ChangeLog
++++ b/gcc/go/ChangeLog
+@@ -1,3 +1,7 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
+ 2019-08-12  Release Manager
+ 
+ 	* GCC 9.2.0 released.
 diff --git a/gcc/go/gofrontend/escape.cc b/gcc/go/gofrontend/escape.cc
 index e1c98094831..23fa7552f4c 100644
 --- a/gcc/go/gofrontend/escape.cc
@@ -22996,6 +23154,18 @@ index fd481d6e0e2..b330f2a287b 100644
    if (lra_simple_p)
      {
        /* It permits to skip live range splitting in LRA.  */
+diff --git a/gcc/jit/ChangeLog b/gcc/jit/ChangeLog
+index 2fc4d3849fe..4481c661529 100644
+--- a/gcc/jit/ChangeLog
++++ b/gcc/jit/ChangeLog
+@@ -1,3 +1,7 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
+ 2019-08-12  Release Manager
+ 
+ 	* GCC 9.2.0 released.
 diff --git a/gcc/loop-iv.c b/gcc/loop-iv.c
 index 82b4bdb1523..340045ce8b2 100644
 --- a/gcc/loop-iv.c
@@ -23357,10 +23527,14 @@ index ac971494054..10bd7c9becb 100644
  					&decoded_options_count);
  
 diff --git a/gcc/lto/ChangeLog b/gcc/lto/ChangeLog
-index eb2653be616..8c715129c11 100644
+index eb2653be616..30fddd73c2d 100644
 --- a/gcc/lto/ChangeLog
 +++ b/gcc/lto/ChangeLog
-@@ -1,3 +1,37 @@
+@@ -1,3 +1,41 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
 +2020-01-20  Martin Liska  <mliska@suse.cz>
 +
 +	Backport from mainline
@@ -23707,6 +23881,30 @@ index 9954ea5cfa1..059b5440123 100644
      }
  
    if (has_conflicts)
+diff --git a/gcc/objc/ChangeLog b/gcc/objc/ChangeLog
+index 8ac308ea4bb..0a09de70e5d 100644
+--- a/gcc/objc/ChangeLog
++++ b/gcc/objc/ChangeLog
+@@ -1,3 +1,7 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
+ 2019-08-12  Release Manager
+ 
+ 	* GCC 9.2.0 released.
+diff --git a/gcc/objcp/ChangeLog b/gcc/objcp/ChangeLog
+index 883c9bde18e..1ba3a488044 100644
+--- a/gcc/objcp/ChangeLog
++++ b/gcc/objcp/ChangeLog
+@@ -1,3 +1,7 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
+ 2019-08-12  Release Manager
+ 
+ 	* GCC 9.2.0 released.
 diff --git a/gcc/omp-low.c b/gcc/omp-low.c
 index f9ab91aafaa..813cefd69b9 100644
 --- a/gcc/omp-low.c
@@ -24116,10 +24314,14 @@ index bc147c4444d..9a859070b26 100644
  	  NEXT_PASS (pass_gcse2);
  	  NEXT_PASS (pass_split_after_reload);
 diff --git a/gcc/po/ChangeLog b/gcc/po/ChangeLog
-index e0186084236..624685bfb5e 100644
+index e0186084236..bab0ce9a655 100644
 --- a/gcc/po/ChangeLog
 +++ b/gcc/po/ChangeLog
-@@ -1,3 +1,31 @@
+@@ -1,3 +1,35 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
 +2020-01-20  Joseph Myers  <joseph@codesourcery.com>
 +
 +	* zh_TW.po: Update.
@@ -28414,10 +28616,22 @@ index 29f6cdc4667..9a6a1eadd2d 100644
    /* We have real symbol that should be in symbol table.  However try to trim
       down the refernces to libraries bit more because linker will otherwise
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index bc11ae4ae0b..3a01188a810 100644
+index bc11ae4ae0b..ce957685132 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,1784 @@
+@@ -1,3 +1,1796 @@
++2020-03-12  Martin Liska  <mliska@suse.cz>
++
++	Backport from mainline
++	2020-03-09  Martin Liska  <mliska@suse.cz>
++
++	PR target/93800
++	* gcc.target/powerpc/pr93800.c: New test.
++
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
 +2020-03-11  Richard Wai  <richard@annexi-strayline.com>
 +
 +	* gnat.dg/subpools1.adb: New test.
@@ -30202,7 +30416,7 @@ index bc11ae4ae0b..3a01188a810 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -427,7 +2208,7 @@
+@@ -427,7 +2220,7 @@
  	Backport from mainline.
  	2019-05-15  Iain Sandoe  <iain@sandoe.co.uk>
  
@@ -30211,7 +30425,7 @@ index bc11ae4ae0b..3a01188a810 100644
  	(check_effective_target_powerpc_p8vector_ok): No support for Darwin.
  	(check_effective_target_powerpc_p9vector_ok): Likewise.
  	(check_effective_target_powerpc_float128_sw_ok): Likewise.
-@@ -720,7 +2501,7 @@
+@@ -720,7 +2513,7 @@
  
  	Backport from mainline
  	PR fortran/91077
@@ -30220,7 +30434,7 @@ index bc11ae4ae0b..3a01188a810 100644
  
  2019-07-05  Szabolcs Nagy  <szabolcs.nagy@arm.com>
  
-@@ -803,7 +2584,7 @@
+@@ -803,7 +2596,7 @@
  	Backport fom mainline
  	2019-06-21  Jeff Law  <law@redhat.com>
  
@@ -30229,7 +30443,7 @@ index bc11ae4ae0b..3a01188a810 100644
  	* gcc.c-torture/execute/pr90949.c: New test.
  
  2019-06-26  Martin Jambor  <mjambor@suse.cz>
-@@ -969,7 +2750,7 @@
+@@ -969,7 +2762,7 @@
         * gcc.target/i386/pr82699-6.c: Likewise
         * gcc.target/i386/returninst1.c: Likewise
         * gcc.target/i386/returninst2.c: Likewise
@@ -30238,7 +30452,7 @@ index bc11ae4ae0b..3a01188a810 100644
  
  2019-05-30  Iain Sandoe  <iain@sandoe.co.uk>
  
-@@ -1131,7 +2912,7 @@
+@@ -1131,7 +2924,7 @@
  
  	Backport from trunk
  	PR fortran/90498
@@ -30247,7 +30461,7 @@ index bc11ae4ae0b..3a01188a810 100644
  
  2019-05-17  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -3801,21 +5582,21 @@
+@@ -3801,21 +5594,21 @@
  2019-02-23  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88117
@@ -30276,7 +30490,7 @@ index bc11ae4ae0b..3a01188a810 100644
  
  2019-02-22  David Malcolm  <dmalcolm@redhat.com>
  
-@@ -4444,7 +6225,7 @@
+@@ -4444,7 +6237,7 @@
  2019-02-09  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/89200
@@ -30285,7 +30499,7 @@ index bc11ae4ae0b..3a01188a810 100644
  
  2019-02-09  Jakub Jelinek  <jakub@redhat.com>
  
-@@ -4704,17 +6485,17 @@
+@@ -4704,17 +6497,17 @@
  2019-02-02  Paul Thomas  <pault@gcc.gnu.org>
  
  	PR fortran/88393
@@ -40528,6 +40742,26 @@ index 00000000000..6a0a4731148
 +	bar ();
 +    }
 +}
+diff --git a/gcc/testsuite/gcc.target/powerpc/pr93800.c b/gcc/testsuite/gcc.target/powerpc/pr93800.c
+new file mode 100644
+index 00000000000..f8dfbe7c082
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/powerpc/pr93800.c
+@@ -0,0 +1,14 @@
++/* { dg-do compile } */
++/* { dg-options "-mcpu=860 -O2" } */
++/* { dg-require-effective-target ilp32 } */
++/* { dg-final { scan-assembler-not "\\.p2align 4" } } */
++
++volatile int g;
++int f(int a, int b)
++{
++	int i;
++
++	for (i = 0; i < b; i++)
++		a += g;
++	return a;
++}
 diff --git a/gcc/testsuite/gcc.target/powerpc/pure-builtin-redundant-load.c b/gcc/testsuite/gcc.target/powerpc/pure-builtin-redundant-load.c
 new file mode 100644
 index 00000000000..16ab6abfc3b
@@ -46197,11 +46431,87 @@ index cb43248ec49..8f006dcff67 100644
  }
  
  /* Allocate SIZE bytes writable static space with a gensym name
+diff --git a/gnattools/ChangeLog b/gnattools/ChangeLog
+index ed10c936799..ca5a2b38129 100644
+--- a/gnattools/ChangeLog
++++ b/gnattools/ChangeLog
+@@ -1,3 +1,7 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
+ 2019-08-12  Release Manager
+ 
+ 	* GCC 9.2.0 released.
+diff --git a/gotools/ChangeLog b/gotools/ChangeLog
+index d5ec2aac637..bae6d8454d2 100644
+--- a/gotools/ChangeLog
++++ b/gotools/ChangeLog
+@@ -1,3 +1,7 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
+ 2019-08-12  Release Manager
+ 
+ 	* GCC 9.2.0 released.
+diff --git a/include/ChangeLog b/include/ChangeLog
+index b3056e498a7..1811056c182 100644
+--- a/include/ChangeLog
++++ b/include/ChangeLog
+@@ -1,3 +1,7 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
+ 2019-08-12  Release Manager
+ 
+ 	* GCC 9.2.0 released.
+diff --git a/intl/ChangeLog b/intl/ChangeLog
+index ffbd824947b..79be1294ad9 100644
+--- a/intl/ChangeLog
++++ b/intl/ChangeLog
+@@ -1,3 +1,7 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
+ 2019-08-12  Release Manager
+ 
+ 	* GCC 9.2.0 released.
+diff --git a/libada/ChangeLog b/libada/ChangeLog
+index 25ea2485fab..285b2530dad 100644
+--- a/libada/ChangeLog
++++ b/libada/ChangeLog
+@@ -1,3 +1,7 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
+ 2019-08-12  Release Manager
+ 
+ 	* GCC 9.2.0 released.
+diff --git a/libatomic/ChangeLog b/libatomic/ChangeLog
+index f4a9c7eb351..5c0aa2db0c8 100644
+--- a/libatomic/ChangeLog
++++ b/libatomic/ChangeLog
+@@ -1,3 +1,7 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
+ 2019-08-12  Release Manager
+ 
+ 	* GCC 9.2.0 released.
 diff --git a/libbacktrace/ChangeLog b/libbacktrace/ChangeLog
-index 93fcf483153..3fa0caa6f67 100644
+index 93fcf483153..0bbbbb7ab8a 100644
 --- a/libbacktrace/ChangeLog
 +++ b/libbacktrace/ChangeLog
-@@ -1,3 +1,13 @@
+@@ -1,3 +1,17 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
 +2020-02-29  John David Anglin  <danglin@gcc.gnu.org>
 +
 +	Backport from mainline
@@ -46243,11 +46553,27 @@ index d50b5bc517e..bc60962fe04 100644
      }
  
    if (!state->threaded)
+diff --git a/libcc1/ChangeLog b/libcc1/ChangeLog
+index 8f3449ebb17..2802ce5c0b1 100644
+--- a/libcc1/ChangeLog
++++ b/libcc1/ChangeLog
+@@ -1,3 +1,7 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
+ 2019-08-12  Release Manager
+ 
+ 	* GCC 9.2.0 released.
 diff --git a/libcpp/ChangeLog b/libcpp/ChangeLog
-index 99e2386de14..68c9237cf03 100644
+index 99e2386de14..ee91cc18084 100644
 --- a/libcpp/ChangeLog
 +++ b/libcpp/ChangeLog
-@@ -1,3 +1,17 @@
+@@ -1,3 +1,21 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
 +2019-11-08  Jakub Jelinek  <jakub@redhat.com>
 +
 +	Backported from mainline
@@ -46342,11 +46668,27 @@ index 77a2a3becb3..496c9d63236 100644
  
  /* In directives.c */
  extern int _cpp_test_assertion (cpp_reader *, unsigned int *);
+diff --git a/libcpp/po/ChangeLog b/libcpp/po/ChangeLog
+index 9c4d30df3b7..fba298d045f 100644
+--- a/libcpp/po/ChangeLog
++++ b/libcpp/po/ChangeLog
+@@ -1,3 +1,7 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
+ 2019-08-12  Release Manager
+ 
+ 	* GCC 9.2.0 released.
 diff --git a/libdecnumber/ChangeLog b/libdecnumber/ChangeLog
-index 1bef6d92f9d..90d5a978f7a 100644
+index 1bef6d92f9d..a309bc3b03e 100644
 --- a/libdecnumber/ChangeLog
 +++ b/libdecnumber/ChangeLog
-@@ -1,3 +1,14 @@
+@@ -1,3 +1,18 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
 +2020-01-13  Joseph Myers  <joseph@codesourcery.com>
 +
 +	Backport from mainline:
@@ -46401,11 +46743,27 @@ index 63d3cecfe8d..36aa56c540d 100644
      d1018 = reciprocals10_128[18];
      __mul_128x128_high (BH, bcoeff, d1018);
      amount = recip_scale[18];
+diff --git a/libffi/ChangeLog b/libffi/ChangeLog
+index 828a1c72370..bef94178c31 100644
+--- a/libffi/ChangeLog
++++ b/libffi/ChangeLog
+@@ -1,3 +1,7 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
+ 2019-08-12  Release Manager
+ 
+ 	* GCC 9.2.0 released.
 diff --git a/libgcc/ChangeLog b/libgcc/ChangeLog
-index 348c54c0b3e..7630d6ef81d 100644
+index 348c54c0b3e..a5c30516ff8 100644
 --- a/libgcc/ChangeLog
 +++ b/libgcc/ChangeLog
-@@ -1,3 +1,73 @@
+@@ -1,3 +1,77 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
 +2020-02-10  H.J. Lu  <hongjiu.lu@intel.com>
 +
 +	Backport from mainline
@@ -46550,6 +46908,18 @@ index c53c3fe5c63..129d6d19c37 100644
 +  else							\
 +    frames++;
 +#endif
+diff --git a/libgcc/config/libbid/ChangeLog b/libgcc/config/libbid/ChangeLog
+index 0f7b9dd4714..f94a68150ee 100644
+--- a/libgcc/config/libbid/ChangeLog
++++ b/libgcc/config/libbid/ChangeLog
+@@ -1,3 +1,7 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
+ 2019-08-12  Release Manager
+ 
+ 	* GCC 9.2.0 released.
 diff --git a/libgcc/config/pa/fptr.c b/libgcc/config/pa/fptr.c
 index 53440051730..5beb0b832e2 100644
 --- a/libgcc/config/pa/fptr.c
@@ -47157,10 +47527,14 @@ index 8340ea2bfe4..3b5e3428958 100644
 -	$(crt_compile) $(DARWIN_EXTRA_CRT_BUILD_CFLAGS) -mmacosx-version-min=10.6 -c $<
 +	$(crt_compile) -mmacosx-version-min=10.6 -c $<
 diff --git a/libgfortran/ChangeLog b/libgfortran/ChangeLog
-index 48f9886896e..ce75fe80636 100644
+index 48f9886896e..01aa551b914 100644
 --- a/libgfortran/ChangeLog
 +++ b/libgfortran/ChangeLog
-@@ -1,3 +1,79 @@
+@@ -1,3 +1,83 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
 +2020-02-22  Thomas Koenig  <tkoenig@gcc.gnu.org>
 +
 +	Backport from trunk
@@ -47240,7 +47614,7 @@ index 48f9886896e..ce75fe80636 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -24,12 +100,12 @@
+@@ -24,12 +104,12 @@
  2019-05-20  Janne Blomqvist  <jb@gcc.gnu.org>
  
  	Backport from trunk
@@ -48112,10 +48486,14 @@ index c9dd8d494a9..f086c507e07 100755
  fi
  if ! echo "$statfs" | grep f_flags; then
 diff --git a/libgomp/ChangeLog b/libgomp/ChangeLog
-index 958572a54c0..b90fddf3ee2 100644
+index 958572a54c0..0156d5f7bc9 100644
 --- a/libgomp/ChangeLog
 +++ b/libgomp/ChangeLog
-@@ -1,3 +1,61 @@
+@@ -1,3 +1,65 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
 +2020-02-13  Jakub Jelinek  <jakub@redhat.com>
 +
 +	Backported from mainline
@@ -48497,11 +48875,27 @@ index f58a95fe670..1009f4a81e5 100644
    integer :: i
  
    do i = 1, N
+diff --git a/libhsail-rt/ChangeLog b/libhsail-rt/ChangeLog
+index e4017172712..9dec465a52a 100644
+--- a/libhsail-rt/ChangeLog
++++ b/libhsail-rt/ChangeLog
+@@ -1,3 +1,7 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
+ 2019-08-12  Release Manager
+ 
+ 	* GCC 9.2.0 released.
 diff --git a/libiberty/ChangeLog b/libiberty/ChangeLog
-index 7bbc0dec6c8..0be41b24d13 100644
+index 7bbc0dec6c8..c5a095dec5d 100644
 --- a/libiberty/ChangeLog
 +++ b/libiberty/ChangeLog
-@@ -1,3 +1,12 @@
+@@ -1,3 +1,16 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
 +2020-03-02  H.J. Lu  <hongjiu.lu@intel.com>
 +
 +	Backport from master
@@ -48528,11 +48922,51 @@ index b00c265128c..7fdb30f3416 100644
    /* Copy over .comment section under the same name if present.  Solaris
       ld uses them to relax its checking of ELF gABI access rules for
       COMDAT sections in objects produced by GCC.  */
+diff --git a/libitm/ChangeLog b/libitm/ChangeLog
+index bedb8310e7e..703db28ee23 100644
+--- a/libitm/ChangeLog
++++ b/libitm/ChangeLog
+@@ -1,3 +1,7 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
+ 2019-08-12  Release Manager
+ 
+ 	* GCC 9.2.0 released.
+diff --git a/libobjc/ChangeLog b/libobjc/ChangeLog
+index 5cc4decbb71..9003252bebd 100644
+--- a/libobjc/ChangeLog
++++ b/libobjc/ChangeLog
+@@ -1,3 +1,7 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
+ 2019-08-12  Release Manager
+ 
+ 	* GCC 9.2.0 released.
+diff --git a/liboffloadmic/ChangeLog b/liboffloadmic/ChangeLog
+index cc464c1fd59..bbd18fc5e11 100644
+--- a/liboffloadmic/ChangeLog
++++ b/liboffloadmic/ChangeLog
+@@ -1,3 +1,7 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
+ 2019-08-12  Release Manager
+ 
+ 	* GCC 9.2.0 released.
 diff --git a/libphobos/ChangeLog b/libphobos/ChangeLog
-index 24de0ab9bd8..becd8b1ec86 100644
+index 24de0ab9bd8..569a3c91ab2 100644
 --- a/libphobos/ChangeLog
 +++ b/libphobos/ChangeLog
-@@ -1,3 +1,12 @@
+@@ -1,3 +1,16 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
 +2019-10-30  Thomas Schwinge  <thomas@codesourcery.com>
 +
 +	Backport from trunk:
@@ -48576,10 +49010,14 @@ index d3fe75358c8..056e8f1d444 100644
  
      libphobos_maybe_build_wrapper "${objdir}/testglue.o"
 diff --git a/libquadmath/ChangeLog b/libquadmath/ChangeLog
-index 15f371b36f0..b8f71d6520b 100644
+index 15f371b36f0..f5c5231071a 100644
 --- a/libquadmath/ChangeLog
 +++ b/libquadmath/ChangeLog
-@@ -1,3 +1,12 @@
+@@ -1,3 +1,16 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
 +2019-10-21  Jakub Jelinek  <jakub@redhat.com>
 +
 +	Backported from mainline
@@ -48637,10 +49075,14 @@ index 76275b51b62..81eb957d2fa 100644
  #define __quadmath_extern_inline \
    extern inline __attribute__ ((__gnu_inline__))
 diff --git a/libsanitizer/ChangeLog b/libsanitizer/ChangeLog
-index c7d3cf4f562..53b8343a189 100644
+index c7d3cf4f562..07a4952bc66 100644
 --- a/libsanitizer/ChangeLog
 +++ b/libsanitizer/ChangeLog
-@@ -1,3 +1,40 @@
+@@ -1,3 +1,44 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
 +2020-03-03  Iain Sandoe  <iain@sandoe.co.uk>
 +
 +	* configure.tgt (x86_64-*-darwin*, i?86-*-darwin*): Enable by
@@ -48786,11 +49228,27 @@ index 73af92af1e8..6a673a7c995 100644
      unsigned short __seq;
      unsigned short __pad2;
  #if defined(__x86_64__) && !defined(_LP64)
+diff --git a/libssp/ChangeLog b/libssp/ChangeLog
+index 869b8d008e2..73ccbe971ac 100644
+--- a/libssp/ChangeLog
++++ b/libssp/ChangeLog
+@@ -1,3 +1,7 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
+ 2019-08-12  Release Manager
+ 
+ 	* GCC 9.2.0 released.
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
-index 8ac50251005..ce96fe14640 100644
+index 8ac50251005..45847172291 100644
 --- a/libstdc++-v3/ChangeLog
 +++ b/libstdc++-v3/ChangeLog
-@@ -1,3 +1,572 @@
+@@ -1,3 +1,576 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
 +2020-03-06  Jonathan Wakely  <jwakely@redhat.com>
 +
 +	Backport from mainline
@@ -59769,11 +60227,39 @@ index 4636d9995c1..ac646a59cb8 100644
    };
  }
  #endif
+diff --git a/libvtv/ChangeLog b/libvtv/ChangeLog
+index b9cfd6bd3ac..d3854a15726 100644
+--- a/libvtv/ChangeLog
++++ b/libvtv/ChangeLog
+@@ -1,3 +1,7 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
+ 2019-08-12  Release Manager
+ 
+ 	* GCC 9.2.0 released.
+diff --git a/lto-plugin/ChangeLog b/lto-plugin/ChangeLog
+index 2beb473c410..6da9d219489 100644
+--- a/lto-plugin/ChangeLog
++++ b/lto-plugin/ChangeLog
+@@ -1,3 +1,7 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
+ 2019-08-12  Release Manager
+ 
+ 	* GCC 9.2.0 released.
 diff --git a/maintainer-scripts/ChangeLog b/maintainer-scripts/ChangeLog
-index 280c506b9c3..c50e6c284e2 100644
+index 280c506b9c3..b1a9be6f5b2 100644
 --- a/maintainer-scripts/ChangeLog
 +++ b/maintainer-scripts/ChangeLog
-@@ -1,3 +1,19 @@
+@@ -1,3 +1,23 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
 +2020-02-27  Jakub Jelinek  <jakub@redhat.com>
 +
 +	* gcc_release: Add support for -b local-git-repo argument.
@@ -60094,3 +60580,15 @@ index bfb6b037bb1..74cce1af18d 100755
  
  ########################################################################
  # Main Program
+diff --git a/zlib/ChangeLog b/zlib/ChangeLog
+index 480ecdf9c50..feae5b01fa5 100644
+--- a/zlib/ChangeLog
++++ b/zlib/ChangeLog
+@@ -1,3 +1,7 @@
++2020-03-12  Release Manager
++
++	* GCC 9.3.0 released.
++
+ 2019-08-12  Release Manager
+ 
+ 	* GCC 9.2.0 released.
