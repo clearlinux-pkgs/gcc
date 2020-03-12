@@ -19,9 +19,10 @@ Bernd Edlinger (4):
       backport: re PR fortran/91716 (ICE in output_constant, at varasm.c:5026)
       Avoid collect2 calling signal unsafe functions and/or unlink with uninitialized memory
 
-Bill Schmidt (2):
+Bill Schmidt (3):
       backport: re PR target/91275 (__builtin_crypto_vpmsumd gives different results -O[123] vs -O0)
       backport: re PR testsuite/92093 (New test case gcc.target/powerpc/pr91275.c from r276410 fails on BE)
+      rs6000: Fix -mpower9-vector -mno-altivec ICE (PR87560)
 
 Carl Love (1):
       PPC64, fix documentation for __builtin_crypto_vpmsum* builtin functions.
@@ -522,7 +523,7 @@ John David Anglin (20):
       Fix libbacktrace build on hppa-hpux.
       Fix/skip various tests for hppa*-*-hpux*.
 
-Jonathan Wakely (49):
+Jonathan Wakely (54):
       PR libstdc++/90361 add missing macro definition
       PR c++/91436 fix C++ dialect for std::make_unique fix-it hint
       Implement new serial algorithms from Parallelism TS (P0024R2)
@@ -572,6 +573,11 @@ Jonathan Wakely (49):
       PR libstdc++/91910 fix data race in Debug Mode destructors
       libstdc++: Fix some warnings in filesystem tests
       libstdc++: Fix call to __glibcxx_rwlock_init (PR 94069)
+      libstdc++: Ensure root-dir converted to forward slash (PR93244)
+      libstdc++: Fix FS-dependent filesystem tests
+      libstdc++: Fix test failure due to -Wnonnull warnings
+      libstdc++: Fix name of macro in #undef directive
+      libstdc++: Handle type-changing path concatenations (PR 94063)
 
 Joseph Myers (15):
       * zh_CN.po: Update.
@@ -1359,10 +1365,20 @@ index deeb3d66ef0..3b74042132a 100644
 -9.2.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..603294bcd72 100644
+index 7f6557d8018..92d5b0afb2e 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,2379 @@
+@@ -1,3 +1,2389 @@
++2020-03-12  Bill Schmidt  <wschmidt@linux.ibm.com>
++
++	Backport from master
++	2020-03-02  Bill Schmidt  <wschmidt@linux.ibm.com>
++
++	PR target/87560
++	* rs6000-cpus.def (OTHER_ALTIVEC_MASKS): New #define.
++	* rs6000.c (rs6000_disable_incompatible_switches): Add table entry
++	for OPTION_MASK_ALTIVEC.
++
 +2020-03-12  Richard Earnshaw  <rearnsha@arm.com>
 +
 +	Backport from master
@@ -3742,7 +3758,7 @@ index 7f6557d8018..603294bcd72 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +2889,7 @@
+@@ -513,7 +2899,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -12991,6 +13007,21 @@ index 0a2bdb79e15..0feee7cafca 100644
  BU_VSX_X (ST_ELEMREV_V1TI,    "st_elemrev_v1ti",  MEM)
  BU_VSX_X (ST_ELEMREV_V2DF,    "st_elemrev_v2df",  MEM)
  BU_VSX_X (ST_ELEMREV_V2DI,    "st_elemrev_v2di",  MEM)
+diff --git a/gcc/config/rs6000/rs6000-cpus.def b/gcc/config/rs6000/rs6000-cpus.def
+index d0d69beafd4..47a5d0576d0 100644
+--- a/gcc/config/rs6000/rs6000-cpus.def
++++ b/gcc/config/rs6000/rs6000-cpus.def
+@@ -88,6 +88,10 @@
+ 				 | OPTION_MASK_FLOAT128_KEYWORD		\
+ 				 | OPTION_MASK_P8_VECTOR)
+ 
++/* Flags that need to be turned off if -mno-altivec.  */
++#define OTHER_ALTIVEC_MASKS	(OTHER_VSX_VECTOR_MASKS			\
++				 | OPTION_MASK_VSX)
++
+ #define POWERPC_7400_MASK	(OPTION_MASK_PPC_GFXOPT | OPTION_MASK_ALTIVEC)
+ 
+ /* Deal with ports that do not have -mstrict-align.  */
 diff --git a/gcc/config/rs6000/rs6000-p8swap.c b/gcc/config/rs6000/rs6000-p8swap.c
 index c3b98315503..d30e5dec980 100644
 --- a/gcc/config/rs6000/rs6000-p8swap.c
@@ -13008,7 +13039,7 @@ index c3b98315503..d30e5dec980 100644
        }
  
 diff --git a/gcc/config/rs6000/rs6000.c b/gcc/config/rs6000/rs6000.c
-index cb8d737976b..d45294302cb 100644
+index cb8d737976b..04324ab981a 100644
 --- a/gcc/config/rs6000/rs6000.c
 +++ b/gcc/config/rs6000/rs6000.c
 @@ -4715,11 +4715,6 @@ rs6000_option_override_internal (bool global_init_p)
@@ -13183,7 +13214,15 @@ index cb8d737976b..d45294302cb 100644
  	}
        else
  	warning (0, "stack limit expression is not supported");
-@@ -37762,25 +37870,31 @@ rs6000_can_inline_p (tree caller, tree callee)
+@@ -37286,6 +37394,7 @@ rs6000_disable_incompatible_switches (void)
+     { OPTION_MASK_P9_VECTOR,	OTHER_P9_VECTOR_MASKS,	"power9-vector"	},
+     { OPTION_MASK_P8_VECTOR,	OTHER_P8_VECTOR_MASKS,	"power8-vector"	},
+     { OPTION_MASK_VSX,		OTHER_VSX_VECTOR_MASKS,	"vsx"		},
++    { OPTION_MASK_ALTIVEC,	OTHER_ALTIVEC_MASKS,	"altivec"	},
+   };
+ 
+   for (i = 0; i < ARRAY_SIZE (flags); i++)
+@@ -37762,25 +37871,31 @@ rs6000_can_inline_p (tree caller, tree callee)
    tree caller_tree = DECL_FUNCTION_SPECIFIC_TARGET (caller);
    tree callee_tree = DECL_FUNCTION_SPECIFIC_TARGET (callee);
  
@@ -13227,7 +13266,7 @@ index cb8d737976b..d45294302cb 100644
  	ret = true;
      }
  
-@@ -38273,7 +38387,8 @@ rs6000_call_darwin_1 (rtx value, rtx func_desc, rtx tlsarg,
+@@ -38273,7 +38388,8 @@ rs6000_call_darwin_1 (rtx value, rtx func_desc, rtx tlsarg,
    if ((cookie_val & CALL_LONG) != 0
        && GET_CODE (func_desc) == SYMBOL_REF)
      {
@@ -49296,10 +49335,52 @@ index 869b8d008e2..73ccbe971ac 100644
  
  	* GCC 9.2.0 released.
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
-index 8ac50251005..45847172291 100644
+index 8ac50251005..0c39c30a484 100644
 --- a/libstdc++-v3/ChangeLog
 +++ b/libstdc++-v3/ChangeLog
-@@ -1,3 +1,576 @@
+@@ -1,3 +1,618 @@
++2020-03-12  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backport from mainline
++	2020-03-09  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/94063
++	* src/c++17/fs_path.cc (path::operator+=(const path&)): Add kluge to
++	handle concatenations that change the type of the first component.
++	(path::operator+=(basic_string_view<value_type>)): Likewise.
++	* testsuite/27_io/filesystem/path/concat/94063.cc: New test.
++
++	Backport from mainline
++	2020-02-04  Jonathan Wakely  <jwakely@redhat.com>
++
++	* include/std/functional (_GLIBCXX_NOT_FN_CALL_OP): Un-define after
++	use.
++
++	Backport from mainline
++	2020-03-12  Jonathan Wakely  <jwakely@redhat.com>
++
++	* testsuite/tr1/8_c_compatibility/cstdlib/functions.cc: Do not pass
++	a null pointer to functions with nonnull(1) attribute.
++
++	Backport from mainline
++	2020-02-28  Jonathan Wakely  <jwakely@redhat.com>
++
++	* testsuite/27_io/filesystem/operations/last_write_time.cc: Fixes for
++	filesystems that silently truncate timestamps.
++	* testsuite/experimental/filesystem/operations/last_write_time.cc:
++	Likewise.
++
++	Backport from mainline
++	2020-01-13  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/93244
++	* include/bits/fs_path.h (path::generic_string<C,A>)
++	[_GLIBCXX_FILESYSTEM_IS_WINDOWS]: Convert root-dir to forward-slash.
++	* testsuite/27_io/filesystem/path/generic/generic_string.cc: Check
++	root-dir is converted to forward slash in generic pathname.
++	* testsuite/27_io/filesystem/path/generic/utf.cc: New test.
++	* testsuite/27_io/filesystem/path/generic/wchar_t.cc: New test.
++
 +2020-03-12  Release Manager
 +
 +	* GCC 9.3.0 released.
@@ -54058,7 +54139,7 @@ index 7a7e78819ba..7e0962edd19 100644
 -#endif
  // End of prewritten config; the settings discovered at configure time follow.
 diff --git a/libstdc++-v3/include/bits/fs_path.h b/libstdc++-v3/include/bits/fs_path.h
-index e56a0a7f138..5dc624dbb1e 100644
+index e56a0a7f138..6b39c46ac6e 100644
 --- a/libstdc++-v3/include/bits/fs_path.h
 +++ b/libstdc++-v3/include/bits/fs_path.h
 @@ -612,6 +612,36 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
@@ -54141,6 +54222,20 @@ index e56a0a7f138..5dc624dbb1e 100644
    struct path::_Cmpt : path
    {
      _Cmpt(basic_string_view<value_type> __s, _Type __t, size_t __pos)
+@@ -1070,6 +1073,13 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
+ 	  bool __add_slash = false;
+ 	  for (auto& __elem : *this)
+ 	    {
++#ifdef _GLIBCXX_FILESYSTEM_IS_WINDOWS
++	      if (__elem._M_type() == _Type::_Root_dir)
++		{
++		  __str += __slash;
++		  continue;
++		}
++#endif
+ 	      if (__add_slash)
+ 		__str += __slash;
+ 	      __str += __elem._M_pathname;
 diff --git a/libstdc++-v3/include/bits/ios_base.h b/libstdc++-v3/include/bits/ios_base.h
 index 06a3e0870f3..be908b3ffd2 100644
 --- a/libstdc++-v3/include/bits/ios_base.h
@@ -55013,7 +55108,7 @@ index 0a4f68bc438..45450e8ca01 100644
      inline std::complex<typename __gnu_cxx::__promote<_Tp>::__type>
      proj(_Tp __x)
 diff --git a/libstdc++-v3/include/std/functional b/libstdc++-v3/include/std/functional
-index 8cf2c670648..528452fed40 100644
+index 8cf2c670648..4b9c3449383 100644
 --- a/libstdc++-v3/include/std/functional
 +++ b/libstdc++-v3/include/std/functional
 @@ -837,7 +837,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
@@ -55034,6 +55129,15 @@ index 8cf2c670648..528452fed40 100644
  
    template<typename _Fn, typename... _Args>
      _Bind_front_t<_Fn, _Args...>
+@@ -974,7 +974,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       _GLIBCXX_NOT_FN_CALL_OP( const & )
+       _GLIBCXX_NOT_FN_CALL_OP( && )
+       _GLIBCXX_NOT_FN_CALL_OP( const && )
+-#undef _GLIBCXX_NOT_FN_CALL
++#undef _GLIBCXX_NOT_FN_CALL_OP
+ 
+     private:
+       _Fn _M_fn;
 diff --git a/libstdc++-v3/include/std/memory_resource b/libstdc++-v3/include/std/memory_resource
 index 7f1f0ca5e91..7ff5d17afe7 100644
 --- a/libstdc++-v3/include/std/memory_resource
@@ -56611,10 +56715,37 @@ index d8064819d36..5f1f47b9fb7 100644
  
    if (fs::remove(p, ec))
 diff --git a/libstdc++-v3/src/c++17/fs_path.cc b/libstdc++-v3/src/c++17/fs_path.cc
-index 14842452354..54bef75efd8 100644
+index 14842452354..a6be0e03a78 100644
 --- a/libstdc++-v3/src/c++17/fs_path.cc
 +++ b/libstdc++-v3/src/c++17/fs_path.cc
-@@ -968,16 +968,7 @@ path::operator+=(const path& p)
+@@ -845,6 +845,26 @@ path::operator+=(const path& p)
+       return *this;
+     }
+ 
++#if _GLIBCXX_FILESYSTEM_IS_WINDOWS
++  if (_M_type() == _Type::_Root_name
++      || (_M_type() == _Type::_Filename && _M_pathname.size() == 1))
++    {
++      // Handle path("C") += path(":") and path("C:") += path("/x")
++      // FIXME: do this more efficiently
++      *this = path(_M_pathname + p._M_pathname);
++      return *this;
++    }
++#endif
++#if SLASHSLASH_IS_ROOTNAME
++  if (_M_type() == _Type::_Root_dir)
++    {
++      // Handle path("/") += path("/x") and path("//") += path("x")
++      // FIXME: do this more efficiently
++      *this = path(_M_pathname + p._M_pathname);
++      return *this;
++    }
++#endif
++
+   const auto orig_pathlen = _M_pathname.length();
+   const auto orig_type = _M_type();
+   const auto orig_size = _M_cmpts.size();
+@@ -968,16 +988,7 @@ path::operator+=(const path& p)
  	}
  
        if (it != last && it->_M_type() == _Type::_Root_dir)
@@ -56632,6 +56763,33 @@ index 14842452354..54bef75efd8 100644
  
        while (it != last)
  	{
+@@ -1040,6 +1051,26 @@ path::_M_concat(basic_string_view<value_type> s)
+       return;
+     }
+ 
++#if _GLIBCXX_FILESYSTEM_IS_WINDOWS
++  if (_M_type() == _Type::_Root_name
++      || (_M_type() == _Type::_Filename && _M_pathname.size() == 1))
++    {
++      // Handle path("C") += ":" and path("C:") += "/x"
++      // FIXME: do this more efficiently
++      *this = path(_M_pathname + string_type(s));
++      return;
++    }
++#endif
++#if SLASHSLASH_IS_ROOTNAME
++  if (_M_type() == _Type::_Root_dir)
++    {
++      // Handle path("/") += "/x" and path("//") += "x"
++      // FIXME: do this more efficiently
++      *this = path(_M_pathname + string_type(s));
++      return;
++    }
++#endif
++
+   const auto orig_pathlen = _M_pathname.length();
+   const auto orig_type = _M_type();
+   const auto orig_size = _M_cmpts.size();
 diff --git a/libstdc++-v3/src/c++17/memory_resource.cc b/libstdc++-v3/src/c++17/memory_resource.cc
 index b6698011f5c..e28526d1bfe 100644
 --- a/libstdc++-v3/src/c++17/memory_resource.cc
@@ -59234,6 +59392,166 @@ index 57c9e96e4dc..4c55aa0cced 100644
  }
  
  int
+diff --git a/libstdc++-v3/testsuite/27_io/filesystem/operations/last_write_time.cc b/libstdc++-v3/testsuite/27_io/filesystem/operations/last_write_time.cc
+index 3f31375f51b..5d6e62c421a 100644
+--- a/libstdc++-v3/testsuite/27_io/filesystem/operations/last_write_time.cc
++++ b/libstdc++-v3/testsuite/27_io/filesystem/operations/last_write_time.cc
+@@ -32,9 +32,12 @@
+ #if _GLIBCXX_HAVE_UTIME_H
+ # include <utime.h>
+ #endif
++#include <stdio.h>
+ 
+ using time_type = std::filesystem::file_time_type;
+ 
++namespace chrono = std::chrono;
++
+ void
+ test01()
+ {
+@@ -67,10 +70,15 @@ test01()
+ 
+   auto end_of_time = time_type::duration::max();
+   auto last_second
+-    = std::chrono::duration_cast<std::chrono::seconds>(end_of_time).count();
++    = chrono::duration_cast<chrono::seconds>(end_of_time).count();
+   if (last_second > std::numeric_limits<std::time_t>::max())
+-    return; // can't test overflow
++  {
++    puts("Range of time_t is smaller than range of chrono::file_clock, "
++	 "can't test for overflow on this target.");
++    return;
++  }
+ 
++  // Set mtime to a date past the maximum possible file_time_type:
+ #if _GLIBCXX_USE_UTIMENSAT
+   struct ::timespec ts[2];
+   ts[0].tv_sec = 0;
+@@ -84,25 +92,34 @@ test01()
+   times.actime = std::numeric_limits<std::time_t>::max() - 1;
+   VERIFY( !::utime(p.string().c_str(), &times) );
+ #else
++  puts("No utimensat or utime, giving up.");
+   return;
+ #endif
+ 
++  // Try to read back the impossibly-large mtime:
+   mtime = last_write_time(p, ec);
+-  VERIFY( ec );
+-  VERIFY( ec == std::make_error_code(std::errc::value_too_large) );
+-  VERIFY( mtime == time_type::min() );
++  // Some filesystems (e.g. XFS) silently truncate distant times to
++  // the time_t epochalypse, Jan 19 2038, so we won't get an error when
++  // reading it back:
++  if (ec)
++  {
++    VERIFY( ec == std::make_error_code(std::errc::value_too_large) );
++    VERIFY( mtime == time_type::min() );
++  }
++  else
++    puts("No overflow error, filesystem may not support 64-bit time_t.");
+ 
+ #if __cpp_exceptions
+-  caught = false;
++  // Once more, with exceptions:
+   try {
+-    mtime = last_write_time(p);
+-  } catch (std::system_error const& e) {
+-    caught = true;
+-    ec = e.code();
++    auto mtime2 = last_write_time(p);
++    // If it didn't throw, expect to have read back the same value:
++    VERIFY( mtime2 == mtime );
++  } catch (std::filesystem::filesystem_error const& e) {
++    // If it did throw, expect the error_code to be the same:
++    VERIFY( e.code() == ec );
++    VERIFY( e.path1() == p );
+   }
+-  VERIFY( caught );
+-  VERIFY( ec );
+-  VERIFY( ec == std::make_error_code(std::errc::value_too_large) );
+ #endif
+ }
+ 
+@@ -111,7 +128,7 @@ bool approx_equal(time_type file_time, time_type expected)
+   auto delta = expected - file_time;
+   if (delta < delta.zero())
+     delta = -delta;
+-  return delta < std::chrono::seconds(1);
++  return delta < chrono::seconds(1);
+ }
+ 
+ void
+@@ -124,20 +141,20 @@ test02()
+   std::error_code ec;
+   time_type time;
+ 
+-  time = last_write_time(f.path);
+   ec = bad_ec;
++  time = last_write_time(f.path);
+   last_write_time(f.path, time, ec);
+   VERIFY( !ec );
+   VERIFY( approx_equal(last_write_time(f.path), time) );
+ 
+   ec = bad_ec;
+-  time -= std::chrono::milliseconds(1000 * 60 * 10 + 15);
++  time -= chrono::milliseconds(1000 * 60 * 10 + 15);
+   last_write_time(f.path, time, ec);
+   VERIFY( !ec );
+   VERIFY( approx_equal(last_write_time(f.path), time) );
+ 
+   ec = bad_ec;
+-  time += std::chrono::milliseconds(1000 * 60 * 20 + 15);
++  time += chrono::milliseconds(1000 * 60 * 20 + 15);
+   last_write_time(f.path, time, ec);
+   VERIFY( !ec );
+   VERIFY( approx_equal(last_write_time(f.path), time) );
+@@ -146,6 +163,28 @@ test02()
+       < std::numeric_limits<std::int64_t>::max())
+     return; // file clock's epoch is out of range for 32-bit time_t
+ 
++  using sys_time_32b
++    = chrono::time_point<chrono::system_clock, chrono::duration<std::int32_t>>;
++  auto duration_until_2038 = sys_time_32b::max() - sys_time_32b::clock::now();
++  auto file_time_2038 = time_type::clock::now() + duration_until_2038;
++
++  ec = bad_ec;
++  time = file_time_2038 - chrono::seconds(1);
++  // Assume all filesystems can store times that fit in 32-bit time_t
++  // (i.e. up to Jan 19 2038)
++  last_write_time(f.path, time, ec);
++  VERIFY( !ec );
++  VERIFY( approx_equal(last_write_time(f.path), time) );
++
++  // Check whether the filesystem supports times larger than 32-bit time_t:
++  time += chrono::seconds(60);
++  last_write_time(f.path, time, ec);
++  if (ec || !approx_equal(last_write_time(f.path), time))
++  {
++    puts("Filesystem seems to truncate times past Jan 19 2038, giving up.");
++    return; // Tests below will fail on this filesystem
++  }
++
+   ec = bad_ec;
+   // The file clock's epoch:
+   time = time_type();
+@@ -155,14 +194,14 @@ test02()
+ 
+   ec = bad_ec;
+   // A time after the epoch
+-  time += std::chrono::milliseconds(1000 * 60 * 10 + 15);
++  time += chrono::milliseconds(1000 * 60 * 10 + 15);
+   last_write_time(f.path, time, ec);
+   VERIFY( !ec );
+   VERIFY( approx_equal(last_write_time(f.path), time) );
+ 
+   ec = bad_ec;
+   // A time before than the epoch
+-  time -= std::chrono::milliseconds(1000 * 60 * 20 + 15);
++  time -= chrono::milliseconds(1000 * 60 * 20 + 15);
+   last_write_time(f.path, time, ec);
+   VERIFY( !ec );
+   VERIFY( approx_equal(last_write_time(f.path), time) );
 diff --git a/libstdc++-v3/testsuite/27_io/filesystem/operations/remove_all.cc b/libstdc++-v3/testsuite/27_io/filesystem/operations/remove_all.cc
 index a19bac9c5f6..b0b176fc656 100644
 --- a/libstdc++-v3/testsuite/27_io/filesystem/operations/remove_all.cc
@@ -59349,6 +59667,123 @@ index 00000000000..62bde05c3ad
 +  test02();
 +  test03();
 +}
+diff --git a/libstdc++-v3/testsuite/27_io/filesystem/path/concat/94063.cc b/libstdc++-v3/testsuite/27_io/filesystem/path/concat/94063.cc
+new file mode 100644
+index 00000000000..9f4c9c0aa08
+--- /dev/null
++++ b/libstdc++-v3/testsuite/27_io/filesystem/path/concat/94063.cc
+@@ -0,0 +1,111 @@
++// Copyright (C) 2020 Free Software Foundation, Inc.
++//
++// This file is part of the GNU ISO C++ Library.  This library is free
++// software; you can redistribute it and/or modify it under the
++// terms of the GNU General Public License as published by the
++// Free Software Foundation; either version 3, or (at your option)
++// any later version.
++
++// This library is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++
++// You should have received a copy of the GNU General Public License along
++// with this library; see the file COPYING3.  If not see
++// <http://www.gnu.org/licenses/>.
++
++// { dg-options "-std=gnu++17" }
++// { dg-do run { target { *-*-*mingw* || *-*-cygwin } } }
++// { dg-require-effective-target c++17 }
++
++#include <filesystem>
++#include <testsuite_hooks.h>
++
++void
++test01()
++{
++  using std::filesystem::path;
++  path p;
++
++  // PR libstdc++/94063
++#ifdef _GLIBCXX_FILESYSTEM_IS_WINDOWS
++  p = L"C";
++  p += path(L":");
++  VERIFY( p.has_root_name() );
++  VERIFY( p.root_name() == p );
++  p += path(L"\\");
++  VERIFY( p.has_root_name() );
++  VERIFY( p.has_root_directory() );
++  VERIFY( p.root_name() == L"C:" );
++  VERIFY( p.root_directory() == L"\\" );
++
++  p = L"C";
++  p += L':';
++  VERIFY( p.has_root_name() );
++  VERIFY( p.root_name() == p );
++  p += L'\\';
++  VERIFY( p.has_root_name() );
++  VERIFY( p.has_root_directory() );
++  VERIFY( p.root_name() == L"C:" );
++  VERIFY( p.root_directory() == L"\\" );
++
++  p = L"C:";
++  p += path(L"/foo");
++  VERIFY( p.has_root_name() );
++  VERIFY( p.has_root_directory() );
++  VERIFY( p.root_name() == L"C:" );
++  VERIFY( p.root_directory() == L"/" );
++  VERIFY( p.filename() == L"foo" );
++
++  p = L"C:";
++  p += L"/foo";
++  VERIFY( p.has_root_name() );
++  VERIFY( p.has_root_directory() );
++  VERIFY( p.root_name() == L"C:" );
++  VERIFY( p.root_directory() == L"/" );
++  VERIFY( p.filename() == L"foo" );
++
++  p = L"C";
++  p += path(L":/foo");
++  VERIFY( p.has_root_name() );
++  VERIFY( p.has_root_directory() );
++  VERIFY( p.root_name() == L"C:" );
++  VERIFY( p.root_directory() == L"/" );
++  VERIFY( p.filename() == L"foo" );
++
++  p = L"C";
++  p += L":/foo";
++  VERIFY( p.has_root_name() );
++  VERIFY( p.has_root_directory() );
++  VERIFY( p.root_name() == L"C:" );
++  VERIFY( p.root_directory() == L"/" );
++  VERIFY( p.filename() == L"foo" );
++#elif defined __CYGWIN__
++  p = "/";
++  p += path("/x");
++  VERIFY( p.has_root_name() );
++  VERIFY( p.root_name() == p );
++
++  p = "/";
++  p += "/x";
++  VERIFY( p.has_root_name() );
++  VERIFY( p.root_name() == p );
++
++  p = "/";
++  p += path("/");
++  VERIFY( !p.has_root_name() );
++  VERIFY( p.has_root_directory() );
++
++  p = "/";
++  p += "/";
++  VERIFY( !p.has_root_name() );
++  VERIFY( p.has_root_directory() );
++#endif
++}
++
++int
++main()
++{
++  test01();
++}
 diff --git a/libstdc++-v3/testsuite/27_io/filesystem/path/concat/path.cc b/libstdc++-v3/testsuite/27_io/filesystem/path/concat/path.cc
 index 9f534e64cb7..16e668c0163 100644
 --- a/libstdc++-v3/testsuite/27_io/filesystem/path/concat/path.cc
@@ -59425,6 +59860,182 @@ index 80ce25ef119..f51707b171c 100644
    test03();
 +  test04();
  }
+diff --git a/libstdc++-v3/testsuite/27_io/filesystem/path/generic/generic_string.cc b/libstdc++-v3/testsuite/27_io/filesystem/path/generic/generic_string.cc
+index 5a0c24c25c3..5caf079ed9b 100644
+--- a/libstdc++-v3/testsuite/27_io/filesystem/path/generic/generic_string.cc
++++ b/libstdc++-v3/testsuite/27_io/filesystem/path/generic/generic_string.cc
+@@ -1,7 +1,7 @@
+ // { dg-options "-std=gnu++17" }
+ // { dg-do run { target c++17 } }
+ 
+-// Copyright (C) 2017-2019 Free Software Foundation, Inc.
++// Copyright (C) 2017-2020 Free Software Foundation, Inc.
+ //
+ // This file is part of the GNU ISO C++ Library.  This library is free
+ // software; you can redistribute it and/or modify it under the
+@@ -46,8 +46,20 @@ test01()
+   VERIFY( path("/a//b//.").generic_string() == "/a/b/." );
+ }
+ 
++void
++test02()
++{
++  if constexpr (path::preferred_separator == L'\\')
++  {
++    // PR libstdc++/93244
++    VERIFY( path("C:\\foo\\bar").generic_string() == "C:/foo/bar" );
++    VERIFY( path("C://foo//bar").generic_string() == "C:/foo/bar" );
++  }
++}
++
+ int
+ main()
+ {
+   test01();
++  test02();
+ }
+diff --git a/libstdc++-v3/testsuite/27_io/filesystem/path/generic/utf.cc b/libstdc++-v3/testsuite/27_io/filesystem/path/generic/utf.cc
+new file mode 100644
+index 00000000000..52afdb4497b
+--- /dev/null
++++ b/libstdc++-v3/testsuite/27_io/filesystem/path/generic/utf.cc
+@@ -0,0 +1,65 @@
++// { dg-options "-std=gnu++17" }
++// { dg-do run { target c++17 } }
++
++// Copyright (C) 2017-2020 Free Software Foundation, Inc.
++//
++// This file is part of the GNU ISO C++ Library.  This library is free
++// software; you can redistribute it and/or modify it under the
++// terms of the GNU General Public License as published by the
++// Free Software Foundation; either version 3, or (at your option)
++// any later version.
++
++// This library is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++
++// You should have received a copy of the GNU General Public License along
++// with this library; see the file COPYING3.  If not see
++// <http://www.gnu.org/licenses/>.
++
++// C++17 30.10.7.4.7 path generic format observers [fs.path.generic.obs]
++
++#include <filesystem>
++#include <testsuite_hooks.h>
++
++using std::filesystem::path;
++
++void
++test01()
++{
++  VERIFY( path().generic_u32string() == U"" );
++  VERIFY( path("/").generic_u32string() == U"/" );
++  VERIFY( path("////").generic_u32string() == U"/" );
++#ifdef __CYGWIN__
++  VERIFY( path("//a").generic_u32string() == U"//a" );
++  VERIFY( path("//a/").generic_u32string() == U"//a/" );
++  VERIFY( path("//a/b").generic_u32string() == U"//a/b" );
++#else
++  VERIFY( path("//a").generic_u32string() == U"/a" );
++  VERIFY( path("//a/").generic_u32string() == U"/a/" );
++  VERIFY( path("//a/b").generic_u32string() == U"/a/b" );
++#endif
++  VERIFY( path("/a//b").generic_u32string() == U"/a/b" );
++  VERIFY( path("/a//b/").generic_u32string() == U"/a/b/" );
++  VERIFY( path("/a//b//").generic_u32string() == U"/a/b/" );
++  VERIFY( path("/a//b//.").generic_u32string() == U"/a/b/." );
++}
++
++void
++test02()
++{
++  if constexpr (path::preferred_separator == L'\\')
++  {
++    // PR libstdc++/93244
++    VERIFY( path("C:\\foo\\bar").generic_u32string() == U"C:/foo/bar" );
++    VERIFY( path("C://foo//bar").generic_u32string() == U"C:/foo/bar" );
++  }
++}
++
++int
++main()
++{
++  test01();
++  test02();
++}
+diff --git a/libstdc++-v3/testsuite/27_io/filesystem/path/generic/wchar_t.cc b/libstdc++-v3/testsuite/27_io/filesystem/path/generic/wchar_t.cc
+new file mode 100644
+index 00000000000..7bb2f643043
+--- /dev/null
++++ b/libstdc++-v3/testsuite/27_io/filesystem/path/generic/wchar_t.cc
+@@ -0,0 +1,65 @@
++// { dg-options "-std=gnu++17" }
++// { dg-do run { target c++17 } }
++
++// Copyright (C) 2017-2020 Free Software Foundation, Inc.
++//
++// This file is part of the GNU ISO C++ Library.  This library is free
++// software; you can redistribute it and/or modify it under the
++// terms of the GNU General Public License as published by the
++// Free Software Foundation; either version 3, or (at your option)
++// any later version.
++
++// This library is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++
++// You should have received a copy of the GNU General Public License along
++// with this library; see the file COPYING3.  If not see
++// <http://www.gnu.org/licenses/>.
++
++// C++17 30.10.7.4.7 path generic format observers [fs.path.generic.obs]
++
++#include <filesystem>
++#include <testsuite_hooks.h>
++
++using std::filesystem::path;
++
++void
++test01()
++{
++  VERIFY( path().generic_wstring() == L"" );
++  VERIFY( path("/").generic_wstring() == L"/" );
++  VERIFY( path("////").generic_wstring() == L"/" );
++#ifdef __CYGWIN__
++  VERIFY( path("//a").generic_wstring() == L"//a" );
++  VERIFY( path("//a/").generic_wstring() == L"//a/" );
++  VERIFY( path("//a/b").generic_wstring() == L"//a/b" );
++#else
++  VERIFY( path("//a").generic_wstring() == L"/a" );
++  VERIFY( path("//a/").generic_wstring() == L"/a/" );
++  VERIFY( path("//a/b").generic_wstring() == L"/a/b" );
++#endif
++  VERIFY( path("/a//b").generic_wstring() == L"/a/b" );
++  VERIFY( path("/a//b/").generic_wstring() == L"/a/b/" );
++  VERIFY( path("/a//b//").generic_wstring() == L"/a/b/" );
++  VERIFY( path("/a//b//.").generic_wstring() == L"/a/b/." );
++}
++
++void
++test02()
++{
++  if constexpr (path::preferred_separator == L'\\')
++  {
++    // PR libstdc++/93244
++    VERIFY( path("C:\\foo\\bar").generic_wstring() == L"C:/foo/bar" );
++    VERIFY( path("C://foo//bar").generic_wstring() == L"C:/foo/bar" );
++  }
++}
++
++int
++main()
++{
++  test01();
++  test02();
++}
 diff --git a/libstdc++-v3/testsuite/30_threads/shared_timed_mutex/94069.cc b/libstdc++-v3/testsuite/30_threads/shared_timed_mutex/94069.cc
 new file mode 100644
 index 00000000000..6e5cf5f0c6e
@@ -59518,6 +60129,145 @@ index b54776aa33f..7acd1efda05 100644
  }
  
  int
+diff --git a/libstdc++-v3/testsuite/experimental/filesystem/operations/last_write_time.cc b/libstdc++-v3/testsuite/experimental/filesystem/operations/last_write_time.cc
+index 1bbc37408c3..82061f9e7e9 100644
+--- a/libstdc++-v3/testsuite/experimental/filesystem/operations/last_write_time.cc
++++ b/libstdc++-v3/testsuite/experimental/filesystem/operations/last_write_time.cc
+@@ -22,6 +22,7 @@
+ // 15.25 Permissions [fs.op.last_write_time]
+ 
+ #include <experimental/filesystem>
++#include <limits>
+ #include <testsuite_fs.h>
+ #include <testsuite_hooks.h>
+ 
+@@ -31,9 +32,12 @@
+ #if _GLIBCXX_HAVE_UTIME_H
+ # include <utime.h>
+ #endif
++#include <stdio.h>
+ 
+ using time_type = std::experimental::filesystem::file_time_type;
+ 
++namespace chrono = std::chrono;
++
+ void
+ test01()
+ {
+@@ -66,10 +70,15 @@ test01()
+ 
+   auto end_of_time = time_type::duration::max();
+   auto last_second
+-    = std::chrono::duration_cast<std::chrono::seconds>(end_of_time).count();
++    = chrono::duration_cast<chrono::seconds>(end_of_time).count();
+   if (last_second > std::numeric_limits<std::time_t>::max())
+-    return; // can't test overflow
++  {
++    puts("Range of time_t is smaller than range of chrono::file_clock, "
++	 "can't test for overflow on this target.");
++    return;
++  }
+ 
++  // Set mtime to a date past the maximum possible file_time_type:
+ #if _GLIBCXX_USE_UTIMENSAT
+   struct ::timespec ts[2];
+   ts[0].tv_sec = 0;
+@@ -83,25 +92,34 @@ test01()
+   times.actime = std::numeric_limits<std::time_t>::max() - 1;
+   VERIFY( !::utime(p.string().c_str(), &times) );
+ #else
++  puts("No utimensat or utime, giving up.");
+   return;
+ #endif
+ 
++  // Try to read back the impossibly-large mtime:
+   mtime = last_write_time(p, ec);
+-  VERIFY( ec );
+-  VERIFY( ec == std::make_error_code(std::errc::value_too_large) );
+-  VERIFY( mtime == time_type::min() );
++  // Some filesystems (e.g. XFS) silently truncate distant times to
++  // the time_t epochalypse, Jan 19 2038, so we won't get an error when
++  // reading it back:
++  if (ec)
++  {
++    VERIFY( ec == std::make_error_code(std::errc::value_too_large) );
++    VERIFY( mtime == time_type::min() );
++  }
++  else
++    puts("No overflow error, filesystem may not support 64-bit time_t.");
+ 
+ #if __cpp_exceptions
+-  caught = false;
++  // Once more, with exceptions:
+   try {
+-    mtime = last_write_time(p);
+-  } catch (std::system_error const& e) {
+-    caught = true;
+-    ec = e.code();
++    auto mtime2 = last_write_time(p);
++    // If it didn't throw, expect to have read back the same value:
++    VERIFY( mtime2 == mtime );
++  } catch (std::experimental::filesystem::filesystem_error const& e) {
++    // If it did throw, expect the error_code to be the same:
++    VERIFY( e.code() == ec );
++    VERIFY( e.path1() == p );
+   }
+-  VERIFY( caught );
+-  VERIFY( ec );
+-  VERIFY( ec == std::make_error_code(std::errc::value_too_large) );
+ #endif
+ }
+ 
+@@ -110,7 +128,7 @@ bool approx_equal(time_type file_time, time_type expected)
+   auto delta = expected - file_time;
+   if (delta < delta.zero())
+     delta = -delta;
+-  return delta < std::chrono::seconds(1);
++  return delta < chrono::seconds(1);
+ }
+ 
+ void
+@@ -118,31 +136,37 @@ test02()
+ {
+   // write times
+ 
++  const std::error_code bad_ec = make_error_code(std::errc::invalid_argument);
+   __gnu_test::scoped_file f;
+   std::error_code ec;
+   time_type time;
+ 
++  ec = bad_ec;
+   time = last_write_time(f.path);
+   last_write_time(f.path, time, ec);
+   VERIFY( !ec );
+   VERIFY( approx_equal(last_write_time(f.path), time) );
+ 
+-  time -= std::chrono::milliseconds(1000 * 60 * 10 + 15);
++  ec = bad_ec;
++  time -= chrono::milliseconds(1000 * 60 * 10 + 15);
+   last_write_time(f.path, time, ec);
+   VERIFY( !ec );
+   VERIFY( approx_equal(last_write_time(f.path), time) );
+ 
+-  time += std::chrono::milliseconds(1000 * 60 * 20 + 15);
++  ec = bad_ec;
++  time += chrono::milliseconds(1000 * 60 * 20 + 15);
+   last_write_time(f.path, time, ec);
+   VERIFY( !ec );
+   VERIFY( approx_equal(last_write_time(f.path), time) );
+ 
++  ec = bad_ec;
+   time = time_type();
+   last_write_time(f.path, time, ec);
+   VERIFY( !ec );
+   VERIFY( approx_equal(last_write_time(f.path), time) );
+ 
+-  time -= std::chrono::milliseconds(1000 * 60 * 10 + 15);
++  ec = bad_ec;
++  time -= chrono::milliseconds(1000 * 60 * 10 + 15);
+   last_write_time(f.path, time, ec);
+   VERIFY( !ec );
+   VERIFY( approx_equal(last_write_time(f.path), time) );
 diff --git a/libstdc++-v3/testsuite/experimental/filesystem/operations/remove_all.cc b/libstdc++-v3/testsuite/experimental/filesystem/operations/remove_all.cc
 index 99fb14a71d7..9d51a66c71f 100644
 --- a/libstdc++-v3/testsuite/experimental/filesystem/operations/remove_all.cc
@@ -59617,6 +60367,19 @@ index a538b854038..255d3e7cff1 100644
  // { dg-skip-if "" { *-*-* } { "-D_GLIBCXX_PROFILE" } }
  
  // Copyright (C) 2014-2019 Free Software Foundation, Inc.
+diff --git a/libstdc++-v3/testsuite/tr1/8_c_compatibility/cstdlib/functions.cc b/libstdc++-v3/testsuite/tr1/8_c_compatibility/cstdlib/functions.cc
+index e1feef99582..0f00a94da42 100644
+--- a/libstdc++-v3/testsuite/tr1/8_c_compatibility/cstdlib/functions.cc
++++ b/libstdc++-v3/testsuite/tr1/8_c_compatibility/cstdlib/functions.cc
+@@ -30,7 +30,7 @@ void test01()
+ #if _GLIBCXX_USE_C99_STDLIB
+ 
+   long long i = 0;
+-  const char* s = 0;
++  const char* s = "";
+   char** endptr = 0;
+   int base = 0;
+ 
 diff --git a/libstdc++-v3/testsuite/tr2/dynamic_bitset/cmp.cc b/libstdc++-v3/testsuite/tr2/dynamic_bitset/cmp.cc
 new file mode 100644
 index 00000000000..a811307c73a
