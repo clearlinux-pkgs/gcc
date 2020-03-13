@@ -44,7 +44,7 @@ Dragan Mladjenovic (4):
 Edward Smith-Rowland (1):
       Update docs for p858 - Constexpr iterator changes available since 9.1.
 
-Eric Botcazou (19):
+Eric Botcazou (20):
       re PR rtl-optimization/91347 (hppa: wrong code generated with tail call optimisation)
       re PR target/91472 (gmp testsuite segfaults with gcc-8 and gcc-9, works fine with gcc-7)
       re PR rtl-optimization/89795 (wrong code with -O2 -fno-dce -fno-forward-propagate -fno-sched-pressure)
@@ -64,11 +64,13 @@ Eric Botcazou (19):
       Fix problematic TLS sequences for the Solaris linker
       Fix link failure with debug info in LTO mode
       Fix internal error on locally-defined subpools
+      Fix incorrect filling of delay slots in branchy code at -O2
 
 Eric S. Raymond (1):
       Clean up references to Subversion in documentation sources.
 
-GCC Administrator (211):
+GCC Administrator (212):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -723,7 +725,7 @@ Rainer Orth (2):
       Update Solaris baselines for GCC 9.3
       testsuite: xfail gcc.target/i386/pr91298-?.c on Solaris/x86 with as
 
-Richard Biener (18):
+Richard Biener (19):
       backport: [multiple changes]
       backport: [multiple changes]
       backport: re PR tree-optimization/90637 (ICE in vect_loop_versioning, at tree-vect-loop-manip.c:3055)
@@ -742,6 +744,7 @@ Richard Biener (18):
       tree-optimization/93439 move clique bookkeeping to OMP expansion
       tree-optimization/93381 fix integer offsetting in points-to analysis
       middle-end/90648 fend off builtin calls with not enough arguments from match
+      tree-optimization/94163 constrain alignment set by PRE
 
 Richard Earnshaw (5):
       [aarch64] PR target/91386 Use copy_rtx to avoid modifying original insns in peep2 pattern
@@ -1365,10 +1368,25 @@ index deeb3d66ef0..3b74042132a 100644
 -9.2.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7f6557d8018..92d5b0afb2e 100644
+index 7f6557d8018..db18605fbe4 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,2389 @@
+@@ -1,3 +1,2404 @@
++2020-03-13  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/94163
++	* tree-ssa-pre.c (create_expression_by_pieces): Check
++	whether alignment would be zero.
++
++2019-03-13  Eric Botcazou  <ebotcazou@adacore.com>
++
++	PR rtl-optimization/94119
++	* resource.h (clear_hashed_info_until_next_barrier): Declare.
++	* resource.c (clear_hashed_info_until_next_barrier): New function.
++	* reorg.c (add_to_delay_list): Fix formatting.
++	(relax_delay_slots): Call clear_hashed_info_until_next_barrier on
++	the next instruction after removing a BARRIER.
++
 +2020-03-12  Bill Schmidt  <wschmidt@linux.ibm.com>
 +
 +	Backport from master
@@ -3758,7 +3776,7 @@ index 7f6557d8018..92d5b0afb2e 100644
  2019-08-12  Release Manager
  
  	* GCC 9.2.0 released.
-@@ -513,7 +2899,7 @@
+@@ -513,7 +2914,7 @@
  
  2019-07-11  Uroš Bizjak  <ubizjak@gmail.com>
  
@@ -28538,6 +28556,109 @@ index 60a19d7edd1..eaab47f992a 100644
  	  warn_function_cold (current_function_decl);
  	}
        else if (lookup_attribute ("hot", DECL_ATTRIBUTES (current_function_decl))
+diff --git a/gcc/reorg.c b/gcc/reorg.c
+index 81349382b81..a93cf90e0ab 100644
+--- a/gcc/reorg.c
++++ b/gcc/reorg.c
+@@ -577,8 +577,9 @@ add_to_delay_list (rtx_insn *insn, vec<rtx_insn *> *delay_list)
+ {
+   /* If INSN has its block number recorded, clear it since we may
+      be moving the insn to a new block.  */
+-      clear_hashed_info_for_insn (insn);
+-      delay_list->safe_push (insn);
++  clear_hashed_info_for_insn (insn);
++
++  delay_list->safe_push (insn);
+ }
+ 
+ /* Delete INSN from the delay slot of the insn that it is in, which may
+@@ -3221,7 +3222,14 @@ relax_delay_slots (rtx_insn *first)
+ 
+ 	      if (invert_jump (jump_insn, label, 1))
+ 		{
+-		  delete_related_insns (next);
++		  rtx_insn *from = delete_related_insns (next);
++
++		  /* We have just removed a BARRIER, which means that the block
++		     number of the next insns has effectively been changed (see
++		     find_basic_block in resource.c), so clear it.  */
++		  if (from)
++		    clear_hashed_info_until_next_barrier (from);
++
+ 		  next = jump_insn;
+ 		}
+ 
+@@ -3494,18 +3502,22 @@ relax_delay_slots (rtx_insn *first)
+ 
+ 	      if (invert_jump (delay_jump_insn, label, 1))
+ 		{
+-		  int i;
+-
+ 		  /* Must update the INSN_FROM_TARGET_P bits now that
+ 		     the branch is reversed, so that mark_target_live_regs
+ 		     will handle the delay slot insn correctly.  */
+-		  for (i = 1; i < XVECLEN (PATTERN (insn), 0); i++)
++		  for (int i = 1; i < XVECLEN (PATTERN (insn), 0); i++)
+ 		    {
+ 		      rtx slot = XVECEXP (PATTERN (insn), 0, i);
+ 		      INSN_FROM_TARGET_P (slot) = ! INSN_FROM_TARGET_P (slot);
+ 		    }
+ 
+-		  delete_related_insns (next);
++		  /* We have just removed a BARRIER, which means that the block
++		     number of the next insns has effectively been changed (see
++		     find_basic_block in resource.c), so clear it.  */
++		  rtx_insn *from = delete_related_insns (next);
++		  if (from)
++		    clear_hashed_info_until_next_barrier (from);
++
+ 		  next = insn;
+ 		}
+ 
+diff --git a/gcc/resource.c b/gcc/resource.c
+index c4bcfd7dc71..164b55e561b 100644
+--- a/gcc/resource.c
++++ b/gcc/resource.c
+@@ -1311,7 +1311,26 @@ clear_hashed_info_for_insn (rtx_insn *insn)
+ 	tinfo->block = -1;
+     }
+ }
+-
++
++/* Clear any hashed information that we have stored for instructions
++   between INSN and the next BARRIER that follow a JUMP or a LABEL.  */
++
++void
++clear_hashed_info_until_next_barrier (rtx_insn *insn)
++{
++  while (insn && !BARRIER_P (insn))
++    {
++      if (JUMP_P (insn) || LABEL_P (insn))
++	{
++	  rtx_insn *next = next_active_insn (insn);
++	  if (next)
++	    clear_hashed_info_for_insn (next);
++	}
++
++      insn = next_nonnote_insn (insn);
++    }
++}
++
+ /* Increment the tick count for the basic block that contains INSN.  */
+ 
+ void
+diff --git a/gcc/resource.h b/gcc/resource.h
+index 7916344c584..3e969e52176 100644
+--- a/gcc/resource.h
++++ b/gcc/resource.h
+@@ -46,6 +46,7 @@ extern void mark_set_resources (rtx, struct resources *, int,
+ 				enum mark_resource_type);
+ extern void mark_referenced_resources (rtx, struct resources *, bool);
+ extern void clear_hashed_info_for_insn (rtx_insn *);
++extern void clear_hashed_info_until_next_barrier (rtx_insn *);
+ extern void incr_ticks_for_insn (rtx_insn *);
+ extern void mark_end_of_function_resources (rtx, bool);
+ extern void init_resource_info (rtx_insn *);
 diff --git a/gcc/rtlanal.c b/gcc/rtlanal.c
 index 268a38799d6..01af063a222 100644
 --- a/gcc/rtlanal.c
@@ -45229,7 +45350,7 @@ index d710582a915..e90ae6a89cb 100644
  
        /* Check if we can move the loads.  The def stmt of the virtual use
 diff --git a/gcc/tree-ssa-pre.c b/gcc/tree-ssa-pre.c
-index 646feb6085f..8bd17b82368 100644
+index 646feb6085f..7b171bc4e8f 100644
 --- a/gcc/tree-ssa-pre.c
 +++ b/gcc/tree-ssa-pre.c
 @@ -1184,8 +1184,8 @@ translate_vuse_through_block (vec<vn_reference_op_s> operands,
@@ -45243,6 +45364,16 @@ index 646feb6085f..8bd17b82368 100644
  	  if (visited)
  	    BITMAP_FREE (visited);
  	}
+@@ -2810,7 +2810,8 @@ create_expression_by_pieces (basic_block block, pre_expr expr,
+ 	      unsigned HOST_WIDE_INT hmisalign
+ 		= args.length () == 3 ? tree_to_uhwi (args[2]) : 0;
+ 	      if ((halign & (halign - 1)) == 0
+-		  && (hmisalign & ~(halign - 1)) == 0)
++		  && (hmisalign & ~(halign - 1)) == 0
++		  && (unsigned int)halign != 0)
+ 		set_ptr_info_alignment (get_ptr_info (forcedname),
+ 					halign, hmisalign);
+ 	    }
 diff --git a/gcc/tree-ssa-reassoc.c b/gcc/tree-ssa-reassoc.c
 index 7161c4c36c3..6794fbde29e 100644
 --- a/gcc/tree-ssa-reassoc.c
