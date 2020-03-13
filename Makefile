@@ -4,7 +4,7 @@ URL := https://mirrors.kernel.org/gnu/gcc/gcc-9.1.0/gcc-9.1.0.tar.gz
 include ../common/Makefile.common
 
 GCCGIT = ~/git/gcc
-GCCVER = 9.2.0
+GCCVER = 9.3.0
 
 GCCTAG = releases/gcc-$(GCCVER)
 GCCBRANCH = origin/releases/gcc-$(shell echo $(GCCVER) | sed 's/\..*//')
