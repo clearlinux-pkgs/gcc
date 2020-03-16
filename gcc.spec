@@ -772,12 +772,12 @@ cat *.lang > gcc.lang
 /usr/lib64/libstdc++.so.*
 
 #avx2
-/usr/lib64/haswell/libstdc++.so.6
-/usr/lib64/haswell/libstdc++.so.6.0.*
+%exclude /usr/lib64/haswell/libstdc++.so.6
+%exclude /usr/lib64/haswell/libstdc++.so.6.0.*
 
 #avx512
-/usr/lib64/haswell/avx512_1/libstdc++.so.6
-/usr/lib64/haswell/avx512_1/libstdc++.so.6.0.*
+%exclude /usr/lib64/haswell/avx512_1/libstdc++.so.6
+%exclude /usr/lib64/haswell/avx512_1/libstdc++.so.6.0.*
 
 %files libstdc++32
 /usr/lib32/libstdc++.so.*
