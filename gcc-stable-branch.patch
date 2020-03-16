@@ -5,11 +5,18 @@ Eric Botcazou (2):
       Fix incorrect filling of delay slots in branchy code at -O2
       Fix wrong year in ChangeLog.
 
-GCC Administrator (1):
+GCC Administrator (3):
+      Daily bump.
+      Daily bump.
       Daily bump.
 
 Jakub Jelinek (1):
       Bump BASE-VER to 9.3.1.
+
+Jason Merrill (3):
+      c++: Fix CTAD with multiple-arg ctor template [93248].
+      c++: Fix ICE-after-error on partial spec [92068]
+      c++: Find parameter pack in typedef in lambda [92909].
 
 Jonathan Wakely (5):
       libstdc++: Ensure root-dir converted to forward slash (PR93244)
@@ -159,6 +166,97 @@ index 87d60078bb0..04324ab981a 100644
    };
  
    for (i = 0; i < ARRAY_SIZE (flags); i++)
+diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
+index 6441d647a54..8edc445e70e 100644
+--- a/gcc/cp/ChangeLog
++++ b/gcc/cp/ChangeLog
+@@ -1,3 +1,21 @@
++2020-03-14  Jason Merrill  <jason@redhat.com>
++
++	PR c++/92909
++	* pt.c (find_parameter_packs_r): [DECL_EXPR]: Walk
++	DECL_ORIGINAL_TYPE of a typedef.
++
++2020-03-14  Jason Merrill  <jason@redhat.com>
++
++	PR c++/92068
++	* pt.c (process_partial_specialization): Error rather than crash on
++	extra pack expansion.
++
++2020-03-14  Jason Merrill  <jason@redhat.com>
++
++	PR c++/93248
++	* pt.c (build_deduction_guide): Clear cp_unevaluated_operand for
++	substituting DECL_ARGUMENTS.
++
+ 2020-03-12  Release Manager
+ 
+ 	* GCC 9.3.0 released.
+diff --git a/gcc/cp/pt.c b/gcc/cp/pt.c
+index 4787747b6ff..3e4fc235f7a 100644
+--- a/gcc/cp/pt.c
++++ b/gcc/cp/pt.c
+@@ -3773,10 +3773,18 @@ find_parameter_packs_r (tree *tp, int *walk_subtrees, void* data)
+       return NULL_TREE;
+ 
+     case DECL_EXPR:
+-      /* Ignore the declaration of a capture proxy for a parameter pack.  */
+-      if (is_capture_proxy (DECL_EXPR_DECL (t)))
+-	*walk_subtrees = 0;
+-      return NULL_TREE;
++      {
++	tree decl = DECL_EXPR_DECL (t);
++	/* Ignore the declaration of a capture proxy for a parameter pack.  */
++	if (is_capture_proxy (decl))
++	  *walk_subtrees = 0;
++	if (is_typedef_decl (decl) && TYPE_ALIAS_P (TREE_TYPE (decl)))
++	  /* Since we stop at aliases above, we need to look through them at
++	     the point of the DECL_EXPR.  */
++	  cp_walk_tree (&DECL_ORIGINAL_TYPE (decl),
++			&find_parameter_packs_r, ppd, ppd->visited);
++	return NULL_TREE;
++      }
+ 
+     case RECORD_TYPE:
+       if (TYPE_PTRMEMFUNC_P (t))
+@@ -4877,6 +4885,14 @@ process_partial_specialization (tree decl)
+       return decl;
+     }
+ 
++  else if (nargs > DECL_NTPARMS (maintmpl))
++    {
++      error ("too many arguments for partial specialization %qT", type);
++      inform (DECL_SOURCE_LOCATION (maintmpl), "primary template here");
++      /* Avoid crash below.  */
++      return decl;
++    }
++
+   /* If we aren't in a dependent class, we can actually try deduction.  */
+   else if (tpd.level == 1
+ 	   /* FIXME we should be able to handle a partial specialization of a
+@@ -4903,7 +4919,6 @@ process_partial_specialization (tree decl)
+ 
+      Also, we verify that pack expansions only occur at the
+      end of the argument list.  */
+-  gcc_assert (nargs == DECL_NTPARMS (maintmpl));
+   tpd2.parms = 0;
+   for (i = 0; i < nargs; ++i)
+     {
+@@ -27376,10 +27391,13 @@ build_deduction_guide (tree ctor, tree outer_args, tsubst_flags_t complain)
+ 				     complain, ctor);
+ 	  if (fparms == error_mark_node)
+ 	    ok = false;
+-	  fargs = tsubst (fargs, tsubst_args, complain, ctor);
+ 	  if (ci)
+ 	    ci = tsubst_constraint_info (ci, tsubst_args, complain, ctor);
+ 
++	  /* Parms are to have DECL_CHAIN tsubsted, which would be skipped if
++	     cp_unevaluated_operand.  */
++	  cp_evaluated ev;
++	  fargs = tsubst (fargs, tsubst_args, complain, ctor);
+ 	  current_template_parms = save_parms;
+ 	}
+ 
 diff --git a/gcc/reorg.c b/gcc/reorg.c
 index 81349382b81..a93cf90e0ab 100644
 --- a/gcc/reorg.c
@@ -286,6 +384,48 @@ index e132f2657ef..b96c9b9ab1c 100644
  2020-03-12  Release Manager
  
  	* GCC 9.3.0 released.
+diff --git a/gcc/testsuite/g++.dg/cpp0x/lambda/lambda-variadic10.C b/gcc/testsuite/g++.dg/cpp0x/lambda/lambda-variadic10.C
+new file mode 100644
+index 00000000000..052283e6caa
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp0x/lambda/lambda-variadic10.C
+@@ -0,0 +1,12 @@
++// PR c++/92909
++// { dg-do compile { target c++11 } }
++
++template <class ... Ts>
++void foo()
++{
++    []
++    {
++        using T = Ts;
++    }();			// { dg-error "not expanded" }
++}
++template void foo<>();
+diff --git a/gcc/testsuite/g++.dg/cpp0x/variadic178.C b/gcc/testsuite/g++.dg/cpp0x/variadic178.C
+new file mode 100644
+index 00000000000..f0e65958de3
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp0x/variadic178.C
+@@ -0,0 +1,6 @@
++// PR c++/92068
++// { dg-do compile { target c++11 } }
++
++template <typename, typename> struct a;
++template <typename b, typename c, typename... d>
++struct a<b, c, d...> { };	// { dg-error "arguments" }
+diff --git a/gcc/testsuite/g++.dg/cpp1z/class-deduction71.C b/gcc/testsuite/g++.dg/cpp1z/class-deduction71.C
+new file mode 100644
+index 00000000000..2fc71de8d95
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp1z/class-deduction71.C
+@@ -0,0 +1,6 @@
++// PR c++/93248
++// { dg-do compile { target c++17 } }
++
++template <typename T> struct S
++{ template <typename V> S (T, V, long = 0); };
++using U = decltype(S{0, 4u});
 diff --git a/gcc/testsuite/gcc.target/powerpc/pr93800.c b/gcc/testsuite/gcc.target/powerpc/pr93800.c
 new file mode 100644
 index 00000000000..f8dfbe7c082

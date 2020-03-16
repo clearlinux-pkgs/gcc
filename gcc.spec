@@ -14,7 +14,7 @@
 
 Name     : gcc
 Version  : 9.3.1
-Release  : 811
+Release  : 812
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://gcc.gnu.org/pub/gcc/releases/gcc-9.3.0/gcc-9.3.0.tar.xz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.16.1.tar.bz2
@@ -820,21 +820,5 @@ cat *.lang > gcc.lang
 /usr/lib64/libsanit*
 
 #avx2
-%exclude /usr/lib64/haswell/libubsan.so.1
-%exclude /usr/lib64/haswell/libubsan.so.1.0.0
-%exclude /usr/lib64/haswell/libasan.so.5
-%exclude /usr/lib64/haswell/libasan.so.5.0.0
-%exclude /usr/lib64/haswell/libtsan.so.0
-%exclude /usr/lib64/haswell/libtsan.so.0.0.0
-%exclude /usr/lib64/haswell/liblsan.so.0
-%exclude /usr/lib64/haswell/liblsan.so.0.0.0
-
-#avx512
-%exclude /usr/lib64/haswell/avx512_1/libubsan.so.1
-%exclude /usr/lib64/haswell/avx512_1/libubsan.so.1.0.0
-%exclude /usr/lib64/haswell/avx512_1/libasan.so.5
-%exclude /usr/lib64/haswell/avx512_1/libasan.so.5.0.0
-%exclude /usr/lib64/haswell/avx512_1/libtsan.so.0
-%exclude /usr/lib64/haswell/avx512_1/libtsan.so.0.0.0
-%exclude /usr/lib64/haswell/avx512_1/liblsan.so.0
-%exclude /usr/lib64/haswell/avx512_1/liblsan.so.0.0.0
+%exclude /usr/lib64/haswell/*
+%exclude /usr/lib64/haswell/avx512_1/*
