@@ -12,8 +12,22 @@ GCC Administrator (5):
       Daily bump.
       Daily bump.
 
-Jakub Jelinek (1):
+Jakub Jelinek (15):
       Bump BASE-VER to 9.3.1.
+      tailcall: Fix up process_assignment [PR94001]
+      inliner: Copy DECL_BY_REFERENCE in copy_decl_to_var [PR93888]
+      print-rtl: Fix printing of CONST_STRING in DEBUG_INSNs [PR93399]
+      ldist: Further fixes for -ftrapv [PR94114]
+      dfp: Fix decimal_to_binary [PR94111]
+      aarch64: Fix ICE in aarch64_add_offset_1 [PR94121]
+      pdp11: Fix handling of common (local and global) vars [PR94134]
+      tree-dse: Fix mem* head trimming if call has lhs [PR94130]
+      doc: Fix up ASM_OUTPUT_ALIGNED_DECL_LOCAL description
+      maintainer-scripts: Fix up gcc_release without -l, where mkdir was using umask 077 after migration
+      aarch64: Fix another bug in aarch64_add_offset_1 [PR94121]
+      tree-nested: Fix handling of *reduction clauses with C array sections [PR93566]
+      tree-inline: Fix a -fcompare-debug issue in the inliner [PR94167]
+      expand: Don't depend on warning flags in code generation of strnlen [PR94189]
 
 Jason Merrill (3):
       c++: Fix CTAD with multiple-arg ctor template [93248].
@@ -49,10 +63,92 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..ec0284ad8be 100644
+index d8e53874e68..d443cb45ed4 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,52 @@
+@@ -1,3 +1,134 @@
++2020-03-17  Jakub Jelinek  <jakub@redhat.com>
++
++	PR middle-end/94189
++	* builtins.c (expand_builtin_strnlen): Do return NULL_RTX if we would
++	emit a warning if it was enabled and don't depend on TREE_NO_WARNING
++	for code-generation.
++
++	Backported from mainline
++	2020-03-16  Jakub Jelinek  <jakub@redhat.com>
++
++	PR debug/94167
++	* tree-inline.c (insert_init_stmt): Don't gimple_regimplify_operands
++	DEBUG_STMTs.
++
++	2020-03-14  Jakub Jelinek  <jakub@redhat.com>
++
++	PR middle-end/93566
++	* tree-nested.c (convert_nonlocal_omp_clauses,
++	convert_local_omp_clauses): Handle {,in_,task_}reduction clauses
++	with C/C++ array sections.
++
++	2020-03-13  Jakub Jelinek  <jakub@redhat.com>
++
++	PR target/94121
++	* config/aarch64/aarch64.c (aarch64_add_offset_1): Use gen_int_mode
++	instead of GEN_INT.
++
++	2020-03-12  Jakub Jelinek  <jakub@redhat.com>
++
++	* doc/tm.texi.in (ASM_OUTPUT_ALIGNED_DECL_LOCAL): Change
++	ASM_OUTPUT_ALIGNED_DECL in description to ASM_OUTPUT_ALIGNED_LOCAL
++	and ASM_OUTPUT_DECL to ASM_OUTPUT_LOCAL.
++	* doc/tm.texi: Regenerated.
++
++	PR tree-optimization/94130
++	* tree-ssa-dse.c: Include gimplify.h.
++	(increment_start_addr): If stmt has lhs, drop the lhs from call and
++	set it after the call to the original value of the first argument.
++	Formatting fixes.
++	(decrement_count): Formatting fix.
++
++	2020-03-11  Jakub Jelinek  <jakub@redhat.com>
++
++	PR target/94134
++	* config/pdp11/pdp11.c (pdp11_asm_output_var): Call switch_to_section
++	at the start to switch to data section.  Don't print extra newline if
++	.globl directive has not been emitted.
++
++	PR target/94121
++	* config/aarch64/aarch64.c (aarch64_add_offset_1): Use absu_hwi
++	instead of abs_hwi, change moffset type to unsigned HOST_WIDE_INT.
++
++	PR middle-end/94111
++	* dfp.c (decimal_to_binary): Only use decimal128ToString if from->cl
++	is rvc_normal, otherwise use real_to_decimal to print the number to
++	string.
++
++	PR tree-optimization/94114
++	* tree-loop-distribution.c (generate_memset_builtin): Call
++	rewrite_to_non_trapping_overflow even on mem.
++	(generate_memcpy_builtin): Call rewrite_to_non_trapping_overflow even
++	on dest and src.
++
++	2020-03-05  Jakub Jelinek  <jakub@redhat.com>
++
++	PR middle-end/93399
++	* tree-pretty-print.h (pretty_print_string): Declare.
++	* tree-pretty-print.c (pretty_print_string): Remove forward
++	declaration, no longer static.  Change nbytes parameter type
++	from unsigned to size_t.
++	* print-rtl.c (print_value) <case CONST_STRING>: Use
++	pretty_print_string and for shrink way too long strings.
++
++	2020-03-04  Jakub Jelinek  <jakub@redhat.com>
++
++	PR debug/93888
++	* tree-inline.c (copy_decl_to_var): Copy DECL_BY_REFERENCE flag.
++
++	PR tree-optimization/94001
++	* tree-tailcall.c (process_assignment): Before comparing op1 to
++	*ass_var, verify *ass_var is non-NULL.
++
 +2020-03-13  Richard Biener  <rguenther@suse.de>
 +
 +	PR tree-optimization/94163
@@ -105,6 +201,71 @@ index d8e53874e68..ec0284ad8be 100644
  2020-03-12  Release Manager
  
  	* GCC 9.3.0 released.
+diff --git a/gcc/builtins.c b/gcc/builtins.c
+index ed11f79ff0b..e8e43f53ec6 100644
+--- a/gcc/builtins.c
++++ b/gcc/builtins.c
+@@ -3112,27 +3112,25 @@ expand_builtin_strnlen (tree exp, rtx target, machine_mode target_mode)
+ 	    return NULL_RTX;
+ 	}
+ 
+-      if (lendata.decl
+-	  && !TREE_NO_WARNING (exp)
+-	  && ((tree_int_cst_lt (len, bound))
+-	      || !exact))
++      if (lendata.decl && (tree_int_cst_lt (len, bound) || !exact))
+ 	{
+ 	  location_t warnloc
+ 	    = expansion_point_location_if_in_system_header (loc);
+ 
+-	  if (warning_at (warnloc, OPT_Wstringop_overflow_,
+-			  exact
+-			  ? G_("%K%qD specified bound %E exceeds the size %E "
+-			       "of unterminated array")
+-			  : G_("%K%qD specified bound %E may exceed the size "
+-			       "of at most %E of unterminated array"),
+-			  exp, func, bound, len))
++	  if (!TREE_NO_WARNING (exp)
++	      && warning_at (warnloc, OPT_Wstringop_overflow_,
++			     exact
++			     ? G_("%K%qD specified bound %E exceeds the size "
++				  "%E of unterminated array")
++			     : G_("%K%qD specified bound %E may exceed the "
++				  "size of at most %E of unterminated array"),
++			     exp, func, bound, len))
+ 	    {
+ 	      inform (DECL_SOURCE_LOCATION (lendata.decl),
+ 		      "referenced argument declared here");
+ 	      TREE_NO_WARNING (exp) = true;
+-	      return NULL_RTX;
+ 	    }
++	  return NULL_RTX;
+ 	}
+ 
+       if (!len)
+diff --git a/gcc/config/aarch64/aarch64.c b/gcc/config/aarch64/aarch64.c
+index b452a53af99..2b09f317978 100644
+--- a/gcc/config/aarch64/aarch64.c
++++ b/gcc/config/aarch64/aarch64.c
+@@ -2818,7 +2818,7 @@ aarch64_add_offset_1 (scalar_int_mode mode, rtx dest,
+   gcc_assert (emit_move_imm || temp1 != NULL_RTX);
+   gcc_assert (temp1 == NULL_RTX || !reg_overlap_mentioned_p (temp1, src));
+ 
+-  HOST_WIDE_INT moffset = abs_hwi (offset);
++  unsigned HOST_WIDE_INT moffset = absu_hwi (offset);
+   rtx_insn *insn;
+ 
+   if (!moffset)
+@@ -2862,7 +2862,8 @@ aarch64_add_offset_1 (scalar_int_mode mode, rtx dest,
+   if (emit_move_imm)
+     {
+       gcc_assert (temp1 != NULL_RTX || can_create_pseudo_p ());
+-      temp1 = aarch64_force_temporary (mode, temp1, GEN_INT (moffset));
++      temp1 = aarch64_force_temporary (mode, temp1,
++				       gen_int_mode (moffset, mode));
+     }
+   insn = emit_insn (offset < 0
+ 		    ? gen_sub3_insn (dest, src, temp1)
 diff --git a/gcc/config/arm/arm.md b/gcc/config/arm/arm.md
 index 53e54874c12..bfb03f1b96d 100644
 --- a/gcc/config/arm/arm.md
@@ -134,6 +295,28 @@ index 53e54874c12..bfb03f1b96d 100644
  )
  
  ;; Subroutine to store a half word from a register into memory.
+diff --git a/gcc/config/pdp11/pdp11.c b/gcc/config/pdp11/pdp11.c
+index 5f530a43000..1be79e1964c 100644
+--- a/gcc/config/pdp11/pdp11.c
++++ b/gcc/config/pdp11/pdp11.c
+@@ -744,6 +744,7 @@ void
+ pdp11_asm_output_var (FILE *file, const char *name, int size,
+ 		      int align, bool global)
+ {
++  switch_to_section (data_section);
+   if (align > 8)
+     fprintf (file, "\t.even\n");
+   if (TARGET_DEC_ASM)
+@@ -764,8 +765,8 @@ pdp11_asm_output_var (FILE *file, const char *name, int size,
+ 	{
+ 	  fprintf (file, ".globl ");
+ 	  assemble_name (file, name);
++	  fprintf (file, "\n");
+ 	}
+-      fprintf (file, "\n");
+       assemble_name (file, name);
+       fputs (":", file);
+       ASM_OUTPUT_SKIP (file, size);
 diff --git a/gcc/config/rs6000/rs6000-cpus.def b/gcc/config/rs6000/rs6000-cpus.def
 index d0d69beafd4..47a5d0576d0 100644
 --- a/gcc/config/rs6000/rs6000-cpus.def
@@ -264,6 +447,80 @@ index 4787747b6ff..3e4fc235f7a 100644
  	  current_template_parms = save_parms;
  	}
  
+diff --git a/gcc/dfp.c b/gcc/dfp.c
+index 65d5fcb0845..599f37ea9da 100644
+--- a/gcc/dfp.c
++++ b/gcc/dfp.c
+@@ -342,9 +342,13 @@ decimal_to_binary (REAL_VALUE_TYPE *to, const REAL_VALUE_TYPE *from,
+ 		   const real_format *fmt)
+ {
+   char string[256];
+-  const decimal128 *const d128 = (const decimal128 *) from->sig;
+-
+-  decimal128ToString (d128, string);
++  if (from->cl == rvc_normal)
++    {
++      const decimal128 *const d128 = (const decimal128 *) from->sig;
++      decimal128ToString (d128, string);
++    }
++  else
++    real_to_decimal (string, from, sizeof (string), 0, 1);
+   real_from_string3 (to, string, fmt);
+ }
+ 
+diff --git a/gcc/doc/tm.texi b/gcc/doc/tm.texi
+index 8c8978bb13a..7f5c370d97a 100644
+--- a/gcc/doc/tm.texi
++++ b/gcc/doc/tm.texi
+@@ -8330,11 +8330,11 @@ as the number of bits.
+ @end defmac
+ 
+ @defmac ASM_OUTPUT_ALIGNED_DECL_LOCAL (@var{stream}, @var{decl}, @var{name}, @var{size}, @var{alignment})
+-Like @code{ASM_OUTPUT_ALIGNED_DECL} except that @var{decl} of the
++Like @code{ASM_OUTPUT_ALIGNED_LOCAL} except that @var{decl} of the
+ variable to be output, if there is one, or @code{NULL_TREE} if there
+ is no corresponding variable.  If you define this macro, GCC will use it
+-in place of both @code{ASM_OUTPUT_DECL} and
+-@code{ASM_OUTPUT_ALIGNED_DECL}.  Define this macro when you need to see
++in place of both @code{ASM_OUTPUT_LOCAL} and
++@code{ASM_OUTPUT_ALIGNED_LOCAL}.  Define this macro when you need to see
+ the variable's decl in order to chose what to output.
+ @end defmac
+ 
+diff --git a/gcc/doc/tm.texi.in b/gcc/doc/tm.texi.in
+index fe1194ef91a..44a15dda240 100644
+--- a/gcc/doc/tm.texi.in
++++ b/gcc/doc/tm.texi.in
+@@ -5403,11 +5403,11 @@ as the number of bits.
+ @end defmac
+ 
+ @defmac ASM_OUTPUT_ALIGNED_DECL_LOCAL (@var{stream}, @var{decl}, @var{name}, @var{size}, @var{alignment})
+-Like @code{ASM_OUTPUT_ALIGNED_DECL} except that @var{decl} of the
++Like @code{ASM_OUTPUT_ALIGNED_LOCAL} except that @var{decl} of the
+ variable to be output, if there is one, or @code{NULL_TREE} if there
+ is no corresponding variable.  If you define this macro, GCC will use it
+-in place of both @code{ASM_OUTPUT_DECL} and
+-@code{ASM_OUTPUT_ALIGNED_DECL}.  Define this macro when you need to see
++in place of both @code{ASM_OUTPUT_LOCAL} and
++@code{ASM_OUTPUT_ALIGNED_LOCAL}.  Define this macro when you need to see
+ the variable's decl in order to chose what to output.
+ @end defmac
+ 
+diff --git a/gcc/print-rtl.c b/gcc/print-rtl.c
+index fbb108568b3..819b8473d9d 100644
+--- a/gcc/print-rtl.c
++++ b/gcc/print-rtl.c
+@@ -1678,7 +1678,9 @@ print_value (pretty_printer *pp, const_rtx x, int verbose)
+       pp_string (pp, tmp);
+       break;
+     case CONST_STRING:
+-      pp_printf (pp, "\"%s\"", XSTR (x, 0));
++      pp_string (pp, "\"");
++      pretty_print_string (pp, XSTR (x, 0), strlen (XSTR (x, 0)));
++      pp_string (pp, "\"");
+       break;
+     case SYMBOL_REF:
+       pp_printf (pp, "`%s'", XSTR (x, 0));
 diff --git a/gcc/reorg.c b/gcc/reorg.c
 index 81349382b81..a93cf90e0ab 100644
 --- a/gcc/reorg.c
@@ -368,10 +625,53 @@ index 7916344c584..3e969e52176 100644
  extern void mark_end_of_function_resources (rtx, bool);
  extern void init_resource_info (rtx_insn *);
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..555d9965efd 100644
+index e132f2657ef..f982ee6a9ec 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,37 @@
+@@ -1,3 +1,80 @@
++2020-03-17  Jakub Jelinek  <jakub@redhat.com>
++
++	PR middle-end/94189
++	* gcc.dg/pr94189.c: New test.
++
++	Backported from mainline
++	2020-03-16  Jakub Jelinek  <jakub@redhat.com>
++
++	PR debug/94167
++	* gcc.dg/pr94167.c: New test.
++
++	2020-03-12  Jakub Jelinek  <jakub@redhat.com>
++
++	PR tree-optimization/94130
++	* gcc.c-torture/execute/pr94130.c: New test.
++
++	2020-03-11  Jakub Jelinek  <jakub@redhat.com>
++
++	PR target/94134
++	* gcc.c-torture/execute/pr94134.c: New test.
++
++	PR target/94121
++	* gcc.dg/pr94121.c: New test.
++
++	PR middle-end/94111
++	* gcc.dg/dfp/pr94111.c: New test.
++
++	PR tree-optimization/94114
++	* gcc.dg/pr94114.c: New test.
++
++	2020-03-05  Jakub Jelinek  <jakub@redhat.com>
++
++	PR middle-end/93399
++	* gcc.dg/pr93399.c: New test.
++
++	2020-03-04  Jakub Jelinek  <jakub@redhat.com>
++
++	PR debug/93888
++	* g++.dg/guality/pr93888.C: New test.
++
++	PR tree-optimization/94001
++	* gcc.dg/pr94001.c: New test.
++
 +2020-03-17  Kewen Lin  <linkw@gcc.gnu.org>
 +
 +	Backport from master
@@ -451,6 +751,233 @@ index 00000000000..2fc71de8d95
 +template <typename T> struct S
 +{ template <typename V> S (T, V, long = 0); };
 +using U = decltype(S{0, 4u});
+diff --git a/gcc/testsuite/g++.dg/guality/pr93888.C b/gcc/testsuite/g++.dg/guality/pr93888.C
+new file mode 100644
+index 00000000000..d54a4dcc8cc
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/guality/pr93888.C
+@@ -0,0 +1,24 @@
++// PR debug/93888
++// { dg-do run }
++// { dg-options "-g -fvar-tracking -fno-inline" }
++// { dg-skip-if "" { *-*-* }  { "*" } { "-O0" } }
++
++struct K
++{
++  K () {}
++  K (K const &rhs) { k[0] = 'C'; }
++  char k[8] = {'B','B','B','B','B','B','B','B'};
++};
++
++__attribute__((always_inline)) inline bool
++foo (const K karg)
++{
++  return karg.k[0] != 'C';	// { dg-final { gdb-test 16 "karg.k[0]" "'C'" } }
++}				// { dg-final { gdb-test 16 "karg.k[1]" "'B'" } }
++
++int
++main ()
++{
++  K x;
++  return foo (x);
++}
+diff --git a/gcc/testsuite/gcc.c-torture/execute/pr94130.c b/gcc/testsuite/gcc.c-torture/execute/pr94130.c
+new file mode 100644
+index 00000000000..044e578d373
+--- /dev/null
++++ b/gcc/testsuite/gcc.c-torture/execute/pr94130.c
+@@ -0,0 +1,16 @@
++/* PR tree-optimization/94130 */
++
++int
++main ()
++{
++  int a[8];
++  char *b = __builtin_memset (a, 0, sizeof (a));
++  a[0] = 1;
++  a[1] = 2;
++  a[2] = 3;
++  if (b != (char *) a)
++    __builtin_abort ();
++  else
++    asm volatile ("" : : "g" (a) : "memory");
++  return 0;
++}
+diff --git a/gcc/testsuite/gcc.c-torture/execute/pr94134.c b/gcc/testsuite/gcc.c-torture/execute/pr94134.c
+new file mode 100644
+index 00000000000..b1b44c3b184
+--- /dev/null
++++ b/gcc/testsuite/gcc.c-torture/execute/pr94134.c
+@@ -0,0 +1,14 @@
++/* PR target/94134 */
++
++static volatile int a = 0;
++static volatile int b = 1;
++
++int
++main ()
++{
++  a++;
++  b++;
++  if (a != 1 || b != 2)
++    __builtin_abort ();
++  return 0;
++}
+diff --git a/gcc/testsuite/gcc.dg/dfp/pr94111.c b/gcc/testsuite/gcc.dg/dfp/pr94111.c
+new file mode 100644
+index 00000000000..ea3a132270a
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/dfp/pr94111.c
+@@ -0,0 +1,12 @@
++/* PR middle-end/94111 */
++/* { dg-do run } */
++/* { dg-options "-O2" } */
++
++int
++main ()
++{
++  _Decimal32 d = (_Decimal32) __builtin_inff ();
++  if (!__builtin_isinf ((double) d))
++    __builtin_abort ();
++  return 0;
++}
+diff --git a/gcc/testsuite/gcc.dg/pr93399.c b/gcc/testsuite/gcc.dg/pr93399.c
+new file mode 100644
+index 00000000000..3d9299018be
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/pr93399.c
+@@ -0,0 +1,17 @@
++/* PR middle-end/93399 */
++/* { dg-do assemble } */
++/* { dg-options "-fverbose-asm -dA -g -O3" } */
++
++extern inline __attribute__ ((__always_inline__, __gnu_inline__)) char *
++strstr (const char *haystack, const char *needle)
++{
++  return __builtin_strstr (haystack, needle);
++}
++
++int
++main (int argc, const char **argv)
++{
++  char *substr = strstr (argv[0], "\n");
++  char *another = strstr (argv[0], "\r\n");
++  return 0;
++}
+diff --git a/gcc/testsuite/gcc.dg/pr94001.c b/gcc/testsuite/gcc.dg/pr94001.c
+new file mode 100644
+index 00000000000..f83873fa2bd
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/pr94001.c
+@@ -0,0 +1,11 @@
++/* PR tree-optimization/94001 */
++/* { dg-do compile } */
++/* { dg-options "-O2 -fno-tree-dce" } */
++
++void
++bar (int e)
++{
++  bar (3);
++  int c;
++  c = -e;
++}
+diff --git a/gcc/testsuite/gcc.dg/pr94114.c b/gcc/testsuite/gcc.dg/pr94114.c
+new file mode 100644
+index 00000000000..8d6d0eb5c2a
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/pr94114.c
+@@ -0,0 +1,13 @@
++/* PR tree-optimization/94114 */
++/* { dg-do compile } */
++/* { dg-options "-O2 -ftree-loop-distribute-patterns -ftrapv" } */
++
++void
++foo (int *x, int *y, int *z, long int w)
++{
++  while (y + w > z)
++    {
++      x[w] = 0;
++      --w;
++    }
++}
+diff --git a/gcc/testsuite/gcc.dg/pr94121.c b/gcc/testsuite/gcc.dg/pr94121.c
+new file mode 100644
+index 00000000000..2a4261ae02d
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/pr94121.c
+@@ -0,0 +1,16 @@
++/* PR target/94121 */
++/* { dg-do compile { target pie } } */
++/* { dg-options "-O2 -fpie -w" } */
++
++#define DIFF_MAX __PTRDIFF_MAX__
++#define DIFF_MIN (-DIFF_MAX - 1)
++
++extern void foo (char *);
++extern char v[];
++
++void
++bar (void)
++{
++  char *p = v;
++  foo (&p[DIFF_MIN]);
++}
+diff --git a/gcc/testsuite/gcc.dg/pr94167.c b/gcc/testsuite/gcc.dg/pr94167.c
+new file mode 100644
+index 00000000000..4b819d3a869
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/pr94167.c
+@@ -0,0 +1,33 @@
++/* PR debug/94167 */
++/* { dg-do compile } */
++/* { dg-options "-O2 -fcompare-debug" } */
++
++struct S { int g, h; signed char i; int j; signed char k; int l[4]; } a, c;
++struct T { signed char g; } e;
++int *b, d;
++static void foo ();
++
++void
++bar (void)
++{
++  while (d)
++    {
++      int k;
++      struct T f[3];
++      foo (bar, a);
++      for (k = 0;; k++)
++	f[k] = e;
++    }
++}
++
++static inline void
++foo (int x, struct S y, struct T z)
++{
++  for (z.g = 2; z.g; z.g--)
++    {
++      c = a = y;
++      *b |= 6;
++      if (y.g)
++	break;
++    }
++}
+diff --git a/gcc/testsuite/gcc.dg/pr94189.c b/gcc/testsuite/gcc.dg/pr94189.c
+new file mode 100644
+index 00000000000..f927d55279a
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/pr94189.c
+@@ -0,0 +1,11 @@
++/* PR middle-end/94189 */
++/* { dg-do compile } */
++/* { dg-options "-O2 -fcompare-debug" } */
++
++const char a[] = { 'a', 'b', 'c', 'd' };/* { dg-message "declared here" } */
++
++int
++foo (void)
++{
++  return __builtin_strnlen (a, 5);	/* { dg-warning "specified bound 5 exceeds the size 4 of unterminated array" } */
++}
 diff --git a/gcc/testsuite/gcc.dg/vect/slp-perm-12.c b/gcc/testsuite/gcc.dg/vect/slp-perm-12.c
 index 4d4c5344402..113223ab0f9 100644
 --- a/gcc/testsuite/gcc.dg/vect/slp-perm-12.c
@@ -507,6 +1034,258 @@ index 00000000000..7d5477ac0c3
 +! { dg-options "-std=legacy -Ofast --param max-cse-insns=0 -fno-schedule-insns -fsanitize=null" }
 +
 +include 'string_ctor_1.f90'
+diff --git a/gcc/tree-inline.c b/gcc/tree-inline.c
+index d115fcb1a5b..7a41f64bcc3 100644
+--- a/gcc/tree-inline.c
++++ b/gcc/tree-inline.c
+@@ -3213,10 +3213,10 @@ insert_init_stmt (copy_body_data *id, basic_block bb, gimple *init_stmt)
+ 	  gimple_assign_set_rhs1 (init_stmt, rhs);
+ 	}
+       gsi_insert_after (&si, init_stmt, GSI_NEW_STMT);
+-      gimple_regimplify_operands (init_stmt, &si);
+-
+       if (!is_gimple_debug (init_stmt))
+ 	{
++	  gimple_regimplify_operands (init_stmt, &si);
++
+ 	  tree def = gimple_assign_lhs (init_stmt);
+ 	  insert_init_debug_bind (id, bb, def, def, init_stmt);
+ 	}
+@@ -5698,6 +5698,7 @@ copy_decl_to_var (tree decl, copy_body_data *id)
+   TREE_READONLY (copy) = TREE_READONLY (decl);
+   TREE_THIS_VOLATILE (copy) = TREE_THIS_VOLATILE (decl);
+   DECL_GIMPLE_REG_P (copy) = DECL_GIMPLE_REG_P (decl);
++  DECL_BY_REFERENCE (copy) = DECL_BY_REFERENCE (decl);
+ 
+   return copy_decl_for_dup_finish (id, decl, copy);
+ }
+diff --git a/gcc/tree-loop-distribution.c b/gcc/tree-loop-distribution.c
+index 8959f52a67b..c07ac0d228c 100644
+--- a/gcc/tree-loop-distribution.c
++++ b/gcc/tree-loop-distribution.c
+@@ -1004,7 +1004,7 @@ generate_memset_builtin (struct loop *loop, partition *partition)
+   nb_bytes = rewrite_to_non_trapping_overflow (builtin->size);
+   nb_bytes = force_gimple_operand_gsi (&gsi, nb_bytes, true, NULL_TREE,
+ 				       false, GSI_CONTINUE_LINKING);
+-  mem = builtin->dst_base;
++  mem = rewrite_to_non_trapping_overflow (builtin->dst_base);
+   mem = force_gimple_operand_gsi (&gsi, mem, true, NULL_TREE,
+ 				  false, GSI_CONTINUE_LINKING);
+ 
+@@ -1056,8 +1056,8 @@ generate_memcpy_builtin (struct loop *loop, partition *partition)
+   nb_bytes = rewrite_to_non_trapping_overflow (builtin->size);
+   nb_bytes = force_gimple_operand_gsi (&gsi, nb_bytes, true, NULL_TREE,
+ 				       false, GSI_CONTINUE_LINKING);
+-  dest = builtin->dst_base;
+-  src = builtin->src_base;
++  dest = rewrite_to_non_trapping_overflow (builtin->dst_base);
++  src = rewrite_to_non_trapping_overflow (builtin->src_base);
+   if (partition->kind == PKIND_MEMCPY
+       || ! ptr_derefs_may_alias_p (dest, src))
+     kind = BUILT_IN_MEMCPY;
+diff --git a/gcc/tree-nested.c b/gcc/tree-nested.c
+index 3fe23cc2b22..e7c1026cf85 100644
+--- a/gcc/tree-nested.c
++++ b/gcc/tree-nested.c
+@@ -1178,7 +1178,7 @@ convert_nonlocal_omp_clauses (tree *pclauses, struct walk_stmt_info *wi)
+ {
+   struct nesting_info *const info = (struct nesting_info *) wi->info;
+   bool need_chain = false, need_stmts = false;
+-  tree clause, decl;
++  tree clause, decl, *pdecl;
+   int dummy;
+   bitmap new_suppress;
+ 
+@@ -1187,6 +1187,7 @@ convert_nonlocal_omp_clauses (tree *pclauses, struct walk_stmt_info *wi)
+ 
+   for (clause = *pclauses; clause ; clause = OMP_CLAUSE_CHAIN (clause))
+     {
++      pdecl = NULL;
+       switch (OMP_CLAUSE_CODE (clause))
+ 	{
+ 	case OMP_CLAUSE_REDUCTION:
+@@ -1194,6 +1195,15 @@ convert_nonlocal_omp_clauses (tree *pclauses, struct walk_stmt_info *wi)
+ 	case OMP_CLAUSE_TASK_REDUCTION:
+ 	  if (OMP_CLAUSE_REDUCTION_PLACEHOLDER (clause))
+ 	    need_stmts = true;
++	  if (TREE_CODE (OMP_CLAUSE_DECL (clause)) == MEM_REF)
++	    {
++	      pdecl = &TREE_OPERAND (OMP_CLAUSE_DECL (clause), 0);
++	      if (TREE_CODE (*pdecl) == POINTER_PLUS_EXPR)
++		pdecl = &TREE_OPERAND (*pdecl, 0);
++	      if (TREE_CODE (*pdecl) == INDIRECT_REF
++		  || TREE_CODE (*pdecl) == ADDR_EXPR)
++		pdecl = &TREE_OPERAND (*pdecl, 0);
++	    }
+ 	  goto do_decl_clause;
+ 
+ 	case OMP_CLAUSE_LASTPRIVATE:
+@@ -1219,7 +1229,9 @@ convert_nonlocal_omp_clauses (tree *pclauses, struct walk_stmt_info *wi)
+ 	case OMP_CLAUSE_USE_DEVICE_PTR:
+ 	case OMP_CLAUSE_IS_DEVICE_PTR:
+ 	do_decl_clause:
+-	  decl = OMP_CLAUSE_DECL (clause);
++	  if (pdecl == NULL)
++	    pdecl = &OMP_CLAUSE_DECL (clause);
++	  decl = *pdecl;
+ 	  if (VAR_P (decl)
+ 	      && (TREE_STATIC (decl) || DECL_EXTERNAL (decl)))
+ 	    break;
+@@ -1228,7 +1240,7 @@ convert_nonlocal_omp_clauses (tree *pclauses, struct walk_stmt_info *wi)
+ 	      if (OMP_CLAUSE_CODE (clause) == OMP_CLAUSE_SHARED)
+ 		OMP_CLAUSE_SHARED_READONLY (clause) = 0;
+ 	      bitmap_set_bit (new_suppress, DECL_UID (decl));
+-	      OMP_CLAUSE_DECL (clause) = get_nonlocal_debug_decl (info, decl);
++	      *pdecl = get_nonlocal_debug_decl (info, decl);
+ 	      if (OMP_CLAUSE_CODE (clause) != OMP_CLAUSE_PRIVATE)
+ 		need_chain = true;
+ 	    }
+@@ -1894,7 +1906,7 @@ convert_local_omp_clauses (tree *pclauses, struct walk_stmt_info *wi)
+ {
+   struct nesting_info *const info = (struct nesting_info *) wi->info;
+   bool need_frame = false, need_stmts = false;
+-  tree clause, decl;
++  tree clause, decl, *pdecl;
+   int dummy;
+   bitmap new_suppress;
+ 
+@@ -1903,6 +1915,7 @@ convert_local_omp_clauses (tree *pclauses, struct walk_stmt_info *wi)
+ 
+   for (clause = *pclauses; clause ; clause = OMP_CLAUSE_CHAIN (clause))
+     {
++      pdecl = NULL;
+       switch (OMP_CLAUSE_CODE (clause))
+ 	{
+ 	case OMP_CLAUSE_REDUCTION:
+@@ -1910,6 +1923,15 @@ convert_local_omp_clauses (tree *pclauses, struct walk_stmt_info *wi)
+ 	case OMP_CLAUSE_TASK_REDUCTION:
+ 	  if (OMP_CLAUSE_REDUCTION_PLACEHOLDER (clause))
+ 	    need_stmts = true;
++	  if (TREE_CODE (OMP_CLAUSE_DECL (clause)) == MEM_REF)
++	    {
++	      pdecl = &TREE_OPERAND (OMP_CLAUSE_DECL (clause), 0);
++	      if (TREE_CODE (*pdecl) == POINTER_PLUS_EXPR)
++		pdecl = &TREE_OPERAND (*pdecl, 0);
++	      if (TREE_CODE (*pdecl) == INDIRECT_REF
++		  || TREE_CODE (*pdecl) == ADDR_EXPR)
++		pdecl = &TREE_OPERAND (*pdecl, 0);
++	    }
+ 	  goto do_decl_clause;
+ 
+ 	case OMP_CLAUSE_LASTPRIVATE:
+@@ -1935,7 +1957,9 @@ convert_local_omp_clauses (tree *pclauses, struct walk_stmt_info *wi)
+ 	case OMP_CLAUSE_USE_DEVICE_PTR:
+ 	case OMP_CLAUSE_IS_DEVICE_PTR:
+ 	do_decl_clause:
+-	  decl = OMP_CLAUSE_DECL (clause);
++	  if (pdecl == NULL)
++	    pdecl = &OMP_CLAUSE_DECL (clause);
++	  decl = *pdecl;
+ 	  if (VAR_P (decl)
+ 	      && (TREE_STATIC (decl) || DECL_EXTERNAL (decl)))
+ 	    break;
+@@ -1948,8 +1972,7 @@ convert_local_omp_clauses (tree *pclauses, struct walk_stmt_info *wi)
+ 		  if (OMP_CLAUSE_CODE (clause) == OMP_CLAUSE_SHARED)
+ 		    OMP_CLAUSE_SHARED_READONLY (clause) = 0;
+ 		  bitmap_set_bit (new_suppress, DECL_UID (decl));
+-		  OMP_CLAUSE_DECL (clause)
+-		    = get_local_debug_decl (info, decl, field);
++		  *pdecl = get_local_debug_decl (info, decl, field);
+ 		  need_frame = true;
+ 		}
+ 	    }
+diff --git a/gcc/tree-pretty-print.c b/gcc/tree-pretty-print.c
+index ae0a6c12072..b06b595d151 100644
+--- a/gcc/tree-pretty-print.c
++++ b/gcc/tree-pretty-print.c
+@@ -37,7 +37,6 @@ along with GCC; see the file COPYING3.  If not see
+ 
+ /* Local functions, macros and variables.  */
+ static const char *op_symbol (const_tree);
+-static void pretty_print_string (pretty_printer *, const char*, unsigned);
+ static void newline_and_indent (pretty_printer *, int);
+ static void maybe_init_pretty_print (FILE *);
+ static void print_struct_decl (pretty_printer *, const_tree, int, dump_flags_t);
+@@ -4021,8 +4020,8 @@ print_call_name (pretty_printer *pp, tree node, dump_flags_t flags)
+ /* Print the first N characters in the array STR, replacing non-printable
+    characters (including embedded nuls) with unambiguous escape sequences.  */
+ 
+-static void
+-pretty_print_string (pretty_printer *pp, const char *str, unsigned n)
++void
++pretty_print_string (pretty_printer *pp, const char *str, size_t n)
+ {
+   if (str == NULL)
+     return;
+diff --git a/gcc/tree-pretty-print.h b/gcc/tree-pretty-print.h
+index 9f593289666..41697e77994 100644
+--- a/gcc/tree-pretty-print.h
++++ b/gcc/tree-pretty-print.h
+@@ -47,6 +47,7 @@ extern void print_declaration (pretty_printer *, tree, int, dump_flags_t);
+ extern int op_code_prio (enum tree_code);
+ extern int op_prio (const_tree);
+ extern const char *op_symbol_code (enum tree_code);
++extern void pretty_print_string (pretty_printer *, const char *, size_t);
+ extern void print_call_name (pretty_printer *, tree, dump_flags_t);
+ extern void percent_K_format (text_info *, location_t, tree);
+ extern void pp_tree_identifier (pretty_printer *, tree);
+diff --git a/gcc/tree-ssa-dse.c b/gcc/tree-ssa-dse.c
+index efe5b31cc0a..26376ecf8de 100644
+--- a/gcc/tree-ssa-dse.c
++++ b/gcc/tree-ssa-dse.c
+@@ -36,6 +36,7 @@ along with GCC; see the file COPYING3.  If not see
+ #include "params.h"
+ #include "alias.h"
+ #include "tree-ssa-loop.h"
++#include "gimplify.h"
+ 
+ /* This file implements dead store elimination.
+ 
+@@ -394,29 +395,38 @@ decrement_count (gimple *stmt, int decrement)
+   gcc_assert (TREE_CODE (*countp) == INTEGER_CST);
+   *countp = wide_int_to_tree (TREE_TYPE (*countp), (TREE_INT_CST_LOW (*countp)
+ 						    - decrement));
+-
+ }
+ 
+ static void
+ increment_start_addr (gimple *stmt, tree *where, int increment)
+ {
++  if (tree lhs = gimple_call_lhs (stmt))
++    if (where == gimple_call_arg_ptr (stmt, 0))
++      {
++	gassign *newop = gimple_build_assign (lhs, unshare_expr (*where));
++	gimple_stmt_iterator gsi = gsi_for_stmt (stmt);
++	gsi_insert_after (&gsi, newop, GSI_SAME_STMT);
++	gimple_call_set_lhs (stmt, NULL_TREE);
++	update_stmt (stmt);
++      }
++
+   if (TREE_CODE (*where) == SSA_NAME)
+     {
+       tree tem = make_ssa_name (TREE_TYPE (*where));
+       gassign *newop
+-        = gimple_build_assign (tem, POINTER_PLUS_EXPR, *where,
++	= gimple_build_assign (tem, POINTER_PLUS_EXPR, *where,
+ 			       build_int_cst (sizetype, increment));
+       gimple_stmt_iterator gsi = gsi_for_stmt (stmt);
+       gsi_insert_before (&gsi, newop, GSI_SAME_STMT);
+       *where = tem;
+-      update_stmt (gsi_stmt (gsi));
++      update_stmt (stmt);
+       return;
+     }
+ 
+   *where = build_fold_addr_expr (fold_build2 (MEM_REF, char_type_node,
+-                                             *where,
+-                                             build_int_cst (ptr_type_node,
+-                                                            increment)));
++					      *where,
++					      build_int_cst (ptr_type_node,
++							     increment)));
+ }
+ 
+ /* STMT is builtin call that writes bytes in bitmap ORIG, some bytes are dead
 diff --git a/gcc/tree-ssa-pre.c b/gcc/tree-ssa-pre.c
 index 8bd17b82368..7b171bc4e8f 100644
 --- a/gcc/tree-ssa-pre.c
@@ -521,6 +1300,155 @@ index 8bd17b82368..7b171bc4e8f 100644
  		set_ptr_info_alignment (get_ptr_info (forcedname),
  					halign, hmisalign);
  	    }
+diff --git a/gcc/tree-tailcall.c b/gcc/tree-tailcall.c
+index 255575f1198..4f42817f7de 100644
+--- a/gcc/tree-tailcall.c
++++ b/gcc/tree-tailcall.c
+@@ -327,7 +327,8 @@ process_assignment (gassign *stmt,
+ 	   && (non_ass_var = independent_of_stmt_p (op1, stmt, call,
+ 						    to_move)))
+     ;
+-  else if (op1 == *ass_var
++  else if (*ass_var
++	   && op1 == *ass_var
+ 	   && (non_ass_var = independent_of_stmt_p (op0, stmt, call,
+ 						    to_move)))
+     ;
+diff --git a/libgomp/ChangeLog b/libgomp/ChangeLog
+index 0156d5f7bc9..f4aa8c63481 100644
+--- a/libgomp/ChangeLog
++++ b/libgomp/ChangeLog
+@@ -1,3 +1,11 @@
++2020-03-17  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from mainline
++	2020-03-14  Jakub Jelinek  <jakub@redhat.com>
++
++	PR middle-end/93566
++	* testsuite/libgomp.c/pr93566.c: New test.
++
+ 2020-03-12  Release Manager
+ 
+ 	* GCC 9.3.0 released.
+diff --git a/libgomp/testsuite/libgomp.c/pr93566.c b/libgomp/testsuite/libgomp.c/pr93566.c
+new file mode 100644
+index 00000000000..3334bd571f6
+--- /dev/null
++++ b/libgomp/testsuite/libgomp.c/pr93566.c
+@@ -0,0 +1,113 @@
++/* PR middle-end/93566 */
++/* { dg-additional-options "-std=c99" } */
++
++extern void abort (void);
++
++void
++foo (int *x)
++{
++  void nest (void) {
++    #pragma omp parallel for reduction(+:x[:10])
++    for (int i = 0; i < 1024; i++)
++      for (int j = 0; j < 10; j++)
++	x[j] += j * i;
++  }
++  nest ();
++  for (int i = 0; i < 10; i++)
++    if (x[i] != 1023 * 1024 / 2 * i)
++      abort ();
++}
++
++void
++bar (void)
++{
++  int x[10] = {};
++  void nest (void) {
++    #pragma omp parallel for reduction(+:x[:10])
++    for (int i = 0; i < 1024; i++)
++      for (int j = 0; j < 10; j++)
++	x[j] += j * i;
++  }
++  nest ();
++  for (int i = 0; i < 10; i++)
++    if (x[i] != 1023 * 1024 / 2 * i)
++      abort ();
++}
++
++void
++baz (void)
++{
++  int x[10] = {};
++  void nest (void) {
++    #pragma omp parallel for reduction(+:x[2:5])
++    for (int i = 0; i < 1024; i++)
++      for (int j = 2; j < 7; j++)
++	x[j] += j * i;
++  }
++  nest ();
++  for (int i = 2; i < 7; i++)
++    if (x[i] != 1023 * 1024 / 2 * i)
++      abort ();
++}
++
++void
++qux (int *x)
++{
++  void nest (void) { x++; }
++  nest ();
++  #pragma omp parallel for reduction(+:x[:9])
++  for (int i = 0; i < 1024; i++)
++    for (int j = 0; j < 9; j++)
++      x[j] += j * i;
++  nest ();
++  for (int i = 0; i < 9; i++)
++    if (x[i - 1] != 1023 * 1024 / 2 * i)
++      abort ();
++}
++
++void
++quux (void)
++{
++  int x[10];
++  void nest (void) { for (int i = 0; i < 10; i++) x[i] = 0; }
++  int nest2 (int i) { return x[i]; }
++  nest ();
++  #pragma omp parallel for reduction(+:x[:7])
++  for (int i = 0; i < 1024; i++)
++    for (int j = 0; j < 7; j++)
++      x[j] += j * i;
++  for (int i = 0; i < 7; i++)
++    if (nest2 (i) != 1023 * 1024 / 2 * i)
++      abort ();
++}
++
++void
++corge (void)
++{
++  int x[10];
++  void nest (void) { for (int i = 0; i < 10; i++) x[i] = 0; }
++  int nest2 (int i) { return x[i]; }
++  nest ();
++  #pragma omp parallel for reduction(+:x[2:4])
++  for (int i = 0; i < 1024; i++)
++    for (int j = 2; j < 6; j++)
++      x[j] += j * i;
++  for (int i = 2; i < 6; i++)
++    if (nest2 (i) != 1023 * 1024 / 2 * i)
++      abort ();
++}
++
++int
++main ()
++{
++  int a[10] = {};
++  foo (a);
++  bar ();
++  baz ();
++  for (int i = 0; i < 10; i++)
++    a[i] = 0;
++  qux (a);
++  quux ();
++  corge ();
++  return 0;
++}
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
 index 45847172291..8e11c6df5a7 100644
 --- a/libstdc++-v3/ChangeLog
@@ -1338,3 +2266,32 @@ index e1feef99582..0f00a94da42 100644
    char** endptr = 0;
    int base = 0;
  
+diff --git a/maintainer-scripts/ChangeLog b/maintainer-scripts/ChangeLog
+index b1a9be6f5b2..039f7381af5 100644
+--- a/maintainer-scripts/ChangeLog
++++ b/maintainer-scripts/ChangeLog
+@@ -1,3 +1,11 @@
++2020-03-17  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from mainline
++	2020-03-12  Jakub Jelinek  <jakub@redhat.com>
++
++	* gcc_release (upload_files): Without -l, pass -m 755 to the mkdir
++	command invoked through ssh.
++
+ 2020-03-12  Release Manager
+ 
+ 	* GCC 9.3.0 released.
+diff --git a/maintainer-scripts/gcc_release b/maintainer-scripts/gcc_release
+index 74cce1af18d..2456908d716 100755
+--- a/maintainer-scripts/gcc_release
++++ b/maintainer-scripts/gcc_release
+@@ -398,7 +398,7 @@ upload_files() {
+   # Make sure the directory exists on the server.
+   if [ $LOCAL -eq 0 ]; then
+     ${SSH} -l ${GCC_USERNAME} ${GCC_HOSTNAME} \
+-      mkdir -p "${FTP_PATH}/diffs"
++      mkdir -m 755 -p "${FTP_PATH}/diffs"
+     UPLOAD_PATH="${GCC_USERNAME}@${GCC_HOSTNAME}:${FTP_PATH}"
+   else
+     mkdir -p "${FTP_PATH}/diffs" \
