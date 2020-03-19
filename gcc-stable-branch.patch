@@ -5,7 +5,9 @@ Eric Botcazou (2):
       Fix incorrect filling of delay slots in branchy code at -O2
       Fix wrong year in ChangeLog.
 
-GCC Administrator (5):
+GCC Administrator (7):
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -34,6 +36,9 @@ Jason Merrill (3):
       c++: Fix ICE-after-error on partial spec [92068]
       c++: Find parameter pack in typedef in lambda [92909].
 
+Jiufu Guo (1):
+      rs6000: Check -+0 and NaN for smax/smin generation
+
 Jonathan Wakely (6):
       libstdc++: Ensure root-dir converted to forward slash (PR93244)
       libstdc++: Fix FS-dependent filesystem tests
@@ -55,6 +60,93 @@ Richard Biener (1):
 Richard Earnshaw (1):
       arm: correct constraints on movsi_compare0 [PR91913]
 
+diff --git a/a b/a
+new file mode 100644
+index 00000000000..a4f422403ef
+--- /dev/null
++++ b/a
+@@ -0,0 +1,81 @@
++commit 5b075372b47b87bde46e5acc58531c410fb65f8c
++Author:     Jiufu Guo <guojiufu@linux.ibm.com>
++AuthorDate: Tue Mar 10 13:51:57 2020 +0800
++Commit:     Jiufu Guo <guojiufu@linux.ibm.com>
++CommitDate: Thu Mar 19 10:04:00 2020 +0800
++
++    rs6000: Check -+0 and NaN for smax/smin generation
++    
++    PR93709 mentioned regressions on maxlocval_4.f90 and minlocval_f.f90 which
++    relates to max of '-inf' and 'nan'. This regression occur on P9 because
++    P9 new instruction 'xsmaxcdp' is generated.
++    And for C code `a < b ? b : a` is also generated as `xsmaxcdp` under -O2
++    for P9. While this instruction behavior more like C/C++ semantic (a>b?a:b).
++    The issue also occur as the new test case shows.
++    
++    This generates prevents 'xsmaxcdp' to be generated for those cases.
++    'xsmincdp' also is handled in patch.
++    
++    gcc/
++    2020-03-19  Jiufu Guo  <guojiufu@linux.ibm.com>
++    
++            PR target/93709
++            * gcc/config/rs6000/rs6000.c (rs6000_emit_p9_fp_minmax): Check
++            NAN and SIGNED_ZEROR for smax/smin.
++    
++    gcc/testsuite
++    2020-03-19  Jiufu Guo  <guojiufu@linux.ibm.com>
++    
++            PR target/93709
++            * gcc.target/powerpc/p9-minmax-3.c: New test.
++
++diff --git a/gcc/ChangeLog b/gcc/ChangeLog
++index d443cb45ed4..a7847fd00b9 100644
++--- a/gcc/ChangeLog
+++++ b/gcc/ChangeLog
++@@ -1,3 +1,9 @@
+++2020-03-10  Jiufu Guo  <guojiufu@linux.ibm.com>
+++
+++	PR target/93709
+++	* gcc/config/rs6000/rs6000.c (rs6000_emit_p9_fp_minmax): Check
+++	NAN and SIGNED_ZEROR for smax/smin.
+++
++ 2020-03-17  Jakub Jelinek  <jakub@redhat.com>
++ 
++ 	PR middle-end/94189
++diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
++index f982ee6a9ec..b12d397eb93 100644
++--- a/gcc/testsuite/ChangeLog
+++++ b/gcc/testsuite/ChangeLog
++@@ -1,3 +1,8 @@
+++2020-03-10  Jiufu Guo  <guojiufu@linux.ibm.com>
+++
+++	PR target/93709
+++	* gcc.target/powerpc/p9-minmax-3.c: New test.
+++
++ 2020-03-17  Jakub Jelinek  <jakub@redhat.com>
++ 
++ 	PR middle-end/94189
++diff --git a/gcc/testsuite/gcc.target/powerpc/p9-minmax-3.c b/gcc/testsuite/gcc.target/powerpc/p9-minmax-3.c
++new file mode 100644
++index 00000000000..141603e05b4
++--- /dev/null
+++++ b/gcc/testsuite/gcc.target/powerpc/p9-minmax-3.c
++@@ -0,0 +1,17 @@
+++/* { dg-do compile { target { powerpc*-*-* } } } */
+++/* { dg-require-effective-target powerpc_p9vector_ok } */
+++/* { dg-options "-mdejagnu-cpu=power9 -O2 -mpower9-minmax" } */
+++/* { dg-final { scan-assembler-not "xsmaxcdp"   } } */
+++/* { dg-final { scan-assembler-not "xsmincdp"   } } */
+++
+++double
+++dbl_max1 (double a, double b)
+++{
+++  return a < b ? b : a;
+++}
+++
+++double
+++dbl_min1 (double a, double b)
+++{
+++  return a > b ? b : a;
+++}
 diff --git a/gcc/BASE-VER b/gcc/BASE-VER
 index b13d146a7b0..3b74042132a 100644
 --- a/gcc/BASE-VER
@@ -63,10 +155,16 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..d443cb45ed4 100644
+index d8e53874e68..90a5cf5c8d8 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,134 @@
+@@ -1,3 +1,140 @@
++2020-03-19  Jiufu Guo  <guojiufu@linux.ibm.com>
++
++	PR target/93709
++	* gcc/config/rs6000/rs6000.c (rs6000_emit_p9_fp_minmax): Check
++	NAN and SIGNED_ZEROR for smax/smin.
++
 +2020-03-17  Jakub Jelinek  <jakub@redhat.com>
 +
 +	PR middle-end/94189
@@ -333,7 +431,7 @@ index d0d69beafd4..47a5d0576d0 100644
  
  /* Deal with ports that do not have -mstrict-align.  */
 diff --git a/gcc/config/rs6000/rs6000.c b/gcc/config/rs6000/rs6000.c
-index 87d60078bb0..04324ab981a 100644
+index 87d60078bb0..5ec2b339df6 100644
 --- a/gcc/config/rs6000/rs6000.c
 +++ b/gcc/config/rs6000/rs6000.c
 @@ -4715,11 +4715,6 @@ rs6000_option_override_internal (bool global_init_p)
@@ -348,7 +446,20 @@ index 87d60078bb0..04324ab981a 100644
  	}
  
        /* Arrange to save and restore machine status around nested functions.  */
-@@ -37399,6 +37394,7 @@ rs6000_disable_incompatible_switches (void)
+@@ -23092,7 +23087,11 @@ rs6000_emit_p9_fp_minmax (rtx dest, rtx op, rtx true_cond, rtx false_cond)
+   if (rtx_equal_p (op0, true_cond) && rtx_equal_p (op1, false_cond))
+     ;
+ 
+-  else if (rtx_equal_p (op1, true_cond) && rtx_equal_p (op0, false_cond))
++  /* Only when NaNs and signed-zeros are not in effect, smax could be
++     used for `op0 < op1 ? op1 : op0`, and smin could be used for
++     `op0 > op1 ? op1 : op0`.  */
++  else if (rtx_equal_p (op1, true_cond) && rtx_equal_p (op0, false_cond)
++	   && !HONOR_NANS (compare_mode) && !HONOR_SIGNED_ZEROS (compare_mode))
+     max_p = !max_p;
+ 
+   else
+@@ -37399,6 +37398,7 @@ rs6000_disable_incompatible_switches (void)
      { OPTION_MASK_P9_VECTOR,	OTHER_P9_VECTOR_MASKS,	"power9-vector"	},
      { OPTION_MASK_P8_VECTOR,	OTHER_P8_VECTOR_MASKS,	"power8-vector"	},
      { OPTION_MASK_VSX,		OTHER_VSX_VECTOR_MASKS,	"vsx"		},
@@ -625,10 +736,15 @@ index 7916344c584..3e969e52176 100644
  extern void mark_end_of_function_resources (rtx, bool);
  extern void init_resource_info (rtx_insn *);
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..f982ee6a9ec 100644
+index e132f2657ef..e99496f4a2b 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,80 @@
+@@ -1,3 +1,85 @@
++2020-03-19  Jiufu Guo  <guojiufu@linux.ibm.com>
++
++	PR target/93709
++	* gcc.target/powerpc/p9-minmax-3.c: New test.
++
 +2020-03-17  Jakub Jelinek  <jakub@redhat.com>
 +
 +	PR middle-end/94189
@@ -1003,6 +1119,29 @@ index 04482607b04..333d74ac3e7 100644
 +/* { dg-final { scan-tree-dump-not {vector[^\n]*char} "vect" { target vect_hw_misalign } } } */
  /* { dg-final { scan-tree-dump-not {vector[^ ]* int} "vect" } } */
  /* { dg-final { scan-tree-dump-times "vectorized 1 loop" 1 "vect" } } */
+diff --git a/gcc/testsuite/gcc.target/powerpc/p9-minmax-3.c b/gcc/testsuite/gcc.target/powerpc/p9-minmax-3.c
+new file mode 100644
+index 00000000000..141603e05b4
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/powerpc/p9-minmax-3.c
+@@ -0,0 +1,17 @@
++/* { dg-do compile { target { powerpc*-*-* } } } */
++/* { dg-require-effective-target powerpc_p9vector_ok } */
++/* { dg-options "-mdejagnu-cpu=power9 -O2 -mpower9-minmax" } */
++/* { dg-final { scan-assembler-not "xsmaxcdp"   } } */
++/* { dg-final { scan-assembler-not "xsmincdp"   } } */
++
++double
++dbl_max1 (double a, double b)
++{
++  return a < b ? b : a;
++}
++
++double
++dbl_min1 (double a, double b)
++{
++  return a > b ? b : a;
++}
 diff --git a/gcc/testsuite/gcc.target/powerpc/pr93800.c b/gcc/testsuite/gcc.target/powerpc/pr93800.c
 new file mode 100644
 index 00000000000..f8dfbe7c082
