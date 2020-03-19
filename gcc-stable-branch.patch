@@ -39,13 +39,14 @@ Jason Merrill (3):
 Jiufu Guo (1):
       rs6000: Check -+0 and NaN for smax/smin generation
 
-Jonathan Wakely (6):
+Jonathan Wakely (7):
       libstdc++: Ensure root-dir converted to forward slash (PR93244)
       libstdc++: Fix FS-dependent filesystem tests
       libstdc++: Fix test failure due to -Wnonnull warnings
       libstdc++: Fix name of macro in #undef directive
       libstdc++: Handle type-changing path concatenations (PR 94063)
       libstdc++: Add default constructor to net::service_already_exists (PR 94199)
+      doc: Note that some warnings depend on optimizations (PR 92757)
 
 Kewen Lin (2):
       [testsuite] Fix PR94023 to guard case under vect_hw_misalign
@@ -155,10 +156,19 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..90a5cf5c8d8 100644
+index d8e53874e68..91bcc48ceca 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,140 @@
+@@ -1,3 +1,149 @@
++2020-03-19  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backport from mainline
++	2020-01-13  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR driver/92757
++	* doc/invoke.texi (Warning Options): Add caveat about some warnings
++	depending on optimization settings.
++
 +2020-03-19  Jiufu Guo  <guojiufu@linux.ibm.com>
 +
 +	PR target/93709
@@ -579,6 +589,22 @@ index 65d5fcb0845..599f37ea9da 100644
    real_from_string3 (to, string, fmt);
  }
  
+diff --git a/gcc/doc/invoke.texi b/gcc/doc/invoke.texi
+index 0ab6c9c6449..0f6247caf51 100644
+--- a/gcc/doc/invoke.texi
++++ b/gcc/doc/invoke.texi
+@@ -4313,6 +4313,11 @@ are being produced.  This allows the use of new @option{-Wno-} options
+ with old compilers, but if something goes wrong, the compiler
+ warns that an unrecognized option is present.
+ 
++The effectiveness of some warnings depends on optimizations also being
++enabled. For example @option{-Wsuggest-final-types} is more effective
++with link-time optimization and @option{-Wmaybe-uninitialized} will not
++warn at all unless optimization is enabled.
++
+ @table @gcctabopt
+ @item -Wpedantic
+ @itemx -pedantic
 diff --git a/gcc/doc/tm.texi b/gcc/doc/tm.texi
 index 8c8978bb13a..7f5c370d97a 100644
 --- a/gcc/doc/tm.texi
