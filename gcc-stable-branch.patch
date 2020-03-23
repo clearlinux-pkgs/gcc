@@ -5,7 +5,7 @@ Eric Botcazou (2):
       Fix incorrect filling of delay slots in branchy code at -O2
       Fix wrong year in ChangeLog.
 
-GCC Administrator (7):
+GCC Administrator (11):
       Daily bump.
       Daily bump.
       Daily bump.
@@ -13,6 +13,13 @@ GCC Administrator (7):
       Daily bump.
       Daily bump.
       Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+
+Iain Sandoe (1):
+      Darwin: Fix i686 bootstrap when the assembler supports GOTOFF in data.
 
 Jakub Jelinek (15):
       Bump BASE-VER to 9.3.1.
@@ -48,6 +55,9 @@ Jonathan Wakely (7):
       libstdc++: Add default constructor to net::service_already_exists (PR 94199)
       doc: Note that some warnings depend on optimizations (PR 92757)
 
+Joseph Myers (1):
+      Remove wrongly committed file.
+
 Kewen Lin (2):
       [testsuite] Fix PR94023 to guard case under vect_hw_misalign
       [testsuite] Fix PR94019 to check vector char when vect_hw_misalign
@@ -61,93 +71,9 @@ Richard Biener (1):
 Richard Earnshaw (1):
       arm: correct constraints on movsi_compare0 [PR91913]
 
-diff --git a/a b/a
-new file mode 100644
-index 00000000000..a4f422403ef
---- /dev/null
-+++ b/a
-@@ -0,0 +1,81 @@
-+commit 5b075372b47b87bde46e5acc58531c410fb65f8c
-+Author:     Jiufu Guo <guojiufu@linux.ibm.com>
-+AuthorDate: Tue Mar 10 13:51:57 2020 +0800
-+Commit:     Jiufu Guo <guojiufu@linux.ibm.com>
-+CommitDate: Thu Mar 19 10:04:00 2020 +0800
-+
-+    rs6000: Check -+0 and NaN for smax/smin generation
-+    
-+    PR93709 mentioned regressions on maxlocval_4.f90 and minlocval_f.f90 which
-+    relates to max of '-inf' and 'nan'. This regression occur on P9 because
-+    P9 new instruction 'xsmaxcdp' is generated.
-+    And for C code `a < b ? b : a` is also generated as `xsmaxcdp` under -O2
-+    for P9. While this instruction behavior more like C/C++ semantic (a>b?a:b).
-+    The issue also occur as the new test case shows.
-+    
-+    This generates prevents 'xsmaxcdp' to be generated for those cases.
-+    'xsmincdp' also is handled in patch.
-+    
-+    gcc/
-+    2020-03-19  Jiufu Guo  <guojiufu@linux.ibm.com>
-+    
-+            PR target/93709
-+            * gcc/config/rs6000/rs6000.c (rs6000_emit_p9_fp_minmax): Check
-+            NAN and SIGNED_ZEROR for smax/smin.
-+    
-+    gcc/testsuite
-+    2020-03-19  Jiufu Guo  <guojiufu@linux.ibm.com>
-+    
-+            PR target/93709
-+            * gcc.target/powerpc/p9-minmax-3.c: New test.
-+
-+diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-+index d443cb45ed4..a7847fd00b9 100644
-+--- a/gcc/ChangeLog
-++++ b/gcc/ChangeLog
-+@@ -1,3 +1,9 @@
-++2020-03-10  Jiufu Guo  <guojiufu@linux.ibm.com>
-++
-++	PR target/93709
-++	* gcc/config/rs6000/rs6000.c (rs6000_emit_p9_fp_minmax): Check
-++	NAN and SIGNED_ZEROR for smax/smin.
-++
-+ 2020-03-17  Jakub Jelinek  <jakub@redhat.com>
-+ 
-+ 	PR middle-end/94189
-+diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-+index f982ee6a9ec..b12d397eb93 100644
-+--- a/gcc/testsuite/ChangeLog
-++++ b/gcc/testsuite/ChangeLog
-+@@ -1,3 +1,8 @@
-++2020-03-10  Jiufu Guo  <guojiufu@linux.ibm.com>
-++
-++	PR target/93709
-++	* gcc.target/powerpc/p9-minmax-3.c: New test.
-++
-+ 2020-03-17  Jakub Jelinek  <jakub@redhat.com>
-+ 
-+ 	PR middle-end/94189
-+diff --git a/gcc/testsuite/gcc.target/powerpc/p9-minmax-3.c b/gcc/testsuite/gcc.target/powerpc/p9-minmax-3.c
-+new file mode 100644
-+index 00000000000..141603e05b4
-+--- /dev/null
-++++ b/gcc/testsuite/gcc.target/powerpc/p9-minmax-3.c
-+@@ -0,0 +1,17 @@
-++/* { dg-do compile { target { powerpc*-*-* } } } */
-++/* { dg-require-effective-target powerpc_p9vector_ok } */
-++/* { dg-options "-mdejagnu-cpu=power9 -O2 -mpower9-minmax" } */
-++/* { dg-final { scan-assembler-not "xsmaxcdp"   } } */
-++/* { dg-final { scan-assembler-not "xsmincdp"   } } */
-++
-++double
-++dbl_max1 (double a, double b)
-++{
-++  return a < b ? b : a;
-++}
-++
-++double
-++dbl_min1 (double a, double b)
-++{
-++  return a > b ? b : a;
-++}
+Will Schmidt (1):
+      backport PR90763: PowerPC vec_xl_len should take const argument.
+
 diff --git a/gcc/BASE-VER b/gcc/BASE-VER
 index b13d146a7b0..3b74042132a 100644
 --- a/gcc/BASE-VER
@@ -156,10 +82,29 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..91bcc48ceca 100644
+index d8e53874e68..836833778da 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,149 @@
+@@ -1,3 +1,168 @@
++2020-03-23  Will Schmidt  <will_schmidt@vnet.ibm.com>
++
++	Backport from mainline
++	2020-03-10  Will Schmidt  <will_schmidt@vnet.ibm.com>
++
++	PR target/90763
++	    * config/rs6000/rs6000-c.c (altivec_resolve_overloaded_builtin):
++	    Add clause to handle P9V_BUILTIN_VEC_LXVL with const arguments.
++
++2020-03-23  Iain Sandoe  <iain@sandoe.co.uk>
++
++	Backport from master.
++	2020-03-22  Iain Sandoe  <iain@sandoe.co.uk>
++
++	* config/i386/darwin.h (JUMP_TABLES_IN_TEXT_SECTION): Remove
++	references to Darwin.
++	* config/i386/i386.h (JUMP_TABLES_IN_TEXT_SECTION): Define this
++	unconditionally and comment on why.
++
 +2020-03-19  Jonathan Wakely  <jwakely@redhat.com>
 +
 +	Backport from mainline
@@ -403,6 +348,45 @@ index 53e54874c12..bfb03f1b96d 100644
  )
  
  ;; Subroutine to store a half word from a register into memory.
+diff --git a/gcc/config/i386/darwin.h b/gcc/config/i386/darwin.h
+index bdb36f00959..c099a6238d8 100644
+--- a/gcc/config/i386/darwin.h
++++ b/gcc/config/i386/darwin.h
+@@ -239,6 +239,16 @@ along with GCC; see the file COPYING3.  If not see
+ #undef TARGET_ASM_OUTPUT_IDENT
+ #define TARGET_ASM_OUTPUT_IDENT default_asm_output_ident_directive
+ 
++/* We always want jump tables in the text section:
++   * for PIC code, we need the subtracted symbol to be defined at
++     assembly-time.
++   * for mdynamic-no-pic, we cannot support jump tables in the .const
++     section for weak functions, this looks to ld64 like direct access
++     to the weak symbol from an anonymous atom.  */
++
++#undef JUMP_TABLES_IN_TEXT_SECTION
++#define JUMP_TABLES_IN_TEXT_SECTION 1
++
+ /* Darwin profiling -- call mcount.  */
+ #undef FUNCTION_PROFILER
+ #define FUNCTION_PROFILER(FILE, LABELNO)				\
+diff --git a/gcc/config/i386/i386.h b/gcc/config/i386/i386.h
+index 14e5a392f62..441213eebb8 100644
+--- a/gcc/config/i386/i386.h
++++ b/gcc/config/i386/i386.h
+@@ -2232,11 +2232,10 @@ extern int const svr4_dbx_register_map[FIRST_PSEUDO_REGISTER];
+ 
+ /* Under some conditions we need jump tables in the text section,
+    because the assembler cannot handle label differences between
+-   sections.  This is the case for x86_64 on Mach-O for example.  */
++   sections.  */
+ 
+ #define JUMP_TABLES_IN_TEXT_SECTION \
+-  (flag_pic && ((TARGET_MACHO && TARGET_64BIT) \
+-   || (!TARGET_64BIT && !HAVE_AS_GOTOFF_IN_DATA)))
++  (flag_pic && !(TARGET_64BIT || HAVE_AS_GOTOFF_IN_DATA))
+ 
+ /* Switch to init or fini section via SECTION_OP, emit a call to FUNC,
+    and switch back.  For x86 we do this only to save a few bytes that
 diff --git a/gcc/config/pdp11/pdp11.c b/gcc/config/pdp11/pdp11.c
 index 5f530a43000..1be79e1964c 100644
 --- a/gcc/config/pdp11/pdp11.c
@@ -425,6 +409,30 @@ index 5f530a43000..1be79e1964c 100644
        assemble_name (file, name);
        fputs (":", file);
        ASM_OUTPUT_SKIP (file, size);
+diff --git a/gcc/config/rs6000/rs6000-c.c b/gcc/config/rs6000/rs6000-c.c
+index 7c28d4d8176..1ec38db0908 100644
+--- a/gcc/config/rs6000/rs6000-c.c
++++ b/gcc/config/rs6000/rs6000-c.c
+@@ -6853,6 +6853,19 @@ altivec_resolve_overloaded_builtin (location_t loc, tree fndecl,
+ 	  arg = fold_convert (type, arg);
+ 	}
+ 
++      /* For P9V_BUILTIN_VEC_LXVL, convert any const * to its non constant
++	 equivalent to simplify the overload matching below.  */
++      if (fcode == P9V_BUILTIN_VEC_LXVL)
++	{
++	  if (POINTER_TYPE_P (type)
++	      && TYPE_READONLY (TREE_TYPE (type)))
++	    {
++	      type = build_pointer_type (build_qualified_type (
++						TREE_TYPE (type),0));
++	      arg = fold_convert (type, arg);
++	    }
++	}
++
+       args[n] = arg;
+       types[n] = type;
+     }
 diff --git a/gcc/config/rs6000/rs6000-cpus.def b/gcc/config/rs6000/rs6000-cpus.def
 index d0d69beafd4..47a5d0576d0 100644
 --- a/gcc/config/rs6000/rs6000-cpus.def
@@ -762,10 +770,18 @@ index 7916344c584..3e969e52176 100644
  extern void mark_end_of_function_resources (rtx, bool);
  extern void init_resource_info (rtx_insn *);
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..e99496f4a2b 100644
+index e132f2657ef..7483f2f85d2 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,85 @@
+@@ -1,3 +1,93 @@
++2020-03-23  Will Schmidt  <will_schmidt@vnet.ibm.com>
++
++	Backport from mainline
++	2020-03-10  Will Schmidt  <will_schmidt@vnet.ibm.com>
++
++	PR target/90763
++	* gcc.target/powerpc/pr90763.c: New.
++
 +2020-03-19  Jiufu Guo  <guojiufu@linux.ibm.com>
 +
 +	PR target/93709
@@ -1168,6 +1184,100 @@ index 00000000000..141603e05b4
 +{
 +  return a > b ? b : a;
 +}
+diff --git a/gcc/testsuite/gcc.target/powerpc/pr90763.c b/gcc/testsuite/gcc.target/powerpc/pr90763.c
+new file mode 100644
+index 00000000000..55f1d461e82
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/powerpc/pr90763.c
+@@ -0,0 +1,88 @@
++/* { dg-do compile { target { powerpc*-*-* && lp64 } } } */
++/* { dg-require-effective-target powerpc_p9vector_ok } */
++/* { dg-options "-mcpu=power9 -O2" } */
++
++/* PR90763: PowerPC vec_xl_len should take const.
++*/
++
++#include <altivec.h>
++
++vector unsigned char vec_load_uc(unsigned char *p, int num) {
++    return vec_xl_len(p, num);
++}
++vector unsigned char vec_load_const_uc(const unsigned char *p, int num) {
++    return vec_xl_len(p, num);
++}
++vector signed char vec_load_sc(signed char *p, int num) {
++    return vec_xl_len(p, num);
++}
++vector signed char vec_load_const_sc(const signed char *p, int num) {
++    return vec_xl_len(p, num);
++}
++
++vector signed short vec_load_ss(signed short *p, int num) {
++    return vec_xl_len(p, num);
++}
++vector signed short vec_load_const_ss(const signed short *p, int num) {
++    return vec_xl_len(p, num);
++}
++vector unsigned short vec_load_us(unsigned short *p, int num) {
++    return vec_xl_len(p, num);
++}
++vector unsigned short vec_load_const_us(const unsigned short *p, int num) {
++    return vec_xl_len(p, num);
++}
++
++vector signed int vec_load_si(signed int *p, int num) {
++    return vec_xl_len(p, num);
++}
++vector signed int vec_load_const_si(const signed int *p, int num) {
++    return vec_xl_len(p, num);
++}
++vector unsigned int vec_load_ui(unsigned int *p, int num) {
++    return vec_xl_len(p, num);
++}
++vector unsigned int vec_load_const_ui(const unsigned int *p, int num) {
++    return vec_xl_len(p, num);
++}
++
++vector signed long long vec_load_sll(signed long long *p, int num) {
++    return vec_xl_len(p, num);
++}
++vector signed long long vec_load_const_sll(const signed long long *p, int num) {
++    return vec_xl_len(p, num);
++}
++vector unsigned long long vec_load_ull(unsigned long long *p, int num) {
++    return vec_xl_len(p, num);
++}
++vector unsigned long long vec_load_const_ull(const unsigned long long *p, int num) {
++    return vec_xl_len(p, num);
++}
++
++vector signed __int128 vec_load_si128(signed __int128 *p, int num) {
++    return vec_xl_len(p, num);
++}
++vector signed __int128 vec_load_const_si128(const signed __int128 *p, int num) {
++    return vec_xl_len(p, num);
++}
++vector unsigned __int128 vec_load_ui128(unsigned __int128 *p, int num) {
++    return vec_xl_len(p, num);
++}
++vector unsigned __int128 vec_load_const_ui128(const unsigned __int128 *p, int num) {
++    return vec_xl_len(p, num);
++}
++
++vector float vec_load_f(float *p, int num) {
++    return vec_xl_len(p, num);
++}
++vector float vec_load_const_f(const float *p, int num) {
++    return vec_xl_len(p, num);
++}
++
++vector double vec_load_d(double *p, int num) {
++    return vec_xl_len(p, num);
++}
++vector double vec_load_const_d(const double *p, int num) {
++    return vec_xl_len(p, num);
++}
++
 diff --git a/gcc/testsuite/gcc.target/powerpc/pr93800.c b/gcc/testsuite/gcc.target/powerpc/pr93800.c
 new file mode 100644
 index 00000000000..f8dfbe7c082
