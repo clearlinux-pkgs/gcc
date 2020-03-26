@@ -441,11 +441,11 @@ for dir in ../gcc-build/x86_64-generic-linux/{,32}; do
     done
 done
 
-#%check
-#pushd ../gcc-build
-#export CHECK_TEST_FRAMEWORK=1
-#make -k  %{?_smp_mflags} check  || :
-#popd
+%check
+pushd ../gcc-build
+export CHECK_TEST_FRAMEWORK=1
+make -k  %{?_smp_mflags} check  || :
+popd
 
 
 %install
