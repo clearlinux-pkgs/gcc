@@ -8,7 +8,9 @@ Eric Botcazou (2):
       Fix incorrect filling of delay slots in branchy code at -O2
       Fix wrong year in ChangeLog.
 
-GCC Administrator (13):
+GCC Administrator (15):
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -76,6 +78,9 @@ Mark Eggleston (1):
 
 Martin Liska (1):
       Backport 314b91220a07bd63f13c58e37f1b5b9430a3702b
+
+Nathan Sidwell (1):
+      c++: Fix ICE popping local scope [pr84733]
 
 Richard Biener (1):
       tree-optimization/94163 constrain alignment set by PRE
@@ -565,10 +570,15 @@ index 87d60078bb0..5ec2b339df6 100644
  
    for (i = 0; i < ARRAY_SIZE (flags); i++)
 diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
-index 6441d647a54..8edc445e70e 100644
+index 6441d647a54..91c01f543a5 100644
 --- a/gcc/cp/ChangeLog
 +++ b/gcc/cp/ChangeLog
-@@ -1,3 +1,21 @@
+@@ -1,3 +1,26 @@
++2020-03-27  Nathan Sidwell  <nathan@acm.org>
++
++	PR c++/84733
++	* name-lookup.c (do_pushdecl): Look through cleanp levels.
++
 +2020-03-14  Jason Merrill  <jason@redhat.com>
 +
 +	PR c++/92909
@@ -590,6 +600,20 @@ index 6441d647a54..8edc445e70e 100644
  2020-03-12  Release Manager
  
  	* GCC 9.3.0 released.
+diff --git a/gcc/cp/name-lookup.c b/gcc/cp/name-lookup.c
+index 8999c5ad4a7..8298ee171e0 100644
+--- a/gcc/cp/name-lookup.c
++++ b/gcc/cp/name-lookup.c
+@@ -2988,7 +2988,8 @@ do_pushdecl (tree decl, bool is_friend)
+   /* The binding level we will be pushing into.  During local class
+      pushing, we want to push to the containing scope.  */
+   cp_binding_level *level = current_binding_level;
+-  while (level->kind == sk_class)
++  while (level->kind == sk_class
++	 || level->kind == sk_cleanup)
+     level = level->level_chain;
+ 
+   /* An anonymous namespace has a NULL DECL_NAME, but we still want to
 diff --git a/gcc/cp/pt.c b/gcc/cp/pt.c
 index 4787747b6ff..3e4fc235f7a 100644
 --- a/gcc/cp/pt.c
@@ -1081,6 +1105,33 @@ index 00000000000..d54a4dcc8cc
 +{
 +  K x;
 +  return foo (x);
++}
+diff --git a/gcc/testsuite/g++.dg/lookup/pr84733.C b/gcc/testsuite/g++.dg/lookup/pr84733.C
+new file mode 100644
+index 00000000000..d0394eab891
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/lookup/pr84733.C
+@@ -0,0 +1,21 @@
++// { dg-do compile { target c++11 } }
++// PR c++/84733 ICE popping local binding after cleanup region
++
++struct c {
++  ~c();
++} b;
++
++void f() {
++#ifndef OK
++  try {
++  d:
++    ;
++  } catch (int) {
++  }
++#endif
++  decltype(b) a;
++  int e;
++  struct e { } f;
++  e = 5;
++  struct e j;
 +}
 diff --git a/gcc/testsuite/g++.target/aarch64/pr94052.C b/gcc/testsuite/g++.target/aarch64/pr94052.C
 new file mode 100644
