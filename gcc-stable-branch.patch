@@ -8,7 +8,11 @@ Eric Botcazou (2):
       Fix incorrect filling of delay slots in branchy code at -O2
       Fix wrong year in ChangeLog.
 
-GCC Administrator (15):
+GCC Administrator (19):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -90,6 +94,9 @@ Richard Earnshaw (1):
 
 Tamar Christina (1):
       AArch64: Break apart paradoxical subregs for VSTRUCT writes (PR target/94052)
+
+Tobias Burnus (1):
+      [Fortran] Fix result-variable handling of MODULE PROCEDURE (PR94348)
 
 Will Schmidt (1):
       backport PR90763: PowerPC vec_xl_len should take const argument.
@@ -755,10 +762,19 @@ index fe1194ef91a..44a15dda240 100644
  @end defmac
  
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index 8fefea2b63d..503b385d79c 100644
+index 8fefea2b63d..99106cc39a0 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,12 @@
+@@ -1,3 +1,21 @@
++2020-03-28  Tobias Burnus  <tobias@codesourcery.com>
++
++	Backport from mainline
++	2020-03-28  Tobias Burnus  <tobias@codesourcery.com>
++
++	PR fortran/94348
++	* decl.c (gfc_match_submod_proc): Add result var to the
++	proc's namespace.
++
 +2020-03-25  Mark Eggleston <markeggleston@gcc.gnu.org>
 +
 +	Backport from master
@@ -771,6 +787,36 @@ index 8fefea2b63d..503b385d79c 100644
  2020-03-12  Release Manager
  
  	* GCC 9.3.0 released.
+diff --git a/gcc/fortran/decl.c b/gcc/fortran/decl.c
+index abff4af9f67..0291e248bb3 100644
+--- a/gcc/fortran/decl.c
++++ b/gcc/fortran/decl.c
+@@ -9602,13 +9602,20 @@ gfc_match_submod_proc (void)
+   if (get_proc_name (name, &sym, false))
+     return MATCH_ERROR;
+ 
+-  /* Make sure that the result field is appropriately filled, even though
+-     the result symbol will be replaced later on.  */
++  /* Make sure that the result field is appropriately filled.  */
+   if (sym->tlink && sym->tlink->attr.function)
+     {
+-      if (sym->tlink->result
+-	  && sym->tlink->result != sym->tlink)
+-	sym->result= sym->tlink->result;
++      if (sym->tlink->result && sym->tlink->result != sym->tlink)
++	{
++	  sym->result = sym->tlink->result;
++	  if (!sym->result->attr.use_assoc)
++	    {
++	      gfc_symtree *st = gfc_new_symtree (&gfc_current_ns->sym_root,
++						 sym->result->name);
++	      st->n.sym = sym->result;
++	      sym->result->refs++;
++	    }
++	}
+       else
+ 	sym->result = sym;
+     }
 diff --git a/gcc/fortran/match.c b/gcc/fortran/match.c
 index 088b69f8ec9..f4ae9e9dfe7 100644
 --- a/gcc/fortran/match.c
@@ -906,10 +952,18 @@ index 7916344c584..3e969e52176 100644
  extern void mark_end_of_function_resources (rtx, bool);
  extern void init_resource_info (rtx_insn *);
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..e4d99050bcf 100644
+index e132f2657ef..71686c72a33 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,124 @@
+@@ -1,3 +1,132 @@
++2020-03-28  Tobias Burnus  <tobias@codesourcery.com>
++
++	Backport from mainline
++	2020-03-28  Tobias Burnus  <tobias@codesourcery.com>
++
++	PR fortran/94348
++	* gfortran.dg/module_procedure_3.f90: New.
++
 +2020-03-25  Mark Eggleston <markeggleston@gcc.gnu.org>
 +
 +	Backport from master
@@ -931,7 +985,7 @@ index e132f2657ef..e4d99050bcf 100644
 +2020-03-24  Tamar Christina  <tamar.christina@arm.com>
 +
 +	PR target/94052
-+        * g++.target/aarch64/pr94052.C: New test.
++	* g++.target/aarch64/pr94052.C: New test.
 +
 +2020-03-24  Bin Cheng  <bin.cheng@linux.alibaba.com>
 +
@@ -1729,6 +1783,39 @@ index 00000000000..f8dfbe7c082
 +		a += g;
 +	return a;
 +}
+diff --git a/gcc/testsuite/gfortran.dg/module_procedure_3.f90 b/gcc/testsuite/gfortran.dg/module_procedure_3.f90
+new file mode 100644
+index 00000000000..50a83d9e5b1
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/module_procedure_3.f90
+@@ -0,0 +1,27 @@
++! { dg-do run }
++!
++! PR fortran/94348
++!
++! Contributed by Damian Rouson
++
++module foo_module
++  implicit none
++
++  interface
++     module function foo() result(bar)
++       implicit none
++       integer bar
++     end function
++  end interface
++
++contains
++  module procedure foo
++    bar = 5
++  end procedure
++end module
++
++program main
++  use foo_module
++  implicit none
++  if (foo() /= 5) stop 1
++end program main
 diff --git a/gcc/testsuite/gfortran.dg/pr91913.f90 b/gcc/testsuite/gfortran.dg/pr91913.f90
 new file mode 100644
 index 00000000000..7d5477ac0c3
