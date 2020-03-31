@@ -4,6 +4,10 @@ Bill Schmidt (1):
 Bin Cheng (1):
       backport PR94125: Update post order number for merged SCC.
 
+Carl Love (2):
+      rs6000: Add command line and builtin compatibility check
+      rs6000: vec_rlnm fix to make builtin work according to ABI
+
 Eric Botcazou (2):
       Fix incorrect filling of delay slots in branchy code at -O2
       Fix wrong year in ChangeLog.
@@ -49,10 +53,11 @@ Jakub Jelinek (15):
       tree-inline: Fix a -fcompare-debug issue in the inliner [PR94167]
       expand: Don't depend on warning flags in code generation of strnlen [PR94189]
 
-Jason Merrill (3):
+Jason Merrill (4):
       c++: Fix CTAD with multiple-arg ctor template [93248].
       c++: Fix ICE-after-error on partial spec [92068]
       c++: Find parameter pack in typedef in lambda [92909].
+      c++: Fix comparison of fn() and ns::fn() [PR90711]
 
 Jiufu Guo (1):
       rs6000: Check -+0 and NaN for smax/smin generation
@@ -109,10 +114,33 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..040c48d0829 100644
+index d8e53874e68..2b1ce7df14a 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,189 @@
+@@ -1,3 +1,212 @@
++2020-03-31  Carl Love  <cel@us.ibm.com>
++
++	Backport of:
++	  commit e97929e20b2f52e6cfc046c1302324d1b24d95e3
++	  Author: Carl Love <carll@us.ibm.com>
++	  Date:   Wed Mar 25 18:33:37 2020 -0500
++
++	PR target/93819
++        * gcc/config/rs6000/altivec.h:
++        Fixed swapped arguments for vec_rlnm define.
++
++2020-03-31  Carl Love  <cel@us.ibm.com>
++
++	Backport from mainline
++	  commit 68dd57808f7c0147acdb5ca72c88ff655afcb0ce
++	  Author: Carl Love <carll@us.ibm.com>
++	  Date:   Fri Mar 20 18:15:05 2020 -0500
++	with ChangeLog typo fixed.
++
++	PR target/87583
++	* gcc/config/rs6000/rs6000.c (rs6000_option_override_internal):
++	Add check for TARGET_FPRND for Power 7 or newer.
++
 +2020-03-24  John David Anglin  <danglin@gcc.gnu.org>
 +
 +	PR lto/94249
@@ -500,6 +528,19 @@ index 5f530a43000..1be79e1964c 100644
        assemble_name (file, name);
        fputs (":", file);
        ASM_OUTPUT_SKIP (file, size);
+diff --git a/gcc/config/rs6000/altivec.h b/gcc/config/rs6000/altivec.h
+index d66ae7ca2c7..dbe5b7a1909 100644
+--- a/gcc/config/rs6000/altivec.h
++++ b/gcc/config/rs6000/altivec.h
+@@ -180,7 +180,7 @@
+ #define vec_recipdiv __builtin_vec_recipdiv
+ #define vec_rlmi __builtin_vec_rlmi
+ #define vec_vrlnm __builtin_vec_rlnm
+-#define vec_rlnm(a,b,c) (__builtin_vec_rlnm((a),((b)<<8)|(c)))
++#define vec_rlnm(a,b,c) (__builtin_vec_rlnm((a),((c)<<8)|(b)))
+ #define vec_rsqrt __builtin_vec_rsqrt
+ #define vec_rsqrte __builtin_vec_rsqrte
+ #define vec_signed __builtin_vec_vsigned
 diff --git a/gcc/config/rs6000/rs6000-c.c b/gcc/config/rs6000/rs6000-c.c
 index 7c28d4d8176..1ec38db0908 100644
 --- a/gcc/config/rs6000/rs6000-c.c
@@ -540,10 +581,25 @@ index d0d69beafd4..47a5d0576d0 100644
  
  /* Deal with ports that do not have -mstrict-align.  */
 diff --git a/gcc/config/rs6000/rs6000.c b/gcc/config/rs6000/rs6000.c
-index 87d60078bb0..5ec2b339df6 100644
+index 87d60078bb0..11d45129357 100644
 --- a/gcc/config/rs6000/rs6000.c
 +++ b/gcc/config/rs6000/rs6000.c
-@@ -4715,11 +4715,6 @@ rs6000_option_override_internal (bool global_init_p)
+@@ -4099,6 +4099,14 @@ rs6000_option_override_internal (bool global_init_p)
+       rs6000_isa_flags &= ~OPTION_MASK_CRYPTO;
+     }
+ 
++  if (!TARGET_FPRND && TARGET_VSX)
++    {
++      if (rs6000_isa_flags_explicit & OPTION_MASK_FPRND)
++	/* TARGET_VSX = 1 implies Power 7 and newer */
++	error ("%qs requires %qs", "-mvsx", "-mfprnd");
++      rs6000_isa_flags &= ~OPTION_MASK_FPRND;
++    }
++
+   if (TARGET_DIRECT_MOVE && !TARGET_VSX)
+     {
+       if (rs6000_isa_flags_explicit & OPTION_MASK_DIRECT_MOVE)
+@@ -4715,11 +4723,6 @@ rs6000_option_override_internal (bool global_init_p)
  		  str_align_loops = "16";
  		}
  	    }
@@ -555,7 +611,7 @@ index 87d60078bb0..5ec2b339df6 100644
  	}
  
        /* Arrange to save and restore machine status around nested functions.  */
-@@ -23092,7 +23087,11 @@ rs6000_emit_p9_fp_minmax (rtx dest, rtx op, rtx true_cond, rtx false_cond)
+@@ -23092,7 +23095,11 @@ rs6000_emit_p9_fp_minmax (rtx dest, rtx op, rtx true_cond, rtx false_cond)
    if (rtx_equal_p (op0, true_cond) && rtx_equal_p (op1, false_cond))
      ;
  
@@ -568,7 +624,7 @@ index 87d60078bb0..5ec2b339df6 100644
      max_p = !max_p;
  
    else
-@@ -37399,6 +37398,7 @@ rs6000_disable_incompatible_switches (void)
+@@ -37399,6 +37406,7 @@ rs6000_disable_incompatible_switches (void)
      { OPTION_MASK_P9_VECTOR,	OTHER_P9_VECTOR_MASKS,	"power9-vector"	},
      { OPTION_MASK_P8_VECTOR,	OTHER_P8_VECTOR_MASKS,	"power8-vector"	},
      { OPTION_MASK_VSX,		OTHER_VSX_VECTOR_MASKS,	"vsx"		},
@@ -577,10 +633,16 @@ index 87d60078bb0..5ec2b339df6 100644
  
    for (i = 0; i < ARRAY_SIZE (flags); i++)
 diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
-index 6441d647a54..91c01f543a5 100644
+index 6441d647a54..d46bcfc8c17 100644
 --- a/gcc/cp/ChangeLog
 +++ b/gcc/cp/ChangeLog
-@@ -1,3 +1,26 @@
+@@ -1,3 +1,32 @@
++2020-03-30  Jason Merrill  <jason@redhat.com>
++
++	PR c++/90711
++	* tree.c (cp_tree_equal) [CALL_EXPR]: Compare KOENIG_LOOKUP_P.
++	(called_fns_equal): Check DECL_CONTEXT.
++
 +2020-03-27  Nathan Sidwell  <nathan@acm.org>
 +
 +	PR c++/84733
@@ -686,6 +748,45 @@ index 4787747b6ff..3e4fc235f7a 100644
  	  current_template_parms = save_parms;
  	}
  
+diff --git a/gcc/cp/tree.c b/gcc/cp/tree.c
+index 3f3583c825d..ff150245d72 100644
+--- a/gcc/cp/tree.c
++++ b/gcc/cp/tree.c
+@@ -2402,6 +2402,8 @@ is_overloaded_fn (tree x)
+ tree
+ dependent_name (tree x)
+ {
++  /* FIXME a dependent name must be unqualified, but this function doesn't
++     distinguish between qualified and unqualified identifiers.  */
+   if (identifier_p (x))
+     return x;
+   if (TREE_CODE (x) == TEMPLATE_ID_EXPR)
+@@ -3506,6 +3508,15 @@ called_fns_equal (tree t1, tree t2)
+       if (name1 != name2)
+ 	return false;
+ 
++      /* FIXME dependent_name currently returns an unqualified name regardless
++	 of whether the function was named with a qualified- or unqualified-id.
++	 Until that's fixed, check that we aren't looking at overload sets from
++	 different scopes.  */
++      if (is_overloaded_fn (t1) && is_overloaded_fn (t2)
++	  && (DECL_CONTEXT (get_first_fn (t1))
++	      != DECL_CONTEXT (get_first_fn (t2))))
++	return false;
++
+       if (TREE_CODE (t1) == TEMPLATE_ID_EXPR)
+ 	targs1 = TREE_OPERAND (t1, 1);
+       if (TREE_CODE (t2) == TEMPLATE_ID_EXPR)
+@@ -3602,7 +3613,8 @@ cp_tree_equal (tree t1, tree t2)
+       {
+ 	tree arg1, arg2;
+ 	call_expr_arg_iterator iter1, iter2;
+-	if (!called_fns_equal (CALL_EXPR_FN (t1), CALL_EXPR_FN (t2)))
++	if (KOENIG_LOOKUP_P (t1) != KOENIG_LOOKUP_P (t2)
++	    || !called_fns_equal (CALL_EXPR_FN (t1), CALL_EXPR_FN (t2)))
+ 	  return false;
+ 	for (arg1 = first_call_expr_arg (t1, &iter1),
+ 	       arg2 = first_call_expr_arg (t2, &iter2);
 diff --git a/gcc/dfp.c b/gcc/dfp.c
 index 65d5fcb0845..599f37ea9da 100644
 --- a/gcc/dfp.c
@@ -1187,6 +1288,50 @@ index 00000000000..d0394eab891
 +  e = 5;
 +  struct e j;
 +}
+diff --git a/gcc/testsuite/g++.dg/template/dependent-name14.C b/gcc/testsuite/g++.dg/template/dependent-name14.C
+new file mode 100644
+index 00000000000..52d2e72be35
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/template/dependent-name14.C
+@@ -0,0 +1,38 @@
++// PR c++/90711
++// { dg-do compile { target c++11 } }
++
++namespace test {
++    void EXISTS(int);
++}
++
++template<typename... ARGS>
++struct stub_void {
++    typedef void type;
++};
++template<typename... ARGS>
++using stub_void_t = typename stub_void<ARGS...>::type;
++
++#if !defined(SUPPRESS)
++template<typename O, typename = void>
++struct has_to_string {
++    static constexpr bool value = false;
++};
++
++template<typename O>
++struct has_to_string<O, stub_void_t<decltype(EXISTS(O{}))>> {
++    static constexpr bool value = true;
++};
++#endif
++
++template<typename O, typename = void>
++struct has_std_to_string {
++    static constexpr bool value = false;
++};
++
++template<typename O>
++struct has_std_to_string<O, stub_void_t<decltype(test::EXISTS(O{}))>> {
++    static constexpr bool value = true;
++};
++
++static_assert (has_std_to_string<int>::value, "");
++
 diff --git a/gcc/testsuite/g++.target/aarch64/pr94052.C b/gcc/testsuite/g++.target/aarch64/pr94052.C
 new file mode 100644
 index 00000000000..d36c9bdc158
