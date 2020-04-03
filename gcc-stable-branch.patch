@@ -12,7 +12,13 @@ Eric Botcazou (2):
       Fix incorrect filling of delay slots in branchy code at -O2
       Fix wrong year in ChangeLog.
 
-GCC Administrator (19):
+Fritz Reese (1):
+      Fix fortran/85982 ICE in resolve_component.
+
+GCC Administrator (22):
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -36,7 +42,7 @@ GCC Administrator (19):
 Iain Sandoe (1):
       Darwin: Fix i686 bootstrap when the assembler supports GOTOFF in data.
 
-Jakub Jelinek (15):
+Jakub Jelinek (16):
       Bump BASE-VER to 9.3.1.
       tailcall: Fix up process_assignment [PR94001]
       inliner: Copy DECL_BY_REFERENCE in copy_decl_to_var [PR93888]
@@ -52,6 +58,7 @@ Jakub Jelinek (15):
       tree-nested: Fix handling of *reduction clauses with C array sections [PR93566]
       tree-inline: Fix a -fcompare-debug issue in the inliner [PR94167]
       expand: Don't depend on warning flags in code generation of strnlen [PR94189]
+      aarch64: Fix ICE due to aarch64_gen_compare_reg_maybe_ze [PR94435]
 
 Jason Merrill (4):
       c++: Fix CTAD with multiple-arg ctor template [93248].
@@ -65,7 +72,7 @@ Jiufu Guo (1):
 John David Anglin (1):
       Define __BIG_ENDIAN__
 
-Jonathan Wakely (7):
+Jonathan Wakely (8):
       libstdc++: Ensure root-dir converted to forward slash (PR93244)
       libstdc++: Fix FS-dependent filesystem tests
       libstdc++: Fix test failure due to -Wnonnull warnings
@@ -73,6 +80,7 @@ Jonathan Wakely (7):
       libstdc++: Handle type-changing path concatenations (PR 94063)
       libstdc++: Add default constructor to net::service_already_exists (PR 94199)
       doc: Note that some warnings depend on optimizations (PR 92757)
+      libstdc++: Fix std::to_address for debug iterators (PR 93960)
 
 Joseph Myers (1):
       Remove wrongly committed file.
@@ -82,17 +90,33 @@ Kewen Lin (3):
       [testsuite] Fix PR94019 to check vector char when vect_hw_misalign
       [testsuite] Fix PR93935 to guard case under vect_hw_misalign
 
-Mark Eggleston (1):
-      fortran: ICE using undeclared symbol in array constructor PR93484
+Kyrylo Tkachov (9):
+      aarch64: Extend %R for integer registers
+      aarch64: Implement TImode compare-and-swap
+      aarch64: Tidy aarch64_split_compare_and_swap
+      aarch64: Add out-of-line functions for LSE atomics
+      aarch64: Implement -moutline-atomics
+      [AArch64] Fix shrinkwrapping interactions with atomics (PR92692)
+      aarch64: Fix store-exclusive in load-operate LSE helpers
+      aarch64: Configure for sys/auxv.h in libgcc for lse-init.c
+      aarch64: Fix up aarch64_compare_and_swaphi pattern [PR94368]
 
-Martin Liska (1):
+Mark Eggleston (3):
+      fortran: ICE using undeclared symbol in array constructor PR93484
+      fortran: ICE equivalence with an element of an array PR94030
+      fortran : ICE in gfc_resolve_findloc PR93498
+
+Martin Liska (2):
       Backport 314b91220a07bd63f13c58e37f1b5b9430a3702b
+      Backport 55a7380213a5c16120d5c674fb42b38a3d796b57
 
 Nathan Sidwell (1):
       c++: Fix ICE popping local scope [pr84733]
 
-Richard Biener (1):
+Richard Biener (3):
       tree-optimization/94163 constrain alignment set by PRE
+      middle-end/94206 fix memset folding to avoid types with padding
+      tree-optimization/94103 avoid CSE of loads with padding
 
 Richard Earnshaw (1):
       arm: correct constraints on movsi_compare0 [PR91913]
@@ -106,6 +130,9 @@ Tobias Burnus (1):
 Will Schmidt (1):
       backport PR90763: PowerPC vec_xl_len should take const argument.
 
+Zackery Spytz (1):
+      doc: Fix a typo in the documentation of the copy attribute
+
 diff --git a/gcc/BASE-VER b/gcc/BASE-VER
 index b13d146a7b0..3b74042132a 100644
 --- a/gcc/BASE-VER
@@ -114,10 +141,127 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..2b1ce7df14a 100644
+index d8e53874e68..04e297cd455 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,212 @@
+@@ -1,3 +1,329 @@
++2020-04-03  Martin Liska  <mliska@suse.cz>
++
++	Backport from mainline
++	2020-04-03  Martin Liska  <mliska@suse.cz>
++
++	PR ipa/94445
++	* ipa-icf-gimple.c (func_checker::compare_gimple_call):
++	  Compare type attributes for gimple_call_fntypes.
++
++2020-04-02  Fritz Reese  <foreese@gcc.gnu.org>
++
++	Backport from master.
++	2020-04-02  Fritz Reese  <foreese@gcc.gnu.org>
++
++	PR fortran/85982
++	* fortran/decl.c (match_attr_spec): Lump COMP_STRUCTURE/COMP_MAP into
++	attribute checking used by TYPE.
++
++2020-04-02  Richard Biener  <rguenther@suse.de>
++
++	Backport from mainline
++	2020-03-12  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/94103
++	* tree-ssa-sccvn.c (visit_reference_op_load): Avoid type
++	punning when the mode precision is not sufficient.
++
++	2020-03-18  Richard Biener  <rguenther@suse.de>
++
++	PR middle-end/94206
++	* gimple-fold.c (gimple_fold_builtin_memset): Avoid using
++	partial int modes or not mode-precision integer types for
++	the store.
++
++2020-04-02  Jakub Jelinek  <jakub@redhat.com>
++
++	PR target/94435
++	* config/aarch64/aarch64.c (aarch64_gen_compare_reg_maybe_ze): For
++	y_mode E_[QH]Imode and y being a CONST_INT, change y_mode to SImode.
++
++2020-04-01  Zackery Spytz  <zspytz@gmail.com>
++
++	* doc/extend.texi: Fix a typo in the documentation of the
++	copy function attribute.
++
++2020-04-01  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	Backport from mainline
++	2020-03-31  Jakub Jelinek  <jakub@redhat.com>
++
++	PR target/94368
++	* config/aarch64/constraints.md (Uph): New constraint.
++	* config/aarch64/atomics.md (cas_short_expected_imm): New mode attr.
++	(@aarch64_compare_and_swap<mode>): Use it instead of n in operand 2's
++	constraint.
++
++2020-04-01  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	Backport from mainline
++	2020-01-17  Wilco Dijkstra  <wdijkstr@arm.com>
++
++	PR target/92692
++	* config/aarch64/atomics.md (aarch64_compare_and_swap<mode>)
++	Use epilogue_completed rather than reload_completed.
++
++2020-04-01  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	Backport from mainline
++	2019-09-19  Richard Henderson  <richard.henderson@linaro.org>
++
++	* config/aarch64/aarch64.opt (-moutline-atomics): New.
++	* config/aarch64/aarch64.c (aarch64_atomic_ool_func): New.
++	(aarch64_ool_cas_names, aarch64_ool_swp_names): New.
++	(aarch64_ool_ldadd_names, aarch64_ool_ldset_names): New.
++	(aarch64_ool_ldclr_names, aarch64_ool_ldeor_names): New.
++	(aarch64_expand_compare_and_swap): Honor TARGET_OUTLINE_ATOMICS.
++	* config/aarch64/atomics.md (atomic_exchange<ALLI>): Likewise.
++	(atomic_<atomic_op><ALLI>): Likewise.
++	(atomic_fetch_<atomic_op><ALLI>): Likewise.
++	(atomic_<atomic_op>_fetch<ALLI>): Likewise.
++	* doc/invoke.texi: Document -moutline-atomics.
++
++2020-04-01  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	Backport from mainline
++	2019-09-19  Richard Henderson  <richard.henderson@linaro.org>
++
++	* config/aarch64/aarch64 (aarch64_split_compare_and_swap): Disable
++	strong_zero_p for aarch64_track_speculation; unify some code paths;
++	use aarch64_gen_compare_reg instead of open-coding.
++
++2020-04-01  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	Backport from mainline
++	2019-09-19  Richard Henderson  <richard.henderson@linaro.org>
++
++	* config/aarch64/aarch64.c (aarch64_gen_compare_reg): Add support
++	for NE comparison of TImode values.
++	(aarch64_emit_load_exclusive): Add support for TImode.
++	(aarch64_emit_store_exclusive): Likewise.
++	(aarch64_split_compare_and_swap): Disable strong_zero_p for TImode.
++	* config/aarch64/atomics.md (@atomic_compare_and_swap<ALLI_TI>):
++	Change iterator from ALLI to ALLI_TI.
++	(@atomic_compare_and_swap<JUST_TI>): New.
++	(@atomic_compare_and_swap<JUST_TI>_lse): New.
++	(aarch64_load_exclusive_pair): New.
++	(aarch64_store_exclusive_pair): New.
++	* config/aarch64/iterators.md (JUST_TI): New.
++
++2020-04-01  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	Backport from mainline
++	2019-09-19  Richard Henderson  <richard.henderson@linaro.org>
++
++	* config/aarch64/aarch64.c (aarch64_print_operand): Allow integer
++	registers with %R.
++
 +2020-03-31  Carl Love  <cel@us.ibm.com>
 +
 +	Backport of:
@@ -372,6 +516,28 @@ index ed11f79ff0b..e8e43f53ec6 100644
  	}
  
        if (!len)
+diff --git a/gcc/config/aarch64/aarch64-protos.h b/gcc/config/aarch64/aarch64-protos.h
+index c083cad5327..b9bfb281275 100644
+--- a/gcc/config/aarch64/aarch64-protos.h
++++ b/gcc/config/aarch64/aarch64-protos.h
+@@ -644,4 +644,17 @@ poly_uint64 aarch64_regmode_natural_size (machine_mode);
+ 
+ bool aarch64_high_bits_all_ones_p (HOST_WIDE_INT);
+ 
++struct atomic_ool_names
++{
++    const char *str[5][4];
++};
++
++rtx aarch64_atomic_ool_func(machine_mode mode, rtx model_rtx,
++			    const atomic_ool_names *names);
++extern const atomic_ool_names aarch64_ool_swp_names;
++extern const atomic_ool_names aarch64_ool_ldadd_names;
++extern const atomic_ool_names aarch64_ool_ldset_names;
++extern const atomic_ool_names aarch64_ool_ldclr_names;
++extern const atomic_ool_names aarch64_ool_ldeor_names;
++
+ #endif /* GCC_AARCH64_PROTOS_H */
 diff --git a/gcc/config/aarch64/aarch64-simd.md b/gcc/config/aarch64/aarch64-simd.md
 index e3852c5d182..0b09fd8320d 100644
 --- a/gcc/config/aarch64/aarch64-simd.md
@@ -404,10 +570,59 @@ index e3852c5d182..0b09fd8320d 100644
  
  
 diff --git a/gcc/config/aarch64/aarch64.c b/gcc/config/aarch64/aarch64.c
-index b452a53af99..2b09f317978 100644
+index b452a53af99..78acd7ecfdb 100644
 --- a/gcc/config/aarch64/aarch64.c
 +++ b/gcc/config/aarch64/aarch64.c
-@@ -2818,7 +2818,7 @@ aarch64_add_offset_1 (scalar_int_mode mode, rtx dest,
+@@ -1879,10 +1879,33 @@ emit_set_insn (rtx x, rtx y)
+ rtx
+ aarch64_gen_compare_reg (RTX_CODE code, rtx x, rtx y)
+ {
+-  machine_mode mode = SELECT_CC_MODE (code, x, y);
+-  rtx cc_reg = gen_rtx_REG (mode, CC_REGNUM);
++  machine_mode cmp_mode = GET_MODE (x);
++  machine_mode cc_mode;
++  rtx cc_reg;
+ 
+-  emit_set_insn (cc_reg, gen_rtx_COMPARE (mode, x, y));
++  if (cmp_mode == TImode)
++    {
++      gcc_assert (code == NE);
++
++      cc_mode = CCmode;
++      cc_reg = gen_rtx_REG (cc_mode, CC_REGNUM);
++
++      rtx x_lo = operand_subword (x, 0, 0, TImode);
++      rtx y_lo = operand_subword (y, 0, 0, TImode);
++      emit_set_insn (cc_reg, gen_rtx_COMPARE (cc_mode, x_lo, y_lo));
++
++      rtx x_hi = operand_subword (x, 1, 0, TImode);
++      rtx y_hi = operand_subword (y, 1, 0, TImode);
++      emit_insn (gen_ccmpdi (cc_reg, cc_reg, x_hi, y_hi,
++			     gen_rtx_EQ (cc_mode, cc_reg, const0_rtx),
++			     GEN_INT (AARCH64_EQ)));
++    }
++  else
++    {
++      cc_mode = SELECT_CC_MODE (code, x, y);
++      cc_reg = gen_rtx_REG (cc_mode, CC_REGNUM);
++      emit_set_insn (cc_reg, gen_rtx_COMPARE (cc_mode, x, y));
++    }
+   return cc_reg;
+ }
+ 
+@@ -1895,7 +1918,10 @@ aarch64_gen_compare_reg_maybe_ze (RTX_CODE code, rtx x, rtx y,
+   if (y_mode == E_QImode || y_mode == E_HImode)
+     {
+       if (CONST_INT_P (y))
+-	y = GEN_INT (INTVAL (y) & GET_MODE_MASK (y_mode));
++	{
++	  y = GEN_INT (INTVAL (y) & GET_MODE_MASK (y_mode));
++	  y_mode = SImode;
++	}
+       else
+ 	{
+ 	  rtx t, cc_reg;
+@@ -2818,7 +2844,7 @@ aarch64_add_offset_1 (scalar_int_mode mode, rtx dest,
    gcc_assert (emit_move_imm || temp1 != NULL_RTX);
    gcc_assert (temp1 == NULL_RTX || !reg_overlap_mentioned_p (temp1, src));
  
@@ -416,7 +631,7 @@ index b452a53af99..2b09f317978 100644
    rtx_insn *insn;
  
    if (!moffset)
-@@ -2862,7 +2862,8 @@ aarch64_add_offset_1 (scalar_int_mode mode, rtx dest,
+@@ -2862,7 +2888,8 @@ aarch64_add_offset_1 (scalar_int_mode mode, rtx dest,
    if (emit_move_imm)
      {
        gcc_assert (temp1 != NULL_RTX || can_create_pseudo_p ());
@@ -426,6 +641,578 @@ index b452a53af99..2b09f317978 100644
      }
    insn = emit_insn (offset < 0
  		    ? gen_sub3_insn (dest, src, temp1)
+@@ -7541,7 +7568,7 @@ sizetochar (int size)
+      'S/T/U/V':		Print a FP/SIMD register name for a register list.
+ 			The register printed is the FP/SIMD register name
+ 			of X + 0/1/2/3 for S/T/U/V.
+-     'R':		Print a scalar FP/SIMD register name + 1.
++     'R':		Print a scalar Integer/FP/SIMD register name + 1.
+      'X':		Print bottom 16 bits of integer constant in hex.
+      'w/x':		Print a general register name or the zero register
+ 			(32-bit or 64-bit).
+@@ -7733,12 +7760,13 @@ aarch64_print_operand (FILE *f, rtx x, int code)
+       break;
+ 
+     case 'R':
+-      if (!REG_P (x) || !FP_REGNUM_P (REGNO (x)))
+-	{
+-	  output_operand_lossage ("incompatible floating point / vector register operand for '%%%c'", code);
+-	  return;
+-	}
+-      asm_fprintf (f, "q%d", REGNO (x) - V0_REGNUM + 1);
++      if (REG_P (x) && FP_REGNUM_P (REGNO (x)))
++	asm_fprintf (f, "q%d", REGNO (x) - V0_REGNUM + 1);
++      else if (REG_P (x) && GP_REGNUM_P (REGNO (x)))
++	asm_fprintf (f, "x%d", REGNO (x) - R0_REGNUM + 1);
++      else
++	output_operand_lossage ("incompatible register operand for '%%%c'",
++				code);
+       break;
+ 
+     case 'X':
+@@ -15426,16 +15454,26 @@ static void
+ aarch64_emit_load_exclusive (machine_mode mode, rtx rval,
+ 			     rtx mem, rtx model_rtx)
+ {
+-  emit_insn (gen_aarch64_load_exclusive (mode, rval, mem, model_rtx));
++  if (mode == TImode)
++    emit_insn (gen_aarch64_load_exclusive_pair (gen_lowpart (DImode, rval),
++						gen_highpart (DImode, rval),
++						mem, model_rtx));
++  else
++    emit_insn (gen_aarch64_load_exclusive (mode, rval, mem, model_rtx));
+ }
+ 
+ /* Emit store exclusive.  */
+ 
+ static void
+ aarch64_emit_store_exclusive (machine_mode mode, rtx bval,
+-			      rtx rval, rtx mem, rtx model_rtx)
++			      rtx mem, rtx rval, rtx model_rtx)
+ {
+-  emit_insn (gen_aarch64_store_exclusive (mode, bval, rval, mem, model_rtx));
++  if (mode == TImode)
++    emit_insn (gen_aarch64_store_exclusive_pair
++	       (bval, mem, operand_subword (rval, 0, 0, TImode),
++		operand_subword (rval, 1, 0, TImode), model_rtx));
++  else
++    emit_insn (gen_aarch64_store_exclusive (mode, bval, mem, rval, model_rtx));
+ }
+ 
+ /* Mark the previous jump instruction as unlikely.  */
+@@ -15447,6 +15485,82 @@ aarch64_emit_unlikely_jump (rtx insn)
+   add_reg_br_prob_note (jump, profile_probability::very_unlikely ());
+ }
+ 
++/* We store the names of the various atomic helpers in a 5x4 array.
++   Return the libcall function given MODE, MODEL and NAMES.  */
++
++rtx
++aarch64_atomic_ool_func(machine_mode mode, rtx model_rtx,
++			const atomic_ool_names *names)
++{
++  memmodel model = memmodel_base (INTVAL (model_rtx));
++  int mode_idx, model_idx;
++
++  switch (mode)
++    {
++    case E_QImode:
++      mode_idx = 0;
++      break;
++    case E_HImode:
++      mode_idx = 1;
++      break;
++    case E_SImode:
++      mode_idx = 2;
++      break;
++    case E_DImode:
++      mode_idx = 3;
++      break;
++    case E_TImode:
++      mode_idx = 4;
++      break;
++    default:
++      gcc_unreachable ();
++    }
++
++  switch (model)
++    {
++    case MEMMODEL_RELAXED:
++      model_idx = 0;
++      break;
++    case MEMMODEL_CONSUME:
++    case MEMMODEL_ACQUIRE:
++      model_idx = 1;
++      break;
++    case MEMMODEL_RELEASE:
++      model_idx = 2;
++      break;
++    case MEMMODEL_ACQ_REL:
++    case MEMMODEL_SEQ_CST:
++      model_idx = 3;
++      break;
++    default:
++      gcc_unreachable ();
++    }
++
++  return init_one_libfunc_visibility (names->str[mode_idx][model_idx],
++				      VISIBILITY_HIDDEN);
++}
++
++#define DEF0(B, N) \
++  { "__aarch64_" #B #N "_relax", \
++    "__aarch64_" #B #N "_acq", \
++    "__aarch64_" #B #N "_rel", \
++    "__aarch64_" #B #N "_acq_rel" }
++
++#define DEF4(B)  DEF0(B, 1), DEF0(B, 2), DEF0(B, 4), DEF0(B, 8), \
++		 { NULL, NULL, NULL, NULL }
++#define DEF5(B)  DEF0(B, 1), DEF0(B, 2), DEF0(B, 4), DEF0(B, 8), DEF0(B, 16)
++
++static const atomic_ool_names aarch64_ool_cas_names = { { DEF5(cas) } };
++const atomic_ool_names aarch64_ool_swp_names = { { DEF4(swp) } };
++const atomic_ool_names aarch64_ool_ldadd_names = { { DEF4(ldadd) } };
++const atomic_ool_names aarch64_ool_ldset_names = { { DEF4(ldset) } };
++const atomic_ool_names aarch64_ool_ldclr_names = { { DEF4(ldclr) } };
++const atomic_ool_names aarch64_ool_ldeor_names = { { DEF4(ldeor) } };
++
++#undef DEF0
++#undef DEF4
++#undef DEF5
++
+ /* Expand a compare and swap pattern.  */
+ 
+ void
+@@ -15493,6 +15607,17 @@ aarch64_expand_compare_and_swap (rtx operands[])
+ 						   newval, mod_s));
+       cc_reg = aarch64_gen_compare_reg_maybe_ze (NE, rval, oldval, mode);
+     }
++  else if (TARGET_OUTLINE_ATOMICS)
++    {
++      /* Oldval must satisfy compare afterward.  */
++      if (!aarch64_plus_operand (oldval, mode))
++	oldval = force_reg (mode, oldval);
++      rtx func = aarch64_atomic_ool_func (mode, mod_s, &aarch64_ool_cas_names);
++      rval = emit_library_call_value (func, NULL_RTX, LCT_NORMAL, r_mode,
++				      oldval, mode, newval, mode,
++				      XEXP (mem, 0), Pmode);
++      cc_reg = aarch64_gen_compare_reg_maybe_ze (NE, rval, oldval, mode);
++    }
+   else
+     {
+       /* The oldval predicate varies by mode.  Test it and force to reg.  */
+@@ -15538,13 +15663,11 @@ aarch64_split_compare_and_swap (rtx operands[])
+   /* Split after prolog/epilog to avoid interactions with shrinkwrapping.  */
+   gcc_assert (epilogue_completed);
+ 
+-  rtx rval, mem, oldval, newval, scratch;
++  rtx rval, mem, oldval, newval, scratch, x, model_rtx;
+   machine_mode mode;
+   bool is_weak;
+   rtx_code_label *label1, *label2;
+-  rtx x, cond;
+   enum memmodel model;
+-  rtx model_rtx;
+ 
+   rval = operands[0];
+   mem = operands[1];
+@@ -15565,7 +15688,8 @@ aarch64_split_compare_and_swap (rtx operands[])
+ 	CBNZ	scratch, .label1
+     .label2:
+ 	CMP	rval, 0.  */
+-  bool strong_zero_p = !is_weak && oldval == const0_rtx;
++  bool strong_zero_p = (!is_weak && !aarch64_track_speculation &&
++			oldval == const0_rtx && mode != TImode);
+ 
+   label1 = NULL;
+   if (!is_weak)
+@@ -15578,35 +15702,20 @@ aarch64_split_compare_and_swap (rtx operands[])
+   /* The initial load can be relaxed for a __sync operation since a final
+      barrier will be emitted to stop code hoisting.  */
+   if (is_mm_sync (model))
+-    aarch64_emit_load_exclusive (mode, rval, mem,
+-				 GEN_INT (MEMMODEL_RELAXED));
++    aarch64_emit_load_exclusive (mode, rval, mem, GEN_INT (MEMMODEL_RELAXED));
+   else
+     aarch64_emit_load_exclusive (mode, rval, mem, model_rtx);
+ 
+   if (strong_zero_p)
+-    {
+-      if (aarch64_track_speculation)
+-	{
+-	  /* Emit an explicit compare instruction, so that we can correctly
+-	     track the condition codes.  */
+-	  rtx cc_reg = aarch64_gen_compare_reg (NE, rval, const0_rtx);
+-	  x = gen_rtx_NE (GET_MODE (cc_reg), cc_reg, const0_rtx);
+-	}
+-      else
+-	x = gen_rtx_NE (VOIDmode, rval, const0_rtx);
+-
+-      x = gen_rtx_IF_THEN_ELSE (VOIDmode, x,
+-				gen_rtx_LABEL_REF (Pmode, label2), pc_rtx);
+-      aarch64_emit_unlikely_jump (gen_rtx_SET (pc_rtx, x));
+-    }
++    x = gen_rtx_NE (VOIDmode, rval, const0_rtx);
+   else
+     {
+-      cond = aarch64_gen_compare_reg_maybe_ze (NE, rval, oldval, mode);
+-      x = gen_rtx_NE (VOIDmode, cond, const0_rtx);
+-      x = gen_rtx_IF_THEN_ELSE (VOIDmode, x,
+-				gen_rtx_LABEL_REF (Pmode, label2), pc_rtx);
+-      aarch64_emit_unlikely_jump (gen_rtx_SET (pc_rtx, x));
++      rtx cc_reg = aarch64_gen_compare_reg_maybe_ze (NE, rval, oldval, mode);
++      x = gen_rtx_NE (VOIDmode, cc_reg, const0_rtx);
+     }
++  x = gen_rtx_IF_THEN_ELSE (VOIDmode, x,
++			    gen_rtx_LABEL_REF (Pmode, label2), pc_rtx);
++  aarch64_emit_unlikely_jump (gen_rtx_SET (pc_rtx, x));
+ 
+   aarch64_emit_store_exclusive (mode, scratch, mem, newval, model_rtx);
+ 
+@@ -15627,22 +15736,16 @@ aarch64_split_compare_and_swap (rtx operands[])
+       aarch64_emit_unlikely_jump (gen_rtx_SET (pc_rtx, x));
+     }
+   else
+-    {
+-      cond = gen_rtx_REG (CCmode, CC_REGNUM);
+-      x = gen_rtx_COMPARE (CCmode, scratch, const0_rtx);
+-      emit_insn (gen_rtx_SET (cond, x));
+-    }
++    aarch64_gen_compare_reg (NE, scratch, const0_rtx);
+ 
+   emit_label (label2);
++
+   /* If we used a CBNZ in the exchange loop emit an explicit compare with RVAL
+      to set the condition flags.  If this is not used it will be removed by
+      later passes.  */
+   if (strong_zero_p)
+-    {
+-      cond = gen_rtx_REG (CCmode, CC_REGNUM);
+-      x = gen_rtx_COMPARE (CCmode, rval, const0_rtx);
+-      emit_insn (gen_rtx_SET (cond, x));
+-    }
++    aarch64_gen_compare_reg (NE, rval, const0_rtx);
++
+   /* Emit any final barrier needed for a __sync operation.  */
+   if (is_mm_sync (model))
+     aarch64_emit_post_barrier (model);
+diff --git a/gcc/config/aarch64/aarch64.opt b/gcc/config/aarch64/aarch64.opt
+index 3c6d1cc90ad..f474a28eb92 100644
+--- a/gcc/config/aarch64/aarch64.opt
++++ b/gcc/config/aarch64/aarch64.opt
+@@ -255,3 +255,6 @@ user-land code.
+ TargetVariable
+ long aarch64_stack_protector_guard_offset = 0
+ 
++moutline-atomics
++Target Report Mask(OUTLINE_ATOMICS) Save
++Generate local calls to out-of-line atomic operations.
+diff --git a/gcc/config/aarch64/atomics.md b/gcc/config/aarch64/atomics.md
+index 0f357662ac3..590f82a4b14 100644
+--- a/gcc/config/aarch64/atomics.md
++++ b/gcc/config/aarch64/atomics.md
+@@ -22,10 +22,10 @@
+ 
+ (define_expand "@atomic_compare_and_swap<mode>"
+   [(match_operand:SI 0 "register_operand" "")			;; bool out
+-   (match_operand:ALLI 1 "register_operand" "")			;; val out
+-   (match_operand:ALLI 2 "aarch64_sync_memory_operand" "")	;; memory
+-   (match_operand:ALLI 3 "nonmemory_operand" "")		;; expected
+-   (match_operand:ALLI 4 "aarch64_reg_or_zero" "")		;; desired
++   (match_operand:ALLI_TI 1 "register_operand" "")		;; val out
++   (match_operand:ALLI_TI 2 "aarch64_sync_memory_operand" "")	;; memory
++   (match_operand:ALLI_TI 3 "nonmemory_operand" "")		;; expected
++   (match_operand:ALLI_TI 4 "aarch64_reg_or_zero" "")		;; desired
+    (match_operand:SI 5 "const_int_operand")			;; is_weak
+    (match_operand:SI 6 "const_int_operand")			;; mod_s
+    (match_operand:SI 7 "const_int_operand")]			;; mod_f
+@@ -38,6 +38,8 @@
+ 
+ (define_mode_attr cas_short_expected_pred
+   [(QI "aarch64_reg_or_imm") (HI "aarch64_plushi_operand")])
++(define_mode_attr cas_short_expected_imm
++  [(QI "n") (HI "Uph")])
+ 
+ (define_insn_and_split "@aarch64_compare_and_swap<mode>"
+   [(set (reg:CC CC_REGNUM)					;; bool out
+@@ -47,7 +49,8 @@
+       (match_operand:SHORT 1 "aarch64_sync_memory_operand" "+Q"))) ;; memory
+    (set (match_dup 1)
+     (unspec_volatile:SHORT
+-      [(match_operand:SHORT 2 "<cas_short_expected_pred>" "rn")	;; expected
++      [(match_operand:SHORT 2 "<cas_short_expected_pred>"
++			      "r<cas_short_expected_imm>")	;; expected
+        (match_operand:SHORT 3 "aarch64_reg_or_zero" "rZ")	;; desired
+        (match_operand:SI 4 "const_int_operand")			;; is_weak
+        (match_operand:SI 5 "const_int_operand")			;; mod_s
+@@ -88,6 +91,30 @@
+   }
+ )
+ 
++(define_insn_and_split "@aarch64_compare_and_swap<mode>"
++  [(set (reg:CC CC_REGNUM)					;; bool out
++    (unspec_volatile:CC [(const_int 0)] UNSPECV_ATOMIC_CMPSW))
++   (set (match_operand:JUST_TI 0 "register_operand" "=&r")	;; val out
++    (match_operand:JUST_TI 1 "aarch64_sync_memory_operand" "+Q")) ;; memory
++   (set (match_dup 1)
++    (unspec_volatile:JUST_TI
++      [(match_operand:JUST_TI 2 "aarch64_reg_or_zero" "rZ")	;; expect
++       (match_operand:JUST_TI 3 "aarch64_reg_or_zero" "rZ")	;; desired
++       (match_operand:SI 4 "const_int_operand")			;; is_weak
++       (match_operand:SI 5 "const_int_operand")			;; mod_s
++       (match_operand:SI 6 "const_int_operand")]		;; mod_f
++      UNSPECV_ATOMIC_CMPSW))
++   (clobber (match_scratch:SI 7 "=&r"))]
++  ""
++  "#"
++  "&& epilogue_completed"
++  [(const_int 0)]
++  {
++    aarch64_split_compare_and_swap (operands);
++    DONE;
++  }
++)
++
+ (define_insn "@aarch64_compare_and_swap<mode>_lse"
+   [(set (match_operand:SI 0 "register_operand" "+r")		;; val out
+     (zero_extend:SI
+@@ -133,6 +160,28 @@
+     return "casal<atomic_sfx>\t%<w>0, %<w>2, %1";
+ })
+ 
++(define_insn "@aarch64_compare_and_swap<mode>_lse"
++  [(set (match_operand:JUST_TI 0 "register_operand" "+r")	;; val out
++    (match_operand:JUST_TI 1 "aarch64_sync_memory_operand" "+Q")) ;; memory
++   (set (match_dup 1)
++    (unspec_volatile:JUST_TI
++      [(match_dup 0)						;; expect
++       (match_operand:JUST_TI 2 "register_operand" "r")		;; desired
++       (match_operand:SI 3 "const_int_operand")]		;; mod_s
++      UNSPECV_ATOMIC_CMPSW))]
++  "TARGET_LSE"
++{
++  enum memmodel model = memmodel_from_int (INTVAL (operands[3]));
++  if (is_mm_relaxed (model))
++    return "casp\t%0, %R0, %2, %R2, %1";
++  else if (is_mm_acquire (model) || is_mm_consume (model))
++    return "caspa\t%0, %R0, %2, %R2, %1";
++  else if (is_mm_release (model))
++    return "caspl\t%0, %R0, %2, %R2, %1";
++  else
++    return "caspal\t%0, %R0, %2, %R2, %1";
++})
++
+ (define_expand "atomic_exchange<mode>"
+  [(match_operand:ALLI 0 "register_operand" "")
+   (match_operand:ALLI 1 "aarch64_sync_memory_operand" "")
+@@ -140,16 +189,27 @@
+   (match_operand:SI 3 "const_int_operand" "")]
+   ""
+   {
+-    rtx (*gen) (rtx, rtx, rtx, rtx);
+-
+     /* Use an atomic SWP when available.  */
+     if (TARGET_LSE)
+-      gen = gen_aarch64_atomic_exchange<mode>_lse;
++      {
++	emit_insn (gen_aarch64_atomic_exchange<mode>_lse
++		   (operands[0], operands[1], operands[2], operands[3]));
++      }
++    else if (TARGET_OUTLINE_ATOMICS)
++      {
++	machine_mode mode = <MODE>mode;
++	rtx func = aarch64_atomic_ool_func (mode, operands[3],
++					    &aarch64_ool_swp_names);
++	rtx rval = emit_library_call_value (func, operands[0], LCT_NORMAL,
++					    mode, operands[2], mode,
++					    XEXP (operands[1], 0), Pmode);
++        emit_move_insn (operands[0], rval);
++      }
+     else
+-      gen = gen_aarch64_atomic_exchange<mode>;
+-
+-    emit_insn (gen (operands[0], operands[1], operands[2], operands[3]));
+-
++      {
++	emit_insn (gen_aarch64_atomic_exchange<mode>
++		   (operands[0], operands[1], operands[2], operands[3]));
++      }
+     DONE;
+   }
+ )
+@@ -234,6 +294,39 @@
+ 	  }
+ 	operands[1] = force_reg (<MODE>mode, operands[1]);
+       }
++    else if (TARGET_OUTLINE_ATOMICS)
++      {
++        const atomic_ool_names *names;
++	switch (<CODE>)
++	  {
++	  case MINUS:
++	    operands[1] = expand_simple_unop (<MODE>mode, NEG, operands[1],
++					      NULL, 1);
++	    /* fallthru */
++	  case PLUS:
++	    names = &aarch64_ool_ldadd_names;
++	    break;
++	  case IOR:
++	    names = &aarch64_ool_ldset_names;
++	    break;
++	  case XOR:
++	    names = &aarch64_ool_ldeor_names;
++	    break;
++	  case AND:
++	    operands[1] = expand_simple_unop (<MODE>mode, NOT, operands[1],
++					      NULL, 1);
++	    names = &aarch64_ool_ldclr_names;
++	    break;
++	  default:
++	    gcc_unreachable ();
++	  }
++        machine_mode mode = <MODE>mode;
++	rtx func = aarch64_atomic_ool_func (mode, operands[2], names);
++	emit_library_call_value (func, NULL_RTX, LCT_NORMAL, mode,
++				 operands[1], mode,
++				 XEXP (operands[0], 0), Pmode);
++        DONE;
++      }
+     else
+       gen = gen_aarch64_atomic_<atomic_optab><mode>;
+ 
+@@ -359,6 +452,40 @@
+ 	}
+       operands[2] = force_reg (<MODE>mode, operands[2]);
+     }
++  else if (TARGET_OUTLINE_ATOMICS)
++    {
++      const atomic_ool_names *names;
++      switch (<CODE>)
++	{
++	case MINUS:
++	  operands[2] = expand_simple_unop (<MODE>mode, NEG, operands[2],
++					    NULL, 1);
++	  /* fallthru */
++	case PLUS:
++	  names = &aarch64_ool_ldadd_names;
++	  break;
++	case IOR:
++	  names = &aarch64_ool_ldset_names;
++	  break;
++	case XOR:
++	  names = &aarch64_ool_ldeor_names;
++	  break;
++	case AND:
++	  operands[2] = expand_simple_unop (<MODE>mode, NOT, operands[2],
++					    NULL, 1);
++	  names = &aarch64_ool_ldclr_names;
++	  break;
++	default:
++	  gcc_unreachable ();
++	}
++      machine_mode mode = <MODE>mode;
++      rtx func = aarch64_atomic_ool_func (mode, operands[3], names);
++      rtx rval = emit_library_call_value (func, operands[0], LCT_NORMAL, mode,
++					  operands[2], mode,
++					  XEXP (operands[1], 0), Pmode);
++      emit_move_insn (operands[0], rval);
++      DONE;
++    }
+   else
+     gen = gen_aarch64_atomic_fetch_<atomic_optab><mode>;
+ 
+@@ -448,7 +575,7 @@
+ {
+   /* Use an atomic load-operate instruction when possible.  In this case
+      we will re-compute the result from the original mem value. */
+-  if (TARGET_LSE)
++  if (TARGET_LSE || TARGET_OUTLINE_ATOMICS)
+     {
+       rtx tmp = gen_reg_rtx (<MODE>mode);
+       operands[2] = force_reg (<MODE>mode, operands[2]);
+@@ -581,6 +708,24 @@
+   }
+ )
+ 
++(define_insn "aarch64_load_exclusive_pair"
++  [(set (match_operand:DI 0 "register_operand" "=r")
++	(unspec_volatile:DI
++	  [(match_operand:TI 2 "aarch64_sync_memory_operand" "Q")
++	   (match_operand:SI 3 "const_int_operand")]
++	  UNSPECV_LX))
++   (set (match_operand:DI 1 "register_operand" "=r")
++	(unspec_volatile:DI [(match_dup 2) (match_dup 3)] UNSPECV_LX))]
++  ""
++  {
++    enum memmodel model = memmodel_from_int (INTVAL (operands[3]));
++    if (is_mm_relaxed (model) || is_mm_consume (model) || is_mm_release (model))
++      return "ldxp\t%0, %1, %2";
++    else
++      return "ldaxp\t%0, %1, %2";
++  }
++)
++
+ (define_insn "@aarch64_store_exclusive<mode>"
+   [(set (match_operand:SI 0 "register_operand" "=&r")
+     (unspec_volatile:SI [(const_int 0)] UNSPECV_SX))
+@@ -599,6 +744,25 @@
+   }
+ )
+ 
++(define_insn "aarch64_store_exclusive_pair"
++  [(set (match_operand:SI 0 "register_operand" "=&r")
++	(unspec_volatile:SI [(const_int 0)] UNSPECV_SX))
++   (set (match_operand:TI 1 "aarch64_sync_memory_operand" "=Q")
++	(unspec_volatile:TI
++	  [(match_operand:DI 2 "aarch64_reg_or_zero" "rZ")
++	   (match_operand:DI 3 "aarch64_reg_or_zero" "rZ")
++	   (match_operand:SI 4 "const_int_operand")]
++	  UNSPECV_SX))]
++  ""
++  {
++    enum memmodel model = memmodel_from_int (INTVAL (operands[3]));
++    if (is_mm_relaxed (model) || is_mm_consume (model) || is_mm_acquire (model))
++      return "stxp\t%w0, %x2, %x3, %1";
++    else
++      return "stlxp\t%w0, %x2, %x3, %1";
++  }
++)
++
+ (define_expand "mem_thread_fence"
+   [(match_operand:SI 0 "const_int_operand" "")]
+   ""
+diff --git a/gcc/config/aarch64/constraints.md b/gcc/config/aarch64/constraints.md
+index 21f9549e660..73892b339c4 100644
+--- a/gcc/config/aarch64/constraints.md
++++ b/gcc/config/aarch64/constraints.md
+@@ -220,6 +220,13 @@
+   (and (match_code "const_int")
+        (match_test "(unsigned) exact_log2 (ival) <= 4")))
+ 
++(define_constraint "Uph"
++  "@internal
++  A constraint that matches HImode integers zero extendable to
++  SImode plus_operand."
++  (and (match_code "const_int")
++       (match_test "aarch64_plushi_immediate (op, VOIDmode)")))
++
+ (define_memory_constraint "Q"
+  "A memory address which uses a single base register with no offset."
+  (and (match_code "mem")
+diff --git a/gcc/config/aarch64/iterators.md b/gcc/config/aarch64/iterators.md
+index 6caeeac8086..3bc49ea0238 100644
+--- a/gcc/config/aarch64/iterators.md
++++ b/gcc/config/aarch64/iterators.md
+@@ -29,6 +29,9 @@
+ ;; Iterator for HI, SI, DI, some instructions can only work on these modes.
+ (define_mode_iterator GPI_I16 [(HI "AARCH64_ISA_F16") SI DI])
+ 
++;; "Iterator" for just TI -- features like @pattern only work with iterators.
++(define_mode_iterator JUST_TI [TI])
++
+ ;; Iterator for QI and HI modes
+ (define_mode_iterator SHORT [QI HI])
+ 
 diff --git a/gcc/config/arm/arm.md b/gcc/config/arm/arm.md
 index 53e54874c12..bfb03f1b96d 100644
 --- a/gcc/config/arm/arm.md
@@ -808,11 +1595,34 @@ index 65d5fcb0845..599f37ea9da 100644
    real_from_string3 (to, string, fmt);
  }
  
+diff --git a/gcc/doc/extend.texi b/gcc/doc/extend.texi
+index f5becf988d2..51ebb90e32d 100644
+--- a/gcc/doc/extend.texi
++++ b/gcc/doc/extend.texi
+@@ -2760,7 +2760,7 @@ the same type as the target function.  As a result of the @code{copy}
+ attribute the alias also shares the same attributes as the target.
+ 
+ @smallexample
+-#define StrongAlias(TagetFunc, AliasDecl)   \
++#define StrongAlias(TargetFunc, AliasDecl)  \
+   extern __typeof__ (TargetFunc) AliasDecl  \
+     __attribute__ ((alias (#TargetFunc), copy (TargetFunc)));
+ 
 diff --git a/gcc/doc/invoke.texi b/gcc/doc/invoke.texi
-index 0ab6c9c6449..0f6247caf51 100644
+index 0ab6c9c6449..792b768fceb 100644
 --- a/gcc/doc/invoke.texi
 +++ b/gcc/doc/invoke.texi
-@@ -4313,6 +4313,11 @@ are being produced.  This allows the use of new @option{-Wno-} options
+@@ -637,7 +637,8 @@ Objective-C and Objective-C++ Dialects}.
+ -march=@var{name}  -mcpu=@var{name}  -mtune=@var{name}  @gol
+ -moverride=@var{string}  -mverbose-cost-dump @gol
+ -mstack-protector-guard=@var{guard} -mstack-protector-guard-reg=@var{sysreg} @gol
+--mstack-protector-guard-offset=@var{offset} -mtrack-speculation }
++-mstack-protector-guard-offset=@var{offset} -mtrack-speculation @gol
++-moutline-atomics }
+ 
+ @emph{Adapteva Epiphany Options}
+ @gccoptlist{-mhalf-reg-file  -mprefer-short-insn-regs @gol
+@@ -4313,6 +4314,11 @@ are being produced.  This allows the use of new @option{-Wno-} options
  with old compilers, but if something goes wrong, the compiler
  warns that an unrecognized option is present.
  
@@ -824,6 +1634,26 @@ index 0ab6c9c6449..0f6247caf51 100644
  @table @gcctabopt
  @item -Wpedantic
  @itemx -pedantic
+@@ -15777,6 +15783,19 @@ be used by the compiler when expanding calls to
+ @code{__builtin_speculation_safe_copy} to permit a more efficient code
+ sequence to be generated.
+ 
++@item -moutline-atomics
++@itemx -mno-outline-atomics
++Enable or disable calls to out-of-line helpers to implement atomic operations.
++These helpers will, at runtime, determine if the LSE instructions from
++ARMv8.1-A can be used; if not, they will use the load/store-exclusive
++instructions that are present in the base ARMv8.0 ISA.
++
++This option is only applicable when compiling for the base ARMv8.0
++instruction set.  If using a later revision, e.g. @option{-march=armv8.1-a}
++or @option{-march=armv8-a+lse}, the ARMv8.1-Atomics instructions will be
++used directly.  The same applies when using @option{-mcpu=} when the
++selected cpu supports the @samp{lse} feature.
++
+ @item -march=@var{name}
+ @opindex march
+ Specify the name of the target architecture and, optionally, one or
 diff --git a/gcc/doc/tm.texi b/gcc/doc/tm.texi
 index 8c8978bb13a..7f5c370d97a 100644
 --- a/gcc/doc/tm.texi
@@ -863,10 +1693,31 @@ index fe1194ef91a..44a15dda240 100644
  @end defmac
  
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index 8fefea2b63d..99106cc39a0 100644
+index 8fefea2b63d..744511a5cb8 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,21 @@
+@@ -1,3 +1,42 @@
++2020-04-02  Mark Eggleston <markeggleston@gcc.gnu.org>
++
++	Backport from master
++	Steven G. Kargl  <kargl@gcc.gnu.org>
++
++	PR fortran/93498
++	* check.c (gfc_check_findloc):  If the kinds of the arguments
++	differ goto label "incompat".
++
++2020-04-02  Mark Eggleston <markeggleston@gcc.gnu.org>
++
++	Backport from master
++	2020-04-02  Steven G. Kargl  <kargl@gcc.gnu.org>
++
++	PR fortran/94030
++	* resolve.c (resolve_equivalence): Correct formatting
++	around the label "identical_types".  Instead of using
++	gfc_resolve_array_spec use is_non_constants_shape_array
++	to determine whether the array can be used in a in an
++	equivalence statement.
++
 +2020-03-28  Tobias Burnus  <tobias@codesourcery.com>
 +
 +	Backport from mainline
@@ -888,11 +1739,90 @@ index 8fefea2b63d..99106cc39a0 100644
  2020-03-12  Release Manager
  
  	* GCC 9.3.0 released.
+diff --git a/gcc/fortran/check.c b/gcc/fortran/check.c
+index 6d37bbb8fd2..adda284ef71 100644
+--- a/gcc/fortran/check.c
++++ b/gcc/fortran/check.c
+@@ -3384,6 +3384,10 @@ gfc_check_findloc (gfc_actual_arglist *ap)
+   v1 = v->ts.type == BT_CHARACTER;
+   if ((a1 && !v1) || (!a1 && v1))
+     goto incompat;
++
++  /* Check the kind of the characters argument match.  */
++  if (a1 && v1 && a->ts.kind != v->ts.kind)
++    goto incompat;
+ 	 
+   d = ap->next->next->expr;
+   m = ap->next->next->next->expr;
 diff --git a/gcc/fortran/decl.c b/gcc/fortran/decl.c
-index abff4af9f67..0291e248bb3 100644
+index abff4af9f67..78ea32a3770 100644
 --- a/gcc/fortran/decl.c
 +++ b/gcc/fortran/decl.c
-@@ -9602,13 +9602,20 @@ gfc_match_submod_proc (void)
+@@ -5339,15 +5339,19 @@ match_attr_spec (void)
+       if (d == DECL_STATIC && seen[DECL_SAVE])
+ 	continue;
+ 
+-      if (gfc_current_state () == COMP_DERIVED
++      if (gfc_comp_struct (gfc_current_state ())
+ 	  && d != DECL_DIMENSION && d != DECL_CODIMENSION
+ 	  && d != DECL_POINTER   && d != DECL_PRIVATE
+ 	  && d != DECL_PUBLIC && d != DECL_CONTIGUOUS && d != DECL_NONE)
+ 	{
++	  bool is_derived = gfc_current_state () == COMP_DERIVED;
+ 	  if (d == DECL_ALLOCATABLE)
+ 	    {
+-	      if (!gfc_notify_std (GFC_STD_F2003, "ALLOCATABLE "
+-				   "attribute at %C in a TYPE definition"))
++	      if (!gfc_notify_std (GFC_STD_F2003, is_derived
++				   ? G_("ALLOCATABLE attribute at %C in a "
++					"TYPE definition")
++				   : G_("ALLOCATABLE attribute at %C in a "
++					"STRUCTURE definition")))
+ 		{
+ 		  m = MATCH_ERROR;
+ 		  goto cleanup;
+@@ -5355,8 +5359,11 @@ match_attr_spec (void)
+ 	    }
+ 	  else if (d == DECL_KIND)
+ 	    {
+-	      if (!gfc_notify_std (GFC_STD_F2003, "KIND "
+-				   "attribute at %C in a TYPE definition"))
++	      if (!gfc_notify_std (GFC_STD_F2003, is_derived
++				   ? G_("KIND attribute at %C in a "
++					"TYPE definition")
++				   : G_("KIND attribute at %C in a "
++					"STRUCTURE definition")))
+ 		{
+ 		  m = MATCH_ERROR;
+ 		  goto cleanup;
+@@ -5379,8 +5386,11 @@ match_attr_spec (void)
+ 	    }
+ 	  else if (d == DECL_LEN)
+ 	    {
+-	      if (!gfc_notify_std (GFC_STD_F2003, "LEN "
+-				   "attribute at %C in a TYPE definition"))
++	      if (!gfc_notify_std (GFC_STD_F2003, is_derived
++				   ? G_("LEN attribute at %C in a "
++					"TYPE definition")
++				   : G_("LEN attribute at %C in a "
++					"STRUCTURE definition")))
+ 		{
+ 		  m = MATCH_ERROR;
+ 		  goto cleanup;
+@@ -5403,8 +5413,10 @@ match_attr_spec (void)
+ 	    }
+ 	  else
+ 	    {
+-	      gfc_error ("Attribute at %L is not allowed in a TYPE definition",
+-			 &seen_at[d]);
++	      gfc_error (is_derived ? G_("Attribute at %L is not allowed in a "
++					 "TYPE definition")
++				    : G_("Attribute at %L is not allowed in a "
++					 "STRUCTURE definition"), &seen_at[d]);
+ 	      m = MATCH_ERROR;
+ 	      goto cleanup;
+ 	    }
+@@ -9602,13 +9614,20 @@ gfc_match_submod_proc (void)
    if (get_proc_name (name, &sym, false))
      return MATCH_ERROR;
  
@@ -934,6 +1864,75 @@ index 088b69f8ec9..f4ae9e9dfe7 100644
  
        /* If a comma appears, it is an intrinsic subprogram. */
        gfc_gobble_whitespace ();
+diff --git a/gcc/fortran/resolve.c b/gcc/fortran/resolve.c
+index a4ad26efffc..a3df534180c 100644
+--- a/gcc/fortran/resolve.c
++++ b/gcc/fortran/resolve.c
+@@ -16510,7 +16510,8 @@ resolve_equivalence (gfc_equiv *eq)
+ 	  && !gfc_notify_std (GFC_STD_GNU, msg, sym->name, &e->where))
+ 		continue;
+ 
+-  identical_types:
++identical_types:
++
+       last_ts =&sym->ts;
+       last_where = &e->where;
+ 
+@@ -16518,8 +16519,7 @@ resolve_equivalence (gfc_equiv *eq)
+ 	continue;
+ 
+       /* Shall not be an automatic array.  */
+-      if (e->ref->type == REF_ARRAY
+-	  && !gfc_resolve_array_spec (e->ref->u.ar.as, 1))
++      if (e->ref->type == REF_ARRAY && is_non_constant_shape_array (sym))
+ 	{
+ 	  gfc_error ("Array %qs at %L with non-constant bounds cannot be "
+ 		     "an EQUIVALENCE object", sym->name, &e->where);
+diff --git a/gcc/gimple-fold.c b/gcc/gimple-fold.c
+index d00f1e2b035..408b93b2200 100644
+--- a/gcc/gimple-fold.c
++++ b/gcc/gimple-fold.c
+@@ -1242,12 +1242,18 @@ gimple_fold_builtin_memset (gimple_stmt_iterator *gsi, tree c, tree len)
+ 
+   length = tree_to_uhwi (len);
+   if (GET_MODE_SIZE (SCALAR_INT_TYPE_MODE (etype)) != length
++      || (GET_MODE_PRECISION (SCALAR_INT_TYPE_MODE (etype))
++	  != GET_MODE_BITSIZE (SCALAR_INT_TYPE_MODE (etype)))
+       || get_pointer_alignment (dest) / BITS_PER_UNIT < length)
+     return NULL_TREE;
+ 
+   if (length > HOST_BITS_PER_WIDE_INT / BITS_PER_UNIT)
+     return NULL_TREE;
+ 
++  if (!type_has_mode_precision_p (etype))
++    etype = lang_hooks.types.type_for_mode (SCALAR_INT_TYPE_MODE (etype),
++					    TYPE_UNSIGNED (etype));
++
+   if (integer_zerop (c))
+     cval = 0;
+   else
+diff --git a/gcc/ipa-icf-gimple.c b/gcc/ipa-icf-gimple.c
+index 25284936bc3..38e0ac12f7e 100644
+--- a/gcc/ipa-icf-gimple.c
++++ b/gcc/ipa-icf-gimple.c
+@@ -37,6 +37,7 @@ along with GCC; see the file COPYING3.  If not see
+ #include "ipa-utils.h"
+ #include "tree-eh.h"
+ #include "builtins.h"
++#include "attribs.h"
+ 
+ #include "ipa-icf-gimple.h"
+ 
+@@ -768,6 +769,9 @@ func_checker::compare_gimple_call (gcall *s1, gcall *s2)
+       || (fntype1 && !types_compatible_p (fntype1, fntype2)))
+     return return_false_with_msg ("call function types are not compatible");
+ 
++  if (fntype1 && fntype2 && comp_type_attributes (fntype1, fntype2) != 1)
++    return return_false_with_msg ("different fntype attributes");
++
+   tree chain1 = gimple_call_chain (s1);
+   tree chain2 = gimple_call_chain (s2);
+   if ((chain1 && !chain2)
 diff --git a/gcc/print-rtl.c b/gcc/print-rtl.c
 index fbb108568b3..819b8473d9d 100644
 --- a/gcc/print-rtl.c
@@ -1053,10 +2052,85 @@ index 7916344c584..3e969e52176 100644
  extern void mark_end_of_function_resources (rtx, bool);
  extern void init_resource_info (rtx_insn *);
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..71686c72a33 100644
+index e132f2657ef..da06792dc18 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,132 @@
+@@ -1,3 +1,207 @@
++2020-04-02  Fritz Reese  <foreese@gcc.gnu.org>
++
++	Backport from master.
++	2020-04-02  Fritz Reese  <foreese@gcc.gnu.org>
++
++	PR fortran/85982
++	* gfortran.dg/dec_structure_28.f90: New test.
++
++2020-04-02  Richard Biener  <rguenther@suse.de>
++
++	Backport from mainline
++	2020-03-12  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/94103
++	* gcc.target/i386/pr94103.c: New testcase.
++
++	2020-03-18  Richard Biener  <rguenther@suse.de>
++
++	PR middle-end/94206
++	* gcc.dg/torture/pr94206.c: New testcase.
++
++2020-04-02  Jakub Jelinek  <jakub@redhat.com>
++
++	PR target/94435
++	* gcc.target/aarch64/pr94435.c: New test.
++
++2020-04-02  Mark Eggleston <markeggleston@gcc.gnu.org>
++
++	Backport from master
++	Mark Eggleston  <mark.eggleston@codethink.com>
++
++	PR fortran/93498
++	* gfortran.dg/pr93498_1.f90:  New test.
++	* gfortran.dg/pr93498_2.f90:  New test.
++
++2020-04-02  Mark Eggleston <markeggleston@gcc.gnu.org>
++
++	Backport from master
++	2020-04-02  Mark Eggleston <markeggleston@gcc.gnu.org>
++	Steven G. Kargl  <kargl@gcc.gnu.org>
++
++	PR fortran/94030
++	* gfortran.dg/pr94030_1.f90: New test.
++	* gfortran.dg/pr94030_2.f90: New test.
++
++2020-04-01  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	Backport from mainline
++	2020-03-31  Jakub Jelinek  <jakub@redhat.com>
++
++	* gcc.dg/pr94368.c: New test.
++
++2020-04-01  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	Backport from mainline
++	2019-09-19  Richard Henderson  <richard.henderson@linaro.org>
++
++	* gcc.target/aarch64/atomic-op-acq_rel.c: Use -mno-outline-atomics.
++	* gcc.target/aarch64/atomic-comp-swap-release-acquire.c: Likewise.
++	* gcc.target/aarch64/atomic-op-acquire.c: Likewise.
++	* gcc.target/aarch64/atomic-op-char.c: Likewise.
++	* gcc.target/aarch64/atomic-op-consume.c: Likewise.
++	* gcc.target/aarch64/atomic-op-imm.c: Likewise.
++	* gcc.target/aarch64/atomic-op-int.c: Likewise.
++	* gcc.target/aarch64/atomic-op-long.c: Likewise.
++	* gcc.target/aarch64/atomic-op-relaxed.c: Likewise.
++	* gcc.target/aarch64/atomic-op-release.c: Likewise.
++	* gcc.target/aarch64/atomic-op-seq_cst.c: Likewise.
++	* gcc.target/aarch64/atomic-op-short.c: Likewise.
++	* gcc.target/aarch64/atomic_cmp_exchange_zero_reg_1.c: Likewise.
++	* gcc.target/aarch64/atomic_cmp_exchange_zero_strong_1.c: Likewise.
++	* gcc.target/aarch64/sync-comp-swap.c: Likewise.
++	* gcc.target/aarch64/sync-op-acquire.c: Likewise.
++	* gcc.target/aarch64/sync-op-full.c: Likewise.
++
 +2020-03-28  Tobias Burnus  <tobias@codesourcery.com>
 +
 +	Backport from mainline
@@ -1709,6 +2783,60 @@ index 00000000000..f927d55279a
 +{
 +  return __builtin_strnlen (a, 5);	/* { dg-warning "specified bound 5 exceeds the size 4 of unterminated array" } */
 +}
+diff --git a/gcc/testsuite/gcc.dg/pr94368.c b/gcc/testsuite/gcc.dg/pr94368.c
+new file mode 100644
+index 00000000000..1267b822098
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/pr94368.c
+@@ -0,0 +1,25 @@
++/* PR target/94368 */
++/* { dg-do compile { target fpic } } */
++/* { dg-options "-fpic -O1 -fcommon" } */
++
++int b, c, d, e, f, h;
++short g;
++int foo (int) __attribute__ ((__const__));
++
++void
++bar (void)
++{
++  while (1)
++    {
++      while (1)
++	{
++	  __atomic_load_n (&e, 0);
++	  if (foo (2))
++	    __sync_val_compare_and_swap (&c, 0, f);
++	  b = 1;
++	  if (h == e)
++	    break;
++	}
++      __sync_val_compare_and_swap (&g, -1, f);
++    }
++}
+diff --git a/gcc/testsuite/gcc.dg/torture/pr94206.c b/gcc/testsuite/gcc.dg/torture/pr94206.c
+new file mode 100644
+index 00000000000..9e54bba4ed4
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/torture/pr94206.c
+@@ -0,0 +1,17 @@
++/* { dg-do run { target lp64 } } */
++
++struct {
++    unsigned long x:33;
++} s;
++typedef __typeof__(s.x + 0) uint33;
++
++int main()
++{
++  uint33 x;
++  __builtin_memset(&x, -1, sizeof x);
++  unsigned long u;
++  __builtin_memcpy(&u, &x, sizeof u);
++  if (u != -1ul)
++    __builtin_abort ();
++  return 0;
++}
 diff --git a/gcc/testsuite/gcc.dg/tree-ssa/pr94125.c b/gcc/testsuite/gcc.dg/tree-ssa/pr94125.c
 new file mode 100644
 index 00000000000..c339e51f482
@@ -1791,6 +2919,247 @@ index 04482607b04..333d74ac3e7 100644
 +/* { dg-final { scan-tree-dump-not {vector[^\n]*char} "vect" { target vect_hw_misalign } } } */
  /* { dg-final { scan-tree-dump-not {vector[^ ]* int} "vect" } } */
  /* { dg-final { scan-tree-dump-times "vectorized 1 loop" 1 "vect" } } */
+diff --git a/gcc/testsuite/gcc.target/aarch64/atomic-comp-swap-release-acquire.c b/gcc/testsuite/gcc.target/aarch64/atomic-comp-swap-release-acquire.c
+index 49ca5d0d09c..a828a72aa75 100644
+--- a/gcc/testsuite/gcc.target/aarch64/atomic-comp-swap-release-acquire.c
++++ b/gcc/testsuite/gcc.target/aarch64/atomic-comp-swap-release-acquire.c
+@@ -1,5 +1,5 @@
+ /* { dg-do compile } */
+-/* { dg-options "-march=armv8-a+nolse -O2 -fno-ipa-icf" } */
++/* { dg-options "-march=armv8-a+nolse -O2 -fno-ipa-icf -mno-outline-atomics" } */
+ 
+ #include "atomic-comp-swap-release-acquire.x"
+ 
+diff --git a/gcc/testsuite/gcc.target/aarch64/atomic-op-acq_rel.c b/gcc/testsuite/gcc.target/aarch64/atomic-op-acq_rel.c
+index 74f26348e42..6823ce381b2 100644
+--- a/gcc/testsuite/gcc.target/aarch64/atomic-op-acq_rel.c
++++ b/gcc/testsuite/gcc.target/aarch64/atomic-op-acq_rel.c
+@@ -1,5 +1,5 @@
+ /* { dg-do compile } */
+-/* { dg-options "-march=armv8-a+nolse -O2" } */
++/* { dg-options "-march=armv8-a+nolse -O2 -mno-outline-atomics" } */
+ 
+ #include "atomic-op-acq_rel.x"
+ 
+diff --git a/gcc/testsuite/gcc.target/aarch64/atomic-op-acquire.c b/gcc/testsuite/gcc.target/aarch64/atomic-op-acquire.c
+index 66c1b1efe20..87937de378a 100644
+--- a/gcc/testsuite/gcc.target/aarch64/atomic-op-acquire.c
++++ b/gcc/testsuite/gcc.target/aarch64/atomic-op-acquire.c
+@@ -1,5 +1,5 @@
+ /* { dg-do compile } */
+-/* { dg-options "-march=armv8-a+nolse -O2" } */
++/* { dg-options "-march=armv8-a+nolse -O2 -mno-outline-atomics" } */
+ 
+ #include "atomic-op-acquire.x"
+ 
+diff --git a/gcc/testsuite/gcc.target/aarch64/atomic-op-char.c b/gcc/testsuite/gcc.target/aarch64/atomic-op-char.c
+index c09d0434ecf..60955e57da3 100644
+--- a/gcc/testsuite/gcc.target/aarch64/atomic-op-char.c
++++ b/gcc/testsuite/gcc.target/aarch64/atomic-op-char.c
+@@ -1,5 +1,5 @@
+ /* { dg-do compile } */
+-/* { dg-options "-march=armv8-a+nolse -O2" } */
++/* { dg-options "-march=armv8-a+nolse -O2 -mno-outline-atomics" } */
+ 
+ #include "atomic-op-char.x"
+ 
+diff --git a/gcc/testsuite/gcc.target/aarch64/atomic-op-consume.c b/gcc/testsuite/gcc.target/aarch64/atomic-op-consume.c
+index 5783ab84f5c..16cb11aeeaf 100644
+--- a/gcc/testsuite/gcc.target/aarch64/atomic-op-consume.c
++++ b/gcc/testsuite/gcc.target/aarch64/atomic-op-consume.c
+@@ -1,5 +1,5 @@
+ /* { dg-do compile } */
+-/* { dg-options "-march=armv8-a+nolse -O2" } */
++/* { dg-options "-march=armv8-a+nolse -O2 -mno-outline-atomics" } */
+ 
+ #include "atomic-op-consume.x"
+ 
+diff --git a/gcc/testsuite/gcc.target/aarch64/atomic-op-imm.c b/gcc/testsuite/gcc.target/aarch64/atomic-op-imm.c
+index 18b8f0b04e9..bcab4e481e3 100644
+--- a/gcc/testsuite/gcc.target/aarch64/atomic-op-imm.c
++++ b/gcc/testsuite/gcc.target/aarch64/atomic-op-imm.c
+@@ -1,5 +1,5 @@
+ /* { dg-do compile } */
+-/* { dg-options "-march=armv8-a+nolse -O2" } */
++/* { dg-options "-march=armv8-a+nolse -O2 -mno-outline-atomics" } */
+ 
+ int v = 0;
+ 
+diff --git a/gcc/testsuite/gcc.target/aarch64/atomic-op-int.c b/gcc/testsuite/gcc.target/aarch64/atomic-op-int.c
+index 8520f0839ba..040e4a8d168 100644
+--- a/gcc/testsuite/gcc.target/aarch64/atomic-op-int.c
++++ b/gcc/testsuite/gcc.target/aarch64/atomic-op-int.c
+@@ -1,5 +1,5 @@
+ /* { dg-do compile } */
+-/* { dg-options "-march=armv8-a+nolse -O2" } */
++/* { dg-options "-march=armv8-a+nolse -O2 -mno-outline-atomics" } */
+ 
+ #include "atomic-op-int.x"
+ 
+diff --git a/gcc/testsuite/gcc.target/aarch64/atomic-op-long.c b/gcc/testsuite/gcc.target/aarch64/atomic-op-long.c
+index d011f8c5ce2..fc88b92cd3e 100644
+--- a/gcc/testsuite/gcc.target/aarch64/atomic-op-long.c
++++ b/gcc/testsuite/gcc.target/aarch64/atomic-op-long.c
+@@ -1,5 +1,5 @@
+ /* { dg-do compile } */
+-/* { dg-options "-march=armv8-a+nolse -O2" } */
++/* { dg-options "-march=armv8-a+nolse -O2 -mno-outline-atomics" } */
+ 
+ long v = 0;
+ 
+diff --git a/gcc/testsuite/gcc.target/aarch64/atomic-op-relaxed.c b/gcc/testsuite/gcc.target/aarch64/atomic-op-relaxed.c
+index ed96bfdb978..503d62b0280 100644
+--- a/gcc/testsuite/gcc.target/aarch64/atomic-op-relaxed.c
++++ b/gcc/testsuite/gcc.target/aarch64/atomic-op-relaxed.c
+@@ -1,5 +1,5 @@
+ /* { dg-do compile } */
+-/* { dg-options "-march=armv8-a+nolse -O2" } */
++/* { dg-options "-march=armv8-a+nolse -O2 -mno-outline-atomics" } */
+ 
+ #include "atomic-op-relaxed.x"
+ 
+diff --git a/gcc/testsuite/gcc.target/aarch64/atomic-op-release.c b/gcc/testsuite/gcc.target/aarch64/atomic-op-release.c
+index fc4be17de89..efe14aea7e4 100644
+--- a/gcc/testsuite/gcc.target/aarch64/atomic-op-release.c
++++ b/gcc/testsuite/gcc.target/aarch64/atomic-op-release.c
+@@ -1,5 +1,5 @@
+ /* { dg-do compile } */
+-/* { dg-options "-march=armv8-a+nolse -O2" } */
++/* { dg-options "-march=armv8-a+nolse -O2 -mno-outline-atomics" } */
+ 
+ #include "atomic-op-release.x"
+ 
+diff --git a/gcc/testsuite/gcc.target/aarch64/atomic-op-seq_cst.c b/gcc/testsuite/gcc.target/aarch64/atomic-op-seq_cst.c
+index 613000fe490..09973bf82ba 100644
+--- a/gcc/testsuite/gcc.target/aarch64/atomic-op-seq_cst.c
++++ b/gcc/testsuite/gcc.target/aarch64/atomic-op-seq_cst.c
+@@ -1,5 +1,5 @@
+ /* { dg-do compile } */
+-/* { dg-options "-march=armv8-a+nolse -O2" } */
++/* { dg-options "-march=armv8-a+nolse -O2 -mno-outline-atomics" } */
+ 
+ #include "atomic-op-seq_cst.x"
+ 
+diff --git a/gcc/testsuite/gcc.target/aarch64/atomic-op-short.c b/gcc/testsuite/gcc.target/aarch64/atomic-op-short.c
+index e82c8118ece..e1dcebb0f89 100644
+--- a/gcc/testsuite/gcc.target/aarch64/atomic-op-short.c
++++ b/gcc/testsuite/gcc.target/aarch64/atomic-op-short.c
+@@ -1,5 +1,5 @@
+ /* { dg-do compile } */
+-/* { dg-options "-march=armv8-a+nolse -O2" } */
++/* { dg-options "-march=armv8-a+nolse -O2 -mno-outline-atomics" } */
+ 
+ #include "atomic-op-short.x"
+ 
+diff --git a/gcc/testsuite/gcc.target/aarch64/atomic_cmp_exchange_zero_reg_1.c b/gcc/testsuite/gcc.target/aarch64/atomic_cmp_exchange_zero_reg_1.c
+index f2a21ddf2e1..29246979bfb 100644
+--- a/gcc/testsuite/gcc.target/aarch64/atomic_cmp_exchange_zero_reg_1.c
++++ b/gcc/testsuite/gcc.target/aarch64/atomic_cmp_exchange_zero_reg_1.c
+@@ -1,5 +1,5 @@
+ /* { dg-do compile } */
+-/* { dg-options "-O2 -march=armv8-a+nolse" } */
++/* { dg-options "-O2 -march=armv8-a+nolse -mno-outline-atomics" } */
+ /* { dg-skip-if "" { *-*-* } { "-mcpu=*" } { "" } } */
+ 
+ int
+diff --git a/gcc/testsuite/gcc.target/aarch64/atomic_cmp_exchange_zero_strong_1.c b/gcc/testsuite/gcc.target/aarch64/atomic_cmp_exchange_zero_strong_1.c
+index 8d2ae67dfbe..6daf9b08f5a 100644
+--- a/gcc/testsuite/gcc.target/aarch64/atomic_cmp_exchange_zero_strong_1.c
++++ b/gcc/testsuite/gcc.target/aarch64/atomic_cmp_exchange_zero_strong_1.c
+@@ -1,5 +1,5 @@
+ /* { dg-do compile } */
+-/* { dg-options "-O2 -march=armv8-a+nolse" } */
++/* { dg-options "-O2 -march=armv8-a+nolse -mno-outline-atomics" } */
+ /* { dg-skip-if "" { *-*-* } { "-mcpu=*" } { "" } } */
+ 
+ int
+diff --git a/gcc/testsuite/gcc.target/aarch64/pr94435.c b/gcc/testsuite/gcc.target/aarch64/pr94435.c
+new file mode 100644
+index 00000000000..5713c14d5f9
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/pr94435.c
+@@ -0,0 +1,25 @@
++/* PR target/94435 */
++/* { dg-do compile } */
++/* { dg-options "-march=armv8-a+nolse -moutline-atomics" } */
++
++int b, c, d, e, f, h;
++short g;
++int foo (int) __attribute__ ((__const__));
++
++void
++bar (void)
++{
++  while (1)
++    {
++      while (1)
++	{
++	  __atomic_load_n (&e, 0);
++	  if (foo (2))
++	    __sync_val_compare_and_swap (&c, 0, f);
++	  b = 1;
++	  if (h == e)
++	    break;
++	}
++      __sync_val_compare_and_swap (&g, -1, f);
++    }
++}
+diff --git a/gcc/testsuite/gcc.target/aarch64/sync-comp-swap.c b/gcc/testsuite/gcc.target/aarch64/sync-comp-swap.c
+index e571b2f13b3..f56415f3354 100644
+--- a/gcc/testsuite/gcc.target/aarch64/sync-comp-swap.c
++++ b/gcc/testsuite/gcc.target/aarch64/sync-comp-swap.c
+@@ -1,5 +1,5 @@
+ /* { dg-do compile } */
+-/* { dg-options "-march=armv8-a+nolse -O2 -fno-ipa-icf" } */
++/* { dg-options "-march=armv8-a+nolse -O2 -fno-ipa-icf -mno-outline-atomics" } */
+ 
+ #include "sync-comp-swap.x"
+ 
+diff --git a/gcc/testsuite/gcc.target/aarch64/sync-op-acquire.c b/gcc/testsuite/gcc.target/aarch64/sync-op-acquire.c
+index 357bf1be3b2..39b3144aa36 100644
+--- a/gcc/testsuite/gcc.target/aarch64/sync-op-acquire.c
++++ b/gcc/testsuite/gcc.target/aarch64/sync-op-acquire.c
+@@ -1,5 +1,5 @@
+ /* { dg-do compile } */
+-/* { dg-options "-march=armv8-a+nolse -O2" } */
++/* { dg-options "-march=armv8-a+nolse -O2 -mno-outline-atomics" } */
+ 
+ #include "sync-op-acquire.x"
+ 
+diff --git a/gcc/testsuite/gcc.target/aarch64/sync-op-full.c b/gcc/testsuite/gcc.target/aarch64/sync-op-full.c
+index c6ba1629965..6b8b2043f40 100644
+--- a/gcc/testsuite/gcc.target/aarch64/sync-op-full.c
++++ b/gcc/testsuite/gcc.target/aarch64/sync-op-full.c
+@@ -1,5 +1,5 @@
+ /* { dg-do compile } */
+-/* { dg-options "-march=armv8-a+nolse -O2" } */
++/* { dg-options "-march=armv8-a+nolse -O2 -mno-outline-atomics" } */
+ 
+ #include "sync-op-full.x"
+ 
+diff --git a/gcc/testsuite/gcc.target/i386/pr94103.c b/gcc/testsuite/gcc.target/i386/pr94103.c
+new file mode 100644
+index 00000000000..91b5fc64b5e
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr94103.c
+@@ -0,0 +1,17 @@
++/* { dg-do run { target lp64 } } */
++/* { dg-options "-O3" } */
++
++int main()
++{
++  long double x;
++  unsigned long u[2] = {0xEEEEEEEEEEEEEEEEUL, 0xEEEEEEEEEEEEEEEEUL};
++  __builtin_memcpy(&x, &u, sizeof x);
++  __builtin_memcpy(&u, &x, sizeof u);
++  ++*(unsigned char *)&x;
++  (void)-x;
++  __builtin_memcpy(&u, &x, sizeof u);
++  if (u[1] != 0xEEEEEEEEEEEEEEEEUL
++      || u[0] != 0xEEEEEEEEEEEEEEEFUL)
++    __builtin_abort ();
++  return 0;
++}
 diff --git a/gcc/testsuite/gcc.target/powerpc/p9-minmax-3.c b/gcc/testsuite/gcc.target/powerpc/p9-minmax-3.c
 new file mode 100644
 index 00000000000..141603e05b4
@@ -1928,6 +3297,47 @@ index 00000000000..f8dfbe7c082
 +		a += g;
 +	return a;
 +}
+diff --git a/gcc/testsuite/gfortran.dg/dec_structure_28.f90 b/gcc/testsuite/gfortran.dg/dec_structure_28.f90
+new file mode 100644
+index 00000000000..bab08b2d5c3
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/dec_structure_28.f90
+@@ -0,0 +1,35 @@
++! { dg-do compile }
++! { dg-options "-fdec-structure -fdec-static" }
++!
++! PR fortran/85982
++!
++! Test a regression wherein some component attributes were erroneously accepted
++! within a DEC structure.
++!
++
++structure /s/
++  integer :: a
++  integer, intent(in) :: b ! { dg-error "is not allowed" }
++  integer, intent(out) :: c ! { dg-error "is not allowed" }
++  integer, intent(inout) :: d ! { dg-error "is not allowed" }
++  integer, dimension(1,1) :: e ! OK
++  integer, external, pointer :: f ! { dg-error "is not allowed" }
++  integer, intrinsic :: f ! { dg-error "is not allowed" }
++  integer, optional :: g ! { dg-error "is not allowed" }
++  integer, parameter :: h ! { dg-error "is not allowed" }
++  integer, protected :: i ! { dg-error "is not allowed" }
++  integer, private :: j ! { dg-error "is not allowed" }
++  integer, static :: k ! { dg-error "is not allowed" }
++  integer, automatic :: l ! { dg-error "is not allowed" }
++  integer, public :: m ! { dg-error "is not allowed" }
++  integer, save :: n ! { dg-error "is not allowed" }
++  integer, target :: o ! { dg-error "is not allowed" }
++  integer, value :: p ! { dg-error "is not allowed" }
++  integer, volatile :: q ! { dg-error "is not allowed" }
++  integer, bind(c) :: r ! { dg-error "is not allowed" }
++  integer, asynchronous :: t ! { dg-error "is not allowed" }
++  character(len=3) :: v ! OK
++  integer(kind=4) :: w ! OK
++end structure
++
++end
 diff --git a/gcc/testsuite/gfortran.dg/module_procedure_3.f90 b/gcc/testsuite/gfortran.dg/module_procedure_3.f90
 new file mode 100644
 index 00000000000..50a83d9e5b1
@@ -2000,6 +3410,97 @@ index 00000000000..4a7f4330ed9
 +  print *, [real(x(k))] ! { dg-error "Symbol 'k' at .1. has no IMPLICIT type" }
 +end
 +
+diff --git a/gcc/testsuite/gfortran.dg/pr93498_1.f90 b/gcc/testsuite/gfortran.dg/pr93498_1.f90
+new file mode 100644
+index 00000000000..0210cc7951e
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr93498_1.f90
+@@ -0,0 +1,11 @@
++! { dg-do compile }
++!
++! Test case by  G. Steinmetz
++
++program p
++   character(len=1, kind=1) :: x(3) = ['a', 'b', 'c']
++   character(len=1, kind=4) :: y = 4_'b'
++   print *, findloc(x, y)     ! { dg-error " must be in type conformance" }
++   print *, findloc(x, y, 1)  ! { dg-error " must be in type conformance" }
++end
++
+diff --git a/gcc/testsuite/gfortran.dg/pr93498_2.f90 b/gcc/testsuite/gfortran.dg/pr93498_2.f90
+new file mode 100644
+index 00000000000..ee9238ffa24
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr93498_2.f90
+@@ -0,0 +1,12 @@
++! { dg-do compile }
++!
++! Test case by  G. Steinmetz
++
++program p
++   character(len=1, kind=4) :: x(3) = [4_'a', 4_'b', 4_'c']
++   character(len=1, kind=1) :: y = 'b'
++   print *, findloc(x, y)     ! { dg-error " must be in type conformance" }
++   print *, findloc(x, y, 1)  ! { dg-error " must be in type conformance" }
++end
++
++
+diff --git a/gcc/testsuite/gfortran.dg/pr94030_1.f90 b/gcc/testsuite/gfortran.dg/pr94030_1.f90
+new file mode 100644
+index 00000000000..e63d3cc8da4
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr94030_1.f90
+@@ -0,0 +1,11 @@
++! { dg-do compile }
++!
++
++subroutine f(n)
++  integer :: n
++  integer :: arr(n)
++  integer :: i
++  equivalence (i, arr(1))
++end
++
++! { dg-error "Array 'arr' at .1. with non-constant bounds cannot be an EQUIVALENCE object" " " { target *-*-* } 8 }
+diff --git a/gcc/testsuite/gfortran.dg/pr94030_2.f90 b/gcc/testsuite/gfortran.dg/pr94030_2.f90
+new file mode 100644
+index 00000000000..84bfdeaa819
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr94030_2.f90
+@@ -0,0 +1,33 @@
++! { dg-do compile }
++!
++! Provided by Steve Kargl.
++
++subroutine foo(n,m)
++  integer, intent(in) :: n, m
++  integer a(n)
++  real b(n)
++  equivalence(a,b)
++  if (m /= 2) then
++      a = 1
++      print *, a(1)
++  else
++      b = 42.
++      print *, b(1)
++   end if
++end subroutine 
++
++subroutine bar(m)
++  integer, intent(in) :: m
++  integer x(8)
++  real y(8)
++  equivalence(x,y)
++  if (m /= 2) then
++      x = 1
++      print *, x(1)
++  else
++      y = 42.
++      print *, y(1)
++   end if
++end subroutine 
++
++! { dg-error "Array '.' at .1. with non-constant bounds cannot be an EQUIVALENCE object" " " { target *-*-* } 9 }
 diff --git a/gcc/tree-inline.c b/gcc/tree-inline.c
 index d115fcb1a5b..7a41f64bcc3 100644
 --- a/gcc/tree-inline.c
@@ -2286,6 +3787,40 @@ index 8bd17b82368..7b171bc4e8f 100644
  		set_ptr_info_alignment (get_ptr_info (forcedname),
  					halign, hmisalign);
  	    }
+diff --git a/gcc/tree-ssa-sccvn.c b/gcc/tree-ssa-sccvn.c
+index 32f45c95cdf..262bfff9f11 100644
+--- a/gcc/tree-ssa-sccvn.c
++++ b/gcc/tree-ssa-sccvn.c
+@@ -4124,13 +4124,22 @@ visit_reference_op_load (tree lhs, tree op, gimple *stmt)
+   if (result
+       && !useless_type_conversion_p (TREE_TYPE (result), TREE_TYPE (op)))
+     {
+-      /* We will be setting the value number of lhs to the value number
+-	 of VIEW_CONVERT_EXPR <TREE_TYPE (result)> (result).
+-	 So first simplify and lookup this expression to see if it
+-	 is already available.  */
+-      gimple_match_op res_op (gimple_match_cond::UNCOND,
+-			      VIEW_CONVERT_EXPR, TREE_TYPE (op), result);
+-      result = vn_nary_build_or_lookup (&res_op);
++      /* Avoid the type punning in case the result mode has padding where
++	 the op we lookup has not.  */
++      if (maybe_lt (GET_MODE_PRECISION (TYPE_MODE (TREE_TYPE (result))),
++		    GET_MODE_PRECISION (TYPE_MODE (TREE_TYPE (op)))))
++	result = NULL_TREE;
++      else
++	{
++	  /* We will be setting the value number of lhs to the value number
++	     of VIEW_CONVERT_EXPR <TREE_TYPE (result)> (result).
++	     So first simplify and lookup this expression to see if it
++	     is already available.  */
++	  gimple_match_op res_op (gimple_match_cond::UNCOND,
++				  VIEW_CONVERT_EXPR, TREE_TYPE (op), result);
++	  result = vn_nary_build_or_lookup (&res_op);
++	}
++
+       /* When building the conversion fails avoid inserting the reference
+          again.  */
+       if (!result)
 diff --git a/gcc/tree-tailcall.c b/gcc/tree-tailcall.c
 index 255575f1198..4f42817f7de 100644
 --- a/gcc/tree-tailcall.c
@@ -2300,6 +3835,568 @@ index 255575f1198..4f42817f7de 100644
  	   && (non_ass_var = independent_of_stmt_p (op0, stmt, call,
  						    to_move)))
      ;
+diff --git a/libgcc/ChangeLog b/libgcc/ChangeLog
+index a5c30516ff8..3dbc003ecbd 100644
+--- a/libgcc/ChangeLog
++++ b/libgcc/ChangeLog
+@@ -1,3 +1,33 @@
++2020-04-01  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	Backport from mainline
++	2019-09-25  Richard Henderson  <richard.henderson@linaro.org>
++
++	PR target/91833
++	* config/aarch64/lse-init.c: Include auto-target.h.  Disable
++	initialization if !HAVE_SYS_AUXV_H.
++	* configure.ac (AC_CHECK_HEADERS): Add sys/auxv.h.
++	* config.in, configure: Rebuild.
++
++2020-04-01  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	Backport from mainline
++	2019-09-25  Richard Henderson  <richard.henderson@linaro.org>
++
++	PR target/91834
++	* config/aarch64/lse.S (LDNM): Ensure STXR output does not
++	overlap the inputs.
++
++2020-04-01  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	Backport from mainline
++	2019-09-19  Richard Henderson  <richard.henderson@linaro.org>
++
++	* config/aarch64/lse-init.c: New file.
++	* config/aarch64/lse.S: New file.
++	* config/aarch64/t-lse: New file.
++	* config.host: Add t-lse to all aarch64 tuples.
++
+ 2020-03-12  Release Manager
+ 
+ 	* GCC 9.3.0 released.
+diff --git a/libgcc/config.host b/libgcc/config.host
+index 0f15fda3612..18e306b48a5 100644
+--- a/libgcc/config.host
++++ b/libgcc/config.host
+@@ -347,23 +347,27 @@ aarch64*-*-elf | aarch64*-*-rtems*)
+ 	extra_parts="$extra_parts crtbegin.o crtend.o crti.o crtn.o"
+ 	extra_parts="$extra_parts crtfastmath.o"
+ 	tmake_file="${tmake_file} ${cpu_type}/t-aarch64"
++	tmake_file="${tmake_file} ${cpu_type}/t-lse t-slibgcc-libgcc"
+ 	tmake_file="${tmake_file} ${cpu_type}/t-softfp t-softfp t-crtfm"
+ 	md_unwind_header=aarch64/aarch64-unwind.h
+ 	;;
+ aarch64*-*-freebsd*)
+ 	extra_parts="$extra_parts crtfastmath.o"
+ 	tmake_file="${tmake_file} ${cpu_type}/t-aarch64"
++	tmake_file="${tmake_file} ${cpu_type}/t-lse t-slibgcc-libgcc"
+ 	tmake_file="${tmake_file} ${cpu_type}/t-softfp t-softfp t-crtfm"
+ 	md_unwind_header=aarch64/freebsd-unwind.h
+ 	;;
+ aarch64*-*-fuchsia*)
+ 	tmake_file="${tmake_file} ${cpu_type}/t-aarch64"
++	tmake_file="${tmake_file} ${cpu_type}/t-lse t-slibgcc-libgcc"
+ 	tmake_file="${tmake_file} ${cpu_type}/t-softfp t-softfp"
+ 	;;
+ aarch64*-*-linux*)
+ 	extra_parts="$extra_parts crtfastmath.o"
+ 	md_unwind_header=aarch64/linux-unwind.h
+ 	tmake_file="${tmake_file} ${cpu_type}/t-aarch64"
++	tmake_file="${tmake_file} ${cpu_type}/t-lse t-slibgcc-libgcc"
+ 	tmake_file="${tmake_file} ${cpu_type}/t-softfp t-softfp t-crtfm"
+ 	;;
+ alpha*-*-linux*)
+diff --git a/libgcc/config.in b/libgcc/config.in
+index d634af9d949..59a3d8daf52 100644
+--- a/libgcc/config.in
++++ b/libgcc/config.in
+@@ -43,6 +43,9 @@
+ /* Define to 1 if you have the <string.h> header file. */
+ #undef HAVE_STRING_H
+ 
++/* Define to 1 if you have the <sys/auxv.h> header file. */
++#undef HAVE_SYS_AUXV_H
++
+ /* Define to 1 if you have the <sys/stat.h> header file. */
+ #undef HAVE_SYS_STAT_H
+ 
+@@ -82,6 +85,11 @@
+ /* Define to 1 if the target use emutls for thread-local storage. */
+ #undef USE_EMUTLS
+ 
++/* Enable large inode numbers on Mac OS X 10.5.  */
++#ifndef _DARWIN_USE_64_BIT_INODE
++# define _DARWIN_USE_64_BIT_INODE 1
++#endif
++
+ /* Number of bits in a file offset, on hosts where this is settable. */
+ #undef _FILE_OFFSET_BITS
+ 
+diff --git a/libgcc/config/aarch64/lse-init.c b/libgcc/config/aarch64/lse-init.c
+new file mode 100644
+index 00000000000..1a8f4c55213
+--- /dev/null
++++ b/libgcc/config/aarch64/lse-init.c
+@@ -0,0 +1,47 @@
++/* Out-of-line LSE atomics for AArch64 architecture, Init.
++   Copyright (C) 2019 Free Software Foundation, Inc.
++   Contributed by Linaro Ltd.
++
++This file is part of GCC.
++
++GCC is free software; you can redistribute it and/or modify it under
++the terms of the GNU General Public License as published by the Free
++Software Foundation; either version 3, or (at your option) any later
++version.
++
++GCC is distributed in the hope that it will be useful, but WITHOUT ANY
++WARRANTY; without even the implied warranty of MERCHANTABILITY or
++FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
++for more details.
++
++Under Section 7 of GPL version 3, you are granted additional
++permissions described in the GCC Runtime Library Exception, version
++3.1, as published by the Free Software Foundation.
++
++You should have received a copy of the GNU General Public License and
++a copy of the GCC Runtime Library Exception along with this program;
++see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
++<http://www.gnu.org/licenses/>.  */
++
++#include "auto-target.h"
++
++/* Define the symbol gating the LSE implementations.  */
++_Bool __aarch64_have_lse_atomics
++  __attribute__((visibility("hidden"), nocommon));
++
++/* Disable initialization of __aarch64_have_lse_atomics during bootstrap.  */
++#if !defined(inhibit_libc) && defined(HAVE_SYS_AUXV_H)
++# include <sys/auxv.h>
++
++/* Disable initialization if the system headers are too old.  */
++# if defined(AT_HWCAP) && defined(HWCAP_ATOMICS)
++
++static void __attribute__((constructor))
++init_have_lse_atomics (void)
++{
++  unsigned long hwcap = getauxval (AT_HWCAP);
++  __aarch64_have_lse_atomics = (hwcap & HWCAP_ATOMICS) != 0;
++}
++
++# endif /* HWCAP */
++#endif /* inhibit_libc */
+diff --git a/libgcc/config/aarch64/lse.S b/libgcc/config/aarch64/lse.S
+new file mode 100644
+index 00000000000..c7979382ad7
+--- /dev/null
++++ b/libgcc/config/aarch64/lse.S
+@@ -0,0 +1,235 @@
++/* Out-of-line LSE atomics for AArch64 architecture.
++   Copyright (C) 2019 Free Software Foundation, Inc.
++   Contributed by Linaro Ltd.
++
++This file is part of GCC.
++
++GCC is free software; you can redistribute it and/or modify it under
++the terms of the GNU General Public License as published by the Free
++Software Foundation; either version 3, or (at your option) any later
++version.
++
++GCC is distributed in the hope that it will be useful, but WITHOUT ANY
++WARRANTY; without even the implied warranty of MERCHANTABILITY or
++FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
++for more details.
++
++Under Section 7 of GPL version 3, you are granted additional
++permissions described in the GCC Runtime Library Exception, version
++3.1, as published by the Free Software Foundation.
++
++You should have received a copy of the GNU General Public License and
++a copy of the GCC Runtime Library Exception along with this program;
++see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
++<http://www.gnu.org/licenses/>.  */
++
++/*
++ * The problem that we are trying to solve is operating system deployment
++ * of ARMv8.1-Atomics, also known as Large System Exensions (LSE).
++ *
++ * There are a number of potential solutions for this problem which have
++ * been proposed and rejected for various reasons.  To recap:
++ *
++ * (1) Multiple builds.  The dynamic linker will examine /lib64/atomics/
++ * if HWCAP_ATOMICS is set, allowing entire libraries to be overwritten.
++ * However, not all Linux distributions are happy with multiple builds,
++ * and anyway it has no effect on main applications.
++ *
++ * (2) IFUNC.  We could put these functions into libgcc_s.so, and have
++ * a single copy of each function for all DSOs.  However, ARM is concerned
++ * that the branch-to-indirect-branch that is implied by using a PLT,
++ * as required by IFUNC, is too much overhead for smaller cpus.
++ *
++ * (3) Statically predicted direct branches.  This is the approach that
++ * is taken here.  These functions are linked into every DSO that uses them.
++ * All of the symbols are hidden, so that the functions are called via a
++ * direct branch.  The choice of LSE vs non-LSE is done via one byte load
++ * followed by a well-predicted direct branch.  The functions are compiled
++ * separately to minimize code size.
++ */
++
++/* Tell the assembler to accept LSE instructions.  */
++	.arch armv8-a+lse
++
++/* Declare the symbol gating the LSE implementations.  */
++	.hidden	__aarch64_have_lse_atomics
++
++/* Turn size and memory model defines into mnemonic fragments.  */
++#if SIZE == 1
++# define S     b
++# define UXT   uxtb
++#elif SIZE == 2
++# define S     h
++# define UXT   uxth
++#elif SIZE == 4 || SIZE == 8 || SIZE == 16
++# define S
++# define UXT   mov
++#else
++# error
++#endif
++
++#if MODEL == 1
++# define SUFF  _relax
++# define A
++# define L
++#elif MODEL == 2
++# define SUFF  _acq
++# define A     a
++# define L
++#elif MODEL == 3
++# define SUFF  _rel
++# define A
++# define L     l
++#elif MODEL == 4
++# define SUFF  _acq_rel
++# define A     a
++# define L     l
++#else
++# error
++#endif
++
++/* Concatenate symbols.  */
++#define glue2_(A, B)		A ## B
++#define glue2(A, B)		glue2_(A, B)
++#define glue3_(A, B, C)		A ## B ## C
++#define glue3(A, B, C)		glue3_(A, B, C)
++#define glue4_(A, B, C, D)	A ## B ## C ## D
++#define glue4(A, B, C, D)	glue4_(A, B, C, D)
++
++/* Select the size of a register, given a regno.  */
++#define x(N)			glue2(x, N)
++#define w(N)			glue2(w, N)
++#if SIZE < 8
++# define s(N)			w(N)
++#else
++# define s(N)			x(N)
++#endif
++
++#define NAME(BASE)		glue4(__aarch64_, BASE, SIZE, SUFF)
++#define LDXR			glue4(ld, A, xr, S)
++#define STXR			glue4(st, L, xr, S)
++
++/* Temporary registers used.  Other than these, only the return value
++   register (x0) and the flags are modified.  */
++#define tmp0	16
++#define tmp1	17
++#define tmp2	15
++
++/* Start and end a function.  */
++.macro	STARTFN name
++	.text
++	.balign	16
++	.globl	\name
++	.hidden	\name
++	.type	\name, %function
++	.cfi_startproc
++\name:
++.endm
++
++.macro	ENDFN name
++	.cfi_endproc
++	.size	\name, . - \name
++.endm
++
++/* Branch to LABEL if LSE is disabled.  */
++.macro	JUMP_IF_NOT_LSE label
++	adrp	x(tmp0), __aarch64_have_lse_atomics
++	ldrb	w(tmp0), [x(tmp0), :lo12:__aarch64_have_lse_atomics]
++	cbz	w(tmp0), \label
++.endm
++
++#ifdef L_cas
++
++STARTFN	NAME(cas)
++	JUMP_IF_NOT_LSE	8f
++
++#if SIZE < 16
++#define CAS	glue4(cas, A, L, S)
++
++	CAS		s(0), s(1), [x2]
++	ret
++
++8:	UXT		s(tmp0), s(0)
++0:	LDXR		s(0), [x2]
++	cmp		s(0), s(tmp0)
++	bne		1f
++	STXR		w(tmp1), s(1), [x2]
++	cbnz		w(tmp1), 0b
++1:	ret
++
++#else
++#define LDXP	glue3(ld, A, xp)
++#define STXP	glue3(st, L, xp)
++#define CASP	glue3(casp, A, L)
++
++	CASP		x0, x1, x2, x3, [x4]
++	ret
++
++8:	mov		x(tmp0), x0
++	mov		x(tmp1), x1
++0:	LDXP		x0, x1, [x4]
++	cmp		x0, x(tmp0)
++	ccmp		x1, x(tmp1), #0, eq
++	bne		1f
++	STXP		w(tmp2), x(tmp0), x(tmp1), [x4]
++	cbnz		w(tmp2), 0b
++1:	ret
++
++#endif
++
++ENDFN	NAME(cas)
++#endif
++
++#ifdef L_swp
++#define SWP	glue4(swp, A, L, S)
++
++STARTFN	NAME(swp)
++	JUMP_IF_NOT_LSE	8f
++
++	SWP		s(0), s(0), [x1]
++	ret
++
++8:	mov		s(tmp0), s(0)
++0:	LDXR		s(0), [x1]
++	STXR		w(tmp1), s(tmp0), [x1]
++	cbnz		w(tmp1), 0b
++	ret
++
++ENDFN	NAME(swp)
++#endif
++
++#if defined(L_ldadd) || defined(L_ldclr) \
++    || defined(L_ldeor) || defined(L_ldset)
++
++#ifdef L_ldadd
++#define LDNM	ldadd
++#define OP	add
++#elif defined(L_ldclr)
++#define LDNM	ldclr
++#define OP	bic
++#elif defined(L_ldeor)
++#define LDNM	ldeor
++#define OP	eor
++#elif defined(L_ldset)
++#define LDNM	ldset
++#define OP	orr
++#else
++#error
++#endif
++#define LDOP	glue4(LDNM, A, L, S)
++
++STARTFN	NAME(LDNM)
++	JUMP_IF_NOT_LSE	8f
++
++	LDOP		s(0), s(0), [x1]
++	ret
++
++8:	mov		s(tmp0), s(0)
++0:	LDXR		s(0), [x1]
++	OP		s(tmp1), s(0), s(tmp0)
++	STXR		w(tmp2), s(tmp1), [x1]
++	cbnz		w(tmp2), 0b
++	ret
++
++ENDFN	NAME(LDNM)
++#endif
+diff --git a/libgcc/config/aarch64/t-lse b/libgcc/config/aarch64/t-lse
+new file mode 100644
+index 00000000000..fe3868dacbf
+--- /dev/null
++++ b/libgcc/config/aarch64/t-lse
+@@ -0,0 +1,44 @@
++# Out-of-line LSE atomics for AArch64 architecture.
++# Copyright (C) 2019 Free Software Foundation, Inc.
++# Contributed by Linaro Ltd.
++#
++# This file is part of GCC.
++#
++# GCC is free software; you can redistribute it and/or modify it
++# under the terms of the GNU General Public License as published by
++# the Free Software Foundation; either version 3, or (at your option)
++# any later version.
++#
++# GCC is distributed in the hope that it will be useful, but
++# WITHOUT ANY WARRANTY; without even the implied warranty of
++# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++# General Public License for more details.
++#
++# You should have received a copy of the GNU General Public License
++# along with GCC; see the file COPYING3.  If not see
++# <http://www.gnu.org/licenses/>.
++
++# Compare-and-swap has 5 sizes and 4 memory models.
++S0 := $(foreach s, 1 2 4 8 16, $(addsuffix _$(s), cas))
++O0 := $(foreach m, 1 2 3 4, $(addsuffix _$(m)$(objext), $(S0)))
++
++# Swap, Load-and-operate have 4 sizes and 4 memory models
++S1 := $(foreach s, 1 2 4 8, $(addsuffix _$(s), swp ldadd ldclr ldeor ldset))
++O1 := $(foreach m, 1 2 3 4, $(addsuffix _$(m)$(objext), $(S1)))
++
++LSE_OBJS := $(O0) $(O1)
++
++libgcc-objects += $(LSE_OBJS) lse-init$(objext)
++
++empty      =
++space      = $(empty) $(empty)
++PAT_SPLIT  = $(subst _,$(space),$(*F))
++PAT_BASE   = $(word 1,$(PAT_SPLIT))
++PAT_N      = $(word 2,$(PAT_SPLIT))
++PAT_M      = $(word 3,$(PAT_SPLIT))
++
++lse-init$(objext): $(srcdir)/config/aarch64/lse-init.c
++	$(gcc_compile) -c $<
++
++$(LSE_OBJS): $(srcdir)/config/aarch64/lse.S
++	$(gcc_compile) -DL_$(PAT_BASE) -DSIZE=$(PAT_N) -DMODEL=$(PAT_M) -c $<
+diff --git a/libgcc/configure b/libgcc/configure
+old mode 100644
+new mode 100755
+index 36dbbc1f699..cf42c057352
+--- a/libgcc/configure
++++ b/libgcc/configure
+@@ -674,6 +674,7 @@ infodir
+ docdir
+ oldincludedir
+ includedir
++runstatedir
+ localstatedir
+ sharedstatedir
+ sysconfdir
+@@ -763,6 +764,7 @@ datadir='${datarootdir}'
+ sysconfdir='${prefix}/etc'
+ sharedstatedir='${prefix}/com'
+ localstatedir='${prefix}/var'
++runstatedir='${localstatedir}/run'
+ includedir='${prefix}/include'
+ oldincludedir='/usr/include'
+ docdir='${datarootdir}/doc/${PACKAGE_TARNAME}'
+@@ -1015,6 +1017,15 @@ do
+   | -silent | --silent | --silen | --sile | --sil)
+     silent=yes ;;
+ 
++  -runstatedir | --runstatedir | --runstatedi | --runstated \
++  | --runstate | --runstat | --runsta | --runst | --runs \
++  | --run | --ru | --r)
++    ac_prev=runstatedir ;;
++  -runstatedir=* | --runstatedir=* | --runstatedi=* | --runstated=* \
++  | --runstate=* | --runstat=* | --runsta=* | --runst=* | --runs=* \
++  | --run=* | --ru=* | --r=*)
++    runstatedir=$ac_optarg ;;
++
+   -sbindir | --sbindir | --sbindi | --sbind | --sbin | --sbi | --sb)
+     ac_prev=sbindir ;;
+   -sbindir=* | --sbindir=* | --sbindi=* | --sbind=* | --sbin=* \
+@@ -1152,7 +1163,7 @@ fi
+ for ac_var in	exec_prefix prefix bindir sbindir libexecdir datarootdir \
+ 		datadir sysconfdir sharedstatedir localstatedir includedir \
+ 		oldincludedir docdir infodir htmldir dvidir pdfdir psdir \
+-		libdir localedir mandir
++		libdir localedir mandir runstatedir
+ do
+   eval ac_val=\$$ac_var
+   # Remove trailing slashes.
+@@ -1305,6 +1316,7 @@ Fine tuning of the installation directories:
+   --sysconfdir=DIR        read-only single-machine data [PREFIX/etc]
+   --sharedstatedir=DIR    modifiable architecture-independent data [PREFIX/com]
+   --localstatedir=DIR     modifiable single-machine data [PREFIX/var]
++  --runstatedir=DIR       modifiable per-process data [LOCALSTATEDIR/run]
+   --libdir=DIR            object code libraries [EPREFIX/lib]
+   --includedir=DIR        C header files [PREFIX/include]
+   --oldincludedir=DIR     C header files for non-gcc [/usr/include]
+@@ -4170,7 +4182,7 @@ else
+     We can't simply define LARGE_OFF_T to be 9223372036854775807,
+     since some C++ compilers masquerading as C compilers
+     incorrectly reject 9223372036854775807.  */
+-#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
++#define LARGE_OFF_T ((((off_t) 1 << 31) << 31) - 1 + (((off_t) 1 << 31) << 31))
+   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
+ 		       && LARGE_OFF_T % 2147483647 == 1)
+ 		      ? 1 : -1];
+@@ -4216,7 +4228,7 @@ else
+     We can't simply define LARGE_OFF_T to be 9223372036854775807,
+     since some C++ compilers masquerading as C compilers
+     incorrectly reject 9223372036854775807.  */
+-#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
++#define LARGE_OFF_T ((((off_t) 1 << 31) << 31) - 1 + (((off_t) 1 << 31) << 31))
+   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
+ 		       && LARGE_OFF_T % 2147483647 == 1)
+ 		      ? 1 : -1];
+@@ -4240,7 +4252,7 @@ rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+     We can't simply define LARGE_OFF_T to be 9223372036854775807,
+     since some C++ compilers masquerading as C compilers
+     incorrectly reject 9223372036854775807.  */
+-#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
++#define LARGE_OFF_T ((((off_t) 1 << 31) << 31) - 1 + (((off_t) 1 << 31) << 31))
+   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
+ 		       && LARGE_OFF_T % 2147483647 == 1)
+ 		      ? 1 : -1];
+@@ -4285,7 +4297,7 @@ else
+     We can't simply define LARGE_OFF_T to be 9223372036854775807,
+     since some C++ compilers masquerading as C compilers
+     incorrectly reject 9223372036854775807.  */
+-#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
++#define LARGE_OFF_T ((((off_t) 1 << 31) << 31) - 1 + (((off_t) 1 << 31) << 31))
+   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
+ 		       && LARGE_OFF_T % 2147483647 == 1)
+ 		      ? 1 : -1];
+@@ -4309,7 +4321,7 @@ rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+     We can't simply define LARGE_OFF_T to be 9223372036854775807,
+     since some C++ compilers masquerading as C compilers
+     incorrectly reject 9223372036854775807.  */
+-#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
++#define LARGE_OFF_T ((((off_t) 1 << 31) << 31) - 1 + (((off_t) 1 << 31) << 31))
+   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
+ 		       && LARGE_OFF_T % 2147483647 == 1)
+ 		      ? 1 : -1];
+@@ -4421,7 +4433,7 @@ as_fn_arith $ac_cv_sizeof_long_double \* 8 && long_double_type_size=$as_val
+ 
+ for ac_header in inttypes.h stdint.h stdlib.h ftw.h \
+ 	unistd.h sys/stat.h sys/types.h \
+-	string.h strings.h memory.h
++	string.h strings.h memory.h sys/auxv.h
+ do :
+   as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
+ ac_fn_c_check_header_preproc "$LINENO" "$ac_header" "$as_ac_Header"
+diff --git a/libgcc/configure.ac b/libgcc/configure.ac
+index 8e96cafdf8b..0762d77a801 100644
+--- a/libgcc/configure.ac
++++ b/libgcc/configure.ac
+@@ -207,7 +207,7 @@ AC_SUBST(long_double_type_size)
+ 
+ AC_CHECK_HEADERS(inttypes.h stdint.h stdlib.h ftw.h \
+ 	unistd.h sys/stat.h sys/types.h \
+-	string.h strings.h memory.h)
++	string.h strings.h memory.h sys/auxv.h)
+ AC_HEADER_STDC
+ 
+ # Check for decimal float support.
 diff --git a/libgomp/ChangeLog b/libgomp/ChangeLog
 index 0156d5f7bc9..f4aa8c63481 100644
 --- a/libgomp/ChangeLog
@@ -2436,10 +4533,21 @@ index 00000000000..3334bd571f6
 +  return 0;
 +}
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
-index 45847172291..8e11c6df5a7 100644
+index 45847172291..bc64a051de8 100644
 --- a/libstdc++-v3/ChangeLog
 +++ b/libstdc++-v3/ChangeLog
-@@ -1,3 +1,56 @@
+@@ -1,3 +1,67 @@
++2020-04-03  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backport from mainline
++	2020-04-03  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/93960
++	* include/bits/ptr_traits.h (__to_address): Add special case for debug
++	iterators, to avoid dereferenceable check.
++	* testsuite/20_util/to_address/1_neg.cc: Adjust dg-error line number.
++	* testsuite/20_util/to_address/debug.cc: New test.
++
 +2020-03-16  Jonathan Wakely  <jwakely@redhat.com>
 +
 +	Backport from mainline
@@ -2514,6 +4622,35 @@ index 5dc624dbb1e..6b39c46ac6e 100644
  	      if (__add_slash)
  		__str += __slash;
  	      __str += __elem._M_pathname;
+diff --git a/libstdc++-v3/include/bits/ptr_traits.h b/libstdc++-v3/include/bits/ptr_traits.h
+index c90a35080f1..cff56feb66f 100644
+--- a/libstdc++-v3/include/bits/ptr_traits.h
++++ b/libstdc++-v3/include/bits/ptr_traits.h
+@@ -34,6 +34,10 @@
+ 
+ #include <bits/move.h>
+ 
++#if __cplusplus > 201703L
++namespace __gnu_debug { struct _Safe_iterator_base; }
++#endif
++
+ namespace std _GLIBCXX_VISIBILITY(default)
+ {
+ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+@@ -169,7 +173,12 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+   template<typename _Ptr, typename... _None>
+     constexpr auto
+     __to_address(const _Ptr& __ptr, _None...) noexcept
+-    { return std::__to_address(__ptr.operator->()); }
++    {
++      if constexpr (is_base_of_v<__gnu_debug::_Safe_iterator_base, _Ptr>)
++	return std::__to_address(__ptr.base().operator->());
++      else
++	return std::__to_address(__ptr.operator->());
++    }
+ 
+   /**
+    * @brief Obtain address referenced by a pointer to an object
 diff --git a/libstdc++-v3/include/experimental/executor b/libstdc++-v3/include/experimental/executor
 index 266a2487899..15f28de9b9d 100644
 --- a/libstdc++-v3/include/experimental/executor
@@ -2605,6 +4742,61 @@ index 54bef75efd8..a6be0e03a78 100644
    const auto orig_pathlen = _M_pathname.length();
    const auto orig_type = _M_type();
    const auto orig_size = _M_cmpts.size();
+diff --git a/libstdc++-v3/testsuite/20_util/to_address/1_neg.cc b/libstdc++-v3/testsuite/20_util/to_address/1_neg.cc
+index 0954ac7b458..33a0e32711a 100644
+--- a/libstdc++-v3/testsuite/20_util/to_address/1_neg.cc
++++ b/libstdc++-v3/testsuite/20_util/to_address/1_neg.cc
+@@ -17,7 +17,7 @@
+ 
+ // { dg-options "-std=gnu++2a" }
+ // { dg-do compile { target c++2a } }
+-// { dg-error "not a function pointer" "" { target *-*-* } 153 }
++// { dg-error "not a function pointer" "" { target *-*-* } 157 }
+ 
+ #include <memory>
+ 
+diff --git a/libstdc++-v3/testsuite/20_util/to_address/debug.cc b/libstdc++-v3/testsuite/20_util/to_address/debug.cc
+new file mode 100644
+index 00000000000..4555284416d
+--- /dev/null
++++ b/libstdc++-v3/testsuite/20_util/to_address/debug.cc
+@@ -0,0 +1,36 @@
++// Copyright (C) 2020 Free Software Foundation, Inc.
++//
++// This file is part of the GNU ISO C++ Library.  This library is free
++// software; you can redistribute it and/or modify it under the
++// terms of the GNU General Public License as published by the
++// Free Software Foundation; either version 3, or (at your option)
++// any later version.
++
++// This library is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++
++// You should have received a copy of the GNU General Public License along
++// with this library; see the file COPYING3.  If not see
++// <http://www.gnu.org/licenses/>.
++
++// { dg-options "-std=gnu++2a" }
++// { dg-do run { target c++2a } }
++
++#include <debug/vector>
++#include <testsuite_hooks.h>
++
++void
++test01()
++{
++  __gnu_debug::vector<int> v{1, 2, 3};
++  auto p = std::to_address(v.end());
++  VERIFY( p == v.data() + v.size() );
++}
++
++int
++main()
++{
++  test01();
++}
 diff --git a/libstdc++-v3/testsuite/27_io/filesystem/operations/last_write_time.cc b/libstdc++-v3/testsuite/27_io/filesystem/operations/last_write_time.cc
 index 3f31375f51b..5d6e62c421a 100644
 --- a/libstdc++-v3/testsuite/27_io/filesystem/operations/last_write_time.cc
