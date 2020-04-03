@@ -60,11 +60,12 @@ Jakub Jelinek (16):
       expand: Don't depend on warning flags in code generation of strnlen [PR94189]
       aarch64: Fix ICE due to aarch64_gen_compare_reg_maybe_ze [PR94435]
 
-Jason Merrill (4):
+Jason Merrill (5):
       c++: Fix CTAD with multiple-arg ctor template [93248].
       c++: Fix ICE-after-error on partial spec [92068]
       c++: Find parameter pack in typedef in lambda [92909].
       c++: Fix comparison of fn() and ns::fn() [PR90711]
+      c++: alias template and parameter packs (PR91966).
 
 Jiufu Guo (1):
       rs6000: Check -+0 and NaN for smax/smin generation
@@ -106,6 +107,9 @@ Mark Eggleston (3):
       fortran: ICE equivalence with an element of an array PR94030
       fortran : ICE in gfc_resolve_findloc PR93498
 
+Martin Jambor (1):
+      gcc-9 sra: Cap number of sub-access propagations with a param (PR 93435)
+
 Martin Liska (2):
       Backport 314b91220a07bd63f13c58e37f1b5b9430a3702b
       Backport 55a7380213a5c16120d5c674fb42b38a3d796b57
@@ -141,10 +145,20 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..04e297cd455 100644
+index d8e53874e68..3994227a158 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,329 @@
+@@ -1,3 +1,339 @@
++2020-04-02  Martin Jambor  <mjambor@suse.cz>
++
++	PR tree-optimization/93435
++	* params.def (PARAM_SRA_MAX_PROPAGATIONS): New parameter.
++	* tree-sra.c (propagation_budget): New variable.
++	(budget_for_propagation_access): New function.
++	(propagate_subaccesses_across_link): Use it.
++	(propagate_all_subaccesses): Set up and destroy propagation_budget.
++	* doc/invoke.texi (sra-max-propagations): New.
++
 +2020-04-03  Martin Liska  <mliska@suse.cz>
 +
 +	Backport from mainline
@@ -1420,10 +1434,16 @@ index 87d60078bb0..11d45129357 100644
  
    for (i = 0; i < ARRAY_SIZE (flags); i++)
 diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
-index 6441d647a54..d46bcfc8c17 100644
+index 6441d647a54..d290145bf36 100644
 --- a/gcc/cp/ChangeLog
 +++ b/gcc/cp/ChangeLog
-@@ -1,3 +1,32 @@
+@@ -1,3 +1,38 @@
++2020-04-03  Jason Merrill  <jason@redhat.com>
++
++	PR c++/91966
++	* pt.c (complex_pack_expansion_r): New.
++	(complex_alias_template_p): Use it.
++
 +2020-03-30  Jason Merrill  <jason@redhat.com>
 +
 +	PR c++/90711
@@ -1471,7 +1491,7 @@ index 8999c5ad4a7..8298ee171e0 100644
  
    /* An anonymous namespace has a NULL DECL_NAME, but we still want to
 diff --git a/gcc/cp/pt.c b/gcc/cp/pt.c
-index 4787747b6ff..3e4fc235f7a 100644
+index 4787747b6ff..bc572ac51fb 100644
 --- a/gcc/cp/pt.c
 +++ b/gcc/cp/pt.c
 @@ -3773,10 +3773,18 @@ find_parameter_packs_r (tree *tp, int *walk_subtrees, void* data)
@@ -1520,7 +1540,52 @@ index 4787747b6ff..3e4fc235f7a 100644
    tpd2.parms = 0;
    for (i = 0; i < nargs; ++i)
      {
-@@ -27376,10 +27391,13 @@ build_deduction_guide (tree ctor, tree outer_args, tsubst_flags_t complain)
+@@ -6137,6 +6152,33 @@ uses_all_template_parms_r (tree t, void *data_)
+   return 0;
+ }
+ 
++/* for_each_template_parm any_fn callback for complex_alias_template_p.  */
++
++static int
++complex_pack_expansion_r (tree t, void *data_)
++{
++  /* An alias template with a pack expansion that expands a pack from the
++     enclosing class needs to be considered complex, to avoid confusion with
++     the same pack being used as an argument to the alias's own template
++     parameter (91966).  */
++  if (!PACK_EXPANSION_P (t))
++    return 0;
++  struct uses_all_template_parms_data &data
++    = *(struct uses_all_template_parms_data*)data_;
++  for (tree pack = PACK_EXPANSION_PARAMETER_PACKS (t); pack;
++       pack = TREE_CHAIN (pack))
++    {
++      tree parm_pack = TREE_VALUE (pack);
++      if (!TEMPLATE_PARM_P (parm_pack))
++	continue;
++      int idx, level;
++      template_parm_level_and_index (parm_pack, &level, &idx);
++      if (level < data.level)
++	return 1;
++    }
++  return 0;
++}
++
+ static bool
+ complex_alias_template_p (const_tree tmpl)
+ {
+@@ -6149,7 +6191,9 @@ complex_alias_template_p (const_tree tmpl)
+   for (int i = 0; i < len; ++i)
+     data.seen[i] = false;
+ 
+-  for_each_template_parm (pat, uses_all_template_parms_r, &data, NULL, true);
++  if (for_each_template_parm (pat, uses_all_template_parms_r, &data,
++			      NULL, true, complex_pack_expansion_r))
++    return true;
+   for (int i = 0; i < len; ++i)
+     if (!data.seen[i])
+       return true;
+@@ -27376,10 +27420,13 @@ build_deduction_guide (tree ctor, tree outer_args, tsubst_flags_t complain)
  				     complain, ctor);
  	  if (fparms == error_mark_node)
  	    ok = false;
@@ -1609,7 +1674,7 @@ index f5becf988d2..51ebb90e32d 100644
      __attribute__ ((alias (#TargetFunc), copy (TargetFunc)));
  
 diff --git a/gcc/doc/invoke.texi b/gcc/doc/invoke.texi
-index 0ab6c9c6449..792b768fceb 100644
+index 0ab6c9c6449..b18e9124b4e 100644
 --- a/gcc/doc/invoke.texi
 +++ b/gcc/doc/invoke.texi
 @@ -637,7 +637,8 @@ Objective-C and Objective-C++ Dialects}.
@@ -1634,7 +1699,19 @@ index 0ab6c9c6449..792b768fceb 100644
  @table @gcctabopt
  @item -Wpedantic
  @itemx -pedantic
-@@ -15777,6 +15783,19 @@ be used by the compiler when expanding calls to
+@@ -11792,6 +11798,11 @@ speed
+ (@option{sra-max-scalarization-size-Ospeed}) or size
+ (@option{sra-max-scalarization-size-Osize}) respectively.
+ 
++@item sra-max-propagations
++The maximum number of artificial accesses that Scalar Replacement of
++Aggregates (SRA) will track, per one local variable, in order to
++facilitate copy propagation.
++
+ @item tm-max-aggregate-size
+ When making copies of thread-local variables in a transaction, this
+ parameter specifies the size in bytes after which variables are
+@@ -15777,6 +15788,19 @@ be used by the compiler when expanding calls to
  @code{__builtin_speculation_safe_copy} to permit a more efficient code
  sequence to be generated.
  
@@ -1933,6 +2010,24 @@ index 25284936bc3..38e0ac12f7e 100644
    tree chain1 = gimple_call_chain (s1);
    tree chain2 = gimple_call_chain (s2);
    if ((chain1 && !chain2)
+diff --git a/gcc/params.def b/gcc/params.def
+index 8e4887e50a2..e23a4530bfa 100644
+--- a/gcc/params.def
++++ b/gcc/params.def
+@@ -1081,6 +1081,13 @@ DEFPARAM (PARAM_SRA_MAX_SCALARIZATION_SIZE_SIZE,
+ 	  "considered for scalarization when compiling for size.",
+ 	  0, 0, 0)
+ 
++DEFPARAM (PARAM_SRA_MAX_PROPAGATIONS,
++	  "sra-max-propagations",
++	  "Maximum number of artificial accesses to enable forward propagation "
++	  "that Scalar Replacement of Aggregates will keep for one local "
++	  "variable.",
++	  32, 0, 0)
++
+ DEFPARAM (PARAM_IPA_CP_VALUE_LIST_SIZE,
+ 	  "ipa-cp-value-list-size",
+ 	  "Maximum size of a list of values associated with each parameter for "
 diff --git a/gcc/print-rtl.c b/gcc/print-rtl.c
 index fbb108568b3..819b8473d9d 100644
 --- a/gcc/print-rtl.c
@@ -2052,10 +2147,15 @@ index 7916344c584..3e969e52176 100644
  extern void mark_end_of_function_resources (rtx, bool);
  extern void init_resource_info (rtx_insn *);
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..da06792dc18 100644
+index e132f2657ef..a1101ae50b5 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,207 @@
+@@ -1,3 +1,212 @@
++2020-04-02  Martin Jambor  <mjambor@suse.cz>
++
++	PR tree-optimization/93435
++	* gcc.dg/tree-ssa/pr93435.c: New test.
++
 +2020-04-02  Fritz Reese  <foreese@gcc.gnu.org>
 +
 +	Backport from master.
@@ -2281,6 +2381,115 @@ index 00000000000..052283e6caa
 +    }();			// { dg-error "not expanded" }
 +}
 +template void foo<>();
+diff --git a/gcc/testsuite/g++.dg/cpp0x/variadic-alias2.C b/gcc/testsuite/g++.dg/cpp0x/variadic-alias2.C
+new file mode 100644
+index 00000000000..ab64866d35f
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp0x/variadic-alias2.C
+@@ -0,0 +1,103 @@
++// PR c++/91966
++// { dg-do compile { target c++11 } }
++
++// Reduced to this include-free example. Further reduction is hard: Either
++// the bug(?) disappears, or the program becomes meaningless.
++
++template<class...>
++struct list {};
++
++struct nil;
++
++////////////////////////////////////////////////////////////////////////////////
++
++template<int n>
++struct number {
++  constexpr /*implicit*/ operator int() const { return n; }
++  using type = number<n>;
++};
++
++using false_ = number<0>;
++using true_ = number<1>;
++
++static_assert(!false_{}, "");
++static_assert(true_{}, "");
++
++template<int... ns> using numbers = list<number<ns>...>;
++
++////////////////////////////////////////////////////////////////////////////////
++
++template<class lhs, class rhs>
++struct less_impl;
++
++template<int lhs, int rhs>
++struct less_impl<number<lhs>, number<rhs>>
++  : number<(lhs < rhs)> {};
++
++template<class lhs, class rhs> using less = typename less_impl<lhs, rhs>::type;
++
++////////////////////////////////////////////////////////////////////////////////
++
++template<class v0, class... vs>
++struct sum_impl {
++  static_assert(sizeof...(vs) == 0, "see specialization");
++  using type = v0;
++};
++
++template<int v0, int v1, class... vs>
++struct sum_impl<number<v0>, number<v1>, vs...>
++  : sum_impl<number<v0 + v1>, vs...> {};
++
++template<class... nums> using sum = typename sum_impl<nums...>::type;
++
++////////////////////////////////////////////////////////////////////////////////
++
++template<class num>
++struct conditional_impl {
++  static_assert(num{}, "see specialization");
++
++  template<class T, class F>
++  using type = T;
++};
++
++template<>
++struct conditional_impl<false_> {
++  template<class T, class F>
++  using type = F;
++};
++
++template<class num, class T, class F>
++using conditional = typename conditional_impl<num>::template type<T, F>;
++
++////////////////////////////////////////////////////////////////////////////////
++
++template<class seq>
++struct min_filter_impl;
++
++template<class... nums>
++struct min_filter_impl<list<nums...>> {
++  template<class num>
++  using count_better_mins = sum<less<nums, num>...>;
++
++  using type = list<conditional<count_better_mins<nums>, nil, nums>...>;
++
++//using debug = list<conditional<count_better_mins<nums>, nil, void>...>;
++
++// error: expansion pattern 'conditional<typename sum_impl<less<nums, nums>...>::type, nil, void>' contains no parameter packs
++
++};
++
++template<class seq> using min_filter = typename min_filter_impl<seq>::type;
++
++////////////////////////////////////////////////////////////////////////////////
++
++void test_min_filter() {
++  using computed = min_filter<numbers<2, 7, 2>>;
++  using expected = list<number<2>, nil, number<2>>;
++  (void)(computed{} = expected{});// compiles for identical types
++
++// error: no match for 'operator=' (operand types are 'computed' {aka 'list<number<2>, number<7>, number<2> >'} and 'expected' {aka 'list<number<2>, nil, number<2> >'})
++
++}
++
++int main() {}
 diff --git a/gcc/testsuite/g++.dg/cpp0x/variadic178.C b/gcc/testsuite/g++.dg/cpp0x/variadic178.C
 new file mode 100644
 index 00000000000..f0e65958de3
@@ -2836,6 +3045,171 @@ index 00000000000..9e54bba4ed4
 +  if (u != -1ul)
 +    __builtin_abort ();
 +  return 0;
++}
+diff --git a/gcc/testsuite/gcc.dg/tree-ssa/pr93435.c b/gcc/testsuite/gcc.dg/tree-ssa/pr93435.c
+new file mode 100644
+index 00000000000..cb8e7495b15
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/tree-ssa/pr93435.c
+@@ -0,0 +1,159 @@
++/* { dg-do compile } */
++/* { dg-options "-O2" } */
++
++typedef signed char int8_T;
++typedef int int32_T;
++
++typedef struct {
++  int8_T a;
++} struct0_T;
++
++typedef struct {
++  struct0_T f10[4];
++} struct_T;
++
++typedef struct {
++  struct_T f9[4];
++} b_struct_T;
++
++typedef struct {
++  b_struct_T f8[4];
++} c_struct_T;
++
++typedef struct {
++  c_struct_T f7[4];
++} d_struct_T;
++
++typedef struct {
++  d_struct_T f6[4];
++} e_struct_T;
++
++typedef struct {
++  e_struct_T f5[4];
++} f_struct_T;
++
++typedef struct {
++  f_struct_T f4[4];
++} g_struct_T;
++
++typedef struct {
++  g_struct_T f3[4];
++} h_struct_T;
++
++typedef struct {
++  h_struct_T f2[4];
++} i_struct_T;
++
++typedef struct {
++  i_struct_T f1[4];
++} j_struct_T;
++
++typedef struct {
++  struct {
++    j_struct_T ds21[4];
++    i_struct_T ds20[4];
++    i_struct_T r9;
++  } f0;
++} deep_struct_arraysStackData;
++
++/* Function Definitions */
++void deep_struct_arrays(deep_struct_arraysStackData *SD,
++  int8_T in1, int8_T inCount, int8_T *out1, int8_T *out2, struct0_T out3[4])
++{
++  struct0_T r;
++  struct_T r1;
++  b_struct_T r2;
++  c_struct_T r3;
++  d_struct_T r4;
++  e_struct_T r5;
++  f_struct_T r6;
++  g_struct_T r7;
++  h_struct_T r8;
++  int32_T count;
++  int32_T i;
++
++  /*  Check properties of input in1 */
++  /*  Check properties of input inCount */
++  /*  Copyright 2006 The MathWorks, Inc. */
++  r.a = in1;
++  r1.f10[0] = r;
++  r1.f10[1] = r;
++  r1.f10[2] = r;
++  r1.f10[3] = r;
++  r2.f9[0] = r1;
++  r2.f9[1] = r1;
++  r2.f9[2] = r1;
++  r2.f9[3] = r1;
++  r3.f8[0] = r2;
++  r3.f8[1] = r2;
++  r3.f8[2] = r2;
++  r3.f8[3] = r2;
++  r4.f7[0] = r3;
++  r4.f7[1] = r3;
++  r4.f7[2] = r3;
++  r4.f7[3] = r3;
++  r5.f6[0] = r4;
++  r5.f6[1] = r4;
++  r5.f6[2] = r4;
++  r5.f6[3] = r4;
++  r6.f5[0] = r5;
++  r6.f5[1] = r5;
++  r6.f5[2] = r5;
++  r6.f5[3] = r5;
++  r7.f4[0] = r6;
++  r7.f4[1] = r6;
++  r7.f4[2] = r6;
++  r7.f4[3] = r6;
++  r8.f3[0] = r7;
++  r8.f3[1] = r7;
++  r8.f3[2] = r7;
++  r8.f3[3] = r7;
++  SD->f0.r9.f2[0] = r8;
++  SD->f0.r9.f2[1] = r8;
++  SD->f0.r9.f2[2] = r8;
++  SD->f0.r9.f2[3] = r8;
++  SD->f0.ds20[0] = SD->f0.r9;
++  SD->f0.ds20[3] = SD->f0.r9;
++  count = 0;
++  while (count < inCount) {
++    i = in1 + SD->f0.ds20[0].f2[0].f3[0].f4[0].f5[0].f6[0].f7[0].f8[0].f9[0]
++      .f10[0].a;
++    if (i > 127) {
++      i = 127;
++    } else {
++      if (i < -128) {
++        i = -128;
++      }
++    }
++
++    SD->f0.ds20[0].f2[0].f3[0].f4[0].f5[0].f6[0].f7[0].f8[0].f9[0].f10[0].a =
++      (int8_T)i;
++    i = SD->f0.ds20[3].f2[3].f3[3].f4[3].f5[3].f6[3].f7[3].f8[3].f9[3].f10[3].a
++      + 3;
++    if (i > 127) {
++      i = 127;
++    }
++
++    SD->f0.ds20[3].f2[3].f3[3].f4[3].f5[3].f6[3].f7[3].f8[3].f9[3].f10[3].a =
++      (int8_T)i;
++    count++;
++  }
++
++  if (inCount > 10) {
++    SD->f0.ds21[0].f1[1].f2[2].f3[3].f4[3].f5[3].f6[3].f7[3].f8[3].f9[3].f10[3].
++      a = 14;
++  } else {
++    SD->f0.ds21[0].f1[1].f2[2].f3[3].f4[3].f5[3].f6[3].f7[3].f8[3].f9[3].f10[3].
++      a = 16;
++  }
++
++  *out1 = SD->f0.ds20[0].f2[0].f3[0].f4[0].f5[0].f6[0].f7[0].f8[0].f9[0].f10[0].
++    a;
++  *out2 = SD->f0.ds20[3].f2[3].f3[3].f4[3].f5[3].f6[3].f7[3].f8[3].f9[3].f10[3].
++    a;
++  out3[0] = r;
++  out3[1] = r;
++  out3[2] = r;
++  out3[3] = SD->f0.ds21[0].f1[1].f2[2].f3[3].f4[3].f5[3].f6[3].f7[3].f8[3].f9[3]
++    .f10[3];
 +}
 diff --git a/gcc/testsuite/gcc.dg/tree-ssa/pr94125.c b/gcc/testsuite/gcc.dg/tree-ssa/pr94125.c
 new file mode 100644
@@ -3716,6 +4090,79 @@ index 9f593289666..41697e77994 100644
  extern void print_call_name (pretty_printer *, tree, dump_flags_t);
  extern void percent_K_format (text_info *, location_t, tree);
  extern void pp_tree_identifier (pretty_printer *, tree);
+diff --git a/gcc/tree-sra.c b/gcc/tree-sra.c
+index fd51a3d0323..0a5c24a183a 100644
+--- a/gcc/tree-sra.c
++++ b/gcc/tree-sra.c
+@@ -291,6 +291,9 @@ static object_allocator<assign_link> assign_link_pool ("SRA links");
+ /* Base (tree) -> Vector (vec<access_p> *) map.  */
+ static hash_map<tree, auto_vec<access_p> > *base_access_vec;
+ 
++/* Hash to limit creation of artificial accesses */
++static hash_map<tree, unsigned> *propagation_budget;
++
+ /* Candidate hash table helpers.  */
+ 
+ struct uid_decl_hasher : nofree_ptr_hash <tree_node>
+@@ -2670,6 +2673,32 @@ subtree_mark_written_and_enqueue (struct access *access)
+     subtree_mark_written_and_enqueue (child);
+ }
+ 
++/* If there is still budget to create a propagation access for DECL, return
++   true and decrement the budget.  Otherwise return false.  */
++
++static bool
++budget_for_propagation_access (tree decl)
++{
++  unsigned b, *p = propagation_budget->get (decl);
++  if (p)
++    b = *p;
++  else
++    b = PARAM_SRA_MAX_PROPAGATIONS;
++
++  if (b == 0)
++    return false;
++  b--;
++
++  if (b == 0 && dump_file && (dump_flags & TDF_DETAILS))
++    {
++      fprintf (dump_file, "The propagation budget of ");
++      print_generic_expr (dump_file, decl);
++      fprintf (dump_file, " (UID: %u) has been exhausted.\n", DECL_UID (decl));
++    }
++  propagation_budget->put (decl, b);
++  return true;
++}
++
+ /* Propagate subaccesses and grp_write flags of RACC across an assignment link
+    to LACC.  Enqueue sub-accesses as necessary so that the write flag is
+    propagated transitively.  Return true if anything changed.  Additionally, if
+@@ -2770,7 +2799,8 @@ propagate_subaccesses_across_link (struct access *lacc, struct access *racc)
+ 	  continue;
+ 	}
+ 
+-      if (rchild->grp_unscalarizable_region)
++      if (rchild->grp_unscalarizable_region
++	  || !budget_for_propagation_access (lacc->base))
+ 	{
+ 	  if (rchild->grp_write && !lacc->grp_write)
+ 	    {
+@@ -2800,6 +2830,7 @@ propagate_subaccesses_across_link (struct access *lacc, struct access *racc)
+ static void
+ propagate_all_subaccesses (void)
+ {
++  propagation_budget = new hash_map<tree, unsigned>;
+   while (work_queue_head)
+     {
+       struct access *racc = pop_access_from_work_queue ();
+@@ -2838,6 +2869,7 @@ propagate_all_subaccesses (void)
+ 	    while (lacc);
+ 	}
+     }
++  delete propagation_budget;
+ }
+ 
+ /* Go through all accesses collected throughout the (intraprocedural) analysis
 diff --git a/gcc/tree-ssa-dse.c b/gcc/tree-ssa-dse.c
 index efe5b31cc0a..26376ecf8de 100644
 --- a/gcc/tree-ssa-dse.c
