@@ -12,10 +12,15 @@ Eric Botcazou (2):
       Fix incorrect filling of delay slots in branchy code at -O2
       Fix wrong year in ChangeLog.
 
-Fritz Reese (1):
+Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
+      Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (22):
+GCC Administrator (26):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -42,7 +47,7 @@ GCC Administrator (22):
 Iain Sandoe (1):
       Darwin: Fix i686 bootstrap when the assembler supports GOTOFF in data.
 
-Jakub Jelinek (16):
+Jakub Jelinek (17):
       Bump BASE-VER to 9.3.1.
       tailcall: Fix up process_assignment [PR94001]
       inliner: Copy DECL_BY_REFERENCE in copy_decl_to_var [PR93888]
@@ -59,13 +64,16 @@ Jakub Jelinek (16):
       tree-inline: Fix a -fcompare-debug issue in the inliner [PR94167]
       expand: Don't depend on warning flags in code generation of strnlen [PR94189]
       aarch64: Fix ICE due to aarch64_gen_compare_reg_maybe_ze [PR94435]
+      i386: Fix emit_reduc_half on V{64Q,32H}Imode [PR94500]
 
-Jason Merrill (5):
+Jason Merrill (7):
       c++: Fix CTAD with multiple-arg ctor template [93248].
       c++: Fix ICE-after-error on partial spec [92068]
       c++: Find parameter pack in typedef in lambda [92909].
       c++: Fix comparison of fn() and ns::fn() [PR90711]
       c++: alias template and parameter packs (PR91966).
+      c++: Fix reuse of class constants [PR94453]
+      c++: Mangling of dependent conversions [PR91377]
 
 Jiufu Guo (1):
       rs6000: Check -+0 and NaN for smax/smin generation
@@ -101,6 +109,9 @@ Kyrylo Tkachov (9):
       aarch64: Fix store-exclusive in load-operate LSE helpers
       aarch64: Configure for sys/auxv.h in libgcc for lse-init.c
       aarch64: Fix up aarch64_compare_and_swaphi pattern [PR94368]
+
+Marek Polacek (1):
+      c++: Fix ICE with lambda in operator function [PR93597]
 
 Mark Eggleston (3):
       fortran: ICE using undeclared symbol in array constructor PR93484
@@ -145,10 +156,16 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..3994227a158 100644
+index d8e53874e68..86cc47cb78d 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,339 @@
+@@ -1,3 +1,345 @@
++2020-04-07  Jakub Jelinek  <jakub@redhat.com>
++
++	PR target/94500
++	* config/i386/i386.c (emit_reduc_half): For V{64QI,32HI}mode
++	handle i < 64 using avx512bw_lshrv4ti3.  Formatting fixes.
++
 +2020-04-02  Martin Jambor  <mjambor@suse.cz>
 +
 +	PR tree-optimization/93435
@@ -1277,6 +1294,91 @@ index bdb36f00959..c099a6238d8 100644
  /* Darwin profiling -- call mcount.  */
  #undef FUNCTION_PROFILER
  #define FUNCTION_PROFILER(FILE, LABELNO)				\
+diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
+index 1bca5a7eea6..c9c33a8fd62 100644
+--- a/gcc/config/i386/i386.c
++++ b/gcc/config/i386/i386.c
+@@ -44150,43 +44150,51 @@ emit_reduc_half (rtx dest, rtx src, int i)
+       break;
+     case E_V64QImode:
+     case E_V32HImode:
++      if (i < 64)
++	{
++	  d = gen_reg_rtx (V4TImode);
++	  tem = gen_avx512bw_lshrv4ti3 (d, gen_lowpart (V4TImode, src),
++					GEN_INT (i / 2));
++	  break;
++	}
++      /* FALLTHRU */
+     case E_V16SImode:
+     case E_V16SFmode:
+     case E_V8DImode:
+     case E_V8DFmode:
+       if (i > 128)
+ 	tem = gen_avx512f_shuf_i32x4_1 (gen_lowpart (V16SImode, dest),
+-				      gen_lowpart (V16SImode, src),
+-				      gen_lowpart (V16SImode, src),
+-				      GEN_INT (0x4 + (i == 512 ? 4 : 0)),
+-				      GEN_INT (0x5 + (i == 512 ? 4 : 0)),
+-				      GEN_INT (0x6 + (i == 512 ? 4 : 0)),
+-				      GEN_INT (0x7 + (i == 512 ? 4 : 0)),
+-				      GEN_INT (0xC), GEN_INT (0xD),
+-				      GEN_INT (0xE), GEN_INT (0xF),
+-				      GEN_INT (0x10), GEN_INT (0x11),
+-				      GEN_INT (0x12), GEN_INT (0x13),
+-				      GEN_INT (0x14), GEN_INT (0x15),
+-				      GEN_INT (0x16), GEN_INT (0x17));
++					gen_lowpart (V16SImode, src),
++					gen_lowpart (V16SImode, src),
++					GEN_INT (0x4 + (i == 512 ? 4 : 0)),
++					GEN_INT (0x5 + (i == 512 ? 4 : 0)),
++					GEN_INT (0x6 + (i == 512 ? 4 : 0)),
++					GEN_INT (0x7 + (i == 512 ? 4 : 0)),
++					GEN_INT (0xC), GEN_INT (0xD),
++					GEN_INT (0xE), GEN_INT (0xF),
++					GEN_INT (0x10), GEN_INT (0x11),
++					GEN_INT (0x12), GEN_INT (0x13),
++					GEN_INT (0x14), GEN_INT (0x15),
++					GEN_INT (0x16), GEN_INT (0x17));
+       else
+ 	tem = gen_avx512f_pshufd_1 (gen_lowpart (V16SImode, dest),
+-				   gen_lowpart (V16SImode, src),
+-				   GEN_INT (i == 128 ? 0x2 : 0x1),
+-				   GEN_INT (0x3),
+-				   GEN_INT (0x3),
+-				   GEN_INT (0x3),
+-				   GEN_INT (i == 128 ? 0x6 : 0x5),
+-				   GEN_INT (0x7),
+-				   GEN_INT (0x7),
+-				   GEN_INT (0x7),
+-				   GEN_INT (i == 128 ? 0xA : 0x9),
+-				   GEN_INT (0xB),
+-				   GEN_INT (0xB),
+-				   GEN_INT (0xB),
+-				   GEN_INT (i == 128 ? 0xE : 0xD),
+-				   GEN_INT (0xF),
+-				   GEN_INT (0xF),
+-				   GEN_INT (0xF));
++				    gen_lowpart (V16SImode, src),
++				    GEN_INT (i == 128 ? 0x2 : 0x1),
++				    GEN_INT (0x3),
++				    GEN_INT (0x3),
++				    GEN_INT (0x3),
++				    GEN_INT (i == 128 ? 0x6 : 0x5),
++				    GEN_INT (0x7),
++				    GEN_INT (0x7),
++				    GEN_INT (0x7),
++				    GEN_INT (i == 128 ? 0xA : 0x9),
++				    GEN_INT (0xB),
++				    GEN_INT (0xB),
++				    GEN_INT (0xB),
++				    GEN_INT (i == 128 ? 0xE : 0xD),
++				    GEN_INT (0xF),
++				    GEN_INT (0xF),
++				    GEN_INT (0xF));
+       break;
+     default:
+       gcc_unreachable ();
 diff --git a/gcc/config/i386/i386.h b/gcc/config/i386/i386.h
 index 14e5a392f62..441213eebb8 100644
 --- a/gcc/config/i386/i386.h
@@ -1434,10 +1536,30 @@ index 87d60078bb0..11d45129357 100644
  
    for (i = 0; i < ARRAY_SIZE (flags); i++)
 diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
-index 6441d647a54..d290145bf36 100644
+index 6441d647a54..2e247069b96 100644
 --- a/gcc/cp/ChangeLog
 +++ b/gcc/cp/ChangeLog
-@@ -1,3 +1,38 @@
+@@ -1,3 +1,58 @@
++2020-04-05  Marek Polacek  <polacek@redhat.com>
++
++	2020-02-06  Marek Polacek  <polacek@redhat.com>
++	Backport from mainline
++
++	PR c++/93597 - ICE with lambda in operator function.
++	* name-lookup.c (maybe_save_operator_binding): Check is_overloaded_fn.
++
++2020-04-04  Jason Merrill  <jason@redhat.com>
++
++	PR c++/91377
++	* mangle.c (write_expression): Skip IMPLICIT_CONV_EXPR.
++
++2020-04-04  Jason Merrill  <jason@redhat.com>
++
++	PR c++/94453
++	* constexpr.c (maybe_constant_value): Use break_out_target_exprs.
++	* expr.c (mark_use) [VIEW_CONVERT_EXPR]: Don't wrap a TARGET_EXPR in
++	NON_LVALUE_EXPR.
++
 +2020-04-03  Jason Merrill  <jason@redhat.com>
 +
 +	PR c++/91966
@@ -1476,8 +1598,66 @@ index 6441d647a54..d290145bf36 100644
  2020-03-12  Release Manager
  
  	* GCC 9.3.0 released.
+diff --git a/gcc/cp/constexpr.c b/gcc/cp/constexpr.c
+index bab5935a4eb..b349919b434 100644
+--- a/gcc/cp/constexpr.c
++++ b/gcc/cp/constexpr.c
+@@ -5602,7 +5602,7 @@ maybe_constant_value (tree t, tree decl, bool manifestly_const_eval)
+       r = *cached;
+       if (r != t)
+ 	{
+-	  r = unshare_expr_without_location (r);
++	  r = break_out_target_exprs (r, /*clear_loc*/true);
+ 	  protected_set_expr_location (r, EXPR_LOCATION (t));
+ 	}
+       return r;
+diff --git a/gcc/cp/expr.c b/gcc/cp/expr.c
+index 9160043ed11..5a60da36025 100644
+--- a/gcc/cp/expr.c
++++ b/gcc/cp/expr.c
+@@ -195,11 +195,23 @@ mark_use (tree expr, bool rvalue_p, bool read_p,
+ 	  tree nop = RECUR (op);
+ 	  if (nop == error_mark_node)
+ 	    return error_mark_node;
+-	  TREE_OPERAND (expr, 0) = nop;
+-	  /* If we're replacing a DECL with a constant, we also need to change
+-	     the TREE_CODE of the location wrapper.  */
+-	  if (op != nop && rvalue_p)
+-	    TREE_SET_CODE (expr, NON_LVALUE_EXPR);
++	  else if (op == nop)
++	    /* No change.  */;
++	  else if (DECL_P (nop) || CONSTANT_CLASS_P (nop))
++	    {
++	      /* Reuse the location wrapper.  */
++	      TREE_OPERAND (expr, 0) = nop;
++	      /* If we're replacing a DECL with a constant, we also need to
++		 change the TREE_CODE of the location wrapper.  */
++	      if (rvalue_p)
++		TREE_SET_CODE (expr, NON_LVALUE_EXPR);
++	    }
++	  else
++	    {
++	      /* Drop the location wrapper.  */
++	      expr = nop;
++	      protected_set_expr_location (expr, loc);
++	    }
+ 	  return expr;
+ 	}
+       gcc_fallthrough();
+diff --git a/gcc/cp/mangle.c b/gcc/cp/mangle.c
+index 6f194375261..2b9190aee29 100644
+--- a/gcc/cp/mangle.c
++++ b/gcc/cp/mangle.c
+@@ -2856,6 +2856,7 @@ write_expression (tree expr)
+   /* Skip NOP_EXPR and CONVERT_EXPR.  They can occur when (say) a pointer
+      argument is converted (via qualification conversions) to another type.  */
+   while (CONVERT_EXPR_CODE_P (code)
++	 || code == IMPLICIT_CONV_EXPR
+ 	 || location_wrapper_p (expr)
+ 	 /* Parentheses aren't mangled.  */
+ 	 || code == PAREN_EXPR
 diff --git a/gcc/cp/name-lookup.c b/gcc/cp/name-lookup.c
-index 8999c5ad4a7..8298ee171e0 100644
+index 8999c5ad4a7..f5535ba50bc 100644
 --- a/gcc/cp/name-lookup.c
 +++ b/gcc/cp/name-lookup.c
 @@ -2988,7 +2988,8 @@ do_pushdecl (tree decl, bool is_friend)
@@ -1490,6 +1670,21 @@ index 8999c5ad4a7..8298ee171e0 100644
      level = level->level_chain;
  
    /* An anonymous namespace has a NULL DECL_NAME, but we still want to
+@@ -7626,10 +7627,10 @@ maybe_save_operator_binding (tree e)
+ 
+   if (!fns && (fns = op_unqualified_lookup (fnname)))
+     {
+-      tree fn = get_first_fn (fns);
+-      if (DECL_CLASS_SCOPE_P (fn))
+-	/* We don't need to remember class-scope functions, normal unqualified
+-	   lookup will find them again.  */
++      tree d = is_overloaded_fn (fns) ? get_first_fn (fns) : fns;
++      if (DECL_P (d) && DECL_CLASS_SCOPE_P (d))
++	/* We don't need to remember class-scope functions or declarations,
++	   normal unqualified lookup will find them again.  */
+ 	return;
+ 
+       bindings = tree_cons (fnname, fns, bindings);
 diff --git a/gcc/cp/pt.c b/gcc/cp/pt.c
 index 4787747b6ff..bc572ac51fb 100644
 --- a/gcc/cp/pt.c
@@ -1770,10 +1965,19 @@ index fe1194ef91a..44a15dda240 100644
  @end defmac
  
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index 8fefea2b63d..744511a5cb8 100644
+index 8fefea2b63d..68a85ed026c 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,42 @@
+@@ -1,3 +1,51 @@
++2020-04-06  Fritz Reese  <foreese@gcc.gnu.org>
++
++	Backport from master
++	Steven G. Kargl  <kargl@gcc.gnu.org>
++
++	PR fortran/93686
++	* decl.c (gfc_match_data): Handle data matching for derived type
++	pointers.
++
 +2020-04-02  Mark Eggleston <markeggleston@gcc.gnu.org>
 +
 +	Backport from master
@@ -1832,10 +2036,21 @@ index 6d37bbb8fd2..adda284ef71 100644
    d = ap->next->next->expr;
    m = ap->next->next->next->expr;
 diff --git a/gcc/fortran/decl.c b/gcc/fortran/decl.c
-index abff4af9f67..78ea32a3770 100644
+index abff4af9f67..86226b63ecc 100644
 --- a/gcc/fortran/decl.c
 +++ b/gcc/fortran/decl.c
-@@ -5339,15 +5339,19 @@ match_attr_spec (void)
+@@ -668,6 +668,10 @@ gfc_match_data (void)
+ 	  /* F2008:C567 (R536) A data-i-do-object or a variable that appears
+ 	     as a data-stmt-object shall not be an object designator in which
+ 	     a pointer appears other than as the entire rightmost part-ref.  */
++	  if (!e->ref && e->ts.type == BT_DERIVED
++	      && e->symtree->n.sym->attr.pointer)
++	    goto partref;
++
+ 	  ref = e->ref;
+ 	  if (e->symtree->n.sym->ts.type == BT_DERIVED
+ 	      && e->symtree->n.sym->attr.pointer
+@@ -5339,15 +5343,19 @@ match_attr_spec (void)
        if (d == DECL_STATIC && seen[DECL_SAVE])
  	continue;
  
@@ -1858,7 +2073,7 @@ index abff4af9f67..78ea32a3770 100644
  		{
  		  m = MATCH_ERROR;
  		  goto cleanup;
-@@ -5355,8 +5359,11 @@ match_attr_spec (void)
+@@ -5355,8 +5363,11 @@ match_attr_spec (void)
  	    }
  	  else if (d == DECL_KIND)
  	    {
@@ -1872,7 +2087,7 @@ index abff4af9f67..78ea32a3770 100644
  		{
  		  m = MATCH_ERROR;
  		  goto cleanup;
-@@ -5379,8 +5386,11 @@ match_attr_spec (void)
+@@ -5379,8 +5390,11 @@ match_attr_spec (void)
  	    }
  	  else if (d == DECL_LEN)
  	    {
@@ -1886,7 +2101,7 @@ index abff4af9f67..78ea32a3770 100644
  		{
  		  m = MATCH_ERROR;
  		  goto cleanup;
-@@ -5403,8 +5413,10 @@ match_attr_spec (void)
+@@ -5403,8 +5417,10 @@ match_attr_spec (void)
  	    }
  	  else
  	    {
@@ -1899,7 +2114,7 @@ index abff4af9f67..78ea32a3770 100644
  	      m = MATCH_ERROR;
  	      goto cleanup;
  	    }
-@@ -9602,13 +9614,20 @@ gfc_match_submod_proc (void)
+@@ -9602,13 +9618,20 @@ gfc_match_submod_proc (void)
    if (get_proc_name (name, &sym, false))
      return MATCH_ERROR;
  
@@ -2147,10 +2362,34 @@ index 7916344c584..3e969e52176 100644
  extern void mark_end_of_function_resources (rtx, bool);
  extern void init_resource_info (rtx_insn *);
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..a1101ae50b5 100644
+index e132f2657ef..cf0d5d76f2d 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,212 @@
+@@ -1,3 +1,236 @@
++2020-04-07  Jakub Jelinek  <jakub@redhat.com>
++
++	PR target/94500
++	* gcc.target/i386/avx512bw-pr94500.c: New test.
++
++2020-04-06  Fritz Reese  <foreese@gcc.gnu.org>
++
++	Backport from master.
++	Steven G. Kargl  <kargl@gcc.gnu.org>
++
++	PR fortran/93686
++	* gfortran.dg/pr93686_1.f90: New test.
++	* gfortran.dg/pr93686_2.f90: Likewise.
++	* gfortran.dg/pr93686_3.f90: Likewise.
++	* gfortran.dg/pr93686_4.f90: Likewise.
++
++2020-04-05  Marek Polacek  <polacek@redhat.com>
++
++	2020-02-06  Marek Polacek  <polacek@redhat.com>
++	Backport from mainline
++
++	PR c++/93597 - ICE with lambda in operator function.
++	* g++.dg/cpp0x/lambda/lambda-93597.C: New test.
++
 +2020-04-02  Martin Jambor  <mjambor@suse.cz>
 +
 +	PR tree-optimization/93435
@@ -2363,6 +2602,73 @@ index e132f2657ef..a1101ae50b5 100644
  2020-03-12  Release Manager
  
  	* GCC 9.3.0 released.
+diff --git a/gcc/testsuite/g++.dg/abi/mangle75.C b/gcc/testsuite/g++.dg/abi/mangle75.C
+new file mode 100644
+index 00000000000..f2661997a33
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/abi/mangle75.C
+@@ -0,0 +1,13 @@
++// PR c++/91377
++// { dg-do compile { target c++11 } }
++
++struct f {
++  static constexpr int d = 3;
++  typedef int e;
++};
++template <int a> struct x { };
++template <typename g, g j, g m> using n = x<j + m>;
++template <typename ac> auto v() -> n<typename ac::e, 0, ac::d>;
++void af() { v<f>(); }
++
++// { dg-final { scan-assembler "_Z1vI1fE1xIXplLi0EsrT_1dEEv" } }
+diff --git a/gcc/testsuite/g++.dg/cpp0x/lambda/lambda-93597.C b/gcc/testsuite/g++.dg/cpp0x/lambda/lambda-93597.C
+new file mode 100644
+index 00000000000..257d9c7cdfd
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp0x/lambda/lambda-93597.C
+@@ -0,0 +1,8 @@
++// PR c++/93597 - ICE with lambda in operator function.
++// { dg-do compile { target c++11 } }
++
++template <typename T>
++struct S {
++  using T ::operator<;
++  void operator==(T x) { [x] { 0 < x; }; }
++};
+diff --git a/gcc/testsuite/g++.dg/cpp0x/lambda/lambda-constexpr1.C b/gcc/testsuite/g++.dg/cpp0x/lambda/lambda-constexpr1.C
+new file mode 100644
+index 00000000000..7cb1e239ebb
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp0x/lambda/lambda-constexpr1.C
+@@ -0,0 +1,28 @@
++// PR c++/94453
++// { dg-do compile { target c++11 } }
++
++void *ay();
++template <typename f> f ay() { return *static_cast<f *>(ay()); }
++template <typename h>
++void bf() {
++  ay<h>()();
++}
++struct az {
++  template <typename h>
++  az(h);
++  using bk = void (*)();
++  bk bl;
++};
++template <typename h>
++az::az(h) { bl = bf<h>; }
++struct A {};
++void da(az);
++void di(A, int);
++void dk(A, az, az);
++void b() {
++  int data = 0;
++  auto n = [] {};
++  constexpr auto p = A{};
++  auto q = [=] { di(p, data); };
++  da([=] { dk(p, n, q); });
++}
 diff --git a/gcc/testsuite/g++.dg/cpp0x/lambda/lambda-variadic10.C b/gcc/testsuite/g++.dg/cpp0x/lambda/lambda-variadic10.C
 new file mode 100644
 index 00000000000..052283e6caa
@@ -3511,6 +3817,40 @@ index c6ba1629965..6b8b2043f40 100644
  
  #include "sync-op-full.x"
  
+diff --git a/gcc/testsuite/gcc.target/i386/avx512bw-pr94500.c b/gcc/testsuite/gcc.target/i386/avx512bw-pr94500.c
+new file mode 100644
+index 00000000000..7effdac5a17
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/avx512bw-pr94500.c
+@@ -0,0 +1,28 @@
++/* PR target/94500 */
++/* { dg-do run { target avx512bw } } */
++/* { dg-options "-O3 -mavx512bw -mprefer-vector-width=512" } */
++
++#define AVX512BW
++#include "avx512f-helper.h"
++
++__attribute__((noipa)) signed char
++foo (signed char *p)
++{
++  signed char r = 0;
++  int i;
++  for (i = 0; i < 256; i++)
++    if (p[i] > r) r = p[i];
++  return r;
++}
++
++signed char buf[256];
++
++static void
++TEST (void)
++{
++  int i;
++  for (i = 0; i < 256; i++)
++    buf[i] = i - 128;
++  if (foo (buf) != 127)
++    abort ();
++}
 diff --git a/gcc/testsuite/gcc.target/i386/pr94103.c b/gcc/testsuite/gcc.target/i386/pr94103.c
 new file mode 100644
 index 00000000000..91b5fc64b5e
@@ -3819,6 +4159,67 @@ index 00000000000..ee9238ffa24
 +end
 +
 +
+diff --git a/gcc/testsuite/gfortran.dg/pr93686_1.f90 b/gcc/testsuite/gfortran.dg/pr93686_1.f90
+new file mode 100644
+index 00000000000..0e7560a5c17
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr93686_1.f90
+@@ -0,0 +1,10 @@
++! { dg-do compile }
++! PR fortran/93686
++
++program p
++   type t
++      integer :: a
++   end type
++   type(t), pointer :: x
++   data x /t(2)/ ! { dg-error "part-ref with pointer attribute near ... is not rightmost part-ref of data-stmt-object" }
++end
+diff --git a/gcc/testsuite/gfortran.dg/pr93686_2.f90 b/gcc/testsuite/gfortran.dg/pr93686_2.f90
+new file mode 100644
+index 00000000000..aac4d9138ee
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr93686_2.f90
+@@ -0,0 +1,10 @@
++! { dg-do compile }
++! PR fortran/93686
++
++program p
++   type t
++      integer :: a = 1
++   end type
++   type(t), pointer :: x
++   data x /t(2)/ ! { dg-error "part-ref with pointer attribute near ... is not rightmost part-ref of data-stmt-object" }
++end
+diff --git a/gcc/testsuite/gfortran.dg/pr93686_3.f90 b/gcc/testsuite/gfortran.dg/pr93686_3.f90
+new file mode 100644
+index 00000000000..5b570407f8f
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr93686_3.f90
+@@ -0,0 +1,9 @@
++! { dg-do compile }
++! PR fortran/93686
++
++program p
++   type t
++   end type
++   type(t), pointer :: x
++   data x /t()/ ! { dg-error "part-ref with pointer attribute near ... is not rightmost part-ref of data-stmt-object" }
++end
+diff --git a/gcc/testsuite/gfortran.dg/pr93686_4.f90 b/gcc/testsuite/gfortran.dg/pr93686_4.f90
+new file mode 100644
+index 00000000000..ff3ae764ab7
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr93686_4.f90
+@@ -0,0 +1,8 @@
++! { dg-do compile }
++! PR fortran/93686
++
++type t
++end type
++type(t), pointer :: x
++data x / ! { dg-error "part-ref with pointer attribute near ... is not rightmost part-ref of data-stmt-object" }
++end
 diff --git a/gcc/testsuite/gfortran.dg/pr94030_1.f90 b/gcc/testsuite/gfortran.dg/pr94030_1.f90
 new file mode 100644
 index 00000000000..e63d3cc8da4
