@@ -8,6 +8,9 @@ Carl Love (2):
       rs6000: Add command line and builtin compatibility check
       rs6000: vec_rlnm fix to make builtin work according to ABI
 
+Claudiu Zissulescu (1):
+      arc: Allow more ABIs in GLIBC_DYNAMIC_LINKER
+
 Eric Botcazou (2):
       Fix incorrect filling of delay slots in branchy code at -O2
       Fix wrong year in ChangeLog.
@@ -16,7 +19,12 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (27):
+GCC Administrator (32):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -119,6 +127,9 @@ Jonathan Wakely (8):
 Joseph Myers (1):
       Remove wrongly committed file.
 
+Julian Brown (1):
+      Test cases for mixed structured/dynamic data lifetimes with OpenACC [PR92843]
+
 Kewen Lin (3):
       [testsuite] Fix PR94023 to guard case under vect_hw_misalign
       [testsuite] Fix PR94019 to check vector char when vect_hw_misalign
@@ -151,6 +162,9 @@ Martin Liska (2):
       Backport 314b91220a07bd63f13c58e37f1b5b9430a3702b
       Backport 55a7380213a5c16120d5c674fb42b38a3d796b57
 
+Michael Meissner (1):
+      Backport PR target/93932 (variable vec_extract) to GCC 9
+
 Nathan Sidwell (1):
       c++: Fix ICE popping local scope [pr84733]
 
@@ -165,8 +179,15 @@ Richard Earnshaw (1):
 Tamar Christina (1):
       AArch64: Break apart paradoxical subregs for VSTRUCT writes (PR target/94052)
 
+Thomas Schwinge (1):
+      Rename 'libgomp.oacc-c-c++-common/static-dynamic-lifetimes-*' to 'libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-*' [PR92843]
+
 Tobias Burnus (1):
       [Fortran] Fix result-variable handling of MODULE PROCEDURE (PR94348)
+
+Uros Bizjak (2):
+      i386: Fix REDUC_SSE_SMINMAX_MODE mode conditions.
+      i386: Fix REDUC_SSE_SMINMAX_MODE mode conditions.
 
 Will Schmidt (2):
       backport PR90763: PowerPC vec_xl_len should take const argument.
@@ -183,10 +204,43 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..8cbd3cc2d8a 100644
+index d8e53874e68..43a027b37d1 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,456 @@
+@@ -1,3 +1,489 @@
++2020-04-11  Uroš Bizjak  <ubizjak@gmail.com>
++
++	PR target/94494
++	* config/i386/sse.md (REDUC_SSE_SMINMAX_MODE): Use TARGET_SSE2
++	condition for V4SI, V8HI and V16QI modes.
++
++2020-04-10  Claudiu Zissulescu  <claziss@synopsys.com>
++
++	Backport from trunk
++	2020-0-31  Vineet Gupta <vgupta@synopsys.com>
++	* config/arc/linux.h: GLIBC_DYNAMIC_LINKER support BE/arc700.
++
++2020-04-09  Michael Meissner  <meissner@linux.ibm.com>
++
++	Back port from trunk
++	2020-02-26  Michael Meissner  <meissner@linux.ibm.com>
++
++	PR target/93932
++	* config/rs6000/vsx.md (vsx_extract_<mode>_var, VSX_D iterator):
++	Split the insn into two parts.  This insn only does variable
++	extract from a register.
++	(vsx_extract_<mode>_var_load, VSX_D iterator): New insn, do
++	variable extract from memory.
++	(vsx_extract_v4sf_var): Split the insn into two parts.  This insn
++	only does variable extract from a register.
++	(vsx_extract_v4sf_var_load): New insn, do variable extract from
++	memory.
++	(vsx_extract_<mode>_var, VSX_EXTRACT_I iterator): Split the insn
++	into two parts.  This insn only does variable extract from a
++	register.
++	(vsx_extract_<mode>_var_load, VSX_EXTRACT_I iterator): New insn,
++	do variable extract from memory.
++
 +2020-04-07  Will Schmidt  <will_schmidt@vnet.ibm.com>
 +
 +Backport from mainline.
@@ -1974,6 +2028,20 @@ index 6caeeac8086..3bc49ea0238 100644
  ;; Iterator for QI and HI modes
  (define_mode_iterator SHORT [QI HI])
  
+diff --git a/gcc/config/arc/linux.h b/gcc/config/arc/linux.h
+index 270ca907d87..7d07adc4257 100644
+--- a/gcc/config/arc/linux.h
++++ b/gcc/config/arc/linux.h
+@@ -29,7 +29,8 @@ along with GCC; see the file COPYING3.  If not see
+     }						\
+   while (0)
+ 
+-#define GLIBC_DYNAMIC_LINKER   "/lib/ld-linux-arc.so.2"
++#define GLIBC_DYNAMIC_LINKER					\
++  "/lib/ld-linux-arc%{mbig-endian:eb}%{mcpu=arc700:700}.so.2"
+ #define UCLIBC_DYNAMIC_LINKER  "/lib/ld-uClibc.so.0"
+ 
+ /* Note that the default is to link against dynamic libraries, if they are
 diff --git a/gcc/config/arm/arm.md b/gcc/config/arm/arm.md
 index 53e54874c12..bfb03f1b96d 100644
 --- a/gcc/config/arm/arm.md
@@ -2137,9 +2205,20 @@ index 14e5a392f62..441213eebb8 100644
  /* Switch to init or fini section via SECTION_OP, emit a call to FUNC,
     and switch back.  For x86 we do this only to save a few bytes that
 diff --git a/gcc/config/i386/sse.md b/gcc/config/i386/sse.md
-index 18cc39ae521..618fc231c40 100644
+index 18cc39ae521..cbcbe3846ca 100644
 --- a/gcc/config/i386/sse.md
 +++ b/gcc/config/i386/sse.md
+@@ -2625,8 +2625,8 @@
+ ;; Modes handled by reduc_sm{in,ax}* patterns.
+ (define_mode_iterator REDUC_SSE_SMINMAX_MODE
+   [(V4SF "TARGET_SSE") (V2DF "TARGET_SSE")
+-   (V2DI "TARGET_SSE4_2") (V4SI "TARGET_SSE") (V8HI "TARGET_SSE")
+-   (V16QI "TARGET_SSE")])
++   (V4SI "TARGET_SSE2") (V8HI "TARGET_SSE2") (V16QI "TARGET_SSE2")
++   (V2DI "TARGET_SSE4_2")])
+ 
+ (define_expand "reduc_<code>_scal_<mode>"
+   [(smaxmin:REDUC_SSE_SMINMAX_MODE
 @@ -8288,7 +8288,8 @@
  })
  
@@ -2445,6 +2524,147 @@ index 87d60078bb0..8e63249d4ba 100644
    };
  
    for (i = 0; i < ARRAY_SIZE (flags); i++)
+diff --git a/gcc/config/rs6000/vsx.md b/gcc/config/rs6000/vsx.md
+index 607c0cd33f2..43dd3cba641 100644
+--- a/gcc/config/rs6000/vsx.md
++++ b/gcc/config/rs6000/vsx.md
+@@ -3292,14 +3292,14 @@
+   "vslo %0,%1,%2"
+   [(set_attr "type" "vecperm")])
+ 
+-;; Variable V2DI/V2DF extract
++;; Variable V2DI/V2DF extract from a register
+ (define_insn_and_split "vsx_extract_<mode>_var"
+-  [(set (match_operand:<VS_scalar> 0 "gpc_reg_operand" "=v,<VSa>,r")
+-	(unspec:<VS_scalar> [(match_operand:VSX_D 1 "input_operand" "v,m,m")
+-			     (match_operand:DI 2 "gpc_reg_operand" "r,r,r")]
++  [(set (match_operand:<VS_scalar> 0 "gpc_reg_operand" "=v")
++	(unspec:<VS_scalar> [(match_operand:VSX_D 1 "gpc_reg_operand" "v")
++			     (match_operand:DI 2 "gpc_reg_operand" "r")]
+ 			    UNSPEC_VSX_EXTRACT))
+-   (clobber (match_scratch:DI 3 "=r,&b,&b"))
+-   (clobber (match_scratch:V2DI 4 "=&v,X,X"))]
++   (clobber (match_scratch:DI 3 "=r"))
++   (clobber (match_scratch:V2DI 4 "=&v"))]
+   "VECTOR_MEM_VSX_P (<MODE>mode) && TARGET_DIRECT_MOVE_64BIT"
+   "#"
+   "&& reload_completed"
+@@ -3310,6 +3310,23 @@
+   DONE;
+ })
+ 
++;; Variable V2DI/V2DF extract from memory
++(define_insn_and_split "*vsx_extract_<mode>_var_load"
++  [(set (match_operand:<VS_scalar> 0 "gpc_reg_operand" "=wa,r")
++	(unspec:<VS_scalar> [(match_operand:VSX_D 1 "memory_operand" "Q,Q")
++			     (match_operand:DI 2 "gpc_reg_operand" "r,r")]
++			    UNSPEC_VSX_EXTRACT))
++   (clobber (match_scratch:DI 3 "=&b,&b"))]
++  "VECTOR_MEM_VSX_P (<MODE>mode) && TARGET_DIRECT_MOVE_64BIT"
++  "#"
++  "&& reload_completed"
++  [(set (match_dup 0) (match_dup 4))]
++{
++  operands[4] = rs6000_adjust_vec_address (operands[0], operands[1], operands[2],
++					   operands[3], <VS_scalar>mode);
++}
++  [(set_attr "type" "fpload,load")])
++
+ ;; Extract a SF element from V4SF
+ (define_insn_and_split "vsx_extract_v4sf"
+   [(set (match_operand:SF 0 "vsx_register_operand" "=ww")
+@@ -3361,14 +3378,14 @@
+   [(set_attr "type" "fpload,fpload,fpload,load")
+    (set_attr "length" "8")])
+ 
+-;; Variable V4SF extract
++;; Variable V4SF extract from a register
+ (define_insn_and_split "vsx_extract_v4sf_var"
+-  [(set (match_operand:SF 0 "gpc_reg_operand" "=ww,ww,?r")
+-	(unspec:SF [(match_operand:V4SF 1 "input_operand" "v,m,m")
+-		    (match_operand:DI 2 "gpc_reg_operand" "r,r,r")]
++  [(set (match_operand:SF 0 "gpc_reg_operand" "=wa")
++	(unspec:SF [(match_operand:V4SF 1 "gpc_reg_operand" "v")
++		    (match_operand:DI 2 "gpc_reg_operand" "r")]
+ 		   UNSPEC_VSX_EXTRACT))
+-   (clobber (match_scratch:DI 3 "=r,&b,&b"))
+-   (clobber (match_scratch:V2DI 4 "=&v,X,X"))]
++   (clobber (match_scratch:DI 3 "=r"))
++   (clobber (match_scratch:V2DI 4 "=&v"))]
+   "VECTOR_MEM_VSX_P (V4SFmode) && TARGET_DIRECT_MOVE_64BIT"
+   "#"
+   "&& reload_completed"
+@@ -3379,6 +3396,23 @@
+   DONE;
+ })
+ 
++;; Variable V4SF extract from memory
++(define_insn_and_split "*vsx_extract_v4sf_var_load"
++  [(set (match_operand:SF 0 "gpc_reg_operand" "=wa,?r")
++	(unspec:SF [(match_operand:V4SF 1 "memory_operand" "Q,Q")
++		    (match_operand:DI 2 "gpc_reg_operand" "r,r")]
++		   UNSPEC_VSX_EXTRACT))
++   (clobber (match_scratch:DI 3 "=&b,&b"))]
++  "VECTOR_MEM_VSX_P (V4SFmode) && TARGET_DIRECT_MOVE_64BIT"
++  "#"
++  "&& reload_completed"
++  [(set (match_dup 0) (match_dup 4))]
++{
++  operands[4] = rs6000_adjust_vec_address (operands[0], operands[1], operands[2],
++					   operands[3], SFmode);
++}
++  [(set_attr "type" "fpload,load")])
++
+ ;; Expand the builtin form of xxpermdi to canonical rtl.
+ (define_expand "vsx_xxpermdi_<mode>"
+   [(match_operand:VSX_L 0 "vsx_register_operand")
+@@ -3720,15 +3754,15 @@
+   [(set_attr "type" "load")
+    (set_attr "length" "8")])
+ 
+-;; Variable V16QI/V8HI/V4SI extract
++;; Variable V16QI/V8HI/V4SI extract from a register
+ (define_insn_and_split "vsx_extract_<mode>_var"
+-  [(set (match_operand:<VS_scalar> 0 "gpc_reg_operand" "=r,r,r")
++  [(set (match_operand:<VS_scalar> 0 "gpc_reg_operand" "=r,r")
+ 	(unspec:<VS_scalar>
+-	 [(match_operand:VSX_EXTRACT_I 1 "input_operand" "wK,v,m")
+-	  (match_operand:DI 2 "gpc_reg_operand" "r,r,r")]
++	 [(match_operand:VSX_EXTRACT_I 1 "gpc_reg_operand" "wK,v")
++	  (match_operand:DI 2 "gpc_reg_operand" "r,r")]
+ 	 UNSPEC_VSX_EXTRACT))
+-   (clobber (match_scratch:DI 3 "=r,r,&b"))
+-   (clobber (match_scratch:V2DI 4 "=X,&v,X"))]
++   (clobber (match_scratch:DI 3 "=r,r"))
++   (clobber (match_scratch:V2DI 4 "=X,&v"))]
+   "VECTOR_MEM_VSX_P (<MODE>mode) && TARGET_DIRECT_MOVE_64BIT"
+   "#"
+   "&& reload_completed"
+@@ -3739,6 +3773,24 @@
+   DONE;
+ })
+ 
++;; Variable V16QI/V8HI/V4SI extract from memory
++(define_insn_and_split "*vsx_extract_<mode>_var_load"
++  [(set (match_operand:<VS_scalar> 0 "gpc_reg_operand" "=r")
++	(unspec:<VS_scalar>
++	 [(match_operand:VSX_EXTRACT_I 1 "memory_operand" "Q")
++	  (match_operand:DI 2 "gpc_reg_operand" "r")]
++	 UNSPEC_VSX_EXTRACT))
++   (clobber (match_scratch:DI 3 "=&b"))]
++  "VECTOR_MEM_VSX_P (<MODE>mode) && TARGET_DIRECT_MOVE_64BIT"
++  "#"
++  "&& reload_completed"
++  [(set (match_dup 0) (match_dup 4))]
++{
++  operands[4] = rs6000_adjust_vec_address (operands[0], operands[1], operands[2],
++					   operands[3], <VS_scalar>mode);
++}
++  [(set_attr "type" "load")])
++
+ (define_insn_and_split "*vsx_extract_<mode>_<VS_scalar>mode_var"
+   [(set (match_operand:<VS_scalar> 0 "gpc_reg_operand" "=r,r,r")
+ 	(zero_extend:<VS_scalar>
 diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
 index 6441d647a54..cb49aeccafa 100644
 --- a/gcc/cp/ChangeLog
@@ -3680,10 +3900,15 @@ index 7916344c584..3e969e52176 100644
  extern void mark_end_of_function_resources (rtx, bool);
  extern void init_resource_info (rtx_insn *);
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..148fa9ebbbc 100644
+index e132f2657ef..813ec5a0c9a 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,336 @@
+@@ -1,3 +1,341 @@
++2020-04-11  Uroš Bizjak  <ubizjak@gmail.com>
++
++	PR target/94494
++	* gcc.target/i386/pr94494.c: New test.
++
 +2020-04-07  Will Schmidt  <will_schmidt@vnet.ibm.com>
 +
 +	Backport from mainline.
@@ -5844,6 +6069,35 @@ index 00000000000..4982f7d01d7
 +/* { dg-options "-O3 -fcompare-debug -mavx2" } */
 +
 +#include "../../gcc.dg/fold-bopcond-1.c"
+diff --git a/gcc/testsuite/gcc.target/i386/pr94494.c b/gcc/testsuite/gcc.target/i386/pr94494.c
+new file mode 100644
+index 00000000000..ba0171e59f8
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr94494.c
+@@ -0,0 +1,23 @@
++/* PR target/94494 */
++/* { dg-do compile } */
++/* { dg-options "-O2 -ftree-vectorize -msse -mno-sse2" } */
++
++void
++foo (float *item, float *f, float *out,
++     int threshold, int wi, int lo, int hi, int value)
++{
++  for (int i = 0; i < wi; i++) {
++    if (item[i] > 0) {
++      int found = 0;
++
++      for (int k = lo; k < hi; k++)
++        if (f[k] > 0)
++          found = 1;
++
++      if (found > 0)
++        out[i] = threshold;
++      else if (out[i] > value)
++        out[i] -= 1;
++    }
++  }
++}
 diff --git a/gcc/testsuite/gcc.target/powerpc/p9-minmax-3.c b/gcc/testsuite/gcc.target/powerpc/p9-minmax-3.c
 new file mode 100644
 index 00000000000..141603e05b4
@@ -7695,10 +7949,115 @@ index 8e96cafdf8b..0762d77a801 100644
  
  # Check for decimal float support.
 diff --git a/libgomp/ChangeLog b/libgomp/ChangeLog
-index 0156d5f7bc9..ee18a994590 100644
+index 0156d5f7bc9..2926096bb7c 100644
 --- a/libgomp/ChangeLog
 +++ b/libgomp/ChangeLog
-@@ -1,3 +1,19 @@
+@@ -1,3 +1,124 @@
++2020-04-13  Thomas Schwinge  <thomas@codesourcery.com>
++
++	PR libgomp/92843
++	* testsuite/libgomp.oacc-c-c++-common/static-dynamic-lifetimes-1-lib.c:
++	Rename to...
++	* testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-1-lib.c:
++	... this.
++	* testsuite/libgomp.oacc-c-c++-common/static-dynamic-lifetimes-1.c:
++	Rename to...
++	* testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-1.c:
++	... this.
++	* testsuite/libgomp.oacc-c-c++-common/static-dynamic-lifetimes-2-lib.c:
++	Rename to...
++	* testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-2-lib.c:
++	... this.
++	* testsuite/libgomp.oacc-c-c++-common/static-dynamic-lifetimes-2.c:
++	Rename to...
++	* testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-2.c:
++	... this.
++	* testsuite/libgomp.oacc-c-c++-common/static-dynamic-lifetimes-3-lib.c:
++	Rename to...
++	* testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-3-lib.c:
++	... this.
++	* testsuite/libgomp.oacc-c-c++-common/static-dynamic-lifetimes-3.c:
++	Rename to...
++	* testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-3.c:
++	... this.
++	* testsuite/libgomp.oacc-c-c++-common/static-dynamic-lifetimes-4-lib.c:
++	Rename to...
++	* testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-4-lib.c:
++	... this.
++	* testsuite/libgomp.oacc-c-c++-common/static-dynamic-lifetimes-4.c:
++	Rename to...
++	* testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-4.c:
++	... this.
++	* testsuite/libgomp.oacc-c-c++-common/static-dynamic-lifetimes-5-lib.c:
++	Rename to...
++	* testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-5-lib.c:
++	... this.
++	* testsuite/libgomp.oacc-c-c++-common/static-dynamic-lifetimes-5.c:
++	Rename to...
++	* testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-5.c:
++	... this.
++	* testsuite/libgomp.oacc-c-c++-common/static-dynamic-lifetimes-6-lib.c:
++	Rename to...
++	* testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-6-lib.c:
++	... this.
++	* testsuite/libgomp.oacc-c-c++-common/static-dynamic-lifetimes-6.c:
++	Rename to...
++	* testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-6.c:
++	... this.
++	* testsuite/libgomp.oacc-c-c++-common/static-dynamic-lifetimes-7-lib.c:
++	Rename to...
++	* testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-7-lib.c:
++	... this.
++	* testsuite/libgomp.oacc-c-c++-common/static-dynamic-lifetimes-7.c:
++	Rename to...
++	* testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-7.c:
++	... this.
++	* testsuite/libgomp.oacc-c-c++-common/static-dynamic-lifetimes-8-lib.c:
++	Rename to...
++	* testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-8-lib.c:
++	... this.
++	* testsuite/libgomp.oacc-c-c++-common/static-dynamic-lifetimes-8.c::
++	Rename to...
++	* testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-8.c:
++	... this.
++
++2020-04-10  Julian Brown  <julian@codesourcery.com>
++	    Thomas Schwinge  <thomas@codesourcery.com>
++
++	PR libgomp/92843
++	* testsuite/libgomp.oacc-c-c++-common/static-dynamic-lifetimes-1-lib.c:
++	New file.
++	* testsuite/libgomp.oacc-c-c++-common/static-dynamic-lifetimes-1.c:
++	Likewise.
++	* testsuite/libgomp.oacc-c-c++-common/static-dynamic-lifetimes-2-lib.c:
++	Likewise.
++	* testsuite/libgomp.oacc-c-c++-common/static-dynamic-lifetimes-2.c:
++	Likewise.
++	* testsuite/libgomp.oacc-c-c++-common/static-dynamic-lifetimes-3-lib.c:
++	Likewise.
++	* testsuite/libgomp.oacc-c-c++-common/static-dynamic-lifetimes-3.c:
++	Likewise.
++	* testsuite/libgomp.oacc-c-c++-common/static-dynamic-lifetimes-4-lib.c:
++	Likewise.
++	* testsuite/libgomp.oacc-c-c++-common/static-dynamic-lifetimes-4.c:
++	Likewise.
++	* testsuite/libgomp.oacc-c-c++-common/static-dynamic-lifetimes-5-lib.c:
++	Likewise.
++	* testsuite/libgomp.oacc-c-c++-common/static-dynamic-lifetimes-5.c:
++	Likewise.
++	* testsuite/libgomp.oacc-c-c++-common/static-dynamic-lifetimes-6-lib.c:
++	Likewise.
++	* testsuite/libgomp.oacc-c-c++-common/static-dynamic-lifetimes-6.c:
++	Likewise.
++	* testsuite/libgomp.oacc-c-c++-common/static-dynamic-lifetimes-7-lib.c:
++	Likewise.
++	* testsuite/libgomp.oacc-c-c++-common/static-dynamic-lifetimes-7.c:
++	Likewise.
++	* testsuite/libgomp.oacc-c-c++-common/static-dynamic-lifetimes-8-lib.c:
++	Likewise.
++	* testsuite/libgomp.oacc-c-c++-common/static-dynamic-lifetimes-8.c:
++	Likewise.
++
 +2020-04-07  Jakub Jelinek  <jakub@redhat.com>
 +
 +	Backported from mainline
@@ -7961,6 +8320,890 @@ index 00000000000..3334bd571f6
 +  qux (a);
 +  quux ();
 +  corge ();
++  return 0;
++}
+diff --git a/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-1-lib.c b/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-1-lib.c
+new file mode 100644
+index 00000000000..8fa87777f1a
+--- /dev/null
++++ b/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-1-lib.c
+@@ -0,0 +1,3 @@
++/* { dg-skip-if "" { *-*-* } { "-DACC_MEM_SHARED=1" } } */
++/* { dg-additional-options "-DOPENACC_API" } */
++#include "structured-dynamic-lifetimes-1.c"
+diff --git a/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-1.c b/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-1.c
+new file mode 100644
+index 00000000000..0d6b4159ad0
+--- /dev/null
++++ b/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-1.c
+@@ -0,0 +1,161 @@
++/* Test transitioning of data lifetimes between structured and dynamic.  */
++
++/* { dg-skip-if "" { *-*-* } { "-DACC_MEM_SHARED=1" } } */
++
++#include <openacc.h>
++#include <assert.h>
++#include <stdlib.h>
++
++#define SIZE 1024
++
++void
++f1 (void)
++{
++  char *block1 = (char *) malloc (SIZE);
++
++#ifdef OPENACC_API
++  acc_copyin (block1, SIZE);
++  acc_copyin (block1, SIZE);
++#else
++#pragma acc enter data copyin(block1[0:SIZE])
++#pragma acc enter data copyin(block1[0:SIZE])
++#endif
++
++#pragma acc data copy(block1[0:SIZE])
++  {
++#ifdef OPENACC_API
++    acc_copyin (block1, SIZE);
++#else
++#pragma acc enter data copyin(block1[0:SIZE])
++#endif
++  }
++
++  assert (acc_is_present (block1, SIZE));
++
++#ifdef OPENACC_API
++  acc_copyout (block1, SIZE);
++  assert (acc_is_present (block1, SIZE));
++  acc_copyout (block1, SIZE);
++  assert (acc_is_present (block1, SIZE));
++  acc_copyout (block1, SIZE);
++  assert (!acc_is_present (block1, SIZE));
++#else
++#pragma acc exit data copyout(block1[0:SIZE])
++  assert (acc_is_present (block1, SIZE));
++#pragma acc exit data copyout(block1[0:SIZE])
++  assert (acc_is_present (block1, SIZE));
++#pragma acc exit data copyout(block1[0:SIZE])
++  assert (!acc_is_present (block1, SIZE));
++#endif
++
++  free (block1);
++}
++
++void
++f2 (void)
++{
++  char *block1 = (char *) malloc (SIZE);
++
++#ifdef OPENACC_API
++  acc_copyin (block1, SIZE);
++#else
++#pragma acc enter data copyin(block1[0:SIZE])
++#endif
++
++#pragma acc data copy(block1[0:SIZE])
++  {
++#ifdef OPENACC_API
++    acc_copyout (block1, SIZE);
++#else
++#pragma acc exit data copyout(block1[0:SIZE])
++#endif
++    /* This should stay present until the end of the structured data
++       lifetime.  */
++    assert (acc_is_present (block1, SIZE));
++  }
++
++  assert (!acc_is_present (block1, SIZE));
++
++  free (block1);
++}
++
++void
++f3 (void)
++{
++  char *block1 = (char *) malloc (SIZE);
++
++#ifdef OPENACC_API
++  acc_copyin (block1, SIZE);
++#else
++#pragma acc enter data copyin(block1[0:SIZE])
++#endif
++
++#pragma acc data copy(block1[0:SIZE])
++  {
++#ifdef OPENACC_API
++    acc_copyout (block1, SIZE);
++    acc_copyin (block1, SIZE);
++#else
++#pragma acc exit data copyout(block1[0:SIZE])
++#pragma acc enter data copyin(block1[0:SIZE])
++#endif
++    assert (acc_is_present (block1, SIZE));
++  }
++
++  assert (acc_is_present (block1, SIZE));
++#ifdef OPENACC_API
++  acc_copyout (block1, SIZE);
++#else
++#pragma acc exit data copyout(block1[0:SIZE])
++#endif
++  assert (!acc_is_present (block1, SIZE));
++
++  free (block1);
++}
++
++void
++f4 (void)
++{
++  char *block1 = (char *) malloc (SIZE);
++  char *block2 = (char *) malloc (SIZE);
++  char *block3 = (char *) malloc (SIZE);
++
++#pragma acc data copy(block1[0:SIZE], block2[0:SIZE], block3[0:SIZE])
++  {
++  /* The first copyin of block2 is the enclosing data region.  This
++     "enter data" should make it live beyond the end of this region.
++     This works, though the on-target copies of block1, block2 and block3
++     will stay allocated until block2 is unmapped because they are bound
++     together in a single target_mem_desc.  */
++#ifdef OPENACC_API
++    acc_copyin (block2, SIZE);
++#else
++#pragma acc enter data copyin(block2[0:SIZE])
++#endif
++  }
++
++  assert (!acc_is_present (block1, SIZE));
++  assert (acc_is_present (block2, SIZE));
++  assert (!acc_is_present (block3, SIZE));
++
++#ifdef OPENACC_API
++  acc_copyout (block2, SIZE);
++#else
++#pragma acc exit data copyout(block2[0:SIZE])
++#endif
++  assert (!acc_is_present (block2, SIZE));
++
++  free (block1);
++  free (block2);
++  free (block3);
++}
++
++int
++main (int argc, char *argv[])
++{
++  f1 ();
++  f2 ();
++  f3 ();
++  f4 ();
++  return 0;
++}
+diff --git a/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-2-lib.c b/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-2-lib.c
+new file mode 100644
+index 00000000000..365df8d7f7d
+--- /dev/null
++++ b/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-2-lib.c
+@@ -0,0 +1,3 @@
++/* { dg-skip-if "" { *-*-* } { "-DACC_MEM_SHARED=1" } } */
++/* { dg-additional-options "-DOPENACC_API" } */
++#include "structured-dynamic-lifetimes-2.c"
+diff --git a/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-2.c b/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-2.c
+new file mode 100644
+index 00000000000..726942c76fd
+--- /dev/null
++++ b/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-2.c
+@@ -0,0 +1,166 @@
++/* Test nested dynamic/structured data mappings.  */
++
++/* { dg-skip-if "" { *-*-* } { "-DACC_MEM_SHARED=1" } } */
++
++#include <openacc.h>
++#include <assert.h>
++#include <stdlib.h>
++
++#define SIZE 1024
++
++void
++f1 (void)
++{
++  char *block1 = (char *) malloc (SIZE);
++
++#pragma acc data copy(block1[0:SIZE])
++  {
++#ifdef OPENACC_API
++    acc_copyin (block1, SIZE);
++    acc_copyout (block1, SIZE);
++#else
++#pragma acc enter data copyin(block1[0:SIZE])
++#pragma acc exit data copyout(block1[0:SIZE])
++#endif
++  }
++
++  assert (!acc_is_present (block1, SIZE));
++
++  free (block1);
++}
++
++void
++f2 (void)
++{
++  char *block1 = (char *) malloc (SIZE);
++
++#ifdef OPENACC_API
++  acc_copyin (block1, SIZE);
++#else
++#pragma acc enter data copyin(block1[0:SIZE])
++#endif
++
++#pragma acc data copy(block1[0:SIZE])
++  {
++  }
++
++#ifdef OPENACC_API
++  acc_copyout (block1, SIZE);
++#else
++#pragma acc exit data copyout(block1[0:SIZE])
++#endif
++
++  assert (!acc_is_present (block1, SIZE));
++
++  free (block1);
++}
++
++void
++f3 (void)
++{
++  char *block1 = (char *) malloc (SIZE);
++
++#pragma acc data copy(block1[0:SIZE])
++  {
++#ifdef OPENACC_API
++    acc_copyin (block1, SIZE);
++    acc_copyin (block1, SIZE);
++    acc_copyout (block1, SIZE);
++    acc_copyout (block1, SIZE);
++#else
++#pragma acc enter data copyin(block1[0:SIZE])
++#pragma acc enter data copyin(block1[0:SIZE])
++#pragma acc exit data copyout(block1[0:SIZE])
++#pragma acc exit data copyout(block1[0:SIZE])
++#endif
++  }
++
++  assert (!acc_is_present (block1, SIZE));
++
++  free (block1);
++}
++
++void
++f4 (void)
++{
++  char *block1 = (char *) malloc (SIZE);
++
++#pragma acc data copy(block1[0:SIZE])
++  {
++#ifdef OPENACC_API
++    acc_copyin (block1, SIZE);
++#else
++#pragma acc enter data copyin(block1[0:SIZE])
++#endif
++
++#pragma acc data copy(block1[0:SIZE])
++    {
++#ifdef OPENACC_API
++      acc_copyin (block1, SIZE);
++      acc_copyout (block1, SIZE);
++#else
++#pragma acc enter data copyin(block1[0:SIZE])
++#pragma acc exit data copyout(block1[0:SIZE])
++#endif
++    }
++
++#ifdef OPENACC_API
++  acc_copyout (block1, SIZE);
++#else
++#pragma acc exit data copyout(block1[0:SIZE])
++#endif
++  }
++
++  assert (!acc_is_present (block1, SIZE));
++
++  free (block1);
++}
++
++void
++f5 (void)
++{
++  char *block1 = (char *) malloc (SIZE);
++
++#ifdef OPENACC_API
++  acc_copyin (block1, SIZE);
++#else
++#pragma acc enter data copyin(block1[0:SIZE])
++#endif
++
++#pragma acc data copy(block1[0:SIZE])
++  {
++#ifdef OPENACC_API
++    acc_copyin (block1, SIZE);
++#else
++#pragma acc enter data copyin(block1[0:SIZE])
++#endif
++#pragma acc data copy(block1[0:SIZE])
++    {
++    }
++#ifdef OPENACC_API
++    acc_copyout (block1, SIZE);
++#else
++#pragma acc exit data copyout(block1[0:SIZE])
++#endif
++  }
++#ifdef OPENACC_API
++  acc_copyout (block1, SIZE);
++#else
++#pragma acc exit data copyout(block1[0:SIZE])
++#endif
++
++  assert (!acc_is_present (block1, SIZE));
++
++  free (block1);
++}
++
++int
++main (int argc, char *argv[])
++{
++  f1 ();
++  f2 ();
++  f3 ();
++  f4 ();
++  f5 ();
++  return 0;
++}
+diff --git a/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-3-lib.c b/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-3-lib.c
+new file mode 100644
+index 00000000000..469b35b76f1
+--- /dev/null
++++ b/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-3-lib.c
+@@ -0,0 +1,3 @@
++/* { dg-skip-if "" { *-*-* } { "-DACC_MEM_SHARED=1" } } */
++/* { dg-additional-options "-DOPENACC_API" } */
++#include "structured-dynamic-lifetimes-3.c"
+diff --git a/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-3.c b/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-3.c
+new file mode 100644
+index 00000000000..c13f3c56584
+--- /dev/null
++++ b/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-3.c
+@@ -0,0 +1,183 @@
++/* Test nested dynamic/structured data mappings (multiple blocks on data
++   regions).  */
++
++/* { dg-skip-if "" { *-*-* } { "-DACC_MEM_SHARED=1" } } */
++
++#include <openacc.h>
++#include <assert.h>
++#include <stdlib.h>
++
++#define SIZE 1024
++
++void
++f1 (void)
++{
++  char *block1 = (char *) malloc (SIZE);
++  char *block2 = (char *) malloc (SIZE);
++
++#pragma acc data copy(block1[0:SIZE], block2[0:SIZE])
++  {
++#ifdef OPENACC_API
++    acc_copyin (block1, SIZE);
++    acc_copyout (block1, SIZE);
++#else
++#pragma acc enter data copyin(block1[0:SIZE])
++#pragma acc exit data copyout(block1[0:SIZE])
++#endif
++  }
++
++  assert (!acc_is_present (block1, SIZE));
++  assert (!acc_is_present (block2, SIZE));
++
++  free (block1);
++  free (block2);
++}
++
++void
++f2 (void)
++{
++  char *block1 = (char *) malloc (SIZE);
++  char *block2 = (char *) malloc (SIZE);
++
++#ifdef OPENACC_API
++  acc_copyin (block1, SIZE);
++#else
++#pragma acc enter data copyin(block1[0:SIZE])
++#endif
++
++#pragma acc data copy(block1[0:SIZE], block2[0:SIZE])
++  {
++  }
++
++#ifdef OPENACC_API
++  acc_copyout (block1, SIZE);
++#else
++#pragma acc exit data copyout(block1[0:SIZE])
++#endif
++
++  assert (!acc_is_present (block1, SIZE));
++  assert (!acc_is_present (block2, SIZE));
++
++  free (block1);
++  free (block2);
++}
++
++void
++f3 (void)
++{
++  char *block1 = (char *) malloc (SIZE);
++  char *block2 = (char *) malloc (SIZE);
++
++#pragma acc data copy(block1[0:SIZE], block2[0:SIZE])
++  {
++#ifdef OPENACC_API
++    acc_copyin (block1, SIZE);
++    acc_copyin (block2, SIZE);
++    acc_copyout (block2, SIZE);
++    acc_copyout (block1, SIZE);
++#else
++#pragma acc enter data copyin(block1[0:SIZE])
++#pragma acc enter data copyin(block2[0:SIZE])
++#pragma acc exit data copyout(block2[0:SIZE])
++#pragma acc exit data copyout(block1[0:SIZE])
++#endif
++  }
++
++  assert (!acc_is_present (block1, SIZE));
++  assert (!acc_is_present (block2, SIZE));
++
++  free (block1);
++  free (block2);
++}
++
++void
++f4 (void)
++{
++  char *block1 = (char *) malloc (SIZE);
++  char *block2 = (char *) malloc (SIZE);
++
++#pragma acc data copy(block1[0:SIZE], block2[0:SIZE])
++  {
++#ifdef OPENACC_API
++    acc_copyin (block1, SIZE);
++#else
++#pragma acc enter data copyin(block1[0:SIZE])
++#endif
++
++#pragma acc data copy(block1[0:SIZE], block2[0:SIZE])
++    {
++#ifdef OPENACC_API
++      acc_copyin (block2, SIZE);
++      acc_copyout (block2, SIZE);
++#else
++#pragma acc enter data copyin(block2[0:SIZE])
++#pragma acc exit data copyout(block2[0:SIZE])
++#endif
++    }
++#ifdef OPENACC_API
++  acc_copyout (block1, SIZE);
++#else
++#pragma acc exit data copyout(block1[0:SIZE])
++#endif
++  }
++
++  assert (!acc_is_present (block1, SIZE));
++  assert (!acc_is_present (block2, SIZE));
++
++  free (block1);
++  free (block2);
++}
++
++void
++f5 (void)
++{
++  char *block1 = (char *) malloc (SIZE);
++  char *block2 = (char *) malloc (SIZE);
++
++#ifdef OPENACC_API
++  acc_copyin (block1, SIZE);
++#else
++#pragma acc enter data copyin(block1[0:SIZE])
++#endif
++
++#pragma acc data copy(block1[0:SIZE], block2[0:SIZE])
++  {
++#ifdef OPENACC_API
++    acc_copyin (block2, SIZE);
++#else
++#pragma acc enter data copyin(block2[0:SIZE])
++#endif
++
++#pragma acc data copy(block1[0:SIZE], block2[0:SIZE])
++    {
++    }
++#ifdef OPENACC_API
++    acc_copyout (block2, SIZE);
++#else
++#pragma acc exit data copyout(block2[0:SIZE])
++#endif
++  }
++
++#ifdef OPENACC_API
++  acc_copyout (block1, SIZE);
++#else
++#pragma acc exit data copyout(block1[0:SIZE])
++#endif
++
++  assert (!acc_is_present (block1, SIZE));
++  assert (!acc_is_present (block2, SIZE));
++
++  free (block1);
++  free (block2);
++}
++
++int
++main (int argc, char *argv[])
++{
++  f1 ();
++  f2 ();
++  f3 ();
++  f4 ();
++  f5 ();
++  return 0;
++}
+diff --git a/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-4-lib.c b/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-4-lib.c
+new file mode 100644
+index 00000000000..8e88b97b2ce
+--- /dev/null
++++ b/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-4-lib.c
+@@ -0,0 +1,3 @@
++/* { dg-skip-if "" { *-*-* } { "-DACC_MEM_SHARED=1" } } */
++/* { dg-additional-options "-DOPENACC_API" } */
++#include "structured-dynamic-lifetimes-4.c"
+diff --git a/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-4.c b/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-4.c
+new file mode 100644
+index 00000000000..e9a6510ace8
+--- /dev/null
++++ b/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-4.c
+@@ -0,0 +1,64 @@
++/* { dg-skip-if "" { *-*-* } { "-DACC_MEM_SHARED=1" } } */
++
++#include <openacc.h>
++#include <assert.h>
++#include <stdlib.h>
++
++#define SIZE 1024
++
++int
++main (int argc, char *argv[])
++{
++  char *block1 = (char *) malloc (SIZE);
++  char *block2 = (char *) malloc (SIZE);
++  char *block3 = (char *) malloc (SIZE);
++
++  /* Doing this twice ensures that we have a non-zero virtual refcount.  Make
++     sure that works too.  */
++#ifdef OPENACC_API
++  acc_copyin (block1, SIZE);
++  acc_copyin (block1, SIZE);
++#else
++#pragma acc enter data copyin(block1[0:SIZE])
++#pragma acc enter data copyin(block1[0:SIZE])
++#endif
++
++#pragma acc data copy(block1[0:SIZE], block2[0:SIZE], block3[0:SIZE])
++  {
++  /* The first copyin of block2 is the enclosing data region.  This
++     "enter data" should make it live beyond the end of this region.  */
++#ifdef OPENACC_API
++    acc_copyin (block2, SIZE);
++#else
++#pragma acc enter data copyin(block2[0:SIZE])
++#endif
++  }
++
++  assert (acc_is_present (block1, SIZE));
++  assert (acc_is_present (block2, SIZE));
++  assert (!acc_is_present (block3, SIZE));
++
++#ifdef OPENACC_API
++  acc_copyout (block1, SIZE);
++  assert (acc_is_present (block1, SIZE));
++  acc_copyout (block1, SIZE);
++  assert (!acc_is_present (block1, SIZE));
++
++  acc_copyout (block2, SIZE);
++  assert (!acc_is_present (block2, SIZE));
++#else
++#pragma acc exit data copyout(block1[0:SIZE])
++  assert (acc_is_present (block1, SIZE));
++#pragma acc exit data copyout(block1[0:SIZE])
++  assert (!acc_is_present (block1, SIZE));
++
++#pragma acc exit data copyout(block2[0:SIZE])
++  assert (!acc_is_present (block2, SIZE));
++#endif
++
++  free (block1);
++  free (block2);
++  free (block3);
++
++  return 0;
++}
+diff --git a/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-5-lib.c b/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-5-lib.c
+new file mode 100644
+index 00000000000..59ef5626bd0
+--- /dev/null
++++ b/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-5-lib.c
+@@ -0,0 +1,3 @@
++/* { dg-skip-if "" { *-*-* } { "-DACC_MEM_SHARED=1" } } */
++/* { dg-additional-options "-DOPENACC_API" } */
++#include "structured-dynamic-lifetimes-5.c"
+diff --git a/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-5.c b/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-5.c
+new file mode 100644
+index 00000000000..9807076d3f4
+--- /dev/null
++++ b/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-5.c
+@@ -0,0 +1,56 @@
++/* { dg-skip-if "" { *-*-* } { "-DACC_MEM_SHARED=1" } } */
++
++#include <openacc.h>
++#include <assert.h>
++#include <stdlib.h>
++
++#define SIZE 1024
++
++int
++main (int argc, char *argv[])
++{
++  char *block1 = (char *) malloc (SIZE);
++  char *block2 = (char *) malloc (SIZE);
++  char *block3 = (char *) malloc (SIZE);
++
++#ifdef OPENACC_API
++  acc_copyin (block1, SIZE);
++#else
++#pragma acc enter data copyin(block1[0:SIZE])
++#endif
++
++#pragma acc data copy(block1[0:SIZE], block2[0:SIZE], block3[0:SIZE])
++  {
++  /* The first copyin of block2 is the enclosing data region.  This
++     "enter data" should make it live beyond the end of this region.  */
++#ifdef OPENACC_API
++    acc_copyin (block2, SIZE);
++#else
++#pragma acc enter data copyin(block2[0:SIZE])
++#endif
++  }
++
++  assert (acc_is_present (block1, SIZE));
++  assert (acc_is_present (block2, SIZE));
++  assert (!acc_is_present (block3, SIZE));
++
++#ifdef OPENACC_API
++  acc_copyout (block1, SIZE);
++  assert (!acc_is_present (block1, SIZE));
++
++  acc_copyout (block2, SIZE);
++  assert (!acc_is_present (block2, SIZE));
++#else
++#pragma acc exit data copyout(block1[0:SIZE])
++  assert (!acc_is_present (block1, SIZE));
++
++#pragma acc exit data copyout(block2[0:SIZE])
++  assert (!acc_is_present (block2, SIZE));
++#endif
++
++  free (block1);
++  free (block2);
++  free (block3);
++
++  return 0;
++}
+diff --git a/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-6-lib.c b/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-6-lib.c
+new file mode 100644
+index 00000000000..0401f73966f
+--- /dev/null
++++ b/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-6-lib.c
+@@ -0,0 +1,3 @@
++/* { dg-skip-if "" { *-*-* } { "-DACC_MEM_SHARED=1" } } */
++/* { dg-additional-options "-DOPENACC_API" } */
++#include "structured-dynamic-lifetimes-6.c"
+diff --git a/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-6.c b/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-6.c
+new file mode 100644
+index 00000000000..9250b4af3ed
+--- /dev/null
++++ b/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-6.c
+@@ -0,0 +1,43 @@
++/* { dg-skip-if "" { *-*-* } { "-DACC_MEM_SHARED=1" } } */
++
++#include <openacc.h>
++#include <assert.h>
++#include <stdlib.h>
++
++#define SIZE 1024
++
++int
++main (int argc, char *argv[])
++{
++  char *block1 = (char *) malloc (SIZE);
++  char *block2 = (char *) malloc (SIZE);
++
++#ifdef OPENACC_API
++  acc_copyin (block1, SIZE);
++  acc_copyin (block2, SIZE);
++#else
++#pragma acc enter data copyin(block1[0:SIZE], block2[0:SIZE])
++#endif
++
++#pragma acc data copy(block1[0:SIZE], block2[0:SIZE])
++  {
++#ifdef OPENACC_API
++    acc_copyout (block1, SIZE);
++    acc_copyout (block2, SIZE);
++#else
++#pragma acc exit data copyout(block1[0:SIZE], block2[0:SIZE])
++#endif
++    /* These should stay present until the end of the structured data
++       lifetime.  */
++    assert (acc_is_present (block1, SIZE));
++    assert (acc_is_present (block2, SIZE));
++  }
++
++  assert (!acc_is_present (block1, SIZE));
++  assert (!acc_is_present (block2, SIZE));
++
++  free (block1);
++  free (block2);
++
++  return 0;
++}
+diff --git a/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-7-lib.c b/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-7-lib.c
+new file mode 100644
+index 00000000000..07caefbd082
+--- /dev/null
++++ b/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-7-lib.c
+@@ -0,0 +1,3 @@
++/* { dg-skip-if "" { *-*-* } { "-DACC_MEM_SHARED=1" } } */
++/* { dg-additional-options "-DOPENACC_API" } */
++#include "structured-dynamic-lifetimes-7.c"
+diff --git a/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-7.c b/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-7.c
+new file mode 100644
+index 00000000000..52e8d4c9959
+--- /dev/null
++++ b/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-7.c
+@@ -0,0 +1,44 @@
++/* { dg-skip-if "" { *-*-* } { "-DACC_MEM_SHARED=1" } } */
++
++#include <openacc.h>
++#include <assert.h>
++#include <stdlib.h>
++
++#define SIZE 1024
++
++int
++main (int argc, char *argv[])
++{
++  char *block1 = (char *) malloc (SIZE);
++  char *block2 = (char *) malloc (SIZE);
++
++#ifdef OPENACC_API
++  acc_copyin (block1, SIZE);
++#else
++#pragma acc enter data copyin(block1[0:SIZE])
++#endif
++
++#pragma acc data copy(block1[0:SIZE], block2[0:SIZE])
++  {
++/* We can't attach the dynamic data mapping's (block1) target_mem_desc to the
++   enclosing structured data region here, because that region maps block2
++   also.  */
++#ifdef OPENACC_API
++    acc_copyout (block1, SIZE);
++#else
++#pragma acc exit data copyout(block1[0:SIZE])
++#endif
++    /* These should stay present until the end of the structured data
++       lifetime.  */
++    assert (acc_is_present (block1, SIZE));
++    assert (acc_is_present (block2, SIZE));
++  }
++
++  assert (!acc_is_present (block1, SIZE));
++  assert (!acc_is_present (block2, SIZE));
++
++  free (block1);
++  free (block2);
++
++  return 0;
++}
+diff --git a/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-8-lib.c b/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-8-lib.c
+new file mode 100644
+index 00000000000..1c2479ad96f
+--- /dev/null
++++ b/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-8-lib.c
+@@ -0,0 +1,3 @@
++/* { dg-skip-if "" { *-*-* } { "-DACC_MEM_SHARED=1" } } */
++/* { dg-additional-options "-DOPENACC_API" } */
++#include "structured-dynamic-lifetimes-8.c"
+diff --git a/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-8.c b/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-8.c
+new file mode 100644
+index 00000000000..919ee02b725
+--- /dev/null
++++ b/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-8.c
+@@ -0,0 +1,47 @@
++/* { dg-skip-if "" { *-*-* } { "-DACC_MEM_SHARED=1" } } */
++
++#include <openacc.h>
++#include <assert.h>
++#include <stdlib.h>
++
++#define SIZE 1024
++
++int
++main (int argc, char *argv[])
++{
++  char *block1 = (char *) malloc (SIZE);
++  char *block2 = (char *) malloc (SIZE);
++
++#ifdef OPENACC_API
++  acc_copyin (block1, SIZE);
++#else
++#pragma acc enter data copyin(block1[0:SIZE])
++#endif
++
++#pragma acc data copy(block1[0:SIZE], block2[0:SIZE])
++  {
++#ifdef OPENACC_API
++    acc_copyout (block1, SIZE);
++    acc_copyin (block2, SIZE);
++#else
++#pragma acc exit data copyout(block1[0:SIZE])
++#pragma acc enter data copyin(block2[0:SIZE])
++#endif
++    assert (acc_is_present (block1, SIZE));
++    assert (acc_is_present (block2, SIZE));
++  }
++
++  assert (!acc_is_present (block1, SIZE));
++  assert (acc_is_present (block2, SIZE));
++#ifdef OPENACC_API
++  acc_copyout (block2, SIZE);
++#else
++#pragma acc exit data copyout(block2[0:SIZE])
++#endif
++  assert (!acc_is_present (block2, SIZE));
++
++  free (block1);
++  free (block2);
++
 +  return 0;
 +}
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
