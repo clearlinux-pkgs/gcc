@@ -19,7 +19,8 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (32):
+GCC Administrator (33):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -178,6 +179,9 @@ Richard Earnshaw (1):
 
 Tamar Christina (1):
       AArch64: Break apart paradoxical subregs for VSTRUCT writes (PR target/94052)
+
+Thomas König (1):
+      Backport from trunk of the fix for PR 94270.
 
 Thomas Schwinge (1):
       Rename 'libgomp.oacc-c-c++-common/static-dynamic-lifetimes-*' to 'libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-*' [PR92843]
@@ -3503,10 +3507,17 @@ index c717f24501e..64273c1c6bc 100644
  				    "when distributing negation across "
  				    "division"),
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index 8fefea2b63d..68a85ed026c 100644
+index 8fefea2b63d..1c88bb0efcb 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,51 @@
+@@ -1,3 +1,58 @@
++2020-04-14  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	Backport from trunk.
++	PR fortran/94270
++	* trans-decl.c (generate_local_decl): Do not warn if the
++	symbol is artifical.
++
 +2020-04-06  Fritz Reese  <foreese@gcc.gnu.org>
 +
 +	Backport from master
@@ -3718,6 +3729,19 @@ index a4ad26efffc..a3df534180c 100644
  	{
  	  gfc_error ("Array %qs at %L with non-constant bounds cannot be "
  		     "an EQUIVALENCE object", sym->name, &e->where);
+diff --git a/gcc/fortran/trans-decl.c b/gcc/fortran/trans-decl.c
+index 71f751de76f..ff85fd9da96 100644
+--- a/gcc/fortran/trans-decl.c
++++ b/gcc/fortran/trans-decl.c
+@@ -6011,7 +6011,7 @@ generate_local_decl (gfc_symbol * sym)
+       /* Unused procedure passed as dummy argument.  */
+       if (sym->attr.flavor == FL_PROCEDURE)
+ 	{
+-	  if (!sym->attr.referenced)
++	  if (!sym->attr.referenced && !sym->attr.artificial)
+ 	    {
+ 	      if (warn_unused_dummy_argument)
+ 		gfc_warning (OPT_Wunused_dummy_argument,
 diff --git a/gcc/gimple-fold.c b/gcc/gimple-fold.c
 index d00f1e2b035..408b93b2200 100644
 --- a/gcc/gimple-fold.c
@@ -3900,10 +3924,16 @@ index 7916344c584..3e969e52176 100644
  extern void mark_end_of_function_resources (rtx, bool);
  extern void init_resource_info (rtx_insn *);
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..813ec5a0c9a 100644
+index e132f2657ef..cd9ea033801 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,341 @@
+@@ -1,3 +1,347 @@
++2020-04-14  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	Backport from trunk
++	PR fortran/94270
++	* gfortran.dg/warn_unused_dummy_argument_6.f90: New test.
++
 +2020-04-11  Uroš Bizjak  <ubizjak@gmail.com>
 +
 +	PR target/94494
@@ -6783,6 +6813,25 @@ index 00000000000..9efcf4b6524
 +    end do
 +  end do
 +end
+diff --git a/gcc/testsuite/gfortran.dg/warn_unused_dummy_argument_6.f90 b/gcc/testsuite/gfortran.dg/warn_unused_dummy_argument_6.f90
+new file mode 100644
+index 00000000000..72f6d5c0857
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/warn_unused_dummy_argument_6.f90
+@@ -0,0 +1,13 @@
++! { dg-do compile }
++! { dg-options "-Wall" }
++! PR 94270 - this used to give a bogus warning.
++! Test case by Ignacio Fernández Galván.
++subroutine foo()
++external bar
++call meh(bar)
++call foo_internal()
++contains
++  subroutine foo_internal()
++    call meh(bar)
++  end subroutine foo_internal
++end subroutine foo
 diff --git a/gcc/tree-if-conv.c b/gcc/tree-if-conv.c
 index 2780a4b243f..699b48b8124 100644
 --- a/gcc/tree-if-conv.c
