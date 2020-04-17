@@ -57,6 +57,9 @@ GCC Administrator (36):
       Daily bump.
       Daily bump.
 
+H.J. Lu (1):
+      x86: Insert ENDBR if function will be called indirectly
+
 Iain Buclaw (1):
       d: Fix ICE in add_symbol_to_partition_1, at lto/lto-partition.c:215
 
@@ -220,10 +223,19 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..29f9f52067d 100644
+index d8e53874e68..7df3a0d0990 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,548 @@
+@@ -1,3 +1,557 @@
++2020-04-17  H.J. Lu  <hongjiu.lu@intel.com>
++
++	Backport from master
++	2020-04-08  H.J. Lu  <hongjiu.lu@intel.com>
++
++	PR target/94417
++	* config/i386/i386.c (rest_of_insert_endbranch): Insert ENDBR at
++	function entry if function will be called indirectly.
++
 +2020-04-17  Kewen Lin  <linkw@gcc.gnu.org>
 +
 +	Backport from mainline
@@ -2181,10 +2193,24 @@ index 5dedeb2d18b..2f57d19bea2 100644
  /* SSE2 MMX */
  BDESC (OPTION_MASK_ISA_SSE2 | OPTION_MASK_ISA_MMX, 0, CODE_FOR_mmx_addv1di3, "__builtin_ia32_paddq", IX86_BUILTIN_PADDQ, UNKNOWN, (int) V1DI_FTYPE_V1DI_V1DI)
 diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
-index 1bca5a7eea6..5d12d82db5b 100644
+index 1bca5a7eea6..3891d44ce85 100644
 --- a/gcc/config/i386/i386.c
 +++ b/gcc/config/i386/i386.c
-@@ -44150,43 +44150,51 @@ emit_reduc_half (rtx dest, rtx src, int i)
+@@ -2535,7 +2535,12 @@ rest_of_insert_endbranch (void)
+       && (!flag_manual_endbr
+ 	  || lookup_attribute ("cf_check",
+ 			       DECL_ATTRIBUTES (cfun->decl)))
+-      && !cgraph_node::get (cfun->decl)->only_called_directly_p ())
++      && (!cgraph_node::get (cfun->decl)->only_called_directly_p ()
++	  || ix86_cmodel == CM_LARGE
++	  || ix86_cmodel == CM_LARGE_PIC
++	  || flag_force_indirect_call
++	  || (TARGET_DLLIMPORT_DECL_ATTRIBUTES
++	      && DECL_DLLIMPORT_P (cfun->decl))))
+     {
+       /* Queue ENDBR insertion to x86_function_profiler.  */
+       if (crtl->profile && flag_fentry)
+@@ -44150,43 +44155,51 @@ emit_reduc_half (rtx dest, rtx src, int i)
        break;
      case E_V64QImode:
      case E_V32HImode:
@@ -2265,7 +2291,7 @@ index 1bca5a7eea6..5d12d82db5b 100644
        break;
      default:
        gcc_unreachable ();
-@@ -46667,7 +46675,7 @@ expand_vec_perm_pshufb (struct expand_vec_perm_d *d)
+@@ -46667,7 +46680,7 @@ expand_vec_perm_pshufb (struct expand_vec_perm_d *d)
  	      /* vpshufb only works intra lanes, it is not
  		 possible to shuffle bytes in between the lanes.  */
  	      for (i = 0; i < nelt; ++i)
@@ -4106,10 +4132,20 @@ index 7916344c584..3e969e52176 100644
  extern void mark_end_of_function_resources (rtx, bool);
  extern void init_resource_info (rtx_insn *);
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..8742d27ce2f 100644
+index e132f2657ef..3df9dd78d0c 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,392 @@
+@@ -1,3 +1,402 @@
++2020-04-17  H.J. Lu  <hongjiu.lu@intel.com>
++
++	Backport from master
++	2020-04-08  H.J. Lu  <hongjiu.lu@intel.com>
++
++	PR target/94417
++	* gcc.target/i386/pr94417-1.c: New test.
++	* gcc.target/i386/pr94417-2.c: Likewise.
++	* gcc.target/i386/pr94417-3.c: Likewise.
++
 +2020-04-17  Kewen Lin  <linkw@gcc.gnu.org>
 +
 +	Backport from mainline
@@ -6363,6 +6399,84 @@ index 00000000000..4982f7d01d7
 +/* { dg-options "-O3 -fcompare-debug -mavx2" } */
 +
 +#include "../../gcc.dg/fold-bopcond-1.c"
+diff --git a/gcc/testsuite/gcc.target/i386/pr94417-1.c b/gcc/testsuite/gcc.target/i386/pr94417-1.c
+new file mode 100644
+index 00000000000..5bbe057fa8f
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr94417-1.c
+@@ -0,0 +1,20 @@
++/* { dg-do compile } */
++/* { dg-require-effective-target lp64 } */
++/* { dg-options "-O2 -fcf-protection -mcmodel=large" } */
++/* { dg-final { scan-assembler-times {\mendbr} 2 } } */
++
++extern void ext (void);
++
++__attribute((noclone, noinline))
++static
++void
++foo (void)
++{
++  ext ();
++}
++
++void
++bar (void)
++{
++  foo ();
++}
+diff --git a/gcc/testsuite/gcc.target/i386/pr94417-2.c b/gcc/testsuite/gcc.target/i386/pr94417-2.c
+new file mode 100644
+index 00000000000..9e9c277e07f
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr94417-2.c
+@@ -0,0 +1,21 @@
++/* { dg-do compile } */
++/* { dg-require-effective-target lp64 } */
++/* { dg-require-effective-target fpic } */
++/* { dg-options "-O2 -fpic -mcmodel=large -fcf-protection" } */
++/* { dg-final { scan-assembler-times {\mendbr} 4 } } */
++
++extern void ext (void);
++
++__attribute((noclone, noinline))
++static
++void
++foo (void)
++{
++  ext ();
++}
++
++void
++bar (void)
++{
++  foo ();
++}
+diff --git a/gcc/testsuite/gcc.target/i386/pr94417-3.c b/gcc/testsuite/gcc.target/i386/pr94417-3.c
+new file mode 100644
+index 00000000000..07c451796c2
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr94417-3.c
+@@ -0,0 +1,19 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -fcf-protection -mforce-indirect-call" } */
++/* { dg-final { scan-assembler-times {\mendbr} 2 } } */
++
++extern void ext (void);
++
++__attribute((noclone, noinline))
++static
++void
++foo (void)
++{
++  ext ();
++}
++
++void
++bar (void)
++{
++  foo ();
++}
 diff --git a/gcc/testsuite/gcc.target/i386/pr94494.c b/gcc/testsuite/gcc.target/i386/pr94494.c
 new file mode 100644
 index 00000000000..ba0171e59f8
