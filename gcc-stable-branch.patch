@@ -19,7 +19,8 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (35):
+GCC Administrator (36):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -133,10 +134,12 @@ Joseph Myers (1):
 Julian Brown (1):
       Test cases for mixed structured/dynamic data lifetimes with OpenACC [PR92843]
 
-Kewen Lin (3):
+Kewen Lin (5):
       [testsuite] Fix PR94023 to guard case under vect_hw_misalign
       [testsuite] Fix PR94019 to check vector char when vect_hw_misalign
       [testsuite] Fix PR93935 to guard case under vect_hw_misalign
+      Fix PR94043 by making vect_live_op generate lc-phi
+      Fix PR94443 with gsi_insert_seq_before [PR94443]
 
 Kyrylo Tkachov (10):
       aarch64: Extend %R for integer registers
@@ -217,10 +220,28 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..a7949385573 100644
+index d8e53874e68..29f9f52067d 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,530 @@
+@@ -1,3 +1,548 @@
++2020-04-17  Kewen Lin  <linkw@gcc.gnu.org>
++
++	Backport from mainline
++	2020-04-03  Kewen Lin  <linkw@gcc.gnu.org>
++
++	PR tree-optimization/94443
++	* tree-vect-loop.c (vectorizable_live_operation): Use
++	gsi_insert_seq_before to replace gsi_insert_before.
++
++2020-04-17  Kewen Lin  <linkw@gcc.gnu.org>
++
++	Backport from mainline
++	2020-04-01  Kewen Lin  <linkw@gcc.gnu.org>
++
++	PR tree-optimization/94043
++	* tree-vect-loop.c (vectorizable_live_operation): Generate loop-closed
++	phi for vec_lhs and use it for lane extraction.
++
 +2020-04-16  Michael Meissner  <meissner@linux.ibm.com>
 +
 +	PR target/94557
@@ -4085,10 +4106,26 @@ index 7916344c584..3e969e52176 100644
  extern void mark_end_of_function_resources (rtx, bool);
  extern void init_resource_info (rtx_insn *);
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..30ac5f5522e 100644
+index e132f2657ef..8742d27ce2f 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,376 @@
+@@ -1,3 +1,392 @@
++2020-04-17  Kewen Lin  <linkw@gcc.gnu.org>
++
++	Backport from mainline
++	2020-04-03  Kewen Lin  <linkw@gcc.gnu.org>
++
++	PR tree-optimization/94443
++	* gcc.dg/vect/pr94443.c: New test.
++
++2020-04-17  Kewen Lin  <linkw@gcc.gnu.org>
++
++	Backport from mainline
++	2020-04-01  Kewen Lin  <linkw@gcc.gnu.org>
++
++	PR tree-optimization/94043
++	* gfortran.dg/graphite/vect-pr94043.f90: New test.
++
 +2020-04-16  Richard Biener  <rguenther@suse.de>
 +
 +	Backport from mainline
@@ -5841,6 +5878,25 @@ index 00000000000..45c740dbe9e
 +{
 +  return x == 0 ? x : y;
 +}
+diff --git a/gcc/testsuite/gcc.dg/vect/pr94443.c b/gcc/testsuite/gcc.dg/vect/pr94443.c
+new file mode 100644
+index 00000000000..f8cbaf1b9ce
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/vect/pr94443.c
+@@ -0,0 +1,13 @@
++/* { dg-do compile } */
++/* { dg-additional-options "-march=znver2" { target { x86_64-*-* i?86-*-* } } } */
++
++/* Check it to be compiled successfully without any ICE.  */
++
++int a;
++unsigned *b;
++
++void foo()
++{
++  for (unsigned i; i <= a; ++i, ++b)
++    ;
++}
 diff --git a/gcc/testsuite/gcc.dg/vect/slp-perm-12.c b/gcc/testsuite/gcc.dg/vect/slp-perm-12.c
 index 4d4c5344402..113223ab0f9 100644
 --- a/gcc/testsuite/gcc.dg/vect/slp-perm-12.c
@@ -6889,6 +6945,30 @@ index 00000000000..bab08b2d5c3
 +end structure
 +
 +end
+diff --git a/gcc/testsuite/gfortran.dg/graphite/vect-pr94043.f90 b/gcc/testsuite/gfortran.dg/graphite/vect-pr94043.f90
+new file mode 100644
+index 00000000000..744c0f3042e
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/graphite/vect-pr94043.f90
+@@ -0,0 +1,18 @@
++! { dg-do compile }
++! { dg-additional-options "-O3 -ftree-parallelize-loops=2 -fno-tree-dce" }
++
++! As PR94043, test it to be compiled successfully without ICE.
++
++program yw
++      integer :: hx(6, 6)
++      integer :: ps = 1, e2 = 1
++
++      do ps = 1, 6
++        do e2 = 1, 6
++            hx(e2, ps) = 0
++            if (ps >= 5 .and. e2 >= 5) then
++                hx(e2, ps) = hx(1, 1)
++            end if
++        end do
++      end do
++end program
 diff --git a/gcc/testsuite/gfortran.dg/module_procedure_3.f90 b/gcc/testsuite/gfortran.dg/module_procedure_3.f90
 new file mode 100644
 index 00000000000..50a83d9e5b1
@@ -7722,6 +7802,86 @@ index 255575f1198..4f42817f7de 100644
  	   && (non_ass_var = independent_of_stmt_p (op0, stmt, call,
  						    to_move)))
      ;
+diff --git a/gcc/tree-vect-loop.c b/gcc/tree-vect-loop.c
+index 0308b26b808..ed6586753c5 100644
+--- a/gcc/tree-vect-loop.c
++++ b/gcc/tree-vect-loop.c
+@@ -7942,6 +7942,25 @@ vectorizable_live_operation (stmt_vec_info stmt_info,
+       bitstart = int_const_binop (MINUS_EXPR, vec_bitsize, bitsize);
+     }
+ 
++  /* Ensure the VEC_LHS for lane extraction stmts satisfy loop-closed PHI
++     requirement, insert one phi node for it.  It looks like:
++	 loop;
++       BB:
++	 # lhs' = PHI <lhs>
++     ==>
++	 loop;
++       BB:
++	 # vec_lhs' = PHI <vec_lhs>
++	 new_tree = lane_extract <vec_lhs', ...>;
++	 lhs' = new_tree;  */
++
++  basic_block exit_bb = single_exit (loop)->dest;
++  gcc_assert (single_pred_p (exit_bb));
++
++  tree vec_lhs_phi = copy_ssa_name (vec_lhs);
++  gimple *phi = create_phi_node (vec_lhs_phi, exit_bb);
++  SET_PHI_ARG_DEF (phi, single_exit (loop)->dest_idx, vec_lhs);
++
+   gimple_seq stmts = NULL;
+   tree new_tree;
+   if (LOOP_VINFO_FULLY_MASKED_P (loop_vinfo))
+@@ -7954,10 +7973,10 @@ vectorizable_live_operation (stmt_vec_info stmt_info,
+ 	 the loop mask for the final iteration.  */
+       gcc_assert (ncopies == 1 && !slp_node);
+       tree scalar_type = TREE_TYPE (STMT_VINFO_VECTYPE (stmt_info));
+-      tree mask = vect_get_loop_mask (gsi, &LOOP_VINFO_MASKS (loop_vinfo),
+-				      1, vectype, 0);
+-      tree scalar_res = gimple_build (&stmts, CFN_EXTRACT_LAST,
+-				      scalar_type, mask, vec_lhs);
++      tree mask = vect_get_loop_mask (gsi, &LOOP_VINFO_MASKS (loop_vinfo), 1,
++				      vectype, 0);
++      tree scalar_res = gimple_build (&stmts, CFN_EXTRACT_LAST, scalar_type,
++				      mask, vec_lhs_phi);
+ 
+       /* Convert the extracted vector element to the required scalar type.  */
+       new_tree = gimple_convert (&stmts, lhs_type, scalar_res);
+@@ -7967,13 +7986,32 @@ vectorizable_live_operation (stmt_vec_info stmt_info,
+       tree bftype = TREE_TYPE (vectype);
+       if (VECTOR_BOOLEAN_TYPE_P (vectype))
+ 	bftype = build_nonstandard_integer_type (tree_to_uhwi (bitsize), 1);
+-      new_tree = build3 (BIT_FIELD_REF, bftype, vec_lhs, bitsize, bitstart);
++      new_tree = build3 (BIT_FIELD_REF, bftype, vec_lhs_phi, bitsize, bitstart);
+       new_tree = force_gimple_operand (fold_convert (lhs_type, new_tree),
+ 				       &stmts, true, NULL_TREE);
+     }
+ 
+   if (stmts)
+-    gsi_insert_seq_on_edge_immediate (single_exit (loop), stmts);
++    {
++      gimple_stmt_iterator exit_gsi = gsi_after_labels (exit_bb);
++      gsi_insert_seq_before (&exit_gsi, stmts, GSI_SAME_STMT);
++
++      /* Remove existing phi from lhs and create one copy from new_tree.  */
++      tree lhs_phi = NULL_TREE;
++      gimple_stmt_iterator gsi;
++      for (gsi = gsi_start_phis (exit_bb); !gsi_end_p (gsi); gsi_next (&gsi))
++	{
++	  gimple *phi = gsi_stmt (gsi);
++	  if ((gimple_phi_arg_def (phi, 0) == lhs))
++	    {
++	      remove_phi_node (&gsi, false);
++	      lhs_phi = gimple_phi_result (phi);
++	      gimple *copy = gimple_build_assign (lhs_phi, new_tree);
++	      gsi_insert_before (&exit_gsi, copy, GSI_SAME_STMT);
++	      break;
++	    }
++	}
++    }
+ 
+   /* Replace use of lhs with newly computed result.  If the use stmt is a
+      single arg PHI, just replace all uses of PHI result.  It's necessary
 diff --git a/gcc/varasm.c b/gcc/varasm.c
 index 8f006dcff67..8d87e28cc7c 100644
 --- a/gcc/varasm.c
