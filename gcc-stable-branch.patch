@@ -1,3 +1,6 @@
+Andrea Corallo (1):
+      aarch64: backport fix for PR target/94530
+
 Bill Schmidt (1):
       rs6000: Fix -mpower9-vector -mno-altivec ICE (PR87560)
 
@@ -19,7 +22,10 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (36):
+GCC Administrator (39):
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -57,8 +63,12 @@ GCC Administrator (36):
       Daily bump.
       Daily bump.
 
-H.J. Lu (1):
+H.J. Lu (2):
       x86: Insert ENDBR if function will be called indirectly
+      x86: Restore the frame pointer in word_mode
+
+Harald Anlauf (1):
+      PR fortran/93364 - ICE in gfc_set_array_spec, at fortran/array.c:879
 
 Iain Buclaw (1):
       d: Fix ICE in add_symbol_to_partition_1, at lto/lto-partition.c:215
@@ -167,9 +177,10 @@ Mark Eggleston (3):
 Martin Jambor (1):
       gcc-9 sra: Cap number of sub-access propagations with a param (PR 93435)
 
-Martin Liska (2):
+Martin Liska (3):
       Backport 314b91220a07bd63f13c58e37f1b5b9430a3702b
       Backport 55a7380213a5c16120d5c674fb42b38a3d796b57
+      Backport e9f799d25973fc38022c5ea71ed5a2bca58a847f
 
 Max Filippov (2):
       xtensa: backport fix for PR target/91880
@@ -191,8 +202,9 @@ Richard Biener (4):
 Richard Earnshaw (1):
       arm: correct constraints on movsi_compare0 [PR91913]
 
-Tamar Christina (1):
+Tamar Christina (2):
       AArch64: Break apart paradoxical subregs for VSTRUCT writes (PR target/94052)
+      AArch64: Fix options canonicanization for assembler
 
 Thomas König (1):
       Backport from trunk of the fix for PR 94270.
@@ -203,10 +215,11 @@ Thomas Schwinge (1):
 Tobias Burnus (1):
       [Fortran] Fix result-variable handling of MODULE PROCEDURE (PR94348)
 
-Uros Bizjak (3):
+Uros Bizjak (4):
       i386: Fix REDUC_SSE_SMINMAX_MODE mode conditions.
       i386: Fix REDUC_SSE_SMINMAX_MODE mode conditions.
       i386: Require OPTION_MASK_ISA_SSE2 for __builtin_ia32_movq128 [PR94603]
+      i386: Remove unneeded assignments when triggering SSE exceptions
 
 Will Schmidt (2):
       backport PR90763: PowerPC vec_xl_len should take const argument.
@@ -215,6 +228,24 @@ Will Schmidt (2):
 Zackery Spytz (1):
       doc: Fix a typo in the documentation of the copy attribute
 
+diff --git a/ChangeLog b/ChangeLog
+index 9605d767a80..0203aec84ad 100644
+--- a/ChangeLog
++++ b/ChangeLog
+@@ -1,3 +1,13 @@
++2020-04-20  Martin Liska  <mliska@suse.cz>
++
++	Backport from mainline
++	2020-04-17  Martin Liska  <mliska@suse.cz>
++		    Jonathan Yong <10walls@gmail.com>
++
++	PR gcov-profile/94570
++	* ltmain.sh: Do not define HAVE_DOS_BASED_FILE_SYSTEM
++	for CYGWIN.
++
+ 2020-03-12  Release Manager
+ 
+ 	* GCC 9.3.0 released.
 diff --git a/gcc/BASE-VER b/gcc/BASE-VER
 index b13d146a7b0..3b74042132a 100644
 --- a/gcc/BASE-VER
@@ -223,10 +254,47 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..7df3a0d0990 100644
+index d8e53874e68..93bd849acca 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,557 @@
+@@ -1,3 +1,594 @@
++2020-04-20  H.J. Lu  <hongjiu.lu@intel.com>
++
++	Backport from master
++	2020-04-13  H.J. Lu  <hongjiu.lu@intel.com>
++
++	PR target/94556
++	* config/i386/i386.c (ix86_expand_epilogue): Restore the frame
++	pointer in word_mode for eh_return epilogues.
++
++2020-04-20  Andrea Corallo  <andrea.corallo@arm.com>
++
++	Backport from mainline.
++	2020-04-15  Andrea Corallo  <andrea.corallo@arm.com>
++
++	PR target/94530
++	* config/aarch64/falkor-tag-collision-avoidance.c
++	(valid_src_p): Check for aarch64_address_info type before
++	accessing base field.
++
++2020-04-20  Tamar Christina  <tamar.christina@arm.com>
++
++	Backport from mainline.
++	2020-04-03  Tamar Christina  <tamar.christina@arm.com>
++
++	PR target/94396
++	* common/config/aarch64/aarch64-common.c
++	(aarch64_get_extension_string_for_isa_flags): Handle default flags.
++
++2020-04-20  Martin Liska  <mliska@suse.cz>
++
++	Backport from mainline
++	2020-04-17  Martin Liska  <mliska@suse.cz>
++		    Jonathan Yong <10walls@gmail.com>
++
++	PR gcov-profile/94570
++	* coverage.c (coverage_init): Use separator properly.
++
 +2020-04-17  H.J. Lu  <hongjiu.lu@intel.com>
 +
 +	Backport from master
@@ -1291,6 +1359,34 @@ index 4a27867b82c..0f933bdc758 100644
        /* This symbol is effectively an "extern" declaration now.  */
        TREE_PUBLIC (decl) = 1;
      }
+diff --git a/gcc/common/config/aarch64/aarch64-common.c b/gcc/common/config/aarch64/aarch64-common.c
+index bab3ab3fa36..db9842b1ea6 100644
+--- a/gcc/common/config/aarch64/aarch64-common.c
++++ b/gcc/common/config/aarch64/aarch64-common.c
+@@ -433,7 +433,22 @@ aarch64_get_extension_string_for_isa_flags (unsigned long isa_flags,
+ 	/* We remove all the dependent bits, to prevent them from being turned
+ 	   on twice.  This only works because we assume that all there are
+ 	   individual options to set all bits standalone.  */
+-	isa_flag_bits &= ~opt->flags_on;
++
++	/* PR target/94396.
++
++	   For flags which would already imply a bit that's on by default (e.g
++	   fp16fml which implies +fp,+fp16) we must emit the flags that are not
++	   on by default.  i.e. in Armv8.4-a +fp16fml is default if +fp16.  So
++	   if a user passes armv8.4-a+fp16 (or +fp16fml) then we need to emit
++	   +fp16.  But if +fp16fml is used in an architecture where it is
++	   completely optional we only have to emit the canonical flag.  */
++	uint64_t toggle_bits = opt->flags_on & default_arch_flags;
++	/* Now check to see if the canonical flag is on by default.  If it
++	   is not then enabling it will enable all bits in flags_on.  */
++	if ((opt->flag_canonical & default_arch_flags) == 0)
++	  toggle_bits = opt->flags_on;
++
++	isa_flag_bits &= ~toggle_bits;
+ 	isa_flag_bits |= opt->flag_canonical;
+       }
+     }
 diff --git a/gcc/config/aarch64/aarch64-protos.h b/gcc/config/aarch64/aarch64-protos.h
 index c083cad5327..b9bfb281275 100644
 --- a/gcc/config/aarch64/aarch64-protos.h
@@ -2101,6 +2197,24 @@ index 21f9549e660..73892b339c4 100644
  (define_memory_constraint "Q"
   "A memory address which uses a single base register with no offset."
   (and (match_code "mem")
+diff --git a/gcc/config/aarch64/falkor-tag-collision-avoidance.c b/gcc/config/aarch64/falkor-tag-collision-avoidance.c
+index 779dee81f7f..698d1595d0a 100644
+--- a/gcc/config/aarch64/falkor-tag-collision-avoidance.c
++++ b/gcc/config/aarch64/falkor-tag-collision-avoidance.c
+@@ -537,6 +537,13 @@ valid_src_p (rtx src, rtx_insn *insn, struct loop *loop, bool *pre_post,
+   if (!aarch64_classify_address (&addr, XEXP (x, 0), mode, true))
+     return false;
+ 
++  if (addr.type != ADDRESS_REG_IMM
++      && addr.type != ADDRESS_REG_WB
++      && addr.type != ADDRESS_REG_REG
++      && addr.type != ADDRESS_REG_UXTW
++      && addr.type != ADDRESS_REG_SXTW)
++    return false;
++
+   unsigned regno = REGNO (addr.base);
+   if (global_regs[regno] || fixed_regs[regno])
+     return false;
 diff --git a/gcc/config/aarch64/iterators.md b/gcc/config/aarch64/iterators.md
 index 6caeeac8086..3bc49ea0238 100644
 --- a/gcc/config/aarch64/iterators.md
@@ -2193,7 +2307,7 @@ index 5dedeb2d18b..2f57d19bea2 100644
  /* SSE2 MMX */
  BDESC (OPTION_MASK_ISA_SSE2 | OPTION_MASK_ISA_MMX, 0, CODE_FOR_mmx_addv1di3, "__builtin_ia32_paddq", IX86_BUILTIN_PADDQ, UNKNOWN, (int) V1DI_FTYPE_V1DI_V1DI)
 diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
-index 1bca5a7eea6..3891d44ce85 100644
+index 1bca5a7eea6..efe32f3975e 100644
 --- a/gcc/config/i386/i386.c
 +++ b/gcc/config/i386/i386.c
 @@ -2535,7 +2535,12 @@ rest_of_insert_endbranch (void)
@@ -2210,7 +2324,32 @@ index 1bca5a7eea6..3891d44ce85 100644
      {
        /* Queue ENDBR insertion to x86_function_profiler.  */
        if (crtl->profile && flag_fentry)
-@@ -44150,43 +44155,51 @@ emit_reduc_half (rtx dest, rtx src, int i)
+@@ -14347,8 +14352,13 @@ ix86_expand_epilogue (int style)
+ 	      t = plus_constant (Pmode, t, m->fs.fp_offset - UNITS_PER_WORD);
+ 	      emit_insn (gen_rtx_SET (sa, t));
+ 
+-	      t = gen_frame_mem (Pmode, hard_frame_pointer_rtx);
+-	      insn = emit_move_insn (hard_frame_pointer_rtx, t);
++	      /* NB: eh_return epilogues must restore the frame pointer
++		 in word_mode since the upper 32 bits of RBP register
++		 can have any values.  */
++	      t = gen_frame_mem (word_mode, hard_frame_pointer_rtx);
++	      rtx frame_reg = gen_rtx_REG (word_mode,
++					   HARD_FRAME_POINTER_REGNUM);
++	      insn = emit_move_insn (frame_reg, t);
+ 
+ 	      /* Note that we use SA as a temporary CFA, as the return
+ 		 address is at the proper place relative to it.  We
+@@ -14363,7 +14373,7 @@ ix86_expand_epilogue (int style)
+ 	      add_reg_note (insn, REG_CFA_DEF_CFA,
+ 			    plus_constant (Pmode, sa, UNITS_PER_WORD));
+ 	      ix86_add_queued_cfa_restore_notes (insn);
+-	      add_reg_note (insn, REG_CFA_RESTORE, hard_frame_pointer_rtx);
++	      add_reg_note (insn, REG_CFA_RESTORE, frame_reg);
+ 	      RTX_FRAME_RELATED_P (insn) = 1;
+ 
+ 	      m->fs.cfa_reg = sa;
+@@ -44150,43 +44160,51 @@ emit_reduc_half (rtx dest, rtx src, int i)
        break;
      case E_V64QImode:
      case E_V32HImode:
@@ -2291,7 +2430,7 @@ index 1bca5a7eea6..3891d44ce85 100644
        break;
      default:
        gcc_unreachable ();
-@@ -46667,7 +46680,7 @@ expand_vec_perm_pshufb (struct expand_vec_perm_d *d)
+@@ -46667,7 +46685,7 @@ expand_vec_perm_pshufb (struct expand_vec_perm_d *d)
  	      /* vpshufb only works intra lanes, it is not
  		 possible to shuffle bytes in between the lanes.  */
  	      for (i = 0; i < nelt; ++i)
@@ -2862,6 +3001,43 @@ index 362e5ff3c1f..673ddad2eae 100644
    [(set_attr "type"	"arith,load")
     (set_attr "mode"	"SI")
     (set_attr "length"	"3,3")])
+diff --git a/gcc/coverage.c b/gcc/coverage.c
+index 1ffefd5f482..9be446a862d 100644
+--- a/gcc/coverage.c
++++ b/gcc/coverage.c
+@@ -1201,6 +1201,11 @@ coverage_obj_finish (vec<constructor_elt, va_gc> *ctor)
+ void
+ coverage_init (const char *filename)
+ {
++#if HAVE_DOS_BASED_FILE_SYSTEM
++  const char *separator = "\\";
++#else
++  const char *separator = "/";
++#endif
+   int len = strlen (filename);
+   int prefix_len = 0;
+ 
+@@ -1217,11 +1222,6 @@ coverage_init (const char *filename)
+ 	 of filename in order to prevent file path clashing.  */
+       if (profile_data_prefix)
+ 	{
+-#if HAVE_DOS_BASED_FILE_SYSTEM
+-	  const char *separator = "\\";
+-#else
+-	  const char *separator = "/";
+-#endif
+ 	  filename = concat (getpwd (), separator, filename, NULL);
+ 	  filename = mangle_path (filename);
+ 	  len = strlen (filename);
+@@ -1240,7 +1240,7 @@ coverage_init (const char *filename)
+   if (profile_data_prefix)
+     {
+       memcpy (da_file_name, profile_data_prefix, prefix_len);
+-      da_file_name[prefix_len++] = '/';
++      da_file_name[prefix_len++] = *separator;
+     }
+   memcpy (da_file_name + prefix_len, filename, len);
+   strcpy (da_file_name + prefix_len + len, GCOV_DATA_SUFFIX);
 diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
 index 6441d647a54..cb49aeccafa 100644
 --- a/gcc/cp/ChangeLog
@@ -3700,10 +3876,17 @@ index c717f24501e..64273c1c6bc 100644
  				    "when distributing negation across "
  				    "division"),
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index 8fefea2b63d..1c88bb0efcb 100644
+index 8fefea2b63d..03193c2f9d7 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,58 @@
+@@ -1,3 +1,65 @@
++2020-04-20  Harald Anlauf  <anlauf@gmx.de>
++
++	Backport from mainline.
++	PR fortran/93364
++	* array.c (gfc_set_array_spec): Check for sum of rank and corank
++	not exceeding GFC_MAX_DIMENSIONS.
++
 +2020-04-14  Thomas Koenig  <tkoenig@gcc.gnu.org>
 +
 +	Backport from trunk.
@@ -3762,6 +3945,21 @@ index 8fefea2b63d..1c88bb0efcb 100644
  2020-03-12  Release Manager
  
  	* GCC 9.3.0 released.
+diff --git a/gcc/fortran/array.c b/gcc/fortran/array.c
+index 4a7f44f3e8b..017334839ed 100644
+--- a/gcc/fortran/array.c
++++ b/gcc/fortran/array.c
+@@ -835,6 +835,10 @@ gfc_set_array_spec (gfc_symbol *sym, gfc_array_spec *as, locus *error_loc)
+       return false;
+     }
+ 
++  /* Check F2018:C822.  */
++  if (sym->as->rank + sym->as->corank > GFC_MAX_DIMENSIONS)
++    goto too_many;
++
+   if (as->corank)
+     {
+       sym->as->cotype = as->cotype;
 diff --git a/gcc/fortran/check.c b/gcc/fortran/check.c
 index 6d37bbb8fd2..adda284ef71 100644
 --- a/gcc/fortran/check.c
@@ -4132,10 +4330,47 @@ index 7916344c584..3e969e52176 100644
  extern void mark_end_of_function_resources (rtx, bool);
  extern void init_resource_info (rtx_insn *);
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..3df9dd78d0c 100644
+index e132f2657ef..fb039ee0e97 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,402 @@
+@@ -1,3 +1,439 @@
++2020-04-20  Harald Anlauf  <anlauf@gmx.de>
++
++	Backport from mainline.
++	PR fortran/93364
++	* gfortran.dg/pr93364.f90: New test.
++
++2020-04-20  Andrea Corallo  <andrea.corallo@arm.com>
++
++	Backport from mainline.
++	2020-04-09  Andrea Corallo  <andrea.corallo@arm.com
++
++	PR target/94530
++	* gcc.target/aarch64/pr94530.c: New test.
++
++2020-04-20  Tamar Christina  <tamar.christina@arm.com>
++
++	Backport from mainline.
++	2020-04-03  Tamar Christina  <tamar.christina@arm.com>
++
++	PR target/94396
++	* gcc.target/aarch64/options_set_11.c: New test.
++	* gcc.target/aarch64/options_set_12.c: New test.
++	* gcc.target/aarch64/options_set_13.c: New test.
++	* gcc.target/aarch64/options_set_14.c: New test.
++	* gcc.target/aarch64/options_set_15.c: New test.
++	* gcc.target/aarch64/options_set_16.c: New test.
++	* gcc.target/aarch64/options_set_17.c: New test.
++	* gcc.target/aarch64/options_set_18.c: New test.
++	* gcc.target/aarch64/options_set_19.c: New test.
++	* gcc.target/aarch64/options_set_20.c: New test.
++	* gcc.target/aarch64/options_set_21.c: New test.
++	* gcc.target/aarch64/options_set_22.c: New test.
++	* gcc.target/aarch64/options_set_23.c: New test.
++	* gcc.target/aarch64/options_set_24.c: New test.
++	* gcc.target/aarch64/options_set_25.c: New test.
++	* gcc.target/aarch64/options_set_26.c: New test.
++
 +2020-04-17  H.J. Lu  <hongjiu.lu@intel.com>
 +
 +	Backport from master
@@ -6132,6 +6367,278 @@ index 8d2ae67dfbe..6daf9b08f5a 100644
  /* { dg-skip-if "" { *-*-* } { "-mcpu=*" } { "" } } */
  
  int
+diff --git a/gcc/testsuite/gcc.target/aarch64/options_set_11.c b/gcc/testsuite/gcc.target/aarch64/options_set_11.c
+new file mode 100644
+index 00000000000..d083bfdbd5c
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/options_set_11.c
+@@ -0,0 +1,11 @@
++/* { dg-do compile } */
++/* { dg-additional-options "-march=armv8.2-a+fp" } */
++
++int main ()
++{
++  return 0;
++}
++
++/* { dg-final { scan-assembler {\.arch armv8\.2-a\+crc} } } */
++
++ /* FP is default on, no need to pass on to assembler.  */
+diff --git a/gcc/testsuite/gcc.target/aarch64/options_set_12.c b/gcc/testsuite/gcc.target/aarch64/options_set_12.c
+new file mode 100644
+index 00000000000..58a09fda2c1
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/options_set_12.c
+@@ -0,0 +1,11 @@
++/* { dg-do compile } */
++/* { dg-additional-options "-march=armv8.2-a+fp16" } */
++
++int main ()
++{
++  return 0;
++}
++
++/* { dg-final { scan-assembler {\.arch armv8\.2-a\+crc\+fp16} } } */
++
++ /* fp16 not default, should be emitted.  */
+diff --git a/gcc/testsuite/gcc.target/aarch64/options_set_13.c b/gcc/testsuite/gcc.target/aarch64/options_set_13.c
+new file mode 100644
+index 00000000000..2a517ecb58f
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/options_set_13.c
+@@ -0,0 +1,11 @@
++/* { dg-do compile } */
++/* { dg-additional-options "-march=armv8.2-a+fp16+fp" } */
++
++int main ()
++{
++  return 0;
++}
++
++/* { dg-final { scan-assembler {\.arch armv8\.2-a\+crc\+fp16} } } */
++
++ /* FP is part of FP16, don't emit it.  */
+diff --git a/gcc/testsuite/gcc.target/aarch64/options_set_14.c b/gcc/testsuite/gcc.target/aarch64/options_set_14.c
+new file mode 100644
+index 00000000000..c192bf6cb63
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/options_set_14.c
+@@ -0,0 +1,11 @@
++/* { dg-do compile } */
++/* { dg-additional-options "-march=armv8.2-a+fp16fml" } */
++
++int main ()
++{
++  return 0;
++}
++
++/* { dg-final { scan-assembler {\.arch armv8\.2-a\+crc\+fp16fml} } } */
++
++ /* fmp16fml is smallest option to emit.  */
+diff --git a/gcc/testsuite/gcc.target/aarch64/options_set_15.c b/gcc/testsuite/gcc.target/aarch64/options_set_15.c
+new file mode 100644
+index 00000000000..32ec3ea4643
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/options_set_15.c
+@@ -0,0 +1,11 @@
++/* { dg-do compile } */
++/* { dg-additional-options "-march=armv8.2-a+fp16fml+fp" } */
++
++int main ()
++{
++  return 0;
++}
++
++/* { dg-final { scan-assembler {\.arch armv8\.2-a\+crc\+fp16fml*} } } */
++
++ /* fp included in fp16fml, only emit latter.  */
+diff --git a/gcc/testsuite/gcc.target/aarch64/options_set_16.c b/gcc/testsuite/gcc.target/aarch64/options_set_16.c
+new file mode 100644
+index 00000000000..b45c01a915b
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/options_set_16.c
+@@ -0,0 +1,11 @@
++/* { dg-do compile } */
++/* { dg-additional-options "-march=armv8.2-a+fp16fml+fp16+fp" } */
++
++int main ()
++{
++  return 0;
++}
++
++/* { dg-final { scan-assembler {\.arch armv8\.2-a\+crc\+fp16fml} } } */
++
++ /* fp16fml is smallest options to emit.  */
+diff --git a/gcc/testsuite/gcc.target/aarch64/options_set_17.c b/gcc/testsuite/gcc.target/aarch64/options_set_17.c
+new file mode 100644
+index 00000000000..c490e1f47a0
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/options_set_17.c
+@@ -0,0 +1,11 @@
++/* { dg-do compile } */
++/* { dg-additional-options "-march=armv8.2-a+dotprod" } */
++
++int main ()
++{
++  return 0;
++}
++
++/* { dg-final { scan-assembler {\.arch armv8\.2-a\+crc\+dotprod} } } */
++
++ /* dotprod needs to be emitted pre armv8.4.  */
+diff --git a/gcc/testsuite/gcc.target/aarch64/options_set_18.c b/gcc/testsuite/gcc.target/aarch64/options_set_18.c
+new file mode 100644
+index 00000000000..61587dbbd63
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/options_set_18.c
+@@ -0,0 +1,11 @@
++/* { dg-do compile } */
++/* { dg-additional-options "-march=armv8.4-a+dotprod" } */
++
++int main ()
++{
++  return 0;
++}
++
++/* { dg-final { scan-assembler {\.arch armv8\.4-a\+crc} } } */
++
++ /* dotprod is default in armv8.4-a, don't emit.  */
+diff --git a/gcc/testsuite/gcc.target/aarch64/options_set_19.c b/gcc/testsuite/gcc.target/aarch64/options_set_19.c
+new file mode 100644
+index 00000000000..72b58126182
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/options_set_19.c
+@@ -0,0 +1,11 @@
++/* { dg-do compile } */
++/* { dg-additional-options "-march=armv8.4-a+fp" } */
++
++int main ()
++{
++  return 0;
++}
++
++/* { dg-final { scan-assembler {\.arch armv8\.4-a\+crc} } } */
++
++ /* fp default, don't emit.  */
+diff --git a/gcc/testsuite/gcc.target/aarch64/options_set_20.c b/gcc/testsuite/gcc.target/aarch64/options_set_20.c
+new file mode 100644
+index 00000000000..b383e0aced2
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/options_set_20.c
+@@ -0,0 +1,11 @@
++/* { dg-do compile } */
++/* { dg-additional-options "-march=armv8.4-a+fp16" } */
++
++int main ()
++{
++  return 0;
++}
++
++/* { dg-final { scan-assembler {\.arch armv8\.4-a\+crc\+fp16} } } */
++
++ /* fp16 smallest set to emit.  */
+diff --git a/gcc/testsuite/gcc.target/aarch64/options_set_21.c b/gcc/testsuite/gcc.target/aarch64/options_set_21.c
+new file mode 100644
+index 00000000000..19fcd6fda6e
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/options_set_21.c
+@@ -0,0 +1,11 @@
++/* { dg-do compile } */
++/* { dg-additional-options "-march=armv8.4-a+fp16+fp" } */
++
++int main ()
++{
++  return 0;
++}
++
++/* { dg-final { scan-assembler {\.arch armv8\.4-a\+crc\+fp16} } } */
++
++ /* fp16 smallest set to emit.  */
+diff --git a/gcc/testsuite/gcc.target/aarch64/options_set_22.c b/gcc/testsuite/gcc.target/aarch64/options_set_22.c
+new file mode 100644
+index 00000000000..77ae4089f39
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/options_set_22.c
+@@ -0,0 +1,11 @@
++/* { dg-do compile } */
++/* { dg-additional-options "-march=armv8.4-a+fp16fml" } */
++
++int main ()
++{
++  return 0;
++}
++
++/* { dg-final { scan-assembler {\.arch armv8\.4-a\+crc\+fp16} } } */
++
++ /* fp16 smallest set to emit.  */
+diff --git a/gcc/testsuite/gcc.target/aarch64/options_set_23.c b/gcc/testsuite/gcc.target/aarch64/options_set_23.c
+new file mode 100644
+index 00000000000..dee637c5d2c
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/options_set_23.c
+@@ -0,0 +1,11 @@
++/* { dg-do compile } */
++/* { dg-additional-options "-march=armv8.4-a+fp16fml+fp" } */
++
++int main ()
++{
++  return 0;
++}
++
++/* { dg-final { scan-assembler {\.arch armv8\.4-a\+crc\+fp16} } } */
++
++ /* fp16 smallest set to emit.  */
+diff --git a/gcc/testsuite/gcc.target/aarch64/options_set_24.c b/gcc/testsuite/gcc.target/aarch64/options_set_24.c
+new file mode 100644
+index 00000000000..54b0e3d4a83
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/options_set_24.c
+@@ -0,0 +1,11 @@
++/* { dg-do compile } */
++/* { dg-additional-options "-march=armv8.4-a+fp16fml+fp16" } */
++
++int main ()
++{
++  return 0;
++}
++
++/* { dg-final { scan-assembler {\.arch armv8\.4-a\+crc\+fp16} } } */
++
++ /* fp16 smallest set to emit.  */
+diff --git a/gcc/testsuite/gcc.target/aarch64/options_set_25.c b/gcc/testsuite/gcc.target/aarch64/options_set_25.c
+new file mode 100644
+index 00000000000..a3b2d63c06e
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/options_set_25.c
+@@ -0,0 +1,11 @@
++/* { dg-do compile } */
++/* { dg-additional-options "-march=armv8.4-a+fp16fml+fp+fp16" } */
++
++int main ()
++{
++  return 0;
++}
++
++/* { dg-final { scan-assembler {\.arch armv8\.4-a\+crc\+fp16} } } */
++
++ /* fp16 smallest set to emit.  */
+diff --git a/gcc/testsuite/gcc.target/aarch64/options_set_26.c b/gcc/testsuite/gcc.target/aarch64/options_set_26.c
+new file mode 100644
+index 00000000000..b383e0aced2
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/options_set_26.c
+@@ -0,0 +1,11 @@
++/* { dg-do compile } */
++/* { dg-additional-options "-march=armv8.4-a+fp16" } */
++
++int main ()
++{
++  return 0;
++}
++
++/* { dg-final { scan-assembler {\.arch armv8\.4-a\+crc\+fp16} } } */
++
++ /* fp16 smallest set to emit.  */
 diff --git a/gcc/testsuite/gcc.target/aarch64/pr94435.c b/gcc/testsuite/gcc.target/aarch64/pr94435.c
 new file mode 100644
 index 00000000000..5713c14d5f9
@@ -6162,6 +6669,21 @@ index 00000000000..5713c14d5f9
 +	}
 +      __sync_val_compare_and_swap (&g, -1, f);
 +    }
++}
+diff --git a/gcc/testsuite/gcc.target/aarch64/pr94530.c b/gcc/testsuite/gcc.target/aarch64/pr94530.c
+new file mode 100644
+index 00000000000..1f98201c50a
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/pr94530.c
+@@ -0,0 +1,9 @@
++/* { dg-do compile } */
++/* { dg-options "-Os -mcpu=falkor -mpc-relative-literal-loads -mcmodel=large" } */
++
++extern void bar(const char *);
++
++void foo(void) {
++  for (;;)
++    bar("");
 +}
 diff --git a/gcc/testsuite/gcc.target/aarch64/sync-comp-swap.c b/gcc/testsuite/gcc.target/aarch64/sync-comp-swap.c
 index e571b2f13b3..f56415f3354 100644
@@ -7127,6 +7649,25 @@ index 00000000000..7d5477ac0c3
 +! { dg-options "-std=legacy -Ofast --param max-cse-insns=0 -fno-schedule-insns -fsanitize=null" }
 +
 +include 'string_ctor_1.f90'
+diff --git a/gcc/testsuite/gfortran.dg/pr93364.f90 b/gcc/testsuite/gfortran.dg/pr93364.f90
+new file mode 100644
+index 00000000000..61d7fa149a6
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr93364.f90
+@@ -0,0 +1,13 @@
++! { dg-do compile }
++! { dg-options "-fcoarray=single" }
++!
++! PR fortran/93364 - check fix for ICE in gfc_set_array_spec
++
++type(t) function f()
++  codimension :: t[1,2,1,2,1,2,1,*]
++  dimension :: t(1,2,1,2,1,2,1,2)
++end
++
++! { dg-error "has not been declared" " " { target *-*-* } 6 }
++! { dg-error "is of type 't'" " " { target *-*-* } 6 }
++! { dg-error "rank \\+ corank of" " " { target *-*-* } 8 }
 diff --git a/gcc/testsuite/gfortran.dg/pr93484_1.f90 b/gcc/testsuite/gfortran.dg/pr93484_1.f90
 new file mode 100644
 index 00000000000..3b6dbc9ad79
@@ -8027,11 +8568,95 @@ index 8f006dcff67..8d87e28cc7c 100644
    unsigned HOST_WIDE_INT fieldsize
      = int_size_in_bytes (TREE_TYPE (local->type));
  
+diff --git a/include/ChangeLog b/include/ChangeLog
+index 1811056c182..e8e301dd8e7 100644
+--- a/include/ChangeLog
++++ b/include/ChangeLog
+@@ -1,3 +1,13 @@
++2020-04-20  Martin Liska  <mliska@suse.cz>
++
++	Backport from mainline
++	2020-04-17  Martin Liska  <mliska@suse.cz>
++		    Jonathan Yong <10walls@gmail.com>
++
++	PR gcov-profile/94570
++	* filenames.h (defined): Do not define HAVE_DOS_BASED_FILE_SYSTEM
++	for CYGWIN.
++
+ 2020-03-12  Release Manager
+ 
+ 	* GCC 9.3.0 released.
+diff --git a/include/filenames.h b/include/filenames.h
+index 1bcfddb87ac..790a27db873 100644
+--- a/include/filenames.h
++++ b/include/filenames.h
+@@ -32,7 +32,8 @@ Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston, MA 02110-1301, USA.
+ extern "C" {
+ #endif
+ 
+-#if defined(__MSDOS__) || defined(_WIN32) || defined(__OS2__) || defined (__CYGWIN__)
++#if defined(__MSDOS__) || (defined(_WIN32) && ! defined(__CYGWIN__)) || \
++    defined(__OS2__)
+ #  ifndef HAVE_DOS_BASED_FILE_SYSTEM
+ #    define HAVE_DOS_BASED_FILE_SYSTEM 1
+ #  endif
+diff --git a/libatomic/ChangeLog b/libatomic/ChangeLog
+index 5c0aa2db0c8..93ba72ae5ef 100644
+--- a/libatomic/ChangeLog
++++ b/libatomic/ChangeLog
+@@ -1,3 +1,8 @@
++2020-04-19  Uroš Bizjak  <ubizjak@gmail.com>
++
++	* config/x86/fenv.c (__atomic_feraiseexcept) [__SSE_MATH__]:
++	Remove unneeded assignments to volatile memory.
++
+ 2020-03-12  Release Manager
+ 
+ 	* GCC 9.3.0 released.
+diff --git a/libatomic/config/x86/fenv.c b/libatomic/config/x86/fenv.c
+index 9b8a3bd9308..b4c7edc249e 100644
+--- a/libatomic/config/x86/fenv.c
++++ b/libatomic/config/x86/fenv.c
+@@ -57,9 +57,7 @@ __atomic_feraiseexcept (int excepts)
+     {
+       float f = 0.0f;
+ #ifdef __SSE_MATH__
+-      volatile float r __attribute__ ((unused));
+       asm volatile ("%vdivss\t{%0, %d0|%d0, %0}" : "+x" (f));
+-      r = f; /* Needed to trigger exception.   */
+ #else
+       asm volatile ("fdiv\t{%y0, %0|%0, %y0}" : "+t" (f));
+       /* No need for fwait, exception is triggered by emitted fstp.  */
+@@ -77,9 +75,7 @@ __atomic_feraiseexcept (int excepts)
+     {
+       float f = 1.0f, g = 0.0f;
+ #ifdef __SSE_MATH__
+-      volatile float r __attribute__ ((unused));
+       asm volatile ("%vdivss\t{%1, %d0|%d0, %1}" : "+x" (f) : "xm" (g));
+-      r = f; /* Needed to trigger exception.   */
+ #else
+       asm volatile ("fdivs\t%1" : "+t" (f) : "m" (g));
+       /* No need for fwait, exception is triggered by emitted fstp.  */
+@@ -105,9 +101,7 @@ __atomic_feraiseexcept (int excepts)
+     {
+       float f = 1.0f, g = 3.0f;
+ #ifdef __SSE_MATH__
+-      volatile float r __attribute__ ((unused));
+       asm volatile ("%vdivss\t{%1, %d0|%d0, %1}" : "+x" (f) : "xm" (g));
+-      r = f; /* Needed to trigger exception.   */
+ #else
+       asm volatile ("fdivs\t%1" : "+t" (f) : "m" (g));
+       /* No need for fwait, exception is triggered by emitted fstp.  */
 diff --git a/libgcc/ChangeLog b/libgcc/ChangeLog
-index a5c30516ff8..3dbc003ecbd 100644
+index a5c30516ff8..9a9d19814d8 100644
 --- a/libgcc/ChangeLog
 +++ b/libgcc/ChangeLog
-@@ -1,3 +1,33 @@
+@@ -1,3 +1,38 @@
++2020-04-19  Uroš Bizjak  <ubizjak@gmail.com>
++
++	* config/i386/sfp-exceptions.c (__sfp_handle_exceptions) [__SSE_MATH__]:
++	Remove unneeded assignments to volatile memory.
++
 +2020-04-01  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
 +
 +	Backport from mainline
@@ -8467,6 +9092,40 @@ index 00000000000..fe3868dacbf
 +
 +$(LSE_OBJS): $(srcdir)/config/aarch64/lse.S
 +	$(gcc_compile) -DL_$(PAT_BASE) -DSIZE=$(PAT_N) -DMODEL=$(PAT_M) -c $<
+diff --git a/libgcc/config/i386/sfp-exceptions.c b/libgcc/config/i386/sfp-exceptions.c
+index a6c56392acd..de4a2e06102 100644
+--- a/libgcc/config/i386/sfp-exceptions.c
++++ b/libgcc/config/i386/sfp-exceptions.c
+@@ -48,9 +48,7 @@ __sfp_handle_exceptions (int _fex)
+     {
+       float f = 0.0f;
+ #ifdef __SSE_MATH__
+-      volatile float r __attribute__ ((unused));
+       asm volatile ("%vdivss\t{%0, %d0|%d0, %0}" : "+x" (f));
+-      r = f; /* Needed to trigger exception.   */
+ #else
+       asm volatile ("fdiv\t{%y0, %0|%0, %y0}" : "+t" (f));
+       /* No need for fwait, exception is triggered by emitted fstp.  */
+@@ -68,9 +66,7 @@ __sfp_handle_exceptions (int _fex)
+     {
+       float f = 1.0f, g = 0.0f;
+ #ifdef __SSE_MATH__
+-      volatile float r __attribute__ ((unused));
+       asm volatile ("%vdivss\t{%1, %d0|%d0, %1}" : "+x" (f) : "xm" (g));
+-      r = f; /* Needed to trigger exception.   */
+ #else
+       asm volatile ("fdivs\t%1" : "+t" (f) : "m" (g));
+       /* No need for fwait, exception is triggered by emitted fstp.  */
+@@ -96,9 +92,7 @@ __sfp_handle_exceptions (int _fex)
+     {
+       float f = 1.0f, g = 3.0f;
+ #ifdef __SSE_MATH__
+-      volatile float r __attribute__ ((unused));
+       asm volatile ("%vdivss\t{%1, %d0|%d0, %1}" : "+x" (f) : "xm" (g));
+-      r = f; /* Needed to trigger exception.   */
+ #else
+       asm volatile ("fdivs\t%1" : "+t" (f) : "m" (g));
+       /* No need for fwait, exception is triggered by emitted fstp.  */
 diff --git a/libgcc/configure b/libgcc/configure
 old mode 100644
 new mode 100755
@@ -8589,6 +9248,53 @@ index 8e96cafdf8b..0762d77a801 100644
  AC_HEADER_STDC
  
  # Check for decimal float support.
+diff --git a/libgfortran/ChangeLog b/libgfortran/ChangeLog
+index 01aa551b914..946c9f0100b 100644
+--- a/libgfortran/ChangeLog
++++ b/libgfortran/ChangeLog
+@@ -1,3 +1,8 @@
++2020-04-19  Uroš Bizjak  <ubizjak@gmail.com>
++
++	* config/fpu-387.h (local_feraiseexcept) [__SSE_MATH__]:
++	Remove unneeded assignments to volatile memory.
++
+ 2020-03-12  Release Manager
+ 
+ 	* GCC 9.3.0 released.
+diff --git a/libgfortran/config/fpu-387.h b/libgfortran/config/fpu-387.h
+index a2f4281d0c5..bf4d78586c9 100644
+--- a/libgfortran/config/fpu-387.h
++++ b/libgfortran/config/fpu-387.h
+@@ -103,9 +103,7 @@ local_feraiseexcept (int excepts)
+     {
+       float f = 0.0f;
+ #ifdef __SSE_MATH__
+-      volatile float r __attribute__ ((unused));
+       __asm__ __volatile__ ("%vdivss\t{%0, %d0|%d0, %0}" : "+x" (f));
+-      r = f; /* Needed to trigger exception.   */
+ #else
+       __asm__ __volatile__ ("fdiv\t{%y0, %0|%0, %y0}" : "+t" (f));
+       /* No need for fwait, exception is triggered by emitted fstp.  */
+@@ -123,9 +121,7 @@ local_feraiseexcept (int excepts)
+     {
+       float f = 1.0f, g = 0.0f;
+ #ifdef __SSE_MATH__
+-      volatile float r __attribute__ ((unused));
+       __asm__ __volatile__ ("%vdivss\t{%1, %d0|%d0, %1}" : "+x" (f) : "xm" (g));
+-      r = f; /* Needed to trigger exception.   */
+ #else
+       __asm__ __volatile__ ("fdivs\t%1" : "+t" (f) : "m" (g));
+       /* No need for fwait, exception is triggered by emitted fstp.  */
+@@ -151,9 +147,7 @@ local_feraiseexcept (int excepts)
+     {
+       float f = 1.0f, g = 3.0f;
+ #ifdef __SSE_MATH__
+-      volatile float r __attribute__ ((unused));
+       __asm__ __volatile__ ("%vdivss\t{%1, %d0|%d0, %1}" : "+x" (f) : "xm" (g));
+-      r = f; /* Needed to trigger exception.   */
+ #else
+       __asm__ __volatile__ ("fdivs\t%1" : "+t" (f) : "m" (g));
+       /* No need for fwait, exception is triggered by emitted fstp.  */
 diff --git a/libgomp/ChangeLog b/libgomp/ChangeLog
 index 0156d5f7bc9..2926096bb7c 100644
 --- a/libgomp/ChangeLog
@@ -10759,6 +11465,21 @@ index e1feef99582..0f00a94da42 100644
    char** endptr = 0;
    int base = 0;
  
+diff --git a/ltmain.sh b/ltmain.sh
+index 79f9ba89af5..70990740b6c 100644
+--- a/ltmain.sh
++++ b/ltmain.sh
+@@ -3425,8 +3425,8 @@ int setenv (const char *, const char *, int);
+ # define PATH_SEPARATOR ':'
+ #endif
+ 
+-#if defined (_WIN32) || defined (__MSDOS__) || defined (__DJGPP__) || \
+-  defined (__OS2__)
++#if (defined (_WIN32) && ! defined(__CYGWIN__)) || defined (__MSDOS__) || \
++  defined (__DJGPP__) || defined (__OS2__)
+ # define HAVE_DOS_BASED_FILE_SYSTEM
+ # define FOPEN_WB "wb"
+ # ifndef DIR_SEPARATOR_2
 diff --git a/maintainer-scripts/ChangeLog b/maintainer-scripts/ChangeLog
 index b1a9be6f5b2..039f7381af5 100644
 --- a/maintainer-scripts/ChangeLog
