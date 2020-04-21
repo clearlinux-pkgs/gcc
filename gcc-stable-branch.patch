@@ -22,7 +22,8 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (39):
+GCC Administrator (40):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -166,16 +167,18 @@ Kyrylo Tkachov (10):
       aarch64: Fix up aarch64_compare_and_swaphi pattern [PR94368]
       [AArch64] PR target/94518: Fix memmodel index in aarch64_store_exclusive_pair
 
-Marek Polacek (1):
+Marek Polacek (2):
       c++: Fix ICE with lambda in operator function [PR93597]
+      c++: Fix bogus -Wparentheses warning with fold-expression [PR94505]
 
 Mark Eggleston (3):
       fortran: ICE using undeclared symbol in array constructor PR93484
       fortran: ICE equivalence with an element of an array PR94030
       fortran : ICE in gfc_resolve_findloc PR93498
 
-Martin Jambor (1):
+Martin Jambor (2):
       gcc-9 sra: Cap number of sub-access propagations with a param (PR 93435)
+      sra-9: Fix sra_modify_expr handling of partial writes (PR 94482)
 
 Martin Liska (3):
       Backport 314b91220a07bd63f13c58e37f1b5b9430a3702b
@@ -254,10 +257,25 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..93bd849acca 100644
+index d8e53874e68..4cb1497a61f 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,594 @@
+@@ -1,3 +1,609 @@
++2020-04-21  Martin Jambor  <mjambor@suse.cz>
++
++	Backport from master
++	2020-04-09  Martin Jambor  <mjambor@suse.cz>
++	            Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/94482
++	* tree-sra.c (create_access_replacement): Dump new replacement with
++	TDF_UID.
++	(sra_modify_expr): Fix handling of cases when the original EXPR writes
++	to only part of the replacement.
++	* tree-ssa-forwprop.c (pass_forwprop::execute): Properly verify
++	the first operand of combinations into REAL/IMAGPART_EXPR and
++	BIT_FIELD_REF.
++
 +2020-04-20  H.J. Lu  <hongjiu.lu@intel.com>
 +
 +	Backport from master
@@ -3039,10 +3057,19 @@ index 1ffefd5f482..9be446a862d 100644
    memcpy (da_file_name + prefix_len, filename, len);
    strcpy (da_file_name + prefix_len + len, GCOV_DATA_SUFFIX);
 diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
-index 6441d647a54..cb49aeccafa 100644
+index 6441d647a54..d81de9d32df 100644
 --- a/gcc/cp/ChangeLog
 +++ b/gcc/cp/ChangeLog
-@@ -1,3 +1,95 @@
+@@ -1,3 +1,104 @@
++2020-04-20  Marek Polacek  <polacek@redhat.com>
++
++	Backported from mainline
++	2020-04-20  Marek Polacek  <polacek@redhat.com>
++
++	PR c++/94505 - bogus -Wparentheses warning with fold-expression.
++	* pt.c (fold_expression): Add warning_sentinel for -Wparentheses
++	before calling build_x_binary_op.
++
 +2020-04-07  Jakub Jelinek  <jakub@redhat.com>
 +
 +	PR c++/94512
@@ -3381,7 +3408,7 @@ index e1c02d7b718..db0276eb04f 100644
  	}
        else if (!flag_openmp)  /* flag_openmp_simd  */
 diff --git a/gcc/cp/pt.c b/gcc/cp/pt.c
-index 4787747b6ff..7f51f70c71a 100644
+index 4787747b6ff..8d437c5072d 100644
 --- a/gcc/cp/pt.c
 +++ b/gcc/cp/pt.c
 @@ -3773,10 +3773,18 @@ find_parameter_packs_r (tree *tp, int *walk_subtrees, void* data)
@@ -3475,7 +3502,15 @@ index 4787747b6ff..7f51f70c71a 100644
    for (int i = 0; i < len; ++i)
      if (!data.seen[i])
        return true;
-@@ -17838,8 +17882,10 @@ tsubst_expr (tree t, tree args, tsubst_flags_t complain, tree in_decl,
+@@ -11824,6 +11868,7 @@ fold_expression (tree t, tree left, tree right, tsubst_flags_t complain)
+   if (FOLD_EXPR_MODIFY_P (t))
+     return build_x_modify_expr (input_location, left, code, right, complain);
+ 
++  warning_sentinel s(warn_parentheses);
+   switch (code)
+     {
+     case COMPOUND_EXPR:
+@@ -17838,8 +17883,10 @@ tsubst_expr (tree t, tree args, tsubst_flags_t complain, tree in_decl,
        add_stmt (t);
        break;
  
@@ -3487,7 +3522,7 @@ index 4787747b6ff..7f51f70c71a 100644
        stmt = push_stmt_list ();
        RECUR (OMP_BODY (t));
        stmt = pop_stmt_list (stmt);
-@@ -27376,10 +27422,13 @@ build_deduction_guide (tree ctor, tree outer_args, tsubst_flags_t complain)
+@@ -27376,10 +27423,13 @@ build_deduction_guide (tree ctor, tree outer_args, tsubst_flags_t complain)
  				     complain, ctor);
  	  if (fparms == error_mark_node)
  	    ok = false;
@@ -4330,10 +4365,19 @@ index 7916344c584..3e969e52176 100644
  extern void mark_end_of_function_resources (rtx, bool);
  extern void init_resource_info (rtx_insn *);
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..fb039ee0e97 100644
+index e132f2657ef..74a3cdf7b80 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,439 @@
+@@ -1,3 +1,448 @@
++2020-04-21  Martin Jambor  <mjambor@suse.cz>
++
++	Backport from master
++	2020-04-09  Martin Jambor  <mjambor@suse.cz>
++
++	PR tree-optimization/94482
++	* gcc.dg/torture/pr94482.c: New test.
++	* gcc.dg/tree-ssa/pr94482-2.c: Likewise.
++
 +2020-04-20  Harald Anlauf  <anlauf@gmx.de>
 +
 +	Backport from mainline.
@@ -5041,6 +5085,24 @@ index 00000000000..2fc71de8d95
 +template <typename T> struct S
 +{ template <typename V> S (T, V, long = 0); };
 +using U = decltype(S{0, 4u});
+diff --git a/gcc/testsuite/g++.dg/cpp1z/fold11.C b/gcc/testsuite/g++.dg/cpp1z/fold11.C
+new file mode 100644
+index 00000000000..09a30555eee
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp1z/fold11.C
+@@ -0,0 +1,12 @@
++// PR c++/94505 - bogus -Wparentheses warning with fold-expression.
++// { dg-do compile { target c++17 } }
++// { dg-options "-Wparentheses" }
++
++template <bool... B>
++bool foo () {
++    return ((B && true) || ...); // { dg-bogus "suggest parentheses" }
++}
++
++int main () {
++    foo<true, false, false, true> ();
++}
 diff --git a/gcc/testsuite/g++.dg/debug/pr94459.C b/gcc/testsuite/g++.dg/debug/pr94459.C
 new file mode 100644
 index 00000000000..ebc0cf45cc6
@@ -5888,6 +5950,48 @@ index 00000000000..53285bb4f38
 +struct b e() {
 +    struct b f[] = {{}, "", f, a};
 +}
+diff --git a/gcc/testsuite/gcc.dg/torture/pr94482.c b/gcc/testsuite/gcc.dg/torture/pr94482.c
+new file mode 100644
+index 00000000000..9264842e349
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/torture/pr94482.c
+@@ -0,0 +1,36 @@
++/* { dg-do run } */
++/* { dg-additional-options "-Wno-psabi -w" } */
++/* { dg-additional-options "-msse2" { target sse2_runtime } } */
++
++typedef unsigned V __attribute__ ((__vector_size__ (16)));
++union U
++{
++  V j;
++  unsigned long long i __attribute__ ((__vector_size__ (16)));
++};
++
++static inline __attribute__((always_inline)) V
++foo (unsigned long long a)
++{
++  union U z = { .j = (V) {} };
++  for (unsigned long i = 0; i < 1; i++)
++    z.i[i] = a;
++  return z.j;
++}
++
++static inline __attribute__((always_inline)) V
++bar (V a, unsigned long long i, int q)
++{
++  union U z = { .j = a };
++  z.i[q] = i;
++  return z.j;
++}
++
++int
++main ()
++{
++  union U z = { .j = bar (foo (1729), 2, 1) };
++  if (z.i[0] != 1729)
++    __builtin_abort ();
++  return 0;
++}
 diff --git a/gcc/testsuite/gcc.dg/tree-ssa/pr93435.c b/gcc/testsuite/gcc.dg/tree-ssa/pr93435.c
 new file mode 100644
 index 00000000000..cb8e7495b15
@@ -6098,6 +6202,62 @@ index 00000000000..c339e51f482
 +{
 +  foo ();
 +  bar ();
++  return 0;
++}
+diff --git a/gcc/testsuite/gcc.dg/tree-ssa/pr94482-2.c b/gcc/testsuite/gcc.dg/tree-ssa/pr94482-2.c
+new file mode 100644
+index 00000000000..fcac9d5e439
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/tree-ssa/pr94482-2.c
+@@ -0,0 +1,50 @@
++/* { dg-do run } */
++/* { dg-options "-O1" } */
++
++typedef unsigned long V __attribute__ ((__vector_size__ (8)));
++typedef _Complex int Ci;
++typedef _Complex float Cf;
++
++union U
++{
++  Ci ci;
++  Cf cf;
++};
++
++volatile Ci vgi;
++
++Cf foo (Cf c)
++{
++  __real c = 0x1ffp10;
++  return c;
++}
++
++Ci ioo (Ci c)
++{
++  __real c = 50;
++  return c;
++}
++
++
++int main (int argc, char *argv[])
++{
++  union U u;
++
++  __real u.ci = 500;
++  __imag u.ci = 1000;
++  vgi = u.ci;
++
++  u.ci = ioo (u.ci);
++  __imag u.ci = 100;
++
++  if (__real u.ci != 50 || __imag u.ci != 100)
++    __builtin_abort();
++
++  u.cf = foo (u.cf);
++  __imag u.cf = 0x1p3;
++
++  if (__real u.cf != 0x1ffp10 || __imag u.cf != 0x1p3)
++    __builtin_abort();
++
 +  return 0;
 +}
 diff --git a/gcc/testsuite/gcc.dg/ubsan/pr94423.c b/gcc/testsuite/gcc.dg/ubsan/pr94423.c
@@ -8181,7 +8341,7 @@ index 9f593289666..41697e77994 100644
  extern void percent_K_format (text_info *, location_t, tree);
  extern void pp_tree_identifier (pretty_printer *, tree);
 diff --git a/gcc/tree-sra.c b/gcc/tree-sra.c
-index fd51a3d0323..0a5c24a183a 100644
+index fd51a3d0323..805839cac50 100644
 --- a/gcc/tree-sra.c
 +++ b/gcc/tree-sra.c
 @@ -291,6 +291,9 @@ static object_allocator<assign_link> assign_link_pool ("SRA links");
@@ -8194,6 +8354,15 @@ index fd51a3d0323..0a5c24a183a 100644
  /* Candidate hash table helpers.  */
  
  struct uid_decl_hasher : nofree_ptr_hash <tree_node>
+@@ -2326,7 +2329,7 @@ create_access_replacement (struct access *access, tree reg_type = NULL_TREE)
+ 	  print_generic_expr (dump_file, access->base);
+ 	  fprintf (dump_file, " offset: %u, size: %u: ",
+ 		   (unsigned) access->offset, (unsigned) access->size);
+-	  print_generic_expr (dump_file, repl);
++	  print_generic_expr (dump_file, repl, TDF_UID);
+ 	  fprintf (dump_file, "\n");
+ 	}
+     }
 @@ -2670,6 +2673,32 @@ subtree_mark_written_and_enqueue (struct access *access)
      subtree_mark_written_and_enqueue (child);
  }
@@ -8253,6 +8422,61 @@ index fd51a3d0323..0a5c24a183a 100644
  }
  
  /* Go through all accesses collected throughout the (intraprocedural) analysis
+@@ -3155,6 +3187,7 @@ sra_modify_expr (tree *expr, gimple_stmt_iterator *gsi, bool write)
+   location_t loc;
+   struct access *access;
+   tree type, bfr, orig_expr;
++  bool partial_cplx_access = false;
+ 
+   if (TREE_CODE (*expr) == BIT_FIELD_REF)
+     {
+@@ -3165,7 +3198,10 @@ sra_modify_expr (tree *expr, gimple_stmt_iterator *gsi, bool write)
+     bfr = NULL_TREE;
+ 
+   if (TREE_CODE (*expr) == REALPART_EXPR || TREE_CODE (*expr) == IMAGPART_EXPR)
+-    expr = &TREE_OPERAND (*expr, 0);
++    {
++      expr = &TREE_OPERAND (*expr, 0);
++      partial_cplx_access = true;
++    }
+   access = get_access_for_expr (*expr);
+   if (!access)
+     return false;
+@@ -3193,13 +3229,32 @@ sra_modify_expr (tree *expr, gimple_stmt_iterator *gsi, bool write)
+          be accessed as a different type too, potentially creating a need for
+          type conversion (see PR42196) and when scalarized unions are involved
+          in assembler statements (see PR42398).  */
+-      if (!useless_type_conversion_p (type, access->type))
++      if (!bfr && !useless_type_conversion_p (type, access->type))
+ 	{
+ 	  tree ref;
+ 
+ 	  ref = build_ref_for_model (loc, orig_expr, 0, access, gsi, false);
+ 
+-	  if (write)
++	  if (partial_cplx_access)
++	    {
++	    /* VIEW_CONVERT_EXPRs in partial complex access are always fine in
++	       the case of a write because in such case the replacement cannot
++	       be a gimple register.  In the case of a load, we have to
++	       differentiate in between a register an non-register
++	       replacement.  */
++	      tree t = build1 (VIEW_CONVERT_EXPR, type, repl);
++	      gcc_checking_assert (!write || access->grp_partial_lhs);
++	      if (!access->grp_partial_lhs)
++		{
++		  tree tmp = make_ssa_name (type);
++		  gassign *stmt = gimple_build_assign (tmp, t);
++		  /* This is always a read. */
++		  gsi_insert_before (gsi, stmt, GSI_SAME_STMT);
++		  t = tmp;
++		}
++	      *expr = t;
++	    }
++	  else if (write)
+ 	    {
+ 	      gassign *stmt;
+ 
 diff --git a/gcc/tree-ssa-dse.c b/gcc/tree-ssa-dse.c
 index efe5b31cc0a..26376ecf8de 100644
 --- a/gcc/tree-ssa-dse.c
@@ -8310,6 +8534,20 @@ index efe5b31cc0a..26376ecf8de 100644
  }
  
  /* STMT is builtin call that writes bytes in bitmap ORIG, some bytes are dead
+diff --git a/gcc/tree-ssa-forwprop.c b/gcc/tree-ssa-forwprop.c
+index bbfa1bc6fae..ca5443b79b3 100644
+--- a/gcc/tree-ssa-forwprop.c
++++ b/gcc/tree-ssa-forwprop.c
+@@ -2357,7 +2357,8 @@ pass_forwprop::execute (function *fun)
+ 		    continue;
+ 		  if (!is_gimple_assign (use_stmt)
+ 		      || (gimple_assign_rhs_code (use_stmt) != REALPART_EXPR
+-			  && gimple_assign_rhs_code (use_stmt) != IMAGPART_EXPR))
++			  && gimple_assign_rhs_code (use_stmt) != IMAGPART_EXPR)
++		      || TREE_OPERAND (gimple_assign_rhs1 (use_stmt), 0) != lhs)
+ 		    {
+ 		      rewrite = false;
+ 		      break;
 diff --git a/gcc/tree-ssa-phiopt.c b/gcc/tree-ssa-phiopt.c
 index 19b37b43b8e..47227dc16dc 100644
 --- a/gcc/tree-ssa-phiopt.c
