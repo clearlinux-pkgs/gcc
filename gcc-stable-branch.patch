@@ -22,7 +22,8 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (40):
+GCC Administrator (41):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -132,7 +133,7 @@ Jiufu Guo (1):
 John David Anglin (1):
       Define __BIG_ENDIAN__
 
-Jonathan Wakely (8):
+Jonathan Wakely (11):
       libstdc++: Ensure root-dir converted to forward slash (PR93244)
       libstdc++: Fix FS-dependent filesystem tests
       libstdc++: Fix test failure due to -Wnonnull warnings
@@ -141,6 +142,9 @@ Jonathan Wakely (8):
       libstdc++: Add default constructor to net::service_already_exists (PR 94199)
       doc: Note that some warnings depend on optimizations (PR 92757)
       libstdc++: Fix std::to_address for debug iterators (PR 93960)
+      libstdc++: Document correct feature test macro, __cpp_lib_is_invocable
+      libstdc++: Update __cpp_lib_erase_if macro (P1115R3)
+      libstdc++: Improve C++14 status docs
 
 Joseph Myers (1):
       Remove wrongly committed file.
@@ -10792,10 +10796,47 @@ index 00000000000..919ee02b725
 +  return 0;
 +}
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
-index 45847172291..bc64a051de8 100644
+index 45847172291..616b154e866 100644
 --- a/libstdc++-v3/ChangeLog
 +++ b/libstdc++-v3/ChangeLog
-@@ -1,3 +1,67 @@
+@@ -1,3 +1,104 @@
++2020-04-22  Jonathan Wakely  <jwakely@redhat.com>
++
++	* doc/Makefile.am (xml_sources_manual): Add missing XML files.
++	* doc/Makefile.in: Regenerate.
++	* doc/xml/manual/status_cxx1998.xml: Refer to "this section" instead
++	of "this page".
++	* doc/xml/manual/status_cxx2011.xml: Formatting and other corrections
++	to the C++11 status table.
++	* doc/xml/manual/status_cxx2014.xml: Replace list of C++14 feature
++	proposals with table matching contents of the C++14 standard.
++	* doc/html/*: Regenerate.
++
++	Backport from mainline
++	2020-02-15  Jonathan Wakely  <jwakely@redhat.com>
++
++	* include/bits/erase_if.h (__cpp_lib_erase_if): Define to 202002L.
++	* include/std/deque (__cpp_lib_erase_if): Likewise.
++	* include/std/forward_list (__cpp_lib_erase_if): Likewise.
++	* include/std/list (__cpp_lib_erase_if): Likewise.
++	* include/std/string (__cpp_lib_erase_if): Likewise.
++	* include/std/vector (__cpp_lib_erase_if): Likewise.
++	* include/std/version (__cpp_lib_erase_if): Likewise.
++	* testsuite/21_strings/basic_string/erasure.cc: Test for new value.
++	* testsuite/23_containers/deque/erasure.cc: Likewise.
++	* testsuite/23_containers/forward_list/erasure.cc: Likewise.
++	* testsuite/23_containers/list/erasure.cc: Likewise.
++	* testsuite/23_containers/map/erasure.cc: Likewise.
++	* testsuite/23_containers/set/erasure.cc: Likewise.
++	* testsuite/23_containers/unordered_map/erasure.cc: Likewise.
++	* testsuite/23_containers/unordered_set/erasure.cc: Likewise.
++	* testsuite/23_containers/vector/erasure.cc: Likewise.
++
++2020-04-21  Jonathan Wakely  <jwakely@redhat.com>
++
++	* doc/xml/manual/status_cxx2017.xml: Fix name of feature test macro.
++	* doc/html/*: Regenerate.
++
 +2020-04-03  Jonathan Wakely  <jwakely@redhat.com>
 +
 +	Backport from mainline
@@ -10863,6 +10904,2194 @@ index 45847172291..bc64a051de8 100644
  2020-03-12  Release Manager
  
  	* GCC 9.3.0 released.
+diff --git a/libstdc++-v3/doc/Makefile.am b/libstdc++-v3/doc/Makefile.am
+index 4427e5da6ad..bd88bdaa8c5 100644
+--- a/libstdc++-v3/doc/Makefile.am
++++ b/libstdc++-v3/doc/Makefile.am
+@@ -342,6 +342,8 @@ xml_sources_manual = \
+ 	${xml_dir}/manual/status_cxx1998.xml \
+ 	${xml_dir}/manual/status_cxx2011.xml \
+ 	${xml_dir}/manual/status_cxx2014.xml \
++	${xml_dir}/manual/status_cxx2017.xml \
++	${xml_dir}/manual/status_cxx2020.xml \
+ 	${xml_dir}/manual/status_cxxtr1.xml \
+ 	${xml_dir}/manual/status_cxxtr24733.xml \
+ 	${xml_dir}/manual/strings.xml \
+diff --git a/libstdc++-v3/doc/Makefile.in b/libstdc++-v3/doc/Makefile.in
+index 1058d5c3cc8..9bde1026804 100644
+--- a/libstdc++-v3/doc/Makefile.in
++++ b/libstdc++-v3/doc/Makefile.in
+@@ -483,6 +483,8 @@ xml_sources_manual = \
+ 	${xml_dir}/manual/status_cxx1998.xml \
+ 	${xml_dir}/manual/status_cxx2011.xml \
+ 	${xml_dir}/manual/status_cxx2014.xml \
++	${xml_dir}/manual/status_cxx2017.xml \
++	${xml_dir}/manual/status_cxx2020.xml \
+ 	${xml_dir}/manual/status_cxxtr1.xml \
+ 	${xml_dir}/manual/status_cxxtr24733.xml \
+ 	${xml_dir}/manual/strings.xml \
+diff --git a/libstdc++-v3/doc/html/manual/status.html b/libstdc++-v3/doc/html/manual/status.html
+index 440b8671e0c..26793d9fa83 100644
+--- a/libstdc++-v3/doc/html/manual/status.html
++++ b/libstdc++-v3/doc/html/manual/status.html
+@@ -5,7 +5,7 @@
+ </th><td width="20%" align="right"> <a accesskey="n" href="license.html">Next</a></td></tr></table><hr /></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a id="manual.intro.status"></a>Chapter 1. Status</h2></div></div></div><div class="toc"><p><strong>Table of Contents</strong></p><dl class="toc"><dt><span class="section"><a href="status.html#manual.intro.status.iso">Implementation Status</a></span></dt><dd><dl><dt><span class="section"><a href="status.html#status.iso.1998">C++ 1998/2003</a></span></dt><dd><dl><dt><span class="section"><a href="status.html#iso.1998.status">Implementation Status</a></span></dt><dt><span class="section"><a href="status.html#iso.1998.specific">Implementation Specific Behavior</a></span></dt></dl></dd><dt><span class="section"><a href="status.html#status.iso.2011">C++ 2011</a></span></dt><dd><dl><dt><span class="section"><a href="status.html#iso.2011.specific">Implementation Specific Behavior</a></span></dt></dl></dd><dt><span class="section"><a href="status.html#status.iso.2014">C++ 2014</a></span></dt><dt><span class="section"><a href="status.html#status.iso.2017">C++ 2017</a></span></dt><dd><dl><dt><span class="section"><a href="status.html#iso.2017.specific">Implementation Specific Behavior</a></span></dt></dl></dd><dt><span class="section"><a href="status.html#status.iso.2020">C++ 202a</a></span></dt><dd><dl><dt><span class="section"><a href="status.html#iso.2020.specific">Implementation Specific Behavior</a></span></dt></dl></dd><dt><span class="section"><a href="status.html#status.iso.tr1">C++ TR1</a></span></dt><dd><dl><dt><span class="section"><a href="status.html#iso.tr1.specific">Implementation Specific Behavior</a></span></dt></dl></dd><dt><span class="section"><a href="status.html#status.iso.tr24733">C++ TR 24733</a></span></dt><dt><span class="section"><a href="status.html#status.iso.specfun">C++ IS 29124</a></span></dt><dd><dl><dt><span class="section"><a href="status.html#iso.specfun.specific">Implementation Specific Behavior</a></span></dt></dl></dd></dl></dd><dt><span class="section"><a href="license.html">License</a></span></dt><dd><dl><dt><span class="section"><a href="license.html#manual.intro.status.license.gpl">The Code: GPL</a></span></dt><dt><span class="section"><a href="license.html#manual.intro.status.license.fdl">The Documentation: GPL, FDL</a></span></dt></dl></dd><dt><span class="section"><a href="bugs.html">Bugs</a></span></dt><dd><dl><dt><span class="section"><a href="bugs.html#manual.intro.status.bugs.impl">Implementation Bugs</a></span></dt><dt><span class="section"><a href="bugs.html#manual.intro.status.bugs.iso">Standard Bugs</a></span></dt></dl></dd></dl></div><div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a id="manual.intro.status.iso"></a>Implementation Status</h2></div></div></div><div class="section"><div class="titlepage"><div><div><h3 class="title"><a id="status.iso.1998"></a>C++ 1998/2003</h3></div></div></div><div class="section"><div class="titlepage"><div><div><h4 class="title"><a id="iso.1998.status"></a>Implementation Status</h4></div></div></div><p>
+ This status table is based on the table of contents of ISO/IEC 14882:2003.
+ </p><p>
+-This page describes the C++ support in the GCC 9 series.
++This section describes the C++ support in the GCC 9 series.
+ </p><div class="table"><a id="table.cxx98_status"></a><p class="title"><strong>Table 1.1. C++ 1998/2003 Implementation Status</strong></p><div class="table-contents"><table class="table" summary="C++ 1998/2003 Implementation Status" border="1"><colgroup><col align="left" class="c1" /><col align="left" class="c2" /><col align="left" class="c3" /><col align="left" class="c4" /></colgroup><thead><tr><th align="left">Section</th><th align="left">Description</th><th align="left">Status</th><th align="left">Comments</th></tr></thead><tbody><tr><td align="left">
+ 	<span class="emphasis"><em>18</em></span>
+       </td><td colspan="3" align="left">
+@@ -154,29 +154,29 @@ options. The pre-defined symbol
+ <code class="constant">__cplusplus</code> is used to check for the
+ presence of the required flag.
+ </p><p>
+-This page describes the C++11 support in the GCC 9 series.
++This status table is based on the table of contents of ISO/IEC 14882:2011.
++</p><p>
++This section describes the C++11 support in the GCC 9 series.
+ </p><div class="table"><a id="table.cxx11_status"></a><p class="title"><strong>Table 1.2. C++ 2011 Implementation Status</strong></p><div class="table-contents"><table class="table" summary="C++ 2011 Implementation Status" border="1"><colgroup><col align="left" class="c1" /><col align="left" class="c2" /><col align="left" class="c3" /><col align="left" class="c4" /></colgroup><thead><tr><th align="left">Section</th><th align="left">Description</th><th align="left">Status</th><th align="left">Comments</th></tr></thead><tbody><tr><td align="left">
+ 	<span class="emphasis"><em>18</em></span>
+       </td><td colspan="3" align="left">
+ 	<span class="emphasis"><em>Language support</em></span>
+-      </td></tr><tr><td align="left">18.1</td><td align="left">General</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.2</td><td align="left">Types</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.3</td><td align="left">Implementation properties</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">18.3.2</td><td align="left">Numeric Limits</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">18.3.2.3</td><td align="left">Class template <code class="code">numeric_limits</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.3.2.4</td><td align="left"><code class="code">numeric_limits</code> members</td><td align="left">Y</td><td align="left"> </td></tr><tr bgcolor="#C8B0B0"><td align="left">18.3.2.5</td><td align="left"><code class="code">float_round_style</code></td><td align="left">N</td><td align="left"> </td></tr><tr bgcolor="#C8B0B0"><td align="left">18.3.2.6</td><td align="left"><code class="code">float_denorm_style</code></td><td align="left">N</td><td align="left"> </td></tr><tr><td align="left">18.3.2.7</td><td align="left"><code class="code">numeric_limits</code> specializations</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.3.3</td><td align="left">C Library</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.4</td><td align="left">Integer types</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">18.4.1</td><td align="left">Header <code class="code">&lt;cstdint&gt;</code> synopsis</td><td align="left">Y</td><td align="left"> </td></tr><tr bgcolor="#B0B0B0"><td align="left">18.5</td><td align="left">Start and termination</td><td align="left">Partial</td><td align="left">C library dependency for quick_exit, at_quick_exit</td></tr><tr><td align="left">18.6</td><td align="left">Dynamic memory management</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.7</td><td align="left">Type identification</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">18.7.1</td><td align="left">Class type_info</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.7.2</td><td align="left">Class bad_cast</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.7.3</td><td align="left">Class bad_typeid</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.8</td><td align="left">Exception handling</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">18.8.1</td><td align="left">Class exception</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.8.2</td><td align="left">Class bad_exception</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.8.3</td><td align="left">Abnormal termination</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.8.4</td><td align="left"><code class="code">uncaught_exception</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.8.5</td><td align="left">Exception Propagation</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.8.6</td><td align="left"><code class="code">nested_exception</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.9</td><td align="left">Initializer lists</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">18.9.1</td><td align="left">Initializer list constructors</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.9.2</td><td align="left">Initializer list access</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.9.3</td><td align="left">Initializer list range access</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.10</td><td align="left">Other runtime support</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">
++      </td></tr><tr><td align="left">18.1</td><td align="left">General</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">18.2</td><td align="left">Types</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.3</td><td align="left">Implementation properties</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">18.3.2</td><td align="left">Numeric Limits</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">18.3.2.3</td><td align="left">Class template <code class="code">numeric_limits</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.3.2.4</td><td align="left"><code class="code">numeric_limits</code> members</td><td align="left">Y</td><td align="left"> </td></tr><tr bgcolor="#C8B0B0"><td align="left">18.3.2.5</td><td align="left"><code class="code">float_round_style</code></td><td align="left">N</td><td align="left"> </td></tr><tr bgcolor="#C8B0B0"><td align="left">18.3.2.6</td><td align="left"><code class="code">float_denorm_style</code></td><td align="left">N</td><td align="left"> </td></tr><tr><td align="left">18.3.2.7</td><td align="left"><code class="code">numeric_limits</code> specializations</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.3.3</td><td align="left">C Library</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.4</td><td align="left">Integer types</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">18.4.1</td><td align="left">Header <code class="code">&lt;cstdint&gt;</code> synopsis</td><td align="left">Y</td><td align="left"> </td></tr><tr bgcolor="#B0B0B0"><td align="left">18.5</td><td align="left">Start and termination</td><td align="left">Partial</td><td align="left">C library dependency for quick_exit, at_quick_exit</td></tr><tr><td align="left">18.6</td><td align="left">Dynamic memory management</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.7</td><td align="left">Type identification</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">18.7.1</td><td align="left">Class type_info</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.7.2</td><td align="left">Class bad_cast</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.7.3</td><td align="left">Class bad_typeid</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.8</td><td align="left">Exception handling</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">18.8.1</td><td align="left">Class exception</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.8.2</td><td align="left">Class bad_exception</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.8.3</td><td align="left">Abnormal termination</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.8.4</td><td align="left"><code class="code">uncaught_exception</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.8.5</td><td align="left">Exception Propagation</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.8.6</td><td align="left"><code class="code">nested_exception</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.9</td><td align="left">Initializer lists</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">18.9.1</td><td align="left">Initializer list constructors</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.9.2</td><td align="left">Initializer list access</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.9.3</td><td align="left">Initializer list range access</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.10</td><td align="left">Other runtime support</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">
+ 	<span class="emphasis"><em>19</em></span>
+       </td><td colspan="3" align="left">
+ 	<span class="emphasis"><em>Diagnostics</em></span>
+-      </td></tr><tr><td align="left">19.1</td><td align="left">General</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">19.2</td><td align="left">Exception classes</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">19.3</td><td align="left">Assertions</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">19.4</td><td align="left">Error numbers</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">19.5</td><td align="left">System error support</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">19.5.1</td><td align="left">Class <code class="code">error_category</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">19.5.2</td><td align="left">Class <code class="code">error_code</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">19.5.3</td><td align="left">Class <code class="code">error_condition</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">19.5.4</td><td align="left">Comparison operators</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">19.5.5</td><td align="left">Class <code class="code">system_error</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">
++      </td></tr><tr><td align="left">19.1</td><td align="left">General</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">19.2</td><td align="left">Exception classes</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">19.3</td><td align="left">Assertions</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">19.4</td><td align="left">Error numbers</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">19.5</td><td align="left">System error support</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">19.5.1</td><td align="left">Class <code class="code">error_category</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">19.5.2</td><td align="left">Class <code class="code">error_code</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">19.5.3</td><td align="left">Class <code class="code">error_condition</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">19.5.4</td><td align="left">Comparison operators</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">19.5.5</td><td align="left">Class <code class="code">system_error</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">
+ 	<span class="emphasis"><em>20</em></span>
+       </td><td colspan="3" align="left">
+ 	<span class="emphasis"><em>General utilities</em></span>
+-      </td></tr><tr><td align="left">20.1</td><td align="left">General</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.2</td><td align="left">Utility components</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.2.1</td><td align="left">Operators</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.2.2</td><td align="left">Swap</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.2.3</td><td align="left"><code class="code">forward</code> and <code class="code">move</code> helpers</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.2.4</td><td align="left">Function template <code class="code">declval</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.3</td><td align="left">Pairs</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.3.1</td><td align="left">In general</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.3.2</td><td align="left">Class template <code class="code">pair</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.3.3</td><td align="left">Specialized algorithms</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.3.4</td><td align="left">Tuple-like access to <code class="code">pair</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.3.5</td><td align="left">Piecewise construction</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.4</td><td align="left">Tuples</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.4.1</td><td align="left">In general</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.4.2</td><td align="left">Class template <code class="code">tuple</code></td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.4.2.1</td><td align="left">Construction</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.4.2.2</td><td align="left">Assignment</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.4.2.3</td><td align="left">Swap</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.4.2.4</td><td align="left">Tuple creation functions</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.4.2.5</td><td align="left">Tuple helper classes</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.4.2.6</td><td align="left">Element access</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.4.2.7</td><td align="left">Relational operators</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.4.2.8</td><td align="left">Tuple traits</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.4.2.9</td><td align="left">Tuple specialized algorithms</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.5</td><td align="left">Class template <code class="code">bitset</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.5.1</td><td align="left"><code class="code">bitset</code> constructors</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.5.2</td><td align="left"><code class="code">bitset</code> members</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.5.3</td><td align="left"><code class="code">bitset</code> hash support</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.5.4</td><td align="left"><code class="code">bitset</code> operators</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.6</td><td align="left">Memory</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.6.1</td><td align="left">In general</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.6.2</td><td align="left">Header <code class="code">&lt;memory&gt;</code> synopsis</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.6.3</td><td align="left">Pointer traits</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.6.4</td><td align="left">Pointer safety</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.6.5</td><td align="left">Align</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.6.6</td><td align="left">Allocator argument tag</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.6.7</td><td align="left"><code class="code">uses_allocator</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.6.8</td><td align="left">Allocator traits</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.6.9</td><td align="left">The default allocator</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.6.10</td><td align="left">Raw storage iterator</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.6.11</td><td align="left">Temporary buffers</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.6.12</td><td align="left">Specialized algorithms</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.6.12.1</td><td align="left"><code class="code">addressof</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.6.12.2</td><td align="left"><code class="code">uninitialized_copy</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.6.12.3</td><td align="left"><code class="code">uninitialized_fill</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.6.12.4</td><td align="left"><code class="code">uninitialized_fill_n</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.6.13</td><td align="left">C library</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.7</td><td align="left">Smart pointers</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.7.1</td><td align="left">Class template <code class="code">unique_ptr</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.7.2</td><td align="left">Shared-ownership pointers</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.7.2.1</td><td align="left">Class <code class="code">bad_weak_ptr</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.7.2.2</td><td align="left">Class template <code class="code">shared_ptr</code></td><td align="left">Y</td><td align="left">
++      </td></tr><tr><td align="left">20.1</td><td align="left">General</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.2</td><td align="left">Utility components</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.2.1</td><td align="left">Operators</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.2.2</td><td align="left">swap</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.2.3</td><td align="left">forward/move helpers</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.2.4</td><td align="left">Function template <code class="code">declval</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.3</td><td align="left">Pairs</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.3.1</td><td align="left">In general</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.3.2</td><td align="left">Class template <code class="code">pair</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.3.3</td><td align="left">Specialized algorithms</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.3.4</td><td align="left">Tuple-like access to <code class="code">pair</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.3.5</td><td align="left">Piecewise construction</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.4</td><td align="left">Tuples</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.4.1</td><td align="left">In general</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.4.2</td><td align="left">Class template <code class="code">tuple</code></td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.4.2.1</td><td align="left">Construction</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.4.2.2</td><td align="left">Assignment</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.4.2.3</td><td align="left">Swap</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.4.2.4</td><td align="left">Tuple creation functions</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.4.2.5</td><td align="left">Tuple helper classes</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.4.2.6</td><td align="left">Element access</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.4.2.7</td><td align="left">Relational operators</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.4.2.8</td><td align="left">Tuple traits</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.4.2.9</td><td align="left">Tuple specialized algorithms</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.5</td><td align="left">Class template <code class="code">bitset</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.5.1</td><td align="left"><code class="code">bitset</code> constructors</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.5.2</td><td align="left"><code class="code">bitset</code> members</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.5.3</td><td align="left"><code class="code">bitset</code> hash support</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.5.4</td><td align="left"><code class="code">bitset</code> operators</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.6</td><td align="left">Memory</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.6.1</td><td align="left">In general</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.6.2</td><td align="left">Header <code class="code">&lt;memory&gt;</code> synopsis</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.6.3</td><td align="left">Pointer traits</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.6.4</td><td align="left">Pointer safety</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.6.5</td><td align="left">Align</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.6.6</td><td align="left">Allocator argument tag</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.6.7</td><td align="left"><code class="code">uses_allocator</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.6.8</td><td align="left">Allocator traits</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.6.9</td><td align="left">The default allocator</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.6.10</td><td align="left">Raw storage iterator</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.6.11</td><td align="left">Temporary buffers</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.6.12</td><td align="left">Specialized algorithms</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.6.12.1</td><td align="left"><code class="code">addressof</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.6.12.2</td><td align="left"><code class="code">uninitialized_copy</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.6.12.3</td><td align="left"><code class="code">uninitialized_fill</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.6.12.4</td><td align="left"><code class="code">uninitialized_fill_n</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.6.13</td><td align="left">C library</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.7</td><td align="left">Smart pointers</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.7.1</td><td align="left">Class template <code class="code">unique_ptr</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.7.2</td><td align="left">Shared-ownership pointers</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.7.2.1</td><td align="left">Class <code class="code">bad_weak_ptr</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.7.2.2</td><td align="left">Class template <code class="code">shared_ptr</code></td><td align="left">Y</td><td align="left">
+ 	  Uses code from
+ 	  <a class="link" href="http://www.boost.org/libs/smart_ptr/shared_ptr.htm" target="_top">boost::shared_ptr</a>.
+-      </td></tr><tr><td align="left">20.7.2.3</td><td align="left">Class template <code class="code">weak_ptr</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.7.2.4</td><td align="left">Class template <code class="code">emable_shared_from_this</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.7.2.5</td><td align="left"><code class="code">shared_ptr</code> atomic access</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.7.2.6</td><td align="left">Smart pointer hash support</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.8</td><td align="left">Function objects</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.8.1</td><td align="left">Definitions</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.8.2</td><td align="left">Requirements</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.8.3</td><td align="left">Class template <code class="code">reference_wrapper</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.8.4</td><td align="left">Arithmetic operation</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.8.5</td><td align="left">Comparisons</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.8.6</td><td align="left">Logical operations</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.8.7</td><td align="left">Bitwise operations</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.8.8</td><td align="left">Negators</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.8.9</td><td align="left">Function template <code class="code">bind</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.8.10</td><td align="left">Function template <code class="code">mem_fn</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.8.11</td><td align="left">Polymorphic function wrappers</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.8.11.1</td><td align="left">Class <code class="code">bad_function_call</code></td><td align="left">Y</td><td align="left"> </td></tr><tr bgcolor="#B0B0B0"><td align="left">20.8.11.2</td><td align="left">Class template <code class="code">function</code></td><td align="left">Partial</td><td align="left">Missing allocator support</td></tr><tr><td align="left">20.8.12</td><td align="left">Class template <code class="code">hash</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.9</td><td align="left">Metaprogramming and type traits</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.9.1</td><td align="left">Requirements</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.9.2</td><td align="left">Header <code class="code">&lt;type_traits&gt;</code> synopsis</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.9.3</td><td align="left">Helper classes</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.9.4</td><td align="left">Unary Type Traits</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.9.4.1</td><td align="left">Primary type categories</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.9.4.2</td><td align="left">Composite type traits</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.9.4.3</td><td align="left">Type properties</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.9.5</td><td align="left">Type property queries</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.9.6</td><td align="left">Relationships between types</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.9.7</td><td align="left">Transformations between types</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.9.7.1</td><td align="left">Const-volatile modifications</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.9.7.2</td><td align="left">Reference modifications</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.9.7.3</td><td align="left">Sign modifications</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.9.7.4</td><td align="left">Array modifications</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.9.7.5</td><td align="left">Pointer modifications</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.9.7.6</td><td align="left">Other transformations</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.10</td><td align="left">Compile-time rational arithmetic</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.10.1</td><td align="left">In general</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.10.2</td><td align="left">Header <code class="code">&lt;ratio&gt;</code> synopsis</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.10.3</td><td align="left">Class template <code class="code">ratio</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.10.4</td><td align="left">Arithmetic on <code class="code">ratio</code>s</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.10.5</td><td align="left">Comparison of <code class="code">ratio</code>s</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.10.6</td><td align="left">SI types for <code class="code">ratio</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.11</td><td align="left">Time utilities</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.11.3</td><td align="left">Clock requirements</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.11.4</td><td align="left">Time-related traits</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.11.4.1</td><td align="left"><code class="code">treat_as_floating_point</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.11.4.2</td><td align="left"><code class="code">duration_values</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.11.4.3</td><td align="left">Specializations of <code class="code">common_type</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.11.5</td><td align="left">Class template <code class="code">duration</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.11.6</td><td align="left">Class template <code class="code">time_point</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.11.7</td><td align="left">Clocks</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.11.7.1</td><td align="left">Class <code class="code">system_clock</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.11.7.2</td><td align="left">Class <code class="code">steady_clock</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.11.7.3</td><td align="left">Class <code class="code">high_resolution_clock</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.11.8</td><td align="left">Date and time functions</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.12</td><td align="left">Scoped allocator adaptor</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.12.1</td><td align="left">Header <code class="code">&lt;scoped_allocator&gt;</code> synopsis</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.12.2</td><td align="left">Scoped allocator adaptor member types</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.12.3</td><td align="left">Scoped allocator adaptor constructors</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.12.4</td><td align="left">Scoped allocator adaptor members</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.12.5</td><td align="left">Scoped allocator operators</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.13</td><td align="left">Class <code class="code">type_index</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">
++      </td></tr><tr><td align="left">20.7.2.3</td><td align="left">Class template <code class="code">weak_ptr</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.7.2.4</td><td align="left">Class template <code class="code">enable_shared_from_this</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.7.2.5</td><td align="left"><code class="code">shared_ptr</code> atomic access</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.7.2.6</td><td align="left">Smart pointer hash support</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.8</td><td align="left">Function objects</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.8.1</td><td align="left">Definitions</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.8.2</td><td align="left">Requirements</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.8.3</td><td align="left">Class template <code class="code">reference_wrapper</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.8.4</td><td align="left">Arithmetic operation</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.8.5</td><td align="left">Comparisons</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.8.6</td><td align="left">Logical operations</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.8.7</td><td align="left">Bitwise operations</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.8.8</td><td align="left">Negators</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.8.9</td><td align="left">Function template <code class="code">bind</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.8.10</td><td align="left">Function template <code class="code">mem_fn</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.8.11</td><td align="left">Polymorphic function wrappers</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.8.11.1</td><td align="left">Class <code class="code">bad_function_call</code></td><td align="left">Y</td><td align="left"> </td></tr><tr bgcolor="#B0B0B0"><td align="left">20.8.11.2</td><td align="left">Class template <code class="code">function</code></td><td align="left">Partial</td><td align="left">Missing allocator support</td></tr><tr><td align="left">20.8.12</td><td align="left">Class template <code class="code">hash</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.9</td><td align="left">Metaprogramming and type traits</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.9.1</td><td align="left">Requirements</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.9.2</td><td align="left">Header <code class="code">&lt;type_traits&gt;</code> synopsis</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.9.3</td><td align="left">Helper classes</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.9.4</td><td align="left">Unary Type Traits</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.9.4.1</td><td align="left">Primary type categories</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.9.4.2</td><td align="left">Composite type traits</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.9.4.3</td><td align="left">Type properties</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.9.5</td><td align="left">Type property queries</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.9.6</td><td align="left">Relationships between types</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.9.7</td><td align="left">Transformations between types</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.9.7.1</td><td align="left">Const-volatile modifications</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.9.7.2</td><td align="left">Reference modifications</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.9.7.3</td><td align="left">Sign modifications</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.9.7.4</td><td align="left">Array modifications</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.9.7.5</td><td align="left">Pointer modifications</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.9.7.6</td><td align="left">Other transformations</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.10</td><td align="left">Compile-time rational arithmetic</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.10.1</td><td align="left">In general</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.10.2</td><td align="left">Header <code class="code">&lt;ratio&gt;</code> synopsis</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.10.3</td><td align="left">Class template <code class="code">ratio</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.10.4</td><td align="left">Arithmetic on <code class="code">ratio</code>s</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.10.5</td><td align="left">Comparison of <code class="code">ratio</code>s</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.10.6</td><td align="left">SI types for <code class="code">ratio</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.11</td><td align="left">Time utilities</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.11.3</td><td align="left">Clock requirements</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.11.4</td><td align="left">Time-related traits</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.11.4.1</td><td align="left"><code class="code">treat_as_floating_point</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.11.4.2</td><td align="left"><code class="code">duration_values</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.11.4.3</td><td align="left">Specializations of <code class="code">common_type</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.11.5</td><td align="left">Class template <code class="code">duration</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.11.6</td><td align="left">Class template <code class="code">time_point</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.11.7</td><td align="left">Clocks</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.11.7.1</td><td align="left">Class <code class="code">system_clock</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.11.7.2</td><td align="left">Class <code class="code">steady_clock</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.11.7.3</td><td align="left">Class <code class="code">high_resolution_clock</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.11.8</td><td align="left">Date and time functions</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.12</td><td align="left">Scoped allocator adaptor</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.12.1</td><td align="left">Header <code class="code">&lt;scoped_allocator&gt;</code> synopsis</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.12.2</td><td align="left">Scoped allocator adaptor member types</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.12.3</td><td align="left">Scoped allocator adaptor constructors</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.12.4</td><td align="left">Scoped allocator adaptor members</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.12.5</td><td align="left">Scoped allocator operators</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.13</td><td align="left">Class <code class="code">type_index</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">
+ 	<span class="emphasis"><em>21</em></span>
+       </td><td colspan="3" align="left">
+ 	<span class="emphasis"><em>Strings</em></span>
+-      </td></tr><tr><td align="left">21.1</td><td align="left">General</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">21.2</td><td align="left">Character traits</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">21.2.1</td><td align="left">Character traits requirements</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">21.2.2</td><td align="left">traits typedefs</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">21.2.3</td><td align="left"><code class="code">char_traits</code> specializations</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">21.2.3.1</td><td align="left">struct <code class="code">char_traits&lt;char&gt;</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">21.2.3.2</td><td align="left">struct <code class="code">char_traits&lt;char16_t&gt;</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">21.2.3.3</td><td align="left">struct <code class="code">char_traits&lt;char32_t&gt;</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">21.2.3.4</td><td align="left">struct <code class="code">char_traits&lt;wchar_t&gt;</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">21.3</td><td align="left">String classes</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">21.4</td><td align="left">Class template <code class="code">basic_string</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">21.5</td><td align="left">Numeric Conversions</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">21.6</td><td align="left">Hash support</td><td align="left">Y</td><td align="left"> </td></tr><tr bgcolor="#B0B0B0"><td align="left">21.7</td><td align="left">Null-terminated sequence utilities</td><td align="left">Partial</td><td align="left">C library dependency.
+-      Missing <code class="filename">&lt;cuchar&gt;</code>
+-      </td></tr><tr><td align="left">
++      </td></tr><tr><td align="left">21.1</td><td align="left">General</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">21.2</td><td align="left">Character traits</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">21.2.1</td><td align="left">Character traits requirements</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">21.2.2</td><td align="left">traits typedefs</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">21.2.3</td><td align="left"><code class="code">char_traits</code> specializations</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">21.2.3.1</td><td align="left">struct <code class="code">char_traits&lt;char&gt;</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">21.2.3.2</td><td align="left">struct <code class="code">char_traits&lt;char16_t&gt;</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">21.2.3.3</td><td align="left">struct <code class="code">char_traits&lt;char32_t&gt;</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">21.2.3.4</td><td align="left">struct <code class="code">char_traits&lt;wchar_t&gt;</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">21.3</td><td align="left">String classes</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">21.4</td><td align="left">Class template <code class="code">basic_string</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">21.5</td><td align="left">Numeric Conversions</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">21.6</td><td align="left">Hash support</td><td align="left">Y</td><td align="left"> </td></tr><tr bgcolor="#B0B0B0"><td align="left">21.7</td><td align="left">Null-terminated sequence utilities</td><td align="left">Partial</td><td align="left">C library dependency. </td></tr><tr><td align="left">
+       	<span class="emphasis"><em>22</em></span>
+       </td><td colspan="3" align="left">
+ 	<span class="emphasis"><em>Localization</em></span>
+@@ -196,7 +196,7 @@ This page describes the C++11 support in the GCC 9 series.
+       <span class="emphasis"><em>26</em></span>
+       </td><td colspan="3" align="left">
+ 	<span class="emphasis"><em>Numerics</em></span>
+-      </td></tr><tr><td align="left">26.1</td><td align="left">General</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.2</td><td align="left">Numeric type requirements</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.3</td><td align="left">The floating-point environment</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.4</td><td align="left">Complex numbers</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5</td><td align="left">Random number generation</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">26.5.1</td><td align="left">Requirements</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">26.5.2</td><td align="left">Header <code class="code">&lt;random&gt;</code> synopsis</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">26.5.3</td><td align="left">Random number engine class templates</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">26.5.3.1</td><td align="left">Class template <code class="code">linear_congruential_engine</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.3.2</td><td align="left">Class template <code class="code">mersenne_twister_engine</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.3.3</td><td align="left">Class template <code class="code">subtract_with_carry_engine</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.4</td><td align="left">Random number engine adaptor class templates</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">26.5.4.2</td><td align="left">Class template <code class="code">discard_block_engine</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.4.3</td><td align="left">Class template <code class="code">independent_bits_engine</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.4.4</td><td align="left">Class template <code class="code">shuffle_order_engine</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.5</td><td align="left">Engines and engine adaptors with predefined parameters</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.6</td><td align="left">Class <code class="code">random_device</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.7</td><td align="left">Utilities</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">26.5.7.1</td><td align="left">Class <code class="code">seed_seq</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.7.2</td><td align="left">Function template <code class="code">generate_canonical</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.8</td><td align="left">Random number distribution class templates</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">26.5.8.2</td><td align="left">Uniform distributions</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">26.5.8.2.1</td><td align="left">Class template <code class="code">uniform_int_distribution</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.8.2.2</td><td align="left">Class template <code class="code">uniform_real_distribution</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.8.3</td><td align="left">Bernoulli distributions</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">26.5.8.3.1</td><td align="left">Class <code class="code">bernoulli_distribution</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.8.3.2</td><td align="left">Class template <code class="code">binomial_distribution</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.8.3.3</td><td align="left">Class template <code class="code">geometric_distribution</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.8.3.4</td><td align="left">Class template <code class="code">negative_binomial_distribution</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.8.4</td><td align="left">Poisson distributions</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">26.5.8.4.1</td><td align="left">Class template <code class="code">poisson_distribution</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.8.4.2</td><td align="left">Class template <code class="code">exponential_distribution</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.8.4.3</td><td align="left">Class template <code class="code">gamma_distribution</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.8.4.4</td><td align="left">Class template <code class="code">weibull_distribution</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.8.4.5</td><td align="left">Class template <code class="code">extreme_value_distribution</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.8.5</td><td align="left">Normal distributions</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">26.5.8.5.1</td><td align="left">Class template <code class="code">normal_distribution</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.8.5.2</td><td align="left">Class template <code class="code">lognormal_distribution</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.8.5.3</td><td align="left">Class template <code class="code">chi_squared_distribution</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.8.5.4</td><td align="left">Class template <code class="code">cauchy_distribution</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.8.5.5</td><td align="left">Class template <code class="code">fisher_f_distribution</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.8.5.6</td><td align="left">Class template <code class="code">student_t_distribution</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.8.6</td><td align="left">Sampling distributions</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">26.5.8.6.1</td><td align="left">Class template <code class="code">discrete_distribution</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.8.6.2</td><td align="left">Class template <code class="code">piecewise_constant_distribution</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.8.6.3</td><td align="left">Class template <code class="code">piecewise_linear_distribution</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.6</td><td align="left">Numeric arrays</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">26.6.1</td><td align="left">Header <code class="code">&lt;valarray&gt;</code> synopsis</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.6.2</td><td align="left">Class template <code class="code">valarray</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.6.3</td><td align="left"><code class="code">valarray</code> non-member operations</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.6.4</td><td align="left">Class <code class="code">slice</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.6.5</td><td align="left">Class template <code class="code">slice_array</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.6.6</td><td align="left">The <code class="code">gslice</code> class</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.6.7</td><td align="left">Class template <code class="code">gslice_array</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.6.8</td><td align="left">Class template <code class="code">mask_array</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.6.9</td><td align="left">Class template <code class="code">indirect_array</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.6.10</td><td align="left"><code class="code">valarray</code> range access</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.7</td><td align="left">Generalized numeric operations</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">26.7.1</td><td align="left">Header <code class="code">&lt;numeric&gt;</code> synopsis</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.7.2</td><td align="left"><code class="code">accumulate</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.7.3</td><td align="left"><code class="code">inner_product</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.7.4</td><td align="left"><code class="code">partial_sum</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.7.5</td><td align="left"><code class="code">adjacent_difference</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.7.6</td><td align="left">iota</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.8</td><td align="left">C Library</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">
++      </td></tr><tr><td align="left">26.1</td><td align="left">General</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">26.2</td><td align="left">Numeric type requirements</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.3</td><td align="left">The floating-point environment</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.4</td><td align="left">Complex numbers</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5</td><td align="left">Random number generation</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">26.5.1</td><td align="left">Requirements</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">26.5.2</td><td align="left">Header <code class="code">&lt;random&gt;</code> synopsis</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">26.5.3</td><td align="left">Random number engine class templates</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">26.5.3.1</td><td align="left">Class template <code class="code">linear_congruential_engine</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.3.2</td><td align="left">Class template <code class="code">mersenne_twister_engine</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.3.3</td><td align="left">Class template <code class="code">subtract_with_carry_engine</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.4</td><td align="left">Random number engine adaptor class templates</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">26.5.4.2</td><td align="left">Class template <code class="code">discard_block_engine</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.4.3</td><td align="left">Class template <code class="code">independent_bits_engine</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.4.4</td><td align="left">Class template <code class="code">shuffle_order_engine</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.5</td><td align="left">Engines and engine adaptors with predefined parameters</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.6</td><td align="left">Class <code class="code">random_device</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.7</td><td align="left">Utilities</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">26.5.7.1</td><td align="left">Class <code class="code">seed_seq</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.7.2</td><td align="left">Function template <code class="code">generate_canonical</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.8</td><td align="left">Random number distribution class templates</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">26.5.8.2</td><td align="left">Uniform distributions</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">26.5.8.2.1</td><td align="left">Class template <code class="code">uniform_int_distribution</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.8.2.2</td><td align="left">Class template <code class="code">uniform_real_distribution</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.8.3</td><td align="left">Bernoulli distributions</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">26.5.8.3.1</td><td align="left">Class <code class="code">bernoulli_distribution</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.8.3.2</td><td align="left">Class template <code class="code">binomial_distribution</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.8.3.3</td><td align="left">Class template <code class="code">geometric_distribution</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.8.3.4</td><td align="left">Class template <code class="code">negative_binomial_distribution</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.8.4</td><td align="left">Poisson distributions</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">26.5.8.4.1</td><td align="left">Class template <code class="code">poisson_distribution</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.8.4.2</td><td align="left">Class template <code class="code">exponential_distribution</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.8.4.3</td><td align="left">Class template <code class="code">gamma_distribution</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.8.4.4</td><td align="left">Class template <code class="code">weibull_distribution</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.8.4.5</td><td align="left">Class template <code class="code">extreme_value_distribution</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.8.5</td><td align="left">Normal distributions</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">26.5.8.5.1</td><td align="left">Class template <code class="code">normal_distribution</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.8.5.2</td><td align="left">Class template <code class="code">lognormal_distribution</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.8.5.3</td><td align="left">Class template <code class="code">chi_squared_distribution</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.8.5.4</td><td align="left">Class template <code class="code">cauchy_distribution</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.8.5.5</td><td align="left">Class template <code class="code">fisher_f_distribution</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.8.5.6</td><td align="left">Class template <code class="code">student_t_distribution</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.8.6</td><td align="left">Sampling distributions</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">26.5.8.6.1</td><td align="left">Class template <code class="code">discrete_distribution</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.8.6.2</td><td align="left">Class template <code class="code">piecewise_constant_distribution</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5.8.6.3</td><td align="left">Class template <code class="code">piecewise_linear_distribution</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.6</td><td align="left">Numeric arrays</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">26.6.1</td><td align="left">Header <code class="code">&lt;valarray&gt;</code> synopsis</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.6.2</td><td align="left">Class template <code class="code">valarray</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.6.3</td><td align="left"><code class="code">valarray</code> non-member operations</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.6.4</td><td align="left">Class <code class="code">slice</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.6.5</td><td align="left">Class template <code class="code">slice_array</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.6.6</td><td align="left">The <code class="code">gslice</code> class</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.6.7</td><td align="left">Class template <code class="code">gslice_array</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.6.8</td><td align="left">Class template <code class="code">mask_array</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.6.9</td><td align="left">Class template <code class="code">indirect_array</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.6.10</td><td align="left"><code class="code">valarray</code> range access</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.7</td><td align="left">Generalized numeric operations</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">26.7.1</td><td align="left">Header <code class="code">&lt;numeric&gt;</code> synopsis</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.7.2</td><td align="left">Accumulate&gt;</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.7.3</td><td align="left">Inner product</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.7.4</td><td align="left">Partial sum</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.7.5</td><td align="left">Adjacent difference</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.7.6</td><td align="left">Iota</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.8</td><td align="left">C Library</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">
+ 	<span class="emphasis"><em>27</em></span>
+       </td><td colspan="3" align="left">
+ 	<span class="emphasis"><em>Input/output library</em></span>
+@@ -208,15 +208,17 @@ This page describes the C++11 support in the GCC 9 series.
+ 	<span class="emphasis"><em>29</em></span>
+       </td><td colspan="3" align="left">
+ 	<span class="emphasis"><em>Atomic operations</em></span>
+-      </td></tr><tr><td align="left">29.1</td><td align="left">General</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">29.2</td><td align="left">Header <code class="code">&lt;atomic&gt;</code> synopsis</td><td align="left">Y</td><td align="left"> </td></tr><tr bgcolor="#B0B0B0"><td align="left">29.3</td><td align="left">Order and consistency</td><td align="left">Partial</td><td align="left"> </td></tr><tr><td align="left">29.4</td><td align="left">Lock-free property</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">29.5</td><td align="left">Atomic types</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">29.6</td><td align="left">Operations on atomic types</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">29.7</td><td align="left">Flag Type and operations</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">29.8</td><td align="left">Fences</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">
++      </td></tr><tr><td align="left">29.1</td><td align="left">General</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">29.2</td><td align="left">Header <code class="code">&lt;atomic&gt;</code> synopsis</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">29.3</td><td align="left">Order and consistency</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">29.4</td><td align="left">Lock-free property</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">29.5</td><td align="left">Atomic types</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">29.6</td><td align="left">Operations on atomic types</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">29.7</td><td align="left">Flag Type and operations</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">29.8</td><td align="left">Fences</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">
+ 	<span class="emphasis"><em>30</em></span>
+       </td><td colspan="3" align="left">
+ 	<span class="emphasis"><em>Thread support</em></span>
+-      </td></tr><tr><td align="left">30.1</td><td align="left">General</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.2</td><td align="left">Requirements</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.3</td><td align="left">Threads</td><td align="left"> </td><td align="left"> </td></tr><tr bgcolor="#B0B0B0"><td align="left">30.3.1</td><td align="left">Class <code class="code">thread</code></td><td align="left">Partial</td><td align="left"><code class="code">thread::id</code> comparisons not well-defined</td></tr><tr><td align="left">30.3.2</td><td align="left">Namespace <code class="code">this_thread</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.4</td><td align="left">Mutual exclusion</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">30.4.1</td><td align="left">Mutex requirements</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">30.4.1.1</td><td align="left">In general</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">30.4.1.2</td><td align="left">Mutex types</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">30.4.1.2.1</td><td align="left">Class <code class="code">mutex</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.4.1.2.2</td><td align="left">Class <code class="code">recursive_mutex</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.4.1.3</td><td align="left">Timed mutex types</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">30.4.1.3.1</td><td align="left">Class <code class="code">timed_mutex</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.4.1.3.2</td><td align="left">Class <code class="code">recursive_timed_mutex</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.4.2</td><td align="left">Locks</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">30.4.2.1</td><td align="left">Class template <code class="code">lock_guard</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.4.2.2</td><td align="left">Class template <code class="code">unique_lock</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.4.3</td><td align="left">Generic locking algorithms</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.4.4</td><td align="left">Call once</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">30.4.4.1</td><td align="left">Struct <code class="code">once_flag</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.4.4.2</td><td align="left">Function <code class="code">call_once</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.5</td><td align="left">Condition variables</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.5.1</td><td align="left">Class <code class="code">condition_variable</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.5.2</td><td align="left">Class <code class="code">condition_variable_any</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.6</td><td align="left">Futures</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">30.6.1</td><td align="left">Overview</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">30.6.2</td><td align="left">Error handling</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.6.3</td><td align="left">Class <code class="code">future_error</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.6.4</td><td align="left">Shared state</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.6.5</td><td align="left">Class template <code class="code">promise</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.6.6</td><td align="left">Class template <code class="code">future</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.6.7</td><td align="left">Class template <code class="code">shared_future</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.6.8</td><td align="left">Function template <code class="code">async</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.6.9</td><td align="left">Class template <code class="code">packaged_task</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">
++      </td></tr><tr><td align="left">30.1</td><td align="left">General</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.2</td><td align="left">Requirements</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.3</td><td align="left">Threads</td><td align="left"> </td><td align="left"> </td></tr><tr bgcolor="#B0B0B0"><td align="left">30.3.1</td><td align="left">Class <code class="code">thread</code></td><td align="left">Partial</td><td align="left"><code class="code">thread::id</code> comparisons not well-defined</td></tr><tr><td align="left">30.3.2</td><td align="left">Namespace <code class="code">this_thread</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.4</td><td align="left">Mutual exclusion</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">30.4.1</td><td align="left">Mutex requirements</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">30.4.1.1</td><td align="left">In general</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">30.4.1.2</td><td align="left">Mutex types</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">30.4.1.2.1</td><td align="left">Class <code class="code">mutex</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.4.1.2.2</td><td align="left">Class <code class="code">recursive_mutex</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.4.1.3</td><td align="left">Timed mutex types</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">30.4.1.3.1</td><td align="left">Class <code class="code">timed_mutex</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.4.1.3.2</td><td align="left">Class <code class="code">recursive_timed_mutex</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.4.2</td><td align="left">Locks</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">30.4.2.1</td><td align="left">Class template <code class="code">lock_guard</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.4.2.2</td><td align="left">Class template <code class="code">unique_lock</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.4.3</td><td align="left">Generic locking algorithms</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.4.4</td><td align="left">Call once</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">30.4.4.1</td><td align="left">Struct <code class="code">once_flag</code></td><td align="left">Y</td><td align="left"> </td></tr><tr bgcolor="#B0B0B0"><td align="left">30.4.4.2</td><td align="left">Function <code class="code">call_once</code></td><td align="left">Broken</td><td align="left">See <a class="link" href="https://gcc.gnu.org/bugzilla/show_bug.cgi?id=66146" target="_top">PR
++	66146</a>
++      </td></tr><tr><td align="left">30.5</td><td align="left">Condition variables</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.5.1</td><td align="left">Class <code class="code">condition_variable</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.5.2</td><td align="left">Class <code class="code">condition_variable_any</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.6</td><td align="left">Futures</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">30.6.1</td><td align="left">Overview</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">30.6.2</td><td align="left">Error handling</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.6.3</td><td align="left">Class <code class="code">future_error</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.6.4</td><td align="left">Shared state</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.6.5</td><td align="left">Class template <code class="code">promise</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.6.6</td><td align="left">Class template <code class="code">future</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.6.7</td><td align="left">Class template <code class="code">shared_future</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.6.8</td><td align="left">Function template <code class="code">async</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.6.9</td><td align="left">Class template <code class="code">packaged_task</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">
+       	<span class="emphasis"><em>Appendix D</em></span>
+       </td><td colspan="3" align="left">
+ 	<span class="emphasis"><em>Compatibility features</em></span>
+-      </td></tr><tr><td align="left">D.1</td><td align="left">Increment operator with <code class="code">bool</code> operand</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">D.2</td><td align="left"><code class="code">register</code> keyword</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">D.3</td><td align="left">Implicit declaration of copy functions</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">D.4</td><td align="left">Dynamic exception specifications</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">D.5</td><td align="left">C standard library headers</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">D.6</td><td align="left">Old iostreams members</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">D.7</td><td align="left"><code class="code">char*</code> streams</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">D.8</td><td align="left">Function objects</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">D.9</td><td align="left">Binders</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">D.10</td><td align="left"><code class="code">auto_ptr</code></td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">D.11</td><td align="left">Violating exception-specifications</td><td align="left"> </td><td align="left"> </td></tr></tbody></table></div></div><br class="table-break" /><div class="section"><div class="titlepage"><div><div><h4 class="title"><a id="iso.2011.specific"></a>Implementation Specific Behavior</h4></div></div></div><p>For behaviour which is also specified by the 1998 and 2003 standards,
++      </td></tr><tr><td align="left">D.1</td><td align="left">Increment operator with <code class="code">bool</code> operand</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">D.2</td><td align="left"><code class="code">register</code> keyword</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">D.3</td><td align="left">Implicit declaration of copy functions</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">D.4</td><td align="left">Dynamic exception specifications</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">D.5</td><td align="left">C standard library headers</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">D.6</td><td align="left">Old iostreams members</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">D.7</td><td align="left"><code class="code">char*</code> streams</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">D.8</td><td align="left">Function objects</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">D.9</td><td align="left">Binders</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">D.10</td><td align="left"><code class="code">auto_ptr</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">D.11</td><td align="left">Violating exception-specifications</td><td align="left">Y</td><td align="left"> </td></tr></tbody></table></div></div><br class="table-break" /><div class="section"><div class="titlepage"><div><div><h4 class="title"><a id="iso.2011.specific"></a>Implementation Specific Behavior</h4></div></div></div><p>For behaviour which is also specified by the 1998 and 2003 standards,
+       see <a class="link" href="status.html#iso.1998.specific" title="Implementation Specific Behavior">C++ 1998/2003 Implementation
+       Specific Behavior</a>. This section only documents behaviour which
+       is new in the 2011 standard.
+@@ -386,80 +388,73 @@ options. The pre-defined symbol
+ <code class="constant">__cplusplus</code> is used to check for the
+ presence of the required flag.
+ </p><p>
+-This page describes the C++14 and library TS support in the GCC 9 series.
+-</p><div class="table"><a id="table.cxx14_status"></a><p class="title"><strong>Table 1.3. C++ 2014 Implementation Status</strong></p><div class="table-contents"><table class="table" summary="C++ 2014 Implementation Status" border="1"><colgroup><col align="left" class="c1" /><col align="left" class="c2" /><col align="left" class="c3" /><col align="left" class="c4" /></colgroup><thead><tr><th align="left">Paper</th><th align="left">Title</th><th align="left">Status</th><th align="left">Comments</th></tr></thead><tbody><tr><td align="left">
+-	<a class="link" href="http://www.open-std.org/JTC1/sc22/WG21/docs/papers/2013/n3669.pdf" target="_top">
+-	  N3669
+-	</a>
+-      </td><td align="left">Fixing constexpr member functions without const</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">
+-	<a class="link" href="http://www.open-std.org/JTC1/sc22/WG21/docs/papers/2013/n3668.html" target="_top">
+-	  N3668
+-	</a>
+-      </td><td align="left"><code class="code">exchange()</code> utility function</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">
+-	<a class="link" href="http://www.open-std.org/JTC1/sc22/WG21/docs/papers/2013/n3670.html" target="_top">
+-	  N3670
+-	</a>
+-      </td><td align="left">Wording for Addressing Tuples by Type</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">
+-	<a class="link" href="http://www.open-std.org/JTC1/sc22/WG21/docs/papers/2013/n3656.htm" target="_top">
+-	  N3656
+-	</a>
+-      </td><td align="left"><code class="code">make_unique</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">
+-	<a class="link" href="http://www.open-std.org/JTC1/sc22/WG21/docs/papers/2012/n3462.html" target="_top">
+-	  N3462
+-	</a>
+-      </td><td align="left"><code class="code">std::result_of</code> and SFINAE</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">
+-	<a class="link" href="http://www.open-std.org/JTC1/sc22/WG21/docs/papers/2013/n3545.pdf" target="_top">
+-	  N3545
+-	</a>
+-      </td><td align="left">An Incremental Improvement to <code class="code">integral_constant</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">
+-	<a class="link" href="http://www.open-std.org/JTC1/sc22/WG21/docs/papers/2013/n3642.pdf" target="_top">
+-	  N3642
+-	</a>
+-      </td><td align="left">User-defined Literals for Standard Library Types</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">
+-	<a class="link" href="http://www.open-std.org/JTC1/sc22/WG21/docs/papers/2013/n3671.html" target="_top">
+-	  N3671
+-	</a>
+-      </td><td align="left">Making non-modifying sequence operations more robust</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">
+-	<a class="link" href="http://www.open-std.org/JTC1/sc22/WG21/docs/papers/2013/n3654.html" target="_top">
+-	  N3654
+-	</a>
+-      </td><td align="left">Quoted Strings Library Proposal</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">
+-	<a class="link" href="http://www.open-std.org/JTC1/sc22/WG21/docs/papers/2012/n3469.html" target="_top">
+-	  N3469
+-	</a>
+-      </td><td align="left">Constexpr Library Additions: chrono</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">
+-	<a class="link" href="http://www.open-std.org/JTC1/sc22/WG21/docs/papers/2012/n3470.html" target="_top">
+-	  N3470
+-	</a>
+-      </td><td align="left">Constexpr Library Additions: containers</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">
+-	<a class="link" href="http://www.open-std.org/JTC1/sc22/WG21/docs/papers/2012/n3471.html" target="_top">
+-	  N3471
+-	</a>
+-      </td><td align="left">Constexpr Library Additions: utilities</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">
+-	<a class="link" href="http://www.open-std.org/JTC1/sc22/WG21/docs/papers/2013/n3658.html" target="_top">
+-	  N3658
+-	</a>
+-      </td><td align="left">Compile-time integer sequences</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">
+-	<a class="link" href="http://www.open-std.org/JTC1/sc22/WG21/docs/papers/2013/n3659.html" target="_top">
+-	  N3659
+-	</a>
+-      </td><td align="left">Shared Locking in C++</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">
+-	<a class="link" href="http://www.open-std.org/JTC1/sc22/WG21/docs/papers/2012/n3421.htm" target="_top">
+-	  N3421
+-	</a>
+-      </td><td align="left">Making Operator Functors greater&lt;&gt;</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">
+-	<a class="link" href="http://www.open-std.org/JTC1/sc22/WG21/docs/papers/2013/n3657.htm" target="_top">
+-	  N3657
+-	</a>
+-      </td><td align="left">Adding heterogeneous comparison lookup to associative containers</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">
+-	<a class="link" href="http://www.open-std.org/JTC1/sc22/WG21/docs/papers/2013/n3655.pdf" target="_top">
+-	  N3655
+-	</a>
+-      </td><td align="left">TransformationTraits Redux</td><td align="left">Y</td><td align="left"> </td></tr><tr bgcolor="#B0B0B0"><td align="left">
+-	<a class="link" href="http://www.open-std.org/JTC1/sc22/WG21/docs/papers/2013/n3644.pdf" target="_top">
+-	  N3644
+-	</a>
+-      </td><td align="left">Null Forward Iterators</td><td align="left">Partial</td><td align="left">Only affects Debug Mode</td></tr></tbody></table></div></div><br class="table-break" /><div class="table"><a id="table.ts_status"></a><p class="title"><strong>Table 1.4. C++ Technical Specifications Implementation Status</strong></p><div class="table-contents"><table class="table" summary="C++ Technical Specifications Implementation Status" border="1"><colgroup><col align="left" class="c1" /><col align="left" class="c2" /><col align="left" class="c3" /><col align="left" class="c4" /></colgroup><thead><tr><th align="left">Paper</th><th align="left">Title</th><th align="left">Status</th><th align="left">Comments</th></tr></thead><tbody><tr bgcolor="#C8B0B0"><td align="left">
++This status table is based on the table of contents of ISO/IEC 14882:2014.
++Some subclauses are not shown in the table where the content is unchanged
++since C++11 and the implementation is complete.
++</p><p>
++This section describes the C++14 and library TS support in the GCC 9 series.
++</p><div class="table"><a id="table.cxx14_status"></a><p class="title"><strong>Table 1.3. C++ 2014 Implementation Status</strong></p><div class="table-contents"><table class="table" summary="C++ 2014 Implementation Status" border="1"><colgroup><col align="left" class="c1" /><col align="left" class="c2" /><col align="left" class="c3" /><col align="left" class="c4" /></colgroup><thead><tr><th align="left">Section</th><th align="left">Description</th><th align="left">Status</th><th align="left">Comments</th></tr></thead><tbody><tr><td align="left">
++	<span class="emphasis"><em>18</em></span>
++      </td><td colspan="3" align="left">
++	<span class="emphasis"><em>Language support</em></span>
++      </td></tr><tr><td align="left">18.1</td><td align="left">General</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">18.2</td><td align="left">Types</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.3</td><td align="left">Implementation properties</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">18.3.2</td><td align="left">Numeric Limits</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">18.3.2.3</td><td align="left">Class template <code class="code">numeric_limits</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.3.2.4</td><td align="left"><code class="code">numeric_limits</code> members</td><td align="left">Y</td><td align="left"> </td></tr><tr bgcolor="#C8B0B0"><td align="left">18.3.2.5</td><td align="left"><code class="code">float_round_style</code></td><td align="left">N</td><td align="left"> </td></tr><tr bgcolor="#C8B0B0"><td align="left">18.3.2.6</td><td align="left"><code class="code">float_denorm_style</code></td><td align="left">N</td><td align="left"> </td></tr><tr><td align="left">18.3.2.7</td><td align="left"><code class="code">numeric_limits</code> specializations</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.3.3</td><td align="left">C Library</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.4</td><td align="left">Integer types</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">18.4.1</td><td align="left">Header <code class="code">&lt;cstdint&gt;</code> synopsis</td><td align="left">Y</td><td align="left"> </td></tr><tr bgcolor="#B0B0B0"><td align="left">18.5</td><td align="left">Start and termination</td><td align="left">Partial</td><td align="left">C library dependency for quick_exit, at_quick_exit</td></tr><tr><td align="left">18.6</td><td align="left">Dynamic memory management</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.7</td><td align="left">Type identification</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">18.7.1</td><td align="left">Class type_info</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.7.2</td><td align="left">Class bad_cast</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.7.3</td><td align="left">Class bad_typeid</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.8</td><td align="left">Exception handling</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">18.8.1</td><td align="left">Class exception</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.8.2</td><td align="left">Class bad_exception</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.8.3</td><td align="left">Abnormal termination</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.8.4</td><td align="left"><code class="code">uncaught_exception</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.8.5</td><td align="left">Exception Propagation</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.8.6</td><td align="left"><code class="code">nested_exception</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.9</td><td align="left">Initializer lists</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">18.9.1</td><td align="left">Initializer list constructors</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.9.2</td><td align="left">Initializer list access</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.9.3</td><td align="left">Initializer list range access</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">18.10</td><td align="left">Other runtime support</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">
++	<span class="emphasis"><em>19</em></span>
++      </td><td colspan="3" align="left">
++	<span class="emphasis"><em>Diagnostics</em></span>
++      </td></tr><tr><td align="left">19.1</td><td align="left">General</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">19.2</td><td align="left">Exception classes</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">19.3</td><td align="left">Assertions</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">19.4</td><td align="left">Error numbers</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">19.5</td><td align="left">System error support</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">19.5.1</td><td align="left">Class <code class="code">error_category</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">19.5.2</td><td align="left">Class <code class="code">error_code</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">19.5.3</td><td align="left">Class <code class="code">error_condition</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">19.5.4</td><td align="left">Comparison operators</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">19.5.5</td><td align="left">Class <code class="code">system_error</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">
++	<span class="emphasis"><em>20</em></span>
++      </td><td colspan="3" align="left">
++	<span class="emphasis"><em>General utilities</em></span>
++      </td></tr><tr><td align="left">20.1</td><td align="left">General</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.2</td><td align="left">Utility components</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.2.1</td><td align="left">Operators</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.2.2</td><td align="left">swap</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.2.3</td><td align="left">exchange</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.2.4</td><td align="left">forward/move helpers</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.2.5</td><td align="left">Function template <code class="code">declval</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.3</td><td align="left">Pairs</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.4</td><td align="left">Tuples</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.5</td><td align="left">Compile-time integer sequences</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.5.2</td><td align="left">Class template <code class="code">integer_sequence</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.5.3</td><td align="left">Alias template <code class="code">make_integer_sequence</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.6</td><td align="left">Class template <code class="code">bitset</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.7</td><td align="left">Memory</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.8</td><td align="left">Smart pointers</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.8.1</td><td align="left">Class template <code class="code">unique_ptr</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.8.1.1</td><td align="left">Default deleters</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.8.1.2</td><td align="left"><code class="code">unique_ptr</code> for single objects</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.8.1.3</td><td align="left"><code class="code">unique_ptr</code> for array objects with a runtime length</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.8.1.4</td><td align="left"><code class="code">unique_ptr</code> creation</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.8.1.5</td><td align="left"><code class="code">unique_ptr</code> specialized algorithms</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.8.2</td><td align="left">Shared-ownership pointers</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.8.2.1</td><td align="left">Class <code class="code">bad_weak_ptr</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.8.2.2</td><td align="left">Class template <code class="code">shared_ptr</code></td><td align="left">Y</td><td align="left">
++	  Uses code from
++	  <a class="link" href="http://www.boost.org/libs/smart_ptr/shared_ptr.htm" target="_top">boost::shared_ptr</a>.
++      </td></tr><tr><td align="left">20.8.2.3</td><td align="left">Class template <code class="code">weak_ptr</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.8.2.4</td><td align="left">Class template <code class="code">owner_less</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.8.2.5</td><td align="left">Class template <code class="code">enable_shared_from_this</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.8.2.6</td><td align="left"><code class="code">shared_ptr</code> atomic access</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.8.2.7</td><td align="left">Smart pointer hash support</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.9</td><td align="left">Function objects</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.9.1</td><td align="left">Definitions</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.9.2</td><td align="left">Requirements</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.9.3</td><td align="left">Class template <code class="code">reference_wrapper</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.9.4</td><td align="left">Arithmetic operation</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.9.5</td><td align="left">Comparisons</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.8.6</td><td align="left">Logical operations</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.9.7</td><td align="left">Bitwise operations</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.9.8</td><td align="left">Negators</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.9.9</td><td align="left">Function object binders</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.9.10</td><td align="left">Function template <code class="code">mem_fn</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.9.11</td><td align="left">Polymorphic function wrappers</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.9.11.1</td><td align="left">Class <code class="code">bad_function_call</code></td><td align="left">Y</td><td align="left"> </td></tr><tr bgcolor="#B0B0B0"><td align="left">20.9.11.2</td><td align="left">Class template <code class="code">function</code></td><td align="left">Partial</td><td align="left">Missing allocator support</td></tr><tr><td align="left">20.9.12</td><td align="left">Class template <code class="code">hash</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.10</td><td align="left">Metaprogramming and type traits</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.10.1</td><td align="left">Requirements</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.10.2</td><td align="left">Header <code class="code">&lt;type_traits&gt;</code> synopsis</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.10.3</td><td align="left">Helper classes</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.10.4</td><td align="left">Unary Type Traits</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.10.5</td><td align="left">Type property queries</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.10.6</td><td align="left">Relationships between types</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.10.7</td><td align="left">Transformations between types</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.11</td><td align="left">Compile-time rational arithmetic</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.12</td><td align="left">Time utilities</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">20.12.3</td><td align="left">Clock requirements</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.12.4</td><td align="left">Time-related traits</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.12.5</td><td align="left">Class template <code class="code">duration</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.12.5.8</td><td align="left">Suffixes for duration literals</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.12.6</td><td align="left">Class template <code class="code">time_point</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.12.7</td><td align="left">Clocks</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.12.8</td><td align="left">Date and time functions</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.13</td><td align="left">Scoped allocator adaptor</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">20.14</td><td align="left">Class <code class="code">type_index</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">
++	<span class="emphasis"><em>21</em></span>
++      </td><td colspan="3" align="left">
++	<span class="emphasis"><em>Strings</em></span>
++      </td></tr><tr><td align="left">21.1</td><td align="left">General</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">21.2</td><td align="left">Character traits</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">21.3</td><td align="left">String classes</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">21.4</td><td align="left">Class template <code class="code">basic_string</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">21.5</td><td align="left">Numeric Conversions</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">21.6</td><td align="left">Hash support</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">21.7</td><td align="left">Suffixes for <code class="code">basic_string</code> literals</td><td align="left">Y</td><td align="left"> </td></tr><tr bgcolor="#B0B0B0"><td align="left">21.7</td><td align="left">Null-terminated sequence utilities</td><td align="left">Partial</td><td align="left">C library dependency. </td></tr><tr><td align="left">
++	<span class="emphasis"><em>22</em></span>
++      </td><td colspan="3" align="left">
++	<span class="emphasis"><em>Localization</em></span>
++      </td></tr><tr><td align="left">22.1</td><td align="left">General</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">22.2</td><td align="left">Header <code class="code">&lt;locale&gt;</code> synopsis</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">22.3</td><td align="left">Locales</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">22.4</td><td align="left">Standard <code class="code">locale</code> categories</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">22.5</td><td align="left">Standard code conversion facets</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">22.6</td><td align="left">C Library Locales</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">
++	<span class="emphasis"><em>23</em></span>
++      </td><td colspan="3" align="left">
++	<span class="emphasis"><em>Containers</em></span>
++      </td></tr><tr><td align="left">23.1</td><td align="left">General</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">23.2</td><td align="left">Container requirements</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">23.3</td><td align="left">Sequence containers</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">23.4</td><td align="left">Associative containers</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">23.5</td><td align="left">Unordered associative containers</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">23.6</td><td align="left">Container adaptors</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">
++	<span class="emphasis"><em>24</em></span>
++      </td><td colspan="3" align="left">
++	<span class="emphasis"><em>Iterators</em></span>
++      </td></tr><tr><td align="left">24.1</td><td align="left">General</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">24.2</td><td align="left">Iterator requirements</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">24.3</td><td align="left">Header <code class="code">&lt;iterator&gt;</code> synopsis</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">24.4</td><td align="left">Iterator primitives</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">24.5</td><td align="left">Iterator adaptors</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">24.6</td><td align="left">Stream iterators</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">24.7</td><td align="left">range access</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">
++	<span class="emphasis"><em>25</em></span>
++      </td><td colspan="3" align="left">
++	<span class="emphasis"><em>Algorithms</em></span>
++      </td></tr><tr><td align="left">25.1</td><td align="left">General</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">25.2</td><td align="left">Non-modifying sequence operations</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">25.3</td><td align="left">Mutating sequence operations</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">25.4</td><td align="left">Sorting and related operations</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">25.5</td><td align="left">C library algorithms</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">
++      <span class="emphasis"><em>26</em></span>
++      </td><td colspan="3" align="left">
++	<span class="emphasis"><em>Numerics</em></span>
++      </td></tr><tr><td align="left">26.1</td><td align="left">General</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">26.2</td><td align="left">Numeric type requirements</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.3</td><td align="left">The floating-point environment</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.4</td><td align="left">Complex numbers</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.4.10</td><td align="left">Suffixes for complex number literals</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.5</td><td align="left">Random number generation</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.6</td><td align="left">Numeric arrays</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.7</td><td align="left">Generalized numeric operations</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">26.8</td><td align="left">C Library</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">
++	<span class="emphasis"><em>27</em></span>
++      </td><td colspan="3" align="left">
++	<span class="emphasis"><em>Input/output library</em></span>
++      </td></tr><tr><td align="left">27.1</td><td align="left">General</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">27.2</td><td align="left">Iostreams requirements</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">27.2.1</td><td align="left">Imbue Limitations</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">27.2.2</td><td align="left">Positioning Type Limitations</td><td align="left">Y</td><td align="left"> </td></tr><tr bgcolor="#B0B0B0"><td align="left">27.2.3</td><td align="left">Thread safety</td><td align="left">Partial</td><td align="left"> </td></tr><tr><td align="left">27.3</td><td align="left">Forward declarations</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">27.4</td><td align="left">Standard iostream objects</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">27.5</td><td align="left">Iostreams base classes</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">27.6</td><td align="left">Stream buffers</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">27.7</td><td align="left">Formatting and manipulators</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">27.7.6</td><td align="left">Quoted manipulators</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">27.8</td><td align="left">String-based streams</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">27.9</td><td align="left">File-based streams</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">
++	<span class="emphasis"><em>28</em></span>
++      </td><td colspan="3" align="left">
++	<span class="emphasis"><em>Regular expressions</em></span>
++      </td></tr><tr><td align="left">28.1</td><td align="left">General</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">28.2</td><td align="left">Definitions</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">28.3</td><td align="left">Requirements</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">28.4</td><td align="left">Header <code class="code">&lt;regex&gt;</code> synopsis</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">28.5</td><td align="left">Namespace <code class="code">std::regex_constants</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">28.6</td><td align="left">Class <code class="code">regex_error</code></td><td align="left">Y</td><td align="left"> </td></tr><tr bgcolor="#B0B0B0"><td align="left">28.7</td><td align="left">Class template <code class="code">regex_traits</code></td><td align="left">Partial</td><td align="left"><code class="code">transform_primary</code> is not correctly implemented</td><td align="left"> </td></tr><tr><td align="left">28.8</td><td align="left">Class template <code class="code">basic_regex</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">28.9</td><td align="left">Class template <code class="code">sub_match</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">28.10</td><td align="left">Class template <code class="code">match_results</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">28.11</td><td align="left">Regular expression algorithms</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">28.12</td><td align="left">Regular expression Iterators</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">28.13</td><td align="left">Modified ECMAScript regular expression grammar</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">
++	<span class="emphasis"><em>29</em></span>
++      </td><td colspan="3" align="left">
++	<span class="emphasis"><em>Atomic operations</em></span>
++      </td></tr><tr><td align="left">29.1</td><td align="left">General</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">29.2</td><td align="left">Header <code class="code">&lt;atomic&gt;</code> synopsis</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">29.3</td><td align="left">Order and consistency</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">29.4</td><td align="left">Lock-free property</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">29.5</td><td align="left">Atomic types</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">29.6</td><td align="left">Operations on atomic types</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">29.7</td><td align="left">Flag Type and operations</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">29.8</td><td align="left">Fences</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">
++	<span class="emphasis"><em>30</em></span>
++      </td><td colspan="3" align="left">
++	<span class="emphasis"><em>Thread support</em></span>
++      </td></tr><tr><td align="left">30.1</td><td align="left">General</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.2</td><td align="left">Requirements</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.3</td><td align="left">Threads</td><td align="left"> </td><td align="left"> </td></tr><tr bgcolor="#B0B0B0"><td align="left">30.3.1</td><td align="left">Class <code class="code">thread</code></td><td align="left">Partial</td><td align="left"><code class="code">thread::id</code> comparisons not well-defined</td></tr><tr><td align="left">30.3.2</td><td align="left">Namespace <code class="code">this_thread</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.4</td><td align="left">Mutual exclusion</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">30.4.1</td><td align="left">Mutex requirements</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">30.4.1.1</td><td align="left">In general</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">30.4.1.2</td><td align="left">Mutex types</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">30.4.1.2.1</td><td align="left">Class <code class="code">mutex</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.4.1.2.2</td><td align="left">Class <code class="code">recursive_mutex</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.4.1.3</td><td align="left">Timed mutex types</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">30.4.1.3.1</td><td align="left">Class <code class="code">timed_mutex</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.4.1.3.2</td><td align="left">Class <code class="code">recursive_timed_mutex</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.4.1.4</td><td align="left">Shared timed mutex types</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">30.4.1.4.1</td><td align="left">Class <code class="code">shared_timed_mutex</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.4.2</td><td align="left">Locks</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">30.4.2.1</td><td align="left">Class template <code class="code">lock_guard</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.4.2.2</td><td align="left">Class template <code class="code">unique_lock</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.4.2.3</td><td align="left">Class template <code class="code">shared_lock</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.4.3</td><td align="left">Generic locking algorithms</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.4.4</td><td align="left">Call once</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">30.4.4.1</td><td align="left">Struct <code class="code">once_flag</code></td><td align="left">Y</td><td align="left"> </td></tr><tr bgcolor="#B0B0B0"><td align="left">30.4.4.2</td><td align="left">Function <code class="code">call_once</code></td><td align="left">Broken</td><td align="left">See <a class="link" href="https://gcc.gnu.org/bugzilla/show_bug.cgi?id=66146" target="_top">PR
++	66146</a>
++      </td></tr><tr><td align="left">30.5</td><td align="left">Condition variables</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.5.1</td><td align="left">Class <code class="code">condition_variable</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.5.2</td><td align="left">Class <code class="code">condition_variable_any</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.6</td><td align="left">Futures</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">30.6.1</td><td align="left">Overview</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">30.6.2</td><td align="left">Error handling</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.6.3</td><td align="left">Class <code class="code">future_error</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.6.4</td><td align="left">Shared state</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.6.5</td><td align="left">Class template <code class="code">promise</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.6.6</td><td align="left">Class template <code class="code">future</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.6.7</td><td align="left">Class template <code class="code">shared_future</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.6.8</td><td align="left">Function template <code class="code">async</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">30.6.9</td><td align="left">Class template <code class="code">packaged_task</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">
++	<span class="emphasis"><em>Appendix D</em></span>
++      </td><td colspan="3" align="left">
++	<span class="emphasis"><em>Compatibility features</em></span>
++      </td></tr><tr><td align="left">D.1</td><td align="left">Increment operator with <code class="code">bool</code> operand</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">D.2</td><td align="left"><code class="code">register</code> keyword</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">D.3</td><td align="left">Implicit declaration of copy functions</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">D.4</td><td align="left">Dynamic exception specifications</td><td align="left"> </td><td align="left"> </td></tr><tr><td align="left">D.5</td><td align="left">C standard library headers</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">D.6</td><td align="left">Old iostreams members</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">D.7</td><td align="left"><code class="code">char*</code> streams</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">D.8</td><td align="left">Function objects</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">D.9</td><td align="left">Binders</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">D.10</td><td align="left"><code class="code">auto_ptr</code></td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">D.11</td><td align="left">Violating exception-specifications</td><td align="left">Y</td><td align="left"> </td></tr><tr><td align="left">D.12</td><td align="left">Random shuffle</td><td align="left">Y</td><td align="left"> </td></tr></tbody></table></div></div><br class="table-break" /><div class="table"><a id="table.ts_status"></a><p class="title"><strong>Table 1.4. C++ Technical Specifications Implementation Status</strong></p><div class="table-contents"><table class="table" summary="C++ Technical Specifications Implementation Status" border="1"><colgroup><col align="left" class="c1" /><col align="left" class="c2" /><col align="left" class="c3" /><col align="left" class="c4" /></colgroup><thead><tr><th align="left">Paper</th><th align="left">Title</th><th align="left">Status</th><th align="left">Comments</th></tr></thead><tbody><tr bgcolor="#C8B0B0"><td align="left">
+ 	<a class="link" href="http://www.open-std.org/JTC1/sc22/WG21/docs/papers/2013/n3662.html" target="_top">
+ 	  N3662
+ 	</a>
+@@ -693,7 +688,7 @@ Feature-testing recommendations for C++</a>.
+ 	<a class="link" href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2016/p0077r2.html" target="_top">
+ 	P0077R2
+ 	</a>
+-      </td><td align="center"> 7.1 </td><td align="left"><code class="code"> __cpp_lib_is_callable &gt;= 201603 </code></td></tr><tr><td align="left"> has_unique_object_representations </td><td align="left">
++      </td><td align="center"> 7.1 </td><td align="left"><code class="code"> __cpp_lib_is_invocable &gt;= 201703 </code></td></tr><tr><td align="left"> has_unique_object_representations </td><td align="left">
+ 	<a class="link" href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2016/p0258r2.html" target="_top">
+ 	P0258R2
+ 	</a>
+diff --git a/libstdc++-v3/doc/xml/manual/status_cxx1998.xml b/libstdc++-v3/doc/xml/manual/status_cxx1998.xml
+index 44a042c2724..df3b2c80d20 100644
+--- a/libstdc++-v3/doc/xml/manual/status_cxx1998.xml
++++ b/libstdc++-v3/doc/xml/manual/status_cxx1998.xml
+@@ -18,7 +18,7 @@ This status table is based on the table of contents of ISO/IEC 14882:2003.
+ </para>
+ 
+ <para>
+-This page describes the C++ support in the GCC 9 series.
++This section describes the C++ support in the GCC 9 series.
+ </para>
+ 
+ <!-- Status is Yes or No, Broken/Partial-->
+diff --git a/libstdc++-v3/doc/xml/manual/status_cxx2011.xml b/libstdc++-v3/doc/xml/manual/status_cxx2011.xml
+index 568102823b0..431eb02bb6b 100644
+--- a/libstdc++-v3/doc/xml/manual/status_cxx2011.xml
++++ b/libstdc++-v3/doc/xml/manual/status_cxx2011.xml
+@@ -27,7 +27,11 @@ presence of the required flag.
+ </para>
+ 
+ <para>
+-This page describes the C++11 support in the GCC 9 series.
++This status table is based on the table of contents of ISO/IEC 14882:2011.
++</para>
++
++<para>
++This section describes the C++11 support in the GCC 9 series.
+ </para>
+ 
+ <!-- Status is Yes or No, Broken/Partial-->
+@@ -70,7 +74,7 @@ This page describes the C++11 support in the GCC 9 series.
+     <row>
+       <entry>18.1</entry>
+       <entry>General</entry>
+-      <entry>Y</entry>
++      <entry/>
+       <entry/>
+     </row>
+     <row>
+@@ -264,7 +268,7 @@ This page describes the C++11 support in the GCC 9 series.
+     <row>
+       <entry>19.1</entry>
+       <entry>General</entry>
+-      <entry>Y</entry>
++      <entry/>
+       <entry/>
+     </row>
+     <row>
+@@ -349,13 +353,13 @@ This page describes the C++11 support in the GCC 9 series.
+     </row>
+     <row>
+       <entry>20.2.2</entry>
+-      <entry>Swap</entry>
++      <entry>swap</entry>
+       <entry>Y</entry>
+       <entry/>
+     </row>
+     <row>
+       <entry>20.2.3</entry>
+-      <entry><code>forward</code> and <code>move</code> helpers</entry>
++      <entry>forward/move helpers</entry>
+       <entry>Y</entry>
+       <entry/>
+     </row>
+@@ -626,7 +630,7 @@ This page describes the C++11 support in the GCC 9 series.
+     <row>
+       <entry>20.7.2</entry>
+       <entry>Shared-ownership pointers</entry>
+-      <entry>Y</entry>
++      <entry/>
+       <entry/>
+     </row>
+     <row>
+@@ -652,7 +656,7 @@ This page describes the C++11 support in the GCC 9 series.
+     </row>
+     <row>
+       <entry>20.7.2.4</entry>
+-      <entry>Class template <code>emable_shared_from_this</code></entry>
++      <entry>Class template <code>enable_shared_from_this</code></entry>
+       <entry>Y</entry>
+       <entry/>
+     </row>
+@@ -1114,9 +1118,7 @@ This page describes the C++11 support in the GCC 9 series.
+       <entry>21.7</entry>
+       <entry>Null-terminated sequence utilities</entry>
+       <entry>Partial</entry>
+-      <entry>C library dependency.
+-      Missing <filename class="headerfile">&lt;cuchar&gt;</filename>
+-      </entry>
++      <entry>C library dependency. </entry>
+     </row>
+     <row>
+       <entry>
+@@ -1635,7 +1637,7 @@ This page describes the C++11 support in the GCC 9 series.
+     <row>
+       <entry>26.1</entry>
+       <entry>General</entry>
+-      <entry>Y</entry>
++      <entry/>
+       <entry/>
+     </row>
+     <row>
+@@ -1988,31 +1990,31 @@ This page describes the C++11 support in the GCC 9 series.
+     </row>
+     <row>
+       <entry>26.7.2</entry>
+-      <entry><code>accumulate</code></entry>
++      <entry>Accumulate></entry>
+       <entry>Y</entry>
+       <entry/>
+     </row>
+     <row>
+       <entry>26.7.3</entry>
+-      <entry><code>inner_product</code></entry>
++      <entry>Inner product</entry>
+       <entry>Y</entry>
+       <entry/>
+     </row>
+     <row>
+       <entry>26.7.4</entry>
+-      <entry><code>partial_sum</code></entry>
++      <entry>Partial sum</entry>
+       <entry>Y</entry>
+       <entry/>
+     </row>
+     <row>
+       <entry>26.7.5</entry>
+-      <entry><code>adjacent_difference</code></entry>
++      <entry>Adjacent difference</entry>
+       <entry>Y</entry>
+       <entry/>
+     </row>
+     <row>
+       <entry>26.7.6</entry>
+-      <entry>iota</entry>
++      <entry>Iota</entry>
+       <entry>Y</entry>
+       <entry/>
+     </row>
+@@ -2230,10 +2232,9 @@ This page describes the C++11 support in the GCC 9 series.
+       <entry/>
+     </row>
+     <row>
+-      <?dbhtml bgcolor="#B0B0B0" ?>
+       <entry>29.3</entry>
+       <entry>Order and consistency</entry>
+-      <entry>Partial</entry>
++      <entry>Y</entry>
+       <entry/>
+     </row>
+     <row>
+@@ -2396,10 +2397,14 @@ This page describes the C++11 support in the GCC 9 series.
+       <entry/>
+     </row>
+     <row>
++      <?dbhtml bgcolor="#B0B0B0" ?>
+       <entry>30.4.4.2</entry>
+       <entry>Function <code>call_once</code></entry>
+-      <entry>Y</entry>
+-      <entry/>
++      <entry>Broken</entry>
++      <entry>See <link xmlns:xlink="http://www.w3.org/1999/xlink"
++	xlink:href="https://gcc.gnu.org/bugzilla/show_bug.cgi?id=66146">PR
++	66146</link>
++      </entry>
+     </row>
+     <row>
+       <entry>30.5</entry>
+@@ -2514,43 +2519,43 @@ This page describes the C++11 support in the GCC 9 series.
+     <row>
+       <entry>D.5</entry>
+       <entry>C standard library headers</entry>
+-      <entry/>
++      <entry>Y</entry>
+       <entry/>
+     </row>
+     <row>
+       <entry>D.6</entry>
+       <entry>Old iostreams members</entry>
+-      <entry/>
++      <entry>Y</entry>
+       <entry/>
+     </row>
+     <row>
+       <entry>D.7</entry>
+       <entry><code>char*</code> streams</entry>
+-      <entry/>
++      <entry>Y</entry>
+       <entry/>
+     </row>
+     <row>
+       <entry>D.8</entry>
+       <entry>Function objects</entry>
+-      <entry/>
++      <entry>Y</entry>
+       <entry/>
+     </row>
+     <row>
+       <entry>D.9</entry>
+       <entry>Binders</entry>
+-      <entry/>
++      <entry>Y</entry>
+       <entry/>
+     </row>
+     <row>
+       <entry>D.10</entry>
+       <entry><code>auto_ptr</code></entry>
+-      <entry/>
++      <entry>Y</entry>
+       <entry/>
+     </row>
+     <row>
+       <entry>D.11</entry>
+       <entry>Violating exception-specifications</entry>
+-      <entry/>
++      <entry>Y</entry>
+       <entry/>
+     </row>
+ 
+diff --git a/libstdc++-v3/doc/xml/manual/status_cxx2014.xml b/libstdc++-v3/doc/xml/manual/status_cxx2014.xml
+index 7b604307c8e..f0872f6f8d0 100644
+--- a/libstdc++-v3/doc/xml/manual/status_cxx2014.xml
++++ b/libstdc++-v3/doc/xml/manual/status_cxx2014.xml
+@@ -1,4 +1,4 @@
+-<section xmlns="http://docbook.org/ns/docbook" version="5.0" 
++<section xmlns="http://docbook.org/ns/docbook" version="5.0"
+ 	 xml:id="status.iso.2014" xreflabel="Status C++ 2014">
+ <?dbhtml filename="status_iso_cxx2014.html"?>
+ 
+@@ -20,9 +20,24 @@ presence of the required flag.
+ </para>
+ 
+ <para>
+-This page describes the C++14 and library TS support in the GCC 9 series.
++This status table is based on the table of contents of ISO/IEC 14882:2014.
++Some subclauses are not shown in the table where the content is unchanged
++since C++11 and the implementation is complete.
+ </para>
+ 
++<para>
++This section describes the C++14 and library TS support in the GCC 9 series.
++</para>
++
++<!-- Status is Yes or No, Broken/Partial-->
++<!--
++   Yes
++
++   No
++      <?dbhtml bgcolor="#C8B0B0" ?>
++   Broken/Partial
++      <?dbhtml bgcolor="#B0B0B0" ?>
++-->
+ <table frame="all" xml:id="table.cxx14_status">
+ <title>C++ 2014 Implementation Status</title>
+ 
+@@ -31,10 +46,10 @@ This page describes the C++14 and library TS support in the GCC 9 series.
+ <colspec colname="c2"/>
+ <colspec colname="c3"/>
+ <colspec colname="c4"/>
+-  <thead>
++<thead>
+     <row>
+-      <entry>Paper</entry>
+-      <entry>Title</entry>
++      <entry>Section</entry>
++      <entry>Description</entry>
+       <entry>Status</entry>
+       <entry>Comments</entry>
+     </row>
+@@ -44,210 +59,1501 @@ This page describes the C++14 and library TS support in the GCC 9 series.
+ 
+     <row>
+       <entry>
+-	<link xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="http://www.open-std.org/JTC1/sc22/WG21/docs/papers/2013/n3669.pdf">
+-	  N3669
+-	</link>
++	<emphasis>18</emphasis>
+       </entry>
+-      <entry>Fixing constexpr member functions without const</entry>
++      <entry namest="c2" nameend="c4" align="left">
++	<emphasis>Language support</emphasis>
++      </entry>
++    </row>
++
++    <row>
++      <entry>18.1</entry>
++      <entry>General</entry>
++      <entry/>
++      <entry/>
++    </row>
++    <row>
++      <entry>18.2</entry>
++      <entry>Types</entry>
+       <entry>Y</entry>
+       <entry/>
+     </row>
++    <row>
++      <entry>18.3</entry>
++      <entry>Implementation properties</entry>
++      <entry/>
++      <entry/>
++    </row>
+ 
+     <row>
+-      <entry>
+-	<link xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="http://www.open-std.org/JTC1/sc22/WG21/docs/papers/2013/n3668.html">
+-	  N3668
+-	</link>
+-      </entry>
+-      <entry><code>exchange()</code> utility function</entry>
++      <entry>18.3.2</entry>
++      <entry>Numeric Limits</entry>
++      <entry/>
++      <entry/>
++    </row>
++    <row>
++      <entry>18.3.2.3</entry>
++      <entry>Class template <code>numeric_limits</code></entry>
+       <entry>Y</entry>
+       <entry/>
+     </row>
+-
+     <row>
+-      <entry>
+-	<link xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="http://www.open-std.org/JTC1/sc22/WG21/docs/papers/2013/n3670.html">
+-	  N3670
+-	</link>
+-      </entry>
+-      <entry>Wording for Addressing Tuples by Type</entry>
++      <entry>18.3.2.4</entry>
++      <entry><code>numeric_limits</code> members</entry>
+       <entry>Y</entry>
+       <entry/>
+     </row>
+-
+     <row>
+-      <entry>
+-	<link xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="http://www.open-std.org/JTC1/sc22/WG21/docs/papers/2013/n3656.htm">
+-	  N3656
+-	</link>
+-      </entry>
+-      <entry><code>make_unique</code></entry>
++      <?dbhtml bgcolor="#C8B0B0" ?>
++      <entry>18.3.2.5</entry>
++      <entry><code>float_round_style</code></entry>
++      <entry>N</entry>
++      <entry/>
++    </row>
++    <row>
++      <?dbhtml bgcolor="#C8B0B0" ?>
++      <entry>18.3.2.6</entry>
++      <entry><code>float_denorm_style</code></entry>
++      <entry>N</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>18.3.2.7</entry>
++      <entry><code>numeric_limits</code> specializations</entry>
+       <entry>Y</entry>
+       <entry/>
+     </row>
+-
+     <row>
+-      <entry>
+-	<link xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="http://www.open-std.org/JTC1/sc22/WG21/docs/papers/2012/n3462.html">
+-	  N3462
+-	</link>
+-      </entry>
+-      <entry><code>std::result_of</code> and SFINAE</entry>
++      <entry>18.3.3</entry>
++      <entry>C Library</entry>
+       <entry>Y</entry>
+       <entry/>
+     </row>
+ 
+     <row>
+-      <entry>
+-	<link xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="http://www.open-std.org/JTC1/sc22/WG21/docs/papers/2013/n3545.pdf">
+-	  N3545
+-	</link>
+-      </entry>
+-      <entry>An Incremental Improvement to <code>integral_constant</code></entry>
++      <entry>18.4</entry>
++      <entry>Integer types</entry>
++      <entry/>
++      <entry/>
++    </row>
++    <row>
++      <entry>18.4.1</entry>
++      <entry>Header <code>&lt;cstdint&gt;</code> synopsis</entry>
+       <entry>Y</entry>
+       <entry/>
+     </row>
+-
+     <row>
+-      <entry>
+-	<link xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="http://www.open-std.org/JTC1/sc22/WG21/docs/papers/2013/n3642.pdf">
+-	  N3642
+-	</link>
+-      </entry>
+-      <entry>User-defined Literals for Standard Library Types</entry>
++      <?dbhtml bgcolor="#B0B0B0" ?>
++      <entry>18.5</entry>
++      <entry>Start and termination</entry>
++      <entry>Partial</entry>
++      <entry>C library dependency for quick_exit, at_quick_exit</entry>
++    </row>
++    <row>
++      <entry>18.6</entry>
++      <entry>Dynamic memory management</entry>
+       <entry>Y</entry>
+       <entry/>
+     </row>
+-
+     <row>
+-      <entry>
+-	<link xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="http://www.open-std.org/JTC1/sc22/WG21/docs/papers/2013/n3671.html">
+-	  N3671
+-	</link>
+-      </entry>
+-      <entry>Making non-modifying sequence operations more robust</entry>
++      <entry>18.7</entry>
++      <entry>Type identification</entry>
++      <entry/>
++      <entry/>
++    </row>
++    <row>
++      <entry>18.7.1</entry>
++      <entry>Class type_info</entry>
+       <entry>Y</entry>
+       <entry/>
+     </row>
+-
+     <row>
+-      <entry>
+-	<link xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="http://www.open-std.org/JTC1/sc22/WG21/docs/papers/2013/n3654.html">
+-	  N3654
+-	</link>
+-      </entry>
+-      <entry>Quoted Strings Library Proposal</entry>
++      <entry>18.7.2</entry>
++      <entry>Class bad_cast</entry>
+       <entry>Y</entry>
+       <entry/>
+     </row>
+-
+-
+     <row>
+-      <entry>
+-	<link xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="http://www.open-std.org/JTC1/sc22/WG21/docs/papers/2012/n3469.html">
+-	  N3469
+-	</link>
+-      </entry>
+-      <entry>Constexpr Library Additions: chrono</entry>
++      <entry>18.7.3</entry>
++      <entry>Class bad_typeid</entry>
+       <entry>Y</entry>
+       <entry/>
+     </row>
+-
+     <row>
+-      <entry>
+-	<link xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="http://www.open-std.org/JTC1/sc22/WG21/docs/papers/2012/n3470.html">
+-	  N3470
+-	</link>
+-      </entry>
+-      <entry>Constexpr Library Additions: containers</entry>
++      <entry>18.8</entry>
++      <entry>Exception handling</entry>
++      <entry/>
++      <entry/>
++    </row>
++    <row>
++      <entry>18.8.1</entry>
++      <entry>Class exception</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>18.8.2</entry>
++      <entry>Class bad_exception</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>18.8.3</entry>
++      <entry>Abnormal termination</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>18.8.4</entry>
++      <entry><code>uncaught_exception</code></entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>18.8.5</entry>
++      <entry>Exception Propagation</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>18.8.6</entry>
++      <entry><code>nested_exception</code></entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>18.9</entry>
++      <entry>Initializer lists</entry>
++      <entry/>
++      <entry/>
++    </row>
++    <row>
++      <entry>18.9.1</entry>
++      <entry>Initializer list constructors</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>18.9.2</entry>
++      <entry>Initializer list access</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>18.9.3</entry>
++      <entry>Initializer list range access</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>18.10</entry>
++      <entry>Other runtime support</entry>
+       <entry>Y</entry>
+       <entry/>
+     </row>
+-
+     <row>
+       <entry>
+-	<link xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="http://www.open-std.org/JTC1/sc22/WG21/docs/papers/2012/n3471.html">
+-	  N3471
+-	</link>
++	<emphasis>19</emphasis>
++      </entry>
++      <entry namest="c2" nameend="c4" align="left">
++	<emphasis>Diagnostics</emphasis>
+       </entry>
+-      <entry>Constexpr Library Additions: utilities</entry>
++    </row>
++    <row>
++      <entry>19.1</entry>
++      <entry>General</entry>
++      <entry/>
++      <entry/>
++    </row>
++    <row>
++      <entry>19.2</entry>
++      <entry>Exception classes</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>19.3</entry>
++      <entry>Assertions</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>19.4</entry>
++      <entry>Error numbers</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>19.5</entry>
++      <entry>System error support</entry>
++      <entry/>
++      <entry/>
++    </row>
++    <row>
++      <entry>19.5.1</entry>
++      <entry>Class <code>error_category</code></entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>19.5.2</entry>
++      <entry>Class <code>error_code</code></entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>19.5.3</entry>
++      <entry>Class <code>error_condition</code></entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>19.5.4</entry>
++      <entry>Comparison operators</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>19.5.5</entry>
++      <entry>Class <code>system_error</code></entry>
+       <entry>Y</entry>
+       <entry/>
+     </row>
+-
+-
+     <row>
+       <entry>
+-	<link xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="http://www.open-std.org/JTC1/sc22/WG21/docs/papers/2013/n3658.html">
+-	  N3658
+-	</link>
++	<emphasis>20</emphasis>
++      </entry>
++      <entry namest="c2" nameend="c4" align="left">
++	<emphasis>General utilities</emphasis>
+       </entry>
++    </row>
++    <row>
++      <entry>20.1</entry>
++      <entry>General</entry>
++      <entry/>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.2</entry>
++      <entry>Utility components</entry>
++      <entry/>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.2.1</entry>
++      <entry>Operators</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.2.2</entry>
++      <entry>swap</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.2.3</entry>
++      <entry>exchange</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.2.4</entry>
++      <entry>forward/move helpers</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.2.5</entry>
++      <entry>Function template <code>declval</code></entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.3</entry>
++      <entry>Pairs</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.4</entry>
++      <entry>Tuples</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.5</entry>
+       <entry>Compile-time integer sequences</entry>
++      <entry/>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.5.2</entry>
++      <entry>Class template <code>integer_sequence</code></entry>
+       <entry>Y</entry>
+       <entry/>
+     </row>
+-
+     <row>
+-      <entry>
+-	<link xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="http://www.open-std.org/JTC1/sc22/WG21/docs/papers/2013/n3659.html">
+-	  N3659
+-	</link>
+-      </entry>
+-      <entry>Shared Locking in C++</entry>
++      <entry>20.5.3</entry>
++      <entry>Alias template <code>make_integer_sequence</code></entry>
+       <entry>Y</entry>
+       <entry/>
+     </row>
+-
+-
+     <row>
+-      <entry>
+-	<link xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="http://www.open-std.org/JTC1/sc22/WG21/docs/papers/2012/n3421.htm">
+-	  N3421
+-	</link>
+-      </entry>
+-      <entry>Making Operator Functors greater&lt;&gt;</entry>
++      <entry>20.6</entry>
++      <entry>Class template <code>bitset</code></entry>
+       <entry>Y</entry>
+       <entry/>
+     </row>
+-
+     <row>
+-      <entry>
+-	<link xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="http://www.open-std.org/JTC1/sc22/WG21/docs/papers/2013/n3657.htm">
+-	  N3657
+-	</link>
+-      </entry>
+-      <entry>Adding heterogeneous comparison lookup to associative containers</entry>
++      <entry>20.7</entry>
++      <entry>Memory</entry>
+       <entry>Y</entry>
+       <entry/>
+     </row>
+-
+     <row>
+-      <entry>
+-	<link xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="http://www.open-std.org/JTC1/sc22/WG21/docs/papers/2013/n3655.pdf">
+-	  N3655
+-	</link>
+-      </entry>
+-      <entry>TransformationTraits Redux</entry>
++      <entry>20.8</entry>
++      <entry>Smart pointers</entry>
++      <entry/>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.8.1</entry>
++      <entry>Class template <code>unique_ptr</code></entry>
+       <entry>Y</entry>
+       <entry/>
+     </row>
+-
+     <row>
+-      <?dbhtml bgcolor="#B0B0B0" ?>
+-      <entry>
+-	<link xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="http://www.open-std.org/JTC1/sc22/WG21/docs/papers/2013/n3644.pdf">
+-	  N3644
+-	</link>
+-      </entry>
+-      <entry>Null Forward Iterators</entry>
+-      <entry>Partial</entry>
+-      <entry>Only affects Debug Mode</entry>
++      <entry>20.8.1.1</entry>
++      <entry>Default deleters</entry>
++      <entry>Y</entry>
++      <entry/>
+     </row>
+-
+-  </tbody>
+-</tgroup>
+-</table>
+-
++    <row>
++      <entry>20.8.1.2</entry>
++      <entry><code>unique_ptr</code> for single objects</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.8.1.3</entry>
++      <entry><code>unique_ptr</code> for array objects with a runtime length</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.8.1.4</entry>
++      <entry><code>unique_ptr</code> creation</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.8.1.5</entry>
++      <entry><code>unique_ptr</code> specialized algorithms</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.8.2</entry>
++      <entry>Shared-ownership pointers</entry>
++      <entry/>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.8.2.1</entry>
++      <entry>Class <code>bad_weak_ptr</code></entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.8.2.2</entry>
++      <entry>Class template <code>shared_ptr</code></entry>
++      <entry>Y</entry>
++      <entry>
++	  Uses code from
++	  <link xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="http://www.boost.org/libs/smart_ptr/shared_ptr.htm">boost::shared_ptr</link>.
++      </entry>
++    </row>
++    <row>
++      <entry>20.8.2.3</entry>
++      <entry>Class template <code>weak_ptr</code></entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.8.2.4</entry>
++      <entry>Class template <code>owner_less</code></entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.8.2.5</entry>
++      <entry>Class template <code>enable_shared_from_this</code></entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.8.2.6</entry>
++      <entry><code>shared_ptr</code> atomic access</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.8.2.7</entry>
++      <entry>Smart pointer hash support</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.9</entry>
++      <entry>Function objects</entry>
++      <entry/>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.9.1</entry>
++      <entry>Definitions</entry>
++      <entry/>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.9.2</entry>
++      <entry>Requirements</entry>
++      <entry/>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.9.3</entry>
++      <entry>Class template <code>reference_wrapper</code></entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.9.4</entry>
++      <entry>Arithmetic operation</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.9.5</entry>
++      <entry>Comparisons</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.8.6</entry>
++      <entry>Logical operations</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.9.7</entry>
++      <entry>Bitwise operations</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.9.8</entry>
++      <entry>Negators</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.9.9</entry>
++      <entry>Function object binders</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.9.10</entry>
++      <entry>Function template <code>mem_fn</code></entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.9.11</entry>
++      <entry>Polymorphic function wrappers</entry>
++      <entry/>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.9.11.1</entry>
++      <entry>Class <code>bad_function_call</code></entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <?dbhtml bgcolor="#B0B0B0" ?>
++      <entry>20.9.11.2</entry>
++      <entry>Class template <code>function</code></entry>
++      <entry>Partial</entry>
++      <entry>Missing allocator support</entry>
++    </row>
++    <row>
++      <entry>20.9.12</entry>
++      <entry>Class template <code>hash</code></entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.10</entry>
++      <entry>Metaprogramming and type traits</entry>
++      <entry/>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.10.1</entry>
++      <entry>Requirements</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.10.2</entry>
++      <entry>Header <code>&lt;type_traits&gt;</code> synopsis</entry>
++      <entry/>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.10.3</entry>
++      <entry>Helper classes</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.10.4</entry>
++      <entry>Unary Type Traits</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.10.5</entry>
++      <entry>Type property queries</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.10.6</entry>
++      <entry>Relationships between types</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.10.7</entry>
++      <entry>Transformations between types</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.11</entry>
++      <entry>Compile-time rational arithmetic</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.12</entry>
++      <entry>Time utilities</entry>
++      <entry/>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.12.3</entry>
++      <entry>Clock requirements</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.12.4</entry>
++      <entry>Time-related traits</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.12.5</entry>
++      <entry>Class template <code>duration</code></entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.12.5.8</entry>
++      <entry>Suffixes for duration literals</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.12.6</entry>
++      <entry>Class template <code>time_point</code></entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.12.7</entry>
++      <entry>Clocks</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.12.8</entry>
++      <entry>Date and time functions</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.13</entry>
++      <entry>Scoped allocator adaptor</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>20.14</entry>
++      <entry>Class <code>type_index</code></entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>
++	<emphasis>21</emphasis>
++      </entry>
++      <entry namest="c2" nameend="c4" align="left">
++	<emphasis>Strings</emphasis>
++      </entry>
++    </row>
++    <row>
++      <entry>21.1</entry>
++      <entry>General</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>21.2</entry>
++      <entry>Character traits</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>21.3</entry>
++      <entry>String classes</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>21.4</entry>
++      <entry>Class template <code>basic_string</code></entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>21.5</entry>
++      <entry>Numeric Conversions</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>21.6</entry>
++      <entry>Hash support</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>21.7</entry>
++      <entry>Suffixes for <code>basic_string</code> literals</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <?dbhtml bgcolor="#B0B0B0" ?>
++      <entry>21.7</entry>
++      <entry>Null-terminated sequence utilities</entry>
++      <entry>Partial</entry>
++      <entry>C library dependency. </entry>
++    </row>
++    <row>
++      <entry>
++	<emphasis>22</emphasis>
++      </entry>
++      <entry namest="c2" nameend="c4" align="left">
++	<emphasis>Localization</emphasis>
++      </entry>
++    </row>
++    <row>
++      <entry>22.1</entry>
++      <entry>General</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>22.2</entry>
++      <entry>Header <code>&lt;locale&gt;</code> synopsis</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>22.3</entry>
++      <entry>Locales</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>22.4</entry>
++      <entry>Standard <code>locale</code> categories</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>22.5</entry>
++      <entry>Standard code conversion facets</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>22.6</entry>
++      <entry>C Library Locales</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>
++	<emphasis>23</emphasis>
++      </entry>
++      <entry namest="c2" nameend="c4" align="left">
++	<emphasis>Containers</emphasis>
++      </entry>
++    </row>
++    <row>
++      <entry>23.1</entry>
++      <entry>General</entry>
++      <entry/>
++      <entry/>
++    </row>
++    <row>
++      <entry>23.2</entry>
++      <entry>Container requirements</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>23.3</entry>
++      <entry>Sequence containers</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>23.4</entry>
++      <entry>Associative containers</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>23.5</entry>
++      <entry>Unordered associative containers</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>23.6</entry>
++      <entry>Container adaptors</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>
++	<emphasis>24</emphasis>
++      </entry>
++      <entry namest="c2" nameend="c4" align="left">
++	<emphasis>Iterators</emphasis>
++      </entry>
++    </row>
++    <row>
++      <entry>24.1</entry>
++      <entry>General</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>24.2</entry>
++      <entry>Iterator requirements</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>24.3</entry>
++      <entry>Header <code>&lt;iterator&gt;</code> synopsis</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>24.4</entry>
++      <entry>Iterator primitives</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>24.5</entry>
++      <entry>Iterator adaptors</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>24.6</entry>
++      <entry>Stream iterators</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>24.7</entry>
++      <entry>range access</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>
++	<emphasis>25</emphasis>
++      </entry>
++      <entry namest="c2" nameend="c4" align="left">
++	<emphasis>Algorithms</emphasis>
++      </entry>
++    </row>
++    <row>
++      <entry>25.1</entry>
++      <entry>General</entry>
++      <entry/>
++      <entry/>
++    </row>
++    <row>
++      <entry>25.2</entry>
++      <entry>Non-modifying sequence operations</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>25.3</entry>
++      <entry>Mutating sequence operations</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>25.4</entry>
++      <entry>Sorting and related operations</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>25.5</entry>
++      <entry>C library algorithms</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>
++      <emphasis>26</emphasis>
++      </entry>
++      <entry namest="c2" nameend="c4" align="left">
++	<emphasis>Numerics</emphasis>
++      </entry>
++    </row>
++    <row>
++      <entry>26.1</entry>
++      <entry>General</entry>
++      <entry/>
++      <entry/>
++    </row>
++    <row>
++      <entry>26.2</entry>
++      <entry>Numeric type requirements</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>26.3</entry>
++      <entry>The floating-point environment</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>26.4</entry>
++      <entry>Complex numbers</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>26.4.10</entry>
++      <entry>Suffixes for complex number literals</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>26.5</entry>
++      <entry>Random number generation</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>26.6</entry>
++      <entry>Numeric arrays</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>26.7</entry>
++      <entry>Generalized numeric operations</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>26.8</entry>
++      <entry>C Library</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>
++	<emphasis>27</emphasis>
++      </entry>
++      <entry namest="c2" nameend="c4" align="left">
++	<emphasis>Input/output library</emphasis>
++      </entry>
++    </row>
++    <row>
++      <entry>27.1</entry>
++      <entry>General</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>27.2</entry>
++      <entry>Iostreams requirements</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>27.2.1</entry>
++      <entry>Imbue Limitations</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>27.2.2</entry>
++      <entry>Positioning Type Limitations</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <?dbhtml bgcolor="#B0B0B0" ?>
++      <entry>27.2.3</entry>
++      <entry>Thread safety</entry>
++      <entry>Partial</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>27.3</entry>
++      <entry>Forward declarations</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>27.4</entry>
++      <entry>Standard iostream objects</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>27.5</entry>
++      <entry>Iostreams base classes</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>27.6</entry>
++      <entry>Stream buffers</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>27.7</entry>
++      <entry>Formatting and manipulators</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>27.7.6</entry>
++      <entry>Quoted manipulators</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>27.8</entry>
++      <entry>String-based streams</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>27.9</entry>
++      <entry>File-based streams</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>
++	<emphasis>28</emphasis>
++      </entry>
++      <entry namest="c2" nameend="c4" align="left">
++	<emphasis>Regular expressions</emphasis>
++      </entry>
++    </row>
++    <row>
++      <entry>28.1</entry>
++      <entry>General</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>28.2</entry>
++      <entry>Definitions</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>28.3</entry>
++      <entry>Requirements</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>28.4</entry>
++      <entry>Header <code>&lt;regex&gt;</code> synopsis</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>28.5</entry>
++      <entry>Namespace <code>std::regex_constants</code></entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>28.6</entry>
++      <entry>Class <code>regex_error</code></entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <?dbhtml bgcolor="#B0B0B0" ?>
++      <entry>28.7</entry>
++      <entry>Class template <code>regex_traits</code></entry>
++      <entry>Partial</entry>
++      <entry><code>transform_primary</code> is not correctly implemented</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>28.8</entry>
++      <entry>Class template <code>basic_regex</code></entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>28.9</entry>
++      <entry>Class template <code>sub_match</code></entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>28.10</entry>
++      <entry>Class template <code>match_results</code></entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>28.11</entry>
++      <entry>Regular expression algorithms</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>28.12</entry>
++      <entry>Regular expression Iterators</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>28.13</entry>
++      <entry>Modified ECMAScript regular expression grammar</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>
++	<emphasis>29</emphasis>
++      </entry>
++      <entry namest="c2" nameend="c4" align="left">
++	<emphasis>Atomic operations</emphasis>
++      </entry>
++    </row>
++    <row>
++      <entry>29.1</entry>
++      <entry>General</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>29.2</entry>
++      <entry>Header <code>&lt;atomic&gt;</code> synopsis</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>29.3</entry>
++      <entry>Order and consistency</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>29.4</entry>
++      <entry>Lock-free property</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>29.5</entry>
++      <entry>Atomic types</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>29.6</entry>
++      <entry>Operations on atomic types</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>29.7</entry>
++      <entry>Flag Type and operations</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>29.8</entry>
++      <entry>Fences</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>
++	<emphasis>30</emphasis>
++      </entry>
++      <entry namest="c2" nameend="c4" align="left">
++	<emphasis>Thread support</emphasis>
++      </entry>
++    </row>
++    <row>
++      <entry>30.1</entry>
++      <entry>General</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>30.2</entry>
++      <entry>Requirements</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>30.3</entry>
++      <entry>Threads</entry>
++      <entry/>
++      <entry/>
++    </row>
++    <row>
++      <?dbhtml bgcolor="#B0B0B0" ?>
++      <entry>30.3.1</entry>
++      <entry>Class <code>thread</code></entry>
++      <entry>Partial</entry>
++      <entry><code>thread::id</code> comparisons not well-defined</entry>
++    </row>
++    <row>
++      <entry>30.3.2</entry>
++      <entry>Namespace <code>this_thread</code></entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>30.4</entry>
++      <entry>Mutual exclusion</entry>
++      <entry/>
++      <entry/>
++    </row>
++    <row>
++      <entry>30.4.1</entry>
++      <entry>Mutex requirements</entry>
++      <entry/>
++      <entry/>
++    </row>
++    <row>
++      <entry>30.4.1.1</entry>
++      <entry>In general</entry>
++      <entry/>
++      <entry/>
++    </row>
++    <row>
++      <entry>30.4.1.2</entry>
++      <entry>Mutex types</entry>
++      <entry/>
++      <entry/>
++    </row>
++    <row>
++      <entry>30.4.1.2.1</entry>
++      <entry>Class <code>mutex</code></entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>30.4.1.2.2</entry>
++      <entry>Class <code>recursive_mutex</code></entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>30.4.1.3</entry>
++      <entry>Timed mutex types</entry>
++      <entry/>
++      <entry/>
++    </row>
++    <row>
++      <entry>30.4.1.3.1</entry>
++      <entry>Class <code>timed_mutex</code></entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>30.4.1.3.2</entry>
++      <entry>Class <code>recursive_timed_mutex</code></entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>30.4.1.4</entry>
++      <entry>Shared timed mutex types</entry>
++      <entry/>
++      <entry/>
++    </row>
++    <row>
++      <entry>30.4.1.4.1</entry>
++      <entry>Class <code>shared_timed_mutex</code></entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>30.4.2</entry>
++      <entry>Locks</entry>
++      <entry/>
++      <entry/>
++    </row>
++    <row>
++      <entry>30.4.2.1</entry>
++      <entry>Class template <code>lock_guard</code></entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>30.4.2.2</entry>
++      <entry>Class template <code>unique_lock</code></entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>30.4.2.3</entry>
++      <entry>Class template <code>shared_lock</code></entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>30.4.3</entry>
++      <entry>Generic locking algorithms</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>30.4.4</entry>
++      <entry>Call once</entry>
++      <entry/>
++      <entry/>
++    </row>
++    <row>
++      <entry>30.4.4.1</entry>
++      <entry>Struct <code>once_flag</code></entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <?dbhtml bgcolor="#B0B0B0" ?>
++      <entry>30.4.4.2</entry>
++      <entry>Function <code>call_once</code></entry>
++      <entry>Broken</entry>
++      <entry>See <link xmlns:xlink="http://www.w3.org/1999/xlink"
++	xlink:href="https://gcc.gnu.org/bugzilla/show_bug.cgi?id=66146">PR
++	66146</link>
++      </entry>
++    </row>
++    <row>
++      <entry>30.5</entry>
++      <entry>Condition variables</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>30.5.1</entry>
++      <entry>Class <code>condition_variable</code></entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>30.5.2</entry>
++      <entry>Class <code>condition_variable_any</code></entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>30.6</entry>
++      <entry>Futures</entry>
++      <entry/>
++      <entry/>
++    </row>
++    <row>
++      <entry>30.6.1</entry>
++      <entry>Overview</entry>
++      <entry/>
++      <entry/>
++    </row>
++    <row>
++      <entry>30.6.2</entry>
++      <entry>Error handling</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>30.6.3</entry>
++      <entry>Class <code>future_error</code></entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>30.6.4</entry>
++      <entry>Shared state</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>30.6.5</entry>
++      <entry>Class template <code>promise</code></entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>30.6.6</entry>
++      <entry>Class template <code>future</code></entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>30.6.7</entry>
++      <entry>Class template <code>shared_future</code></entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>30.6.8</entry>
++      <entry>Function template <code>async</code></entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>30.6.9</entry>
++      <entry>Class template <code>packaged_task</code></entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>
++	<emphasis>Appendix D</emphasis>
++      </entry>
++      <entry namest="c2" nameend="c4" align="left">
++	<emphasis>Compatibility features</emphasis>
++      </entry>
++    </row>
++    <row>
++      <entry>D.1</entry>
++      <entry>Increment operator with <code>bool</code> operand</entry>
++      <entry/>
++      <entry/>
++    </row>
++    <row>
++      <entry>D.2</entry>
++      <entry><code>register</code> keyword</entry>
++      <entry/>
++      <entry/>
++    </row>
++    <row>
++      <entry>D.3</entry>
++      <entry>Implicit declaration of copy functions</entry>
++      <entry/>
++      <entry/>
++    </row>
++    <row>
++      <entry>D.4</entry>
++      <entry>Dynamic exception specifications</entry>
++      <entry/>
++      <entry/>
++    </row>
++    <row>
++      <entry>D.5</entry>
++      <entry>C standard library headers</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>D.6</entry>
++      <entry>Old iostreams members</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>D.7</entry>
++      <entry><code>char*</code> streams</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>D.8</entry>
++      <entry>Function objects</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>D.9</entry>
++      <entry>Binders</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>D.10</entry>
++      <entry><code>auto_ptr</code></entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>D.11</entry>
++      <entry>Violating exception-specifications</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++    <row>
++      <entry>D.12</entry>
++      <entry>Random shuffle</entry>
++      <entry>Y</entry>
++      <entry/>
++    </row>
++
++  </tbody>
++</tgroup>
++</table>
+ 
+ <table frame="all" xml:id="table.ts_status">
+ <title>C++ Technical Specifications Implementation Status</title>
+diff --git a/libstdc++-v3/doc/xml/manual/status_cxx2017.xml b/libstdc++-v3/doc/xml/manual/status_cxx2017.xml
+index e1513142415..898b029e66b 100644
+--- a/libstdc++-v3/doc/xml/manual/status_cxx2017.xml
++++ b/libstdc++-v3/doc/xml/manual/status_cxx2017.xml
+@@ -468,7 +468,7 @@ Feature-testing recommendations for C++</link>.
+ 	</link>
+       </entry>
+       <entry align="center"> 7.1 </entry>
+-      <entry><code> __cpp_lib_is_callable >= 201603 </code></entry>
++      <entry><code> __cpp_lib_is_invocable >= 201703 </code></entry>
+     </row>
+ 
+     <row>
+diff --git a/libstdc++-v3/include/bits/erase_if.h b/libstdc++-v3/include/bits/erase_if.h
+index 4641dbebd85..523bbecfab3 100644
+--- a/libstdc++-v3/include/bits/erase_if.h
++++ b/libstdc++-v3/include/bits/erase_if.h
+@@ -39,7 +39,7 @@ namespace std
+ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+ 
+ #if __cplusplus > 201703L
+-# define __cpp_lib_erase_if 201900L
++# define __cpp_lib_erase_if 202002L
+ #endif
+ 
+   namespace __detail
 diff --git a/libstdc++-v3/include/bits/fs_path.h b/libstdc++-v3/include/bits/fs_path.h
 index 5dc624dbb1e..6b39c46ac6e 100644
 --- a/libstdc++-v3/include/bits/fs_path.h
@@ -10930,6 +13159,32 @@ index 266a2487899..15f28de9b9d 100644
  
    template<typename _Tp> struct is_executor;
  
+diff --git a/libstdc++-v3/include/std/deque b/libstdc++-v3/include/std/deque
+index ed4927e13b7..b940dacb848 100644
+--- a/libstdc++-v3/include/std/deque
++++ b/libstdc++-v3/include/std/deque
+@@ -95,7 +95,7 @@ namespace std _GLIBCXX_VISIBILITY(default)
+ {
+ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+ 
+-#define __cpp_lib_erase_if 201900L
++#define __cpp_lib_erase_if 202002L
+ 
+   template<typename _Tp, typename _Alloc, typename _Predicate>
+     inline typename deque<_Tp, _Alloc>::size_type
+diff --git a/libstdc++-v3/include/std/forward_list b/libstdc++-v3/include/std/forward_list
+index 9d6cc40593b..4b319f93a61 100644
+--- a/libstdc++-v3/include/std/forward_list
++++ b/libstdc++-v3/include/std/forward_list
+@@ -66,7 +66,7 @@ namespace std _GLIBCXX_VISIBILITY(default)
+ {
+ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+ 
+-#define __cpp_lib_erase_if 201900L
++#define __cpp_lib_erase_if 202002L
+ 
+   template<typename _Tp, typename _Alloc, typename _Predicate>
+     inline typename forward_list<_Tp, _Alloc>::size_type 
 diff --git a/libstdc++-v3/include/std/functional b/libstdc++-v3/include/std/functional
 index 528452fed40..4b9c3449383 100644
 --- a/libstdc++-v3/include/std/functional
@@ -10943,6 +13198,58 @@ index 528452fed40..4b9c3449383 100644
  
      private:
        _Fn _M_fn;
+diff --git a/libstdc++-v3/include/std/list b/libstdc++-v3/include/std/list
+index 8d6ac198c9a..6fb5ea8dcc4 100644
+--- a/libstdc++-v3/include/std/list
++++ b/libstdc++-v3/include/std/list
+@@ -90,7 +90,7 @@ namespace std _GLIBCXX_VISIBILITY(default)
+ {
+ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+ 
+-#define __cpp_lib_erase_if 201900L
++#define __cpp_lib_erase_if 202002L
+ 
+   template<typename _Tp, typename _Alloc, typename _Predicate>
+     inline typename list<_Tp, _Alloc>::size_type
+diff --git a/libstdc++-v3/include/std/string b/libstdc++-v3/include/std/string
+index 6ccc06f337a..506cb78313e 100644
+--- a/libstdc++-v3/include/std/string
++++ b/libstdc++-v3/include/std/string
+@@ -118,7 +118,7 @@ namespace std _GLIBCXX_VISIBILITY(default)
+ {
+ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+ 
+-#define __cpp_lib_erase_if 201900L
++#define __cpp_lib_erase_if 202002L
+ 
+   template<typename _CharT, typename _Traits, typename _Alloc,
+ 	   typename _Predicate>
+diff --git a/libstdc++-v3/include/std/vector b/libstdc++-v3/include/std/vector
+index e5e13ab3ef7..1c1e2fd60e7 100644
+--- a/libstdc++-v3/include/std/vector
++++ b/libstdc++-v3/include/std/vector
+@@ -105,7 +105,7 @@ namespace std _GLIBCXX_VISIBILITY(default)
+ {
+ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+ 
+-#define __cpp_lib_erase_if 201900L
++#define __cpp_lib_erase_if 202002L
+ 
+   template<typename _Tp, typename _Alloc, typename _Predicate>
+     inline typename vector<_Tp, _Alloc>::size_type
+diff --git a/libstdc++-v3/include/std/version b/libstdc++-v3/include/std/version
+index 3c288301952..9dc7cbbb184 100644
+--- a/libstdc++-v3/include/std/version
++++ b/libstdc++-v3/include/std/version
+@@ -155,7 +155,7 @@
+ # define __cpp_lib_destroying_delete 201806L
+ #endif
+ #define __cpp_lib_endian 201907L
+-#define __cpp_lib_erase_if 201900L
++#define __cpp_lib_erase_if 202002L
+ #define __cpp_lib_interpolate 201902L
+ #ifdef _GLIBCXX_HAVE_BUILTIN_IS_CONSTANT_EVALUATED
+ # define __cpp_lib_is_constant_evaluated 201811L
 diff --git a/libstdc++-v3/src/c++17/fs_path.cc b/libstdc++-v3/src/c++17/fs_path.cc
 index 54bef75efd8..a6be0e03a78 100644
 --- a/libstdc++-v3/src/c++17/fs_path.cc
@@ -11056,6 +13363,159 @@ index 00000000000..4555284416d
 +{
 +  test01();
 +}
+diff --git a/libstdc++-v3/testsuite/21_strings/basic_string/erasure.cc b/libstdc++-v3/testsuite/21_strings/basic_string/erasure.cc
+index 873dd0cbf0f..a00faf94180 100644
+--- a/libstdc++-v3/testsuite/21_strings/basic_string/erasure.cc
++++ b/libstdc++-v3/testsuite/21_strings/basic_string/erasure.cc
+@@ -21,6 +21,12 @@
+ #include <string>
+ #include <testsuite_hooks.h>
+ 
++#ifndef __cpp_lib_erase_if
++# error "Feature-test macro for erase_if missing in <string>"
++#elif __cpp_lib_erase_if < 202002
++# error "Feature-test macro for erase_if has wrong value in <string>"
++#endif
++
+ void
+ test01()
+ {
+diff --git a/libstdc++-v3/testsuite/23_containers/deque/erasure.cc b/libstdc++-v3/testsuite/23_containers/deque/erasure.cc
+index 39ea6deecc2..da5330b300a 100644
+--- a/libstdc++-v3/testsuite/23_containers/deque/erasure.cc
++++ b/libstdc++-v3/testsuite/23_containers/deque/erasure.cc
+@@ -22,9 +22,9 @@
+ #include <testsuite_hooks.h>
+ 
+ #ifndef __cpp_lib_erase_if
+-# error "Feature-test macro for erase_if missing"
+-#elif __cpp_lib_erase_if < 201811
+-# error "Feature-test macro for erase_if has wrong value"
++# error "Feature-test macro for erase_if missing in <deque>"
++#elif __cpp_lib_erase_if < 202002
++# error "Feature-test macro for erase_if has wrong value in <deque>"
+ #endif
+ 
+ void
+diff --git a/libstdc++-v3/testsuite/23_containers/forward_list/erasure.cc b/libstdc++-v3/testsuite/23_containers/forward_list/erasure.cc
+index 724a720f654..50b35719471 100644
+--- a/libstdc++-v3/testsuite/23_containers/forward_list/erasure.cc
++++ b/libstdc++-v3/testsuite/23_containers/forward_list/erasure.cc
+@@ -22,9 +22,9 @@
+ #include <testsuite_hooks.h>
+ 
+ #ifndef __cpp_lib_erase_if
+-# error "Feature-test macro for erase_if missing"
+-#elif __cpp_lib_erase_if < 201811
+-# error "Feature-test macro for erase_if has wrong value"
++# error "Feature-test macro for erase_if missing in <forward_list>"
++#elif __cpp_lib_erase_if < 202002
++# error "Feature-test macro for erase_if has wrong value in <forward_list>"
+ #endif
+ 
+ void
+diff --git a/libstdc++-v3/testsuite/23_containers/list/erasure.cc b/libstdc++-v3/testsuite/23_containers/list/erasure.cc
+index a9927b484e1..ff849808fd9 100644
+--- a/libstdc++-v3/testsuite/23_containers/list/erasure.cc
++++ b/libstdc++-v3/testsuite/23_containers/list/erasure.cc
+@@ -22,9 +22,9 @@
+ #include <testsuite_hooks.h>
+ 
+ #ifndef __cpp_lib_erase_if
+-# error "Feature-test macro for erase_if missing"
+-#elif __cpp_lib_erase_if < 201811
+-# error "Feature-test macro for erase_if has wrong value"
++# error "Feature-test macro for erase_if missing in <list>"
++#elif __cpp_lib_erase_if < 202002
++# error "Feature-test macro for erase_if has wrong value in <list>"
+ #endif
+ 
+ void
+diff --git a/libstdc++-v3/testsuite/23_containers/map/erasure.cc b/libstdc++-v3/testsuite/23_containers/map/erasure.cc
+index d8a57160865..8e5955ffbd1 100644
+--- a/libstdc++-v3/testsuite/23_containers/map/erasure.cc
++++ b/libstdc++-v3/testsuite/23_containers/map/erasure.cc
+@@ -22,9 +22,9 @@
+ #include <testsuite_hooks.h>
+ 
+ #ifndef __cpp_lib_erase_if
+-# error "Feature-test macro for erase_if missing"
+-#elif __cpp_lib_erase_if < 201811
+-# error "Feature-test macro for erase_if has wrong value"
++# error "Feature-test macro for erase_if missing in <map>"
++#elif __cpp_lib_erase_if < 202002
++# error "Feature-test macro for erase_if has wrong value in <map>"
+ #endif
+ 
+ auto is_odd_pair = [](const std::pair<const int, std::string>& p)
+diff --git a/libstdc++-v3/testsuite/23_containers/set/erasure.cc b/libstdc++-v3/testsuite/23_containers/set/erasure.cc
+index 2412d69f75c..494d6315ea7 100644
+--- a/libstdc++-v3/testsuite/23_containers/set/erasure.cc
++++ b/libstdc++-v3/testsuite/23_containers/set/erasure.cc
+@@ -22,9 +22,9 @@
+ #include <testsuite_hooks.h>
+ 
+ #ifndef __cpp_lib_erase_if
+-# error "Feature-test macro for erase_if missing"
+-#elif __cpp_lib_erase_if < 201811
+-# error "Feature-test macro for erase_if has wrong value"
++# error "Feature-test macro for erase_if missing in <set>"
++#elif __cpp_lib_erase_if < 202002
++# error "Feature-test macro for erase_if has wrong value in <set>"
+ #endif
+ 
+ auto is_odd = [](const int i) { return i % 2 != 0; };
+diff --git a/libstdc++-v3/testsuite/23_containers/unordered_map/erasure.cc b/libstdc++-v3/testsuite/23_containers/unordered_map/erasure.cc
+index 35190a0d19e..1bfc53201dd 100644
+--- a/libstdc++-v3/testsuite/23_containers/unordered_map/erasure.cc
++++ b/libstdc++-v3/testsuite/23_containers/unordered_map/erasure.cc
+@@ -22,9 +22,9 @@
+ #include <testsuite_hooks.h>
+ 
+ #ifndef __cpp_lib_erase_if
+-# error "Feature-test macro for erase_if missing"
+-#elif __cpp_lib_erase_if < 201811
+-# error "Feature-test macro for erase_if has wrong value"
++# error "Feature-test macro for erase_if missing in <unordered_map>"
++#elif __cpp_lib_erase_if < 202002
++# error "Feature-test macro for erase_if has wrong value in <unordered_map>"
+ #endif
+ 
+ auto is_odd_pair = [](const std::pair<const int, std::string>& p)
+diff --git a/libstdc++-v3/testsuite/23_containers/unordered_set/erasure.cc b/libstdc++-v3/testsuite/23_containers/unordered_set/erasure.cc
+index 5ffabf538bd..97aa24c4834 100644
+--- a/libstdc++-v3/testsuite/23_containers/unordered_set/erasure.cc
++++ b/libstdc++-v3/testsuite/23_containers/unordered_set/erasure.cc
+@@ -22,9 +22,9 @@
+ #include <testsuite_hooks.h>
+ 
+ #ifndef __cpp_lib_erase_if
+-# error "Feature-test macro for erase_if missing"
+-#elif __cpp_lib_erase_if < 201811
+-# error "Feature-test macro for erase_if has wrong value"
++# error "Feature-test macro for erase_if missing in <unordered_set>"
++#elif __cpp_lib_erase_if < 202002
++# error "Feature-test macro for erase_if has wrong value in <unordered_set>"
+ #endif
+ 
+ void
+diff --git a/libstdc++-v3/testsuite/23_containers/vector/erasure.cc b/libstdc++-v3/testsuite/23_containers/vector/erasure.cc
+index 0a23c3f0d12..ec479053cf1 100644
+--- a/libstdc++-v3/testsuite/23_containers/vector/erasure.cc
++++ b/libstdc++-v3/testsuite/23_containers/vector/erasure.cc
+@@ -22,9 +22,9 @@
+ #include <testsuite_hooks.h>
+ 
+ #ifndef __cpp_lib_erase_if
+-# error "Feature-test macro for erase_if missing"
+-#elif __cpp_lib_erase_if < 201811
+-# error "Feature-test macro for erase_if has wrong value"
++# error "Feature-test macro for erase_if missing in <vector>"
++#elif __cpp_lib_erase_if < 202002
++# error "Feature-test macro for erase_if has wrong value in <vector>"
+ #endif
+ 
+ void
 diff --git a/libstdc++-v3/testsuite/27_io/filesystem/operations/last_write_time.cc b/libstdc++-v3/testsuite/27_io/filesystem/operations/last_write_time.cc
 index 3f31375f51b..5d6e62c421a 100644
 --- a/libstdc++-v3/testsuite/27_io/filesystem/operations/last_write_time.cc
