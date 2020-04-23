@@ -1,3 +1,6 @@
+Andre Vieira (1):
+      aarch64: Fix bootstrap with old binutils [PR93053]
+
 Andrea Corallo (1):
       aarch64: backport fix for PR target/94530
 
@@ -188,6 +191,9 @@ Martin Liska (3):
       Backport 314b91220a07bd63f13c58e37f1b5b9430a3702b
       Backport 55a7380213a5c16120d5c674fb42b38a3d796b57
       Backport e9f799d25973fc38022c5ea71ed5a2bca58a847f
+
+Martin Sebor (1):
+      c++: reject scalar array initialization with nullptr [PR94510]
 
 Max Filippov (2):
       xtensa: backport fix for PR target/91880
@@ -3061,10 +3067,25 @@ index 1ffefd5f482..9be446a862d 100644
    memcpy (da_file_name + prefix_len, filename, len);
    strcpy (da_file_name + prefix_len + len, GCOV_DATA_SUFFIX);
 diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
-index 6441d647a54..d81de9d32df 100644
+index 6441d647a54..f8070a55055 100644
 --- a/gcc/cp/ChangeLog
 +++ b/gcc/cp/ChangeLog
-@@ -1,3 +1,104 @@
+@@ -1,3 +1,119 @@
++2020-04-21  Martin Sebor  <msebor@redhat.com>
++	    Jason Merrill  <jason@redhat.com>
++
++	PR c++/94510
++	* decl.c (reshape_init_array_1): Avoid stripping redundant trailing
++	zero initializers...
++	* mangle.c (write_expression): ...and handle them here even for
++	pointers to members by calling zero_init_expr_p.
++	* cp-tree.h (zero_init_expr_p): Declare.
++	* tree.c (zero_init_expr_p): Define.
++	(type_initializer_zero_p): Remove.
++	* pt.c (tparm_obj_values): New hash_map.
++	(get_template_parm_object): Store to it.
++	(tparm_object_argument): New.
++
 +2020-04-20  Marek Polacek  <polacek@redhat.com>
 +
 +	Backported from mainline
@@ -3210,6 +3231,85 @@ index 4be45abca88..0e15b1c8147 100644
  }
  
  /* Fold expression X which is used as an rvalue if RVAL is true.  */
+diff --git a/gcc/cp/cp-tree.h b/gcc/cp/cp-tree.h
+index f7c3eea4cdf..0e0efd749bc 100644
+--- a/gcc/cp/cp-tree.h
++++ b/gcc/cp/cp-tree.h
+@@ -6844,6 +6844,7 @@ extern bool alias_type_or_template_p            (tree);
+ extern bool alias_template_specialization_p     (const_tree);
+ extern bool dependent_alias_template_spec_p     (const_tree);
+ extern bool template_parm_object_p		(const_tree);
++extern tree tparm_object_argument		(tree);
+ extern bool explicit_class_specialization_p     (tree);
+ extern bool push_tinst_level                    (tree);
+ extern bool push_tinst_level_loc                (tree, location_t);
+@@ -7216,6 +7217,7 @@ extern bool type_has_nontrivial_copy_init	(const_tree);
+ extern void maybe_warn_parm_abi			(tree, location_t);
+ extern bool class_tmpl_impl_spec_p		(const_tree);
+ extern int zero_init_p				(const_tree);
++extern bool zero_init_expr_p			(tree);
+ extern bool check_abi_tag_redeclaration		(const_tree, const_tree,
+ 						 const_tree);
+ extern bool check_abi_tag_args			(tree, tree);
+@@ -7327,11 +7329,6 @@ extern tree cxx_copy_lang_qualifiers		(const_tree, const_tree);
+ 
+ extern void cxx_print_statistics		(void);
+ extern bool maybe_warn_zero_as_null_pointer_constant (tree, location_t);
+-/* Analogous to initializer_zerop but also examines the type for
+-   which the initializer is being used.  Unlike initializer_zerop,
+-   considers empty strings to be zero initializers for arrays and
+-   non-zero for pointers.  */
+-extern bool type_initializer_zero_p		(tree, tree);
+ 
+ /* in ptree.c */
+ extern void cxx_print_xnode			(FILE *, tree, int);
+diff --git a/gcc/cp/decl.c b/gcc/cp/decl.c
+index 39d55589ef3..04d0b38ddf0 100644
+--- a/gcc/cp/decl.c
++++ b/gcc/cp/decl.c
+@@ -5826,9 +5826,6 @@ reshape_init_array_1 (tree elt_type, tree max_index, reshape_iter *d,
+ 	max_index_cst = tree_to_uhwi (fold_convert (size_type_node, max_index));
+     }
+ 
+-  /* Set to the index of the last element with a non-zero initializer.
+-     Zero initializers for elements past this one can be dropped.  */
+-  unsigned HOST_WIDE_INT last_nonzero = -1;
+   /* Loop until there are no more initializers.  */
+   for (index = 0;
+        d->cur != d->end && (!sized_array_p || index <= max_index_cst);
+@@ -5847,32 +5844,11 @@ reshape_init_array_1 (tree elt_type, tree max_index, reshape_iter *d,
+       if (!TREE_CONSTANT (elt_init))
+ 	TREE_CONSTANT (new_init) = false;
+ 
+-      /* Pointers initialized to strings must be treated as non-zero
+-	 even if the string is empty.  */
+-      tree init_type = TREE_TYPE (elt_init);
+-      if (POINTER_TYPE_P (elt_type) != POINTER_TYPE_P (init_type)
+-	  || !type_initializer_zero_p (elt_type, elt_init))
+-	last_nonzero = index;
+-
+       /* This can happen with an invalid initializer (c++/54501).  */
+       if (d->cur == old_cur && !sized_array_p)
+ 	break;
+     }
+ 
+-  if (sized_array_p && trivial_type_p (elt_type))
+-    {
+-      /* Strip trailing zero-initializers from an array of a trivial
+-	 type of known size.  They are redundant and get in the way
+-	 of telling them apart from those with implicit zero value.  */
+-      unsigned HOST_WIDE_INT nelts = CONSTRUCTOR_NELTS (new_init);
+-      if (last_nonzero > nelts)
+-	nelts = 0;
+-      else if (last_nonzero < nelts - 1)
+-	nelts = last_nonzero + 1;
+-
+-      vec_safe_truncate (CONSTRUCTOR_ELTS (new_init), nelts);
+-    }
+-
+   return new_init;
+ }
+ 
 diff --git a/gcc/cp/expr.c b/gcc/cp/expr.c
 index 9160043ed11..5a60da36025 100644
 --- a/gcc/cp/expr.c
@@ -3244,7 +3344,7 @@ index 9160043ed11..5a60da36025 100644
  	}
        gcc_fallthrough();
 diff --git a/gcc/cp/mangle.c b/gcc/cp/mangle.c
-index 6f194375261..2b9190aee29 100644
+index 6f194375261..bab9fdadfb7 100644
 --- a/gcc/cp/mangle.c
 +++ b/gcc/cp/mangle.c
 @@ -2856,6 +2856,7 @@ write_expression (tree expr)
@@ -3255,6 +3355,58 @@ index 6f194375261..2b9190aee29 100644
  	 || location_wrapper_p (expr)
  	 /* Parentheses aren't mangled.  */
  	 || code == PAREN_EXPR
+@@ -3156,7 +3157,8 @@ write_expression (tree expr)
+ 	  write_type (etype);
+ 	}
+ 
+-      if (!initializer_zerop (expr) || !trivial_type_p (etype))
++      bool nontriv = !trivial_type_p (etype);
++      if (nontriv || !zero_init_expr_p (expr))
+ 	{
+ 	  /* Convert braced initializer lists to STRING_CSTs so that
+ 	     A<"Foo"> mangles the same as A<{'F', 'o', 'o', 0}> while
+@@ -3167,19 +3169,22 @@ write_expression (tree expr)
+ 	  if (TREE_CODE (expr) == CONSTRUCTOR)
+ 	    {
+ 	      vec<constructor_elt, va_gc> *elts = CONSTRUCTOR_ELTS (expr);
+-	      unsigned last_nonzero = -1, i;
++	      unsigned last_nonzero = UINT_MAX, i;
+ 	      tree val;
+ 
+-	      FOR_EACH_CONSTRUCTOR_VALUE (elts, i, val)
+-		if (!initializer_zerop (val))
+-		  last_nonzero = i;
++	      if (!nontriv)
++		FOR_EACH_CONSTRUCTOR_VALUE (elts, i, val)
++		  if (!zero_init_expr_p (val))
++		    last_nonzero = i;
+ 
+-	      FOR_EACH_CONSTRUCTOR_VALUE (elts, i, val)
+-		{
+-		  if (i > last_nonzero)
+-		    break;
+-		  write_expression (val);
+-		}
++	      if (nontriv || last_nonzero != UINT_MAX)
++		FOR_EACH_CONSTRUCTOR_VALUE (elts, i, val)
++		  {
++		    if (i > last_nonzero)
++		      break;
++		    /* FIXME handle RANGE_EXPR */
++		    write_expression (val);
++		  }
+ 	    }
+ 	  else
+ 	    {
+@@ -3504,7 +3509,7 @@ write_template_arg (tree node)
+ 
+   if (template_parm_object_p (node))
+     /* We want to mangle the argument, not the var we stored it in.  */
+-    node = DECL_INITIAL (node);
++    node = tparm_object_argument (node);
+ 
+   /* Strip a conversion added by convert_nontype_argument.  */
+   if (TREE_CODE (node) == IMPLICIT_CONV_EXPR)
 diff --git a/gcc/cp/name-lookup.c b/gcc/cp/name-lookup.c
 index 8999c5ad4a7..f5535ba50bc 100644
 --- a/gcc/cp/name-lookup.c
@@ -3412,7 +3564,7 @@ index e1c02d7b718..db0276eb04f 100644
  	}
        else if (!flag_openmp)  /* flag_openmp_simd  */
 diff --git a/gcc/cp/pt.c b/gcc/cp/pt.c
-index 4787747b6ff..8d437c5072d 100644
+index 4787747b6ff..a4bbcb4e5d5 100644
 --- a/gcc/cp/pt.c
 +++ b/gcc/cp/pt.c
 @@ -3773,10 +3773,18 @@ find_parameter_packs_r (tree *tp, int *walk_subtrees, void* data)
@@ -3506,7 +3658,54 @@ index 4787747b6ff..8d437c5072d 100644
    for (int i = 0; i < len; ++i)
      if (!data.seen[i])
        return true;
-@@ -11824,6 +11868,7 @@ fold_expression (tree t, tree left, tree right, tsubst_flags_t complain)
+@@ -6709,6 +6753,11 @@ invalid_tparm_referent_p (tree type, tree expr, tsubst_flags_t complain)
+ 
+ }
+ 
++/* The template arguments corresponding to template parameter objects of types
++   that contain pointers to members.  */
++
++static GTY(()) hash_map<tree, tree> *tparm_obj_values;
++
+ /* Return a VAR_DECL for the C++20 template parameter object corresponding to
+    template argument EXPR.  */
+ 
+@@ -6742,10 +6791,34 @@ get_template_parm_object (tree expr, tsubst_flags_t complain)
+   SET_DECL_ASSEMBLER_NAME (decl, name);
+   DECL_CONTEXT (decl) = global_namespace;
+   comdat_linkage (decl);
++
++  if (!zero_init_p (type))
++    {
++      /* If EXPR contains any PTRMEM_CST, they will get clobbered by
++	 lower_var_init before we're done mangling.  So store the original
++	 value elsewhere.  */
++      tree copy = unshare_constructor (expr);
++      if (!tparm_obj_values)
++	tparm_obj_values = hash_map<tree, tree>::create_ggc (13);
++      tparm_obj_values->put (decl, copy);
++    }
++
+   pushdecl_top_level_and_finish (decl, expr);
++
+   return decl;
+ }
+ 
++/* Return the actual template argument corresponding to template parameter
++   object VAR.  */
++
++tree
++tparm_object_argument (tree var)
++{
++  if (zero_init_p (TREE_TYPE (var)))
++    return DECL_INITIAL (var);
++  return *(tparm_obj_values->get (var));
++}
++
+ /* Attempt to convert the non-type template parameter EXPR to the
+    indicated TYPE.  If the conversion is successful, return the
+    converted value.  If the conversion is unsuccessful, return
+@@ -11824,6 +11897,7 @@ fold_expression (tree t, tree left, tree right, tsubst_flags_t complain)
    if (FOLD_EXPR_MODIFY_P (t))
      return build_x_modify_expr (input_location, left, code, right, complain);
  
@@ -3514,7 +3713,7 @@ index 4787747b6ff..8d437c5072d 100644
    switch (code)
      {
      case COMPOUND_EXPR:
-@@ -17838,8 +17883,10 @@ tsubst_expr (tree t, tree args, tsubst_flags_t complain, tree in_decl,
+@@ -17838,8 +17912,10 @@ tsubst_expr (tree t, tree args, tsubst_flags_t complain, tree in_decl,
        add_stmt (t);
        break;
  
@@ -3526,7 +3725,7 @@ index 4787747b6ff..8d437c5072d 100644
        stmt = push_stmt_list ();
        RECUR (OMP_BODY (t));
        stmt = pop_stmt_list (stmt);
-@@ -27376,10 +27423,13 @@ build_deduction_guide (tree ctor, tree outer_args, tsubst_flags_t complain)
+@@ -27376,10 +27452,13 @@ build_deduction_guide (tree ctor, tree outer_args, tsubst_flags_t complain)
  				     complain, ctor);
  	  if (fparms == error_mark_node)
  	    ok = false;
@@ -3556,7 +3755,7 @@ index 4bfb5d15293..559e38dbc14 100644
  
    if (code == LABEL_EXPR || code == CASE_LABEL_EXPR)
 diff --git a/gcc/cp/tree.c b/gcc/cp/tree.c
-index 3f3583c825d..ff150245d72 100644
+index 3f3583c825d..1614f346a59 100644
 --- a/gcc/cp/tree.c
 +++ b/gcc/cp/tree.c
 @@ -2402,6 +2402,8 @@ is_overloaded_fn (tree x)
@@ -3594,6 +3793,117 @@ index 3f3583c825d..ff150245d72 100644
  	  return false;
  	for (arg1 = first_call_expr_arg (t1, &iter1),
  	       arg2 = first_call_expr_arg (t2, &iter2);
+@@ -4364,6 +4376,33 @@ zero_init_p (const_tree t)
+   return 1;
+ }
+ 
++/* Returns true if the expression or initializer T is the result of
++   zero-initialization for its type, taking pointers to members
++   into consideration.  */
++
++bool
++zero_init_expr_p (tree t)
++{
++  tree type = TREE_TYPE (t);
++  if (!type || dependent_type_p (type))
++    return false;
++  if (zero_init_p (type))
++    return initializer_zerop (t);
++  if (TYPE_PTRMEM_P (type))
++    return null_member_pointer_value_p (t);
++  if (TREE_CODE (t) == CONSTRUCTOR
++      && CP_AGGREGATE_TYPE_P (type))
++    {
++      tree elt_init;
++      unsigned HOST_WIDE_INT i;
++      FOR_EACH_CONSTRUCTOR_VALUE (CONSTRUCTOR_ELTS (t), i, elt_init)
++	if (!zero_init_expr_p (elt_init))
++	  return false;
++      return true;
++    }
++  return false;
++}
++
+ /* Handle the C++17 [[nodiscard]] attribute, which is similar to the GNU
+    warn_unused_result attribute.  */
+ 
+@@ -5492,76 +5531,6 @@ maybe_warn_zero_as_null_pointer_constant (tree expr, location_t loc)
+   return false;
+ }
+ 
+-/* Given an initializer INIT for a TYPE, return true if INIT is zero
+-   so that it can be replaced by value initialization.  This function
+-   distinguishes betwen empty strings as initializers for arrays and
+-   for pointers (which make it return false).  */
+-
+-bool
+-type_initializer_zero_p (tree type, tree init)
+-{
+-  if (type == error_mark_node || init == error_mark_node)
+-    return false;
+-
+-  STRIP_NOPS (init);
+-
+-  if (POINTER_TYPE_P (type))
+-    return TREE_CODE (init) != STRING_CST && initializer_zerop (init);
+-
+-  if (TREE_CODE (init) != CONSTRUCTOR)
+-    {
+-      /* A class can only be initialized by a non-class type if it has
+-	 a ctor that converts from that type.  Such classes are excluded
+-	 since their semantics are unknown.  */
+-      if (RECORD_OR_UNION_TYPE_P (type)
+-	  && !RECORD_OR_UNION_TYPE_P (TREE_TYPE (init)))
+-	return false;
+-      return initializer_zerop (init);
+-    }
+-
+-  if (TREE_CODE (type) == ARRAY_TYPE)
+-    {
+-      tree elt_type = TREE_TYPE (type);
+-      elt_type = TYPE_MAIN_VARIANT (elt_type);
+-      if (elt_type == char_type_node)
+-	return initializer_zerop (init);
+-
+-      tree elt_init;
+-      unsigned HOST_WIDE_INT i;
+-      FOR_EACH_CONSTRUCTOR_VALUE (CONSTRUCTOR_ELTS (init), i, elt_init)
+-	if (!type_initializer_zero_p (elt_type, elt_init))
+-	  return false;
+-      return true;
+-    }
+-
+-  if (TREE_CODE (type) != RECORD_TYPE)
+-    return initializer_zerop (init);
+-
+-  if (TYPE_NON_AGGREGATE_CLASS (type))
+-    return false;
+-
+-  tree fld = TYPE_FIELDS (type);
+-
+-  tree fld_init;
+-  unsigned HOST_WIDE_INT i;
+-  FOR_EACH_CONSTRUCTOR_VALUE (CONSTRUCTOR_ELTS (init), i, fld_init)
+-    {
+-      fld = next_initializable_field (fld);
+-      if (!fld)
+-	return true;
+-
+-      tree fldtype = TREE_TYPE (fld);
+-      if (!type_initializer_zero_p (fldtype, fld_init))
+-	return false;
+-
+-      fld = DECL_CHAIN (fld);
+-      if (!fld)
+-	break;
+-    }
+-
+-  return true;
+-}
+-
+ #if defined ENABLE_TREE_CHECKING && (GCC_VERSION >= 2007)
+ /* Complain that some language-specific thing hanging off a tree
+    node has been accessed improperly.  */
 diff --git a/gcc/d/ChangeLog b/gcc/d/ChangeLog
 index f8268e87d4d..9cc59c8ad1d 100644
 --- a/gcc/d/ChangeLog
@@ -4369,10 +4679,18 @@ index 7916344c584..3e969e52176 100644
  extern void mark_end_of_function_resources (rtx, bool);
  extern void init_resource_info (rtx_insn *);
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..74a3cdf7b80 100644
+index e132f2657ef..4bfeef9ea6b 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,448 @@
+@@ -1,3 +1,456 @@
++2020-04-21  Martin Sebor  <msebor@redhat.com>
++
++	PR c++/94510
++	* g++.dg/init/array58.C: New test.
++	* g++.dg/init/array59.C: New test.
++	* g++.dg/cpp2a/nontype-class34.C: New test.
++	* g++.dg/cpp2a/nontype-class35.C: New test.
++
 +2020-04-21  Martin Jambor  <mjambor@suse.cz>
 +
 +	Backport from master
@@ -4839,6 +5157,81 @@ index 00000000000..0611921295c
 +{
 +  *y = (({ __builtin_convertvector (*x, V); }));
 +}
+diff --git a/gcc/testsuite/g++.dg/abi/mangle72.C b/gcc/testsuite/g++.dg/abi/mangle72.C
+index 656a0cae403..308865bd2c6 100644
+--- a/gcc/testsuite/g++.dg/abi/mangle72.C
++++ b/gcc/testsuite/g++.dg/abi/mangle72.C
+@@ -24,56 +24,50 @@ struct B { padm_t a[2]; };
+ template <B> struct Y { };
+ 
+ void g__ (Y<B{{ }}>) { }
+-// { dg-final { scan-assembler "_Z3g__1YIXtl1BtlA2_M1AA2_iLS3_0EEEEE" } }
++// { dg-final { scan-assembler "_Z3g__1YIXtl1BEEE" } }
+ 
+ void g0_ (Y<B{{ 0 }}>) { }
+-// { dg-final { scan-assembler "_Z3g0_1YIXtl1BtlA2_M1AA2_iLS3_0EEEEE" } }
++// { dg-final { scan-assembler "_Z3g0_1YIXtl1BEEE" } }
+ 
+ void g00 (Y<B{{ 0, 0 }}>) { }
+-// { dg-final { scan-assembler "_Z3g001YIXtl1BtlA2_M1AA2_iLS3_0EEEEE" } }
++// { dg-final { scan-assembler "_Z3g001YIXtl1BEEE" } }
+ 
+ void g0x (Y<B{{ 0, &A::a }}>) { }
+-// FIXME: This needs to mangle differently from g00.  The space at
+-// the end is intentional to make the directive fail so that the xfail
+-// can be reminder to change this once the mangling is fixed.
+-// { dg-final { scan-assembler "_Z3g0x1YIXtl1BtlA2_M1AA2_iLS3_0EEEEE " { xfail *-*-* } } }
++// { dg-final { scan-assembler "_Z3g0x1YIXtl1BtlA2_M1AA2_iLS3_0EadL_ZNS1_1aEEEEEE" } }
+ 
+ void gx_ (Y<B{{ &A::a }}>) { }
+-// { dg-final { scan-assembler "_Z3gx_1YIXtl1BtlA2_M1AA2_iLS3_0ELS3_0EEEEE" } }
++// { dg-final { scan-assembler "_Z3gx_1YIXtl1BtlA2_M1AA2_iadL_ZNS1_1aEEEEEE" } }
+ 
+ 
+ struct C { padm_t a[3]; };
+ template <C> struct Z { };
+ 
+ void h___ (Z<C{{ }}>) { }
+-// { dg-final { scan-assembler "_Z4h___1ZIXtl1CtlA3_M1AA2_iLS3_0EEEEE" } }
++// { dg-final { scan-assembler "_Z4h___1ZIXtl1CEEE" } }
+ 
+ void h0__ (Z<C{{ 0 }}>) { }
+-// { dg-final { scan-assembler "_Z4h0__1ZIXtl1CtlA3_M1AA2_iLS3_0EEEEE" } }
++// { dg-final { scan-assembler "_Z4h0__1ZIXtl1CEEE" } }
+ 
+ void h00_ (Z<C{{ 0, 0 }}>) { }
+-// { dg-final { scan-assembler "_Z4h00_1ZIXtl1CtlA3_M1AA2_iLS3_0EEEEE" } }
++// { dg-final { scan-assembler "_Z4h00_1ZIXtl1CEEE" } }
+ 
+ void h000 (Z<C{{ 0, 0, 0 }}>) { }
+-// { dg-final { scan-assembler "_Z4h0001ZIXtl1CtlA3_M1AA2_iLS3_0EEEEE" } }
++// { dg-final { scan-assembler "_Z4h0001ZIXtl1CEEE" } }
+ 
+ void h00x (Z<C{{ 0, 0, &A::a }}>) { }
+-// FIXME: This needs to mangle differently from hx0_ and hx__.
+-// { dg-final { scan-assembler "_Z4h00x1ZIXtl1CtlA3_M1AA2_iLS3_0ELS3_0EEEEE " { xfail *-*-*} } }
++// { dg-final { scan-assembler "_Z4h00x1ZIXtl1CtlA3_M1AA2_iLS3_0ELS3_0EadL_ZNS1_1aEEEEEE" } }
+ 
+ void h0x0 (Z<C{{ 0, &A::a, 0 }}>) { }
+-// { dg-final { scan-assembler "_Z4h0x01ZIXtl1CtlA3_M1AA2_iLS3_0ELS3_0ELS3_0EEEEE" } }
++// { dg-final { scan-assembler "_Z4h0x01ZIXtl1CtlA3_M1AA2_iLS3_0EadL_ZNS1_1aEEEEEE" } }
+ 
+ void h0x_ (Z<C{{ 0, &A::a }}>) { }
+-// { dg-final { scan-assembler "_Z4h0x_1ZIXtl1CtlA3_M1AA2_iLS3_0ELS3_0ELS3_0EEEEE" } }
++// { dg-final { scan-assembler "_Z4h0x_1ZIXtl1CtlA3_M1AA2_iLS3_0EadL_ZNS1_1aEEEEEE" } }
+ 
+ void hx0_ (Z<C{{ &A::a, 0 }}>) { }
+-// FIXME: This needs to mangle differently from h00x and hx__.
+-// { dg-final { scan-assembler "_Z4hx0_1ZIXtl1CtlA3_M1AA2_iLS3_0ELS3_0EEEEE " { xfail *-*-*} } }
++// { dg-final { scan-assembler "_Z4hx0_1ZIXtl1CtlA3_M1AA2_iadL_ZNS1_1aEEEEEE" } }
+ 
+ void hx__ (Z<C{{ &A::a }}>) { }
+-// FIXME: This needs to mangle differently from h00x and hx0_.
+-// { dg-final { scan-assembler "_Z4hx__1ZIXtl1CtlA3_M1AA2_iLS3_0ELS3_0EEEEE " { xfail *-*-* } } }
++// { dg-final { scan-assembler "_Z4hx__1ZIXtl1CtlA3_M1AA2_iadL_ZNS1_1aEEEEEE" } }
+ 
+ 
+ // Exercise arrays of pointers to function members.
 diff --git a/gcc/testsuite/g++.dg/abi/mangle75.C b/gcc/testsuite/g++.dg/abi/mangle75.C
 new file mode 100644
 index 00000000000..f2661997a33
@@ -5107,6 +5500,174 @@ index 00000000000..09a30555eee
 +int main () {
 +    foo<true, false, false, true> ();
 +}
+diff --git a/gcc/testsuite/g++.dg/cpp2a/nontype-class36.C b/gcc/testsuite/g++.dg/cpp2a/nontype-class36.C
+new file mode 100644
+index 00000000000..1c1e23c10a8
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp2a/nontype-class36.C
+@@ -0,0 +1,76 @@
++/* PR c++/94510 - nullptr_t implicitly cast to zero twice in std::array
++   { dg-do compile { target c++2a } }
++   { dg-options "-Wall" } */
++
++struct A { int i; int f (); };
++typedef int A::*MemPtr;
++typedef int (A::*MemFuncPtr)();
++
++struct B { MemPtr a[3]; MemFuncPtr b[3]; };
++
++static const constexpr MemPtr mp0 = { 0 };
++static const constexpr MemPtr mpn = { nullptr };
++static const constexpr MemPtr mp_ = { };
++static const constexpr MemPtr mpi = { &A::i };
++
++template <B> struct X { };
++
++typedef X<B{ }>                               XB;
++typedef X<B{ 0 }>                             XB;
++typedef X<B{{ 0 }}>                           XB;
++typedef X<B{{ MemPtr{ }}}>                    XB;
++typedef X<B{{ MemPtr{ 0 }}}>                  XB;
++typedef X<B{{ MemPtr () }}>                   XB;
++typedef X<B{{ MemPtr{ nullptr }}}>            XB;
++typedef X<B{{ mp_ }}>                         XB;
++typedef X<B{{ mpn }}>                         XB;
++typedef X<B{{ mp0 }}>                         XB;
++
++typedef X<B{ mpi }>                           XBp;
++typedef X<B{ mpi, 0 }>                        XBp;
++typedef X<B{{ mpi, 0 }}>                      XBp;
++typedef X<B{{ mpi, MemPtr{ }}}>               XBp;
++typedef X<B{{ mpi, MemPtr{ 0 }}}>             XBp;
++typedef X<B{{ mpi, MemPtr () }}>              XBp;
++typedef X<B{{ mpi, MemPtr{ nullptr }}}>       XBp;
++typedef X<B{{ mpi, mp_ }}>                    XBp;
++typedef X<B{{ mpi, mpn }}>                    XBp;
++typedef X<B{{ mpi, mp0 }}>                    XBp;
++
++typedef X<B{ mpi, mpi }>                      XBpp;
++typedef X<B{ mpi, mpi, 0 }>                   XBpp;
++typedef X<B{{ mpi, mpi, 0 }}>                 XBpp;
++typedef X<B{{ mpi, mpi, MemPtr{ }}}>          XBpp;
++typedef X<B{{ mpi, mpi, MemPtr{ 0 }}}>        XBpp;
++typedef X<B{{ mpi, mpi, MemPtr () }}>         XBpp;
++typedef X<B{{ mpi, mpi, MemPtr{ nullptr }}}>  XBpp;
++typedef X<B{{ mpi, mpi, mp_ }}>               XBpp;
++typedef X<B{{ mpi, mpi, mpn }}>               XBpp;
++typedef X<B{{ mpi, mpi, mp0 }}>               XBpp;
++
++typedef X<B{ 0, mpi }>                        XB0p;
++typedef X<B{ nullptr, mpi, 0 }>               XB0p;
++typedef X<B{ mp0, mpi, 0 }>                   XB0p;
++
++typedef X<B{ 0, 0, mpi }>                     XB00p;
++typedef X<B{ 0, nullptr, mpi }>               XB00p;
++typedef X<B{ nullptr, 0, mpi }>               XB00p;
++typedef X<B{ nullptr, nullptr, mpi }>         XB00p;
++typedef X<B{ MemPtr{ }, MemPtr{ }, mpi }>     XB00p;
++typedef X<B{ mp0, MemPtr{ }, mpi }>           XB00p;
++typedef X<B{ mpn, mpn, mpi }>                 XB00p;
++typedef X<B{ mpn, mp_, mpi }>                 XB00p;  // { dg-bogus "conflicting declaration" "pr94568" { xfail *-*-* } }
++
++static const constexpr MemFuncPtr mfp0 = { 0 };
++static const constexpr MemFuncPtr mfpn = { nullptr };
++static const constexpr MemFuncPtr mfp_ = { };
++
++typedef X<B{{ }, { }}>                        XB;
++typedef X<B{{ }, { 0 }}>                      XB;
++typedef X<B{{ }, { MemFuncPtr{ }}}>           XB;
++typedef X<B{{ }, { MemFuncPtr{ 0 }}}>         XB;
++typedef X<B{{ }, { MemFuncPtr () }}>          XB;
++typedef X<B{{ }, { MemFuncPtr{ nullptr }}}>   XB;
++typedef X<B{{ }, { mfp_ }}>                   XB;
++typedef X<B{{ }, { mfpn }}>                   XB;
++typedef X<B{{ }, { mfp0 }}>                   XB;
+diff --git a/gcc/testsuite/g++.dg/cpp2a/nontype-class37.C b/gcc/testsuite/g++.dg/cpp2a/nontype-class37.C
+new file mode 100644
+index 00000000000..5649fa2e6dc
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp2a/nontype-class37.C
+@@ -0,0 +1,80 @@
++/* PR c++/94510 - nullptr_t implicitly cast to zero twice in std::array
++   { dg-do compile { target c++2a } }
++   { dg-options "-Wall" } */
++
++struct A { char a[4]; };
++template <A> struct B { };
++
++constexpr const char c0{ };
++constexpr const char c1{ 1 };
++
++typedef B<A{ }>                     BA;
++typedef B<A{ { } }>                 BA;
++typedef B<A{ { 0 } }>               BA;
++typedef B<A{ { c0 } }>              BA;
++typedef B<A{ { 0, 0 } }>            BA;
++typedef B<A{ { 0, 0, 0 } }>         BA;
++typedef B<A{ { 0, 0, 0, 0 } }>      BA;
++typedef B<A{ { c0, c0, c0 } }>      BA;
++typedef B<A{ { c0, c0, c0, c0 } }>  BA;
++typedef B<A{ "" }>                  BA;
++typedef B<A{ "\0" }>                BA;
++typedef B<A{ "\0\0" }>              BA;
++typedef B<A{ "\0\0\0" }>            BA;
++
++typedef B<A{ 1 }>                   BA1;
++typedef B<A{ { 1 } }>               BA1;
++typedef B<A{ { 1, 0 } }>            BA1;
++typedef B<A{ { 1, 0, 0 } }>         BA1;
++typedef B<A{ { 1, 0, 0, 0 } }>      BA1;
++typedef B<A{ { c1 } }>              BA1;
++typedef B<A{ { c1, c0 } }>          BA1;
++typedef B<A{ { c1, c0, c0 } }>      BA1;
++typedef B<A{ { c1, c0, c0, c0 } }>  BA1;
++typedef B<A{ "\1" }>                BA1;
++typedef B<A{ "\1\0" }>              BA1;
++typedef B<A{ "\1\0\0" }>            BA1;
++
++typedef B<A{ 0, 1 }>                BA01;
++typedef B<A{ { 0, 1 } }>            BA01;
++typedef B<A{ { 0, 1, 0 } }>         BA01;
++typedef B<A{ { 0, 1, 0, 0 } }>      BA01;
++typedef B<A{ { c0, c1 } }>          BA01;
++typedef B<A{ { c0, c1, c0 } }>      BA01;
++typedef B<A{ { c0, c1, c0, c0 } }>  BA01;
++typedef B<A{ "\0\1" }>              BA01;
++typedef B<A{ "\0\1\0" }>            BA01;
++
++
++struct C { int a[4]; };
++template <C> struct D { };
++
++constexpr const int i0{ };
++
++typedef D<C{ }>                     DC;
++typedef D<C{ { } }>                 DC;
++typedef D<C{ { 0 } }>               DC;
++typedef D<C{ { 0, 0 } }>            DC;
++typedef D<C{ { 0, 0, 0 } }>         DC;
++typedef D<C{ { 0, 0, 0, 0 } }>      DC;
++typedef D<C{ { i0 } }>              DC;
++typedef D<C{ { i0, i0 } }>          DC;
++typedef D<C{ { i0, i0, i0 } }>      DC;
++typedef D<C{ { i0, i0, i0, i0 } }>  DC;
++
++
++constexpr const int i1{ 1 };
++
++typedef D<C{ 1 }>                   DC1;
++typedef D<C{ { 1 } }>               DC1;
++typedef D<C{ { 1, 0 } }>            DC1;
++typedef D<C{ { 1, 0, 0 } }>         DC1;
++typedef D<C{ { 1, 0, 0, 0 } }>      DC1;
++typedef D<C{ { i1, i0, i0, i0 } }>  DC1;
++
++typedef D<C{ 0, 1 }>                DC01;
++typedef D<C{ { 0, 1 } }>            DC01;
++typedef D<C{ { 0, 1, 0 } }>         DC01;
++typedef D<C{ { 0, 1, 0, 0 } }>      DC01;
++typedef D<C{ { 0, i1, 0, 0 } }>     DC01;
++typedef D<C{ { i0, i1, i0, i0 } }>  DC01;   // { dg-bogus "conflicting declaration" "pr94567" { xfail *-*-* } }
 diff --git a/gcc/testsuite/g++.dg/debug/pr94459.C b/gcc/testsuite/g++.dg/debug/pr94459.C
 new file mode 100644
 index 00000000000..ebc0cf45cc6
@@ -5249,6 +5810,86 @@ index 00000000000..d54a4dcc8cc
 +  K x;
 +  return foo (x);
 +}
+diff --git a/gcc/testsuite/g++.dg/init/array58.C b/gcc/testsuite/g++.dg/init/array58.C
+new file mode 100644
+index 00000000000..70e86445c07
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/init/array58.C
+@@ -0,0 +1,26 @@
++/* PR c++/94510 - nullptr_t implicitly cast to zero twice in std::array
++   { dg-do compile } */
++
++int ia1[2] = { (void*)0 };              // { dg-error "invalid conversion from 'void\\\*'" }
++int ia2[2] = { (void*)0, 0 };           // { dg-error "invalid conversion from 'void\\\*'" }
++int ia3[] = { (void*)0, 0 };            // { dg-error "invalid conversion from 'void\\\*'" }
++
++int ia4[2] = { __null };                // { dg-warning "\\\[-Wconversion-null" }
++int ia5[2] = { __null, 0 };             // { dg-warning "\\\[-Wconversion-null" }
++int ia6[] = { __null, 0 };              // { dg-warning "\\\[-Wconversion-null" }
++
++
++const char ca1[2] = { (char*)0, 0 };    // { dg-error "invalid conversion from 'char\\\*'" }
++
++const char ca2[2] = { __null, 0 };      // { dg-warning "\\\[-Wconversion-null" }
++
++
++typedef void Func ();
++const char ca6[2] = { (Func*)0, 0 };    // { dg-error "invalid conversion from 'void \\\(\\\*\\\)\\\(\\\)' to 'char'" }
++
++struct S;
++typedef int S::*MemPtr;
++typedef int (S::*MemFuncPtr)();
++
++const char ca4[2] = { (MemPtr)0, 0 };   // { dg-error "cannot convert 'MemPtr' " }
++const char ca5[2] = { (MemFuncPtr)0, 0 };   // { dg-error "cannot convert 'int \\\(S::\\\*\\\)\\\(\\\)' "  }
+diff --git a/gcc/testsuite/g++.dg/init/array59.C b/gcc/testsuite/g++.dg/init/array59.C
+new file mode 100644
+index 00000000000..e8680de9456
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/init/array59.C
+@@ -0,0 +1,42 @@
++/* PR c++/94510 - nullptr_t implicitly cast to zero twice in std::array
++   { dg-do compile { target c++11 } } */
++
++namespace std {
++typedef __typeof__ (nullptr) nullptr_t;
++}
++
++int ia1[2] = { nullptr };                 // { dg-error "cannot convert 'std::nullptr_t' to 'int'" }
++int ia2[2] = { nullptr, 0 };              // { dg-error "cannot convert 'std::nullptr_t' to 'int'" }
++int ia3[] = { nullptr, 0 };               // { dg-error "cannot convert 'std::nullptr_t' to 'int'" }
++
++int ia4[2] = { (std::nullptr_t)0 };      // { dg-error "cannot convert 'std::nullptr_t' to 'int'" }
++int ia5[2] = { (std::nullptr_t)0, 0 };   // { dg-error "cannot convert 'std::nullptr_t' to 'int'" }
++int ia6[] = { (std::nullptr_t)0, 0 };    // { dg-error "cannot convert 'std::nullptr_t' to 'int'" }
++
++
++const char ca1[2] = { nullptr, 0 };       // { dg-error "cannot convert 'std::nullptr_t' to 'const char'" }
++
++const char ca2[2] = { (char*)nullptr, 0 };// { dg-error "invalid conversion from 'char\\\*' to 'char'" }
++
++const char ca3[2] = { std::nullptr_t () };// { dg-error "cannot convert 'std::nullptr_t'" }
++
++/* Verify that arrays of member pointers can be initialized by a literal
++   zero as well as nullptr.  */
++
++struct S { };
++typedef int S::*MemPtr;
++typedef int (S::*MemFuncPtr)();
++
++MemPtr mp1[3] = { 0, nullptr, (MemPtr)0 };
++MemPtr mp2[3] = { 0, std::nullptr_t (), MemPtr () };
++
++MemPtr mp3[3] = { 0, (void*)0 };          // { dg-error "cannot convert 'void\\\*' to 'MemPtr' " }
++MemPtr mp4[3] = { 0, (S*)0 };             // { dg-error "cannot convert 'S\\\*' to 'MemPtr' " }
++MemPtr mp5[3] = { 0, S () };              // { dg-error "cannot convert 'S' to 'MemPtr' " }
++
++MemFuncPtr mfp1[3] = { 0, nullptr, (MemFuncPtr)0 };
++MemFuncPtr mfp2[3] = { 0, std::nullptr_t (), MemFuncPtr () };
++
++MemFuncPtr mfp3[3] = { 0, (void*)0 };     // { dg-error "cannot convert 'void\\\*' to 'MemFuncPtr' " }
++MemFuncPtr mfp4[3] = { 0, (S*)0 };        // { dg-error "cannot convert 'S\\\*' to 'MemFuncPtr' " }
++MemFuncPtr mfp5[3] = { 0, S () };         // { dg-error "cannot convert 'S' to 'MemFuncPtr' " }
 diff --git a/gcc/testsuite/g++.dg/lookup/pr84733.C b/gcc/testsuite/g++.dg/lookup/pr84733.C
 new file mode 100644
 index 00000000000..d0394eab891
@@ -8890,10 +9531,27 @@ index 9b8a3bd9308..b4c7edc249e 100644
        asm volatile ("fdivs\t%1" : "+t" (f) : "m" (g));
        /* No need for fwait, exception is triggered by emitted fstp.  */
 diff --git a/libgcc/ChangeLog b/libgcc/ChangeLog
-index a5c30516ff8..9a9d19814d8 100644
+index a5c30516ff8..74d3b8599c4 100644
 --- a/libgcc/ChangeLog
 +++ b/libgcc/ChangeLog
-@@ -1,3 +1,38 @@
+@@ -1,3 +1,55 @@
++2020-04-22  Andre Vieira  <andre.simoesdiasvieira@arm.com>
++
++	Backport from mainline.
++	2020-04-15  Jakub Jelinek  <jakub@redhat.com>
++
++	PR target/93053
++	* configure.ac (LIBGCC_CHECK_AS_LSE): Add HAVE_AS_LSE checking.
++	* config/aarch64/lse.S: Include auto-target.h, if HAVE_AS_LSE
++	is not defined, use just .arch armv8-a.
++	(B, M, N, OPN): Define.
++	(COMMENT): New .macro.
++	(CAS, CASP, SWP, LDOP): Use .inst directive if HAVE_AS_LSE is not
++	defined.  Otherwise, move the operands right after the glue? and
++	comment out operands where the macros are used.
++	* configure: Regenerated.
++	* config.in: Regenerated.
++
 +2020-04-19  Uroš Bizjak  <ubizjak@gmail.com>
 +
 +	* config/i386/sfp-exceptions.c (__sfp_handle_exceptions) [__SSE_MATH__]:
@@ -8965,10 +9623,20 @@ index 0f15fda3612..18e306b48a5 100644
  	;;
  alpha*-*-linux*)
 diff --git a/libgcc/config.in b/libgcc/config.in
-index d634af9d949..59a3d8daf52 100644
+index d634af9d949..5be5321d258 100644
 --- a/libgcc/config.in
 +++ b/libgcc/config.in
-@@ -43,6 +43,9 @@
+@@ -10,6 +10,9 @@
+    */
+ #undef HAVE_AS_CFI_SECTIONS
+ 
++/* Define to 1 if the assembler supports LSE. */
++#undef HAVE_AS_LSE
++
+ /* Define to 1 if the target assembler supports thread-local storage. */
+ #undef HAVE_CC_TLS
+ 
+@@ -43,6 +46,9 @@
  /* Define to 1 if you have the <string.h> header file. */
  #undef HAVE_STRING_H
  
@@ -8978,7 +9646,7 @@ index d634af9d949..59a3d8daf52 100644
  /* Define to 1 if you have the <sys/stat.h> header file. */
  #undef HAVE_SYS_STAT_H
  
-@@ -82,6 +85,11 @@
+@@ -82,6 +88,11 @@
  /* Define to 1 if the target use emutls for thread-local storage. */
  #undef USE_EMUTLS
  
@@ -9045,10 +9713,10 @@ index 00000000000..1a8f4c55213
 +#endif /* inhibit_libc */
 diff --git a/libgcc/config/aarch64/lse.S b/libgcc/config/aarch64/lse.S
 new file mode 100644
-index 00000000000..c7979382ad7
+index 00000000000..f7f1c19587b
 --- /dev/null
 +++ b/libgcc/config/aarch64/lse.S
-@@ -0,0 +1,235 @@
+@@ -0,0 +1,276 @@
 +/* Out-of-line LSE atomics for AArch64 architecture.
 +   Copyright (C) 2019 Free Software Foundation, Inc.
 +   Contributed by Linaro Ltd.
@@ -9099,8 +9767,14 @@ index 00000000000..c7979382ad7
 + * separately to minimize code size.
 + */
 +
++#include "auto-target.h"
++
 +/* Tell the assembler to accept LSE instructions.  */
++#ifdef HAVE_AS_LSE
 +	.arch armv8-a+lse
++#else
++	.arch armv8-a
++#endif
 +
 +/* Declare the symbol gating the LSE implementations.  */
 +	.hidden	__aarch64_have_lse_atomics
@@ -9109,12 +9783,19 @@ index 00000000000..c7979382ad7
 +#if SIZE == 1
 +# define S     b
 +# define UXT   uxtb
++# define B     0x00000000
 +#elif SIZE == 2
 +# define S     h
 +# define UXT   uxth
++# define B     0x40000000
 +#elif SIZE == 4 || SIZE == 8 || SIZE == 16
 +# define S
 +# define UXT   mov
++# if SIZE == 4
++#  define B    0x80000000
++# elif SIZE == 8
++#  define B    0xc0000000
++# endif
 +#else
 +# error
 +#endif
@@ -9123,18 +9804,26 @@ index 00000000000..c7979382ad7
 +# define SUFF  _relax
 +# define A
 +# define L
++# define M     0x000000
++# define N     0x000000
 +#elif MODEL == 2
 +# define SUFF  _acq
 +# define A     a
 +# define L
++# define M     0x400000
++# define N     0x800000
 +#elif MODEL == 3
 +# define SUFF  _rel
 +# define A
 +# define L     l
++# define M     0x008000
++# define N     0x400000
 +#elif MODEL == 4
 +# define SUFF  _acq_rel
 +# define A     a
 +# define L     l
++# define M     0x408000
++# define N     0xc00000
 +#else
 +# error
 +#endif
@@ -9195,9 +9884,13 @@ index 00000000000..c7979382ad7
 +	JUMP_IF_NOT_LSE	8f
 +
 +#if SIZE < 16
-+#define CAS	glue4(cas, A, L, S)
++#ifdef HAVE_AS_LSE
++# define CAS	glue4(cas, A, L, S)	s(0), s(1), [x2]
++#else
++# define CAS	.inst 0x08a07c41 + B + M
++#endif
 +
-+	CAS		s(0), s(1), [x2]
++	CAS		/* s(0), s(1), [x2] */
 +	ret
 +
 +8:	UXT		s(tmp0), s(0)
@@ -9211,9 +9904,13 @@ index 00000000000..c7979382ad7
 +#else
 +#define LDXP	glue3(ld, A, xp)
 +#define STXP	glue3(st, L, xp)
-+#define CASP	glue3(casp, A, L)
++#ifdef HAVE_AS_LSE
++# define CASP	glue3(casp, A, L)	x0, x1, x2, x3, [x4]
++#else
++# define CASP	.inst 0x48207c82 + M
++#endif
 +
-+	CASP		x0, x1, x2, x3, [x4]
++	CASP		/* x0, x1, x2, x3, [x4] */
 +	ret
 +
 +8:	mov		x(tmp0), x0
@@ -9232,12 +9929,16 @@ index 00000000000..c7979382ad7
 +#endif
 +
 +#ifdef L_swp
-+#define SWP	glue4(swp, A, L, S)
++#ifdef HAVE_AS_LSE
++# define SWP	glue4(swp, A, L, S)	s(0), s(0), [x1]
++#else
++# define SWP	.inst 0x38208020 + B + N
++#endif
 +
 +STARTFN	NAME(swp)
 +	JUMP_IF_NOT_LSE	8f
 +
-+	SWP		s(0), s(0), [x1]
++	SWP		/* s(0), s(0), [x1] */
 +	ret
 +
 +8:	mov		s(tmp0), s(0)
@@ -9255,24 +9956,32 @@ index 00000000000..c7979382ad7
 +#ifdef L_ldadd
 +#define LDNM	ldadd
 +#define OP	add
++#define OPN	0x0000
 +#elif defined(L_ldclr)
 +#define LDNM	ldclr
 +#define OP	bic
++#define OPN	0x1000
 +#elif defined(L_ldeor)
 +#define LDNM	ldeor
 +#define OP	eor
++#define OPN	0x2000
 +#elif defined(L_ldset)
 +#define LDNM	ldset
 +#define OP	orr
++#define OPN	0x3000
 +#else
 +#error
 +#endif
-+#define LDOP	glue4(LDNM, A, L, S)
++#ifdef HAVE_AS_LSE
++# define LDOP	glue4(LDNM, A, L, S)	s(0), s(0), [x1]
++#else
++# define LDOP	.inst 0x38200020 + OPN + B + N
++#endif
 +
 +STARTFN	NAME(LDNM)
 +	JUMP_IF_NOT_LSE	8f
 +
-+	LDOP		s(0), s(0), [x1]
++	LDOP		/* s(0), s(0), [x1] */
 +	ret
 +
 +8:	mov		s(tmp0), s(0)
@@ -9371,7 +10080,7 @@ index a6c56392acd..de4a2e06102 100644
 diff --git a/libgcc/configure b/libgcc/configure
 old mode 100644
 new mode 100755
-index 36dbbc1f699..cf42c057352
+index 36dbbc1f699..8ceec1d047f
 --- a/libgcc/configure
 +++ b/libgcc/configure
 @@ -674,6 +674,7 @@ infodir
@@ -9477,8 +10186,55 @@ index 36dbbc1f699..cf42c057352
  do :
    as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
  ac_fn_c_check_header_preproc "$LINENO" "$ac_header" "$as_ac_Header"
+@@ -5472,6 +5484,46 @@ $as_echo "#define HAVE_AS_AVX 1" >>confdefs.h
+   ;;
+ esac
+ 
++
++
++case "${target}" in
++aarch64*-*-*)
++  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if the assembler supports LSE" >&5
++$as_echo_n "checking if the assembler supports LSE... " >&6; }
++if ${libgcc_cv_as_lse+:} false; then :
++  $as_echo_n "(cached) " >&6
++else
++
++    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
++/* end confdefs.h.  */
++
++int
++main ()
++{
++			asm(".arch armv8-a+lse\n\tcas w0, w1, [x2]");
++
++  ;
++  return 0;
++}
++_ACEOF
++if ac_fn_c_try_compile "$LINENO"; then :
++  libgcc_cv_as_lse=yes
++else
++  libgcc_cv_as_lse=no
++fi
++rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
++
++fi
++{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $libgcc_cv_as_lse" >&5
++$as_echo "$libgcc_cv_as_lse" >&6; }
++  if test x$libgcc_cv_as_lse = xyes; then
++
++$as_echo "#define HAVE_AS_LSE 1" >>confdefs.h
++
++  fi
++  ;;
++esac
++
+ { $as_echo "$as_me:${as_lineno-$LINENO}: checking for init priority support" >&5
+ $as_echo_n "checking for init priority support... " >&6; }
+ if ${libgcc_cv_init_priority+:} false; then :
 diff --git a/libgcc/configure.ac b/libgcc/configure.ac
-index 8e96cafdf8b..0762d77a801 100644
+index 8e96cafdf8b..61356d0721d 100644
 --- a/libgcc/configure.ac
 +++ b/libgcc/configure.ac
 @@ -207,7 +207,7 @@ AC_SUBST(long_double_type_size)
@@ -9490,6 +10246,32 @@ index 8e96cafdf8b..0762d77a801 100644
  AC_HEADER_STDC
  
  # Check for decimal float support.
+@@ -564,6 +564,25 @@ i[[34567]]86-*-* | x86_64-*-*)
+ esac])
+ LIBGCC_CHECK_AS_AVX
+ 
++dnl Check if as supports LSE instructions.
++AC_DEFUN([LIBGCC_CHECK_AS_LSE], [
++case "${target}" in
++aarch64*-*-*)
++  AC_CACHE_CHECK([if the assembler supports LSE], libgcc_cv_as_lse, [
++    AC_TRY_COMPILE([],
++changequote(,)dnl
++			asm(".arch armv8-a+lse\n\tcas w0, w1, [x2]");
++changequote([,])dnl
++		       ,
++		   [libgcc_cv_as_lse=yes], [libgcc_cv_as_lse=no])
++  ])
++  if test x$libgcc_cv_as_lse = xyes; then
++    AC_DEFINE(HAVE_AS_LSE, 1, [Define to 1 if the assembler supports LSE.])
++  fi
++  ;;
++esac])
++LIBGCC_CHECK_AS_LSE
++
+ dnl Check if as supports RTM instructions.
+ AC_CACHE_CHECK(for init priority support, libgcc_cv_init_priority, [
+ AC_COMPILE_IFELSE([AC_LANG_PROGRAM(,
 diff --git a/libgfortran/ChangeLog b/libgfortran/ChangeLog
 index 01aa551b914..946c9f0100b 100644
 --- a/libgfortran/ChangeLog
