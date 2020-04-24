@@ -230,8 +230,9 @@ Tamar Christina (2):
       AArch64: Break apart paradoxical subregs for VSTRUCT writes (PR target/94052)
       AArch64: Fix options canonicanization for assembler
 
-Thomas König (1):
+Thomas König (2):
       Backport from trunk of the fix for PR 94270.
+      Fix PR 93956, wrong pointer when returned via function.
 
 Thomas Rodgers (3):
       libstdc++: Fix PSTL tests to run correctly with newer Thread Building Blocks
@@ -4241,10 +4242,19 @@ index c717f24501e..64273c1c6bc 100644
  				    "when distributing negation across "
  				    "division"),
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index 8fefea2b63d..03193c2f9d7 100644
+index 8fefea2b63d..787a7d57f79 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,65 @@
+@@ -1,3 +1,74 @@
++2020-04-24  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	Backport from trunk
++	PR fortran/93956
++	* expr.c (gfc_check_pointer_assign): Also set subref_array_pointer
++	when a function returns a pointer.
++	* interface.c (gfc_set_subref_array_pointer_arg): New function.
++	(gfc_procedure_use): Call it.
++
 +2020-04-20  Harald Anlauf  <anlauf@gmx.de>
 +
 +	Backport from mainline.
@@ -4445,6 +4455,76 @@ index abff4af9f67..86226b63ecc 100644
        else
  	sym->result = sym;
      }
+diff --git a/gcc/fortran/expr.c b/gcc/fortran/expr.c
+index 94f9eb00f71..deba751fe22 100644
+--- a/gcc/fortran/expr.c
++++ b/gcc/fortran/expr.c
+@@ -4196,8 +4196,11 @@ gfc_check_pointer_assign (gfc_expr *lvalue, gfc_expr *rvalue,
+   if (rvalue->expr_type == EXPR_NULL)
+     return true;
+ 
+-  if (rvalue->expr_type == EXPR_VARIABLE && is_subref_array (rvalue))
+-    lvalue->symtree->n.sym->attr.subref_array_pointer = 1;
++  /* A function may also return subref arrray pointer.  */
++
++  if ((rvalue->expr_type == EXPR_VARIABLE && is_subref_array (rvalue))
++      || rvalue->expr_type == EXPR_FUNCTION)
++      lvalue->symtree->n.sym->attr.subref_array_pointer = 1;
+ 
+   attr = gfc_expr_attr (rvalue);
+ 
+diff --git a/gcc/fortran/interface.c b/gcc/fortran/interface.c
+index b5701b1a59a..76bd1afd9c4 100644
+--- a/gcc/fortran/interface.c
++++ b/gcc/fortran/interface.c
+@@ -3654,6 +3654,36 @@ check_intents (gfc_formal_arglist *f, gfc_actual_arglist *a)
+   return true;
+ }
+ 
++/* Go through the argument list of a procedure and look for
++   pointers which may be set, possibly introducing a span.  */
++
++static void
++gfc_set_subref_array_pointer_arg (gfc_formal_arglist *dummy_args,
++				  gfc_actual_arglist *actual_args)
++{
++  gfc_formal_arglist *f;
++  gfc_actual_arglist *a;
++  gfc_symbol *a_sym;
++  for (f = dummy_args, a = actual_args; f && a ; f = f->next, a = a->next)
++    {
++
++      if (f->sym == NULL)
++	continue;
++
++      if (!f->sym->attr.pointer || f->sym->attr.intent == INTENT_IN)
++	continue;
++
++      if (a->expr == NULL || a->expr->expr_type != EXPR_VARIABLE)
++	continue;
++      a_sym = a->expr->symtree->n.sym;
++
++      if (!a_sym->attr.pointer)
++	continue;
++
++      a_sym->attr.subref_array_pointer = 1;
++    }
++  return;
++}
+ 
+ /* Check how a procedure is used against its interface.  If all goes
+    well, the actual argument list will also end up being properly
+@@ -3805,6 +3835,10 @@ gfc_procedure_use (gfc_symbol *sym, gfc_actual_arglist **ap, locus *where)
+   if (warn_aliasing)
+     check_some_aliasing (dummy_args, *ap);
+ 
++  /* Set the subref_array_pointer_arg if needed.  */
++  if (dummy_args)
++    gfc_set_subref_array_pointer_arg (dummy_args, *ap);
++
+   return true;
+ }
+ 
 diff --git a/gcc/fortran/match.c b/gcc/fortran/match.c
 index 088b69f8ec9..f4ae9e9dfe7 100644
 --- a/gcc/fortran/match.c
@@ -4695,10 +4775,24 @@ index 7916344c584..3e969e52176 100644
  extern void mark_end_of_function_resources (rtx, bool);
  extern void init_resource_info (rtx_insn *);
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..4bfeef9ea6b 100644
+index e132f2657ef..ec3b39c1dbd 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,456 @@
+@@ -1,3 +1,470 @@
++2020-04-24  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	Backport from trunk
++	PR fortran/93956
++	* gfortran.dg/pointer_assign_13.f90: New test.
++
++2020-04-23 Iain Sandoe <iain@sandoe.co.uk>
++
++	* g++.dg/coroutines/coro-bad-alloc-00-bad-op-new.C: Adjust for
++	changed inline namespace.
++	* g++.dg/coroutines/coro-bad-alloc-01-bad-op-del.C: Likewise.
++	* g++.dg/coroutines/coro-bad-alloc-02-no-op-new-nt.C: Likewise
++	* g++.dg/coroutines/coro.h: Likewise
++
 +2020-04-21  Martin Sebor  <msebor@redhat.com>
 +
 +	PR c++/94510
@@ -8459,6 +8553,59 @@ index 00000000000..50a83d9e5b1
 +  implicit none
 +  if (foo() /= 5) stop 1
 +end program main
+diff --git a/gcc/testsuite/gfortran.dg/pointer_assign_13.f90 b/gcc/testsuite/gfortran.dg/pointer_assign_13.f90
+new file mode 100644
+index 00000000000..b3f2cd9dab7
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pointer_assign_13.f90
+@@ -0,0 +1,47 @@
++! { dg-do run }
++! PR 93956 - span was set incorrectly, leading to wrong code.
++! Original test case by "martin".
++program array_temps
++  implicit none
++  
++  type :: tt
++     integer :: u = 1
++     integer :: v = 2
++  end type tt
++
++  type(tt), dimension(:), pointer :: r
++  integer :: n
++  integer, dimension(:), pointer :: p, q, u
++
++  n = 10
++  allocate(r(1:n))
++  call foo(r%v,n)
++  p => get(r(:))
++  call foo(p, n)
++  call get2(r,u)
++  call foo(u,n)
++  q => r%v
++  call foo(q, n)
++
++deallocate(r)
++
++contains
++
++   subroutine foo(a, n)
++      integer, dimension(:), intent(in) :: a
++      integer, intent(in) :: n
++      if (sum(a(1:n)) /= 2*n) stop 1
++   end subroutine foo
++
++   function get(x) result(q)
++      type(tt), dimension(:), target, intent(in) :: x
++      integer, dimension(:), pointer :: q
++      q => x(:)%v
++   end function get
++
++   subroutine get2(x,q)
++      type(tt), dimension(:), target, intent(in) :: x
++      integer, dimension(:), pointer, intent(out) :: q
++      q => x(:)%v
++    end subroutine get2
++end program array_temps
 diff --git a/gcc/testsuite/gfortran.dg/pr91913.f90 b/gcc/testsuite/gfortran.dg/pr91913.f90
 new file mode 100644
 index 00000000000..7d5477ac0c3
