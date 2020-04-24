@@ -25,7 +25,9 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (41):
+GCC Administrator (43):
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -136,7 +138,7 @@ Jiufu Guo (1):
 John David Anglin (1):
       Define __BIG_ENDIAN__
 
-Jonathan Wakely (11):
+Jonathan Wakely (20):
       libstdc++: Ensure root-dir converted to forward slash (PR93244)
       libstdc++: Fix FS-dependent filesystem tests
       libstdc++: Fix test failure due to -Wnonnull warnings
@@ -148,6 +150,15 @@ Jonathan Wakely (11):
       libstdc++: Document correct feature test macro, __cpp_lib_is_invocable
       libstdc++: Update __cpp_lib_erase_if macro (P1115R3)
       libstdc++: Improve C++14 status docs
+      libstdc++: Add __cpp_lib_unwrap_ref feature test macro
+      libstdc++: Fix some missing/incorrect feature test macros
+      Fix <version> header for freestanding
+      libstdc++: Define __cpp_lib_constexpr_complex macro
+      libstdc++: Define missing __cpp_lib_int_pow2 macro
+      libstdc++: Add comments to non-standard feature test macros
+      libstdc++: Add missing feature test macros
+      libstdc++: Update __cpp_lib_array_constexpr and __cpp_lib_string_view
+      libstdc++: Define __cpp_lib_execution feature test
 
 Joseph Myers (1):
       Remove wrongly committed file.
@@ -221,6 +232,11 @@ Tamar Christina (2):
 
 Thomas König (1):
       Backport from trunk of the fix for PR 94270.
+
+Thomas Rodgers (3):
+      libstdc++: Fix PSTL tests to run correctly with newer Thread Building Blocks
+      libstdc++: Fix date of changelog entry
+      libstdc++: Mark experimental::net::system_context ctor deleted
 
 Thomas Schwinge (1):
       Rename 'libgomp.oacc-c-c++-common/static-dynamic-lifetimes-*' to 'libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-*' [PR92843]
@@ -11578,10 +11594,116 @@ index 00000000000..919ee02b725
 +  return 0;
 +}
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
-index 45847172291..616b154e866 100644
+index 45847172291..9434ab185fe 100644
 --- a/libstdc++-v3/ChangeLog
 +++ b/libstdc++-v3/ChangeLog
-@@ -1,3 +1,104 @@
+@@ -1,3 +1,210 @@
++2020-04-23  Thomas Rodgers  <rodgert@appliantology.com>
++
++	Backport from mainline
++	2020-04-23  Thomas Rodgers  <rodgert@appliantology.com>
++	* include/experimental/net/executor (system_context): Mark
++	system_context::system_context() = delete.
++	* testsuite/experimental/net/executor/1.cc: Add new
++	test to check system_context is not default constructible.
++
++2020-04-23  Thomas Rodgers  <trodgers@redhat.com>
++
++	Backport from mainline
++	2020-04-20  Thomas Rodgers  <trodgers@redhat.com>
++	* testsuite/lib/libstdc++.exp: Add additional_flags=
++	-DTBB_SUPRESS_DEPRECATED_MESSAGES=1 to suppress warnings when
++	compiling with a newer Thread Building Blocks.
++
++2020-04-23  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backport from mainline
++	2020-04-22  Jonathan Wakely  <jwakely@redhat.com>
++
++	* include/std/execution (__cpp_lib_execution): Define to indicate
++	support for P0024R2 and P1001R2.
++	* include/std/version (__cpp_lib_execution): Define.
++	* testsuite/25_algorithms/pstl/feature_test.cc: Only test macro
++	defined by <algorithm>, move other tests to new tests ...
++	* testsuite/25_algorithms/pstl/feature_test-2.cc: New test.
++	* testsuite/25_algorithms/pstl/feature_test-3.cc: New test.
++	* testsuite/25_algorithms/pstl/feature_test-4.cc: New test.
++	* testsuite/25_algorithms/pstl/feature_test-5.cc: New test.
++
++	* include/bits/stl_iterator.h (__cpp_lib_array_constexpr): Update
++	value to indicate P0858R0 support.
++	* include/std/string_view (__cpp_lib_string_view): Likewise.
++	* include/std/version (__cpp_lib_array_constexpr)
++	(__cpp_lib_string_view): Likewise.
++	* testsuite/23_containers/array/element_access/constexpr_c++17.cc:
++	New test.
++	* testsuite/23_containers/array/requirements/constexpr_iter.cc: Test
++	in C++17 mode and check feature test macro.
++
++	Backport from mainline
++	2020-04-22  Jonathan Wakely  <jwakely@redhat.com>
++
++	* include/bits/ptr_traits.h (__cpp_lib_constexpr_memory): Define to
++	indicate P1006R1 support.
++	(__cpp_lib_to_address): Define to indicate P0653R2 support.
++	* include/std/memory (__cpp_lib_assume_aligned): Define to indicate
++	P1007R3 support.
++	* include/std/memory_resource (__cpp_lib_polymorphic_allocator):
++	Define to indicate P0339R6 support.
++	* include/std/string_view (__cpp_lib_starts_ends_with): Define to
++	indicate P0457R2 support.
++	* include/std/type_traits (__cpp_lib_is_nothrow_convertible): Define
++	to indicate P0758R1 support.
++	(__cpp_lib_remove_cvref): Define to indicate P0550R2 support.
++	(__cpp_lib_type_identity): Define to indicate P0887R1 support.
++	* include/std/version (__cpp_lib_is_nothrow_convertible)
++	(__cpp_lib_remove_cvref, __cpp_lib_type_identity)
++	(__cpp_lib_assume_aligned, __cpp_lib_constexpr_memory)
++	(__cpp_lib_polymorphic_allocator, __cpp_lib_starts_ends_with)
++	(__cpp_lib_to_address): Define.
++	* testsuite/20_util/to_address/1_neg.cc: Adjust dg-error line number.
++
++	* include/bits/stl_map.h (__cpp_lib_map_insertion): Add comment to
++	non-standard macro.
++	* include/bits/unordered_map.h (__cpp_lib_unordered_map_insertion):
++	Likewise.
++	* include/std/version (__cpp_lib_map_insertion)
++	(__cpp_lib_unordered_map_insertion): Likewise.
++
++	* include/std/bit (__cpp_lib_int_pow2): Define to indicate P0556R3
++	support.
++	* include/std/version (__cpp_lib_int_pow2): Likewise.
++
++	Backport from mainline
++	2019-12-10  Jonathan Wakely  <jwakely@redhat.com>
++
++	* include/std/complex (__cpp_lib_constexpr_complex): Define.
++	* include/std/version (__cpp_lib_constexpr_complex): Likewise.
++	* testsuite/26_numerics/complex/1.cc: New test.
++	* testsuite/26_numerics/complex/2.cc: New test.
++
++	Backport from mainline
++	2019-11-05  Jonathan Wakely  <jwakely@redhat.com>
++
++	* include/std/version [!_GLIBCXX_HOSTED]: Do not define feature test
++	macros for features that are only present in hosted builds.
++
++	Backport from mainline
++	2019-10-30  Jonathan Wakely  <jwakely@redhat.com>
++
++	* include/std/bit (__cpp_lib_bitops): Define.
++	* include/std/version (__cpp_lib_bitops): Define.
++	* testsuite/26_numerics/bit/header.cc: New test.
++	* testsuite/26_numerics/bit/header-2.cc: New test.
++
++	Backport from mainline
++	2020-02-19  Jonathan Wakely  <jwakely@redhat.com>
++
++	* include/std/type_traits (__cpp_lib_unwrap_ref): Define (LWG 3348).
++	* include/std/version (__cpp_lib_unwrap_ref): Likewise.
++	* testsuite/20_util/unwrap_reference/1.cc: Check macro.
++	* testsuite/20_util/unwrap_reference/3.cc: New test.
++
 +2020-04-22  Jonathan Wakely  <jwakely@redhat.com>
 +
 +	* doc/Makefile.am (xml_sources_manual): Add missing XML files.
@@ -13893,21 +14015,22 @@ index 5dc624dbb1e..6b39c46ac6e 100644
  		__str += __slash;
  	      __str += __elem._M_pathname;
 diff --git a/libstdc++-v3/include/bits/ptr_traits.h b/libstdc++-v3/include/bits/ptr_traits.h
-index c90a35080f1..cff56feb66f 100644
+index c90a35080f1..80ecf5b420d 100644
 --- a/libstdc++-v3/include/bits/ptr_traits.h
 +++ b/libstdc++-v3/include/bits/ptr_traits.h
-@@ -34,6 +34,10 @@
+@@ -34,6 +34,11 @@
  
  #include <bits/move.h>
  
 +#if __cplusplus > 201703L
++#define __cpp_lib_constexpr_memory 201811L
 +namespace __gnu_debug { struct _Safe_iterator_base; }
 +#endif
 +
  namespace std _GLIBCXX_VISIBILITY(default)
  {
  _GLIBCXX_BEGIN_NAMESPACE_VERSION
-@@ -169,7 +173,12 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+@@ -169,7 +174,14 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
    template<typename _Ptr, typename... _None>
      constexpr auto
      __to_address(const _Ptr& __ptr, _None...) noexcept
@@ -13918,11 +14041,54 @@ index c90a35080f1..cff56feb66f 100644
 +      else
 +	return std::__to_address(__ptr.operator->());
 +    }
++
++#define __cpp_lib_to_address 201711L
  
    /**
     * @brief Obtain address referenced by a pointer to an object
+diff --git a/libstdc++-v3/include/bits/stl_iterator.h b/libstdc++-v3/include/bits/stl_iterator.h
+index e9d90fa01f4..11dd9b0fd4c 100644
+--- a/libstdc++-v3/include/bits/stl_iterator.h
++++ b/libstdc++-v3/include/bits/stl_iterator.h
+@@ -69,8 +69,8 @@
+ # include <type_traits>
+ #endif
+ 
+-#if __cplusplus > 201402L
+-# define __cpp_lib_array_constexpr 201603
++#if __cplusplus >= 201703L
++# define __cpp_lib_array_constexpr 201803L
+ #endif
+ 
+ namespace std _GLIBCXX_VISIBILITY(default)
+diff --git a/libstdc++-v3/include/bits/stl_map.h b/libstdc++-v3/include/bits/stl_map.h
+index 322d0a8290a..a87bba83c0d 100644
+--- a/libstdc++-v3/include/bits/stl_map.h
++++ b/libstdc++-v3/include/bits/stl_map.h
+@@ -892,7 +892,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
+ 	{ _M_t._M_insert_range_unique(__first, __last); }
+ 
+ #if __cplusplus > 201402L
+-#define __cpp_lib_map_insertion 201411
++#define __cpp_lib_map_insertion 201411 // non-standard macro
+       /**
+        *  @brief Attempts to insert or assign a std::pair into the %map.
+        *  @param __k    Key to use for finding a possibly existing pair in
+diff --git a/libstdc++-v3/include/bits/unordered_map.h b/libstdc++-v3/include/bits/unordered_map.h
+index b8243a73445..9959c39d083 100644
+--- a/libstdc++-v3/include/bits/unordered_map.h
++++ b/libstdc++-v3/include/bits/unordered_map.h
+@@ -657,7 +657,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
+ 
+ 
+ #if __cplusplus > 201402L
+-#define __cpp_lib_unordered_map_insertion 201411
++#define __cpp_lib_unordered_map_insertion 201411 // non-standard macro
+       /**
+        *  @brief Attempts to insert a std::pair into the %unordered_map.
+        *  @param __k    Key to use for finding a possibly existing pair in
 diff --git a/libstdc++-v3/include/experimental/executor b/libstdc++-v3/include/experimental/executor
-index 266a2487899..15f28de9b9d 100644
+index 266a2487899..9c0c7186234 100644
 --- a/libstdc++-v3/include/experimental/executor
 +++ b/libstdc++-v3/include/experimental/executor
 @@ -127,7 +127,14 @@ inline namespace v1
@@ -13941,6 +14107,52 @@ index 266a2487899..15f28de9b9d 100644
  
    template<typename _Tp> struct is_executor;
  
+@@ -847,7 +854,7 @@ inline namespace v1
+ 
+     // construct / copy / destroy:
+ 
+-    system_context() = default;
++    system_context() = delete;
+     system_context(const system_context&) = delete;
+     system_context& operator=(const system_context&) = delete;
+ 
+diff --git a/libstdc++-v3/include/std/bit b/libstdc++-v3/include/std/bit
+index c753e39b64a..c4af1cfcb4d 100644
+--- a/libstdc++-v3/include/std/bit
++++ b/libstdc++-v3/include/std/bit
+@@ -250,6 +250,8 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+ 
+ #if __cplusplus > 201703L
+ 
++#define __cpp_lib_bitops 201907L
++
+   template<typename _Tp, typename _Up, bool = is_integral_v<_Tp>>
+     struct _If_is_unsigned_integer_type { };
+ 
+@@ -305,6 +307,8 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+ 
+   // [bit.pow.two], integral powers of 2
+ 
++#define __cpp_lib_int_pow2 201806L
++
+   template<typename _Tp>
+     constexpr _If_is_unsigned_integer<_Tp, bool>
+     ispow2(_Tp __x) noexcept
+diff --git a/libstdc++-v3/include/std/complex b/libstdc++-v3/include/std/complex
+index 45450e8ca01..d156d3249a7 100644
+--- a/libstdc++-v3/include/std/complex
++++ b/libstdc++-v3/include/std/complex
+@@ -47,6 +47,10 @@
+ // Get rid of a macro possibly defined in <complex.h>
+ #undef complex
+ 
++#if __cplusplus > 201703L
++# define __cpp_lib_constexpr_complex 201711L
++#endif
++
+ namespace std _GLIBCXX_VISIBILITY(default)
+ {
+ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 diff --git a/libstdc++-v3/include/std/deque b/libstdc++-v3/include/std/deque
 index ed4927e13b7..b940dacb848 100644
 --- a/libstdc++-v3/include/std/deque
@@ -13954,6 +14166,18 @@ index ed4927e13b7..b940dacb848 100644
  
    template<typename _Tp, typename _Alloc, typename _Predicate>
      inline typename deque<_Tp, _Alloc>::size_type
+diff --git a/libstdc++-v3/include/std/execution b/libstdc++-v3/include/std/execution
+index 2d821e5c624..9f941c5e2f4 100644
+--- a/libstdc++-v3/include/std/execution
++++ b/libstdc++-v3/include/std/execution
+@@ -50,6 +50,7 @@
+ 
+ // Feature test macro for parallel algorithms
+ # define __cpp_lib_parallel_algorithm 201603L
++# define __cpp_lib_execution 201902L
+ 
+ #endif // C++17
+ 
 diff --git a/libstdc++-v3/include/std/forward_list b/libstdc++-v3/include/std/forward_list
 index 9d6cc40593b..4b319f93a61 100644
 --- a/libstdc++-v3/include/std/forward_list
@@ -13993,6 +14217,30 @@ index 8d6ac198c9a..6fb5ea8dcc4 100644
  
    template<typename _Tp, typename _Alloc, typename _Predicate>
      inline typename list<_Tp, _Alloc>::size_type
+diff --git a/libstdc++-v3/include/std/memory b/libstdc++-v3/include/std/memory
+index b6950c76089..cb8be4dc129 100644
+--- a/libstdc++-v3/include/std/memory
++++ b/libstdc++-v3/include/std/memory
+@@ -157,6 +157,7 @@ inline pointer_safety
+ get_pointer_safety() noexcept { return pointer_safety::relaxed; }
+ 
+ #if __cplusplus > 201703L
++#define __cpp_lib_assume_aligned 201811L
+   /// Inform the compiler that a pointer is aligned.
+   template<size_t _Align, class _Tp>
+     [[nodiscard,__gnu__::__always_inline__]]
+diff --git a/libstdc++-v3/include/std/memory_resource b/libstdc++-v3/include/std/memory_resource
+index 7ff5d17afe7..5b6ec60268a 100644
+--- a/libstdc++-v3/include/std/memory_resource
++++ b/libstdc++-v3/include/std/memory_resource
+@@ -61,6 +61,7 @@ namespace pmr
+   template<typename _Tp>
+     class polymorphic_allocator;
+ #else // C++20
++# define __cpp_lib_polymorphic_allocator 201902L
+   template<typename _Tp = std::byte>
+     class polymorphic_allocator;
+ #endif
 diff --git a/libstdc++-v3/include/std/string b/libstdc++-v3/include/std/string
 index 6ccc06f337a..506cb78313e 100644
 --- a/libstdc++-v3/include/std/string
@@ -14006,6 +14254,65 @@ index 6ccc06f337a..506cb78313e 100644
  
    template<typename _CharT, typename _Traits, typename _Alloc,
  	   typename _Predicate>
+diff --git a/libstdc++-v3/include/std/string_view b/libstdc++-v3/include/std/string_view
+index 42822cc41ab..4d90438e6be 100644
+--- a/libstdc++-v3/include/std/string_view
++++ b/libstdc++-v3/include/std/string_view
+@@ -47,7 +47,7 @@ namespace std _GLIBCXX_VISIBILITY(default)
+ {
+ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+ 
+-#define __cpp_lib_string_view 201603
++#define __cpp_lib_string_view 201803
+ 
+   // Helper for basic_string and basic_string_view members.
+   constexpr size_t
+@@ -310,6 +310,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       }
+ 
+ #if __cplusplus > 201703L
++#define __cpp_lib_starts_ends_with 201711L
+       constexpr bool
+       starts_with(basic_string_view __x) const noexcept
+       { return this->substr(0, __x.size()) == __x; }
+diff --git a/libstdc++-v3/include/std/type_traits b/libstdc++-v3/include/std/type_traits
+index 9bad55829ce..18bcac824c3 100644
+--- a/libstdc++-v3/include/std/type_traits
++++ b/libstdc++-v3/include/std/type_traits
+@@ -1362,6 +1362,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       using type = decltype(__test<_From, _To>(0));
+     };
+ 
++#define __cpp_lib_is_nothrow_convertible 201806L
+   /// is_nothrow_convertible
+   template<typename _From, typename _To>
+     struct is_nothrow_convertible
+@@ -3027,6 +3028,8 @@ template <typename _From, typename _To>
+ #endif // C++17
+ 
+ #if __cplusplus > 201703L
++#define __cpp_lib_remove_cvref 201711L
++
+   /// Remove references and cv-qualifiers.
+   template<typename _Tp>
+     struct remove_cvref
+@@ -3037,6 +3040,7 @@ template <typename _From, typename _To>
+   template<typename _Tp>
+     using remove_cvref_t = __remove_cvref_t<_Tp>;
+ 
++#define __cpp_lib_type_identity 201806L
+   /// Identity metafunction.
+   template<typename _Tp>
+     struct type_identity { using type = _Tp; };
+@@ -3044,6 +3048,8 @@ template <typename _From, typename _To>
+   template<typename _Tp>
+     using type_identity_t = typename type_identity<_Tp>::type;
+ 
++#define __cpp_lib_unwrap_ref 201811L
++
+   /// Unwrap a reference_wrapper
+   template<typename _Tp>
+     struct unwrap_reference { using type = _Tp; };
 diff --git a/libstdc++-v3/include/std/vector b/libstdc++-v3/include/std/vector
 index e5e13ab3ef7..1c1e2fd60e7 100644
 --- a/libstdc++-v3/include/std/vector
@@ -14020,18 +14327,209 @@ index e5e13ab3ef7..1c1e2fd60e7 100644
    template<typename _Tp, typename _Alloc, typename _Predicate>
      inline typename vector<_Tp, _Alloc>::size_type
 diff --git a/libstdc++-v3/include/std/version b/libstdc++-v3/include/std/version
-index 3c288301952..9dc7cbbb184 100644
+index 3c288301952..0f704c054cf 100644
 --- a/libstdc++-v3/include/std/version
 +++ b/libstdc++-v3/include/std/version
-@@ -155,7 +155,7 @@
+@@ -35,7 +35,9 @@
+ #include <bits/c++config.h>
+ 
+ // c++03
+-#define __cpp_lib_incomplete_container_elements 201505
++#if _GLIBCXX_HOSTED
++# define __cpp_lib_incomplete_container_elements 201505
++#endif
+ 
+ #if !defined(__STRICT_ANSI__)
+ // gnu++03
+@@ -44,17 +46,22 @@
+ 
+ #if __cplusplus >= 201103L
+ // c++11
+-#define __cpp_lib_allocator_is_always_equal 201411
+-#define __cpp_lib_allocator_traits_is_always_equal 201411
+ #define __cpp_lib_is_null_pointer 201309
+ #define __cpp_lib_result_of_sfinae 201210
+-#define __cpp_lib_shared_ptr_arrays 201611L
++
++#if _GLIBCXX_HOSTED
++# define __cpp_lib_allocator_is_always_equal 201411
++# define __cpp_lib_allocator_traits_is_always_equal 201411
++# define __cpp_lib_shared_ptr_arrays 201611L
++#endif
+ 
+ #if !defined(__STRICT_ANSI__)
+ // gnu++11
+-# define __cpp_lib_enable_shared_from_this 201603
+ # define __cpp_lib_is_swappable 201603
+ # define __cpp_lib_void_t 201411
++# if _GLIBCXX_HOSTED
++#  define __cpp_lib_enable_shared_from_this 201603
++# endif
+ #endif
+ 
+ // For C++11 and later we support ISO/IEC 29124 Mathematical Special Functions
+@@ -62,52 +69,41 @@
+ 
+ #if __cplusplus >= 201402L
+ // c++14
+-#define __cpp_lib_chrono_udls 201304
+-#define __cpp_lib_complex_udls 201309
+-#define __cpp_lib_exchange_function 201304
+-#define __cpp_lib_generic_associative_lookup 201304
+-#define __cpp_lib_integer_sequence 201304
+ #define __cpp_lib_integral_constant_callable 201304
+ #define __cpp_lib_is_final 201402L
+-#define __cpp_lib_make_reverse_iterator 201402
+-#define __cpp_lib_make_unique 201304
+-#ifndef _GLIBCXX_DEBUG // PR libstdc++/70303
+-# define __cpp_lib_null_iterators 201304L
+-#endif
+-#define __cpp_lib_quoted_string_io 201304
+-#define __cpp_lib_robust_nonmodifying_seq_ops 201304
+-#ifdef _GLIBCXX_HAS_GTHREADS
+-# define __cpp_lib_shared_timed_mutex 201402
+-#endif
+-#define __cpp_lib_string_udls 201304
+ #define __cpp_lib_transformation_trait_aliases 201304
+-#define __cpp_lib_transparent_operators 201510
+-#define __cpp_lib_tuple_element_t 201402L
+-#define __cpp_lib_tuples_by_type 201304
++
++#if _GLIBCXX_HOSTED
++# define __cpp_lib_chrono_udls 201304
++# define __cpp_lib_complex_udls 201309
++# define __cpp_lib_exchange_function 201304
++# define __cpp_lib_generic_associative_lookup 201304
++# define __cpp_lib_integer_sequence 201304
++# define __cpp_lib_make_reverse_iterator 201402
++# define __cpp_lib_make_unique 201304
++# ifndef _GLIBCXX_DEBUG // PR libstdc++/70303
++#  define __cpp_lib_null_iterators 201304L
++# endif
++# define __cpp_lib_quoted_string_io 201304
++# define __cpp_lib_robust_nonmodifying_seq_ops 201304
++# ifdef _GLIBCXX_HAS_GTHREADS
++#  define __cpp_lib_shared_timed_mutex 201402
++# endif
++# define __cpp_lib_string_udls 201304
++# define __cpp_lib_transparent_operators 201510
++# define __cpp_lib_tuple_element_t 201402L
++# define __cpp_lib_tuples_by_type 201304
++#endif
+ 
+ #if __cplusplus >= 201703L
+ // c++17
+ #define __cpp_lib_addressof_constexpr 201603
+-#define __cpp_lib_any 201606L
+-#define __cpp_lib_apply 201603
+-#define __cpp_lib_array_constexpr 201603
+-#define __cpp_lib_as_const 201510
+ #define __cpp_lib_atomic_is_always_lock_free 201603
+ #define __cpp_lib_bool_constant 201505
+-#define __cpp_lib_boyer_moore_searcher 201603
+ #define __cpp_lib_byte 201603
+-#define __cpp_lib_chrono 201611
+-#define __cpp_lib_clamp 201603
+-#define __cpp_lib_constexpr_char_traits 201611
+-#define __cpp_lib_enable_shared_from_this 201603
+-#define __cpp_lib_filesystem 201703
+-#define __cpp_lib_gcd 201606
+-#define __cpp_lib_gcd_lcm 201606
+ #ifdef _GLIBCXX_HAVE_BUILTIN_HAS_UNIQ_OBJ_REP
+ # define __cpp_lib_has_unique_object_representations 201606
+ #endif
+-#define __cpp_lib_hypot 201603
+-#define __cpp_lib_invoke 201411
+ #ifdef _GLIBCXX_HAVE_BUILTIN_IS_AGGREGATE
+ # define __cpp_lib_is_aggregate 201703
+ #endif
+@@ -116,10 +112,30 @@
+ #ifdef _GLIBCXX_HAVE_BUILTIN_LAUNDER
+ # define __cpp_lib_launder 201606
+ #endif
+-#define __cpp_lib_lcm 201606
+ #define __cpp_lib_logical_traits 201510
++#define __cpp_lib_type_trait_variable_templates 201510L
++#define __cpp_lib_uncaught_exceptions 201411L
++#define __cpp_lib_void_t 201411
++
++#if _GLIBCXX_HOSTED
++#define __cpp_lib_any 201606L
++#define __cpp_lib_apply 201603
++#define __cpp_lib_array_constexpr 201803L
++#define __cpp_lib_as_const 201510
++#define __cpp_lib_boyer_moore_searcher 201603
++#define __cpp_lib_chrono 201611
++#define __cpp_lib_clamp 201603
++#define __cpp_lib_constexpr_char_traits 201611
++#define __cpp_lib_enable_shared_from_this 201603
++#define __cpp_lib_execution 201902L // FIXME: should be 201603L
++#define __cpp_lib_filesystem 201703
++#define __cpp_lib_gcd 201606
++#define __cpp_lib_gcd_lcm 201606
++#define __cpp_lib_hypot 201603
++#define __cpp_lib_invoke 201411
++#define __cpp_lib_lcm 201606
+ #define __cpp_lib_make_from_tuple 201606
+-#define __cpp_lib_map_insertion 201411
++#define __cpp_lib_map_insertion 201411  // non-standard macro
+ #define __cpp_lib_map_try_emplace 201411
+ #define __cpp_lib_math_special_functions 201603L
+ #ifdef _GLIBCXX_HAS_GTHREADS
+@@ -138,29 +154,45 @@
+ # define __cpp_lib_shared_mutex 201505
+ #endif
+ #define __cpp_lib_shared_ptr_weak_type 201606
+-#define __cpp_lib_string_view 201603
+-#define __cpp_lib_type_trait_variable_templates 201510L
+-#define __cpp_lib_uncaught_exceptions 201411L
+-#define __cpp_lib_unordered_map_insertion 201411
++#define __cpp_lib_string_view 201803
++// #define __cpp_lib_to_chars 201611L
++#define __cpp_lib_unordered_map_insertion 201411  // non-standard macro
+ #define __cpp_lib_unordered_map_try_emplace 201411
+ #define __cpp_lib_variant 201606L
+-#define __cpp_lib_void_t 201411
+ #define __cpp_lib_parallel_algorithm 201603L
++#endif
+ 
+ #if __cplusplus > 201703L
+ // c++2a
+-#define __cpp_lib_bind_front 201907L
++#define __cpp_lib_bitops 201907L
+ #define __cpp_lib_bounded_array_traits 201902L
++// __cpp_lib_char8_t is defined in <bits/c++config.h>
+ #if __cpp_impl_destroying_delete
  # define __cpp_lib_destroying_delete 201806L
  #endif
  #define __cpp_lib_endian 201907L
 -#define __cpp_lib_erase_if 201900L
-+#define __cpp_lib_erase_if 202002L
- #define __cpp_lib_interpolate 201902L
+-#define __cpp_lib_interpolate 201902L
++#define __cpp_lib_int_pow2 201806L
  #ifdef _GLIBCXX_HAVE_BUILTIN_IS_CONSTANT_EVALUATED
  # define __cpp_lib_is_constant_evaluated 201811L
+ #endif
++#define __cpp_lib_is_nothrow_convertible 201806L
++#define __cpp_lib_remove_cvref 201711L
++#define __cpp_lib_type_identity 201806L
++#define __cpp_lib_unwrap_ref 201811L
++
++#if _GLIBCXX_HOSTED
++#define __cpp_lib_assume_aligned 201811L
++#define __cpp_lib_bind_front 201907L
++// FIXME: #define __cpp_lib_execution 201902L
++#define __cpp_lib_constexpr_complex 201711L
++#define __cpp_lib_constexpr_memory 201811L
++#define __cpp_lib_erase_if 202002L
++#define __cpp_lib_interpolate 201902L
+ #define __cpp_lib_list_remove_return_type 201806L
++#define __cpp_lib_polymorphic_allocator 201902L
++#define __cpp_lib_starts_ends_with 201711L
++#define __cpp_lib_to_address 201711L
++#endif
+ #endif // C++2a
+ #endif // C++17
+ #endif // C++14
 diff --git a/libstdc++-v3/src/c++17/fs_path.cc b/libstdc++-v3/src/c++17/fs_path.cc
 index 54bef75efd8..a6be0e03a78 100644
 --- a/libstdc++-v3/src/c++17/fs_path.cc
@@ -14091,7 +14589,7 @@ index 54bef75efd8..a6be0e03a78 100644
    const auto orig_type = _M_type();
    const auto orig_size = _M_cmpts.size();
 diff --git a/libstdc++-v3/testsuite/20_util/to_address/1_neg.cc b/libstdc++-v3/testsuite/20_util/to_address/1_neg.cc
-index 0954ac7b458..33a0e32711a 100644
+index 0954ac7b458..092413e6581 100644
 --- a/libstdc++-v3/testsuite/20_util/to_address/1_neg.cc
 +++ b/libstdc++-v3/testsuite/20_util/to_address/1_neg.cc
 @@ -17,7 +17,7 @@
@@ -14099,7 +14597,7 @@ index 0954ac7b458..33a0e32711a 100644
  // { dg-options "-std=gnu++2a" }
  // { dg-do compile { target c++2a } }
 -// { dg-error "not a function pointer" "" { target *-*-* } 153 }
-+// { dg-error "not a function pointer" "" { target *-*-* } 157 }
++// { dg-error "not a function pointer" "" { target *-*-* } 158 }
  
  #include <memory>
  
@@ -14145,6 +14643,56 @@ index 00000000000..4555284416d
 +{
 +  test01();
 +}
+diff --git a/libstdc++-v3/testsuite/20_util/unwrap_reference/1.cc b/libstdc++-v3/testsuite/20_util/unwrap_reference/1.cc
+index 243526725a0..3c04028bb6e 100644
+--- a/libstdc++-v3/testsuite/20_util/unwrap_reference/1.cc
++++ b/libstdc++-v3/testsuite/20_util/unwrap_reference/1.cc
+@@ -20,6 +20,12 @@
+ 
+ #include <type_traits>
+ 
++#ifndef __cpp_lib_unwrap_ref
++# error "Feature-test macro for unwrap_reference missing in <type_traits>"
++#elif __cpp_lib_unwrap_ref != 201811L
++# error "Feature-test macro for unwrap_reference has wrong value in <type_traits>"
++#endif
++
+ template<typename T, typename U> struct expect_same;
+ template<typename T> struct expect_same<T, T> : std::true_type { };
+ 
+diff --git a/libstdc++-v3/testsuite/20_util/unwrap_reference/3.cc b/libstdc++-v3/testsuite/20_util/unwrap_reference/3.cc
+new file mode 100644
+index 00000000000..3ea9cd18a05
+--- /dev/null
++++ b/libstdc++-v3/testsuite/20_util/unwrap_reference/3.cc
+@@ -0,0 +1,27 @@
++// Copyright (C) 2020 Free Software Foundation, Inc.
++//
++// This file is part of the GNU ISO C++ Library.  This library is free
++// software; you can redistribute it and/or modify it under the
++// terms of the GNU General Public License as published by the
++// Free Software Foundation; either version 3, or (at your option)
++// any later version.
++
++// This library is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++
++// You should have received a copy of the GNU General Public License along
++// with this library; see the file COPYING3.  If not see
++// <http://www.gnu.org/licenses/>.
++
++// { dg-options "-std=gnu++2a" }
++// { dg-do compile { target c++2a } }
++
++#include <version>
++
++#ifndef __cpp_lib_unwrap_ref
++# error "Feature-test macro for unwrap_reference missing in <version>"
++#elif __cpp_lib_unwrap_ref != 201811L
++# error "Feature-test macro for unwrap_reference has wrong value in <version>"
++#endif
 diff --git a/libstdc++-v3/testsuite/21_strings/basic_string/erasure.cc b/libstdc++-v3/testsuite/21_strings/basic_string/erasure.cc
 index 873dd0cbf0f..a00faf94180 100644
 --- a/libstdc++-v3/testsuite/21_strings/basic_string/erasure.cc
@@ -14161,6 +14709,95 @@ index 873dd0cbf0f..a00faf94180 100644
 +
  void
  test01()
+ {
+diff --git a/libstdc++-v3/testsuite/23_containers/array/element_access/constexpr_c++17.cc b/libstdc++-v3/testsuite/23_containers/array/element_access/constexpr_c++17.cc
+new file mode 100644
+index 00000000000..dd69645833f
+--- /dev/null
++++ b/libstdc++-v3/testsuite/23_containers/array/element_access/constexpr_c++17.cc
+@@ -0,0 +1,55 @@
++// { dg-options "-std=gnu++17" }
++// { dg-do compile { target c++17 } }
++
++// Copyright (C) 2011-2020 Free Software Foundation, Inc.
++//
++// This file is part of the GNU ISO C++ Library.  This library is free
++// software; you can redistribute it and/or modify it under the
++// terms of the GNU General Public License as published by the
++// Free Software Foundation; either version 3, or (at your option)
++// any later version.
++
++// This library is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++
++// You should have received a copy of the GNU General Public License along
++// with this library; see the file COPYING3.  If not see
++// <http://www.gnu.org/licenses/>.
++
++#include <array>
++
++#ifndef __cpp_lib_array_constexpr
++# error "Feature test macro for array constexpr is missing in <array>"
++#elif __cpp_lib_array_constexpr < 201603L
++# error "Feature test macro for array constexpr has wrong value in <array>"
++#endif
++
++constexpr std::size_t test01()
++{
++  // array
++  typedef std::array<std::size_t, 6> array_type;
++  array_type a = { { 0, 55, 66, 99, 4115, 2 } };
++  auto v1  = a[1];
++  auto v2  = a.at(2);
++  auto v3  = a.front();
++  auto v4  = a.back();
++  return v1 + v2 + v3 + v4;
++}
++
++static_assert( test01() == (55 + 66 + 0 + 2) );
++
++constexpr std::size_t test02()
++{
++  // array
++  typedef std::array<std::size_t, 6> array_type;
++  const array_type a = { { 0, 55, 66, 99, 4115, 2 } };
++  auto v1  = a[1];
++  auto v2  = a.at(2);
++  auto v3  = a.front();
++  auto v4  = a.back();
++  return v1 + v2 + v3 + v4;
++}
++
++static_assert( test02() == (55 + 66 + 0 + 2) );
+diff --git a/libstdc++-v3/testsuite/23_containers/array/requirements/constexpr_iter.cc b/libstdc++-v3/testsuite/23_containers/array/requirements/constexpr_iter.cc
+index 208078c3b5a..7ede36073e1 100644
+--- a/libstdc++-v3/testsuite/23_containers/array/requirements/constexpr_iter.cc
++++ b/libstdc++-v3/testsuite/23_containers/array/requirements/constexpr_iter.cc
+@@ -1,5 +1,5 @@
+-// { dg-options "-std=gnu++2a" }
+-// { dg-do compile { target c++2a } }
++// { dg-options "-std=gnu++17" }
++// { dg-do compile { target c++17 } }
+ //
+ // Copyright (C) 2019 Free Software Foundation, Inc.
+ //
+@@ -20,6 +20,15 @@
+ 
+ #include <array>
+ 
++#ifndef __cpp_lib_array_constexpr
++# error "Feature test macro for array constexpr is missing in <array>"
++#elif __cpp_lib_array_constexpr < 201803L
++# error "Feature test macro for array constexpr has wrong value in <array>"
++#endif
++
++// This test is compiled as C++17 because array::iterator is just a pointer,
++// so always meets the C++20 constexpr iterator requirements, even in C++17.
++
+ constexpr int
+ test()
  {
 diff --git a/libstdc++-v3/testsuite/23_containers/deque/erasure.cc b/libstdc++-v3/testsuite/23_containers/deque/erasure.cc
 index 39ea6deecc2..da5330b300a 100644
@@ -14298,6 +14935,322 @@ index 0a23c3f0d12..ec479053cf1 100644
  #endif
  
  void
+diff --git a/libstdc++-v3/testsuite/25_algorithms/pstl/feature_test-2.cc b/libstdc++-v3/testsuite/25_algorithms/pstl/feature_test-2.cc
+new file mode 100644
+index 00000000000..3e74f89bc41
+--- /dev/null
++++ b/libstdc++-v3/testsuite/25_algorithms/pstl/feature_test-2.cc
+@@ -0,0 +1,27 @@
++// Copyright (C) 2020 Free Software Foundation, Inc.
++//
++// This file is part of the GNU ISO C++ Library.  This library is free
++// software; you can redistribute it and/or modify it under the
++// terms of the GNU General Public License as published by the
++// Free Software Foundation; either version 3, or (at your option)
++// any later version.
++
++// This library is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++
++// You should have received a copy of the GNU General Public License along
++// with this library; see the file COPYING3.  If not see
++// <http://www.gnu.org/licenses/>.
++
++// { dg-options "-std=gnu++17" }
++// { dg-do preprocess { target c++17 } }
++
++#include <numeric>
++
++#ifndef __cpp_lib_parallel_algorithm
++# error "Feature-test macro for parallel algorithms missing in <numeric>"
++#elif __cpp_lib_parallel_algorithm != 201603L
++# error "Feature-test macro for parallel algorithms has wrong value in <numeric>"
++#endif
+diff --git a/libstdc++-v3/testsuite/25_algorithms/pstl/feature_test-3.cc b/libstdc++-v3/testsuite/25_algorithms/pstl/feature_test-3.cc
+new file mode 100644
+index 00000000000..4d75a186211
+--- /dev/null
++++ b/libstdc++-v3/testsuite/25_algorithms/pstl/feature_test-3.cc
+@@ -0,0 +1,35 @@
++// Copyright (C) 2020 Free Software Foundation, Inc.
++//
++// This file is part of the GNU ISO C++ Library.  This library is free
++// software; you can redistribute it and/or modify it under the
++// terms of the GNU General Public License as published by the
++// Free Software Foundation; either version 3, or (at your option)
++// any later version.
++
++// This library is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++
++// You should have received a copy of the GNU General Public License along
++// with this library; see the file COPYING3.  If not see
++// <http://www.gnu.org/licenses/>.
++
++// { dg-options "-std=gnu++17" }
++// { dg-do preprocess { target c++17 } }
++// { dg-require-effective-target tbb-backend }
++
++#include <execution>
++
++#ifndef __cpp_lib_execution
++# error "Feature-test macro for execution policies is missing in <execution>"
++#elif __cpp_lib_execution != 201902L
++# error "Feature-test macro for parallel algorithms has wrong value in <execution>"
++#endif
++
++// Neither SD-6 nor C++20 requires this macro to be defined in <execution>.
++#ifndef __cpp_lib_parallel_algorithm
++# error "Feature-test macro for parallel algorithms missing in <execution>"
++#elif __cpp_lib_parallel_algorithm != 201603L
++# error "Feature-test macro for parallel algorithms has wrong value in <execution>"
++#endif
+diff --git a/libstdc++-v3/testsuite/25_algorithms/pstl/feature_test-4.cc b/libstdc++-v3/testsuite/25_algorithms/pstl/feature_test-4.cc
+new file mode 100644
+index 00000000000..e7bbf920499
+--- /dev/null
++++ b/libstdc++-v3/testsuite/25_algorithms/pstl/feature_test-4.cc
+@@ -0,0 +1,33 @@
++// Copyright (C) 2020 Free Software Foundation, Inc.
++//
++// This file is part of the GNU ISO C++ Library.  This library is free
++// software; you can redistribute it and/or modify it under the
++// terms of the GNU General Public License as published by the
++// Free Software Foundation; either version 3, or (at your option)
++// any later version.
++
++// This library is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++
++// You should have received a copy of the GNU General Public License along
++// with this library; see the file COPYING3.  If not see
++// <http://www.gnu.org/licenses/>.
++
++// { dg-options "-std=gnu++17" }
++// { dg-do preprocess { target c++17 } }
++
++#include <version>
++
++#ifndef __cpp_lib_parallel_algorithm
++# error "Feature-test macro for parallel algorithms missing in <version>"
++#elif __cpp_lib_parallel_algorithm != 201603L
++# error "Feature-test macro for parallel algorithms has wrong value in <version>"
++#endif
++
++#ifndef __cpp_lib_execution
++# error "Feature-test macro for execution policies is missing in <version>"
++#elif __cpp_lib_execution != 201902L
++# error "Feature-test macro for parallel algorithms has wrong value in <version>"
++#endif
+diff --git a/libstdc++-v3/testsuite/25_algorithms/pstl/feature_test-5.cc b/libstdc++-v3/testsuite/25_algorithms/pstl/feature_test-5.cc
+new file mode 100644
+index 00000000000..2d991958e75
+--- /dev/null
++++ b/libstdc++-v3/testsuite/25_algorithms/pstl/feature_test-5.cc
+@@ -0,0 +1,28 @@
++// Copyright (C) 2020 Free Software Foundation, Inc.
++//
++// This file is part of the GNU ISO C++ Library.  This library is free
++// software; you can redistribute it and/or modify it under the
++// terms of the GNU General Public License as published by the
++// Free Software Foundation; either version 3, or (at your option)
++// any later version.
++
++// This library is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++
++// You should have received a copy of the GNU General Public License along
++// with this library; see the file COPYING3.  If not see
++// <http://www.gnu.org/licenses/>.
++
++// { dg-options "-std=gnu++17" }
++// { dg-do preprocess { target c++17 } }
++
++#include <memory>
++
++// Neither SD-6 nor C++20 requires this macro to be defined in <memory>.
++#ifndef __cpp_lib_parallel_algorithm
++# error "Feature-test macro for parallel algorithms missing in <memory>"
++#elif __cpp_lib_parallel_algorithm != 201603L
++# error "Feature-test macro for parallel algorithms has wrong value in <memory>"
++#endif
+diff --git a/libstdc++-v3/testsuite/25_algorithms/pstl/feature_test.cc b/libstdc++-v3/testsuite/25_algorithms/pstl/feature_test.cc
+index d9d558b9dea..c6408f523e0 100644
+--- a/libstdc++-v3/testsuite/25_algorithms/pstl/feature_test.cc
++++ b/libstdc++-v3/testsuite/25_algorithms/pstl/feature_test.cc
+@@ -21,31 +21,7 @@
+ 
+ #include <algorithm>
+ #ifndef __cpp_lib_parallel_algorithm
+-# error "Feature-test macro for parallel algorithms missing"
++# error "Feature-test macro for parallel algorithms missing in <algorithm>"
+ #elif __cpp_lib_parallel_algorithm != 201603L
+ # error "Feature-test macro for parallel algorithms has wrong value in <algorithm>"
+ #endif
+-
+-#include <numeric>
+-#if __cpp_lib_parallel_algorithm != 201603L
+-# error "Feature-test macro for parallel algorithms has wrong value in <numeric>"
+-#endif
+-
+-#include <version>
+-#if __cpp_lib_parallel_algorithm != 201603L
+-# error "Feature-test macro for parallel algorithms has wrong value in <version>"
+-#endif
+-
+-// The N4810 draft does not require the macro to be defined in <execution>.
+-#include <memory>
+-#if __cpp_lib_parallel_algorithm != 201603L
+-# error "Feature-test macro for parallel algorithms has wrong value in <memory>"
+-#endif
+-
+-// The N4810 draft does not require the macro to be defined in <execution>.
+-// Include this last, because it will trigger the inclusion of TBB headers,
+-// which then include <memory>, so we need to have already checked <memory>.
+-#include <execution>
+-#if __cpp_lib_parallel_algorithm != 201603L
+-# error "Feature-test macro for parallel algorithms has wrong value in <execution>"
+-#endif
+diff --git a/libstdc++-v3/testsuite/26_numerics/bit/header-2.cc b/libstdc++-v3/testsuite/26_numerics/bit/header-2.cc
+new file mode 100644
+index 00000000000..f67a1cdcac1
+--- /dev/null
++++ b/libstdc++-v3/testsuite/26_numerics/bit/header-2.cc
+@@ -0,0 +1,27 @@
++// Copyright (C) 2019 Free Software Foundation, Inc.
++//
++// This file is part of the GNU ISO C++ Library.  This library is free
++// software; you can redistribute it and/or modify it under the
++// terms of the GNU General Public License as published by the
++// Free Software Foundation; either version 3, or (at your option)
++// any later version.
++
++// This library is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++
++// You should have received a copy of the GNU General Public License along
++// with this library; see the file COPYING3.  If not see
++// <http://www.gnu.org/licenses/>.
++
++// { dg-options "-std=gnu++2a" }
++// { dg-do compile { target c++2a } }
++
++#include <version>
++
++#ifndef __cpp_lib_bitops
++# error "Feature test macro for bitops is missing in <version>"
++#elif __cpp_lib_bitops < 201907L
++# error "Feature test macro for bitops has wrong value in <version>"
++#endif
+diff --git a/libstdc++-v3/testsuite/26_numerics/bit/header.cc b/libstdc++-v3/testsuite/26_numerics/bit/header.cc
+new file mode 100644
+index 00000000000..824ee002e96
+--- /dev/null
++++ b/libstdc++-v3/testsuite/26_numerics/bit/header.cc
+@@ -0,0 +1,27 @@
++// Copyright (C) 2019 Free Software Foundation, Inc.
++//
++// This file is part of the GNU ISO C++ Library.  This library is free
++// software; you can redistribute it and/or modify it under the
++// terms of the GNU General Public License as published by the
++// Free Software Foundation; either version 3, or (at your option)
++// any later version.
++
++// This library is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++
++// You should have received a copy of the GNU General Public License along
++// with this library; see the file COPYING3.  If not see
++// <http://www.gnu.org/licenses/>.
++
++// { dg-options "-std=gnu++2a" }
++// { dg-do compile { target c++2a } }
++
++#include <bit>
++
++#ifndef __cpp_lib_bitops
++# error "Feature test macro for bitops is missing in <bit>"
++#elif __cpp_lib_bitops < 201907L
++# error "Feature test macro for bitops has wrong value in <bit>"
++#endif
+diff --git a/libstdc++-v3/testsuite/26_numerics/complex/1.cc b/libstdc++-v3/testsuite/26_numerics/complex/1.cc
+new file mode 100644
+index 00000000000..e3e6c22c5f4
+--- /dev/null
++++ b/libstdc++-v3/testsuite/26_numerics/complex/1.cc
+@@ -0,0 +1,27 @@
++// Copyright (C) 2019 Free Software Foundation, Inc.
++//
++// This file is part of the GNU ISO C++ Library.  This library is free
++// software; you can redistribute it and/or modify it under the
++// terms of the GNU General Public License as published by the
++// Free Software Foundation; either version 3, or (at your option)
++// any later version.
++
++// This library is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++
++// You should have received a copy of the GNU General Public License along
++// with this library; see the file COPYING3.  If not see
++// <http://www.gnu.org/licenses/>.
++
++// { dg-options "-std=gnu++2a" }
++// { dg-do preprocess { target c++2a } }
++
++#include <complex>
++
++#ifndef __cpp_lib_constexpr_complex
++# error "Feature test macro for constexpr complex is missing in <complex>"
++#elif __cpp_lib_constexpr_complex < 201711L
++# error "Feature test macro for constexpr complex has wrong value in <complex>"
++#endif
+diff --git a/libstdc++-v3/testsuite/26_numerics/complex/2.cc b/libstdc++-v3/testsuite/26_numerics/complex/2.cc
+new file mode 100644
+index 00000000000..e84e92c62ae
+--- /dev/null
++++ b/libstdc++-v3/testsuite/26_numerics/complex/2.cc
+@@ -0,0 +1,27 @@
++// Copyright (C) 2019 Free Software Foundation, Inc.
++//
++// This file is part of the GNU ISO C++ Library.  This library is free
++// software; you can redistribute it and/or modify it under the
++// terms of the GNU General Public License as published by the
++// Free Software Foundation; either version 3, or (at your option)
++// any later version.
++
++// This library is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++
++// You should have received a copy of the GNU General Public License along
++// with this library; see the file COPYING3.  If not see
++// <http://www.gnu.org/licenses/>.
++
++// { dg-options "-std=gnu++2a" }
++// { dg-do preprocess { target c++2a } }
++
++#include <version>
++
++#ifndef __cpp_lib_constexpr_complex
++# error "Feature test macro for constexpr complex is missing in <version>"
++#elif __cpp_lib_constexpr_complex < 201711L
++# error "Feature test macro for constexpr complex has wrong value in <version>"
++#endif
 diff --git a/libstdc++-v3/testsuite/27_io/filesystem/operations/last_write_time.cc b/libstdc++-v3/testsuite/27_io/filesystem/operations/last_write_time.cc
 index 3f31375f51b..5d6e62c421a 100644
 --- a/libstdc++-v3/testsuite/27_io/filesystem/operations/last_write_time.cc
@@ -14932,6 +15885,126 @@ index 00000000000..f134add48b5
 +{
 +  net::make_service<S>(c);
 +}
+diff --git a/libstdc++-v3/testsuite/experimental/net/executor/1.cc b/libstdc++-v3/testsuite/experimental/net/executor/1.cc
+new file mode 100644
+index 00000000000..cd0af4b7737
+--- /dev/null
++++ b/libstdc++-v3/testsuite/experimental/net/executor/1.cc
+@@ -0,0 +1,100 @@
++// Copyright (C) 2020 Free Software Foundation, Inc.
++//
++// This file is part of the GNU ISO C++ Library.  This library is free
++// software; you can redistribute it and/or modify it under the
++// terms of the GNU General Public License as published by the
++// Free Software Foundation; either version 3, or (at your option)
++// any later version.
++
++// This library is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++
++// You should have received a copy of the GNU General Public License along
++// with this library; see the file COPYING3.  If not see
++// <http://www.gnu.org/licenses/>.
++
++// { dg-do run { target c++14 } }
++
++#include <experimental/executor>
++#include <testsuite_hooks.h>
++
++namespace net = std::experimental::net;
++
++void
++test01()
++{
++  net::executor e;
++  VERIFY( !e );
++  VERIFY( e == nullptr );
++  VERIFY( nullptr == e );
++  VERIFY( e == e );
++  VERIFY( e == e );
++  net::executor e2;
++  VERIFY( e == e2 );
++  swap(e, e2);
++  VERIFY( e == e2 );
++  e = e2;
++  VERIFY( e == e2 );
++}
++
++void
++test02()
++{
++  struct E
++  {
++    void on_work_started() const noexcept { }
++    void on_work_finished() const noexcept { }
++    net::execution_context& context() const noexcept { return c; }
++    void dispatch(std::function<void()>, std::allocator<void>) const { }
++    void post(std::function<void()>, std::allocator<void>) const { }
++    void defer(std::function<void()>, std::allocator<void>) const { }
++
++    net::execution_context& c;
++
++    bool operator==(const E& rhs) const noexcept
++    { return &c == &rhs.c; }
++  };
++
++  net::execution_context c;
++  E d{c};
++  net::executor e(d);
++  VERIFY( e == e );
++  VERIFY( e != nullptr );
++  VERIFY( nullptr != e );
++
++  VERIFY( &e.context() == &c );
++#if __cpp_rtti
++  VERIFY( e.target_type() == typeid(E) );
++#endif
++  VERIFY( *e.target<E>() == d );
++  VERIFY( *e.target<const E>() == d );
++  VERIFY( *const_cast<const net::executor&>(e).target<E>() == d );
++  VERIFY( *const_cast<const net::executor&>(e).target<const E>() == d );
++
++  net::executor f = e;
++  VERIFY( f == e );
++  e = nullptr;
++  VERIFY( f != e );
++  swap(e, f);
++  VERIFY( f == nullptr );
++  VERIFY( nullptr != e );
++
++  net::executor g(E{c});
++  VERIFY( e == g );
++}
++
++void
++test03()
++{
++  static_assert( ! std::is_default_constructible<net::system_context>::value, "" );
++}
++
++int
++main()
++{
++  test01();
++  test02();
++  test03();
++}
+diff --git a/libstdc++-v3/testsuite/lib/libstdc++.exp b/libstdc++-v3/testsuite/lib/libstdc++.exp
+index 1ab896d3deb..a616227ae7b 100644
+--- a/libstdc++-v3/testsuite/lib/libstdc++.exp
++++ b/libstdc++-v3/testsuite/lib/libstdc++.exp
+@@ -1623,7 +1623,8 @@ proc check_effective_target_tbb-backend { } {
+         puts $f "}"
+         close $f
+ 
+-        set lines [v3_target_compile $src $exe executable "additional_flags=-std=c++17 additional_flags=-ltbb"]
++        set lines [v3_target_compile $src $exe executable "additional_flags=-std=c++17 additional_flags=-ltbb
++                                                           additional_flags=-DTBB_SUPPRESS_DEPRECATED_MESSAGES=1"]
+         file delete $src
+ 
+         if [string match "" $lines] {
 diff --git a/libstdc++-v3/testsuite/tr1/8_c_compatibility/cstdlib/functions.cc b/libstdc++-v3/testsuite/tr1/8_c_compatibility/cstdlib/functions.cc
 index e1feef99582..0f00a94da42 100644
 --- a/libstdc++-v3/testsuite/tr1/8_c_compatibility/cstdlib/functions.cc
