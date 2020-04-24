@@ -138,7 +138,7 @@ Jiufu Guo (1):
 John David Anglin (1):
       Define __BIG_ENDIAN__
 
-Jonathan Wakely (20):
+Jonathan Wakely (22):
       libstdc++: Ensure root-dir converted to forward slash (PR93244)
       libstdc++: Fix FS-dependent filesystem tests
       libstdc++: Fix test failure due to -Wnonnull warnings
@@ -159,6 +159,8 @@ Jonathan Wakely (20):
       libstdc++: Add missing feature test macros
       libstdc++: Update __cpp_lib_array_constexpr and __cpp_lib_string_view
       libstdc++: Define __cpp_lib_execution feature test
+      libstdc++: Make net::service_already_exists default constructible
+      libstdc++: Fix type-erasure in experimental::net::executor (PR 94203)
 
 Joseph Myers (1):
       Remove wrongly committed file.
@@ -11741,10 +11743,44 @@ index 00000000000..919ee02b725
 +  return 0;
 +}
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
-index 45847172291..9434ab185fe 100644
+index 45847172291..ceadacbba8d 100644
 --- a/libstdc++-v3/ChangeLog
 +++ b/libstdc++-v3/ChangeLog
-@@ -1,3 +1,210 @@
+@@ -1,3 +1,244 @@
++2020-04-24  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backport from mainline
++	2020-03-18  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/94203
++	* include/experimental/executor (executor::executor(Executor)): Call
++	make_shared directly instead of _M_create. Create _Tgt1 object.
++	(executor::executor(allocator_arg_t, const ProtoAlloc&, Executor)):
++	Call allocate_shared directly instead of _M_create. Create _Tgt2
++	object.
++	(executor::target_type): Add cast needed for new _Tgt interface.
++	(executor::target): Define when RTTI is disabled. Use _Tgt::_M_func.
++	(executor::_Tgt): Define the same interface whether RTTI is enabled or
++	not.
++	(executor::_Tgt::target_type, executor::_Tgt::target): Do not use
++	std::type_info in the interface.
++	(executor::_Tgt::_M_func): Add data member.
++	(executor::_TgtImpl): Replace with _Tgt1 and _Tgt2 class templates.
++	(executor::_Tgt1::_S_func): Define function to access target without
++	depending on RTTI.
++	(executor::_M_create): Remove.
++	(operator==, operator!=): Simplify comparisons for executor.
++	* include/experimental/socket (is_error_code_enum<socket_errc>):
++	Define specialization before use.
++
++	Backport from mainline
++	2020-04-24  Jonathan Wakely  <jwakely@redhat.com>
++
++	* include/experimental/executor (service_already_exists): Make default
++	constructor public (LWG 3414).
++	* testsuite/experimental/net/execution_context/make_service.cc: Check
++	the service_already_exists can be default constructed.
++
 +2020-04-23  Thomas Rodgers  <rodgert@appliantology.com>
 +
 +	Backport from mainline
@@ -14235,26 +14271,62 @@ index b8243a73445..9959c39d083 100644
         *  @brief Attempts to insert a std::pair into the %unordered_map.
         *  @param __k    Key to use for finding a possibly existing pair in
 diff --git a/libstdc++-v3/include/experimental/executor b/libstdc++-v3/include/experimental/executor
-index 266a2487899..9c0c7186234 100644
+index 266a2487899..7e2a97fd8ec 100644
 --- a/libstdc++-v3/include/experimental/executor
 +++ b/libstdc++-v3/include/experimental/executor
-@@ -127,7 +127,14 @@ inline namespace v1
+@@ -127,7 +127,13 @@ inline namespace v1
    /// An extensible, type-safe, polymorphic set of services.
    class execution_context;
  
 -  class service_already_exists : public logic_error { };
 +  class service_already_exists : public logic_error
 +  {
-+    template<typename _Service, typename... _Args>
-+      friend _Service&
-+      make_service(execution_context&, _Args&&...);
-+
++  public:
++    // _GLIBCXX_RESOLVE_LIB_DEFECTS
++    // 3414. service_already_exists has no usable constructors
 +    service_already_exists() : logic_error("service already exists") { }
 +  };
  
    template<typename _Tp> struct is_executor;
  
-@@ -847,7 +854,7 @@ inline namespace v1
+@@ -288,26 +294,22 @@ inline namespace v1
+   class executor;
+ 
+   bool
+-  operator==(const executor& __a, const executor& __b) noexcept;
++  operator==(const executor&, const executor&) noexcept;
+ 
+   bool
+-  operator==(const executor& __e, nullptr_t) noexcept;
++  operator==(const executor&, nullptr_t) noexcept;
+ 
+-  inline bool
+-  operator==(nullptr_t, const executor& __e) noexcept
+-  { return __e == nullptr; }
++  bool
++  operator==(nullptr_t, const executor&) noexcept;
+ 
+-  inline bool
+-  operator!=(const executor& __a, const executor& __b) noexcept
+-  { return !(__a == __b); }
++  bool
++  operator!=(const executor&, const executor&) noexcept;
+ 
+-  inline bool
+-  operator!=(const executor& __e, nullptr_t) noexcept
+-  { return !(__e == nullptr); }
++  bool
++  operator!=(const executor&, nullptr_t) noexcept;
+ 
+-  inline bool
+-  operator!=(nullptr_t, const executor& __e) noexcept
+-  { return !(__e == nullptr); }
++  bool
++  operator!=(nullptr_t, const executor&) noexcept;
+ 
+   void swap(executor&, executor&) noexcept;
+ 
+@@ -847,7 +849,7 @@ inline namespace v1
  
      // construct / copy / destroy:
  
@@ -14262,6 +14334,320 @@ index 266a2487899..9c0c7186234 100644
 +    system_context() = delete;
      system_context(const system_context&) = delete;
      system_context& operator=(const system_context&) = delete;
+ 
+@@ -992,12 +994,13 @@ inline namespace v1
+ 
+     template<typename _Executor>
+       executor(_Executor __e)
+-      : _M_target(_M_create(std::move(__e)))
++      : _M_target(make_shared<_Tgt1<_Executor>>(std::move(__e)))
+       { }
+ 
+     template<typename _Executor, typename _ProtoAlloc>
+       executor(allocator_arg_t, const _ProtoAlloc& __a, _Executor __e)
+-      : _M_target(_M_create(std::move(__e), __a))
++      : _M_target(allocate_shared<_Tgt2<_Executor, _ProtoAlloc>>(__a,
++	    std::move(__e), __a))
+       { }
+ 
+     executor& operator=(const executor&) noexcept = default;
+@@ -1094,28 +1097,46 @@ inline namespace v1
+ #if __cpp_rtti
+     const type_info&
+     target_type() const noexcept
+-    { return _M_target ? _M_target->target_type() : typeid(void); }
++    {
++      if (_M_target)
++	return *static_cast<const type_info*>(_M_target->target_type());
++      return typeid(void);
++    }
++#endif
+ 
+     template<typename _Executor>
+       _Executor*
+       target() noexcept
+       {
++	void* __p = nullptr;
+ 	if (_M_target)
+-	  if (const auto* __p = _M_target->target(typeid(_Executor)))
+-	    return const_cast<_Executor*>(static_cast<const _Executor>(__p));
+-	return nullptr;
++	  {
++	    if (_M_target->_M_func == &_Tgt1<remove_cv_t<_Executor>>::_S_func)
++	      __p = _M_target->_M_func(_M_target.get(), nullptr);
++#if __cpp_rtti
++	    else
++	      __p = _M_target->target(&typeid(_Executor));
++#endif
++	  }
++	return static_cast<_Executor*>(__p);
+       }
+ 
+     template<typename _Executor>
+       const _Executor*
+       target() const noexcept
+       {
++	const void* __p = nullptr;
+ 	if (_M_target)
+-	  if (const auto* __p = _M_target->target(typeid(_Executor)))
+-	    return static_cast<const _Executor*>(__p);
+-	return nullptr;
+-      }
++	  {
++	    if (_M_target->_M_func == &_Tgt1<remove_cv_t<_Executor>>::_S_func)
++	      return (_Executor*)_M_target->_M_func(_M_target.get(), nullptr);
++#if __cpp_rtti
++	    else
++	      __p = _M_target->target(&typeid(_Executor));
+ #endif
++	  }
++	return static_cast<const _Executor*>(__p);
++      }
+ 
+   private:
+     struct _Tgt
+@@ -1126,85 +1147,134 @@ inline namespace v1
+       virtual void dispatch(std::function<void()>) const = 0;
+       virtual void post(std::function<void()>) const = 0;
+       virtual void defer(std::function<void()>) const = 0;
+-#if __cpp_rtti
+-      virtual const type_info& target_type() const = 0;
+-      virtual void* target(const std::type_info&) const = 0;
++      virtual const void* target_type() const noexcept = 0;
++      virtual void* target(const void*) noexcept = 0;
+       virtual bool _M_equals(_Tgt*) const noexcept = 0;
+-      virtual const void* _M_get_executor() const noexcept = 0;
+-#endif
++
++      using _Func = void* (_Tgt*, const _Tgt*);
++      _Func* _M_func; // Provides access to target without RTTI
+     };
+ 
+-    template<typename _Ex, typename _Alloc>
+-      struct _TgtImpl : _Tgt
++    template<typename _Ex>
++      struct _Tgt1 : _Tgt
+       {
+ 	explicit
+-	_TgtImpl(_Ex&& __ex, const _Alloc& __a)
+-	: _M_impl(std::move(__ex), __a) { }
++	_Tgt1(_Ex&& __ex)
++	: _M_ex(std::move(__ex))
++	{ this->_M_func = &_S_func; }
+ 
+-	void on_work_started() const noexcept { _M_ex().on_work_started(); }
+-	void on_work_finished() const noexcept { _M_ex().on_work_finished(); }
+-	execution_context& context() const noexcept { return _M_ex().context(); }
+ 	void
+-	dispatch(std::function<void()> __f) const
+-	{ _M_ex().dispatch(std::move(__f), _M_alloc()); }
++	on_work_started() const noexcept override
++	{ _M_ex.on_work_started(); }
++
++	void
++	on_work_finished() const noexcept override
++	{ _M_ex.on_work_finished(); }
++
++	execution_context&
++	context() const noexcept override
++	{ return _M_ex.context(); }
++
++	void
++	dispatch(std::function<void()> __f) const override
++	{ _M_ex.dispatch(std::move(__f), allocator<void>()); }
++
+ 	void
+-	post(std::function<void()> __f) const
+-	{ _M_ex().post(std::move(__f), _M_alloc()); }
++	post(std::function<void()> __f) const override
++	{ _M_ex.post(std::move(__f), allocator<void>()); }
++
+ 	void
+-	defer(std::function<void()> __f) const
+-	{ _M_ex().defer(std::move(__f), _M_alloc()); }
++	defer(std::function<void()> __f) const override
++	{ _M_ex.defer(std::move(__f), allocator<void>()); }
+ 
++	const void*
++	target_type() const noexcept override
++	{
+ #if __cpp_rtti
+-	virtual const type_info&
+-	target_type() const
+-	{ return typeid(_Ex); }
++	  return &typeid(_Ex);
++#else
++	  return nullptr;
++#endif
++	}
+ 
+-	virtual const void*
+-	target(const std::type_info& __ti) const
++	void*
++	target(const void* __ti) noexcept override
+ 	{
+-	  if (__ti == typeid(_Ex))
+-	    return std::addressof(_M_ex());
++#if __cpp_rtti
++	  if (*static_cast<const type_info*>(__ti) == typeid(_Ex))
++	    return std::__addressof(_M_ex);
++#endif
+ 	  return nullptr;
+ 	}
+ 
+-	virtual bool
+-	_M_equals(const _Tgt* __tgt) const noexcept
++	bool
++	_M_equals(_Tgt* __tgt) const noexcept override
+ 	{
+-	  if (__tgt->target_type() == typeid(_Ex))
+-	    *static_cast<const _Ex*>(__tgt->_M_get_executor()) == _M_ex();
++#if __cpp_rtti
++	  if (const void* __p = __tgt->target(&typeid(_Ex)))
++	    return *static_cast<const _Ex*>(__p) == _M_ex;
++#endif
+ 	  return false;
+ 	}
+ 
+-	virtual const void*
+-	_M_get_executor() const noexcept
+-	{ return std::addressof(_M_ex()); }
+-#endif
++	_Ex _M_ex [[__no_unique_address__]];
+ 
+-	_Ex& _M_ex() { return std::get<0>(_M_impl); }
+-	_Alloc& _M_alloc() { return std::get<1>(_M_impl); }
+-	std::tuple<_Ex, _Alloc> _M_impl;
++	static void*
++	_S_func(_Tgt* __p, const _Tgt* __q) noexcept
++	{
++	  auto& __ex = static_cast<_Tgt1*>(__p)->_M_ex;
++	  if (__q)
++	    {
++	      if (__ex == static_cast<const _Tgt1*>(__q)->_M_ex)
++		return __p;
++	      else
++		return nullptr;
++	    }
++	  else
++	    return std::__addressof(__ex);
++	}
+       };
+ 
+-    template<typename _Ex, typename _Alloc = std::allocator<void>>
+-      shared_ptr<_Tgt>
+-      _M_create(_Ex&& __ex, const _Alloc& __a = _Alloc())
++    template<typename _Ex, typename _Alloc>
++      struct _Tgt2 : _Tgt1<_Ex>
+       {
+-	return allocate_shared<_TgtImpl<_Ex, _Alloc>>(__a, std::move(__ex),
+-						      __a);
+-      }
++	explicit
++	_Tgt2(_Ex&& __ex, const _Alloc& __a)
++	: _Tgt1<_Ex>(std::move(__ex)), _M_alloc(__a) { }
++
++	void
++	dispatch(std::function<void()> __f) const override
++	{ this->_M_ex.dispatch(std::move(__f), _M_alloc); }
++
++	void
++	post(std::function<void()> __f) const override
++	{ this->_M_ex.post(std::move(__f), _M_alloc); }
++
++	void
++	defer(std::function<void()> __f) const override
++	{ this->_M_ex.defer(std::move(__f), _M_alloc); }
++
++	_Alloc _M_alloc [[__no_unique_address__]];
++      };
++
++    // Partial specialization for std::allocator<T>.
++    // Don't store the allocator.
++    template<typename _Ex, typename _Tp>
++      struct _Tgt2<_Ex, std::allocator<_Tp>> : _Tgt1<_Ex>
++      { };
+ 
+     friend bool
+     operator==(const executor& __a, const executor& __b) noexcept
+     {
+-      if (__a._M_target == __b._M_target)
++      _Tgt* __ta = __a._M_target.get();
++      _Tgt* __tb = __b._M_target.get();
++      if (__ta == __tb)
+ 	return true;
+-      if (!__a._M_target || !__b._M_target)
++      if (!__ta || !__tb)
+ 	return false;
+-#if __cpp_rtti
+-      return __a._M_target->_M_equals(__b._M_target.get());
+-#else
+-      return false; // XXX can we do better?
+-#endif
++      if (__ta->_M_func == __tb->_M_func)
++	return __ta->_M_func(__ta, __tb);
++      return __ta->_M_equals(__tb);
+     }
+ 
+     shared_ptr<_Tgt> _M_target;
+@@ -1217,6 +1287,22 @@ inline namespace v1
+   operator==(const executor& __e, nullptr_t) noexcept
+   { return !__e; }
+ 
++  inline bool
++  operator==(nullptr_t, const executor& __e) noexcept
++  { return !__e; }
++
++  inline bool
++  operator!=(const executor& __a, const executor& __b) noexcept
++  { return !(__a == __b); }
++
++  inline bool
++  operator!=(const executor& __e, nullptr_t) noexcept
++  { return (bool)__e; }
++
++  inline bool
++  operator!=(nullptr_t, const executor& __e) noexcept
++  { return (bool)__e; }
++
+   /// Swap two executor objects.
+   inline void swap(executor& __a, executor& __b) noexcept { __a.swap(__b); }
+ 
+diff --git a/libstdc++-v3/include/experimental/socket b/libstdc++-v3/include/experimental/socket
+index e80626528ce..cea17312dbd 100644
+--- a/libstdc++-v3/include/experimental/socket
++++ b/libstdc++-v3/include/experimental/socket
+@@ -79,6 +79,20 @@ inline namespace v1
+     not_found = 4
+   };
+ 
++} // namespace v1
++} // namespace net
++} // namespace experimental
++
++  template<>
++    struct is_error_code_enum<experimental::net::v1::socket_errc>
++    : public true_type {};
++
++namespace experimental
++{
++namespace net
++{
++inline namespace v1
++{
+   const error_category& socket_category() noexcept
+   {
+     struct __cat : error_category
+@@ -2602,10 +2616,6 @@ inline namespace v1
+ } // namespace net
+ } // namespace experimental
+ 
+-  template<>
+-    struct is_error_code_enum<experimental::net::v1::socket_errc>
+-    : public true_type {};
+-
+ _GLIBCXX_END_NAMESPACE_VERSION
+ } // namespace std
  
 diff --git a/libstdc++-v3/include/std/bit b/libstdc++-v3/include/std/bit
 index c753e39b64a..c4af1cfcb4d 100644
@@ -15992,10 +16378,10 @@ index 1bbc37408c3..82061f9e7e9 100644
    VERIFY( approx_equal(last_write_time(f.path), time) );
 diff --git a/libstdc++-v3/testsuite/experimental/net/execution_context/make_service.cc b/libstdc++-v3/testsuite/experimental/net/execution_context/make_service.cc
 new file mode 100644
-index 00000000000..f134add48b5
+index 00000000000..0898d12927a
 --- /dev/null
 +++ b/libstdc++-v3/testsuite/experimental/net/execution_context/make_service.cc
-@@ -0,0 +1,36 @@
+@@ -0,0 +1,39 @@
 +// Copyright (C) 2020 Free Software Foundation, Inc.
 +//
 +// This file is part of the GNU ISO C++ Library.  This library is free
@@ -16032,6 +16418,9 @@ index 00000000000..f134add48b5
 +{
 +  net::make_service<S>(c);
 +}
++
++static_assert(std::is_default_constructible<net::service_already_exists>(),
++	      "LWG 3414. service_already_exists has no usable constructors");
 diff --git a/libstdc++-v3/testsuite/experimental/net/executor/1.cc b/libstdc++-v3/testsuite/experimental/net/executor/1.cc
 new file mode 100644
 index 00000000000..cd0af4b7737
