@@ -14,7 +14,7 @@
 
 Name     : gcc
 Version  : 9.3.1
-Release  : 842
+Release  : 843
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://gcc.gnu.org/pub/gcc/releases/gcc-9.3.0/gcc-9.3.0.tar.xz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.16.1.tar.bz2
@@ -336,7 +336,6 @@ export LIBRARY_PATH=%{_libdir}
     --with-ppl=yes \
     --with-isl \
     --includedir=%{_includedir} \
-    --with-gxx-include-dir=%{_includedir}/c++/ \
     --exec-prefix=%{_prefix} \
     --with-glibc-version=2.19 \
     --with-system-libunwind \
@@ -392,7 +391,6 @@ export LIBRARY_PATH=%{_libdir}
     --with-ppl=yes \
     --with-isl \
     --includedir=%{_includedir} \
-    --with-gxx-include-dir=%{_includedir}/c++/ \
     --exec-prefix=%{_prefix} \
     --with-glibc-version=2.19 \
     --with-system-libunwind \
