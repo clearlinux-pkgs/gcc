@@ -25,7 +25,11 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (43):
+GCC Administrator (47):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -77,8 +81,10 @@ H.J. Lu (2):
 Harald Anlauf (1):
       PR fortran/93364 - ICE in gfc_set_array_spec, at fortran/array.c:879
 
-Iain Buclaw (1):
+Iain Buclaw (3):
       d: Fix ICE in add_symbol_to_partition_1, at lto/lto-partition.c:215
+      libphobos: Fix struct layout of stat32_t on sparc-*-solaris*
+      libphobos: Fix struct layout of addrinfo on sparc-*-solaris*
 
 Iain Sandoe (1):
       Darwin: Fix i686 bootstrap when the assembler supports GOTOFF in data.
@@ -11742,6 +11748,53 @@ index 00000000000..919ee02b725
 +
 +  return 0;
 +}
+diff --git a/libphobos/ChangeLog b/libphobos/ChangeLog
+index 569a3c91ab2..67d02036def 100644
+--- a/libphobos/ChangeLog
++++ b/libphobos/ChangeLog
+@@ -1,3 +1,15 @@
++2020-04-27  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	PR d/90718
++	* libdruntime/core/sys/posix/netdb.d (Solaris): Include _ai_pad member
++	in struct addrinfo only when targeting SPARC64.
++
++2020-04-27  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	PR d/90719
++	* libdruntime/core/sys/posix/sys/stat.d (Solaris): Remove st_pad3 from
++	struct stat32_t.
++
+ 2020-03-12  Release Manager
+ 
+ 	* GCC 9.3.0 released.
+diff --git a/libphobos/libdruntime/core/sys/posix/netdb.d b/libphobos/libdruntime/core/sys/posix/netdb.d
+index 327387f68ea..f1251839b16 100644
+--- a/libphobos/libdruntime/core/sys/posix/netdb.d
++++ b/libphobos/libdruntime/core/sys/posix/netdb.d
+@@ -743,9 +743,7 @@ else version (Solaris)
+         int ai_socktype;
+         int ai_protocol;
+ 
+-        version (SPARC)
+-            int _ai_pad;
+-        else version (SPARC64)
++        version (SPARC64)
+             int _ai_pad;
+ 
+         socklen_t ai_addrlen;
+diff --git a/libphobos/libdruntime/core/sys/posix/sys/stat.d b/libphobos/libdruntime/core/sys/posix/sys/stat.d
+index 76e4460550d..9fc89270d48 100644
+--- a/libphobos/libdruntime/core/sys/posix/sys/stat.d
++++ b/libphobos/libdruntime/core/sys/posix/sys/stat.d
+@@ -1314,7 +1314,6 @@ else version (Solaris)
+             dev_t st_rdev;
+             c_long[2] st_pad2;
+             off_t st_size;
+-            c_long st_pad3;
+             union
+             {
+                 timestruc_t st_atim;
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
 index 45847172291..ceadacbba8d 100644
 --- a/libstdc++-v3/ChangeLog
