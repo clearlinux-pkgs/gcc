@@ -25,7 +25,8 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (47):
+GCC Administrator (48):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -74,9 +75,10 @@ GCC Administrator (47):
       Daily bump.
       Daily bump.
 
-H.J. Lu (2):
+H.J. Lu (3):
       x86: Insert ENDBR if function will be called indirectly
       x86: Restore the frame pointer in word_mode
+      x86: Allow -fcf-protection with external thunk
 
 Harald Anlauf (1):
       PR fortran/93364 - ICE in gfc_set_array_spec, at fortran/array.c:879
@@ -129,7 +131,7 @@ Jakub Jelinek (38):
       openmp: Fix parallel master error recovery [PR94512]
       i386: Fix V{64QI,32HI}mode constant permutations [PR94509]
 
-Jason Merrill (7):
+Jason Merrill (8):
       c++: Fix CTAD with multiple-arg ctor template [93248].
       c++: Fix ICE-after-error on partial spec [92068]
       c++: Find parameter pack in typedef in lambda [92909].
@@ -137,6 +139,7 @@ Jason Merrill (7):
       c++: alias template and parameter packs (PR91966).
       c++: Fix reuse of class constants [PR94453]
       c++: Mangling of dependent conversions [PR91377]
+      c++: Avoid ICE with dependent attribute on type.
 
 Jiufu Guo (1):
       rs6000: Check -+0 and NaN for smax/smin generation
@@ -292,10 +295,22 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..4cb1497a61f 100644
+index d8e53874e68..c0d72cbbdf5 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,609 @@
+@@ -1,3 +1,621 @@
++2020-04-29  H.J. Lu  <hongjiu.lu@intel.com>
++
++	Backport from master
++	2020-04-29  H.J. Lu  <hongjiu.lu@intel.com>
++
++	PR target/93654
++	* config/i386/i386.c (ix86_set_indirect_branch_type): Allow
++	-fcf-protection with -mindirect-branch=thunk-extern and
++	-mfunction-return=thunk-extern.
++	* doc/invoke.texi: Update notes for -fcf-protection=branch with
++	-mindirect-branch=thunk-extern and -mindirect-return=thunk-extern.
++
 +2020-04-21  Martin Jambor  <mjambor@suse.cz>
 +
 +	Backport from master
@@ -2360,7 +2375,7 @@ index 5dedeb2d18b..2f57d19bea2 100644
  /* SSE2 MMX */
  BDESC (OPTION_MASK_ISA_SSE2 | OPTION_MASK_ISA_MMX, 0, CODE_FOR_mmx_addv1di3, "__builtin_ia32_paddq", IX86_BUILTIN_PADDQ, UNKNOWN, (int) V1DI_FTYPE_V1DI_V1DI)
 diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
-index 1bca5a7eea6..efe32f3975e 100644
+index 1bca5a7eea6..ae5046ee6a0 100644
 --- a/gcc/config/i386/i386.c
 +++ b/gcc/config/i386/i386.c
 @@ -2535,7 +2535,12 @@ rest_of_insert_endbranch (void)
@@ -2377,7 +2392,25 @@ index 1bca5a7eea6..efe32f3975e 100644
      {
        /* Queue ENDBR insertion to x86_function_profiler.  */
        if (crtl->profile && flag_fentry)
-@@ -14347,8 +14352,13 @@ ix86_expand_epilogue (int style)
+@@ -5802,6 +5807,8 @@ ix86_set_indirect_branch_type (tree fndecl)
+ 		? "thunk-extern" : "thunk"));
+ 
+       if (cfun->machine->indirect_branch_type != indirect_branch_keep
++	  && (cfun->machine->indirect_branch_type
++	      != indirect_branch_thunk_extern)
+ 	  && (flag_cf_protection & CF_RETURN))
+ 	error ("%<-mindirect-branch%> and %<-fcf-protection%> are not "
+ 	       "compatible");
+@@ -5845,6 +5852,8 @@ ix86_set_indirect_branch_type (tree fndecl)
+ 		? "thunk-extern" : "thunk"));
+ 
+       if (cfun->machine->function_return_type != indirect_branch_keep
++	  && (cfun->machine->function_return_type
++	      != indirect_branch_thunk_extern)
+ 	  && (flag_cf_protection & CF_RETURN))
+ 	error ("%<-mfunction-return%> and %<-fcf-protection%> are not "
+ 	       "compatible");
+@@ -14347,8 +14356,13 @@ ix86_expand_epilogue (int style)
  	      t = plus_constant (Pmode, t, m->fs.fp_offset - UNITS_PER_WORD);
  	      emit_insn (gen_rtx_SET (sa, t));
  
@@ -2393,7 +2426,7 @@ index 1bca5a7eea6..efe32f3975e 100644
  
  	      /* Note that we use SA as a temporary CFA, as the return
  		 address is at the proper place relative to it.  We
-@@ -14363,7 +14373,7 @@ ix86_expand_epilogue (int style)
+@@ -14363,7 +14377,7 @@ ix86_expand_epilogue (int style)
  	      add_reg_note (insn, REG_CFA_DEF_CFA,
  			    plus_constant (Pmode, sa, UNITS_PER_WORD));
  	      ix86_add_queued_cfa_restore_notes (insn);
@@ -2402,7 +2435,7 @@ index 1bca5a7eea6..efe32f3975e 100644
  	      RTX_FRAME_RELATED_P (insn) = 1;
  
  	      m->fs.cfa_reg = sa;
-@@ -44150,43 +44160,51 @@ emit_reduc_half (rtx dest, rtx src, int i)
+@@ -44150,43 +44164,51 @@ emit_reduc_half (rtx dest, rtx src, int i)
        break;
      case E_V64QImode:
      case E_V32HImode:
@@ -2483,7 +2516,7 @@ index 1bca5a7eea6..efe32f3975e 100644
        break;
      default:
        gcc_unreachable ();
-@@ -46667,7 +46685,7 @@ expand_vec_perm_pshufb (struct expand_vec_perm_d *d)
+@@ -46667,7 +46689,7 @@ expand_vec_perm_pshufb (struct expand_vec_perm_d *d)
  	      /* vpshufb only works intra lanes, it is not
  		 possible to shuffle bytes in between the lanes.  */
  	      for (i = 0; i < nelt; ++i)
@@ -3092,10 +3125,17 @@ index 1ffefd5f482..9be446a862d 100644
    memcpy (da_file_name + prefix_len, filename, len);
    strcpy (da_file_name + prefix_len + len, GCOV_DATA_SUFFIX);
 diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
-index 6441d647a54..f8070a55055 100644
+index 6441d647a54..fe53cc0c0bd 100644
 --- a/gcc/cp/ChangeLog
 +++ b/gcc/cp/ChangeLog
-@@ -1,3 +1,119 @@
+@@ -1,3 +1,126 @@
++2020-04-27  Jason Merrill  <jason@redhat.com>
++
++	PR c++/90750
++	PR c++/79585
++	* decl.c (grokdeclarator): Move dependent attribute to decl.
++	* decl2.c (splice_template_attributes): No longer static.
++
 +2020-04-21  Martin Sebor  <msebor@redhat.com>
 +	    Jason Merrill  <jason@redhat.com>
 +
@@ -3257,10 +3297,18 @@ index 4be45abca88..0e15b1c8147 100644
  
  /* Fold expression X which is used as an rvalue if RVAL is true.  */
 diff --git a/gcc/cp/cp-tree.h b/gcc/cp/cp-tree.h
-index f7c3eea4cdf..0e0efd749bc 100644
+index f7c3eea4cdf..1f013c172ce 100644
 --- a/gcc/cp/cp-tree.h
 +++ b/gcc/cp/cp-tree.h
-@@ -6844,6 +6844,7 @@ extern bool alias_type_or_template_p            (tree);
+@@ -6492,6 +6492,7 @@ extern tree grokfield (const cp_declarator *, cp_decl_specifier_seq *,
+ 		       tree, bool, tree, tree);
+ extern tree grokbitfield (const cp_declarator *, cp_decl_specifier_seq *,
+ 			  tree, tree, tree);
++extern tree splice_template_attributes		(tree *, tree);
+ extern bool any_dependent_type_attributes_p	(tree);
+ extern tree cp_reconstruct_complex_type		(tree, tree);
+ extern bool attributes_naming_typedef_ok	(tree);
+@@ -6844,6 +6845,7 @@ extern bool alias_type_or_template_p            (tree);
  extern bool alias_template_specialization_p     (const_tree);
  extern bool dependent_alias_template_spec_p     (const_tree);
  extern bool template_parm_object_p		(const_tree);
@@ -3268,7 +3316,7 @@ index f7c3eea4cdf..0e0efd749bc 100644
  extern bool explicit_class_specialization_p     (tree);
  extern bool push_tinst_level                    (tree);
  extern bool push_tinst_level_loc                (tree, location_t);
-@@ -7216,6 +7217,7 @@ extern bool type_has_nontrivial_copy_init	(const_tree);
+@@ -7216,6 +7218,7 @@ extern bool type_has_nontrivial_copy_init	(const_tree);
  extern void maybe_warn_parm_abi			(tree, location_t);
  extern bool class_tmpl_impl_spec_p		(const_tree);
  extern int zero_init_p				(const_tree);
@@ -3276,7 +3324,7 @@ index f7c3eea4cdf..0e0efd749bc 100644
  extern bool check_abi_tag_redeclaration		(const_tree, const_tree,
  						 const_tree);
  extern bool check_abi_tag_args			(tree, tree);
-@@ -7327,11 +7329,6 @@ extern tree cxx_copy_lang_qualifiers		(const_tree, const_tree);
+@@ -7327,11 +7330,6 @@ extern tree cxx_copy_lang_qualifiers		(const_tree, const_tree);
  
  extern void cxx_print_statistics		(void);
  extern bool maybe_warn_zero_as_null_pointer_constant (tree, location_t);
@@ -3289,7 +3337,7 @@ index f7c3eea4cdf..0e0efd749bc 100644
  /* in ptree.c */
  extern void cxx_print_xnode			(FILE *, tree, int);
 diff --git a/gcc/cp/decl.c b/gcc/cp/decl.c
-index 39d55589ef3..04d0b38ddf0 100644
+index 39d55589ef3..79f61dfe064 100644
 --- a/gcc/cp/decl.c
 +++ b/gcc/cp/decl.c
 @@ -5826,9 +5826,6 @@ reshape_init_array_1 (tree elt_type, tree max_index, reshape_iter *d,
@@ -3335,6 +3383,33 @@ index 39d55589ef3..04d0b38ddf0 100644
    return new_init;
  }
  
+@@ -11283,9 +11259,13 @@ grokdeclarator (const cp_declarator *declarator,
+ 	    attr_flags |= (int) ATTR_FLAG_FUNCTION_NEXT;
+ 	  if (declarator->kind == cdk_array)
+ 	    attr_flags |= (int) ATTR_FLAG_ARRAY_NEXT;
++	  /* Assume that any attributes that get applied late to templates will
++	     DTRT when applied to the declaration as a whole.  */
++	  tree late_attrs = splice_template_attributes (&attrs, type);
+ 	  returned_attrs = decl_attributes (&type,
+ 					    chainon (returned_attrs, attrs),
+ 					    attr_flags);
++	  returned_attrs = chainon (late_attrs, returned_attrs);
+ 	}
+ 
+       inner_declarator = declarator->declarator;
+diff --git a/gcc/cp/decl2.c b/gcc/cp/decl2.c
+index a46cbce08f4..a15bb3c45cc 100644
+--- a/gcc/cp/decl2.c
++++ b/gcc/cp/decl2.c
+@@ -1208,7 +1208,7 @@ is_late_template_attribute (tree attr, tree decl)
+    the declaration itself is dependent, so all attributes should be applied
+    at instantiation time.  */
+ 
+-static tree
++tree
+ splice_template_attributes (tree *attr_p, tree decl)
+ {
+   tree *p = attr_p;
 diff --git a/gcc/cp/expr.c b/gcc/cp/expr.c
 index 9160043ed11..5a60da36025 100644
 --- a/gcc/cp/expr.c
@@ -4093,7 +4168,7 @@ index f5becf988d2..51ebb90e32d 100644
      __attribute__ ((alias (#TargetFunc), copy (TargetFunc)));
  
 diff --git a/gcc/doc/invoke.texi b/gcc/doc/invoke.texi
-index 0ab6c9c6449..b18e9124b4e 100644
+index 0ab6c9c6449..5e6d240dc5d 100644
 --- a/gcc/doc/invoke.texi
 +++ b/gcc/doc/invoke.texi
 @@ -637,7 +637,8 @@ Objective-C and Objective-C++ Dialects}.
@@ -4150,6 +4225,30 @@ index 0ab6c9c6449..b18e9124b4e 100644
  @item -march=@var{name}
  @opindex march
  Specify the name of the target architecture and, optionally, one or
+@@ -28711,9 +28735,9 @@ Note that @option{-mcmodel=large} is incompatible with
+ @option{-mindirect-branch=thunk-extern} since the thunk function may
+ not be reachable in the large code model.
+ 
+-Note that @option{-mindirect-branch=thunk-extern} is incompatible with
+-@option{-fcf-protection=branch} since the external thunk cannot be modified
+-to disable control-flow check.
++Note that @option{-mindirect-branch=thunk-extern} is compatible with
++@option{-fcf-protection=branch} since the external thunk can be made
++to enable control-flow check.
+ 
+ @item -mfunction-return=@var{choice}
+ @opindex mfunction-return
+@@ -28726,6 +28750,10 @@ object file.  You can control this behavior for a specific function by
+ using the function attribute @code{function_return}.
+ @xref{Function Attributes}.
+ 
++Note that @option{-mindirect-return=thunk-extern} is compatible with
++@option{-fcf-protection=branch} since the external thunk can be made
++to enable control-flow check.
++
+ Note that @option{-mcmodel=large} is incompatible with
+ @option{-mfunction-return=thunk} and
+ @option{-mfunction-return=thunk-extern} since the thunk function may
 diff --git a/gcc/doc/tm.texi b/gcc/doc/tm.texi
 index 8c8978bb13a..7f5c370d97a 100644
 --- a/gcc/doc/tm.texi
@@ -4783,10 +4882,18 @@ index 7916344c584..3e969e52176 100644
  extern void mark_end_of_function_resources (rtx, bool);
  extern void init_resource_info (rtx_insn *);
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..ec3b39c1dbd 100644
+index e132f2657ef..49e8d899e5e 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,470 @@
+@@ -1,3 +1,478 @@
++2020-04-29  H.J. Lu  <hongjiu.lu@intel.com>
++
++	Backport from master
++	2020-04-29  H.J. Lu  <hongjiu.lu@intel.com>
++
++	PR target/93654
++	* gcc.target/i386/pr93654.c: New test.
++
 +2020-04-24  Thomas Koenig  <tkoenig@gcc.gnu.org>
 +
 +	Backport from trunk
@@ -5850,6 +5957,31 @@ index 00000000000..ebc0cf45cc6
 +{
 +  return foo ();
 +}
+diff --git a/gcc/testsuite/g++.dg/ext/attr-type1.C b/gcc/testsuite/g++.dg/ext/attr-type1.C
+new file mode 100644
+index 00000000000..6e84cccea1f
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/ext/attr-type1.C
+@@ -0,0 +1,19 @@
++// PR c++/90750
++// { dg-do compile { target c++11 } }
++
++template <typename> struct S
++{
++  static const int b = 64;
++};
++
++template <typename a> struct T: S<a>
++{
++  using A = S<a>;
++  using A::b;
++  char* __attribute__((aligned(b))) c;
++};
++
++T<int> t;
++
++#define SA(X) static_assert (X,#X)
++SA (alignof(T<int>) == S<int>::b);
 diff --git a/gcc/testsuite/g++.dg/gomp/pr94477.C b/gcc/testsuite/g++.dg/gomp/pr94477.C
 new file mode 100644
 index 00000000000..e7fdc23d6d3
@@ -6102,6 +6234,23 @@ index 00000000000..45b90a2249d
 +{
 +  a[2].foo ();
 +}
+diff --git a/gcc/testsuite/g++.dg/warn/Wunused-var-26.C b/gcc/testsuite/g++.dg/warn/Wunused-var-26.C
+index b3e020b6007..89c53de88a4 100644
+--- a/gcc/testsuite/g++.dg/warn/Wunused-var-26.C
++++ b/gcc/testsuite/g++.dg/warn/Wunused-var-26.C
+@@ -47,10 +47,10 @@ template <class T>
+ void f_var_type_unused ()
+ {
+   // The variable's type is marked unused.
+-  T* UNUSED t = new T;   // { dg-bogus "unused variable" "bug 79585" { xfail *-*-* } }
++  T* UNUSED t = new T;   // { dg-bogus "unused variable" "bug 79585" }
+ 
+   typedef T U;
+-  U* UNUSED u = new U;   // { dg-bogus "unused variable" "bug 79585" { xfail *-*-* } }
++  U* UNUSED u = new U;   // { dg-bogus "unused variable" "bug 79585" }
+ 
+   typedef T UNUSED U;
+   U v = U ();   // { dg-bogus "unused variable" "bug 79585" }
 diff --git a/gcc/testsuite/g++.target/aarch64/pr94052.C b/gcc/testsuite/g++.target/aarch64/pr94052.C
 new file mode 100644
 index 00000000000..d36c9bdc158
@@ -7809,6 +7958,21 @@ index 00000000000..b38b5ad32bb
 +foo (int x, int y)
 +{
 +  return x == 0 ? x : y;
++}
+diff --git a/gcc/testsuite/gcc.target/i386/pr93654.c b/gcc/testsuite/gcc.target/i386/pr93654.c
+new file mode 100644
+index 00000000000..ec5bdce86a6
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr93654.c
+@@ -0,0 +1,9 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -fcf-protection -mfunction-return=thunk-extern -mindirect-branch=thunk-extern" } */
++
++int
++bar (void (*foo) (void))
++{
++  foo (); 
++  return 0;
 +}
 diff --git a/gcc/testsuite/gcc.target/i386/pr94103.c b/gcc/testsuite/gcc.target/i386/pr94103.c
 new file mode 100644
