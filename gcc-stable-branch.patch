@@ -10,9 +10,10 @@ Bill Schmidt (1):
 Bin Cheng (1):
       backport PR94125: Update post order number for merged SCC.
 
-Carl Love (2):
+Carl Love (3):
       rs6000: Add command line and builtin compatibility check
       rs6000: vec_rlnm fix to make builtin work according to ABI
+      rs6000, Fix header comment for intrinsic function _mm_movemask_epi8
 
 Claudiu Zissulescu (1):
       arc: Allow more ABIs in GLIBC_DYNAMIC_LINKER
@@ -25,7 +26,8 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (48):
+GCC Administrator (49):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -295,10 +297,14 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..c0d72cbbdf5 100644
+index d8e53874e68..9598a49a702 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,621 @@
+@@ -1,3 +1,625 @@
++2020-04-30  Carl Love  <cel@us.ibm.com>
++
++	* config/rs6000/emmintrin.h (_mm_movemask_epi8): Fix comment.
++
 +2020-04-29  H.J. Lu  <hongjiu.lu@intel.com>
 +
 +	Backport from master
@@ -2714,6 +2720,20 @@ index d66ae7ca2c7..dbe5b7a1909 100644
  #define vec_rsqrt __builtin_vec_rsqrt
  #define vec_rsqrte __builtin_vec_rsqrte
  #define vec_signed __builtin_vec_vsigned
+diff --git a/gcc/config/rs6000/emmintrin.h b/gcc/config/rs6000/emmintrin.h
+index 30975090a2d..32c5fa0cb08 100644
+--- a/gcc/config/rs6000/emmintrin.h
++++ b/gcc/config/rs6000/emmintrin.h
+@@ -2033,7 +2033,8 @@ _mm_min_epu8 (__m128i __A, __m128i __B)
+ #ifdef _ARCH_PWR8
+ /* Intrinsic functions that require PowerISA 2.07 minimum.  */
+ 
+-/* Creates a 4-bit mask from the most significant bits of the SPFP values.  */
++/* Return a mask created from the most significant bit of each 8-bit
++   element in A.  */
+ extern __inline int __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+ _mm_movemask_epi8 (__m128i __A)
+ {
 diff --git a/gcc/config/rs6000/rs6000-c.c b/gcc/config/rs6000/rs6000-c.c
 index 7c28d4d8176..1ec38db0908 100644
 --- a/gcc/config/rs6000/rs6000-c.c
