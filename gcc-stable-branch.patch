@@ -1,3 +1,6 @@
+Alan Modra (1):
+      [RS6000] PR94145, make PLT loads volatile
+
 Andre Vieira (1):
       aarch64: Fix bootstrap with old binutils [PR93053]
 
@@ -26,7 +29,8 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (49):
+GCC Administrator (50):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -297,10 +301,22 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..9598a49a702 100644
+index d8e53874e68..e8b3131e7df 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,625 @@
+@@ -1,3 +1,637 @@
++2020-05-01  Alan Modra	 <amodra@gmail.com>
++
++	PR target/94145
++	Backport from master
++	2020-03-27  Alan Modra	 <amodra@gmail.com>
++
++	* config/rs6000/rs6000.c (rs6000_longcall_ref): Use unspec_volatile
++	for PLT16_LO.
++	* config/rs6000/rs6000.md (UNSPEC_PLT16_LO): Remove.
++	(UNSPECV_PLT16_LO): Define.
++	(pltseq_plt16_lo_): Use unspec_volatile.
++
 +2020-04-30  Carl Love  <cel@us.ibm.com>
 +
 +	* config/rs6000/emmintrin.h (_mm_movemask_epi8): Fix comment.
@@ -472,7 +488,7 @@ index d8e53874e68..9598a49a702 100644
 +
 +2020-04-07  Will Schmidt  <will_schmidt@vnet.ibm.com>
 +
-+Backport from mainline.
++	Backport from mainline.
 +	2020-03-23  Will Schmidt  <will_schmidt@vnet.ibm.com>
 +
 +	* config/rs6000/rs6000-call.c altivec_init_builtins(): Remove
@@ -2774,7 +2790,7 @@ index d0d69beafd4..47a5d0576d0 100644
  
  /* Deal with ports that do not have -mstrict-align.  */
 diff --git a/gcc/config/rs6000/rs6000.c b/gcc/config/rs6000/rs6000.c
-index 87d60078bb0..f7c538c4d54 100644
+index 87d60078bb0..8043cbc8752 100644
 --- a/gcc/config/rs6000/rs6000.c
 +++ b/gcc/config/rs6000/rs6000.c
 @@ -4099,6 +4099,14 @@ rs6000_option_override_internal (bool global_init_p)
@@ -2904,7 +2920,19 @@ index 87d60078bb0..f7c538c4d54 100644
      max_p = !max_p;
  
    else
-@@ -37399,6 +37385,7 @@ rs6000_disable_incompatible_switches (void)
+@@ -33063,8 +33049,9 @@ rs6000_longcall_ref (rtx call_ref, rtx arg)
+       rtx reg = gen_rtx_REG (Pmode, regno);
+       rtx hi = gen_rtx_UNSPEC (Pmode, gen_rtvec (3, base, call_ref, arg),
+ 			       UNSPEC_PLT16_HA);
+-      rtx lo = gen_rtx_UNSPEC (Pmode, gen_rtvec (3, reg, call_ref, arg),
+-			       UNSPEC_PLT16_LO);
++      rtx lo = gen_rtx_UNSPEC_VOLATILE (Pmode,
++					gen_rtvec (3, reg, call_ref, arg),
++					UNSPECV_PLT16_LO);
+       emit_insn (gen_rtx_SET (reg, hi));
+       emit_insn (gen_rtx_SET (reg, lo));
+       return reg;
+@@ -37399,6 +37386,7 @@ rs6000_disable_incompatible_switches (void)
      { OPTION_MASK_P9_VECTOR,	OTHER_P9_VECTOR_MASKS,	"power9-vector"	},
      { OPTION_MASK_P8_VECTOR,	OTHER_P8_VECTOR_MASKS,	"power8-vector"	},
      { OPTION_MASK_VSX,		OTHER_VSX_VECTOR_MASKS,	"vsx"		},
@@ -2912,6 +2940,41 @@ index 87d60078bb0..f7c538c4d54 100644
    };
  
    for (i = 0; i < ARRAY_SIZE (flags); i++)
+diff --git a/gcc/config/rs6000/rs6000.md b/gcc/config/rs6000/rs6000.md
+index a768f5dd511..c8740bfdee8 100644
+--- a/gcc/config/rs6000/rs6000.md
++++ b/gcc/config/rs6000/rs6000.md
+@@ -152,7 +152,6 @@
+    UNSPEC_SI_FROM_SF
+    UNSPEC_PLTSEQ
+    UNSPEC_PLT16_HA
+-   UNSPEC_PLT16_LO
+   ])
+ 
+ ;;
+@@ -181,6 +180,7 @@
+    UNSPECV_MTFSB1		; Set FPSCR Field bit to 1
+    UNSPECV_SPLIT_STACK_RETURN   ; A camouflaged return
+    UNSPECV_SPEC_BARRIER         ; Speculation barrier
++   UNSPECV_PLT16_LO
+   ])
+ 
+ 
+@@ -10162,10 +10162,10 @@
+ 
+ (define_insn "*pltseq_plt16_lo_<mode>"
+   [(set (match_operand:P 0 "gpc_reg_operand" "=r")
+-	(unspec:P [(match_operand:P 1 "gpc_reg_operand" "b")
+-		   (match_operand:P 2 "symbol_ref_operand" "s")
+-		   (match_operand:P 3 "" "")]
+-		  UNSPEC_PLT16_LO))]
++	(unspec_volatile:P [(match_operand:P 1 "gpc_reg_operand" "b")
++			    (match_operand:P 2 "symbol_ref_operand" "s")
++			    (match_operand:P 3 "" "")]
++			   UNSPECV_PLT16_LO))]
+   "TARGET_PLTSEQ"
+ {
+   return rs6000_pltseq_template (operands, 2);
 diff --git a/gcc/config/rs6000/vsx.md b/gcc/config/rs6000/vsx.md
 index 607c0cd33f2..43dd3cba641 100644
 --- a/gcc/config/rs6000/vsx.md
