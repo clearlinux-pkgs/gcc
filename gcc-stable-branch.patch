@@ -7,11 +7,17 @@ Andre Vieira (1):
 Andrea Corallo (1):
       aarch64: backport fix for PR target/94530
 
+Andreas Krebbel (3):
+      PR94613: Fix vec_sel builtin for IBM Z
+      S/390: Fix PR94666
+      Add missing changelog entries
+
 Bill Schmidt (1):
       rs6000: Fix -mpower9-vector -mno-altivec ICE (PR87560)
 
-Bin Cheng (1):
+Bin Cheng (2):
       backport PR94125: Update post order number for merged SCC.
+      Add unsigned type iv_cand for iv_use with non mode-precision type
 
 Carl Love (3):
       rs6000: Add command line and builtin compatibility check
@@ -29,7 +35,10 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (50):
+GCC Administrator (53):
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -262,8 +271,9 @@ Thomas Rodgers (3):
 Thomas Schwinge (1):
       Rename 'libgomp.oacc-c-c++-common/static-dynamic-lifetimes-*' to 'libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-*' [PR92843]
 
-Tobias Burnus (1):
+Tobias Burnus (2):
       [Fortran] Fix result-variable handling of MODULE PROCEDURE (PR94348)
+      ICE in gfc_get_dataptr_offset, at fortran/trans-array.c:6951
 
 Uros Bizjak (4):
       i386: Fix REDUC_SSE_SMINMAX_MODE mode conditions.
@@ -304,10 +314,41 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..e8b3131e7df 100644
+index d8e53874e68..4c625fd55ae 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,637 @@
+@@ -1,3 +1,668 @@
++2020-05-04  Andreas Krebbel  <krebbel@linux.ibm.com>
++
++	Backport from mainline
++	2020-04-20  Andreas Krebbel  <krebbel@linux.ibm.com>
++
++	* config/s390/vector.md ("popcountv8hi2_vx", "popcountv4si2_vx")
++	("popcountv2di2_vx"): Use simplify_gen_subreg.
++
++2020-05-04  Andreas Krebbel  <krebbel@linux.ibm.com>
++
++	Backport from mainline
++	2020-04-20  Andreas Krebbel  <krebbel@linux.ibm.com>
++
++	PR target/94613
++	* config/s390/s390-builtin-types.def: Add 3 new function modes.
++	* config/s390/s390-builtins.def: Add mode dependent low-level
++	builtin and map the overloaded builtins to these.
++	* config/s390/vx-builtins.md ("vec_selV_HW"): Rename to ...
++	("vsel<V_HW"): ... this and rewrite the pattern with bitops.
++
++2020-05-04  Bin Cheng  <bin.cheng@linux.alibaba.com>
++
++	PR tree-optimization/93674
++	Backport from master
++	2020-04-09  Bin Cheng  <bin.cheng@linux.alibaba.com>
++
++	* tree-ssa-loop-ivopts.c (langhooks.h): New include.
++	(add_iv_candidate_for_use): For iv_use of non integer or pointer type,
++	or non-mode precision type, add candidate in unsigned type with the
++	same precision.
++
 +2020-05-01  Alan Modra	 <amodra@gmail.com>
 +
 +	PR target/94145
@@ -3119,6 +3160,205 @@ index 607c0cd33f2..43dd3cba641 100644
  (define_insn_and_split "*vsx_extract_<mode>_<VS_scalar>mode_var"
    [(set (match_operand:<VS_scalar> 0 "gpc_reg_operand" "=r,r,r")
  	(zero_extend:<VS_scalar>
+diff --git a/gcc/config/s390/s390-builtin-types.def b/gcc/config/s390/s390-builtin-types.def
+index 53398a98e9e..9e868b7c818 100644
+--- a/gcc/config/s390/s390-builtin-types.def
++++ b/gcc/config/s390/s390-builtin-types.def
+@@ -301,6 +301,7 @@ DEF_FN_TYPE_3 (BT_FN_UV16QI_UV2DI_UV2DI_UV16QI, BT_UV16QI, BT_UV2DI, BT_UV2DI, B
+ DEF_FN_TYPE_3 (BT_FN_UV16QI_UV8HI_UV8HI_INTPTR, BT_UV16QI, BT_UV8HI, BT_UV8HI, BT_INTPTR)
+ DEF_FN_TYPE_3 (BT_FN_UV2DI_UV2DI_ULONGLONG_INT, BT_UV2DI, BT_UV2DI, BT_ULONGLONG, BT_INT)
+ DEF_FN_TYPE_3 (BT_FN_UV2DI_UV2DI_UV2DI_INT, BT_UV2DI, BT_UV2DI, BT_UV2DI, BT_INT)
++DEF_FN_TYPE_3 (BT_FN_UV2DI_UV2DI_UV2DI_UV2DI, BT_UV2DI, BT_UV2DI, BT_UV2DI, BT_UV2DI)
+ DEF_FN_TYPE_3 (BT_FN_UV2DI_UV4SI_UV4SI_UV2DI, BT_UV2DI, BT_UV4SI, BT_UV4SI, BT_UV2DI)
+ DEF_FN_TYPE_3 (BT_FN_UV4SI_UV2DI_UV2DI_INTPTR, BT_UV4SI, BT_UV2DI, BT_UV2DI, BT_INTPTR)
+ DEF_FN_TYPE_3 (BT_FN_UV4SI_UV4SI_UINT_INT, BT_UV4SI, BT_UV4SI, BT_UINT, BT_INT)
+@@ -322,6 +323,7 @@ DEF_FN_TYPE_3 (BT_FN_V2DF_V2DF_DBL_INT, BT_V2DF, BT_V2DF, BT_DBL, BT_INT)
+ DEF_FN_TYPE_3 (BT_FN_V2DF_V2DF_UCHAR_UCHAR, BT_V2DF, BT_V2DF, BT_UCHAR, BT_UCHAR)
+ DEF_FN_TYPE_3 (BT_FN_V2DF_V2DF_UINT_UINT, BT_V2DF, BT_V2DF, BT_UINT, BT_UINT)
+ DEF_FN_TYPE_3 (BT_FN_V2DF_V2DF_V2DF_INT, BT_V2DF, BT_V2DF, BT_V2DF, BT_INT)
++DEF_FN_TYPE_3 (BT_FN_V2DF_V2DF_V2DF_UV2DI, BT_V2DF, BT_V2DF, BT_V2DF, BT_UV2DI)
+ DEF_FN_TYPE_3 (BT_FN_V2DF_V2DF_V2DF_V2DF, BT_V2DF, BT_V2DF, BT_V2DF, BT_V2DF)
+ DEF_FN_TYPE_3 (BT_FN_V2DI_UV2DI_UV2DI_INTPTR, BT_V2DI, BT_UV2DI, BT_UV2DI, BT_INTPTR)
+ DEF_FN_TYPE_3 (BT_FN_V2DI_V2DF_INT_INTPTR, BT_V2DI, BT_V2DF, BT_INT, BT_INTPTR)
+@@ -332,6 +334,7 @@ DEF_FN_TYPE_3 (BT_FN_V4SF_V2DF_INT_INT, BT_V4SF, BT_V2DF, BT_INT, BT_INT)
+ DEF_FN_TYPE_3 (BT_FN_V4SF_V4SF_FLT_INT, BT_V4SF, BT_V4SF, BT_FLT, BT_INT)
+ DEF_FN_TYPE_3 (BT_FN_V4SF_V4SF_UCHAR_UCHAR, BT_V4SF, BT_V4SF, BT_UCHAR, BT_UCHAR)
+ DEF_FN_TYPE_3 (BT_FN_V4SF_V4SF_V4SF_INT, BT_V4SF, BT_V4SF, BT_V4SF, BT_INT)
++DEF_FN_TYPE_3 (BT_FN_V4SF_V4SF_V4SF_UV4SI, BT_V4SF, BT_V4SF, BT_V4SF, BT_UV4SI)
+ DEF_FN_TYPE_3 (BT_FN_V4SF_V4SF_V4SF_V4SF, BT_V4SF, BT_V4SF, BT_V4SF, BT_V4SF)
+ DEF_FN_TYPE_3 (BT_FN_V4SI_UV4SI_UV4SI_INTPTR, BT_V4SI, BT_UV4SI, BT_UV4SI, BT_INTPTR)
+ DEF_FN_TYPE_3 (BT_FN_V4SI_V2DI_V2DI_INTPTR, BT_V4SI, BT_V2DI, BT_V2DI, BT_INTPTR)
+diff --git a/gcc/config/s390/s390-builtins.def b/gcc/config/s390/s390-builtins.def
+index 3f39b9d3b88..b31abc6af9b 100644
+--- a/gcc/config/s390/s390-builtins.def
++++ b/gcc/config/s390/s390-builtins.def
+@@ -687,36 +687,41 @@ B_DEF      (s390_vsceg,                 vec_scatter_elementv2di,0,
+ 
+ /* First two operands are swapped in s390-c.c */
+ OB_DEF     (s390_vec_sel,               s390_vec_sel_b8_a,  s390_vec_sel_dbl_b, B_VX,               BT_FN_OV4SI_OV4SI_OV4SI_OV4SI)
+-OB_DEF_VAR (s390_vec_sel_b8_a,          s390_vsel,          0,                  0,                  BT_OV_BV16QI_BV16QI_BV16QI_UV16QI)
+-OB_DEF_VAR (s390_vec_sel_b8_b,          s390_vsel,          0,                  0,                  BT_OV_BV16QI_BV16QI_BV16QI_BV16QI)
+-OB_DEF_VAR (s390_vec_sel_s8_a,          s390_vsel,          0,                  0,                  BT_OV_V16QI_V16QI_V16QI_UV16QI)
+-OB_DEF_VAR (s390_vec_sel_s8_b,          s390_vsel,          0,                  0,                  BT_OV_V16QI_V16QI_V16QI_BV16QI)
+-OB_DEF_VAR (s390_vec_sel_u8_a,          s390_vsel,          0,                  0,                  BT_OV_UV16QI_UV16QI_UV16QI_UV16QI)
+-OB_DEF_VAR (s390_vec_sel_u8_b,          s390_vsel,          0,                  0,                  BT_OV_UV16QI_UV16QI_UV16QI_BV16QI)
+-OB_DEF_VAR (s390_vec_sel_b16_a,         s390_vsel,          0,                  0,                  BT_OV_BV8HI_BV8HI_BV8HI_UV8HI)
+-OB_DEF_VAR (s390_vec_sel_b16_b,         s390_vsel,          0,                  0,                  BT_OV_BV8HI_BV8HI_BV8HI_BV8HI)
+-OB_DEF_VAR (s390_vec_sel_s16_a,         s390_vsel,          0,                  0,                  BT_OV_V8HI_V8HI_V8HI_UV8HI)
+-OB_DEF_VAR (s390_vec_sel_s16_b,         s390_vsel,          0,                  0,                  BT_OV_V8HI_V8HI_V8HI_BV8HI)
+-OB_DEF_VAR (s390_vec_sel_u16_a,         s390_vsel,          0,                  0,                  BT_OV_UV8HI_UV8HI_UV8HI_UV8HI)
+-OB_DEF_VAR (s390_vec_sel_u16_b,         s390_vsel,          0,                  0,                  BT_OV_UV8HI_UV8HI_UV8HI_BV8HI)
+-OB_DEF_VAR (s390_vec_sel_b32_a,         s390_vsel,          0,                  0,                  BT_OV_BV4SI_BV4SI_BV4SI_UV4SI)
+-OB_DEF_VAR (s390_vec_sel_b32_b,         s390_vsel,          0,                  0,                  BT_OV_BV4SI_BV4SI_BV4SI_BV4SI)
+-OB_DEF_VAR (s390_vec_sel_s32_a,         s390_vsel,          0,                  0,                  BT_OV_V4SI_V4SI_V4SI_UV4SI)
+-OB_DEF_VAR (s390_vec_sel_s32_b,         s390_vsel,          0,                  0,                  BT_OV_V4SI_V4SI_V4SI_BV4SI)
+-OB_DEF_VAR (s390_vec_sel_u32_a,         s390_vsel,          0,                  0,                  BT_OV_UV4SI_UV4SI_UV4SI_UV4SI)
+-OB_DEF_VAR (s390_vec_sel_u32_b,         s390_vsel,          0,                  0,                  BT_OV_UV4SI_UV4SI_UV4SI_BV4SI)
+-OB_DEF_VAR (s390_vec_sel_b64_a,         s390_vsel,          0,                  0,                  BT_OV_BV2DI_BV2DI_BV2DI_UV2DI)
+-OB_DEF_VAR (s390_vec_sel_b64_b,         s390_vsel,          0,                  0,                  BT_OV_BV2DI_BV2DI_BV2DI_BV2DI)
+-OB_DEF_VAR (s390_vec_sel_s64_a,         s390_vsel,          0,                  0,                  BT_OV_V2DI_V2DI_V2DI_UV2DI)
+-OB_DEF_VAR (s390_vec_sel_s64_b,         s390_vsel,          0,                  0,                  BT_OV_V2DI_V2DI_V2DI_BV2DI)
+-OB_DEF_VAR (s390_vec_sel_u64_a,         s390_vsel,          0,                  0,                  BT_OV_UV2DI_UV2DI_UV2DI_UV2DI)
+-OB_DEF_VAR (s390_vec_sel_u64_b,         s390_vsel,          0,                  0,                  BT_OV_UV2DI_UV2DI_UV2DI_BV2DI)
+-OB_DEF_VAR (s390_vec_sel_flt_a,         s390_vsel,          B_VXE,              0,                  BT_OV_V4SF_V4SF_V4SF_UV4SI)
+-OB_DEF_VAR (s390_vec_sel_flt_b,         s390_vsel,          B_VXE,              0,                  BT_OV_V4SF_V4SF_V4SF_BV4SI)
+-OB_DEF_VAR (s390_vec_sel_dbl_a,         s390_vsel,          0,                  0,                  BT_OV_V2DF_V2DF_V2DF_UV2DI)
+-OB_DEF_VAR (s390_vec_sel_dbl_b,         s390_vsel,          0,                  0,                  BT_OV_V2DF_V2DF_V2DF_BV2DI)
+-
+-B_DEF      (s390_vsel,                  vec_selv16qi,       0,                  B_VX,               0,                  BT_FN_UV16QI_UV16QI_UV16QI_UV16QI)
++OB_DEF_VAR (s390_vec_sel_b8_a,          s390_vselb,         0,                  0,                  BT_OV_BV16QI_BV16QI_BV16QI_UV16QI)
++OB_DEF_VAR (s390_vec_sel_b8_b,          s390_vselb,         0,                  0,                  BT_OV_BV16QI_BV16QI_BV16QI_BV16QI)
++OB_DEF_VAR (s390_vec_sel_s8_a,          s390_vselb,         0,                  0,                  BT_OV_V16QI_V16QI_V16QI_UV16QI)
++OB_DEF_VAR (s390_vec_sel_s8_b,          s390_vselb,         0,                  0,                  BT_OV_V16QI_V16QI_V16QI_BV16QI)
++OB_DEF_VAR (s390_vec_sel_u8_a,          s390_vselb,         0,                  0,                  BT_OV_UV16QI_UV16QI_UV16QI_UV16QI)
++OB_DEF_VAR (s390_vec_sel_u8_b,          s390_vselb,         0,                  0,                  BT_OV_UV16QI_UV16QI_UV16QI_BV16QI)
++OB_DEF_VAR (s390_vec_sel_b16_a,         s390_vselh,         0,                  0,                  BT_OV_BV8HI_BV8HI_BV8HI_UV8HI)
++OB_DEF_VAR (s390_vec_sel_b16_b,         s390_vselh,         0,                  0,                  BT_OV_BV8HI_BV8HI_BV8HI_BV8HI)
++OB_DEF_VAR (s390_vec_sel_s16_a,         s390_vselh,         0,                  0,                  BT_OV_V8HI_V8HI_V8HI_UV8HI)
++OB_DEF_VAR (s390_vec_sel_s16_b,         s390_vselh,         0,                  0,                  BT_OV_V8HI_V8HI_V8HI_BV8HI)
++OB_DEF_VAR (s390_vec_sel_u16_a,         s390_vselh,         0,                  0,                  BT_OV_UV8HI_UV8HI_UV8HI_UV8HI)
++OB_DEF_VAR (s390_vec_sel_u16_b,         s390_vselh,         0,                  0,                  BT_OV_UV8HI_UV8HI_UV8HI_BV8HI)
++OB_DEF_VAR (s390_vec_sel_b32_a,         s390_vself,         0,                  0,                  BT_OV_BV4SI_BV4SI_BV4SI_UV4SI)
++OB_DEF_VAR (s390_vec_sel_b32_b,         s390_vself,         0,                  0,                  BT_OV_BV4SI_BV4SI_BV4SI_BV4SI)
++OB_DEF_VAR (s390_vec_sel_s32_a,         s390_vself,         0,                  0,                  BT_OV_V4SI_V4SI_V4SI_UV4SI)
++OB_DEF_VAR (s390_vec_sel_s32_b,         s390_vself,         0,                  0,                  BT_OV_V4SI_V4SI_V4SI_BV4SI)
++OB_DEF_VAR (s390_vec_sel_u32_a,         s390_vself,         0,                  0,                  BT_OV_UV4SI_UV4SI_UV4SI_UV4SI)
++OB_DEF_VAR (s390_vec_sel_u32_b,         s390_vself,         0,                  0,                  BT_OV_UV4SI_UV4SI_UV4SI_BV4SI)
++OB_DEF_VAR (s390_vec_sel_b64_a,         s390_vselg,         0,                  0,                  BT_OV_BV2DI_BV2DI_BV2DI_UV2DI)
++OB_DEF_VAR (s390_vec_sel_b64_b,         s390_vselg,         0,                  0,                  BT_OV_BV2DI_BV2DI_BV2DI_BV2DI)
++OB_DEF_VAR (s390_vec_sel_s64_a,         s390_vselg,         0,                  0,                  BT_OV_V2DI_V2DI_V2DI_UV2DI)
++OB_DEF_VAR (s390_vec_sel_s64_b,         s390_vselg,         0,                  0,                  BT_OV_V2DI_V2DI_V2DI_BV2DI)
++OB_DEF_VAR (s390_vec_sel_u64_a,         s390_vselg,         0,                  0,                  BT_OV_UV2DI_UV2DI_UV2DI_UV2DI)
++OB_DEF_VAR (s390_vec_sel_u64_b,         s390_vselg,         0,                  0,                  BT_OV_UV2DI_UV2DI_UV2DI_BV2DI)
++OB_DEF_VAR (s390_vec_sel_flt_a,         s390_vself_flt,     B_VXE,              0,                  BT_OV_V4SF_V4SF_V4SF_UV4SI)
++OB_DEF_VAR (s390_vec_sel_flt_b,         s390_vself_flt,     B_VXE,              0,                  BT_OV_V4SF_V4SF_V4SF_BV4SI)
++OB_DEF_VAR (s390_vec_sel_dbl_a,         s390_vselg_dbl,     0,                  0,                  BT_OV_V2DF_V2DF_V2DF_UV2DI)
++OB_DEF_VAR (s390_vec_sel_dbl_b,         s390_vselg_dbl,     0,                  0,                  BT_OV_V2DF_V2DF_V2DF_BV2DI)
++
++B_DEF      (s390_vselb,                 vselv16qi,          0,                  B_VX,               0,                  BT_FN_UV16QI_UV16QI_UV16QI_UV16QI)
++B_DEF      (s390_vselh,                 vselv8hi,           0,                  B_VX,               0,                  BT_FN_UV8HI_UV8HI_UV8HI_UV8HI)
++B_DEF      (s390_vself,                 vselv4si,           0,                  B_VX,               0,                  BT_FN_UV4SI_UV4SI_UV4SI_UV4SI)
++B_DEF      (s390_vselg,                 vselv2di,           0,                  B_VX,               0,                  BT_FN_UV2DI_UV2DI_UV2DI_UV2DI)
++B_DEF      (s390_vself_flt,             vselv4sf,           0,                  B_VXE,              0,                  BT_FN_V4SF_V4SF_V4SF_UV4SI)
++B_DEF      (s390_vselg_dbl,             vselv2df,           0,                  B_VX,               0,                  BT_FN_V2DF_V2DF_V2DF_UV2DI)
+ 
+ OB_DEF     (s390_vec_extend_s64,        s390_vec_extend_s64_s8,s390_vec_extend_s64_s32,B_VX,        BT_FN_OV4SI_OV4SI)
+ OB_DEF_VAR (s390_vec_extend_s64_s8,     s390_vsegb,         0,                  0,                  BT_OV_V2DI_V16QI)
+diff --git a/gcc/config/s390/vector.md b/gcc/config/s390/vector.md
+index 6ca503b0d44..7c1edf03027 100644
+--- a/gcc/config/s390/vector.md
++++ b/gcc/config/s390/vector.md
+@@ -855,7 +855,7 @@
+ 
+ (define_expand "popcountv8hi2_vx"
+   [(set (match_dup 2)
+-	(unspec:V16QI [(subreg:V16QI (match_operand:V8HI 1 "register_operand" "v") 0)]
++	(unspec:V16QI [(match_operand:V8HI 1 "register_operand" "v")]
+ 		      UNSPEC_POPCNT))
+    ; Make a copy of the result
+    (set (match_dup 3) (match_dup 2))
+@@ -887,6 +887,8 @@
+ ]
+   "TARGET_VX && !TARGET_VXE"
+ {
++  operands[1] = simplify_gen_subreg (V16QImode, operands[1],
++				     V8HImode, 0);
+   operands[2] = gen_reg_rtx (V16QImode);
+   operands[3] = gen_reg_rtx (V16QImode);
+   operands[4] = gen_reg_rtx (V16QImode);
+@@ -895,20 +897,21 @@
+ 
+ (define_expand "popcountv4si2_vx"
+   [(set (match_dup 2)
+-	(unspec:V16QI [(subreg:V16QI (match_operand:V4SI 1 "register_operand" "v") 0)]
++	(unspec:V16QI [(match_operand:V4SI 1 "register_operand" "v")]
+ 		      UNSPEC_POPCNT))
+    (set (match_operand:V4SI 0 "register_operand" "=v")
+ 	(unspec:V4SI [(match_dup 2) (match_dup 3)]
+ 		     UNSPEC_VEC_VSUM))]
+   "TARGET_VX && !TARGET_VXE"
+ {
++  operands[1] = simplify_gen_subreg (V16QImode, operands[1], V4SImode, 0);
+   operands[2] = gen_reg_rtx (V16QImode);
+   operands[3] = force_reg (V16QImode, CONST0_RTX (V16QImode));
+ })
+ 
+ (define_expand "popcountv2di2_vx"
+   [(set (match_dup 2)
+-	(unspec:V16QI [(subreg:V16QI (match_operand:V2DI 1 "register_operand" "v") 0)]
++	(unspec:V16QI [(match_operand:V2DI 1 "register_operand" "v")]
+ 		      UNSPEC_POPCNT))
+    (set (match_dup 3)
+ 	(unspec:V4SI [(match_dup 2) (match_dup 4)]
+@@ -918,6 +921,7 @@
+ 		     UNSPEC_VEC_VSUMG))]
+   "TARGET_VX && !TARGET_VXE"
+ {
++  operands[1] = simplify_gen_subreg (V16QImode, operands[1], V2DImode, 0);
+   operands[2] = gen_reg_rtx (V16QImode);
+   operands[3] = gen_reg_rtx (V4SImode);
+   operands[4] = force_reg (V16QImode, CONST0_RTX (V16QImode));
+diff --git a/gcc/config/s390/vx-builtins.md b/gcc/config/s390/vx-builtins.md
+index 5ec3fb4fe58..397f63856ef 100644
+--- a/gcc/config/s390/vx-builtins.md
++++ b/gcc/config/s390/vx-builtins.md
+@@ -499,23 +499,22 @@
+ 
+ ; Vector select
+ 
+-; Operand 3 selects bits from either OP1 (0) or OP2 (1)
++; for all b in bits op0[b] = op3[b] == 0 ? op2[b] : op1[b]
++; implemented as: op0 = (op1 & op3) | (op2 & ~op3)
+ 
+-; Comparison operator should not matter as long as we always use the same ?!
++; Used to expand the vec_sel builtin. Operands op1 and op2 already got
++; swapped in s390-c.c when we get here.
+ 
+-; Operands 1 and 2 are swapped in order to match the altivec builtin.
+-; If operand 3 is a const_int bitmask this would be vec_merge
+-(define_expand "vec_sel<mode>"
+-  [(set (match_operand:V_HW 0 "register_operand" "")
+-	(if_then_else:V_HW
+-	 (eq (match_operand:<tointvec> 3 "register_operand"  "")
+-	     (match_dup 4))
+-	 (match_operand:V_HW 2 "register_operand"  "")
+-	 (match_operand:V_HW 1 "register_operand"  "")))]
++(define_insn "vsel<mode>"
++  [(set (match_operand:V_HW                      0 "register_operand" "=v")
++	(ior:V_HW
++	 (and:V_HW (match_operand:V_HW           1 "register_operand"  "v")
++		   (match_operand:V_HW           3 "register_operand"  "v"))
++	 (and:V_HW (not:V_HW (match_dup 3))
++		   (match_operand:V_HW           2 "register_operand"  "v"))))]
+   "TARGET_VX"
+-{
+-  operands[4] = CONST0_RTX (<tointvec>mode);
+-})
++  "vsel\t%v0,%1,%2,%3"
++  [(set_attr "op_type" "VRR")])
+ 
+ 
+ ; Vector sign extend to doubleword
 diff --git a/gcc/config/xtensa/xtensa.c b/gcc/config/xtensa/xtensa.c
 index ee5612441e2..2527468d57d 100644
 --- a/gcc/config/xtensa/xtensa.c
@@ -4435,10 +4675,21 @@ index c717f24501e..64273c1c6bc 100644
  				    "when distributing negation across "
  				    "division"),
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index 8fefea2b63d..c2032eccac9 100644
+index 8fefea2b63d..21f8b1afa79 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,81 @@
+@@ -1,3 +1,92 @@
++2020-05-04  Tobias Burnus  <tobias@codesourcery.com>
++
++	Backport from mainline.
++	2020-03-08  Paul Thomas  <pault@gcc.gnu.org>
++
++	PR fortran/93581
++	* resolve.c (gfc_resolve_ref): Modify array refs to be elements
++	if the ref chain ends in INQUIRY_LEN.
++	* trans-array.c (gfc_get_dataptr_offset): Provide the offsets
++	for INQUIRY_RE and INQUIRY_IM.
++
 +2020-04-27  Thomas Koenig  <tkoenig@gcc.gnu.org>
 +
 +	PR fortran/93956
@@ -4672,10 +4923,78 @@ index 088b69f8ec9..f4ae9e9dfe7 100644
        /* If a comma appears, it is an intrinsic subprogram. */
        gfc_gobble_whitespace ();
 diff --git a/gcc/fortran/resolve.c b/gcc/fortran/resolve.c
-index a4ad26efffc..a3df534180c 100644
+index a4ad26efffc..c041d8df96d 100644
 --- a/gcc/fortran/resolve.c
 +++ b/gcc/fortran/resolve.c
-@@ -16510,7 +16510,8 @@ resolve_equivalence (gfc_equiv *eq)
+@@ -5094,8 +5094,8 @@ gfc_resolve_substring_charlen (gfc_expr *e)
+ static bool
+ resolve_ref (gfc_expr *expr)
+ {
+-  int current_part_dimension, n_components, seen_part_dimension;
+-  gfc_ref *ref, **prev;
++  int current_part_dimension, n_components, seen_part_dimension, dim;
++  gfc_ref *ref, **prev, *array_ref;
+   bool equal_length;
+ 
+   for (ref = expr->ref; ref; ref = ref->next)
+@@ -5141,12 +5141,14 @@ resolve_ref (gfc_expr *expr)
+   current_part_dimension = 0;
+   seen_part_dimension = 0;
+   n_components = 0;
++  array_ref = NULL;
+ 
+   for (ref = expr->ref; ref; ref = ref->next)
+     {
+       switch (ref->type)
+ 	{
+ 	case REF_ARRAY:
++	  array_ref = ref;
+ 	  switch (ref->u.ar.type)
+ 	    {
+ 	    case AR_FULL:
+@@ -5162,6 +5164,7 @@ resolve_ref (gfc_expr *expr)
+ 	      break;
+ 
+ 	    case AR_ELEMENT:
++	      array_ref = NULL;
+ 	      current_part_dimension = 0;
+ 	      break;
+ 
+@@ -5201,7 +5204,33 @@ resolve_ref (gfc_expr *expr)
+ 	  break;
+ 
+ 	case REF_SUBSTRING:
++	  break;
++
+ 	case REF_INQUIRY:
++	  /* Implement requirement in note 9.7 of F2018 that the result of the
++	     LEN inquiry be a scalar.  */
++	  if (ref->u.i == INQUIRY_LEN && array_ref)
++	    {
++	      array_ref->u.ar.type = AR_ELEMENT;
++	      expr->rank = 0;
++	      /* INQUIRY_LEN is not evaluated from the the rest of the expr
++		 but directly from the string length. This means that setting
++		 the array indices to one does not matter but might trigger
++		 a runtime bounds error. Suppress the check.  */
++	      expr->no_bounds_check = 1;
++	      for (dim = 0; dim < array_ref->u.ar.dimen; dim++)
++		{
++		  array_ref->u.ar.dimen_type[dim] = DIMEN_ELEMENT;
++		  if (array_ref->u.ar.start[dim])
++		    gfc_free_expr (array_ref->u.ar.start[dim]);
++		  array_ref->u.ar.start[dim]
++			= gfc_get_int_expr (gfc_default_integer_kind, NULL, 1);
++		  if (array_ref->u.ar.end[dim])
++		    gfc_free_expr (array_ref->u.ar.end[dim]);
++		  if (array_ref->u.ar.stride[dim])
++		    gfc_free_expr (array_ref->u.ar.stride[dim]);
++		}
++	    }
+ 	  break;
+ 	}
+ 
+@@ -16510,7 +16539,8 @@ resolve_equivalence (gfc_equiv *eq)
  	  && !gfc_notify_std (GFC_STD_GNU, msg, sym->name, &e->where))
  		continue;
  
@@ -4685,7 +5004,7 @@ index a4ad26efffc..a3df534180c 100644
        last_ts =&sym->ts;
        last_where = &e->where;
  
-@@ -16518,8 +16519,7 @@ resolve_equivalence (gfc_equiv *eq)
+@@ -16518,8 +16548,7 @@ resolve_equivalence (gfc_equiv *eq)
  	continue;
  
        /* Shall not be an automatic array.  */
@@ -4695,6 +5014,35 @@ index a4ad26efffc..a3df534180c 100644
  	{
  	  gfc_error ("Array %qs at %L with non-constant bounds cannot be "
  		     "an EQUIVALENCE object", sym->name, &e->where);
+diff --git a/gcc/fortran/trans-array.c b/gcc/fortran/trans-array.c
+index 2e5eb4f468f..572455e0d59 100644
+--- a/gcc/fortran/trans-array.c
++++ b/gcc/fortran/trans-array.c
+@@ -6945,6 +6945,24 @@ gfc_get_dataptr_offset (stmtblock_t *block, tree parm, tree desc, tree offset,
+ 	      tmp = gfc_build_array_ref (tmp, index, NULL);
+ 	      break;
+ 
++	    case REF_INQUIRY:
++	      switch (ref->u.i)
++		{
++		case INQUIRY_RE:
++		  tmp = fold_build1_loc (input_location, REALPART_EXPR,
++					 TREE_TYPE (TREE_TYPE (tmp)), tmp);
++		  break;
++
++		case INQUIRY_IM:
++		  tmp = fold_build1_loc (input_location, IMAGPART_EXPR,
++					 TREE_TYPE (TREE_TYPE (tmp)), tmp);
++		  break;
++
++		default:
++		  break;
++		}
++	      break;
++
+ 	    default:
+ 	      gcc_unreachable ();
+ 	      break;
 diff --git a/gcc/fortran/trans-decl.c b/gcc/fortran/trans-decl.c
 index 71f751de76f..ff85fd9da96 100644
 --- a/gcc/fortran/trans-decl.c
@@ -4905,10 +5253,42 @@ index 7916344c584..3e969e52176 100644
  extern void mark_end_of_function_resources (rtx, bool);
  extern void init_resource_info (rtx_insn *);
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..52ca2715aff 100644
+index e132f2657ef..4a335f474de 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,484 @@
+@@ -1,3 +1,516 @@
++2020-05-04  Tobias Burnus  <tobias@codesourcery.com>
++
++	Backport from mainline.
++	2020-03-08  Paul Thomas  <pault@gcc.gnu.org>
++
++	PR fortran/93581
++	* gfortran.dg/inquiry_type_ref_6.f90 : New test.
++
++2020-05-04  Andreas Krebbel  <krebbel@linux.ibm.com>
++
++	Backport from mainline
++	2020-04-20  Andreas Krebbel  <krebbel@linux.ibm.com>
++
++	* g++.dg/pr94666.C: New test.
++
++2020-05-04  Andreas Krebbel  <krebbel@linux.ibm.com>
++
++	Backport from mainline
++	2020-04-20  Andreas Krebbel  <krebbel@linux.ibm.com>
++
++	PR target/94613
++	* gcc.target/s390/zvector/pr94613.c: New test.
++	* gcc.target/s390/zvector/vec_sel-1.c: New test.
++
++2020-05-04  Bin Cheng  <bin.cheng@linux.alibaba.com>
++
++	PR tree-optimization/93674
++	Backport from master
++	2020-04-09  Bin Cheng  <bin.cheng@linux.alibaba.com>
++
++	* g++.dg/pr93674.C: New test.
++
 +2020-05-01  Thomas Koenig  <tkoenig@gcc.gnu.org>
 +
 +	PR fortran/93956
@@ -6195,6 +6575,54 @@ index 00000000000..d0394eab891
 +  struct e { } f;
 +  e = 5;
 +  struct e j;
++}
+diff --git a/gcc/testsuite/g++.dg/pr93674.C b/gcc/testsuite/g++.dg/pr93674.C
+new file mode 100644
+index 00000000000..8c59f1b0079
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/pr93674.C
+@@ -0,0 +1,16 @@
++// { dg-do compile }
++// { dg-options "-O3 -std=c++14 -fstrict-enums -pedantic -fdump-tree-optimized" }
++enum some_enum { x = 1000 };
++void sink(some_enum);
++
++int __attribute__((noinline)) func() {
++  int sum = 0;
++  for (int i = 0; i < 3; ++i) {
++      for (int j = 3; j >= 0; --j) {
++          sink((some_enum)(i + j));
++      }
++  }
++  return sum;
++}
++
++// { dg-final { scan-tree-dump-not "some_enum ivtmp" "optimized" } }
+diff --git a/gcc/testsuite/g++.dg/pr94666.C b/gcc/testsuite/g++.dg/pr94666.C
+new file mode 100644
+index 00000000000..a9bfb24f795
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/pr94666.C
+@@ -0,0 +1,20 @@
++// { dg-do compile }
++// { dg-options "-O3" }
++// { dg-additional-options "-march=z13" { target s390*-*-* } }
++
++int a, c;
++struct A {
++  int e() {
++    int f;
++    for (int b = 0; b < 4; b++) {
++      a = __builtin_popcountl(d[b]);
++      f += a;
++    }
++    return f;
++  }
++  long d[4];
++} * g;
++void h() {
++  for (int b; b; b++)
++    c += g[b].e();
 +}
 diff --git a/gcc/testsuite/g++.dg/template/dependent-name14.C b/gcc/testsuite/g++.dg/template/dependent-name14.C
 new file mode 100644
@@ -8563,6 +8991,267 @@ index 9fdbd5f9840..757acd93110 100644
 +  return __builtin_vec_vcmpnez_p (__CR6_LT_REV, arg_1, arg_2);
 +  /* { dg-error "'__builtin_altivec_vcmpnezw_p' requires the '-mcpu=power9' option" "" { target *-*-* } .-1 } */
  }
+diff --git a/gcc/testsuite/gcc.target/s390/zvector/pr94613.c b/gcc/testsuite/gcc.target/s390/zvector/pr94613.c
+new file mode 100644
+index 00000000000..c3581d82ede
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/s390/zvector/pr94613.c
+@@ -0,0 +1,38 @@
++/* { dg-do run } */
++/* { dg-require-effective-target s390_vx } */
++/* { dg-options "-O3 -mzarch -march=z13 -mzvector -std=gnu99 --save-temps" } */
++
++#include <vecintrin.h>
++
++/* The initial implementation of vec_sel used an IF_THEN_ELSE rtx.
++   This did NOT match what the vsel instruction does.  vsel is a
++   bit-wise operation.  Using IF_THEN_ELSE made the + operation to be
++   simplified away in combine.  A plus operation affects other bits in
++   the same element. Hence per-element simplifications are wrong for
++   vsel.  */
++vector unsigned char __attribute__((noinline))
++foo (vector unsigned char a, vector unsigned char b, vector unsigned char c)
++{
++  return vec_sel (a + b, c, a);
++}
++
++/* FIXME: The OR operation still should be optimized away in that case.  */
++vector unsigned char __attribute__((noinline))
++bar (vector unsigned char a, vector unsigned char b, vector unsigned char c)
++{
++  return vec_sel (a | b, c, a);
++}
++
++int
++main ()
++{
++  vector unsigned char v = (vector unsigned char){ 1 };
++
++  if (foo (v, v, v)[0] != 3)
++      __builtin_abort ();
++
++  if (bar (v, v, v)[0] != 1)
++    __builtin_abort ();
++
++  return 0;
++}
+diff --git a/gcc/testsuite/gcc.target/s390/zvector/vec_sel-1.c b/gcc/testsuite/gcc.target/s390/zvector/vec_sel-1.c
+new file mode 100644
+index 00000000000..d310f70d3a5
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/s390/zvector/vec_sel-1.c
+@@ -0,0 +1,211 @@
++/* { dg-do run } */
++/* { dg-require-effective-target s390_vxe } */
++/* { dg-options "-O3 -mzarch -march=z14 -mzvector --save-temps -Wno-attributes" } */
++
++#include <string.h>
++#include <vecintrin.h>
++
++typedef vector signed char v16qi;
++typedef vector unsigned char uv16qi;
++typedef vector bool char bv16qi;
++
++typedef vector signed short int v8hi;
++typedef vector unsigned short int uv8hi;
++typedef vector bool short int bv8hi;
++
++typedef vector signed int v4si;
++typedef vector unsigned int uv4si;
++typedef vector bool int bv4si;
++
++typedef vector signed long long v2di;
++typedef vector unsigned long long uv2di;
++typedef vector bool long long bv2di;
++
++typedef vector float v4sf;
++typedef vector double v2df;
++
++#define NUM_CONSTS 8
++
++const v16qi v16qi_vals[NUM_CONSTS] =
++  { (v16qi){ 1 },
++    (v16qi){ 2 },
++    (v16qi){ 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1 },
++    (v16qi){ 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2 },
++    (v16qi){ -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1 },
++    (v16qi){ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 },
++    (v16qi){ 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 },
++    (v16qi){ 15,14,13,12,11,10,9,8,7,6,5,4,3,2,1 }
++  };
++
++const v8hi v8hi_vals[NUM_CONSTS] =
++  { (v8hi){ 1 },
++    (v8hi){ 2 },
++    (v8hi){ 1,1,1,1,1,1,1,1 },
++    (v8hi){ 2,2,2,2,2,2,2,2 },
++    (v8hi){ -1,-1,-1,-1,-1,-1,-1,-1 },
++    (v8hi){ 0,0,0,0,0,0,0,0 },
++    (v8hi){ 1,2,3,4,5,6,7,8 },
++    (v8hi){ 8,7,6,5,4,3,2,1 }
++  };
++
++const v4si v4si_vals[NUM_CONSTS] =
++  { (v4si){ 1 },
++    (v4si){ 2 },
++    (v4si){ 1,1,1,1 },
++    (v4si){ 2,2,2,2 },
++    (v4si){ -1,-1,-1,-1 },
++    (v4si){ 0,0,0,0 },
++    (v4si){ 1,2,3,4 },
++    (v4si){ 4,3,2,1 }
++  };
++
++const v2di v2di_vals[NUM_CONSTS] =
++  { (v2di){ 1 },
++    (v2di){ 2 },
++    (v2di){ 1,1 },
++    (v2di){ 2,2 },
++    (v2di){ -1,-1 },
++    (v2di){ 0,0 },
++    (v2di){ 1,2 },
++    (v2di){ 2,1 }
++  };
++
++const v4sf v4sf_vals[NUM_CONSTS] =
++  { (v4sf){ 1.0f },
++    (v4sf){ 2.0f },
++    (v4sf){ 1.0f,1.0f,1.0f,1.0f },
++    (v4sf){ 2.0f,2.0f,2.0f,2.0f },
++    (v4sf){ -1.0f,-1.0f,-1.0f,-1.0f },
++    (v4sf){ 0.0f,0.0f,0.0f,0.0f },
++    (v4sf){ 1.1f,2.1f,3.1f,4.1f },
++    (v4sf){ 4.1f,3.1f,2.1f,1.1f }
++  };
++
++const v2df v2df_vals[NUM_CONSTS] =
++  { (v2df){ 1.0 },
++    (v2df){ 2.0 },
++    (v2df){ 1.0,1.0 },
++    (v2df){ 2.0,2.0 },
++    (v2df){ -1.0,-1.0 },
++    (v2df){ 0.0,0.0 },
++    (v2df){ 1.1,2.1 },
++    (v2df){ 2.1,1.1 }
++  };
++
++/* Each bit of the result vector has the value of the corresponding
++   bit of A if the corresponding bit of C is 0, or the value of the
++   corresponding bit of B otherwise.  */
++void __attribute__((noinline, noclone, target ("arch=zEC12")))
++emul (unsigned char *result, unsigned char *a,
++      unsigned char *b, unsigned char *c)
++{
++  for (int i = 0; i < 16; i++)
++    result[i] = (a[i] & ~c[i]) | (b[i] & c[i]);
++}
++
++#define GENFUNC(NAME, T1, T2)						\
++  T1 __attribute__((noinline, noclone))					\
++  NAME##_reg (T1 a, T1 b, T2 c) { return vec_sel (a, b, c); }		\
++  void __attribute__((noinline, noclone))				\
++  NAME##_mem (T1 *a, T1 *b, T2 *c, T1 *out) { *out = vec_sel (*a, *b, *c); } \
++  T1 __attribute__((always_inline))					\
++  NAME##_const (T1 a, T1 b, T2 c) { return vec_sel (a, b, c); }
++
++GENFUNC (vec_sel_b8_a, bv16qi, uv16qi)
++GENFUNC (vec_sel_b8_b, bv16qi, bv16qi)
++GENFUNC (vec_sel_s8_a,  v16qi, uv16qi)
++GENFUNC (vec_sel_s8_b,  v16qi, bv16qi)
++GENFUNC (vec_sel_u8_a, uv16qi, uv16qi)
++GENFUNC (vec_sel_u8_b, uv16qi, bv16qi)
++
++GENFUNC (vec_sel_b16_a, bv8hi, uv8hi)
++GENFUNC (vec_sel_b16_b, bv8hi, bv8hi)
++GENFUNC (vec_sel_s16_a,  v8hi, uv8hi)
++GENFUNC (vec_sel_s16_b,  v8hi, bv8hi)
++GENFUNC (vec_sel_u16_a, uv8hi, uv8hi)
++GENFUNC (vec_sel_u16_b, uv8hi, bv8hi)
++
++GENFUNC (vec_sel_b32_a, bv4si, uv4si)
++GENFUNC (vec_sel_b32_b, bv4si, bv4si)
++GENFUNC (vec_sel_s32_a,  v4si, uv4si)
++GENFUNC (vec_sel_s32_b,  v4si, bv4si)
++GENFUNC (vec_sel_u32_a, uv4si, uv4si)
++GENFUNC (vec_sel_u32_b, uv4si, bv4si)
++
++GENFUNC (vec_sel_b64_a, bv2di, uv2di)
++GENFUNC (vec_sel_b64_b, bv2di, bv2di)
++GENFUNC (vec_sel_s64_a,  v2di, uv2di)
++GENFUNC (vec_sel_s64_b,  v2di, bv2di)
++GENFUNC (vec_sel_u64_a, uv2di, uv2di)
++GENFUNC (vec_sel_u64_b, uv2di, bv2di)
++
++GENFUNC (vec_sel_flt_a,  v4sf, uv4si)
++GENFUNC (vec_sel_flt_b,  v4sf, bv4si)
++
++GENFUNC (vec_sel_dbl_a,  v2df, uv2di)
++GENFUNC (vec_sel_dbl_b,  v2df, bv2di)
++
++#define TESTFUNC(NAME, T1, T2, VAL_TYPE)				\
++  for (int i = 0; i < NUM_CONSTS; i++)					\
++    for (int j = 0; j < NUM_CONSTS; j++)				\
++      for (int k = 0; k < NUM_CONSTS; k++)				\
++	{								\
++	  unsigned char result[16];					\
++	  T1 in1 = (T1)VAL_TYPE##_vals[i];				\
++	  T1 in2 = (T1)VAL_TYPE##_vals[j];				\
++	  T2 in3 = (T2)VAL_TYPE##_vals[k];				\
++	  emul (result, (char*)&in1, (char*)&in2, (char*)&in3);		\
++									\
++	  T1 reg = NAME##_reg (in1, in2, in3);				\
++	  if (memcmp ((char*)&reg, result, 16) != 0)			\
++	    __builtin_abort ();						\
++									\
++	  T1 mem;							\
++	  NAME##_mem (&in1, &in2, &in3, &mem);				\
++	  if (memcmp ((char*)&mem, result, 16) != 0)			\
++	    __builtin_abort ();						\
++									\
++	  T1 cons = NAME##_const (in1, in2, in3);			\
++	  if (memcmp ((char*)&cons, result, 16) != 0)			\
++	    __builtin_abort ();						\
++	}
++
++int
++main ()
++{
++  TESTFUNC (vec_sel_b8_a, bv16qi, uv16qi, v16qi);
++  TESTFUNC (vec_sel_b8_b, bv16qi, bv16qi, v16qi);
++  TESTFUNC (vec_sel_s8_a,  v16qi, uv16qi, v16qi);
++  TESTFUNC (vec_sel_s8_b,  v16qi, bv16qi, v16qi);
++  TESTFUNC (vec_sel_u8_a, uv16qi, uv16qi, v16qi);
++  TESTFUNC (vec_sel_u8_b, uv16qi, bv16qi, v16qi);
++
++  TESTFUNC (vec_sel_b16_a, bv8hi, uv8hi, v8hi);
++  TESTFUNC (vec_sel_b16_b, bv8hi, bv8hi, v8hi);
++  TESTFUNC (vec_sel_s16_a,  v8hi, uv8hi, v8hi);
++  TESTFUNC (vec_sel_s16_b,  v8hi, bv8hi, v8hi);
++  TESTFUNC (vec_sel_u16_a, uv8hi, uv8hi, v8hi);
++  TESTFUNC (vec_sel_u16_b, uv8hi, bv8hi, v8hi);
++
++  TESTFUNC (vec_sel_b32_a, bv4si, uv4si, v4si);
++  TESTFUNC (vec_sel_b32_b, bv4si, bv4si, v4si);
++  TESTFUNC (vec_sel_s32_a,  v4si, uv4si, v4si);
++  TESTFUNC (vec_sel_s32_b,  v4si, bv4si, v4si);
++  TESTFUNC (vec_sel_u32_a, uv4si, uv4si, v4si);
++  TESTFUNC (vec_sel_u32_b, uv4si, bv4si, v4si);
++
++  TESTFUNC (vec_sel_b64_a, bv2di, uv2di, v2di);
++  TESTFUNC (vec_sel_b64_b, bv2di, bv2di, v2di);
++  TESTFUNC (vec_sel_s64_a,  v2di, uv2di, v2di);
++  TESTFUNC (vec_sel_s64_b,  v2di, bv2di, v2di);
++  TESTFUNC (vec_sel_u64_a, uv2di, uv2di, v2di);
++  TESTFUNC (vec_sel_u64_b, uv2di, bv2di, v2di);
++
++  TESTFUNC (vec_sel_flt_a,  v4sf, uv4si, v4sf);
++  TESTFUNC (vec_sel_flt_b,  v4sf, bv4si, v4sf);
++
++  TESTFUNC (vec_sel_dbl_a,  v2df, uv2di, v2df);
++  TESTFUNC (vec_sel_dbl_b,  v2df, bv2di, v2df);
++}
++
++/* { dg-final { scan-assembler {\n\tvsel\t} } } */
 diff --git a/gcc/testsuite/gcc.target/xtensa/pr91880.c b/gcc/testsuite/gcc.target/xtensa/pr91880.c
 new file mode 100644
 index 00000000000..f4895a1bb8e
@@ -8721,6 +9410,36 @@ index 00000000000..744c0f3042e
 +        end do
 +      end do
 +end program
+diff --git a/gcc/testsuite/gfortran.dg/inquiry_type_ref_6.f90 b/gcc/testsuite/gfortran.dg/inquiry_type_ref_6.f90
+new file mode 100644
+index 00000000000..ffe09b088aa
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/inquiry_type_ref_6.f90
+@@ -0,0 +1,24 @@
++! { dg-do run }
++! { dg-options "-fcheck=all" }
++!
++! Test the fix for PR93581 and the implementation of note 9.7 of F2018.
++! The latter requires that the result of the LEN inquiry be a scalar
++! even for array expressions.
++!
++! Contributed by Gerhard Steinmetz  <gscfq@t-online.de>
++!
++program p
++   complex, target :: z(2) = [(1.0, 2.0),(3.0, 4.0)]
++   character(:), allocatable, target :: c(:)
++   real, pointer :: r(:)
++   character(:), pointer :: s(:)
++
++   r => z%re
++   if (any (r .ne. real (z))) stop 1
++   r => z%im
++   if (any (r .ne. imag (z))) stop 2
++
++   allocate (c, source = ['abc','def'])
++   s(-2:-1) => c(1:2)
++   if (s%len .ne. len (c)) stop 3
++end
 diff --git a/gcc/testsuite/gfortran.dg/module_procedure_3.f90 b/gcc/testsuite/gfortran.dg/module_procedure_3.f90
 new file mode 100644
 index 00000000000..50a83d9e5b1
@@ -9504,6 +10223,43 @@ index bbfa1bc6fae..ca5443b79b3 100644
  		    {
  		      rewrite = false;
  		      break;
+diff --git a/gcc/tree-ssa-loop-ivopts.c b/gcc/tree-ssa-loop-ivopts.c
+index 01423dee883..ecfa569259c 100644
+--- a/gcc/tree-ssa-loop-ivopts.c
++++ b/gcc/tree-ssa-loop-ivopts.c
+@@ -109,6 +109,9 @@ along with GCC; see the file COPYING3.  If not see
+ #include "builtins.h"
+ #include "tree-vectorizer.h"
+ 
++/* For lang_hooks.types.type_for_mode.  */
++#include "langhooks.h"
++
+ /* FIXME: Expressions are expanded to RTL in this pass to determine the
+    cost of different addressing modes.  This should be moved to a TBD
+    interface between the GIMPLE and RTL worlds.  */
+@@ -3490,8 +3493,21 @@ add_iv_candidate_for_use (struct ivopts_data *data, struct iv_use *use)
+ {
+   poly_uint64 offset;
+   tree base;
+-  tree basetype;
+   struct iv *iv = use->iv;
++  tree basetype = TREE_TYPE (iv->base);
++
++  /* Don't add candidate for iv_use with non integer, pointer or non-mode
++     precision types, instead, add candidate for the corresponding scev in
++     unsigned type with the same precision.  See PR93674 for more info.  */
++  if ((TREE_CODE (basetype) != INTEGER_TYPE && !POINTER_TYPE_P (basetype))
++      || !type_has_mode_precision_p (basetype))
++    {
++      basetype = lang_hooks.types.type_for_mode (TYPE_MODE (basetype),
++						 TYPE_UNSIGNED (basetype));
++      add_candidate (data, fold_convert (basetype, iv->base),
++		     fold_convert (basetype, iv->step), false, NULL);
++      return;
++    }
+ 
+   add_candidate (data, iv->base, iv->step, false, use);
+ 
 diff --git a/gcc/tree-ssa-phiopt.c b/gcc/tree-ssa-phiopt.c
 index 19b37b43b8e..47227dc16dc 100644
 --- a/gcc/tree-ssa-phiopt.c
