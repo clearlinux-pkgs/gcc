@@ -247,8 +247,9 @@ Michael Meissner (2):
       Backport PR target/93932 (variable vec_extract) to GCC 9
       Fix target/94557 PowerPC regression on GCC 9 (variable vec_extract)
 
-Nathan Sidwell (1):
+Nathan Sidwell (2):
       c++: Fix ICE popping local scope [pr84733]
+      c++: QT overload regression with attribute [PR94946]
 
 Richard Biener (4):
       tree-optimization/94163 constrain alignment set by PRE
@@ -3632,10 +3633,16 @@ index 1ffefd5f482..9be446a862d 100644
    memcpy (da_file_name + prefix_len, filename, len);
    strcpy (da_file_name + prefix_len + len, GCOV_DATA_SUFFIX);
 diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
-index 6441d647a54..fe53cc0c0bd 100644
+index 6441d647a54..1b0b35c0ff2 100644
 --- a/gcc/cp/ChangeLog
 +++ b/gcc/cp/ChangeLog
-@@ -1,3 +1,126 @@
+@@ -1,3 +1,132 @@
++2020-05-06  Nathan Sidwell  <nathan@acm.org>
++
++	PR c++/94946
++	* decl.c (grokdeclarator): Don't splice template attributes in
++	parm context -- they can apply to the parm.
++
 +2020-04-27  Jason Merrill  <jason@redhat.com>
 +
 +	PR c++/90750
@@ -3844,7 +3851,7 @@ index f7c3eea4cdf..1f013c172ce 100644
  /* in ptree.c */
  extern void cxx_print_xnode			(FILE *, tree, int);
 diff --git a/gcc/cp/decl.c b/gcc/cp/decl.c
-index 39d55589ef3..79f61dfe064 100644
+index 39d55589ef3..bf00583e29f 100644
 --- a/gcc/cp/decl.c
 +++ b/gcc/cp/decl.c
 @@ -5826,9 +5826,6 @@ reshape_init_array_1 (tree elt_type, tree max_index, reshape_iter *d,
@@ -3890,13 +3897,16 @@ index 39d55589ef3..79f61dfe064 100644
    return new_init;
  }
  
-@@ -11283,9 +11259,13 @@ grokdeclarator (const cp_declarator *declarator,
+@@ -11283,9 +11259,16 @@ grokdeclarator (const cp_declarator *declarator,
  	    attr_flags |= (int) ATTR_FLAG_FUNCTION_NEXT;
  	  if (declarator->kind == cdk_array)
  	    attr_flags |= (int) ATTR_FLAG_ARRAY_NEXT;
-+	  /* Assume that any attributes that get applied late to templates will
-+	     DTRT when applied to the declaration as a whole.  */
-+	  tree late_attrs = splice_template_attributes (&attrs, type);
++	  tree late_attrs = NULL_TREE;
++	  if (decl_context != PARM)
++	    /* Assume that any attributes that get applied late to
++	       templates will DTRT when applied to the declaration
++	       as a whole.  */
++	    late_attrs = splice_template_attributes (&attrs, type);
  	  returned_attrs = decl_attributes (&type,
  					    chainon (returned_attrs, attrs),
  					    attr_flags);
@@ -6555,6 +6565,19 @@ index 00000000000..ebc0cf45cc6
 +{
 +  return foo ();
 +}
+diff --git a/gcc/testsuite/g++.dg/ext/attr-parm-1.C b/gcc/testsuite/g++.dg/ext/attr-parm-1.C
+new file mode 100644
+index 00000000000..872b3e0a019
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/ext/attr-parm-1.C
+@@ -0,0 +1,7 @@
++// { dg-do compile { target { { i?86-*-* x86_64-*-* } && ia32 } } }
++// { dg-options -m32 }
++// PR 94946
++class a {
++  template <typename b> a(b (*)());
++  template <typename b> a(b(__attribute__((fastcall)) *c)());
++};
 diff --git a/gcc/testsuite/g++.dg/ext/attr-type1.C b/gcc/testsuite/g++.dg/ext/attr-type1.C
 new file mode 100644
 index 00000000000..6e84cccea1f
