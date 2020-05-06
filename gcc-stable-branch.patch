@@ -37,7 +37,8 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (54):
+GCC Administrator (55):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -109,7 +110,7 @@ Iain Buclaw (3):
 Iain Sandoe (1):
       Darwin: Fix i686 bootstrap when the assembler supports GOTOFF in data.
 
-Jakub Jelinek (38):
+Jakub Jelinek (39):
       Bump BASE-VER to 9.3.1.
       tailcall: Fix up process_assignment [PR94001]
       inliner: Copy DECL_BY_REFERENCE in copy_decl_to_var [PR93888]
@@ -148,6 +149,7 @@ Jakub Jelinek (38):
       aarch64: Fix {ash[lr],lshr}<mode>3 expanders [PR94488]
       openmp: Fix parallel master error recovery [PR94512]
       i386: Fix V{64QI,32HI}mode constant permutations [PR94509]
+      libstdc++: Update {x86_64,i?86,powerpc64,s390x,aarch64}-linux baselines for GCC 10.1
 
 Jason Merrill (8):
       c++: Fix CTAD with multiple-arg ctor template [93248].
@@ -165,7 +167,7 @@ Jiufu Guo (1):
 John David Anglin (1):
       Define __BIG_ENDIAN__
 
-Jonathan Wakely (23):
+Jonathan Wakely (24):
       libstdc++: Ensure root-dir converted to forward slash (PR93244)
       libstdc++: Fix FS-dependent filesystem tests
       libstdc++: Fix test failure due to -Wnonnull warnings
@@ -189,6 +191,7 @@ Jonathan Wakely (23):
       libstdc++: Make net::service_already_exists default constructible
       libstdc++: Fix type-erasure in experimental::net::executor (PR 94203)
       libstdc++: Fix broken link to SGI STL FAQ
+      libstdc++: Document library versioning for 9.[123] and 10.1
 
 Joseph Myers (1):
       Remove wrongly committed file.
@@ -13078,10 +13081,26 @@ index 76e4460550d..9fc89270d48 100644
              {
                  timestruc_t st_atim;
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
-index 45847172291..042ed7ed014 100644
+index 45847172291..b76f852fd0e 100644
 --- a/libstdc++-v3/ChangeLog
 +++ b/libstdc++-v3/ChangeLog
-@@ -1,3 +1,249 @@
+@@ -1,3 +1,265 @@
++2020-05-06  Jonathan Wakely  <jwakely@redhat.com>
++
++	* doc/xml/manual/abi.xml (abi.versioning.history): Document library
++	versions for GCC 9.[123] and 10.1 releases.
++	* doc/html/*: Regenerate.
++
++2020-05-06  Jakub Jelinek  <jakub@redhat.com>
++
++	* config/abi/post/x86_64-linux-gnu/baseline_symbols.txt: Update.
++	* config/abi/post/x86_64-linux-gnu/32/baseline_symbols.txt: Update.
++	* config/abi/post/i386-linux-gnu/baseline_symbols.txt: Update.
++	* config/abi/post/i486-linux-gnu/baseline_symbols.txt: Update.
++	* config/abi/post/aarch64-linux-gnu/baseline_symbols.txt: Update.
++	* config/abi/post/s390x-linux-gnu/baseline_symbols.txt: Update.
++	* config/abi/post/powerpc64-linux-gnu/baseline_symbols.txt: Update.
++
 +2020-05-04  Jonathan Wakely  <jwakely@redhat.com>
 +
 +	* doc/xml/faq.xml: Use working link for SGI STL FAQ.
@@ -13331,6 +13350,657 @@ index 45847172291..042ed7ed014 100644
  2020-03-12  Release Manager
  
  	* GCC 9.3.0 released.
+diff --git a/libstdc++-v3/config/abi/post/aarch64-linux-gnu/baseline_symbols.txt b/libstdc++-v3/config/abi/post/aarch64-linux-gnu/baseline_symbols.txt
+index 53c87f115e0..089537d5ddf 100644
+--- a/libstdc++-v3/config/abi/post/aarch64-linux-gnu/baseline_symbols.txt
++++ b/libstdc++-v3/config/abi/post/aarch64-linux-gnu/baseline_symbols.txt
+@@ -2062,16 +2062,20 @@ FUNC:_ZNSt12__basic_fileIcED1Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt12__basic_fileIcED2Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1EOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2EOS5_@@GLIBCXX_3.4.28
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC1EOS4_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC2EOS4_@@GLIBCXX_3.4.28
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEaSEOS4_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1EOS6_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2EOS6_@@GLIBCXX_3.4.28
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC1EOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC2EOS5_@@GLIBCXX_3.4.28
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEaSEOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12bad_weak_ptrD0Ev@@GLIBCXX_3.4.15
+@@ -3001,12 +3005,18 @@ FUNC:_ZNSt3_V214error_categoryD1Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V214error_categoryD2Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V215system_categoryEv@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V216generic_categoryEv@@GLIBCXX_3.4.21
++FUNC:_ZNSt3pmr15memory_resourceD0Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr15memory_resourceD1Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr15memory_resourceD2Ev@@GLIBCXX_3.4.28
+ FUNC:_ZNSt3pmr19new_delete_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20get_default_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20null_memory_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20set_default_resourceEPNS_15memory_resourceE@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr25monotonic_buffer_resource13_M_new_bufferEmm@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr25monotonic_buffer_resource18_M_release_buffersEv@@GLIBCXX_3.4.26
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD0Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD1Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD2Ev@@GLIBCXX_3.4.28
+ FUNC:_ZNSt3pmr26synchronized_pool_resource11do_allocateEmm@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr26synchronized_pool_resource13do_deallocateEPvmm@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr26synchronized_pool_resource7releaseEv@@GLIBCXX_3.4.26
+@@ -4408,6 +4418,7 @@ OBJECT:0:GLIBCXX_3.4.24
+ OBJECT:0:GLIBCXX_3.4.25
+ OBJECT:0:GLIBCXX_3.4.26
+ OBJECT:0:GLIBCXX_3.4.27
++OBJECT:0:GLIBCXX_3.4.28
+ OBJECT:0:GLIBCXX_3.4.3
+ OBJECT:0:GLIBCXX_3.4.4
+ OBJECT:0:GLIBCXX_3.4.5
+@@ -4492,6 +4503,7 @@ OBJECT:16:_ZTIN10__cxxabiv119__foreign_exceptionE@@CXXABI_1.3.2
+ OBJECT:16:_ZTINSt13__future_base11_State_baseE@@GLIBCXX_3.4.15
+ OBJECT:16:_ZTINSt13__future_base12_Result_baseE@@GLIBCXX_3.4.15
+ OBJECT:16:_ZTINSt3_V214error_categoryE@@GLIBCXX_3.4.21
++OBJECT:16:_ZTINSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
+ OBJECT:16:_ZTINSt6locale5facetE@@GLIBCXX_3.4
+ OBJECT:16:_ZTINSt6thread6_StateE@@GLIBCXX_3.4.22
+ OBJECT:16:_ZTISt10ctype_base@@GLIBCXX_3.4
+@@ -4921,6 +4933,7 @@ OBJECT:24:_ZTIN9__gnu_cxx18stdio_sync_filebufIwSt11char_traitsIwEEE@@GLIBCXX_3.4
+ OBJECT:24:_ZTINSt10filesystem16filesystem_errorE@@GLIBCXX_3.4.26
+ OBJECT:24:_ZTINSt10filesystem7__cxx1116filesystem_errorE@@GLIBCXX_3.4.26
+ OBJECT:24:_ZTINSt13__future_base19_Async_state_commonE@@GLIBCXX_3.4.17
++OBJECT:24:_ZTINSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:24:_ZTINSt3pmr26synchronized_pool_resourceE@@GLIBCXX_3.4.26
+ OBJECT:24:_ZTINSt3pmr28unsynchronized_pool_resourceE@@GLIBCXX_3.4.26
+ OBJECT:24:_ZTINSt7__cxx1114collate_bynameIcEE@@GLIBCXX_3.4.21
+@@ -5053,6 +5066,7 @@ OBJECT:25:_ZTSNSt7__cxx118messagesIwEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSNSt7__cxx118numpunctIcEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSNSt7__cxx118numpunctIwEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSSt20bad_array_new_length@@CXXABI_1.3.8
++OBJECT:26:_ZTSNSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
+ OBJECT:272:_ZSt4cerr@@GLIBCXX_3.4
+ OBJECT:272:_ZSt4clog@@GLIBCXX_3.4
+ OBJECT:272:_ZSt4cout@@GLIBCXX_3.4
+@@ -5206,6 +5220,7 @@ OBJECT:34:_ZTSSt25__codecvt_utf8_utf16_baseIDsE@@GLIBCXX_3.4.21
+ OBJECT:34:_ZTSSt9basic_iosIcSt11char_traitsIcEE@@GLIBCXX_3.4
+ OBJECT:34:_ZTSSt9basic_iosIwSt11char_traitsIwEE@@GLIBCXX_3.4
+ OBJECT:36:_ZTSN10__cxxabiv119__pointer_type_infoE@@CXXABI_1.3
++OBJECT:36:_ZTSNSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:36:_ZTSSt14codecvt_bynameIcc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:36:_ZTSSt14codecvt_bynameIwc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:37:_ZTSN10__cxxabiv120__function_type_infoE@@CXXABI_1.3
+@@ -5619,6 +5634,8 @@ OBJECT:56:_ZTSNSt7__cxx1115basic_stringbufIcSt11char_traitsIcESaIcEEE@@GLIBCXX_3
+ OBJECT:56:_ZTSNSt7__cxx1115basic_stringbufIwSt11char_traitsIwESaIwEEE@@GLIBCXX_3.4.21
+ OBJECT:56:_ZTTSd@@GLIBCXX_3.4
+ OBJECT:56:_ZTTSt14basic_iostreamIwSt11char_traitsIwEE@@GLIBCXX_3.4
++OBJECT:56:_ZTVNSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
++OBJECT:56:_ZTVNSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:56:_ZTVNSt7__cxx1114collate_bynameIcEE@@GLIBCXX_3.4.21
+ OBJECT:56:_ZTVNSt7__cxx1114collate_bynameIwEE@@GLIBCXX_3.4.21
+ OBJECT:56:_ZTVNSt7__cxx1115messages_bynameIcEE@@GLIBCXX_3.4.21
+diff --git a/libstdc++-v3/config/abi/post/i386-linux-gnu/baseline_symbols.txt b/libstdc++-v3/config/abi/post/i386-linux-gnu/baseline_symbols.txt
+index e488ada5c72..f9eca6c7b0e 100644
+--- a/libstdc++-v3/config/abi/post/i386-linux-gnu/baseline_symbols.txt
++++ b/libstdc++-v3/config/abi/post/i386-linux-gnu/baseline_symbols.txt
+@@ -2062,16 +2062,20 @@ FUNC:_ZNSt12__basic_fileIcED1Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt12__basic_fileIcED2Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1EOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2EOS5_@@GLIBCXX_3.4.28
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC1EOS4_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC2EOS4_@@GLIBCXX_3.4.28
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEaSEOS4_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1EOS6_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2EOS6_@@GLIBCXX_3.4.28
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC1EOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC2EOS5_@@GLIBCXX_3.4.28
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEaSEOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12bad_weak_ptrD0Ev@@GLIBCXX_3.4.15
+@@ -3001,12 +3005,18 @@ FUNC:_ZNSt3_V214error_categoryD1Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V214error_categoryD2Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V215system_categoryEv@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V216generic_categoryEv@@GLIBCXX_3.4.21
++FUNC:_ZNSt3pmr15memory_resourceD0Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr15memory_resourceD1Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr15memory_resourceD2Ev@@GLIBCXX_3.4.28
+ FUNC:_ZNSt3pmr19new_delete_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20get_default_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20null_memory_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20set_default_resourceEPNS_15memory_resourceE@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr25monotonic_buffer_resource13_M_new_bufferEjj@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr25monotonic_buffer_resource18_M_release_buffersEv@@GLIBCXX_3.4.26
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD0Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD1Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD2Ev@@GLIBCXX_3.4.28
+ FUNC:_ZNSt3pmr26synchronized_pool_resource11do_allocateEjj@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr26synchronized_pool_resource13do_deallocateEPvjj@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr26synchronized_pool_resource7releaseEv@@GLIBCXX_3.4.26
+@@ -4409,6 +4419,7 @@ OBJECT:0:GLIBCXX_3.4.24
+ OBJECT:0:GLIBCXX_3.4.25
+ OBJECT:0:GLIBCXX_3.4.26
+ OBJECT:0:GLIBCXX_3.4.27
++OBJECT:0:GLIBCXX_3.4.28
+ OBJECT:0:GLIBCXX_3.4.3
+ OBJECT:0:GLIBCXX_3.4.4
+ OBJECT:0:GLIBCXX_3.4.5
+@@ -4435,6 +4446,7 @@ OBJECT:12:_ZTIN9__gnu_cxx18stdio_sync_filebufIwSt11char_traitsIwEEE@@GLIBCXX_3.4
+ OBJECT:12:_ZTINSt10filesystem16filesystem_errorE@@GLIBCXX_3.4.26
+ OBJECT:12:_ZTINSt10filesystem7__cxx1116filesystem_errorE@@GLIBCXX_3.4.26
+ OBJECT:12:_ZTINSt13__future_base19_Async_state_commonE@@GLIBCXX_3.4.17
++OBJECT:12:_ZTINSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:12:_ZTINSt3pmr26synchronized_pool_resourceE@@GLIBCXX_3.4.26
+ OBJECT:12:_ZTINSt3pmr28unsynchronized_pool_resourceE@@GLIBCXX_3.4.26
+ OBJECT:12:_ZTINSt7__cxx1114collate_bynameIcEE@@GLIBCXX_3.4.21
+@@ -5062,6 +5074,7 @@ OBJECT:25:_ZTSNSt7__cxx118messagesIwEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSNSt7__cxx118numpunctIcEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSNSt7__cxx118numpunctIwEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSSt20bad_array_new_length@@CXXABI_1.3.8
++OBJECT:26:_ZTSNSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
+ OBJECT:27:_ZTSSt19__codecvt_utf8_baseIwE@@GLIBCXX_3.4.21
+ OBJECT:28:_ZTSSt19__codecvt_utf8_baseIDiE@@GLIBCXX_3.4.21
+ OBJECT:28:_ZTSSt19__codecvt_utf8_baseIDsE@@GLIBCXX_3.4.21
+@@ -5070,6 +5083,8 @@ OBJECT:28:_ZTSSt7codecvtIcc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:28:_ZTSSt7codecvtIwc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:28:_ZTTSd@@GLIBCXX_3.4
+ OBJECT:28:_ZTTSt14basic_iostreamIwSt11char_traitsIwEE@@GLIBCXX_3.4
++OBJECT:28:_ZTVNSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
++OBJECT:28:_ZTVNSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:28:_ZTVNSt7__cxx1114collate_bynameIcEE@@GLIBCXX_3.4.21
+ OBJECT:28:_ZTVNSt7__cxx1114collate_bynameIwEE@@GLIBCXX_3.4.21
+ OBJECT:28:_ZTVNSt7__cxx1115messages_bynameIcEE@@GLIBCXX_3.4.21
+@@ -5177,6 +5192,7 @@ OBJECT:34:_ZTSSt25__codecvt_utf8_utf16_baseIDsE@@GLIBCXX_3.4.21
+ OBJECT:34:_ZTSSt9basic_iosIcSt11char_traitsIcEE@@GLIBCXX_3.4
+ OBJECT:34:_ZTSSt9basic_iosIwSt11char_traitsIwEE@@GLIBCXX_3.4
+ OBJECT:36:_ZTSN10__cxxabiv119__pointer_type_infoE@@CXXABI_1.3
++OBJECT:36:_ZTSNSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:36:_ZTSSt14codecvt_bynameIcc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:36:_ZTSSt14codecvt_bynameIwc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:36:_ZTVN10__cxxabiv117__pbase_type_infoE@@CXXABI_1.3
+@@ -5754,6 +5770,7 @@ OBJECT:8:_ZTIN10__cxxabiv119__foreign_exceptionE@@CXXABI_1.3.2
+ OBJECT:8:_ZTINSt13__future_base11_State_baseE@@GLIBCXX_3.4.15
+ OBJECT:8:_ZTINSt13__future_base12_Result_baseE@@GLIBCXX_3.4.15
+ OBJECT:8:_ZTINSt3_V214error_categoryE@@GLIBCXX_3.4.21
++OBJECT:8:_ZTINSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
+ OBJECT:8:_ZTINSt6locale5facetE@@GLIBCXX_3.4
+ OBJECT:8:_ZTINSt6thread6_StateE@@GLIBCXX_3.4.22
+ OBJECT:8:_ZTISt10ctype_base@@GLIBCXX_3.4
+diff --git a/libstdc++-v3/config/abi/post/i486-linux-gnu/baseline_symbols.txt b/libstdc++-v3/config/abi/post/i486-linux-gnu/baseline_symbols.txt
+index e488ada5c72..f9eca6c7b0e 100644
+--- a/libstdc++-v3/config/abi/post/i486-linux-gnu/baseline_symbols.txt
++++ b/libstdc++-v3/config/abi/post/i486-linux-gnu/baseline_symbols.txt
+@@ -2062,16 +2062,20 @@ FUNC:_ZNSt12__basic_fileIcED1Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt12__basic_fileIcED2Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1EOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2EOS5_@@GLIBCXX_3.4.28
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC1EOS4_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC2EOS4_@@GLIBCXX_3.4.28
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEaSEOS4_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1EOS6_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2EOS6_@@GLIBCXX_3.4.28
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC1EOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC2EOS5_@@GLIBCXX_3.4.28
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEaSEOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12bad_weak_ptrD0Ev@@GLIBCXX_3.4.15
+@@ -3001,12 +3005,18 @@ FUNC:_ZNSt3_V214error_categoryD1Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V214error_categoryD2Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V215system_categoryEv@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V216generic_categoryEv@@GLIBCXX_3.4.21
++FUNC:_ZNSt3pmr15memory_resourceD0Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr15memory_resourceD1Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr15memory_resourceD2Ev@@GLIBCXX_3.4.28
+ FUNC:_ZNSt3pmr19new_delete_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20get_default_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20null_memory_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20set_default_resourceEPNS_15memory_resourceE@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr25monotonic_buffer_resource13_M_new_bufferEjj@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr25monotonic_buffer_resource18_M_release_buffersEv@@GLIBCXX_3.4.26
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD0Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD1Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD2Ev@@GLIBCXX_3.4.28
+ FUNC:_ZNSt3pmr26synchronized_pool_resource11do_allocateEjj@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr26synchronized_pool_resource13do_deallocateEPvjj@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr26synchronized_pool_resource7releaseEv@@GLIBCXX_3.4.26
+@@ -4409,6 +4419,7 @@ OBJECT:0:GLIBCXX_3.4.24
+ OBJECT:0:GLIBCXX_3.4.25
+ OBJECT:0:GLIBCXX_3.4.26
+ OBJECT:0:GLIBCXX_3.4.27
++OBJECT:0:GLIBCXX_3.4.28
+ OBJECT:0:GLIBCXX_3.4.3
+ OBJECT:0:GLIBCXX_3.4.4
+ OBJECT:0:GLIBCXX_3.4.5
+@@ -4435,6 +4446,7 @@ OBJECT:12:_ZTIN9__gnu_cxx18stdio_sync_filebufIwSt11char_traitsIwEEE@@GLIBCXX_3.4
+ OBJECT:12:_ZTINSt10filesystem16filesystem_errorE@@GLIBCXX_3.4.26
+ OBJECT:12:_ZTINSt10filesystem7__cxx1116filesystem_errorE@@GLIBCXX_3.4.26
+ OBJECT:12:_ZTINSt13__future_base19_Async_state_commonE@@GLIBCXX_3.4.17
++OBJECT:12:_ZTINSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:12:_ZTINSt3pmr26synchronized_pool_resourceE@@GLIBCXX_3.4.26
+ OBJECT:12:_ZTINSt3pmr28unsynchronized_pool_resourceE@@GLIBCXX_3.4.26
+ OBJECT:12:_ZTINSt7__cxx1114collate_bynameIcEE@@GLIBCXX_3.4.21
+@@ -5062,6 +5074,7 @@ OBJECT:25:_ZTSNSt7__cxx118messagesIwEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSNSt7__cxx118numpunctIcEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSNSt7__cxx118numpunctIwEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSSt20bad_array_new_length@@CXXABI_1.3.8
++OBJECT:26:_ZTSNSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
+ OBJECT:27:_ZTSSt19__codecvt_utf8_baseIwE@@GLIBCXX_3.4.21
+ OBJECT:28:_ZTSSt19__codecvt_utf8_baseIDiE@@GLIBCXX_3.4.21
+ OBJECT:28:_ZTSSt19__codecvt_utf8_baseIDsE@@GLIBCXX_3.4.21
+@@ -5070,6 +5083,8 @@ OBJECT:28:_ZTSSt7codecvtIcc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:28:_ZTSSt7codecvtIwc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:28:_ZTTSd@@GLIBCXX_3.4
+ OBJECT:28:_ZTTSt14basic_iostreamIwSt11char_traitsIwEE@@GLIBCXX_3.4
++OBJECT:28:_ZTVNSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
++OBJECT:28:_ZTVNSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:28:_ZTVNSt7__cxx1114collate_bynameIcEE@@GLIBCXX_3.4.21
+ OBJECT:28:_ZTVNSt7__cxx1114collate_bynameIwEE@@GLIBCXX_3.4.21
+ OBJECT:28:_ZTVNSt7__cxx1115messages_bynameIcEE@@GLIBCXX_3.4.21
+@@ -5177,6 +5192,7 @@ OBJECT:34:_ZTSSt25__codecvt_utf8_utf16_baseIDsE@@GLIBCXX_3.4.21
+ OBJECT:34:_ZTSSt9basic_iosIcSt11char_traitsIcEE@@GLIBCXX_3.4
+ OBJECT:34:_ZTSSt9basic_iosIwSt11char_traitsIwEE@@GLIBCXX_3.4
+ OBJECT:36:_ZTSN10__cxxabiv119__pointer_type_infoE@@CXXABI_1.3
++OBJECT:36:_ZTSNSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:36:_ZTSSt14codecvt_bynameIcc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:36:_ZTSSt14codecvt_bynameIwc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:36:_ZTVN10__cxxabiv117__pbase_type_infoE@@CXXABI_1.3
+@@ -5754,6 +5770,7 @@ OBJECT:8:_ZTIN10__cxxabiv119__foreign_exceptionE@@CXXABI_1.3.2
+ OBJECT:8:_ZTINSt13__future_base11_State_baseE@@GLIBCXX_3.4.15
+ OBJECT:8:_ZTINSt13__future_base12_Result_baseE@@GLIBCXX_3.4.15
+ OBJECT:8:_ZTINSt3_V214error_categoryE@@GLIBCXX_3.4.21
++OBJECT:8:_ZTINSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
+ OBJECT:8:_ZTINSt6locale5facetE@@GLIBCXX_3.4
+ OBJECT:8:_ZTINSt6thread6_StateE@@GLIBCXX_3.4.22
+ OBJECT:8:_ZTISt10ctype_base@@GLIBCXX_3.4
+diff --git a/libstdc++-v3/config/abi/post/powerpc64-linux-gnu/baseline_symbols.txt b/libstdc++-v3/config/abi/post/powerpc64-linux-gnu/baseline_symbols.txt
+index 65ee06d5c2a..58c11a5972b 100644
+--- a/libstdc++-v3/config/abi/post/powerpc64-linux-gnu/baseline_symbols.txt
++++ b/libstdc++-v3/config/abi/post/powerpc64-linux-gnu/baseline_symbols.txt
+@@ -2208,16 +2208,20 @@ FUNC:_ZNSt12__basic_fileIcED1Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt12__basic_fileIcED2Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1EOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2EOS5_@@GLIBCXX_3.4.28
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC1EOS4_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC2EOS4_@@GLIBCXX_3.4.28
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEaSEOS4_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1EOS6_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2EOS6_@@GLIBCXX_3.4.28
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC1EOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC2EOS5_@@GLIBCXX_3.4.28
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEaSEOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12bad_weak_ptrD0Ev@@GLIBCXX_3.4.15
+@@ -3191,12 +3195,18 @@ FUNC:_ZNSt3_V214error_categoryD1Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V214error_categoryD2Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V215system_categoryEv@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V216generic_categoryEv@@GLIBCXX_3.4.21
++FUNC:_ZNSt3pmr15memory_resourceD0Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr15memory_resourceD1Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr15memory_resourceD2Ev@@GLIBCXX_3.4.28
+ FUNC:_ZNSt3pmr19new_delete_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20get_default_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20null_memory_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20set_default_resourceEPNS_15memory_resourceE@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr25monotonic_buffer_resource13_M_new_bufferEmm@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr25monotonic_buffer_resource18_M_release_buffersEv@@GLIBCXX_3.4.26
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD0Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD1Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD2Ev@@GLIBCXX_3.4.28
+ FUNC:_ZNSt3pmr26synchronized_pool_resource11do_allocateEmm@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr26synchronized_pool_resource13do_deallocateEPvmm@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr26synchronized_pool_resource7releaseEv@@GLIBCXX_3.4.26
+@@ -4642,6 +4652,7 @@ OBJECT:0:GLIBCXX_3.4.24
+ OBJECT:0:GLIBCXX_3.4.25
+ OBJECT:0:GLIBCXX_3.4.26
+ OBJECT:0:GLIBCXX_3.4.27
++OBJECT:0:GLIBCXX_3.4.28
+ OBJECT:0:GLIBCXX_3.4.3
+ OBJECT:0:GLIBCXX_3.4.4
+ OBJECT:0:GLIBCXX_3.4.5
+@@ -4734,6 +4745,7 @@ OBJECT:16:_ZTIN10__cxxabiv119__foreign_exceptionE@@CXXABI_1.3.2
+ OBJECT:16:_ZTINSt13__future_base11_State_baseE@@GLIBCXX_3.4.15
+ OBJECT:16:_ZTINSt13__future_base12_Result_baseE@@GLIBCXX_3.4.15
+ OBJECT:16:_ZTINSt3_V214error_categoryE@@GLIBCXX_3.4.21
++OBJECT:16:_ZTINSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
+ OBJECT:16:_ZTINSt6locale5facetE@@GLIBCXX_3.4
+ OBJECT:16:_ZTINSt6thread6_StateE@@GLIBCXX_3.4.22
+ OBJECT:16:_ZTISt10ctype_base@@GLIBCXX_3.4
+@@ -5185,6 +5197,7 @@ OBJECT:24:_ZTINSt17__gnu_cxx_ldbl1289money_getIcSt19istreambuf_iteratorIcSt11cha
+ OBJECT:24:_ZTINSt17__gnu_cxx_ldbl1289money_getIwSt19istreambuf_iteratorIwSt11char_traitsIwEEEE@@GLIBCXX_LDBL_3.4
+ OBJECT:24:_ZTINSt17__gnu_cxx_ldbl1289money_putIcSt19ostreambuf_iteratorIcSt11char_traitsIcEEEE@@GLIBCXX_LDBL_3.4
+ OBJECT:24:_ZTINSt17__gnu_cxx_ldbl1289money_putIwSt19ostreambuf_iteratorIwSt11char_traitsIwEEEE@@GLIBCXX_LDBL_3.4
++OBJECT:24:_ZTINSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:24:_ZTINSt3pmr26synchronized_pool_resourceE@@GLIBCXX_3.4.26
+ OBJECT:24:_ZTINSt3pmr28unsynchronized_pool_resourceE@@GLIBCXX_3.4.26
+ OBJECT:24:_ZTINSt7__cxx1114collate_bynameIcEE@@GLIBCXX_3.4.21
+@@ -5317,6 +5330,7 @@ OBJECT:25:_ZTSNSt7__cxx118messagesIwEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSNSt7__cxx118numpunctIcEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSNSt7__cxx118numpunctIwEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSSt20bad_array_new_length@@CXXABI_1.3.8
++OBJECT:26:_ZTSNSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
+ OBJECT:272:_ZSt4cerr@@GLIBCXX_3.4
+ OBJECT:272:_ZSt4clog@@GLIBCXX_3.4
+ OBJECT:272:_ZSt4cout@@GLIBCXX_3.4
+@@ -5473,6 +5487,7 @@ OBJECT:34:_ZTSSt25__codecvt_utf8_utf16_baseIDsE@@GLIBCXX_3.4.21
+ OBJECT:34:_ZTSSt9basic_iosIcSt11char_traitsIcEE@@GLIBCXX_3.4
+ OBJECT:34:_ZTSSt9basic_iosIwSt11char_traitsIwEE@@GLIBCXX_3.4
+ OBJECT:36:_ZTSN10__cxxabiv119__pointer_type_infoE@@CXXABI_1.3
++OBJECT:36:_ZTSNSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:36:_ZTSSt14codecvt_bynameIcc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:36:_ZTSSt14codecvt_bynameIwc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:37:_ZTSN10__cxxabiv120__function_type_infoE@@CXXABI_1.3
+@@ -5901,6 +5916,8 @@ OBJECT:56:_ZTVNSt17__gnu_cxx_ldbl1289money_getIcSt19istreambuf_iteratorIcSt11cha
+ OBJECT:56:_ZTVNSt17__gnu_cxx_ldbl1289money_getIwSt19istreambuf_iteratorIwSt11char_traitsIwEEEE@@GLIBCXX_LDBL_3.4
+ OBJECT:56:_ZTVNSt17__gnu_cxx_ldbl1289money_putIcSt19ostreambuf_iteratorIcSt11char_traitsIcEEEE@@GLIBCXX_LDBL_3.4
+ OBJECT:56:_ZTVNSt17__gnu_cxx_ldbl1289money_putIwSt19ostreambuf_iteratorIwSt11char_traitsIwEEEE@@GLIBCXX_LDBL_3.4
++OBJECT:56:_ZTVNSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
++OBJECT:56:_ZTVNSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:56:_ZTVNSt7__cxx1114collate_bynameIcEE@@GLIBCXX_3.4.21
+ OBJECT:56:_ZTVNSt7__cxx1114collate_bynameIwEE@@GLIBCXX_3.4.21
+ OBJECT:56:_ZTVNSt7__cxx1115messages_bynameIcEE@@GLIBCXX_3.4.21
+diff --git a/libstdc++-v3/config/abi/post/s390x-linux-gnu/baseline_symbols.txt b/libstdc++-v3/config/abi/post/s390x-linux-gnu/baseline_symbols.txt
+index 65ee06d5c2a..58c11a5972b 100644
+--- a/libstdc++-v3/config/abi/post/s390x-linux-gnu/baseline_symbols.txt
++++ b/libstdc++-v3/config/abi/post/s390x-linux-gnu/baseline_symbols.txt
+@@ -2208,16 +2208,20 @@ FUNC:_ZNSt12__basic_fileIcED1Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt12__basic_fileIcED2Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1EOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2EOS5_@@GLIBCXX_3.4.28
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC1EOS4_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC2EOS4_@@GLIBCXX_3.4.28
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEaSEOS4_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1EOS6_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2EOS6_@@GLIBCXX_3.4.28
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC1EOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC2EOS5_@@GLIBCXX_3.4.28
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEaSEOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12bad_weak_ptrD0Ev@@GLIBCXX_3.4.15
+@@ -3191,12 +3195,18 @@ FUNC:_ZNSt3_V214error_categoryD1Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V214error_categoryD2Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V215system_categoryEv@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V216generic_categoryEv@@GLIBCXX_3.4.21
++FUNC:_ZNSt3pmr15memory_resourceD0Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr15memory_resourceD1Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr15memory_resourceD2Ev@@GLIBCXX_3.4.28
+ FUNC:_ZNSt3pmr19new_delete_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20get_default_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20null_memory_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20set_default_resourceEPNS_15memory_resourceE@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr25monotonic_buffer_resource13_M_new_bufferEmm@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr25monotonic_buffer_resource18_M_release_buffersEv@@GLIBCXX_3.4.26
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD0Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD1Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD2Ev@@GLIBCXX_3.4.28
+ FUNC:_ZNSt3pmr26synchronized_pool_resource11do_allocateEmm@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr26synchronized_pool_resource13do_deallocateEPvmm@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr26synchronized_pool_resource7releaseEv@@GLIBCXX_3.4.26
+@@ -4642,6 +4652,7 @@ OBJECT:0:GLIBCXX_3.4.24
+ OBJECT:0:GLIBCXX_3.4.25
+ OBJECT:0:GLIBCXX_3.4.26
+ OBJECT:0:GLIBCXX_3.4.27
++OBJECT:0:GLIBCXX_3.4.28
+ OBJECT:0:GLIBCXX_3.4.3
+ OBJECT:0:GLIBCXX_3.4.4
+ OBJECT:0:GLIBCXX_3.4.5
+@@ -4734,6 +4745,7 @@ OBJECT:16:_ZTIN10__cxxabiv119__foreign_exceptionE@@CXXABI_1.3.2
+ OBJECT:16:_ZTINSt13__future_base11_State_baseE@@GLIBCXX_3.4.15
+ OBJECT:16:_ZTINSt13__future_base12_Result_baseE@@GLIBCXX_3.4.15
+ OBJECT:16:_ZTINSt3_V214error_categoryE@@GLIBCXX_3.4.21
++OBJECT:16:_ZTINSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
+ OBJECT:16:_ZTINSt6locale5facetE@@GLIBCXX_3.4
+ OBJECT:16:_ZTINSt6thread6_StateE@@GLIBCXX_3.4.22
+ OBJECT:16:_ZTISt10ctype_base@@GLIBCXX_3.4
+@@ -5185,6 +5197,7 @@ OBJECT:24:_ZTINSt17__gnu_cxx_ldbl1289money_getIcSt19istreambuf_iteratorIcSt11cha
+ OBJECT:24:_ZTINSt17__gnu_cxx_ldbl1289money_getIwSt19istreambuf_iteratorIwSt11char_traitsIwEEEE@@GLIBCXX_LDBL_3.4
+ OBJECT:24:_ZTINSt17__gnu_cxx_ldbl1289money_putIcSt19ostreambuf_iteratorIcSt11char_traitsIcEEEE@@GLIBCXX_LDBL_3.4
+ OBJECT:24:_ZTINSt17__gnu_cxx_ldbl1289money_putIwSt19ostreambuf_iteratorIwSt11char_traitsIwEEEE@@GLIBCXX_LDBL_3.4
++OBJECT:24:_ZTINSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:24:_ZTINSt3pmr26synchronized_pool_resourceE@@GLIBCXX_3.4.26
+ OBJECT:24:_ZTINSt3pmr28unsynchronized_pool_resourceE@@GLIBCXX_3.4.26
+ OBJECT:24:_ZTINSt7__cxx1114collate_bynameIcEE@@GLIBCXX_3.4.21
+@@ -5317,6 +5330,7 @@ OBJECT:25:_ZTSNSt7__cxx118messagesIwEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSNSt7__cxx118numpunctIcEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSNSt7__cxx118numpunctIwEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSSt20bad_array_new_length@@CXXABI_1.3.8
++OBJECT:26:_ZTSNSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
+ OBJECT:272:_ZSt4cerr@@GLIBCXX_3.4
+ OBJECT:272:_ZSt4clog@@GLIBCXX_3.4
+ OBJECT:272:_ZSt4cout@@GLIBCXX_3.4
+@@ -5473,6 +5487,7 @@ OBJECT:34:_ZTSSt25__codecvt_utf8_utf16_baseIDsE@@GLIBCXX_3.4.21
+ OBJECT:34:_ZTSSt9basic_iosIcSt11char_traitsIcEE@@GLIBCXX_3.4
+ OBJECT:34:_ZTSSt9basic_iosIwSt11char_traitsIwEE@@GLIBCXX_3.4
+ OBJECT:36:_ZTSN10__cxxabiv119__pointer_type_infoE@@CXXABI_1.3
++OBJECT:36:_ZTSNSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:36:_ZTSSt14codecvt_bynameIcc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:36:_ZTSSt14codecvt_bynameIwc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:37:_ZTSN10__cxxabiv120__function_type_infoE@@CXXABI_1.3
+@@ -5901,6 +5916,8 @@ OBJECT:56:_ZTVNSt17__gnu_cxx_ldbl1289money_getIcSt19istreambuf_iteratorIcSt11cha
+ OBJECT:56:_ZTVNSt17__gnu_cxx_ldbl1289money_getIwSt19istreambuf_iteratorIwSt11char_traitsIwEEEE@@GLIBCXX_LDBL_3.4
+ OBJECT:56:_ZTVNSt17__gnu_cxx_ldbl1289money_putIcSt19ostreambuf_iteratorIcSt11char_traitsIcEEEE@@GLIBCXX_LDBL_3.4
+ OBJECT:56:_ZTVNSt17__gnu_cxx_ldbl1289money_putIwSt19ostreambuf_iteratorIwSt11char_traitsIwEEEE@@GLIBCXX_LDBL_3.4
++OBJECT:56:_ZTVNSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
++OBJECT:56:_ZTVNSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:56:_ZTVNSt7__cxx1114collate_bynameIcEE@@GLIBCXX_3.4.21
+ OBJECT:56:_ZTVNSt7__cxx1114collate_bynameIwEE@@GLIBCXX_3.4.21
+ OBJECT:56:_ZTVNSt7__cxx1115messages_bynameIcEE@@GLIBCXX_3.4.21
+diff --git a/libstdc++-v3/config/abi/post/x86_64-linux-gnu/32/baseline_symbols.txt b/libstdc++-v3/config/abi/post/x86_64-linux-gnu/32/baseline_symbols.txt
+index e488ada5c72..f9eca6c7b0e 100644
+--- a/libstdc++-v3/config/abi/post/x86_64-linux-gnu/32/baseline_symbols.txt
++++ b/libstdc++-v3/config/abi/post/x86_64-linux-gnu/32/baseline_symbols.txt
+@@ -2062,16 +2062,20 @@ FUNC:_ZNSt12__basic_fileIcED1Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt12__basic_fileIcED2Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1EOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2EOS5_@@GLIBCXX_3.4.28
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC1EOS4_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC2EOS4_@@GLIBCXX_3.4.28
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEaSEOS4_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1EOS6_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2EOS6_@@GLIBCXX_3.4.28
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC1EOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC2EOS5_@@GLIBCXX_3.4.28
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEaSEOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12bad_weak_ptrD0Ev@@GLIBCXX_3.4.15
+@@ -3001,12 +3005,18 @@ FUNC:_ZNSt3_V214error_categoryD1Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V214error_categoryD2Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V215system_categoryEv@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V216generic_categoryEv@@GLIBCXX_3.4.21
++FUNC:_ZNSt3pmr15memory_resourceD0Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr15memory_resourceD1Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr15memory_resourceD2Ev@@GLIBCXX_3.4.28
+ FUNC:_ZNSt3pmr19new_delete_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20get_default_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20null_memory_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20set_default_resourceEPNS_15memory_resourceE@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr25monotonic_buffer_resource13_M_new_bufferEjj@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr25monotonic_buffer_resource18_M_release_buffersEv@@GLIBCXX_3.4.26
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD0Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD1Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD2Ev@@GLIBCXX_3.4.28
+ FUNC:_ZNSt3pmr26synchronized_pool_resource11do_allocateEjj@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr26synchronized_pool_resource13do_deallocateEPvjj@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr26synchronized_pool_resource7releaseEv@@GLIBCXX_3.4.26
+@@ -4409,6 +4419,7 @@ OBJECT:0:GLIBCXX_3.4.24
+ OBJECT:0:GLIBCXX_3.4.25
+ OBJECT:0:GLIBCXX_3.4.26
+ OBJECT:0:GLIBCXX_3.4.27
++OBJECT:0:GLIBCXX_3.4.28
+ OBJECT:0:GLIBCXX_3.4.3
+ OBJECT:0:GLIBCXX_3.4.4
+ OBJECT:0:GLIBCXX_3.4.5
+@@ -4435,6 +4446,7 @@ OBJECT:12:_ZTIN9__gnu_cxx18stdio_sync_filebufIwSt11char_traitsIwEEE@@GLIBCXX_3.4
+ OBJECT:12:_ZTINSt10filesystem16filesystem_errorE@@GLIBCXX_3.4.26
+ OBJECT:12:_ZTINSt10filesystem7__cxx1116filesystem_errorE@@GLIBCXX_3.4.26
+ OBJECT:12:_ZTINSt13__future_base19_Async_state_commonE@@GLIBCXX_3.4.17
++OBJECT:12:_ZTINSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:12:_ZTINSt3pmr26synchronized_pool_resourceE@@GLIBCXX_3.4.26
+ OBJECT:12:_ZTINSt3pmr28unsynchronized_pool_resourceE@@GLIBCXX_3.4.26
+ OBJECT:12:_ZTINSt7__cxx1114collate_bynameIcEE@@GLIBCXX_3.4.21
+@@ -5062,6 +5074,7 @@ OBJECT:25:_ZTSNSt7__cxx118messagesIwEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSNSt7__cxx118numpunctIcEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSNSt7__cxx118numpunctIwEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSSt20bad_array_new_length@@CXXABI_1.3.8
++OBJECT:26:_ZTSNSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
+ OBJECT:27:_ZTSSt19__codecvt_utf8_baseIwE@@GLIBCXX_3.4.21
+ OBJECT:28:_ZTSSt19__codecvt_utf8_baseIDiE@@GLIBCXX_3.4.21
+ OBJECT:28:_ZTSSt19__codecvt_utf8_baseIDsE@@GLIBCXX_3.4.21
+@@ -5070,6 +5083,8 @@ OBJECT:28:_ZTSSt7codecvtIcc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:28:_ZTSSt7codecvtIwc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:28:_ZTTSd@@GLIBCXX_3.4
+ OBJECT:28:_ZTTSt14basic_iostreamIwSt11char_traitsIwEE@@GLIBCXX_3.4
++OBJECT:28:_ZTVNSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
++OBJECT:28:_ZTVNSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:28:_ZTVNSt7__cxx1114collate_bynameIcEE@@GLIBCXX_3.4.21
+ OBJECT:28:_ZTVNSt7__cxx1114collate_bynameIwEE@@GLIBCXX_3.4.21
+ OBJECT:28:_ZTVNSt7__cxx1115messages_bynameIcEE@@GLIBCXX_3.4.21
+@@ -5177,6 +5192,7 @@ OBJECT:34:_ZTSSt25__codecvt_utf8_utf16_baseIDsE@@GLIBCXX_3.4.21
+ OBJECT:34:_ZTSSt9basic_iosIcSt11char_traitsIcEE@@GLIBCXX_3.4
+ OBJECT:34:_ZTSSt9basic_iosIwSt11char_traitsIwEE@@GLIBCXX_3.4
+ OBJECT:36:_ZTSN10__cxxabiv119__pointer_type_infoE@@CXXABI_1.3
++OBJECT:36:_ZTSNSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:36:_ZTSSt14codecvt_bynameIcc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:36:_ZTSSt14codecvt_bynameIwc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:36:_ZTVN10__cxxabiv117__pbase_type_infoE@@CXXABI_1.3
+@@ -5754,6 +5770,7 @@ OBJECT:8:_ZTIN10__cxxabiv119__foreign_exceptionE@@CXXABI_1.3.2
+ OBJECT:8:_ZTINSt13__future_base11_State_baseE@@GLIBCXX_3.4.15
+ OBJECT:8:_ZTINSt13__future_base12_Result_baseE@@GLIBCXX_3.4.15
+ OBJECT:8:_ZTINSt3_V214error_categoryE@@GLIBCXX_3.4.21
++OBJECT:8:_ZTINSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
+ OBJECT:8:_ZTINSt6locale5facetE@@GLIBCXX_3.4
+ OBJECT:8:_ZTINSt6thread6_StateE@@GLIBCXX_3.4.22
+ OBJECT:8:_ZTISt10ctype_base@@GLIBCXX_3.4
+diff --git a/libstdc++-v3/config/abi/post/x86_64-linux-gnu/baseline_symbols.txt b/libstdc++-v3/config/abi/post/x86_64-linux-gnu/baseline_symbols.txt
+index a403f4b660a..ab2e0951c31 100644
+--- a/libstdc++-v3/config/abi/post/x86_64-linux-gnu/baseline_symbols.txt
++++ b/libstdc++-v3/config/abi/post/x86_64-linux-gnu/baseline_symbols.txt
+@@ -2062,16 +2062,20 @@ FUNC:_ZNSt12__basic_fileIcED1Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt12__basic_fileIcED2Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1EOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2EOS5_@@GLIBCXX_3.4.28
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC1EOS4_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC2EOS4_@@GLIBCXX_3.4.28
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEaSEOS4_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1EOS6_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2EOS6_@@GLIBCXX_3.4.28
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC1EOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC2EOS5_@@GLIBCXX_3.4.28
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEaSEOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12bad_weak_ptrD0Ev@@GLIBCXX_3.4.15
+@@ -3001,12 +3005,18 @@ FUNC:_ZNSt3_V214error_categoryD1Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V214error_categoryD2Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V215system_categoryEv@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V216generic_categoryEv@@GLIBCXX_3.4.21
++FUNC:_ZNSt3pmr15memory_resourceD0Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr15memory_resourceD1Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr15memory_resourceD2Ev@@GLIBCXX_3.4.28
+ FUNC:_ZNSt3pmr19new_delete_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20get_default_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20null_memory_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20set_default_resourceEPNS_15memory_resourceE@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr25monotonic_buffer_resource13_M_new_bufferEmm@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr25monotonic_buffer_resource18_M_release_buffersEv@@GLIBCXX_3.4.26
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD0Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD1Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD2Ev@@GLIBCXX_3.4.28
+ FUNC:_ZNSt3pmr26synchronized_pool_resource11do_allocateEmm@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr26synchronized_pool_resource13do_deallocateEPvmm@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr26synchronized_pool_resource7releaseEv@@GLIBCXX_3.4.26
+@@ -4409,6 +4419,7 @@ OBJECT:0:GLIBCXX_3.4.24
+ OBJECT:0:GLIBCXX_3.4.25
+ OBJECT:0:GLIBCXX_3.4.26
+ OBJECT:0:GLIBCXX_3.4.27
++OBJECT:0:GLIBCXX_3.4.28
+ OBJECT:0:GLIBCXX_3.4.3
+ OBJECT:0:GLIBCXX_3.4.4
+ OBJECT:0:GLIBCXX_3.4.5
+@@ -4493,6 +4504,7 @@ OBJECT:16:_ZTIN10__cxxabiv119__foreign_exceptionE@@CXXABI_1.3.2
+ OBJECT:16:_ZTINSt13__future_base11_State_baseE@@GLIBCXX_3.4.15
+ OBJECT:16:_ZTINSt13__future_base12_Result_baseE@@GLIBCXX_3.4.15
+ OBJECT:16:_ZTINSt3_V214error_categoryE@@GLIBCXX_3.4.21
++OBJECT:16:_ZTINSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
+ OBJECT:16:_ZTINSt6locale5facetE@@GLIBCXX_3.4
+ OBJECT:16:_ZTINSt6thread6_StateE@@GLIBCXX_3.4.22
+ OBJECT:16:_ZTISt10ctype_base@@GLIBCXX_3.4
+@@ -4923,6 +4935,7 @@ OBJECT:24:_ZTIN9__gnu_cxx18stdio_sync_filebufIwSt11char_traitsIwEEE@@GLIBCXX_3.4
+ OBJECT:24:_ZTINSt10filesystem16filesystem_errorE@@GLIBCXX_3.4.26
+ OBJECT:24:_ZTINSt10filesystem7__cxx1116filesystem_errorE@@GLIBCXX_3.4.26
+ OBJECT:24:_ZTINSt13__future_base19_Async_state_commonE@@GLIBCXX_3.4.17
++OBJECT:24:_ZTINSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:24:_ZTINSt3pmr26synchronized_pool_resourceE@@GLIBCXX_3.4.26
+ OBJECT:24:_ZTINSt3pmr28unsynchronized_pool_resourceE@@GLIBCXX_3.4.26
+ OBJECT:24:_ZTINSt7__cxx1114collate_bynameIcEE@@GLIBCXX_3.4.21
+@@ -5055,6 +5068,7 @@ OBJECT:25:_ZTSNSt7__cxx118messagesIwEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSNSt7__cxx118numpunctIcEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSNSt7__cxx118numpunctIwEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSSt20bad_array_new_length@@CXXABI_1.3.8
++OBJECT:26:_ZTSNSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
+ OBJECT:272:_ZSt4cerr@@GLIBCXX_3.4
+ OBJECT:272:_ZSt4clog@@GLIBCXX_3.4
+ OBJECT:272:_ZSt4cout@@GLIBCXX_3.4
+@@ -5211,6 +5225,7 @@ OBJECT:34:_ZTSSt25__codecvt_utf8_utf16_baseIDsE@@GLIBCXX_3.4.21
+ OBJECT:34:_ZTSSt9basic_iosIcSt11char_traitsIcEE@@GLIBCXX_3.4
+ OBJECT:34:_ZTSSt9basic_iosIwSt11char_traitsIwEE@@GLIBCXX_3.4
+ OBJECT:36:_ZTSN10__cxxabiv119__pointer_type_infoE@@CXXABI_1.3
++OBJECT:36:_ZTSNSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:36:_ZTSSt14codecvt_bynameIcc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:36:_ZTSSt14codecvt_bynameIwc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:37:_ZTSN10__cxxabiv120__function_type_infoE@@CXXABI_1.3
+@@ -5626,6 +5641,8 @@ OBJECT:56:_ZTSNSt7__cxx1115basic_stringbufIcSt11char_traitsIcESaIcEEE@@GLIBCXX_3
+ OBJECT:56:_ZTSNSt7__cxx1115basic_stringbufIwSt11char_traitsIwESaIwEEE@@GLIBCXX_3.4.21
+ OBJECT:56:_ZTTSd@@GLIBCXX_3.4
+ OBJECT:56:_ZTTSt14basic_iostreamIwSt11char_traitsIwEE@@GLIBCXX_3.4
++OBJECT:56:_ZTVNSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
++OBJECT:56:_ZTVNSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:56:_ZTVNSt7__cxx1114collate_bynameIcEE@@GLIBCXX_3.4.21
+ OBJECT:56:_ZTVNSt7__cxx1114collate_bynameIwEE@@GLIBCXX_3.4.21
+ OBJECT:56:_ZTVNSt7__cxx1115messages_bynameIcEE@@GLIBCXX_3.4.21
 diff --git a/libstdc++-v3/doc/Makefile.am b/libstdc++-v3/doc/Makefile.am
 index 4427e5da6ad..bd88bdaa8c5 100644
 --- a/libstdc++-v3/doc/Makefile.am
@@ -13461,6 +14131,28 @@ index ac99835acf2..18407225d7a 100644
      for SGI's STL is still recommended reading.
      </p></td></tr><tr class="question"><td align="left" valign="top"><a id="faq.extensions_and_backwards_compat"></a><a id="q-extensions_and_backwards_compat"></a><p><strong>7.4.</strong></p></td><td align="left" valign="top"><p>
        Extensions and Backward Compatibility
+diff --git a/libstdc++-v3/doc/html/manual/abi.html b/libstdc++-v3/doc/html/manual/abi.html
+index 96383c33112..8ed8de64b32 100644
+--- a/libstdc++-v3/doc/html/manual/abi.html
++++ b/libstdc++-v3/doc/html/manual/abi.html
+@@ -110,7 +110,7 @@ compatible.
+ 	has the same filename and <code class="constant">DT_SONAME</code> as the
+ 	preceding release.
+       </p><p>It is versioned as follows:
+-    </p><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>GCC 3.0.0: libstdc++.so.3.0.0</p></li><li class="listitem"><p>GCC 3.0.1: libstdc++.so.3.0.1</p></li><li class="listitem"><p>GCC 3.0.2: libstdc++.so.3.0.2</p></li><li class="listitem"><p>GCC 3.0.3: libstdc++.so.3.0.2 (See Note 1)</p></li><li class="listitem"><p>GCC 3.0.4: libstdc++.so.3.0.4</p></li><li class="listitem"><p>GCC 3.1.0: libstdc++.so.4.0.0 <span class="emphasis"><em>(Incompatible with previous)</em></span></p></li><li class="listitem"><p>GCC 3.1.1: libstdc++.so.4.0.1</p></li><li class="listitem"><p>GCC 3.2.0: libstdc++.so.5.0.0 <span class="emphasis"><em>(Incompatible with previous)</em></span></p></li><li class="listitem"><p>GCC 3.2.1: libstdc++.so.5.0.1</p></li><li class="listitem"><p>GCC 3.2.2: libstdc++.so.5.0.2</p></li><li class="listitem"><p>GCC 3.2.3: libstdc++.so.5.0.3 (See Note 2)</p></li><li class="listitem"><p>GCC 3.3.0: libstdc++.so.5.0.4</p></li><li class="listitem"><p>GCC 3.3.1: libstdc++.so.5.0.5</p></li><li class="listitem"><p>GCC 3.4.0: libstdc++.so.6.0.0 <span class="emphasis"><em>(Incompatible with previous)</em></span></p></li><li class="listitem"><p>GCC 3.4.1: libstdc++.so.6.0.1</p></li><li class="listitem"><p>GCC 3.4.2: libstdc++.so.6.0.2</p></li><li class="listitem"><p>GCC 3.4.3: libstdc++.so.6.0.3</p></li><li class="listitem"><p>GCC 4.0.0: libstdc++.so.6.0.4</p></li><li class="listitem"><p>GCC 4.0.1: libstdc++.so.6.0.5</p></li><li class="listitem"><p>GCC 4.0.2: libstdc++.so.6.0.6</p></li><li class="listitem"><p>GCC 4.0.3: libstdc++.so.6.0.7</p></li><li class="listitem"><p>GCC 4.1.0: libstdc++.so.6.0.7</p></li><li class="listitem"><p>GCC 4.1.1: libstdc++.so.6.0.8</p></li><li class="listitem"><p>GCC 4.2.0: libstdc++.so.6.0.9</p></li><li class="listitem"><p>GCC 4.2.1: libstdc++.so.6.0.9 (See Note 3)</p></li><li class="listitem"><p>GCC 4.2.2: libstdc++.so.6.0.9</p></li><li class="listitem"><p>GCC 4.3.0: libstdc++.so.6.0.10</p></li><li class="listitem"><p>GCC 4.4.0: libstdc++.so.6.0.11</p></li><li class="listitem"><p>GCC 4.4.1: libstdc++.so.6.0.12</p></li><li class="listitem"><p>GCC 4.4.2: libstdc++.so.6.0.13</p></li><li class="listitem"><p>GCC 4.5.0: libstdc++.so.6.0.14</p></li><li class="listitem"><p>GCC 4.6.0: libstdc++.so.6.0.15</p></li><li class="listitem"><p>GCC 4.6.1: libstdc++.so.6.0.16</p></li><li class="listitem"><p>GCC 4.7.0: libstdc++.so.6.0.17</p></li><li class="listitem"><p>GCC 4.8.0: libstdc++.so.6.0.18</p></li><li class="listitem"><p>GCC 4.8.3: libstdc++.so.6.0.19</p></li><li class="listitem"><p>GCC 4.9.0: libstdc++.so.6.0.20</p></li><li class="listitem"><p>GCC 5.1.0: libstdc++.so.6.0.21</p></li><li class="listitem"><p>GCC 6.1.0: libstdc++.so.6.0.22</p></li><li class="listitem"><p>GCC 7.1.0: libstdc++.so.6.0.23</p></li><li class="listitem"><p>GCC 7.2.0: libstdc++.so.6.0.24</p></li><li class="listitem"><p>GCC 8.0.0: libstdc++.so.6.0.25</p></li><li class="listitem"><p>GCC 9.1.0: libstdc++.so.6.0.26</p></li><li class="listitem"><p>GCC 9.2.0: libstdc++.so.6.0.27</p></li><li class="listitem"><p>GCC 9.3.0: libstdc++.so.6.0.28</p></li></ul></div><p>
++    </p><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>GCC 3.0.0: libstdc++.so.3.0.0</p></li><li class="listitem"><p>GCC 3.0.1: libstdc++.so.3.0.1</p></li><li class="listitem"><p>GCC 3.0.2: libstdc++.so.3.0.2</p></li><li class="listitem"><p>GCC 3.0.3: libstdc++.so.3.0.2 (See Note 1)</p></li><li class="listitem"><p>GCC 3.0.4: libstdc++.so.3.0.4</p></li><li class="listitem"><p>GCC 3.1.0: libstdc++.so.4.0.0 <span class="emphasis"><em>(Incompatible with previous)</em></span></p></li><li class="listitem"><p>GCC 3.1.1: libstdc++.so.4.0.1</p></li><li class="listitem"><p>GCC 3.2.0: libstdc++.so.5.0.0 <span class="emphasis"><em>(Incompatible with previous)</em></span></p></li><li class="listitem"><p>GCC 3.2.1: libstdc++.so.5.0.1</p></li><li class="listitem"><p>GCC 3.2.2: libstdc++.so.5.0.2</p></li><li class="listitem"><p>GCC 3.2.3: libstdc++.so.5.0.3 (See Note 2)</p></li><li class="listitem"><p>GCC 3.3.0: libstdc++.so.5.0.4</p></li><li class="listitem"><p>GCC 3.3.1: libstdc++.so.5.0.5</p></li><li class="listitem"><p>GCC 3.4.0: libstdc++.so.6.0.0 <span class="emphasis"><em>(Incompatible with previous)</em></span></p></li><li class="listitem"><p>GCC 3.4.1: libstdc++.so.6.0.1</p></li><li class="listitem"><p>GCC 3.4.2: libstdc++.so.6.0.2</p></li><li class="listitem"><p>GCC 3.4.3: libstdc++.so.6.0.3</p></li><li class="listitem"><p>GCC 4.0.0: libstdc++.so.6.0.4</p></li><li class="listitem"><p>GCC 4.0.1: libstdc++.so.6.0.5</p></li><li class="listitem"><p>GCC 4.0.2: libstdc++.so.6.0.6</p></li><li class="listitem"><p>GCC 4.0.3: libstdc++.so.6.0.7</p></li><li class="listitem"><p>GCC 4.1.0: libstdc++.so.6.0.7</p></li><li class="listitem"><p>GCC 4.1.1: libstdc++.so.6.0.8</p></li><li class="listitem"><p>GCC 4.2.0: libstdc++.so.6.0.9</p></li><li class="listitem"><p>GCC 4.2.1: libstdc++.so.6.0.9 (See Note 3)</p></li><li class="listitem"><p>GCC 4.2.2: libstdc++.so.6.0.9</p></li><li class="listitem"><p>GCC 4.3.0: libstdc++.so.6.0.10</p></li><li class="listitem"><p>GCC 4.4.0: libstdc++.so.6.0.11</p></li><li class="listitem"><p>GCC 4.4.1: libstdc++.so.6.0.12</p></li><li class="listitem"><p>GCC 4.4.2: libstdc++.so.6.0.13</p></li><li class="listitem"><p>GCC 4.5.0: libstdc++.so.6.0.14</p></li><li class="listitem"><p>GCC 4.6.0: libstdc++.so.6.0.15</p></li><li class="listitem"><p>GCC 4.6.1: libstdc++.so.6.0.16</p></li><li class="listitem"><p>GCC 4.7.0: libstdc++.so.6.0.17</p></li><li class="listitem"><p>GCC 4.8.0: libstdc++.so.6.0.18</p></li><li class="listitem"><p>GCC 4.8.3: libstdc++.so.6.0.19</p></li><li class="listitem"><p>GCC 4.9.0: libstdc++.so.6.0.20</p></li><li class="listitem"><p>GCC 5.1.0: libstdc++.so.6.0.21</p></li><li class="listitem"><p>GCC 6.1.0: libstdc++.so.6.0.22</p></li><li class="listitem"><p>GCC 7.1.0: libstdc++.so.6.0.23</p></li><li class="listitem"><p>GCC 7.2.0: libstdc++.so.6.0.24</p></li><li class="listitem"><p>GCC 8.1.0: libstdc++.so.6.0.25</p></li><li class="listitem"><p>GCC 9.1.0: libstdc++.so.6.0.26</p></li><li class="listitem"><p>GCC 9.2.0: libstdc++.so.6.0.27</p></li><li class="listitem"><p>GCC 9.3.0: libstdc++.so.6.0.28</p></li><li class="listitem"><p>GCC 10.1.0: libstdc++.so.6.0.28</p></li></ul></div><p>
+       Note 1: Error should be libstdc++.so.3.0.3.
+     </p><p>
+       Note 2: Not strictly required.
+@@ -128,7 +128,7 @@ compatible.
+    GLIBCPP_3.2 for symbols that were introduced in the GCC 3.2.0
+    release.) If a particular release is not listed, it has the same
+    version labels as the preceding release.
+-   </p><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>GCC 3.0.0: (Error, not versioned)</p></li><li class="listitem"><p>GCC 3.0.1: (Error, not versioned)</p></li><li class="listitem"><p>GCC 3.0.2: (Error, not versioned)</p></li><li class="listitem"><p>GCC 3.0.3: (Error, not versioned)</p></li><li class="listitem"><p>GCC 3.0.4: (Error, not versioned)</p></li><li class="listitem"><p>GCC 3.1.0: GLIBCPP_3.1, CXXABI_1</p></li><li class="listitem"><p>GCC 3.1.1: GLIBCPP_3.1, CXXABI_1</p></li><li class="listitem"><p>GCC 3.2.0: GLIBCPP_3.2, CXXABI_1.2</p></li><li class="listitem"><p>GCC 3.2.1: GLIBCPP_3.2.1, CXXABI_1.2</p></li><li class="listitem"><p>GCC 3.2.2: GLIBCPP_3.2.2, CXXABI_1.2</p></li><li class="listitem"><p>GCC 3.2.3: GLIBCPP_3.2.2, CXXABI_1.2</p></li><li class="listitem"><p>GCC 3.3.0: GLIBCPP_3.2.2, CXXABI_1.2.1</p></li><li class="listitem"><p>GCC 3.3.1: GLIBCPP_3.2.3, CXXABI_1.2.1</p></li><li class="listitem"><p>GCC 3.3.2: GLIBCPP_3.2.3, CXXABI_1.2.1</p></li><li class="listitem"><p>GCC 3.3.3: GLIBCPP_3.2.3, CXXABI_1.2.1</p></li><li class="listitem"><p>GCC 3.4.0: GLIBCXX_3.4, CXXABI_1.3</p></li><li class="listitem"><p>GCC 3.4.1: GLIBCXX_3.4.1, CXXABI_1.3</p></li><li class="listitem"><p>GCC 3.4.2: GLIBCXX_3.4.2</p></li><li class="listitem"><p>GCC 3.4.3: GLIBCXX_3.4.3</p></li><li class="listitem"><p>GCC 4.0.0: GLIBCXX_3.4.4, CXXABI_1.3.1</p></li><li class="listitem"><p>GCC 4.0.1: GLIBCXX_3.4.5</p></li><li class="listitem"><p>GCC 4.0.2: GLIBCXX_3.4.6</p></li><li class="listitem"><p>GCC 4.0.3: GLIBCXX_3.4.7</p></li><li class="listitem"><p>GCC 4.1.1: GLIBCXX_3.4.8</p></li><li class="listitem"><p>GCC 4.2.0: GLIBCXX_3.4.9</p></li><li class="listitem"><p>GCC 4.3.0: GLIBCXX_3.4.10, CXXABI_1.3.2</p></li><li class="listitem"><p>GCC 4.4.0: GLIBCXX_3.4.11, CXXABI_1.3.3</p></li><li class="listitem"><p>GCC 4.4.1: GLIBCXX_3.4.12, CXXABI_1.3.3</p></li><li class="listitem"><p>GCC 4.4.2: GLIBCXX_3.4.13, CXXABI_1.3.3</p></li><li class="listitem"><p>GCC 4.5.0: GLIBCXX_3.4.14, CXXABI_1.3.4</p></li><li class="listitem"><p>GCC 4.6.0: GLIBCXX_3.4.15, CXXABI_1.3.5</p></li><li class="listitem"><p>GCC 4.6.1: GLIBCXX_3.4.16, CXXABI_1.3.5</p></li><li class="listitem"><p>GCC 4.7.0: GLIBCXX_3.4.17, CXXABI_1.3.6</p></li><li class="listitem"><p>GCC 4.8.0: GLIBCXX_3.4.18, CXXABI_1.3.7</p></li><li class="listitem"><p>GCC 4.8.3: GLIBCXX_3.4.19, CXXABI_1.3.7</p></li><li class="listitem"><p>GCC 4.9.0: GLIBCXX_3.4.20, CXXABI_1.3.8</p></li><li class="listitem"><p>GCC 5.1.0: GLIBCXX_3.4.21, CXXABI_1.3.9</p></li><li class="listitem"><p>GCC 6.1.0: GLIBCXX_3.4.22, CXXABI_1.3.10</p></li><li class="listitem"><p>GCC 7.1.0: GLIBCXX_3.4.23, CXXABI_1.3.11</p></li><li class="listitem"><p>GCC 7.2.0: GLIBCXX_3.4.24, CXXABI_1.3.11</p></li><li class="listitem"><p>GCC 8.0.0: GLIBCXX_3.4.25, CXXABI_1.3.11</p></li><li class="listitem"><p>GCC 9.0.0: GLIBCXX_3.4.26, CXXABI_1.3.11</p></li></ul></div></li><li class="listitem"><p>Incremental bumping of a compiler pre-defined macro,
++   </p><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>GCC 3.0.0: (Error, not versioned)</p></li><li class="listitem"><p>GCC 3.0.1: (Error, not versioned)</p></li><li class="listitem"><p>GCC 3.0.2: (Error, not versioned)</p></li><li class="listitem"><p>GCC 3.0.3: (Error, not versioned)</p></li><li class="listitem"><p>GCC 3.0.4: (Error, not versioned)</p></li><li class="listitem"><p>GCC 3.1.0: GLIBCPP_3.1, CXXABI_1</p></li><li class="listitem"><p>GCC 3.1.1: GLIBCPP_3.1, CXXABI_1</p></li><li class="listitem"><p>GCC 3.2.0: GLIBCPP_3.2, CXXABI_1.2</p></li><li class="listitem"><p>GCC 3.2.1: GLIBCPP_3.2.1, CXXABI_1.2</p></li><li class="listitem"><p>GCC 3.2.2: GLIBCPP_3.2.2, CXXABI_1.2</p></li><li class="listitem"><p>GCC 3.2.3: GLIBCPP_3.2.2, CXXABI_1.2</p></li><li class="listitem"><p>GCC 3.3.0: GLIBCPP_3.2.2, CXXABI_1.2.1</p></li><li class="listitem"><p>GCC 3.3.1: GLIBCPP_3.2.3, CXXABI_1.2.1</p></li><li class="listitem"><p>GCC 3.3.2: GLIBCPP_3.2.3, CXXABI_1.2.1</p></li><li class="listitem"><p>GCC 3.3.3: GLIBCPP_3.2.3, CXXABI_1.2.1</p></li><li class="listitem"><p>GCC 3.4.0: GLIBCXX_3.4, CXXABI_1.3</p></li><li class="listitem"><p>GCC 3.4.1: GLIBCXX_3.4.1, CXXABI_1.3</p></li><li class="listitem"><p>GCC 3.4.2: GLIBCXX_3.4.2</p></li><li class="listitem"><p>GCC 3.4.3: GLIBCXX_3.4.3</p></li><li class="listitem"><p>GCC 4.0.0: GLIBCXX_3.4.4, CXXABI_1.3.1</p></li><li class="listitem"><p>GCC 4.0.1: GLIBCXX_3.4.5</p></li><li class="listitem"><p>GCC 4.0.2: GLIBCXX_3.4.6</p></li><li class="listitem"><p>GCC 4.0.3: GLIBCXX_3.4.7</p></li><li class="listitem"><p>GCC 4.1.1: GLIBCXX_3.4.8</p></li><li class="listitem"><p>GCC 4.2.0: GLIBCXX_3.4.9</p></li><li class="listitem"><p>GCC 4.3.0: GLIBCXX_3.4.10, CXXABI_1.3.2</p></li><li class="listitem"><p>GCC 4.4.0: GLIBCXX_3.4.11, CXXABI_1.3.3</p></li><li class="listitem"><p>GCC 4.4.1: GLIBCXX_3.4.12, CXXABI_1.3.3</p></li><li class="listitem"><p>GCC 4.4.2: GLIBCXX_3.4.13, CXXABI_1.3.3</p></li><li class="listitem"><p>GCC 4.5.0: GLIBCXX_3.4.14, CXXABI_1.3.4</p></li><li class="listitem"><p>GCC 4.6.0: GLIBCXX_3.4.15, CXXABI_1.3.5</p></li><li class="listitem"><p>GCC 4.6.1: GLIBCXX_3.4.16, CXXABI_1.3.5</p></li><li class="listitem"><p>GCC 4.7.0: GLIBCXX_3.4.17, CXXABI_1.3.6</p></li><li class="listitem"><p>GCC 4.8.0: GLIBCXX_3.4.18, CXXABI_1.3.7</p></li><li class="listitem"><p>GCC 4.8.3: GLIBCXX_3.4.19, CXXABI_1.3.7</p></li><li class="listitem"><p>GCC 4.9.0: GLIBCXX_3.4.20, CXXABI_1.3.8</p></li><li class="listitem"><p>GCC 5.1.0: GLIBCXX_3.4.21, CXXABI_1.3.9</p></li><li class="listitem"><p>GCC 6.1.0: GLIBCXX_3.4.22, CXXABI_1.3.10</p></li><li class="listitem"><p>GCC 7.1.0: GLIBCXX_3.4.23, CXXABI_1.3.11</p></li><li class="listitem"><p>GCC 7.2.0: GLIBCXX_3.4.24, CXXABI_1.3.11</p></li><li class="listitem"><p>GCC 8.1.0: GLIBCXX_3.4.25, CXXABI_1.3.11</p></li><li class="listitem"><p>GCC 9.1.0: GLIBCXX_3.4.26, CXXABI_1.3.12</p></li><li class="listitem"><p>GCC 9.2.0: GLIBCXX_3.4.27, CXXABI_1.3.12</p></li><li class="listitem"><p>GCC 9.3.0: GLIBCXX_3.4.28, CXXABI_1.3.12</p></li><li class="listitem"><p>GCC 10.1.0: GLIBCXX_3.4.28, CXXABI_1.3.12</p></li></ul></div></li><li class="listitem"><p>Incremental bumping of a compiler pre-defined macro,
+     __GXX_ABI_VERSION. This macro is defined as the version of the
+     compiler v3 ABI, with g++ 3.0 being version 100. This macro will
+     be automatically defined whenever g++ is used (the curious can
 diff --git a/libstdc++-v3/doc/html/manual/status.html b/libstdc++-v3/doc/html/manual/status.html
 index 440b8671e0c..26793d9fa83 100644
 --- a/libstdc++-v3/doc/html/manual/status.html
@@ -14126,6 +14818,38 @@ index aff6c8d6004..cf8684e1cea 100644
 +    </para>
    </answer>
  </qandaentry>
+ 
+diff --git a/libstdc++-v3/doc/xml/manual/abi.xml b/libstdc++-v3/doc/xml/manual/abi.xml
+index 969edd7c834..7aec810d45f 100644
+--- a/libstdc++-v3/doc/xml/manual/abi.xml
++++ b/libstdc++-v3/doc/xml/manual/abi.xml
+@@ -267,10 +267,11 @@ compatible.
+     <listitem><para>GCC 6.1.0: libstdc++.so.6.0.22</para></listitem>
+     <listitem><para>GCC 7.1.0: libstdc++.so.6.0.23</para></listitem>
+     <listitem><para>GCC 7.2.0: libstdc++.so.6.0.24</para></listitem>
+-    <listitem><para>GCC 8.0.0: libstdc++.so.6.0.25</para></listitem>
++    <listitem><para>GCC 8.1.0: libstdc++.so.6.0.25</para></listitem>
+     <listitem><para>GCC 9.1.0: libstdc++.so.6.0.26</para></listitem>
+     <listitem><para>GCC 9.2.0: libstdc++.so.6.0.27</para></listitem>
+     <listitem><para>GCC 9.3.0: libstdc++.so.6.0.28</para></listitem>
++    <listitem><para>GCC 10.1.0: libstdc++.so.6.0.28</para></listitem>
+     </itemizedlist>
+     <para>
+       Note 1: Error should be libstdc++.so.3.0.3.
+@@ -340,8 +341,12 @@ compatible.
+     <listitem><para>GCC 6.1.0: GLIBCXX_3.4.22, CXXABI_1.3.10</para></listitem>
+     <listitem><para>GCC 7.1.0: GLIBCXX_3.4.23, CXXABI_1.3.11</para></listitem>
+     <listitem><para>GCC 7.2.0: GLIBCXX_3.4.24, CXXABI_1.3.11</para></listitem>
+-    <listitem><para>GCC 8.0.0: GLIBCXX_3.4.25, CXXABI_1.3.11</para></listitem>
+-    <listitem><para>GCC 9.0.0: GLIBCXX_3.4.26, CXXABI_1.3.11</para></listitem>
++    <listitem><para>GCC 8.1.0: GLIBCXX_3.4.25, CXXABI_1.3.11</para></listitem>
++    <listitem><para>GCC 9.1.0: GLIBCXX_3.4.26, CXXABI_1.3.12</para></listitem>
++    <listitem><para>GCC 9.2.0: GLIBCXX_3.4.27, CXXABI_1.3.12</para></listitem>
++    <listitem><para>GCC 9.3.0: GLIBCXX_3.4.28, CXXABI_1.3.12</para></listitem>
++    <listitem><para>GCC 10.1.0: GLIBCXX_3.4.28, CXXABI_1.3.12</para></listitem>
++
+     </itemizedlist>
+     </listitem>
  
 diff --git a/libstdc++-v3/doc/xml/manual/status_cxx1998.xml b/libstdc++-v3/doc/xml/manual/status_cxx1998.xml
 index 44a042c2724..df3b2c80d20 100644
