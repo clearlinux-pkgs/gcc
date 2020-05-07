@@ -28,16 +28,18 @@ Carl Love (3):
 Claudiu Zissulescu (1):
       arc: Allow more ABIs in GLIBC_DYNAMIC_LINKER
 
-Eric Botcazou (3):
+Eric Botcazou (4):
       Fix incorrect filling of delay slots in branchy code at -O2
       Fix wrong year in ChangeLog.
       Fix Ada bootstrap on Cygwin64
+      Update the baseline symbols for SPARC64/Linux
 
 Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (55):
+GCC Administrator (56):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -110,7 +112,7 @@ Iain Buclaw (3):
 Iain Sandoe (1):
       Darwin: Fix i686 bootstrap when the assembler supports GOTOFF in data.
 
-Jakub Jelinek (39):
+Jakub Jelinek (40):
       Bump BASE-VER to 9.3.1.
       tailcall: Fix up process_assignment [PR94001]
       inliner: Copy DECL_BY_REFERENCE in copy_decl_to_var [PR93888]
@@ -150,6 +152,7 @@ Jakub Jelinek (39):
       openmp: Fix parallel master error recovery [PR94512]
       i386: Fix V{64QI,32HI}mode constant permutations [PR94509]
       libstdc++: Update {x86_64,i?86,powerpc64,s390x,aarch64}-linux baselines for GCC 10.1
+      testsuite: Improve g++.dg/ext/attr-parm-1.C testcase [PR94946]
 
 Jason Merrill (8):
       c++: Fix CTAD with multiple-arg ctor template [93248].
@@ -251,6 +254,9 @@ Nathan Sidwell (2):
       c++: Fix ICE popping local scope [pr84733]
       c++: QT overload regression with attribute [PR94946]
 
+Rainer Orth (1):
+      libstdc++: Update Solaris baselines for GCC 9.4
+
 Richard Biener (4):
       tree-optimization/94163 constrain alignment set by PRE
       middle-end/94206 fix memset folding to avoid types with padding
@@ -283,11 +289,12 @@ Tobias Burnus (2):
       [Fortran] Fix result-variable handling of MODULE PROCEDURE (PR94348)
       ICE in gfc_get_dataptr_offset, at fortran/trans-array.c:6951
 
-Uros Bizjak (4):
+Uros Bizjak (5):
       i386: Fix REDUC_SSE_SMINMAX_MODE mode conditions.
       i386: Fix REDUC_SSE_SMINMAX_MODE mode conditions.
       i386: Require OPTION_MASK_ISA_SSE2 for __builtin_ia32_movq128 [PR94603]
       i386: Remove unneeded assignments when triggering SSE exceptions
+      alpha: Implement the PR94780 fix for alpha.
 
 Will Schmidt (2):
       backport PR90763: PowerPC vec_xl_len should take const argument.
@@ -322,10 +329,16 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..25100b8e9c7 100644
+index d8e53874e68..3fad79c3706 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,681 @@
+@@ -1,3 +1,687 @@
++2020-05-07  Uroš Bizjak  <ubizjak@gmail.com>
++
++	* config/alpha/alpha.c (alpha_atomic_assign_expand_fenv): Use
++	TARGET_EXPR instead of MODIFY_EXPR for the first assignments to
++	fenv_var and new_fenv_var.
++
 +2020-05-05  Andreas Krebbel  <krebbel@linux.ibm.com>
 +
 +	Backport from mainline
@@ -2409,6 +2422,32 @@ index 6caeeac8086..3bc49ea0238 100644
  ;; Iterator for QI and HI modes
  (define_mode_iterator SHORT [QI HI])
  
+diff --git a/gcc/config/alpha/alpha.c b/gcc/config/alpha/alpha.c
+index 524379d3763..614a426e989 100644
+--- a/gcc/config/alpha/alpha.c
++++ b/gcc/config/alpha/alpha.c
+@@ -9909,8 +9909,8 @@ alpha_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
+     = build_fn_decl ("__ieee_set_fp_control",
+ 		     build_function_type_list (void_type_node, NULL));
+   mask = build_int_cst (long_unsigned_type_node, ~SWCR_STATUS_MASK);
+-  ld_fenv = build2 (MODIFY_EXPR, long_unsigned_type_node,
+-		    fenv_var, build_call_expr (get_fpscr, 0));
++  ld_fenv = build4 (TARGET_EXPR, long_unsigned_type_node, fenv_var,
++		    build_call_expr (get_fpscr, 0), NULL_TREE, NULL_TREE);
+   masked_fenv = build2 (BIT_AND_EXPR, long_unsigned_type_node, fenv_var, mask);
+   hold_fnclex = build_call_expr (set_fpscr, 1, masked_fenv);
+   *hold = build2 (COMPOUND_EXPR, void_type_node,
+@@ -9931,8 +9931,8 @@ alpha_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
+        __atomic_feraiseexcept (new_fenv_var);  */
+ 
+   new_fenv_var = create_tmp_var_raw (long_unsigned_type_node);
+-  reload_fenv = build2 (MODIFY_EXPR, long_unsigned_type_node, new_fenv_var,
+-			build_call_expr (get_fpscr, 0));
++  reload_fenv = build4 (TARGET_EXPR, long_unsigned_type_node, new_fenv_var,
++			build_call_expr (get_fpscr, 0), NULL_TREE, NULL_TREE);
+   restore_fnenv = build_call_expr (set_fpscr, 1, fenv_var);
+   atomic_feraiseexcept = builtin_decl_implicit (BUILT_IN_ATOMIC_FERAISEEXCEPT);
+   update_call
 diff --git a/gcc/config/arc/linux.h b/gcc/config/arc/linux.h
 index 270ca907d87..7d07adc4257 100644
 --- a/gcc/config/arc/linux.h
@@ -5444,10 +5483,17 @@ index 7916344c584..3e969e52176 100644
  extern void mark_end_of_function_resources (rtx, bool);
  extern void init_resource_info (rtx_insn *);
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..d766fd17160 100644
+index e132f2657ef..02b5dbc6ea8 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,524 @@
+@@ -1,3 +1,531 @@
++2020-05-07  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/94946
++	* g++.dg/ext/attr-parm-1.C: Enable the test also for lp64 x86, use
++	sysv_abi and ms_abi attributes in that case instead of fastcall and
++	no attribute.  Remove dg-options.
++
 +2020-05-05  Andreas Krebbel  <krebbel@linux.ibm.com>
 +
 +	Backport from mainline
@@ -6567,16 +6613,20 @@ index 00000000000..ebc0cf45cc6
 +}
 diff --git a/gcc/testsuite/g++.dg/ext/attr-parm-1.C b/gcc/testsuite/g++.dg/ext/attr-parm-1.C
 new file mode 100644
-index 00000000000..872b3e0a019
+index 00000000000..681a652de1f
 --- /dev/null
 +++ b/gcc/testsuite/g++.dg/ext/attr-parm-1.C
-@@ -0,0 +1,7 @@
-+// { dg-do compile { target { { i?86-*-* x86_64-*-* } && ia32 } } }
-+// { dg-options -m32 }
+@@ -0,0 +1,11 @@
++// { dg-do compile { target { { i?86-*-* x86_64-*-* } && { ia32 || lp64 } } } }
 +// PR 94946
 +class a {
++#ifdef __LP64__
++  template <typename b> a(b(__attribute__((sysv_abi)) *c)());
++  template <typename b> a(b(__attribute__((ms_abi)) *c)());
++#else
 +  template <typename b> a(b (*)());
 +  template <typename b> a(b(__attribute__((fastcall)) *c)());
++#endif
 +};
 diff --git a/gcc/testsuite/g++.dg/ext/attr-type1.C b/gcc/testsuite/g++.dg/ext/attr-type1.C
 new file mode 100644
@@ -13104,10 +13154,30 @@ index 76e4460550d..9fc89270d48 100644
              {
                  timestruc_t st_atim;
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
-index 45847172291..b76f852fd0e 100644
+index 45847172291..a1d06b6fff1 100644
 --- a/libstdc++-v3/ChangeLog
 +++ b/libstdc++-v3/ChangeLog
-@@ -1,3 +1,265 @@
+@@ -1,3 +1,285 @@
++2020-05-07  Eric Botcazou  <ebotcazou@adacore.com>
++
++	* config/abi/post/sparc64-linux-gnu/baseline_symbols.txt: Update.
++	* config/abi/post/sparc64-linux-gnu/32/baseline_symbols.txt: Likewise.
++
++2020-05-07  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
++
++	* config/abi/post/i386-solaris2.10/baseline_symbols.txt: Regenerate.
++	* config/abi/post/i386-solaris2.10/amd64/baseline_symbols.txt:
++	Likewise.
++	* config/abi/post/i386-solaris2.11/baseline_symbols.txt: Likewise.
++	* config/abi/post/i386-solaris2.11/amd64/baseline_symbols.txt:
++	Likewise.
++	* config/abi/post/sparc-solaris2.10/baseline_symbols.txt: Likewise.
++	* config/abi/post/sparc-solaris2.10/sparcv9/baseline_symbols.txt:
++	Likewise.
++	* config/abi/post/sparc-solaris2.11/baseline_symbols.txt: Likewise.
++	* config/abi/post/sparc-solaris2.11/sparcv9/baseline_symbols.txt:
++	Likewise.
++
 +2020-05-06  Jonathan Wakely  <jwakely@redhat.com>
 +
 +	* doc/xml/manual/abi.xml (abi.versioning.history): Document library
@@ -13559,6 +13629,262 @@ index e488ada5c72..f9eca6c7b0e 100644
  OBJECT:8:_ZTINSt6locale5facetE@@GLIBCXX_3.4
  OBJECT:8:_ZTINSt6thread6_StateE@@GLIBCXX_3.4.22
  OBJECT:8:_ZTISt10ctype_base@@GLIBCXX_3.4
+diff --git a/libstdc++-v3/config/abi/post/i386-solaris2.10/amd64/baseline_symbols.txt b/libstdc++-v3/config/abi/post/i386-solaris2.10/amd64/baseline_symbols.txt
+index dc1a34fa9f5..52d4a38a024 100644
+--- a/libstdc++-v3/config/abi/post/i386-solaris2.10/amd64/baseline_symbols.txt
++++ b/libstdc++-v3/config/abi/post/i386-solaris2.10/amd64/baseline_symbols.txt
+@@ -2968,12 +2968,18 @@ FUNC:_ZNSt3_V214error_categoryD1Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V214error_categoryD2Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V215system_categoryEv@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V216generic_categoryEv@@GLIBCXX_3.4.21
++FUNC:_ZNSt3pmr15memory_resourceD0Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr15memory_resourceD1Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr15memory_resourceD2Ev@@GLIBCXX_3.4.28
+ FUNC:_ZNSt3pmr19new_delete_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20get_default_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20null_memory_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20set_default_resourceEPNS_15memory_resourceE@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr25monotonic_buffer_resource13_M_new_bufferEmm@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr25monotonic_buffer_resource18_M_release_buffersEv@@GLIBCXX_3.4.26
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD0Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD1Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD2Ev@@GLIBCXX_3.4.28
+ FUNC:_ZNSt3pmr26synchronized_pool_resource11do_allocateEmm@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr26synchronized_pool_resource13do_deallocateEPvmm@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr26synchronized_pool_resource7releaseEv@@GLIBCXX_3.4.26
+@@ -4457,6 +4463,7 @@ OBJECT:16:_ZTIN10__cxxabiv119__foreign_exceptionE@@CXXABI_1.3.2
+ OBJECT:16:_ZTINSt13__future_base11_State_baseE@@GLIBCXX_3.4.15
+ OBJECT:16:_ZTINSt13__future_base12_Result_baseE@@GLIBCXX_3.4.15
+ OBJECT:16:_ZTINSt3_V214error_categoryE@@GLIBCXX_3.4.21
++OBJECT:16:_ZTINSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
+ OBJECT:16:_ZTINSt6locale5facetE@@GLIBCXX_3.4
+ OBJECT:16:_ZTINSt6thread6_StateE@@GLIBCXX_3.4.22
+ OBJECT:16:_ZTISt10ctype_base@@GLIBCXX_3.4
+@@ -4884,6 +4891,7 @@ OBJECT:24:_ZTIN9__gnu_cxx18stdio_sync_filebufIwSt11char_traitsIwEEE@@GLIBCXX_3.4
+ OBJECT:24:_ZTINSt10filesystem16filesystem_errorE@@GLIBCXX_3.4.26
+ OBJECT:24:_ZTINSt10filesystem7__cxx1116filesystem_errorE@@GLIBCXX_3.4.26
+ OBJECT:24:_ZTINSt13__future_base19_Async_state_commonE@@GLIBCXX_3.4.17
++OBJECT:24:_ZTINSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:24:_ZTINSt3pmr26synchronized_pool_resourceE@@GLIBCXX_3.4.26
+ OBJECT:24:_ZTINSt3pmr28unsynchronized_pool_resourceE@@GLIBCXX_3.4.26
+ OBJECT:24:_ZTINSt7__cxx1114collate_bynameIcEE@@GLIBCXX_3.4.21
+@@ -5016,6 +5024,7 @@ OBJECT:25:_ZTSNSt7__cxx118messagesIwEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSNSt7__cxx118numpunctIcEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSNSt7__cxx118numpunctIwEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSSt20bad_array_new_length@@CXXABI_1.3.8
++OBJECT:26:_ZTSNSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
+ OBJECT:272:_ZSt4cerr@@GLIBCXX_3.4
+ OBJECT:272:_ZSt4clog@@GLIBCXX_3.4
+ OBJECT:272:_ZSt4cout@@GLIBCXX_3.4
+@@ -5160,6 +5169,7 @@ OBJECT:34:_ZTSSt25__codecvt_utf8_utf16_baseIDsE@@GLIBCXX_3.4.21
+ OBJECT:34:_ZTSSt9basic_iosIcSt11char_traitsIcEE@@GLIBCXX_3.4
+ OBJECT:34:_ZTSSt9basic_iosIwSt11char_traitsIwEE@@GLIBCXX_3.4
+ OBJECT:36:_ZTSN10__cxxabiv119__pointer_type_infoE@@CXXABI_1.3
++OBJECT:36:_ZTSNSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:36:_ZTSSt14codecvt_bynameIcc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:36:_ZTSSt14codecvt_bynameIwc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:37:_ZTSN10__cxxabiv120__function_type_infoE@@CXXABI_1.3
+@@ -5587,6 +5597,8 @@ OBJECT:56:_ZTSNSt7__cxx1115basic_stringbufIcSt11char_traitsIcESaIcEEE@@GLIBCXX_3
+ OBJECT:56:_ZTSNSt7__cxx1115basic_stringbufIwSt11char_traitsIwESaIwEEE@@GLIBCXX_3.4.21
+ OBJECT:56:_ZTTSd@@GLIBCXX_3.4
+ OBJECT:56:_ZTTSt14basic_iostreamIwSt11char_traitsIwEE@@GLIBCXX_3.4
++OBJECT:56:_ZTVNSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
++OBJECT:56:_ZTVNSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:56:_ZTVNSt7__cxx1114collate_bynameIcEE@@GLIBCXX_3.4.21
+ OBJECT:56:_ZTVNSt7__cxx1114collate_bynameIwEE@@GLIBCXX_3.4.21
+ OBJECT:56:_ZTVNSt7__cxx1115messages_bynameIcEE@@GLIBCXX_3.4.21
+diff --git a/libstdc++-v3/config/abi/post/i386-solaris2.10/baseline_symbols.txt b/libstdc++-v3/config/abi/post/i386-solaris2.10/baseline_symbols.txt
+index c097965d4b2..ae23c0d8d6e 100644
+--- a/libstdc++-v3/config/abi/post/i386-solaris2.10/baseline_symbols.txt
++++ b/libstdc++-v3/config/abi/post/i386-solaris2.10/baseline_symbols.txt
+@@ -2968,12 +2968,18 @@ FUNC:_ZNSt3_V214error_categoryD1Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V214error_categoryD2Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V215system_categoryEv@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V216generic_categoryEv@@GLIBCXX_3.4.21
++FUNC:_ZNSt3pmr15memory_resourceD0Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr15memory_resourceD1Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr15memory_resourceD2Ev@@GLIBCXX_3.4.28
+ FUNC:_ZNSt3pmr19new_delete_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20get_default_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20null_memory_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20set_default_resourceEPNS_15memory_resourceE@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr25monotonic_buffer_resource13_M_new_bufferEjj@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr25monotonic_buffer_resource18_M_release_buffersEv@@GLIBCXX_3.4.26
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD0Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD1Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD2Ev@@GLIBCXX_3.4.28
+ FUNC:_ZNSt3pmr26synchronized_pool_resource11do_allocateEjj@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr26synchronized_pool_resource13do_deallocateEPvjj@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr26synchronized_pool_resource7releaseEv@@GLIBCXX_3.4.26
+@@ -4399,6 +4405,7 @@ OBJECT:12:_ZTIN9__gnu_cxx18stdio_sync_filebufIwSt11char_traitsIwEEE@@GLIBCXX_3.4
+ OBJECT:12:_ZTINSt10filesystem16filesystem_errorE@@GLIBCXX_3.4.26
+ OBJECT:12:_ZTINSt10filesystem7__cxx1116filesystem_errorE@@GLIBCXX_3.4.26
+ OBJECT:12:_ZTINSt13__future_base19_Async_state_commonE@@GLIBCXX_3.4.17
++OBJECT:12:_ZTINSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:12:_ZTINSt3pmr26synchronized_pool_resourceE@@GLIBCXX_3.4.26
+ OBJECT:12:_ZTINSt3pmr28unsynchronized_pool_resourceE@@GLIBCXX_3.4.26
+ OBJECT:12:_ZTINSt7__cxx1114collate_bynameIcEE@@GLIBCXX_3.4.21
+@@ -5023,6 +5030,7 @@ OBJECT:25:_ZTSNSt7__cxx118messagesIwEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSNSt7__cxx118numpunctIcEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSNSt7__cxx118numpunctIwEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSSt20bad_array_new_length@@CXXABI_1.3.8
++OBJECT:26:_ZTSNSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
+ OBJECT:27:_ZTSSt19__codecvt_utf8_baseIwE@@GLIBCXX_3.4.21
+ OBJECT:28:_ZTSSt19__codecvt_utf8_baseIDiE@@GLIBCXX_3.4.21
+ OBJECT:28:_ZTSSt19__codecvt_utf8_baseIDsE@@GLIBCXX_3.4.21
+@@ -5031,6 +5039,8 @@ OBJECT:28:_ZTSSt7codecvtIcc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:28:_ZTSSt7codecvtIwc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:28:_ZTTSd@@GLIBCXX_3.4
+ OBJECT:28:_ZTTSt14basic_iostreamIwSt11char_traitsIwEE@@GLIBCXX_3.4
++OBJECT:28:_ZTVNSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
++OBJECT:28:_ZTVNSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:28:_ZTVNSt7__cxx1114collate_bynameIcEE@@GLIBCXX_3.4.21
+ OBJECT:28:_ZTVNSt7__cxx1114collate_bynameIwEE@@GLIBCXX_3.4.21
+ OBJECT:28:_ZTVNSt7__cxx1115messages_bynameIcEE@@GLIBCXX_3.4.21
+@@ -5126,6 +5136,7 @@ OBJECT:34:_ZTSSt25__codecvt_utf8_utf16_baseIDsE@@GLIBCXX_3.4.21
+ OBJECT:34:_ZTSSt9basic_iosIcSt11char_traitsIcEE@@GLIBCXX_3.4
+ OBJECT:34:_ZTSSt9basic_iosIwSt11char_traitsIwEE@@GLIBCXX_3.4
+ OBJECT:36:_ZTSN10__cxxabiv119__pointer_type_infoE@@CXXABI_1.3
++OBJECT:36:_ZTSNSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:36:_ZTSSt14codecvt_bynameIcc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:36:_ZTSSt14codecvt_bynameIwc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:36:_ZTVN10__cxxabiv117__pbase_type_infoE@@CXXABI_1.3
+@@ -5714,6 +5725,7 @@ OBJECT:8:_ZTIN10__cxxabiv119__foreign_exceptionE@@CXXABI_1.3.2
+ OBJECT:8:_ZTINSt13__future_base11_State_baseE@@GLIBCXX_3.4.15
+ OBJECT:8:_ZTINSt13__future_base12_Result_baseE@@GLIBCXX_3.4.15
+ OBJECT:8:_ZTINSt3_V214error_categoryE@@GLIBCXX_3.4.21
++OBJECT:8:_ZTINSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
+ OBJECT:8:_ZTINSt6locale5facetE@@GLIBCXX_3.4
+ OBJECT:8:_ZTINSt6thread6_StateE@@GLIBCXX_3.4.22
+ OBJECT:8:_ZTISt10ctype_base@@GLIBCXX_3.4
+diff --git a/libstdc++-v3/config/abi/post/i386-solaris2.11/amd64/baseline_symbols.txt b/libstdc++-v3/config/abi/post/i386-solaris2.11/amd64/baseline_symbols.txt
+index 2a8f88bac7b..2aa9e2639ab 100644
+--- a/libstdc++-v3/config/abi/post/i386-solaris2.11/amd64/baseline_symbols.txt
++++ b/libstdc++-v3/config/abi/post/i386-solaris2.11/amd64/baseline_symbols.txt
+@@ -2968,12 +2968,18 @@ FUNC:_ZNSt3_V214error_categoryD1Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V214error_categoryD2Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V215system_categoryEv@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V216generic_categoryEv@@GLIBCXX_3.4.21
++FUNC:_ZNSt3pmr15memory_resourceD0Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr15memory_resourceD1Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr15memory_resourceD2Ev@@GLIBCXX_3.4.28
+ FUNC:_ZNSt3pmr19new_delete_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20get_default_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20null_memory_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20set_default_resourceEPNS_15memory_resourceE@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr25monotonic_buffer_resource13_M_new_bufferEmm@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr25monotonic_buffer_resource18_M_release_buffersEv@@GLIBCXX_3.4.26
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD0Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD1Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD2Ev@@GLIBCXX_3.4.28
+ FUNC:_ZNSt3pmr26synchronized_pool_resource11do_allocateEmm@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr26synchronized_pool_resource13do_deallocateEPvmm@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr26synchronized_pool_resource7releaseEv@@GLIBCXX_3.4.26
+@@ -4459,6 +4465,7 @@ OBJECT:16:_ZTIN10__cxxabiv119__foreign_exceptionE@@CXXABI_1.3.2
+ OBJECT:16:_ZTINSt13__future_base11_State_baseE@@GLIBCXX_3.4.15
+ OBJECT:16:_ZTINSt13__future_base12_Result_baseE@@GLIBCXX_3.4.15
+ OBJECT:16:_ZTINSt3_V214error_categoryE@@GLIBCXX_3.4.21
++OBJECT:16:_ZTINSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
+ OBJECT:16:_ZTINSt6locale5facetE@@GLIBCXX_3.4
+ OBJECT:16:_ZTINSt6thread6_StateE@@GLIBCXX_3.4.22
+ OBJECT:16:_ZTISt10ctype_base@@GLIBCXX_3.4
+@@ -4886,6 +4893,7 @@ OBJECT:24:_ZTIN9__gnu_cxx18stdio_sync_filebufIwSt11char_traitsIwEEE@@GLIBCXX_3.4
+ OBJECT:24:_ZTINSt10filesystem16filesystem_errorE@@GLIBCXX_3.4.26
+ OBJECT:24:_ZTINSt10filesystem7__cxx1116filesystem_errorE@@GLIBCXX_3.4.26
+ OBJECT:24:_ZTINSt13__future_base19_Async_state_commonE@@GLIBCXX_3.4.17
++OBJECT:24:_ZTINSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:24:_ZTINSt3pmr26synchronized_pool_resourceE@@GLIBCXX_3.4.26
+ OBJECT:24:_ZTINSt3pmr28unsynchronized_pool_resourceE@@GLIBCXX_3.4.26
+ OBJECT:24:_ZTINSt7__cxx1114collate_bynameIcEE@@GLIBCXX_3.4.21
+@@ -5018,6 +5026,7 @@ OBJECT:25:_ZTSNSt7__cxx118messagesIwEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSNSt7__cxx118numpunctIcEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSNSt7__cxx118numpunctIwEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSSt20bad_array_new_length@@CXXABI_1.3.8
++OBJECT:26:_ZTSNSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
+ OBJECT:272:_ZSt4cerr@@GLIBCXX_3.4
+ OBJECT:272:_ZSt4clog@@GLIBCXX_3.4
+ OBJECT:272:_ZSt4cout@@GLIBCXX_3.4
+@@ -5162,6 +5171,7 @@ OBJECT:34:_ZTSSt25__codecvt_utf8_utf16_baseIDsE@@GLIBCXX_3.4.21
+ OBJECT:34:_ZTSSt9basic_iosIcSt11char_traitsIcEE@@GLIBCXX_3.4
+ OBJECT:34:_ZTSSt9basic_iosIwSt11char_traitsIwEE@@GLIBCXX_3.4
+ OBJECT:36:_ZTSN10__cxxabiv119__pointer_type_infoE@@CXXABI_1.3
++OBJECT:36:_ZTSNSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:36:_ZTSSt14codecvt_bynameIcc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:36:_ZTSSt14codecvt_bynameIwc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:37:_ZTSN10__cxxabiv120__function_type_infoE@@CXXABI_1.3
+@@ -5589,6 +5599,8 @@ OBJECT:56:_ZTSNSt7__cxx1115basic_stringbufIcSt11char_traitsIcESaIcEEE@@GLIBCXX_3
+ OBJECT:56:_ZTSNSt7__cxx1115basic_stringbufIwSt11char_traitsIwESaIwEEE@@GLIBCXX_3.4.21
+ OBJECT:56:_ZTTSd@@GLIBCXX_3.4
+ OBJECT:56:_ZTTSt14basic_iostreamIwSt11char_traitsIwEE@@GLIBCXX_3.4
++OBJECT:56:_ZTVNSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
++OBJECT:56:_ZTVNSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:56:_ZTVNSt7__cxx1114collate_bynameIcEE@@GLIBCXX_3.4.21
+ OBJECT:56:_ZTVNSt7__cxx1114collate_bynameIwEE@@GLIBCXX_3.4.21
+ OBJECT:56:_ZTVNSt7__cxx1115messages_bynameIcEE@@GLIBCXX_3.4.21
+diff --git a/libstdc++-v3/config/abi/post/i386-solaris2.11/baseline_symbols.txt b/libstdc++-v3/config/abi/post/i386-solaris2.11/baseline_symbols.txt
+index 85796b3689b..3500f8a76ca 100644
+--- a/libstdc++-v3/config/abi/post/i386-solaris2.11/baseline_symbols.txt
++++ b/libstdc++-v3/config/abi/post/i386-solaris2.11/baseline_symbols.txt
+@@ -2968,12 +2968,18 @@ FUNC:_ZNSt3_V214error_categoryD1Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V214error_categoryD2Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V215system_categoryEv@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V216generic_categoryEv@@GLIBCXX_3.4.21
++FUNC:_ZNSt3pmr15memory_resourceD0Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr15memory_resourceD1Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr15memory_resourceD2Ev@@GLIBCXX_3.4.28
+ FUNC:_ZNSt3pmr19new_delete_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20get_default_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20null_memory_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20set_default_resourceEPNS_15memory_resourceE@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr25monotonic_buffer_resource13_M_new_bufferEjj@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr25monotonic_buffer_resource18_M_release_buffersEv@@GLIBCXX_3.4.26
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD0Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD1Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD2Ev@@GLIBCXX_3.4.28
+ FUNC:_ZNSt3pmr26synchronized_pool_resource11do_allocateEjj@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr26synchronized_pool_resource13do_deallocateEPvjj@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr26synchronized_pool_resource7releaseEv@@GLIBCXX_3.4.26
+@@ -4401,6 +4407,7 @@ OBJECT:12:_ZTIN9__gnu_cxx18stdio_sync_filebufIwSt11char_traitsIwEEE@@GLIBCXX_3.4
+ OBJECT:12:_ZTINSt10filesystem16filesystem_errorE@@GLIBCXX_3.4.26
+ OBJECT:12:_ZTINSt10filesystem7__cxx1116filesystem_errorE@@GLIBCXX_3.4.26
+ OBJECT:12:_ZTINSt13__future_base19_Async_state_commonE@@GLIBCXX_3.4.17
++OBJECT:12:_ZTINSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:12:_ZTINSt3pmr26synchronized_pool_resourceE@@GLIBCXX_3.4.26
+ OBJECT:12:_ZTINSt3pmr28unsynchronized_pool_resourceE@@GLIBCXX_3.4.26
+ OBJECT:12:_ZTINSt7__cxx1114collate_bynameIcEE@@GLIBCXX_3.4.21
+@@ -5025,6 +5032,7 @@ OBJECT:25:_ZTSNSt7__cxx118messagesIwEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSNSt7__cxx118numpunctIcEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSNSt7__cxx118numpunctIwEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSSt20bad_array_new_length@@CXXABI_1.3.8
++OBJECT:26:_ZTSNSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
+ OBJECT:27:_ZTSSt19__codecvt_utf8_baseIwE@@GLIBCXX_3.4.21
+ OBJECT:28:_ZTSSt19__codecvt_utf8_baseIDiE@@GLIBCXX_3.4.21
+ OBJECT:28:_ZTSSt19__codecvt_utf8_baseIDsE@@GLIBCXX_3.4.21
+@@ -5033,6 +5041,8 @@ OBJECT:28:_ZTSSt7codecvtIcc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:28:_ZTSSt7codecvtIwc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:28:_ZTTSd@@GLIBCXX_3.4
+ OBJECT:28:_ZTTSt14basic_iostreamIwSt11char_traitsIwEE@@GLIBCXX_3.4
++OBJECT:28:_ZTVNSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
++OBJECT:28:_ZTVNSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:28:_ZTVNSt7__cxx1114collate_bynameIcEE@@GLIBCXX_3.4.21
+ OBJECT:28:_ZTVNSt7__cxx1114collate_bynameIwEE@@GLIBCXX_3.4.21
+ OBJECT:28:_ZTVNSt7__cxx1115messages_bynameIcEE@@GLIBCXX_3.4.21
+@@ -5128,6 +5138,7 @@ OBJECT:34:_ZTSSt25__codecvt_utf8_utf16_baseIDsE@@GLIBCXX_3.4.21
+ OBJECT:34:_ZTSSt9basic_iosIcSt11char_traitsIcEE@@GLIBCXX_3.4
+ OBJECT:34:_ZTSSt9basic_iosIwSt11char_traitsIwEE@@GLIBCXX_3.4
+ OBJECT:36:_ZTSN10__cxxabiv119__pointer_type_infoE@@CXXABI_1.3
++OBJECT:36:_ZTSNSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:36:_ZTSSt14codecvt_bynameIcc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:36:_ZTSSt14codecvt_bynameIwc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:36:_ZTVN10__cxxabiv117__pbase_type_infoE@@CXXABI_1.3
+@@ -5716,6 +5727,7 @@ OBJECT:8:_ZTIN10__cxxabiv119__foreign_exceptionE@@CXXABI_1.3.2
+ OBJECT:8:_ZTINSt13__future_base11_State_baseE@@GLIBCXX_3.4.15
+ OBJECT:8:_ZTINSt13__future_base12_Result_baseE@@GLIBCXX_3.4.15
+ OBJECT:8:_ZTINSt3_V214error_categoryE@@GLIBCXX_3.4.21
++OBJECT:8:_ZTINSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
+ OBJECT:8:_ZTINSt6locale5facetE@@GLIBCXX_3.4
+ OBJECT:8:_ZTINSt6thread6_StateE@@GLIBCXX_3.4.22
+ OBJECT:8:_ZTISt10ctype_base@@GLIBCXX_3.4
 diff --git a/libstdc++-v3/config/abi/post/i486-linux-gnu/baseline_symbols.txt b/libstdc++-v3/config/abi/post/i486-linux-gnu/baseline_symbols.txt
 index e488ada5c72..f9eca6c7b0e 100644
 --- a/libstdc++-v3/config/abi/post/i486-linux-gnu/baseline_symbols.txt
@@ -13838,6 +14164,882 @@ index 65ee06d5c2a..58c11a5972b 100644
  OBJECT:56:_ZTVNSt7__cxx1114collate_bynameIcEE@@GLIBCXX_3.4.21
  OBJECT:56:_ZTVNSt7__cxx1114collate_bynameIwEE@@GLIBCXX_3.4.21
  OBJECT:56:_ZTVNSt7__cxx1115messages_bynameIcEE@@GLIBCXX_3.4.21
+diff --git a/libstdc++-v3/config/abi/post/sparc-solaris2.10/baseline_symbols.txt b/libstdc++-v3/config/abi/post/sparc-solaris2.10/baseline_symbols.txt
+index b4b39e3fbae..1c3b84cd9fc 100644
+--- a/libstdc++-v3/config/abi/post/sparc-solaris2.10/baseline_symbols.txt
++++ b/libstdc++-v3/config/abi/post/sparc-solaris2.10/baseline_symbols.txt
+@@ -2968,12 +2968,18 @@ FUNC:_ZNSt3_V214error_categoryD1Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V214error_categoryD2Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V215system_categoryEv@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V216generic_categoryEv@@GLIBCXX_3.4.21
++FUNC:_ZNSt3pmr15memory_resourceD0Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr15memory_resourceD1Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr15memory_resourceD2Ev@@GLIBCXX_3.4.28
+ FUNC:_ZNSt3pmr19new_delete_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20get_default_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20null_memory_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20set_default_resourceEPNS_15memory_resourceE@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr25monotonic_buffer_resource13_M_new_bufferEjj@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr25monotonic_buffer_resource18_M_release_buffersEv@@GLIBCXX_3.4.26
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD0Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD1Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD2Ev@@GLIBCXX_3.4.28
+ FUNC:_ZNSt3pmr26synchronized_pool_resource11do_allocateEjj@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr26synchronized_pool_resource13do_deallocateEPvjj@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr26synchronized_pool_resource7releaseEv@@GLIBCXX_3.4.26
+@@ -4398,6 +4404,7 @@ OBJECT:12:_ZTIN9__gnu_cxx18stdio_sync_filebufIwSt11char_traitsIwEEE@@GLIBCXX_3.4
+ OBJECT:12:_ZTINSt10filesystem16filesystem_errorE@@GLIBCXX_3.4.26
+ OBJECT:12:_ZTINSt10filesystem7__cxx1116filesystem_errorE@@GLIBCXX_3.4.26
+ OBJECT:12:_ZTINSt13__future_base19_Async_state_commonE@@GLIBCXX_3.4.17
++OBJECT:12:_ZTINSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:12:_ZTINSt3pmr26synchronized_pool_resourceE@@GLIBCXX_3.4.26
+ OBJECT:12:_ZTINSt3pmr28unsynchronized_pool_resourceE@@GLIBCXX_3.4.26
+ OBJECT:12:_ZTINSt7__cxx1114collate_bynameIcEE@@GLIBCXX_3.4.21
+@@ -5020,6 +5027,7 @@ OBJECT:25:_ZTSNSt7__cxx118messagesIwEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSNSt7__cxx118numpunctIcEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSNSt7__cxx118numpunctIwEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSSt20bad_array_new_length@@CXXABI_1.3.8
++OBJECT:26:_ZTSNSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
+ OBJECT:27:_ZTSSt19__codecvt_utf8_baseIwE@@GLIBCXX_3.4.21
+ OBJECT:28:_ZTSSt19__codecvt_utf8_baseIDiE@@GLIBCXX_3.4.21
+ OBJECT:28:_ZTSSt19__codecvt_utf8_baseIDsE@@GLIBCXX_3.4.21
+@@ -5028,6 +5036,8 @@ OBJECT:28:_ZTSSt7codecvtIcc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:28:_ZTSSt7codecvtIwc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:28:_ZTTSd@@GLIBCXX_3.4
+ OBJECT:28:_ZTTSt14basic_iostreamIwSt11char_traitsIwEE@@GLIBCXX_3.4
++OBJECT:28:_ZTVNSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
++OBJECT:28:_ZTVNSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:28:_ZTVNSt7__cxx1114collate_bynameIcEE@@GLIBCXX_3.4.21
+ OBJECT:28:_ZTVNSt7__cxx1114collate_bynameIwEE@@GLIBCXX_3.4.21
+ OBJECT:28:_ZTVNSt7__cxx1115messages_bynameIcEE@@GLIBCXX_3.4.21
+@@ -5122,6 +5132,7 @@ OBJECT:34:_ZTSSt25__codecvt_utf8_utf16_baseIDsE@@GLIBCXX_3.4.21
+ OBJECT:34:_ZTSSt9basic_iosIcSt11char_traitsIcEE@@GLIBCXX_3.4
+ OBJECT:34:_ZTSSt9basic_iosIwSt11char_traitsIwEE@@GLIBCXX_3.4
+ OBJECT:36:_ZTSN10__cxxabiv119__pointer_type_infoE@@CXXABI_1.3
++OBJECT:36:_ZTSNSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:36:_ZTSSt14codecvt_bynameIcc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:36:_ZTSSt14codecvt_bynameIwc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:36:_ZTVN10__cxxabiv117__pbase_type_infoE@@CXXABI_1.3
+@@ -5708,6 +5719,7 @@ OBJECT:8:_ZTIN10__cxxabiv119__foreign_exceptionE@@CXXABI_1.3.2
+ OBJECT:8:_ZTINSt13__future_base11_State_baseE@@GLIBCXX_3.4.15
+ OBJECT:8:_ZTINSt13__future_base12_Result_baseE@@GLIBCXX_3.4.15
+ OBJECT:8:_ZTINSt3_V214error_categoryE@@GLIBCXX_3.4.21
++OBJECT:8:_ZTINSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
+ OBJECT:8:_ZTINSt6locale5facetE@@GLIBCXX_3.4
+ OBJECT:8:_ZTINSt6thread6_StateE@@GLIBCXX_3.4.22
+ OBJECT:8:_ZTISt10ctype_base@@GLIBCXX_3.4
+diff --git a/libstdc++-v3/config/abi/post/sparc-solaris2.10/sparcv9/baseline_symbols.txt b/libstdc++-v3/config/abi/post/sparc-solaris2.10/sparcv9/baseline_symbols.txt
+index 769d83c53bb..965ee3d8e27 100644
+--- a/libstdc++-v3/config/abi/post/sparc-solaris2.10/sparcv9/baseline_symbols.txt
++++ b/libstdc++-v3/config/abi/post/sparc-solaris2.10/sparcv9/baseline_symbols.txt
+@@ -2968,12 +2968,18 @@ FUNC:_ZNSt3_V214error_categoryD1Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V214error_categoryD2Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V215system_categoryEv@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V216generic_categoryEv@@GLIBCXX_3.4.21
++FUNC:_ZNSt3pmr15memory_resourceD0Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr15memory_resourceD1Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr15memory_resourceD2Ev@@GLIBCXX_3.4.28
+ FUNC:_ZNSt3pmr19new_delete_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20get_default_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20null_memory_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20set_default_resourceEPNS_15memory_resourceE@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr25monotonic_buffer_resource13_M_new_bufferEmm@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr25monotonic_buffer_resource18_M_release_buffersEv@@GLIBCXX_3.4.26
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD0Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD1Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD2Ev@@GLIBCXX_3.4.28
+ FUNC:_ZNSt3pmr26synchronized_pool_resource11do_allocateEmm@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr26synchronized_pool_resource13do_deallocateEPvmm@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr26synchronized_pool_resource7releaseEv@@GLIBCXX_3.4.26
+@@ -4456,6 +4462,7 @@ OBJECT:16:_ZTIN10__cxxabiv119__foreign_exceptionE@@CXXABI_1.3.2
+ OBJECT:16:_ZTINSt13__future_base11_State_baseE@@GLIBCXX_3.4.15
+ OBJECT:16:_ZTINSt13__future_base12_Result_baseE@@GLIBCXX_3.4.15
+ OBJECT:16:_ZTINSt3_V214error_categoryE@@GLIBCXX_3.4.21
++OBJECT:16:_ZTINSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
+ OBJECT:16:_ZTINSt6locale5facetE@@GLIBCXX_3.4
+ OBJECT:16:_ZTINSt6thread6_StateE@@GLIBCXX_3.4.22
+ OBJECT:16:_ZTISt10ctype_base@@GLIBCXX_3.4
+@@ -4882,6 +4889,7 @@ OBJECT:24:_ZTIN9__gnu_cxx18stdio_sync_filebufIwSt11char_traitsIwEEE@@GLIBCXX_3.4
+ OBJECT:24:_ZTINSt10filesystem16filesystem_errorE@@GLIBCXX_3.4.26
+ OBJECT:24:_ZTINSt10filesystem7__cxx1116filesystem_errorE@@GLIBCXX_3.4.26
+ OBJECT:24:_ZTINSt13__future_base19_Async_state_commonE@@GLIBCXX_3.4.17
++OBJECT:24:_ZTINSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:24:_ZTINSt3pmr26synchronized_pool_resourceE@@GLIBCXX_3.4.26
+ OBJECT:24:_ZTINSt3pmr28unsynchronized_pool_resourceE@@GLIBCXX_3.4.26
+ OBJECT:24:_ZTINSt7__cxx1114collate_bynameIcEE@@GLIBCXX_3.4.21
+@@ -5014,6 +5022,7 @@ OBJECT:25:_ZTSNSt7__cxx118messagesIwEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSNSt7__cxx118numpunctIcEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSNSt7__cxx118numpunctIwEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSSt20bad_array_new_length@@CXXABI_1.3.8
++OBJECT:26:_ZTSNSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
+ OBJECT:272:_ZSt4cerr@@GLIBCXX_3.4
+ OBJECT:272:_ZSt4clog@@GLIBCXX_3.4
+ OBJECT:272:_ZSt4cout@@GLIBCXX_3.4
+@@ -5155,6 +5164,7 @@ OBJECT:34:_ZTSSt25__codecvt_utf8_utf16_baseIDsE@@GLIBCXX_3.4.21
+ OBJECT:34:_ZTSSt9basic_iosIcSt11char_traitsIcEE@@GLIBCXX_3.4
+ OBJECT:34:_ZTSSt9basic_iosIwSt11char_traitsIwEE@@GLIBCXX_3.4
+ OBJECT:36:_ZTSN10__cxxabiv119__pointer_type_infoE@@CXXABI_1.3
++OBJECT:36:_ZTSNSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:36:_ZTSSt14codecvt_bynameIcc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:36:_ZTSSt14codecvt_bynameIwc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:37:_ZTSN10__cxxabiv120__function_type_infoE@@CXXABI_1.3
+@@ -5580,6 +5590,8 @@ OBJECT:56:_ZTSNSt7__cxx1115basic_stringbufIcSt11char_traitsIcESaIcEEE@@GLIBCXX_3
+ OBJECT:56:_ZTSNSt7__cxx1115basic_stringbufIwSt11char_traitsIwESaIwEEE@@GLIBCXX_3.4.21
+ OBJECT:56:_ZTTSd@@GLIBCXX_3.4
+ OBJECT:56:_ZTTSt14basic_iostreamIwSt11char_traitsIwEE@@GLIBCXX_3.4
++OBJECT:56:_ZTVNSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
++OBJECT:56:_ZTVNSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:56:_ZTVNSt7__cxx1114collate_bynameIcEE@@GLIBCXX_3.4.21
+ OBJECT:56:_ZTVNSt7__cxx1114collate_bynameIwEE@@GLIBCXX_3.4.21
+ OBJECT:56:_ZTVNSt7__cxx1115messages_bynameIcEE@@GLIBCXX_3.4.21
+diff --git a/libstdc++-v3/config/abi/post/sparc-solaris2.11/baseline_symbols.txt b/libstdc++-v3/config/abi/post/sparc-solaris2.11/baseline_symbols.txt
+index ceb8f02d402..d1ea64e17ab 100644
+--- a/libstdc++-v3/config/abi/post/sparc-solaris2.11/baseline_symbols.txt
++++ b/libstdc++-v3/config/abi/post/sparc-solaris2.11/baseline_symbols.txt
+@@ -2968,12 +2968,18 @@ FUNC:_ZNSt3_V214error_categoryD1Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V214error_categoryD2Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V215system_categoryEv@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V216generic_categoryEv@@GLIBCXX_3.4.21
++FUNC:_ZNSt3pmr15memory_resourceD0Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr15memory_resourceD1Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr15memory_resourceD2Ev@@GLIBCXX_3.4.28
+ FUNC:_ZNSt3pmr19new_delete_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20get_default_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20null_memory_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20set_default_resourceEPNS_15memory_resourceE@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr25monotonic_buffer_resource13_M_new_bufferEjj@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr25monotonic_buffer_resource18_M_release_buffersEv@@GLIBCXX_3.4.26
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD0Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD1Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD2Ev@@GLIBCXX_3.4.28
+ FUNC:_ZNSt3pmr26synchronized_pool_resource11do_allocateEjj@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr26synchronized_pool_resource13do_deallocateEPvjj@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr26synchronized_pool_resource7releaseEv@@GLIBCXX_3.4.26
+@@ -4400,6 +4406,7 @@ OBJECT:12:_ZTIN9__gnu_cxx18stdio_sync_filebufIwSt11char_traitsIwEEE@@GLIBCXX_3.4
+ OBJECT:12:_ZTINSt10filesystem16filesystem_errorE@@GLIBCXX_3.4.26
+ OBJECT:12:_ZTINSt10filesystem7__cxx1116filesystem_errorE@@GLIBCXX_3.4.26
+ OBJECT:12:_ZTINSt13__future_base19_Async_state_commonE@@GLIBCXX_3.4.17
++OBJECT:12:_ZTINSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:12:_ZTINSt3pmr26synchronized_pool_resourceE@@GLIBCXX_3.4.26
+ OBJECT:12:_ZTINSt3pmr28unsynchronized_pool_resourceE@@GLIBCXX_3.4.26
+ OBJECT:12:_ZTINSt7__cxx1114collate_bynameIcEE@@GLIBCXX_3.4.21
+@@ -5022,6 +5029,7 @@ OBJECT:25:_ZTSNSt7__cxx118messagesIwEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSNSt7__cxx118numpunctIcEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSNSt7__cxx118numpunctIwEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSSt20bad_array_new_length@@CXXABI_1.3.8
++OBJECT:26:_ZTSNSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
+ OBJECT:27:_ZTSSt19__codecvt_utf8_baseIwE@@GLIBCXX_3.4.21
+ OBJECT:28:_ZTSSt19__codecvt_utf8_baseIDiE@@GLIBCXX_3.4.21
+ OBJECT:28:_ZTSSt19__codecvt_utf8_baseIDsE@@GLIBCXX_3.4.21
+@@ -5030,6 +5038,8 @@ OBJECT:28:_ZTSSt7codecvtIcc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:28:_ZTSSt7codecvtIwc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:28:_ZTTSd@@GLIBCXX_3.4
+ OBJECT:28:_ZTTSt14basic_iostreamIwSt11char_traitsIwEE@@GLIBCXX_3.4
++OBJECT:28:_ZTVNSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
++OBJECT:28:_ZTVNSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:28:_ZTVNSt7__cxx1114collate_bynameIcEE@@GLIBCXX_3.4.21
+ OBJECT:28:_ZTVNSt7__cxx1114collate_bynameIwEE@@GLIBCXX_3.4.21
+ OBJECT:28:_ZTVNSt7__cxx1115messages_bynameIcEE@@GLIBCXX_3.4.21
+@@ -5124,6 +5134,7 @@ OBJECT:34:_ZTSSt25__codecvt_utf8_utf16_baseIDsE@@GLIBCXX_3.4.21
+ OBJECT:34:_ZTSSt9basic_iosIcSt11char_traitsIcEE@@GLIBCXX_3.4
+ OBJECT:34:_ZTSSt9basic_iosIwSt11char_traitsIwEE@@GLIBCXX_3.4
+ OBJECT:36:_ZTSN10__cxxabiv119__pointer_type_infoE@@CXXABI_1.3
++OBJECT:36:_ZTSNSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:36:_ZTSSt14codecvt_bynameIcc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:36:_ZTSSt14codecvt_bynameIwc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:36:_ZTVN10__cxxabiv117__pbase_type_infoE@@CXXABI_1.3
+@@ -5710,6 +5721,7 @@ OBJECT:8:_ZTIN10__cxxabiv119__foreign_exceptionE@@CXXABI_1.3.2
+ OBJECT:8:_ZTINSt13__future_base11_State_baseE@@GLIBCXX_3.4.15
+ OBJECT:8:_ZTINSt13__future_base12_Result_baseE@@GLIBCXX_3.4.15
+ OBJECT:8:_ZTINSt3_V214error_categoryE@@GLIBCXX_3.4.21
++OBJECT:8:_ZTINSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
+ OBJECT:8:_ZTINSt6locale5facetE@@GLIBCXX_3.4
+ OBJECT:8:_ZTINSt6thread6_StateE@@GLIBCXX_3.4.22
+ OBJECT:8:_ZTISt10ctype_base@@GLIBCXX_3.4
+diff --git a/libstdc++-v3/config/abi/post/sparc-solaris2.11/sparcv9/baseline_symbols.txt b/libstdc++-v3/config/abi/post/sparc-solaris2.11/sparcv9/baseline_symbols.txt
+index b8a89bb1ef4..7596acb3013 100644
+--- a/libstdc++-v3/config/abi/post/sparc-solaris2.11/sparcv9/baseline_symbols.txt
++++ b/libstdc++-v3/config/abi/post/sparc-solaris2.11/sparcv9/baseline_symbols.txt
+@@ -2968,12 +2968,18 @@ FUNC:_ZNSt3_V214error_categoryD1Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V214error_categoryD2Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V215system_categoryEv@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V216generic_categoryEv@@GLIBCXX_3.4.21
++FUNC:_ZNSt3pmr15memory_resourceD0Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr15memory_resourceD1Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr15memory_resourceD2Ev@@GLIBCXX_3.4.28
+ FUNC:_ZNSt3pmr19new_delete_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20get_default_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20null_memory_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20set_default_resourceEPNS_15memory_resourceE@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr25monotonic_buffer_resource13_M_new_bufferEmm@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr25monotonic_buffer_resource18_M_release_buffersEv@@GLIBCXX_3.4.26
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD0Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD1Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD2Ev@@GLIBCXX_3.4.28
+ FUNC:_ZNSt3pmr26synchronized_pool_resource11do_allocateEmm@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr26synchronized_pool_resource13do_deallocateEPvmm@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr26synchronized_pool_resource7releaseEv@@GLIBCXX_3.4.26
+@@ -4458,6 +4464,7 @@ OBJECT:16:_ZTIN10__cxxabiv119__foreign_exceptionE@@CXXABI_1.3.2
+ OBJECT:16:_ZTINSt13__future_base11_State_baseE@@GLIBCXX_3.4.15
+ OBJECT:16:_ZTINSt13__future_base12_Result_baseE@@GLIBCXX_3.4.15
+ OBJECT:16:_ZTINSt3_V214error_categoryE@@GLIBCXX_3.4.21
++OBJECT:16:_ZTINSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
+ OBJECT:16:_ZTINSt6locale5facetE@@GLIBCXX_3.4
+ OBJECT:16:_ZTINSt6thread6_StateE@@GLIBCXX_3.4.22
+ OBJECT:16:_ZTISt10ctype_base@@GLIBCXX_3.4
+@@ -4884,6 +4891,7 @@ OBJECT:24:_ZTIN9__gnu_cxx18stdio_sync_filebufIwSt11char_traitsIwEEE@@GLIBCXX_3.4
+ OBJECT:24:_ZTINSt10filesystem16filesystem_errorE@@GLIBCXX_3.4.26
+ OBJECT:24:_ZTINSt10filesystem7__cxx1116filesystem_errorE@@GLIBCXX_3.4.26
+ OBJECT:24:_ZTINSt13__future_base19_Async_state_commonE@@GLIBCXX_3.4.17
++OBJECT:24:_ZTINSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:24:_ZTINSt3pmr26synchronized_pool_resourceE@@GLIBCXX_3.4.26
+ OBJECT:24:_ZTINSt3pmr28unsynchronized_pool_resourceE@@GLIBCXX_3.4.26
+ OBJECT:24:_ZTINSt7__cxx1114collate_bynameIcEE@@GLIBCXX_3.4.21
+@@ -5016,6 +5024,7 @@ OBJECT:25:_ZTSNSt7__cxx118messagesIwEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSNSt7__cxx118numpunctIcEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSNSt7__cxx118numpunctIwEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSSt20bad_array_new_length@@CXXABI_1.3.8
++OBJECT:26:_ZTSNSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
+ OBJECT:272:_ZSt4cerr@@GLIBCXX_3.4
+ OBJECT:272:_ZSt4clog@@GLIBCXX_3.4
+ OBJECT:272:_ZSt4cout@@GLIBCXX_3.4
+@@ -5157,6 +5166,7 @@ OBJECT:34:_ZTSSt25__codecvt_utf8_utf16_baseIDsE@@GLIBCXX_3.4.21
+ OBJECT:34:_ZTSSt9basic_iosIcSt11char_traitsIcEE@@GLIBCXX_3.4
+ OBJECT:34:_ZTSSt9basic_iosIwSt11char_traitsIwEE@@GLIBCXX_3.4
+ OBJECT:36:_ZTSN10__cxxabiv119__pointer_type_infoE@@CXXABI_1.3
++OBJECT:36:_ZTSNSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:36:_ZTSSt14codecvt_bynameIcc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:36:_ZTSSt14codecvt_bynameIwc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:37:_ZTSN10__cxxabiv120__function_type_infoE@@CXXABI_1.3
+@@ -5582,6 +5592,8 @@ OBJECT:56:_ZTSNSt7__cxx1115basic_stringbufIcSt11char_traitsIcESaIcEEE@@GLIBCXX_3
+ OBJECT:56:_ZTSNSt7__cxx1115basic_stringbufIwSt11char_traitsIwESaIwEEE@@GLIBCXX_3.4.21
+ OBJECT:56:_ZTTSd@@GLIBCXX_3.4
+ OBJECT:56:_ZTTSt14basic_iostreamIwSt11char_traitsIwEE@@GLIBCXX_3.4
++OBJECT:56:_ZTVNSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
++OBJECT:56:_ZTVNSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:56:_ZTVNSt7__cxx1114collate_bynameIcEE@@GLIBCXX_3.4.21
+ OBJECT:56:_ZTVNSt7__cxx1114collate_bynameIwEE@@GLIBCXX_3.4.21
+ OBJECT:56:_ZTVNSt7__cxx1115messages_bynameIcEE@@GLIBCXX_3.4.21
+diff --git a/libstdc++-v3/config/abi/post/sparc64-linux-gnu/32/baseline_symbols.txt b/libstdc++-v3/config/abi/post/sparc64-linux-gnu/32/baseline_symbols.txt
+index 31c73b03659..77c65db856f 100644
+--- a/libstdc++-v3/config/abi/post/sparc64-linux-gnu/32/baseline_symbols.txt
++++ b/libstdc++-v3/config/abi/post/sparc64-linux-gnu/32/baseline_symbols.txt
+@@ -338,7 +338,9 @@ FUNC:_ZNKSt10filesystem16filesystem_error4whatEv@@GLIBCXX_3.4.26
+ FUNC:_ZNKSt10filesystem16filesystem_error5path1Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNKSt10filesystem16filesystem_error5path2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNKSt10filesystem18directory_iteratordeEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem28recursive_directory_iterator17recursion_pendingEv@@GLIBCXX_3.4.26
+ FUNC:_ZNKSt10filesystem28recursive_directory_iterator5depthEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem28recursive_directory_iterator7optionsEv@@GLIBCXX_3.4.26
+ FUNC:_ZNKSt10filesystem28recursive_directory_iteratordeEv@@GLIBCXX_3.4.26
+ FUNC:_ZNKSt10filesystem4path11parent_pathEv@@GLIBCXX_3.4.26
+ FUNC:_ZNKSt10filesystem4path12has_filenameEv@@GLIBCXX_3.4.26
+@@ -364,7 +366,9 @@ FUNC:_ZNKSt10filesystem7__cxx1116filesystem_error4whatEv@@GLIBCXX_3.4.26
+ FUNC:_ZNKSt10filesystem7__cxx1116filesystem_error5path1Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNKSt10filesystem7__cxx1116filesystem_error5path2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNKSt10filesystem7__cxx1118directory_iteratordeEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem7__cxx1128recursive_directory_iterator17recursion_pendingEv@@GLIBCXX_3.4.26
+ FUNC:_ZNKSt10filesystem7__cxx1128recursive_directory_iterator5depthEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem7__cxx1128recursive_directory_iterator7optionsEv@@GLIBCXX_3.4.26
+ FUNC:_ZNKSt10filesystem7__cxx1128recursive_directory_iteratordeEv@@GLIBCXX_3.4.26
+ FUNC:_ZNKSt10filesystem7__cxx114path11parent_pathEv@@GLIBCXX_3.4.26
+ FUNC:_ZNKSt10filesystem7__cxx114path12has_filenameEv@@GLIBCXX_3.4.26
+@@ -982,6 +986,13 @@ FUNC:_ZNKSt7__cxx119money_putIwSt19ostreambuf_iteratorIwSt11char_traitsIwEEE6do_
+ FUNC:_ZNKSt7__cxx119money_putIwSt19ostreambuf_iteratorIwSt11char_traitsIwEEE6do_putES4_bRSt8ios_basewe@@GLIBCXX_3.4.21
+ FUNC:_ZNKSt7__cxx119money_putIwSt19ostreambuf_iteratorIwSt11char_traitsIwEEE9_M_insertILb0EEES4_S4_RSt8ios_basewRKNS_12basic_stringIwS3_SaIwEEE@@GLIBCXX_3.4.21
+ FUNC:_ZNKSt7__cxx119money_putIwSt19ostreambuf_iteratorIwSt11char_traitsIwEEE9_M_insertILb1EEES4_S4_RSt8ios_basewRKNS_12basic_stringIwS3_SaIwEEE@@GLIBCXX_3.4.21
++FUNC:_ZNKSt7codecvtIDiDu11__mbstate_tE10do_unshiftERS0_PDuS3_RS3_@@GLIBCXX_3.4.26
++FUNC:_ZNKSt7codecvtIDiDu11__mbstate_tE11do_encodingEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt7codecvtIDiDu11__mbstate_tE13do_max_lengthEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt7codecvtIDiDu11__mbstate_tE16do_always_noconvEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt7codecvtIDiDu11__mbstate_tE5do_inERS0_PKDuS4_RS4_PDiS6_RS6_@@GLIBCXX_3.4.26
++FUNC:_ZNKSt7codecvtIDiDu11__mbstate_tE6do_outERS0_PKDiS4_RS4_PDuS6_RS6_@@GLIBCXX_3.4.26
++FUNC:_ZNKSt7codecvtIDiDu11__mbstate_tE9do_lengthERS0_PKDuS4_j@@GLIBCXX_3.4.26
+ FUNC:_ZNKSt7codecvtIDic11__mbstate_tE10do_unshiftERS0_PcS3_RS3_@@GLIBCXX_3.4.21
+ FUNC:_ZNKSt7codecvtIDic11__mbstate_tE11do_encodingEv@@GLIBCXX_3.4.21
+ FUNC:_ZNKSt7codecvtIDic11__mbstate_tE13do_max_lengthEv@@GLIBCXX_3.4.21
+@@ -989,6 +1000,13 @@ FUNC:_ZNKSt7codecvtIDic11__mbstate_tE16do_always_noconvEv@@GLIBCXX_3.4.21
+ FUNC:_ZNKSt7codecvtIDic11__mbstate_tE5do_inERS0_PKcS4_RS4_PDiS6_RS6_@@GLIBCXX_3.4.21
+ FUNC:_ZNKSt7codecvtIDic11__mbstate_tE6do_outERS0_PKDiS4_RS4_PcS6_RS6_@@GLIBCXX_3.4.21
+ FUNC:_ZNKSt7codecvtIDic11__mbstate_tE9do_lengthERS0_PKcS4_j@@GLIBCXX_3.4.21
++FUNC:_ZNKSt7codecvtIDsDu11__mbstate_tE10do_unshiftERS0_PDuS3_RS3_@@GLIBCXX_3.4.26
++FUNC:_ZNKSt7codecvtIDsDu11__mbstate_tE11do_encodingEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt7codecvtIDsDu11__mbstate_tE13do_max_lengthEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt7codecvtIDsDu11__mbstate_tE16do_always_noconvEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt7codecvtIDsDu11__mbstate_tE5do_inERS0_PKDuS4_RS4_PDsS6_RS6_@@GLIBCXX_3.4.26
++FUNC:_ZNKSt7codecvtIDsDu11__mbstate_tE6do_outERS0_PKDsS4_RS4_PDuS6_RS6_@@GLIBCXX_3.4.26
++FUNC:_ZNKSt7codecvtIDsDu11__mbstate_tE9do_lengthERS0_PKDuS4_j@@GLIBCXX_3.4.26
+ FUNC:_ZNKSt7codecvtIDsc11__mbstate_tE10do_unshiftERS0_PcS3_RS3_@@GLIBCXX_3.4.21
+ FUNC:_ZNKSt7codecvtIDsc11__mbstate_tE11do_encodingEv@@GLIBCXX_3.4.21
+ FUNC:_ZNKSt7codecvtIDsc11__mbstate_tE13do_max_lengthEv@@GLIBCXX_3.4.21
+@@ -1790,6 +1808,7 @@ FUNC:_ZNSt10filesystem18create_directoriesERKNS_4pathE@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem18create_directoriesERKNS_4pathERSt10error_code@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem18create_directoriesERKNS_7__cxx114pathE@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem18create_directoriesERKNS_7__cxx114pathERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem18directory_iterator9incrementERSt10error_code@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem18directory_iteratorC1ERKNS_4pathENS_17directory_optionsEPSt10error_code@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem18directory_iteratorC2ERKNS_4pathENS_17directory_optionsEPSt10error_code@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem18directory_iteratorppEv@@GLIBCXX_3.4.26
+@@ -1801,6 +1820,7 @@ FUNC:_ZNSt10filesystem24create_directory_symlinkERKNS_4pathES2_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem24create_directory_symlinkERKNS_4pathES2_RSt10error_code@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem24create_directory_symlinkERKNS_7__cxx114pathES3_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem24create_directory_symlinkERKNS_7__cxx114pathES3_RSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem28recursive_directory_iterator25disable_recursion_pendingEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem28recursive_directory_iterator3popERSt10error_code@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem28recursive_directory_iterator3popEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem28recursive_directory_iterator9incrementERSt10error_code@@GLIBCXX_3.4.26
+@@ -1809,6 +1829,7 @@ FUNC:_ZNSt10filesystem28recursive_directory_iteratorC2ERKNS_4pathENS_17directory
+ FUNC:_ZNSt10filesystem28recursive_directory_iteratorD1Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem28recursive_directory_iteratorD2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem28recursive_directory_iteratoraSEOS0_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem28recursive_directory_iteratoraSERKS0_@@GLIBCXX_3.4.27
+ FUNC:_ZNSt10filesystem28recursive_directory_iteratorppEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem4copyERKNS_4pathES2_NS_12copy_optionsE@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem4copyERKNS_4pathES2_NS_12copy_optionsERSt10error_code@@GLIBCXX_3.4.26
+@@ -1852,9 +1873,11 @@ FUNC:_ZNSt10filesystem7__cxx1116filesystem_errorC2ERKNSt7__cxx1112basic_stringIc
+ FUNC:_ZNSt10filesystem7__cxx1116filesystem_errorD0Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx1116filesystem_errorD1Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx1116filesystem_errorD2Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx1118directory_iterator9incrementERSt10error_code@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx1118directory_iteratorC1ERKNS0_4pathENS_17directory_optionsEPSt10error_code@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx1118directory_iteratorC2ERKNS0_4pathENS_17directory_optionsEPSt10error_code@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx1118directory_iteratorppEv@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iterator25disable_recursion_pendingEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iterator3popERSt10error_code@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iterator3popEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iterator9incrementERSt10error_code@@GLIBCXX_3.4.26
+@@ -1863,6 +1886,7 @@ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorC2ERKNS0_4pathENS_17
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorD1Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorD2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratoraSEOS1_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratoraSERKS1_@@GLIBCXX_3.4.27
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorppEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx114path14_M_split_cmptsEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx114path14_S_convert_locEPKcS3_RKSt6locale@@GLIBCXX_3.4.26
+@@ -2038,13 +2062,21 @@ FUNC:_ZNSt12__basic_fileIcED1Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt12__basic_fileIcED2Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1EOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2EOS5_@@GLIBCXX_3.4.28
++FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC1EOS4_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC2EOS4_@@GLIBCXX_3.4.28
++FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEaSEOS4_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1EOS6_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2EOS6_@@GLIBCXX_3.4.28
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC1EOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC2EOS5_@@GLIBCXX_3.4.28
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEaSEOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12bad_weak_ptrD0Ev@@GLIBCXX_3.4.15
+ FUNC:_ZNSt12bad_weak_ptrD1Ev@@GLIBCXX_3.4.15
+@@ -2973,12 +3005,18 @@ FUNC:_ZNSt3_V214error_categoryD1Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V214error_categoryD2Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V215system_categoryEv@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V216generic_categoryEv@@GLIBCXX_3.4.21
++FUNC:_ZNSt3pmr15memory_resourceD0Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr15memory_resourceD1Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr15memory_resourceD2Ev@@GLIBCXX_3.4.28
+ FUNC:_ZNSt3pmr19new_delete_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20get_default_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20null_memory_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20set_default_resourceEPNS_15memory_resourceE@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr25monotonic_buffer_resource13_M_new_bufferEjj@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr25monotonic_buffer_resource18_M_release_buffersEv@@GLIBCXX_3.4.26
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD0Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD1Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD2Ev@@GLIBCXX_3.4.28
+ FUNC:_ZNSt3pmr26synchronized_pool_resource11do_allocateEjj@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr26synchronized_pool_resource13do_deallocateEPvjj@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr26synchronized_pool_resource7releaseEv@@GLIBCXX_3.4.26
+@@ -3720,9 +3758,15 @@ FUNC:_ZNSt7__cxx119money_putIwSt19ostreambuf_iteratorIwSt11char_traitsIwEEEC2Ej@
+ FUNC:_ZNSt7__cxx119money_putIwSt19ostreambuf_iteratorIwSt11char_traitsIwEEED0Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx119money_putIwSt19ostreambuf_iteratorIwSt11char_traitsIwEEED1Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx119money_putIwSt19ostreambuf_iteratorIwSt11char_traitsIwEEED2Ev@@GLIBCXX_3.4.21
++FUNC:_ZNSt7codecvtIDiDu11__mbstate_tED0Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt7codecvtIDiDu11__mbstate_tED1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt7codecvtIDiDu11__mbstate_tED2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt7codecvtIDic11__mbstate_tED0Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7codecvtIDic11__mbstate_tED1Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7codecvtIDic11__mbstate_tED2Ev@@GLIBCXX_3.4.21
++FUNC:_ZNSt7codecvtIDsDu11__mbstate_tED0Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt7codecvtIDsDu11__mbstate_tED1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt7codecvtIDsDu11__mbstate_tED2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt7codecvtIDsc11__mbstate_tED0Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7codecvtIDsc11__mbstate_tED1Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7codecvtIDsc11__mbstate_tED2Ev@@GLIBCXX_3.4.21
+@@ -4343,6 +4387,7 @@ OBJECT:0:CXXABI_1.3
+ OBJECT:0:CXXABI_1.3.1
+ OBJECT:0:CXXABI_1.3.10
+ OBJECT:0:CXXABI_1.3.11
++OBJECT:0:CXXABI_1.3.12
+ OBJECT:0:CXXABI_1.3.2
+ OBJECT:0:CXXABI_1.3.3
+ OBJECT:0:CXXABI_1.3.4
+@@ -4372,6 +4417,8 @@ OBJECT:0:GLIBCXX_3.4.23
+ OBJECT:0:GLIBCXX_3.4.24
+ OBJECT:0:GLIBCXX_3.4.25
+ OBJECT:0:GLIBCXX_3.4.26
++OBJECT:0:GLIBCXX_3.4.27
++OBJECT:0:GLIBCXX_3.4.28
+ OBJECT:0:GLIBCXX_3.4.3
+ OBJECT:0:GLIBCXX_3.4.4
+ OBJECT:0:GLIBCXX_3.4.5
+@@ -4398,6 +4445,7 @@ OBJECT:12:_ZTIN9__gnu_cxx18stdio_sync_filebufIwSt11char_traitsIwEEE@@GLIBCXX_3.4
+ OBJECT:12:_ZTINSt10filesystem16filesystem_errorE@@GLIBCXX_3.4.26
+ OBJECT:12:_ZTINSt10filesystem7__cxx1116filesystem_errorE@@GLIBCXX_3.4.26
+ OBJECT:12:_ZTINSt13__future_base19_Async_state_commonE@@GLIBCXX_3.4.17
++OBJECT:12:_ZTINSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:12:_ZTINSt3pmr26synchronized_pool_resourceE@@GLIBCXX_3.4.26
+ OBJECT:12:_ZTINSt3pmr28unsynchronized_pool_resourceE@@GLIBCXX_3.4.26
+ OBJECT:12:_ZTINSt7__cxx1114collate_bynameIcEE@@GLIBCXX_3.4.21
+@@ -4498,7 +4546,9 @@ OBJECT:12:_ZTISt25__codecvt_utf8_utf16_baseIDiE@@GLIBCXX_3.4.21
+ OBJECT:12:_ZTISt25__codecvt_utf8_utf16_baseIDsE@@GLIBCXX_3.4.21
+ OBJECT:12:_ZTISt25__codecvt_utf8_utf16_baseIwE@@GLIBCXX_3.4.21
+ OBJECT:12:_ZTISt5ctypeIwE@@GLIBCXX_3.4
++OBJECT:12:_ZTISt7codecvtIDiDu11__mbstate_tE@@GLIBCXX_3.4.26
+ OBJECT:12:_ZTISt7codecvtIDic11__mbstate_tE@@GLIBCXX_3.4.21
++OBJECT:12:_ZTISt7codecvtIDsDu11__mbstate_tE@@GLIBCXX_3.4.26
+ OBJECT:12:_ZTISt7codecvtIDsc11__mbstate_tE@@GLIBCXX_3.4.21
+ OBJECT:12:_ZTISt7codecvtIcc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:12:_ZTISt7codecvtIwc11__mbstate_tE@@GLIBCXX_3.4
+@@ -4558,12 +4608,14 @@ OBJECT:16:_ZTIPDf@@CXXABI_1.3.4
+ OBJECT:16:_ZTIPDi@@CXXABI_1.3.3
+ OBJECT:16:_ZTIPDn@@CXXABI_1.3.5
+ OBJECT:16:_ZTIPDs@@CXXABI_1.3.3
++OBJECT:16:_ZTIPDu@@CXXABI_1.3.12
+ OBJECT:16:_ZTIPKDd@@CXXABI_1.3.4
+ OBJECT:16:_ZTIPKDe@@CXXABI_1.3.4
+ OBJECT:16:_ZTIPKDf@@CXXABI_1.3.4
+ OBJECT:16:_ZTIPKDi@@CXXABI_1.3.3
+ OBJECT:16:_ZTIPKDn@@CXXABI_1.3.5
+ OBJECT:16:_ZTIPKDs@@CXXABI_1.3.3
++OBJECT:16:_ZTIPKDu@@CXXABI_1.3.12
+ OBJECT:16:_ZTIPKa@@CXXABI_1.3
+ OBJECT:16:_ZTIPKb@@CXXABI_1.3
+ OBJECT:16:_ZTIPKc@@CXXABI_1.3
+@@ -4697,6 +4749,19 @@ OBJECT:1:_ZNSt14numeric_limitsIDsE8is_exactE@@GLIBCXX_3.4.11
+ OBJECT:1:_ZNSt14numeric_limitsIDsE9is_iec559E@@GLIBCXX_3.4.11
+ OBJECT:1:_ZNSt14numeric_limitsIDsE9is_moduloE@@GLIBCXX_3.4.11
+ OBJECT:1:_ZNSt14numeric_limitsIDsE9is_signedE@@GLIBCXX_3.4.11
++OBJECT:1:_ZNSt14numeric_limitsIDuE10is_boundedE@@GLIBCXX_3.4.26
++OBJECT:1:_ZNSt14numeric_limitsIDuE10is_integerE@@GLIBCXX_3.4.26
++OBJECT:1:_ZNSt14numeric_limitsIDuE12has_infinityE@@GLIBCXX_3.4.26
++OBJECT:1:_ZNSt14numeric_limitsIDuE13has_quiet_NaNE@@GLIBCXX_3.4.26
++OBJECT:1:_ZNSt14numeric_limitsIDuE14is_specializedE@@GLIBCXX_3.4.26
++OBJECT:1:_ZNSt14numeric_limitsIDuE15has_denorm_lossE@@GLIBCXX_3.4.26
++OBJECT:1:_ZNSt14numeric_limitsIDuE15tinyness_beforeE@@GLIBCXX_3.4.26
++OBJECT:1:_ZNSt14numeric_limitsIDuE17has_signaling_NaNE@@GLIBCXX_3.4.26
++OBJECT:1:_ZNSt14numeric_limitsIDuE5trapsE@@GLIBCXX_3.4.26
++OBJECT:1:_ZNSt14numeric_limitsIDuE8is_exactE@@GLIBCXX_3.4.26
++OBJECT:1:_ZNSt14numeric_limitsIDuE9is_iec559E@@GLIBCXX_3.4.26
++OBJECT:1:_ZNSt14numeric_limitsIDuE9is_moduloE@@GLIBCXX_3.4.26
++OBJECT:1:_ZNSt14numeric_limitsIDuE9is_signedE@@GLIBCXX_3.4.26
+ OBJECT:1:_ZNSt14numeric_limitsIaE10is_boundedE@@GLIBCXX_3.4
+ OBJECT:1:_ZNSt14numeric_limitsIaE10is_integerE@@GLIBCXX_3.4
+ OBJECT:1:_ZNSt14numeric_limitsIaE12has_infinityE@@GLIBCXX_3.4
+@@ -5006,6 +5071,7 @@ OBJECT:25:_ZTSNSt7__cxx118messagesIwEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSNSt7__cxx118numpunctIcEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSNSt7__cxx118numpunctIwEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSSt20bad_array_new_length@@CXXABI_1.3.8
++OBJECT:26:_ZTSNSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
+ OBJECT:27:_ZTSSt19__codecvt_utf8_baseIwE@@GLIBCXX_3.4.21
+ OBJECT:28:_ZTSSt19__codecvt_utf8_baseIDiE@@GLIBCXX_3.4.21
+ OBJECT:28:_ZTSSt19__codecvt_utf8_baseIDsE@@GLIBCXX_3.4.21
+@@ -5014,6 +5080,8 @@ OBJECT:28:_ZTSSt7codecvtIcc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:28:_ZTSSt7codecvtIwc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:28:_ZTTSd@@GLIBCXX_3.4
+ OBJECT:28:_ZTTSt14basic_iostreamIwSt11char_traitsIwEE@@GLIBCXX_3.4
++OBJECT:28:_ZTVNSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
++OBJECT:28:_ZTVNSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:28:_ZTVNSt7__cxx1114collate_bynameIcEE@@GLIBCXX_3.4.21
+ OBJECT:28:_ZTVNSt7__cxx1114collate_bynameIwEE@@GLIBCXX_3.4.21
+ OBJECT:28:_ZTVNSt7__cxx1115messages_bynameIcEE@@GLIBCXX_3.4.21
+@@ -5070,6 +5138,8 @@ OBJECT:2:_ZTSv@@CXXABI_1.3
+ OBJECT:2:_ZTSw@@CXXABI_1.3
+ OBJECT:2:_ZTSx@@CXXABI_1.3
+ OBJECT:2:_ZTSy@@CXXABI_1.3
++OBJECT:30:_ZTSSt7codecvtIDiDu11__mbstate_tE@@GLIBCXX_3.4.26
++OBJECT:30:_ZTSSt7codecvtIDsDu11__mbstate_tE@@GLIBCXX_3.4.26
+ OBJECT:32:_ZTINSt7__cxx1110moneypunctIcLb0EEE@@GLIBCXX_3.4.21
+ OBJECT:32:_ZTINSt7__cxx1110moneypunctIcLb1EEE@@GLIBCXX_3.4.21
+ OBJECT:32:_ZTINSt7__cxx1110moneypunctIwLb0EEE@@GLIBCXX_3.4.21
+@@ -5118,6 +5188,7 @@ OBJECT:34:_ZTSSt25__codecvt_utf8_utf16_baseIDsE@@GLIBCXX_3.4.21
+ OBJECT:34:_ZTSSt9basic_iosIcSt11char_traitsIcEE@@GLIBCXX_3.4
+ OBJECT:34:_ZTSSt9basic_iosIwSt11char_traitsIwEE@@GLIBCXX_3.4
+ OBJECT:36:_ZTSN10__cxxabiv119__pointer_type_infoE@@CXXABI_1.3
++OBJECT:36:_ZTSNSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:36:_ZTSSt14codecvt_bynameIcc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:36:_ZTSSt14codecvt_bynameIwc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:36:_ZTVN10__cxxabiv117__pbase_type_infoE@@CXXABI_1.3
+@@ -5224,7 +5295,9 @@ OBJECT:44:_ZTVSt23__codecvt_abstract_baseIwc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:44:_ZTVSt25__codecvt_utf8_utf16_baseIDiE@@GLIBCXX_3.4.21
+ OBJECT:44:_ZTVSt25__codecvt_utf8_utf16_baseIDsE@@GLIBCXX_3.4.21
+ OBJECT:44:_ZTVSt25__codecvt_utf8_utf16_baseIwE@@GLIBCXX_3.4.21
++OBJECT:44:_ZTVSt7codecvtIDiDu11__mbstate_tE@@GLIBCXX_3.4.26
+ OBJECT:44:_ZTVSt7codecvtIDic11__mbstate_tE@@GLIBCXX_3.4.21
++OBJECT:44:_ZTVSt7codecvtIDsDu11__mbstate_tE@@GLIBCXX_3.4.26
+ OBJECT:44:_ZTVSt7codecvtIDsc11__mbstate_tE@@GLIBCXX_3.4.21
+ OBJECT:44:_ZTVSt7codecvtIcc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:44:_ZTVSt7codecvtIwc11__mbstate_tE@@GLIBCXX_3.4
+@@ -5276,6 +5349,15 @@ OBJECT:4:_ZNSt14numeric_limitsIDsE14min_exponent10E@@GLIBCXX_3.4.11
+ OBJECT:4:_ZNSt14numeric_limitsIDsE5radixE@@GLIBCXX_3.4.11
+ OBJECT:4:_ZNSt14numeric_limitsIDsE6digitsE@@GLIBCXX_3.4.11
+ OBJECT:4:_ZNSt14numeric_limitsIDsE8digits10E@@GLIBCXX_3.4.11
++OBJECT:4:_ZNSt14numeric_limitsIDuE10has_denormE@@GLIBCXX_3.4.26
++OBJECT:4:_ZNSt14numeric_limitsIDuE11round_styleE@@GLIBCXX_3.4.26
++OBJECT:4:_ZNSt14numeric_limitsIDuE12max_exponentE@@GLIBCXX_3.4.26
++OBJECT:4:_ZNSt14numeric_limitsIDuE12min_exponentE@@GLIBCXX_3.4.26
++OBJECT:4:_ZNSt14numeric_limitsIDuE14max_exponent10E@@GLIBCXX_3.4.26
++OBJECT:4:_ZNSt14numeric_limitsIDuE14min_exponent10E@@GLIBCXX_3.4.26
++OBJECT:4:_ZNSt14numeric_limitsIDuE5radixE@@GLIBCXX_3.4.26
++OBJECT:4:_ZNSt14numeric_limitsIDuE6digitsE@@GLIBCXX_3.4.26
++OBJECT:4:_ZNSt14numeric_limitsIDuE8digits10E@@GLIBCXX_3.4.26
+ OBJECT:4:_ZNSt14numeric_limitsIaE10has_denormE@@GLIBCXX_3.4
+ OBJECT:4:_ZNSt14numeric_limitsIaE11round_styleE@@GLIBCXX_3.4
+ OBJECT:4:_ZNSt14numeric_limitsIaE12max_digits10E@@GLIBCXX_3.4.14
+@@ -5475,7 +5557,9 @@ OBJECT:4:_ZNSt7__cxx119money_getIcSt19istreambuf_iteratorIcSt11char_traitsIcEEE2
+ OBJECT:4:_ZNSt7__cxx119money_getIwSt19istreambuf_iteratorIwSt11char_traitsIwEEE2idE@@GLIBCXX_3.4.21
+ OBJECT:4:_ZNSt7__cxx119money_putIcSt19ostreambuf_iteratorIcSt11char_traitsIcEEE2idE@@GLIBCXX_3.4.21
+ OBJECT:4:_ZNSt7__cxx119money_putIwSt19ostreambuf_iteratorIwSt11char_traitsIwEEE2idE@@GLIBCXX_3.4.21
++OBJECT:4:_ZNSt7codecvtIDiDu11__mbstate_tE2idE@@GLIBCXX_3.4.26
+ OBJECT:4:_ZNSt7codecvtIDic11__mbstate_tE2idE@@GLIBCXX_3.4.21
++OBJECT:4:_ZNSt7codecvtIDsDu11__mbstate_tE2idE@@GLIBCXX_3.4.26
+ OBJECT:4:_ZNSt7codecvtIDsc11__mbstate_tE2idE@@GLIBCXX_3.4.21
+ OBJECT:4:_ZNSt7codecvtIcc11__mbstate_tE2idE@@GLIBCXX_3.4
+ OBJECT:4:_ZNSt7codecvtIwc11__mbstate_tE2idE@@GLIBCXX_3.4
+@@ -5674,11 +5758,13 @@ OBJECT:8:_ZTIDf@@CXXABI_1.3.4
+ OBJECT:8:_ZTIDi@@CXXABI_1.3.3
+ OBJECT:8:_ZTIDn@@CXXABI_1.3.5
+ OBJECT:8:_ZTIDs@@CXXABI_1.3.3
++OBJECT:8:_ZTIDu@@CXXABI_1.3.12
+ OBJECT:8:_ZTIN10__cxxabiv115__forced_unwindE@@CXXABI_1.3.2
+ OBJECT:8:_ZTIN10__cxxabiv119__foreign_exceptionE@@CXXABI_1.3.2
+ OBJECT:8:_ZTINSt13__future_base11_State_baseE@@GLIBCXX_3.4.15
+ OBJECT:8:_ZTINSt13__future_base12_Result_baseE@@GLIBCXX_3.4.15
+ OBJECT:8:_ZTINSt3_V214error_categoryE@@GLIBCXX_3.4.21
++OBJECT:8:_ZTINSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
+ OBJECT:8:_ZTINSt6locale5facetE@@GLIBCXX_3.4
+ OBJECT:8:_ZTINSt6thread6_StateE@@GLIBCXX_3.4.22
+ OBJECT:8:_ZTISt10ctype_base@@GLIBCXX_3.4
+@@ -5714,3 +5800,5 @@ OBJECT:8:_ZTTSi@@GLIBCXX_3.4
+ OBJECT:8:_ZTTSo@@GLIBCXX_3.4
+ OBJECT:8:_ZTTSt13basic_istreamIwSt11char_traitsIwEE@@GLIBCXX_3.4
+ OBJECT:8:_ZTTSt13basic_ostreamIwSt11char_traitsIwEE@@GLIBCXX_3.4
++TLS:4:_ZSt11__once_call@@GLIBCXX_3.4.11
++TLS:4:_ZSt15__once_callable@@GLIBCXX_3.4.11
+diff --git a/libstdc++-v3/config/abi/post/sparc64-linux-gnu/baseline_symbols.txt b/libstdc++-v3/config/abi/post/sparc64-linux-gnu/baseline_symbols.txt
+index d56b39c9337..f0bdad20607 100644
+--- a/libstdc++-v3/config/abi/post/sparc64-linux-gnu/baseline_symbols.txt
++++ b/libstdc++-v3/config/abi/post/sparc64-linux-gnu/baseline_symbols.txt
+@@ -338,7 +338,9 @@ FUNC:_ZNKSt10filesystem16filesystem_error4whatEv@@GLIBCXX_3.4.26
+ FUNC:_ZNKSt10filesystem16filesystem_error5path1Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNKSt10filesystem16filesystem_error5path2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNKSt10filesystem18directory_iteratordeEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem28recursive_directory_iterator17recursion_pendingEv@@GLIBCXX_3.4.26
+ FUNC:_ZNKSt10filesystem28recursive_directory_iterator5depthEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem28recursive_directory_iterator7optionsEv@@GLIBCXX_3.4.26
+ FUNC:_ZNKSt10filesystem28recursive_directory_iteratordeEv@@GLIBCXX_3.4.26
+ FUNC:_ZNKSt10filesystem4path11parent_pathEv@@GLIBCXX_3.4.26
+ FUNC:_ZNKSt10filesystem4path12has_filenameEv@@GLIBCXX_3.4.26
+@@ -364,7 +366,9 @@ FUNC:_ZNKSt10filesystem7__cxx1116filesystem_error4whatEv@@GLIBCXX_3.4.26
+ FUNC:_ZNKSt10filesystem7__cxx1116filesystem_error5path1Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNKSt10filesystem7__cxx1116filesystem_error5path2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNKSt10filesystem7__cxx1118directory_iteratordeEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem7__cxx1128recursive_directory_iterator17recursion_pendingEv@@GLIBCXX_3.4.26
+ FUNC:_ZNKSt10filesystem7__cxx1128recursive_directory_iterator5depthEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt10filesystem7__cxx1128recursive_directory_iterator7optionsEv@@GLIBCXX_3.4.26
+ FUNC:_ZNKSt10filesystem7__cxx1128recursive_directory_iteratordeEv@@GLIBCXX_3.4.26
+ FUNC:_ZNKSt10filesystem7__cxx114path11parent_pathEv@@GLIBCXX_3.4.26
+ FUNC:_ZNKSt10filesystem7__cxx114path12has_filenameEv@@GLIBCXX_3.4.26
+@@ -982,6 +986,13 @@ FUNC:_ZNKSt7__cxx119money_putIwSt19ostreambuf_iteratorIwSt11char_traitsIwEEE6do_
+ FUNC:_ZNKSt7__cxx119money_putIwSt19ostreambuf_iteratorIwSt11char_traitsIwEEE6do_putES4_bRSt8ios_basewe@@GLIBCXX_3.4.21
+ FUNC:_ZNKSt7__cxx119money_putIwSt19ostreambuf_iteratorIwSt11char_traitsIwEEE9_M_insertILb0EEES4_S4_RSt8ios_basewRKNS_12basic_stringIwS3_SaIwEEE@@GLIBCXX_3.4.21
+ FUNC:_ZNKSt7__cxx119money_putIwSt19ostreambuf_iteratorIwSt11char_traitsIwEEE9_M_insertILb1EEES4_S4_RSt8ios_basewRKNS_12basic_stringIwS3_SaIwEEE@@GLIBCXX_3.4.21
++FUNC:_ZNKSt7codecvtIDiDu11__mbstate_tE10do_unshiftERS0_PDuS3_RS3_@@GLIBCXX_3.4.26
++FUNC:_ZNKSt7codecvtIDiDu11__mbstate_tE11do_encodingEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt7codecvtIDiDu11__mbstate_tE13do_max_lengthEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt7codecvtIDiDu11__mbstate_tE16do_always_noconvEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt7codecvtIDiDu11__mbstate_tE5do_inERS0_PKDuS4_RS4_PDiS6_RS6_@@GLIBCXX_3.4.26
++FUNC:_ZNKSt7codecvtIDiDu11__mbstate_tE6do_outERS0_PKDiS4_RS4_PDuS6_RS6_@@GLIBCXX_3.4.26
++FUNC:_ZNKSt7codecvtIDiDu11__mbstate_tE9do_lengthERS0_PKDuS4_m@@GLIBCXX_3.4.26
+ FUNC:_ZNKSt7codecvtIDic11__mbstate_tE10do_unshiftERS0_PcS3_RS3_@@GLIBCXX_3.4.21
+ FUNC:_ZNKSt7codecvtIDic11__mbstate_tE11do_encodingEv@@GLIBCXX_3.4.21
+ FUNC:_ZNKSt7codecvtIDic11__mbstate_tE13do_max_lengthEv@@GLIBCXX_3.4.21
+@@ -989,6 +1000,13 @@ FUNC:_ZNKSt7codecvtIDic11__mbstate_tE16do_always_noconvEv@@GLIBCXX_3.4.21
+ FUNC:_ZNKSt7codecvtIDic11__mbstate_tE5do_inERS0_PKcS4_RS4_PDiS6_RS6_@@GLIBCXX_3.4.21
+ FUNC:_ZNKSt7codecvtIDic11__mbstate_tE6do_outERS0_PKDiS4_RS4_PcS6_RS6_@@GLIBCXX_3.4.21
+ FUNC:_ZNKSt7codecvtIDic11__mbstate_tE9do_lengthERS0_PKcS4_m@@GLIBCXX_3.4.21
++FUNC:_ZNKSt7codecvtIDsDu11__mbstate_tE10do_unshiftERS0_PDuS3_RS3_@@GLIBCXX_3.4.26
++FUNC:_ZNKSt7codecvtIDsDu11__mbstate_tE11do_encodingEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt7codecvtIDsDu11__mbstate_tE13do_max_lengthEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt7codecvtIDsDu11__mbstate_tE16do_always_noconvEv@@GLIBCXX_3.4.26
++FUNC:_ZNKSt7codecvtIDsDu11__mbstate_tE5do_inERS0_PKDuS4_RS4_PDsS6_RS6_@@GLIBCXX_3.4.26
++FUNC:_ZNKSt7codecvtIDsDu11__mbstate_tE6do_outERS0_PKDsS4_RS4_PDuS6_RS6_@@GLIBCXX_3.4.26
++FUNC:_ZNKSt7codecvtIDsDu11__mbstate_tE9do_lengthERS0_PKDuS4_m@@GLIBCXX_3.4.26
+ FUNC:_ZNKSt7codecvtIDsc11__mbstate_tE10do_unshiftERS0_PcS3_RS3_@@GLIBCXX_3.4.21
+ FUNC:_ZNKSt7codecvtIDsc11__mbstate_tE11do_encodingEv@@GLIBCXX_3.4.21
+ FUNC:_ZNKSt7codecvtIDsc11__mbstate_tE13do_max_lengthEv@@GLIBCXX_3.4.21
+@@ -1790,6 +1808,7 @@ FUNC:_ZNSt10filesystem18create_directoriesERKNS_4pathE@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem18create_directoriesERKNS_4pathERSt10error_code@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem18create_directoriesERKNS_7__cxx114pathE@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem18create_directoriesERKNS_7__cxx114pathERSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem18directory_iterator9incrementERSt10error_code@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem18directory_iteratorC1ERKNS_4pathENS_17directory_optionsEPSt10error_code@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem18directory_iteratorC2ERKNS_4pathENS_17directory_optionsEPSt10error_code@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem18directory_iteratorppEv@@GLIBCXX_3.4.26
+@@ -1801,6 +1820,7 @@ FUNC:_ZNSt10filesystem24create_directory_symlinkERKNS_4pathES2_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem24create_directory_symlinkERKNS_4pathES2_RSt10error_code@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem24create_directory_symlinkERKNS_7__cxx114pathES3_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem24create_directory_symlinkERKNS_7__cxx114pathES3_RSt10error_code@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem28recursive_directory_iterator25disable_recursion_pendingEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem28recursive_directory_iterator3popERSt10error_code@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem28recursive_directory_iterator3popEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem28recursive_directory_iterator9incrementERSt10error_code@@GLIBCXX_3.4.26
+@@ -1809,6 +1829,7 @@ FUNC:_ZNSt10filesystem28recursive_directory_iteratorC2ERKNS_4pathENS_17directory
+ FUNC:_ZNSt10filesystem28recursive_directory_iteratorD1Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem28recursive_directory_iteratorD2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem28recursive_directory_iteratoraSEOS0_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem28recursive_directory_iteratoraSERKS0_@@GLIBCXX_3.4.27
+ FUNC:_ZNSt10filesystem28recursive_directory_iteratorppEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem4copyERKNS_4pathES2_NS_12copy_optionsE@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem4copyERKNS_4pathES2_NS_12copy_optionsERSt10error_code@@GLIBCXX_3.4.26
+@@ -1852,9 +1873,11 @@ FUNC:_ZNSt10filesystem7__cxx1116filesystem_errorC2ERKNSt7__cxx1112basic_stringIc
+ FUNC:_ZNSt10filesystem7__cxx1116filesystem_errorD0Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx1116filesystem_errorD1Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx1116filesystem_errorD2Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx1118directory_iterator9incrementERSt10error_code@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx1118directory_iteratorC1ERKNS0_4pathENS_17directory_optionsEPSt10error_code@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx1118directory_iteratorC2ERKNS0_4pathENS_17directory_optionsEPSt10error_code@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx1118directory_iteratorppEv@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iterator25disable_recursion_pendingEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iterator3popERSt10error_code@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iterator3popEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iterator9incrementERSt10error_code@@GLIBCXX_3.4.26
+@@ -1863,6 +1886,7 @@ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorC2ERKNS0_4pathENS_17
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorD1Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorD2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratoraSEOS1_@@GLIBCXX_3.4.26
++FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratoraSERKS1_@@GLIBCXX_3.4.27
+ FUNC:_ZNSt10filesystem7__cxx1128recursive_directory_iteratorppEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx114path14_M_split_cmptsEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt10filesystem7__cxx114path14_S_convert_locEPKcS3_RKSt6locale@@GLIBCXX_3.4.26
+@@ -2038,13 +2062,21 @@ FUNC:_ZNSt12__basic_fileIcED1Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt12__basic_fileIcED2Ev@@GLIBCXX_3.4
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1EOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2EOS5_@@GLIBCXX_3.4.28
++FUNC:_ZNSt12__shared_ptrINSt10filesystem28recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC1EOS4_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC2EOS4_@@GLIBCXX_3.4.28
++FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem4_DirELN9__gnu_cxx12_Lock_policyE2EEaSEOS4_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1EOS6_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2EOS6_@@GLIBCXX_3.4.28
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx1128recursive_directory_iterator10_Dir_stackELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC1EOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC2EOS5_@@GLIBCXX_3.4.28
++FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEC2Ev@@GLIBCXX_3.4.27
+ FUNC:_ZNSt12__shared_ptrINSt10filesystem7__cxx114_DirELN9__gnu_cxx12_Lock_policyE2EEaSEOS5_@@GLIBCXX_3.4.26
+ FUNC:_ZNSt12bad_weak_ptrD0Ev@@GLIBCXX_3.4.15
+ FUNC:_ZNSt12bad_weak_ptrD1Ev@@GLIBCXX_3.4.15
+@@ -2973,12 +3005,18 @@ FUNC:_ZNSt3_V214error_categoryD1Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V214error_categoryD2Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V215system_categoryEv@@GLIBCXX_3.4.21
+ FUNC:_ZNSt3_V216generic_categoryEv@@GLIBCXX_3.4.21
++FUNC:_ZNSt3pmr15memory_resourceD0Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr15memory_resourceD1Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr15memory_resourceD2Ev@@GLIBCXX_3.4.28
+ FUNC:_ZNSt3pmr19new_delete_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20get_default_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20null_memory_resourceEv@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr20set_default_resourceEPNS_15memory_resourceE@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr25monotonic_buffer_resource13_M_new_bufferEmm@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr25monotonic_buffer_resource18_M_release_buffersEv@@GLIBCXX_3.4.26
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD0Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD1Ev@@GLIBCXX_3.4.28
++FUNC:_ZNSt3pmr25monotonic_buffer_resourceD2Ev@@GLIBCXX_3.4.28
+ FUNC:_ZNSt3pmr26synchronized_pool_resource11do_allocateEmm@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr26synchronized_pool_resource13do_deallocateEPvmm@@GLIBCXX_3.4.26
+ FUNC:_ZNSt3pmr26synchronized_pool_resource7releaseEv@@GLIBCXX_3.4.26
+@@ -3720,9 +3758,15 @@ FUNC:_ZNSt7__cxx119money_putIwSt19ostreambuf_iteratorIwSt11char_traitsIwEEEC2Em@
+ FUNC:_ZNSt7__cxx119money_putIwSt19ostreambuf_iteratorIwSt11char_traitsIwEEED0Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx119money_putIwSt19ostreambuf_iteratorIwSt11char_traitsIwEEED1Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7__cxx119money_putIwSt19ostreambuf_iteratorIwSt11char_traitsIwEEED2Ev@@GLIBCXX_3.4.21
++FUNC:_ZNSt7codecvtIDiDu11__mbstate_tED0Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt7codecvtIDiDu11__mbstate_tED1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt7codecvtIDiDu11__mbstate_tED2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt7codecvtIDic11__mbstate_tED0Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7codecvtIDic11__mbstate_tED1Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7codecvtIDic11__mbstate_tED2Ev@@GLIBCXX_3.4.21
++FUNC:_ZNSt7codecvtIDsDu11__mbstate_tED0Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt7codecvtIDsDu11__mbstate_tED1Ev@@GLIBCXX_3.4.26
++FUNC:_ZNSt7codecvtIDsDu11__mbstate_tED2Ev@@GLIBCXX_3.4.26
+ FUNC:_ZNSt7codecvtIDsc11__mbstate_tED0Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7codecvtIDsc11__mbstate_tED1Ev@@GLIBCXX_3.4.21
+ FUNC:_ZNSt7codecvtIDsc11__mbstate_tED2Ev@@GLIBCXX_3.4.21
+@@ -4343,6 +4387,7 @@ OBJECT:0:CXXABI_1.3
+ OBJECT:0:CXXABI_1.3.1
+ OBJECT:0:CXXABI_1.3.10
+ OBJECT:0:CXXABI_1.3.11
++OBJECT:0:CXXABI_1.3.12
+ OBJECT:0:CXXABI_1.3.2
+ OBJECT:0:CXXABI_1.3.3
+ OBJECT:0:CXXABI_1.3.4
+@@ -4372,6 +4417,8 @@ OBJECT:0:GLIBCXX_3.4.23
+ OBJECT:0:GLIBCXX_3.4.24
+ OBJECT:0:GLIBCXX_3.4.25
+ OBJECT:0:GLIBCXX_3.4.26
++OBJECT:0:GLIBCXX_3.4.27
++OBJECT:0:GLIBCXX_3.4.28
+ OBJECT:0:GLIBCXX_3.4.3
+ OBJECT:0:GLIBCXX_3.4.4
+ OBJECT:0:GLIBCXX_3.4.5
+@@ -4450,11 +4497,13 @@ OBJECT:16:_ZTIDf@@CXXABI_1.3.4
+ OBJECT:16:_ZTIDi@@CXXABI_1.3.3
+ OBJECT:16:_ZTIDn@@CXXABI_1.3.5
+ OBJECT:16:_ZTIDs@@CXXABI_1.3.3
++OBJECT:16:_ZTIDu@@CXXABI_1.3.12
+ OBJECT:16:_ZTIN10__cxxabiv115__forced_unwindE@@CXXABI_1.3.2
+ OBJECT:16:_ZTIN10__cxxabiv119__foreign_exceptionE@@CXXABI_1.3.2
+ OBJECT:16:_ZTINSt13__future_base11_State_baseE@@GLIBCXX_3.4.15
+ OBJECT:16:_ZTINSt13__future_base12_Result_baseE@@GLIBCXX_3.4.15
+ OBJECT:16:_ZTINSt3_V214error_categoryE@@GLIBCXX_3.4.21
++OBJECT:16:_ZTINSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
+ OBJECT:16:_ZTINSt6locale5facetE@@GLIBCXX_3.4
+ OBJECT:16:_ZTINSt6thread6_StateE@@GLIBCXX_3.4.22
+ OBJECT:16:_ZTISt10ctype_base@@GLIBCXX_3.4
+@@ -4570,6 +4619,19 @@ OBJECT:1:_ZNSt14numeric_limitsIDsE8is_exactE@@GLIBCXX_3.4.11
+ OBJECT:1:_ZNSt14numeric_limitsIDsE9is_iec559E@@GLIBCXX_3.4.11
+ OBJECT:1:_ZNSt14numeric_limitsIDsE9is_moduloE@@GLIBCXX_3.4.11
+ OBJECT:1:_ZNSt14numeric_limitsIDsE9is_signedE@@GLIBCXX_3.4.11
++OBJECT:1:_ZNSt14numeric_limitsIDuE10is_boundedE@@GLIBCXX_3.4.26
++OBJECT:1:_ZNSt14numeric_limitsIDuE10is_integerE@@GLIBCXX_3.4.26
++OBJECT:1:_ZNSt14numeric_limitsIDuE12has_infinityE@@GLIBCXX_3.4.26
++OBJECT:1:_ZNSt14numeric_limitsIDuE13has_quiet_NaNE@@GLIBCXX_3.4.26
++OBJECT:1:_ZNSt14numeric_limitsIDuE14is_specializedE@@GLIBCXX_3.4.26
++OBJECT:1:_ZNSt14numeric_limitsIDuE15has_denorm_lossE@@GLIBCXX_3.4.26
++OBJECT:1:_ZNSt14numeric_limitsIDuE15tinyness_beforeE@@GLIBCXX_3.4.26
++OBJECT:1:_ZNSt14numeric_limitsIDuE17has_signaling_NaNE@@GLIBCXX_3.4.26
++OBJECT:1:_ZNSt14numeric_limitsIDuE5trapsE@@GLIBCXX_3.4.26
++OBJECT:1:_ZNSt14numeric_limitsIDuE8is_exactE@@GLIBCXX_3.4.26
++OBJECT:1:_ZNSt14numeric_limitsIDuE9is_iec559E@@GLIBCXX_3.4.26
++OBJECT:1:_ZNSt14numeric_limitsIDuE9is_moduloE@@GLIBCXX_3.4.26
++OBJECT:1:_ZNSt14numeric_limitsIDuE9is_signedE@@GLIBCXX_3.4.26
+ OBJECT:1:_ZNSt14numeric_limitsIaE10is_boundedE@@GLIBCXX_3.4
+ OBJECT:1:_ZNSt14numeric_limitsIaE10is_integerE@@GLIBCXX_3.4
+ OBJECT:1:_ZNSt14numeric_limitsIaE12has_infinityE@@GLIBCXX_3.4
+@@ -4871,6 +4933,7 @@ OBJECT:24:_ZTIN9__gnu_cxx18stdio_sync_filebufIwSt11char_traitsIwEEE@@GLIBCXX_3.4
+ OBJECT:24:_ZTINSt10filesystem16filesystem_errorE@@GLIBCXX_3.4.26
+ OBJECT:24:_ZTINSt10filesystem7__cxx1116filesystem_errorE@@GLIBCXX_3.4.26
+ OBJECT:24:_ZTINSt13__future_base19_Async_state_commonE@@GLIBCXX_3.4.17
++OBJECT:24:_ZTINSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:24:_ZTINSt3pmr26synchronized_pool_resourceE@@GLIBCXX_3.4.26
+ OBJECT:24:_ZTINSt3pmr28unsynchronized_pool_resourceE@@GLIBCXX_3.4.26
+ OBJECT:24:_ZTINSt7__cxx1114collate_bynameIcEE@@GLIBCXX_3.4.21
+@@ -4971,7 +5034,9 @@ OBJECT:24:_ZTISt25__codecvt_utf8_utf16_baseIDiE@@GLIBCXX_3.4.21
+ OBJECT:24:_ZTISt25__codecvt_utf8_utf16_baseIDsE@@GLIBCXX_3.4.21
+ OBJECT:24:_ZTISt25__codecvt_utf8_utf16_baseIwE@@GLIBCXX_3.4.21
+ OBJECT:24:_ZTISt5ctypeIwE@@GLIBCXX_3.4
++OBJECT:24:_ZTISt7codecvtIDiDu11__mbstate_tE@@GLIBCXX_3.4.26
+ OBJECT:24:_ZTISt7codecvtIDic11__mbstate_tE@@GLIBCXX_3.4.21
++OBJECT:24:_ZTISt7codecvtIDsDu11__mbstate_tE@@GLIBCXX_3.4.26
+ OBJECT:24:_ZTISt7codecvtIDsc11__mbstate_tE@@GLIBCXX_3.4.21
+ OBJECT:24:_ZTISt7codecvtIcc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:24:_ZTISt7codecvtIwc11__mbstate_tE@@GLIBCXX_3.4
+@@ -5001,6 +5066,7 @@ OBJECT:25:_ZTSNSt7__cxx118messagesIwEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSNSt7__cxx118numpunctIcEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSNSt7__cxx118numpunctIwEE@@GLIBCXX_3.4.21
+ OBJECT:25:_ZTSSt20bad_array_new_length@@CXXABI_1.3.8
++OBJECT:26:_ZTSNSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
+ OBJECT:272:_ZSt4cerr@@GLIBCXX_3.4
+ OBJECT:272:_ZSt4clog@@GLIBCXX_3.4
+ OBJECT:272:_ZSt4cout@@GLIBCXX_3.4
+@@ -5057,6 +5123,8 @@ OBJECT:2:_ZTSv@@CXXABI_1.3
+ OBJECT:2:_ZTSw@@CXXABI_1.3
+ OBJECT:2:_ZTSx@@CXXABI_1.3
+ OBJECT:2:_ZTSy@@CXXABI_1.3
++OBJECT:30:_ZTSSt7codecvtIDiDu11__mbstate_tE@@GLIBCXX_3.4.26
++OBJECT:30:_ZTSSt7codecvtIDsDu11__mbstate_tE@@GLIBCXX_3.4.26
+ OBJECT:32:_ZNSbIwSt11char_traitsIwESaIwEE4_Rep20_S_empty_rep_storageE@@GLIBCXX_3.4
+ OBJECT:32:_ZNSs4_Rep20_S_empty_rep_storageE@@GLIBCXX_3.4
+ OBJECT:32:_ZTIPDd@@CXXABI_1.3.4
+@@ -5065,12 +5133,14 @@ OBJECT:32:_ZTIPDf@@CXXABI_1.3.4
+ OBJECT:32:_ZTIPDi@@CXXABI_1.3.3
+ OBJECT:32:_ZTIPDn@@CXXABI_1.3.5
+ OBJECT:32:_ZTIPDs@@CXXABI_1.3.3
++OBJECT:32:_ZTIPDu@@CXXABI_1.3.12
+ OBJECT:32:_ZTIPKDd@@CXXABI_1.3.4
+ OBJECT:32:_ZTIPKDe@@CXXABI_1.3.4
+ OBJECT:32:_ZTIPKDf@@CXXABI_1.3.4
+ OBJECT:32:_ZTIPKDi@@CXXABI_1.3.3
+ OBJECT:32:_ZTIPKDn@@CXXABI_1.3.5
+ OBJECT:32:_ZTIPKDs@@CXXABI_1.3.3
++OBJECT:32:_ZTIPKDu@@CXXABI_1.3.12
+ OBJECT:32:_ZTIPKa@@CXXABI_1.3
+ OBJECT:32:_ZTIPKb@@CXXABI_1.3
+ OBJECT:32:_ZTIPKc@@CXXABI_1.3
+@@ -5150,6 +5220,7 @@ OBJECT:34:_ZTSSt25__codecvt_utf8_utf16_baseIDsE@@GLIBCXX_3.4.21
+ OBJECT:34:_ZTSSt9basic_iosIcSt11char_traitsIcEE@@GLIBCXX_3.4
+ OBJECT:34:_ZTSSt9basic_iosIwSt11char_traitsIwEE@@GLIBCXX_3.4
+ OBJECT:36:_ZTSN10__cxxabiv119__pointer_type_infoE@@CXXABI_1.3
++OBJECT:36:_ZTSNSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:36:_ZTSSt14codecvt_bynameIcc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:36:_ZTSSt14codecvt_bynameIwc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:37:_ZTSN10__cxxabiv120__function_type_infoE@@CXXABI_1.3
+@@ -5273,6 +5344,15 @@ OBJECT:4:_ZNSt14numeric_limitsIDsE14min_exponent10E@@GLIBCXX_3.4.11
+ OBJECT:4:_ZNSt14numeric_limitsIDsE5radixE@@GLIBCXX_3.4.11
+ OBJECT:4:_ZNSt14numeric_limitsIDsE6digitsE@@GLIBCXX_3.4.11
+ OBJECT:4:_ZNSt14numeric_limitsIDsE8digits10E@@GLIBCXX_3.4.11
++OBJECT:4:_ZNSt14numeric_limitsIDuE10has_denormE@@GLIBCXX_3.4.26
++OBJECT:4:_ZNSt14numeric_limitsIDuE11round_styleE@@GLIBCXX_3.4.26
++OBJECT:4:_ZNSt14numeric_limitsIDuE12max_exponentE@@GLIBCXX_3.4.26
++OBJECT:4:_ZNSt14numeric_limitsIDuE12min_exponentE@@GLIBCXX_3.4.26
++OBJECT:4:_ZNSt14numeric_limitsIDuE14max_exponent10E@@GLIBCXX_3.4.26
++OBJECT:4:_ZNSt14numeric_limitsIDuE14min_exponent10E@@GLIBCXX_3.4.26
++OBJECT:4:_ZNSt14numeric_limitsIDuE5radixE@@GLIBCXX_3.4.26
++OBJECT:4:_ZNSt14numeric_limitsIDuE6digitsE@@GLIBCXX_3.4.26
++OBJECT:4:_ZNSt14numeric_limitsIDuE8digits10E@@GLIBCXX_3.4.26
+ OBJECT:4:_ZNSt14numeric_limitsIaE10has_denormE@@GLIBCXX_3.4
+ OBJECT:4:_ZNSt14numeric_limitsIaE11round_styleE@@GLIBCXX_3.4
+ OBJECT:4:_ZNSt14numeric_limitsIaE12max_digits10E@@GLIBCXX_3.4.14
+@@ -5554,6 +5634,8 @@ OBJECT:56:_ZTSNSt7__cxx1115basic_stringbufIcSt11char_traitsIcESaIcEEE@@GLIBCXX_3
+ OBJECT:56:_ZTSNSt7__cxx1115basic_stringbufIwSt11char_traitsIwESaIwEEE@@GLIBCXX_3.4.21
+ OBJECT:56:_ZTTSd@@GLIBCXX_3.4
+ OBJECT:56:_ZTTSt14basic_iostreamIwSt11char_traitsIwEE@@GLIBCXX_3.4
++OBJECT:56:_ZTVNSt3pmr15memory_resourceE@@GLIBCXX_3.4.28
++OBJECT:56:_ZTVNSt3pmr25monotonic_buffer_resourceE@@GLIBCXX_3.4.28
+ OBJECT:56:_ZTVNSt7__cxx1114collate_bynameIcEE@@GLIBCXX_3.4.21
+ OBJECT:56:_ZTVNSt7__cxx1114collate_bynameIwEE@@GLIBCXX_3.4.21
+ OBJECT:56:_ZTVNSt7__cxx1115messages_bynameIcEE@@GLIBCXX_3.4.21
+@@ -5667,7 +5749,9 @@ OBJECT:88:_ZTVSt23__codecvt_abstract_baseIwc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:88:_ZTVSt25__codecvt_utf8_utf16_baseIDiE@@GLIBCXX_3.4.21
+ OBJECT:88:_ZTVSt25__codecvt_utf8_utf16_baseIDsE@@GLIBCXX_3.4.21
+ OBJECT:88:_ZTVSt25__codecvt_utf8_utf16_baseIwE@@GLIBCXX_3.4.21
++OBJECT:88:_ZTVSt7codecvtIDiDu11__mbstate_tE@@GLIBCXX_3.4.26
+ OBJECT:88:_ZTVSt7codecvtIDic11__mbstate_tE@@GLIBCXX_3.4.21
++OBJECT:88:_ZTVSt7codecvtIDsDu11__mbstate_tE@@GLIBCXX_3.4.26
+ OBJECT:88:_ZTVSt7codecvtIDsc11__mbstate_tE@@GLIBCXX_3.4.21
+ OBJECT:88:_ZTVSt7codecvtIcc11__mbstate_tE@@GLIBCXX_3.4
+ OBJECT:88:_ZTVSt7codecvtIwc11__mbstate_tE@@GLIBCXX_3.4
+@@ -5745,7 +5829,9 @@ OBJECT:8:_ZNSt7__cxx119money_getIcSt19istreambuf_iteratorIcSt11char_traitsIcEEE2
+ OBJECT:8:_ZNSt7__cxx119money_getIwSt19istreambuf_iteratorIwSt11char_traitsIwEEE2idE@@GLIBCXX_3.4.21
+ OBJECT:8:_ZNSt7__cxx119money_putIcSt19ostreambuf_iteratorIcSt11char_traitsIcEEE2idE@@GLIBCXX_3.4.21
+ OBJECT:8:_ZNSt7__cxx119money_putIwSt19ostreambuf_iteratorIwSt11char_traitsIwEEE2idE@@GLIBCXX_3.4.21
++OBJECT:8:_ZNSt7codecvtIDiDu11__mbstate_tE2idE@@GLIBCXX_3.4.26
+ OBJECT:8:_ZNSt7codecvtIDic11__mbstate_tE2idE@@GLIBCXX_3.4.21
++OBJECT:8:_ZNSt7codecvtIDsDu11__mbstate_tE2idE@@GLIBCXX_3.4.26
+ OBJECT:8:_ZNSt7codecvtIDsc11__mbstate_tE2idE@@GLIBCXX_3.4.21
+ OBJECT:8:_ZNSt7codecvtIcc11__mbstate_tE2idE@@GLIBCXX_3.4
+ OBJECT:8:_ZNSt7codecvtIwc11__mbstate_tE2idE@@GLIBCXX_3.4
 diff --git a/libstdc++-v3/config/abi/post/x86_64-linux-gnu/32/baseline_symbols.txt b/libstdc++-v3/config/abi/post/x86_64-linux-gnu/32/baseline_symbols.txt
 index e488ada5c72..f9eca6c7b0e 100644
 --- a/libstdc++-v3/config/abi/post/x86_64-linux-gnu/32/baseline_symbols.txt
