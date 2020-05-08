@@ -1,0 +1,1468 @@
+From bed1c0f119c9a3681b04bb2c337b4616163e1333 Mon Sep 17 00:00:00 2001
+From: "H.J. Lu" <hjl.tools@gmail.com>
+Date: Tue, 6 Feb 2018 13:31:15 -0800
+Subject: [PATCH 1/3] x86: Add
+ -mzero-caller-saved-regs=[skip|used-gpr|all-gpr|used|all]
+
+Add -mzero-caller-saved-regs=[skip|used-gpr|all-gpr|used|all] command-line
+option and zero_caller_saved_regs("skip|used|all") function attribue:
+
+1. -mzero-caller-saved-regs=skip and zero_caller_saved_regs("skip")
+
+Don't zero caller-saved registers upon function return.
+
+2. -mzero-caller-saved-regs=used-gpr and zero_caller_saved_regs("used-gpr")
+
+Zero used caller-saved integer registers upon function return.
+
+3. -mzero-caller-saved-regs=all-gpr and zero_caller_saved_regs("all-gpr")
+
+2. -mzero-caller-saved-regs=used and zero_caller_saved_regs("used")
+
+Zero used caller-saved integer and vector registers upon function return.
+
+3. -mzero-caller-saved-regs=all and zero_caller_saved_regs("all")
+
+Zero all caller-saved integer and vector registers upon function return.
+
+Tested on i686 and x86-64 with bootstrapping GCC trunk, making
+-mzero-caller-saved-regs=used-gpr, -mzero-caller-saved-regs=all-gpr
+-mzero-caller-saved-regs=used, and -mzero-caller-saved-regs=all enabled
+by default.
+
+gcc/
+
+	* i386-expand.c (ix86_find_live_outgoing_regs): New function.
+	(ix86_split_simple_return_pop_internal): Removed.
+	(ix86_split_simple_return_internal): New function.
+	* config/i386/i386-options.c (ix86_set_zero_caller_saved_regs_type):
+	New function.
+	(ix86_set_current_function): Call ix86_set_zero_caller_saved_regs_type.
+	(ix86_handle_fndecl_attribute): Support zero_caller_saved_regs
+	attribute.
+	(ix86_attribute_table): Add zero_caller_saved_regs.
+	* config/i386/i386-opts.h (zero_caller_saved_regs): New enum.
+	* config/i386/i386-protos.h (ix86_split_simple_return_pop_internal):
+	Renamed to ...
+	(ix86_split_simple_return_internal): This.
+	* config/i386/i386.c (ix86_expand_prologue): Replace
+	gen_prologue_use with gen_pro_epilogue_use.
+	(ix86_expand_epilogue): Replace gen_simple_return_pop_internal
+	with ix86_split_simple_return_internal.  Replace
+	gen_simple_return_internal with ix86_split_simple_return_internal.
+	* config/i386/i386.h (machine_function): Add
+	zero_caller_saved_regs_type, live_outgoing_int_regs and
+	live_outgoing_vector_regs.
+	(TARGET_POP_SCRATCH_REGISTER): New.
+	* config/i386/i386.md (UNSPEC_SIMPLE_RETURN): New UNSPEC.
+	(UNSPECV_PROLOGUE_USE): Renamed to ...
+	(UNSPECV_PRO_EPILOGUE_USE): This.
+	(prologue_use): Renamed to ...
+	(pro_epilogue_use): This.
+	(simple_return_internal): Changed to define_insn_and_split.
+	(simple_return_internal_1): New pattern.
+	(simple_return_pop_internal): Replace
+	ix86_split_simple_return_pop_internal with
+	ix86_split_simple_return_internal.  Always call
+	ix86_split_simple_return_internal if epilogue_completed is
+	true.
+	(simple_return_pop_internal_1): New pattern.
+	(Epilogue deallocator to pop peepholes): Enabled only if
+	TARGET_POP_SCRATCH_REGISTER is true.
+	* config/i386/i386.opt (mzero-caller-saved-regs=): New option.
+	* doc/extend.texi: Document zero_caller_saved_regs attribute.
+	* doc/invoke.texi: Document -mzero-caller-saved-regs=.
+
+gcc/testsuite/
+
+	* gcc.target/i386/zero-scratch-regs-1.c: New test.
+	* gcc.target/i386/zero-scratch-regs-2.c: Likewise.
+	* gcc.target/i386/zero-scratch-regs-3.c: Likewise.
+	* gcc.target/i386/zero-scratch-regs-4.c: Likewise.
+	* gcc.target/i386/zero-scratch-regs-5.c: Likewise.
+	* gcc.target/i386/zero-scratch-regs-6.c: Likewise.
+	* gcc.target/i386/zero-scratch-regs-7.c: Likewise.
+	* gcc.target/i386/zero-scratch-regs-8.c: Likewise.
+	* gcc.target/i386/zero-scratch-regs-9.c: Likewise.
+	* gcc.target/i386/zero-scratch-regs-10.c: Likewise.
+	* gcc.target/i386/zero-scratch-regs-11.c: Likewise.
+	* gcc.target/i386/zero-scratch-regs-12.c: Likewise.
+	* gcc.target/i386/zero-scratch-regs-13.c: Likewise.
+	* gcc.target/i386/zero-scratch-regs-14.c: Likewise.
+	* gcc.target/i386/zero-scratch-regs-15.c: Likewise.
+	* gcc.target/i386/zero-scratch-regs-16.c: Likewise.
+	* gcc.target/i386/zero-scratch-regs-17.c: Likewise.
+	* gcc.target/i386/zero-scratch-regs-18.c: Likewise.
+	* gcc.target/i386/zero-scratch-regs-19.c: Likewise.
+	* gcc.target/i386/zero-scratch-regs-20.c: Likewise.
+	* gcc.target/i386/zero-scratch-regs-21.c: Likewise.
+	* gcc.target/i386/zero-scratch-regs-22.c: Likewise.
+	* gcc.target/i386/zero-scratch-regs-23.c: Likewise.
+---
+ gcc/config/i386/i386-expand.c                 | 281 ++++++++++++++++--
+ gcc/config/i386/i386-options.c                |  67 +++++
+ gcc/config/i386/i386-opts.h                   |   9 +
+ gcc/config/i386/i386-protos.h                 |   2 +-
+ gcc/config/i386/i386.c                        |   8 +-
+ gcc/config/i386/i386.h                        |  16 +
+ gcc/config/i386/i386.md                       |  54 +++-
+ gcc/config/i386/i386.opt                      |  23 ++
+ gcc/doc/extend.texi                           |  12 +
+ gcc/doc/invoke.texi                           |  14 +-
+ .../gcc.target/i386/zero-scratch-regs-1.c     |  12 +
+ .../gcc.target/i386/zero-scratch-regs-10.c    |  21 ++
+ .../gcc.target/i386/zero-scratch-regs-11.c    |  39 +++
+ .../gcc.target/i386/zero-scratch-regs-12.c    |  39 +++
+ .../gcc.target/i386/zero-scratch-regs-13.c    |  21 ++
+ .../gcc.target/i386/zero-scratch-regs-14.c    |  19 ++
+ .../gcc.target/i386/zero-scratch-regs-15.c    |  14 +
+ .../gcc.target/i386/zero-scratch-regs-16.c    |  14 +
+ .../gcc.target/i386/zero-scratch-regs-17.c    |  13 +
+ .../gcc.target/i386/zero-scratch-regs-18.c    |  13 +
+ .../gcc.target/i386/zero-scratch-regs-19.c    |  12 +
+ .../gcc.target/i386/zero-scratch-regs-2.c     |  19 ++
+ .../gcc.target/i386/zero-scratch-regs-20.c    |  23 ++
+ .../gcc.target/i386/zero-scratch-regs-21.c    |  14 +
+ .../gcc.target/i386/zero-scratch-regs-22.c    |  19 ++
+ .../gcc.target/i386/zero-scratch-regs-23.c    |  19 ++
+ .../gcc.target/i386/zero-scratch-regs-3.c     |  12 +
+ .../gcc.target/i386/zero-scratch-regs-4.c     |  14 +
+ .../gcc.target/i386/zero-scratch-regs-5.c     |  20 ++
+ .../gcc.target/i386/zero-scratch-regs-6.c     |  14 +
+ .../gcc.target/i386/zero-scratch-regs-7.c     |  13 +
+ .../gcc.target/i386/zero-scratch-regs-8.c     |  19 ++
+ .../gcc.target/i386/zero-scratch-regs-9.c     |  15 +
+ 33 files changed, 867 insertions(+), 37 deletions(-)
+ create mode 100644 gcc/testsuite/gcc.target/i386/zero-scratch-regs-1.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/zero-scratch-regs-10.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/zero-scratch-regs-11.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/zero-scratch-regs-12.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/zero-scratch-regs-13.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/zero-scratch-regs-14.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/zero-scratch-regs-15.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/zero-scratch-regs-16.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/zero-scratch-regs-17.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/zero-scratch-regs-18.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/zero-scratch-regs-19.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/zero-scratch-regs-2.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/zero-scratch-regs-20.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/zero-scratch-regs-21.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/zero-scratch-regs-22.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/zero-scratch-regs-23.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/zero-scratch-regs-3.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/zero-scratch-regs-4.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/zero-scratch-regs-5.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/zero-scratch-regs-6.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/zero-scratch-regs-7.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/zero-scratch-regs-8.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/zero-scratch-regs-9.c
+
+diff --git a/gcc/config/i386/i386-expand.c b/gcc/config/i386/i386-expand.c
+index 48f00c5fcfc..c98ef219e40 100644
+--- a/gcc/config/i386/i386-expand.c
++++ b/gcc/config/i386/i386-expand.c
+@@ -8089,37 +8089,272 @@ ix86_expand_call (rtx retval, rtx fnaddr, rtx callarg1,
+   return call_insn;
+ }
+ 
+-/* Split simple return with popping POPC bytes from stack to indirect
+-   branch with stack adjustment .  */
++/* Find general registers which are live at the exit of basic block BB
++   and set their corresponding bits in LIVE_OUTGOING_REGS.  */
++
++static void
++ix86_find_live_outgoing_regs (basic_block bb, bool gpr, bool zero_all,
++			      unsigned int &live_outgoing_regs)
++{
++  bitmap live_out = df_get_live_out (bb);
++
++  unsigned int regno;
++
++  /* Check for live outgoing registers.  */
++  for (regno = 0; regno < FIRST_PSEUDO_REGISTER; regno++)
++    {
++      unsigned int i = INVALID_REGNUM;
++
++      if (gpr)
++	{
++	  /* Zero general registers.  */
++	  if (LEGACY_INT_REGNO_P (regno))
++	    i = regno;
++	  else if (TARGET_64BIT && REX_INT_REGNO_P (regno))
++	    i = regno - FIRST_REX_INT_REG + 8;
++	}
++      else if (TARGET_SSE)
++	{
++	  /* Zero vector registers.  */
++	  if (IN_RANGE (regno, FIRST_SSE_REG, LAST_SSE_REG))
++	    i = regno - FIRST_SSE_REG;
++	  else if (TARGET_64BIT)
++	    {
++	      if (REX_SSE_REGNO_P (regno))
++		i = regno - FIRST_REX_SSE_REG + 8;
++	      else if (TARGET_AVX512F && EXT_REX_SSE_REGNO_P (regno))
++		i = regno - FIRST_EXT_REX_SSE_REG + 16;
++	    }
++	}
++
++      if (i == INVALID_REGNUM)
++	continue;
++
++      /* No need to check it again if it is live.  */
++      if ((live_outgoing_regs & (1 << i)))
++	continue;
++
++      /* A register is considered LIVE if
++	 1. It is a fixed register.
++	 2. If isn't a caller-saved register.
++	 3. If it is a live outgoing register.
++	 4. It is never used in the function and we don't zero all
++	    caller-saved registers.
++       */
++      if (fixed_regs[regno]
++	  || !call_used_regs[regno]
++	  || REGNO_REG_SET_P (live_out, regno)
++	  || (!zero_all && !df_regs_ever_live_p (regno)))
++	live_outgoing_regs |= 1 << i;
++    }
++}
++
++/* Split simple return with popping POPC bytes from stack, if POPC
++   isn't NULL_RTX, and zero caller-saved general registers if needed.
++   When popping POPC bytes from stack for -mfunction-return=, convert
++   return to indirect branch with stack adjustment.  */
+ 
+ void
+-ix86_split_simple_return_pop_internal (rtx popc)
++ix86_split_simple_return_internal (rtx popc)
+ {
+-  struct machine_function *m = cfun->machine;
+-  rtx ecx = gen_rtx_REG (SImode, CX_REG);
+-  rtx_insn *insn;
++  /* No need to zero caller-saved registers in main ().  Don't zero
++     caller-saved registers if __builtin_eh_return is called since it
++     isn't a normal function return.  */
++  if ((cfun->machine->zero_caller_saved_regs_type
++       != zero_caller_saved_regs_skip)
++      && !crtl->calls_eh_return
++      && cfun->machine->func_type == TYPE_NORMAL
++      && !MAIN_NAME_P (DECL_NAME (current_function_decl)))
++    {
++      bool gpr_only = true;
++      bool zero_all = false;
++      switch (cfun->machine->zero_caller_saved_regs_type)
++	{
++	case zero_caller_saved_regs_all_gpr:
++	  zero_all = true;
++	  break;
++	case zero_caller_saved_regs_used:
++	  gpr_only = false;
++	  break;
++	case zero_caller_saved_regs_all:
++	  gpr_only = false;
++	  zero_all = true;
++	  break;
++	default:
++	  break;
++	}
++
++      unsigned int &live_outgoing_int_regs
++	= cfun->machine->live_outgoing_int_regs;
++      unsigned int &live_outgoing_vector_regs
++	= cfun->machine->live_outgoing_vector_regs;
++
++      edge e;
++      edge_iterator ei;
++
++      if (live_outgoing_int_regs == 0)
++	{
++	  /* ECX register is used for return with pop.  */
++	  if (popc != NULL_RTX
++	      && (cfun->machine->function_return_type
++		  != indirect_branch_keep))
++	    live_outgoing_int_regs = 1 << CX_REG;
++
++	  FOR_EACH_EDGE (e, ei, EXIT_BLOCK_PTR_FOR_FN (cfun)->preds)
++	    {
++	      ix86_find_live_outgoing_regs (e->src, true, zero_all,
++					    live_outgoing_int_regs);
++	    }
++	}
+ 
+-  /* There is no "pascal" calling convention in any 64bit ABI.  */
+-  gcc_assert (!TARGET_64BIT);
++      if (!gpr_only && live_outgoing_vector_regs == 0)
++	FOR_EACH_EDGE (e, ei, EXIT_BLOCK_PTR_FOR_FN (cfun)->preds)
++	  {
++	    ix86_find_live_outgoing_regs (e->src, false, zero_all,
++					  live_outgoing_vector_regs);
++	  }
+ 
+-  insn = emit_insn (gen_pop (ecx));
+-  m->fs.cfa_offset -= UNITS_PER_WORD;
+-  m->fs.sp_offset -= UNITS_PER_WORD;
++      if (!gpr_only && TARGET_AVX && live_outgoing_vector_regs == 0)
++	{
++	  emit_insn (gen_avx_vzeroall ());
++	  gpr_only = true;
++	}
+ 
+-  rtx x = plus_constant (Pmode, stack_pointer_rtx, UNITS_PER_WORD);
+-  x = gen_rtx_SET (stack_pointer_rtx, x);
+-  add_reg_note (insn, REG_CFA_ADJUST_CFA, x);
+-  add_reg_note (insn, REG_CFA_REGISTER, gen_rtx_SET (ecx, pc_rtx));
+-  RTX_FRAME_RELATED_P (insn) = 1;
++      rtx zero_gpr = NULL_RTX;
++      rtx zero_vector = NULL_RTX;
+ 
+-  x = gen_rtx_PLUS (Pmode, stack_pointer_rtx, popc);
+-  x = gen_rtx_SET (stack_pointer_rtx, x);
+-  insn = emit_insn (x);
+-  add_reg_note (insn, REG_CFA_ADJUST_CFA, x);
+-  RTX_FRAME_RELATED_P (insn) = 1;
++      unsigned int regno;
+ 
+-  /* Now return address is in ECX.  */
+-  emit_jump_insn (gen_simple_return_indirect_internal (ecx));
++      for (regno = 0; regno < FIRST_PSEUDO_REGISTER; regno++)
++	{
++	  unsigned int i = INVALID_REGNUM;
++	  unsigned int live_outgoing_regs;
++	  bool gpr = false;
++
++	  if (LEGACY_INT_REGNO_P (regno))
++	    {
++	      gpr = true;
++	      i = regno;
++	      live_outgoing_regs = live_outgoing_int_regs;
++	    }
++	  else if (TARGET_64BIT && REX_INT_REGNO_P (regno))
++	    {
++	      gpr = true;
++	      live_outgoing_regs = live_outgoing_int_regs;
++	      i = regno - FIRST_REX_INT_REG + 8;
++	    }
++	  else if (!gpr_only && TARGET_SSE)
++	    {
++	      if (IN_RANGE (regno, FIRST_SSE_REG, LAST_SSE_REG))
++		{
++		  live_outgoing_regs = live_outgoing_vector_regs;
++		  i = regno - FIRST_SSE_REG;
++		}
++	      if (TARGET_64BIT)
++		{
++		  if (REX_SSE_REGNO_P (regno))
++		    {
++		      live_outgoing_regs = live_outgoing_vector_regs;
++		      i = regno - FIRST_REX_SSE_REG + 8;
++		    }
++		  else if (TARGET_AVX512F
++			   && EXT_REX_SSE_REGNO_P (regno))
++		    {
++		      live_outgoing_regs = live_outgoing_vector_regs;
++		      i = regno - FIRST_EXT_REX_SSE_REG + 16;
++		    }
++		}
++	    }
++
++	  if (i == INVALID_REGNUM)
++	    continue;
++
++	  if ((live_outgoing_regs & (1 << i)))
++	    continue;
++
++	  rtx reg, tmp;
++
++	  if (gpr)
++	    {
++	      /* Zero out dead caller-saved register.  We only need to
++		 zero the lower 32 bits.  */
++	      reg = gen_rtx_REG (SImode, regno);
++	      if (zero_gpr == NULL_RTX)
++		{
++		  zero_gpr = reg;
++		  tmp = gen_rtx_SET (reg, const0_rtx);
++		  if (!TARGET_USE_MOV0 || optimize_insn_for_size_p ())
++		    {
++		      rtx clob = gen_rtx_CLOBBER (VOIDmode,
++						  gen_rtx_REG (CCmode,
++							       FLAGS_REG));
++		      tmp = gen_rtx_PARALLEL (VOIDmode, gen_rtvec (2,
++								   tmp,
++								   clob));
++		    }
++		  emit_insn (tmp);
++		}
++	      else
++		emit_move_insn (reg, zero_gpr);
++	    }
++	  else
++	    {
++	      reg = gen_rtx_REG (V4SFmode, regno);
++	      if (zero_vector == NULL_RTX)
++		{
++		  zero_vector = reg;
++		  tmp = gen_rtx_SET (reg, const0_rtx);
++		  emit_insn (tmp);
++		}
++	      else
++		emit_move_insn (reg, zero_vector);
++	    }
++
++	  /* Mark it in use  */
++	  emit_insn (gen_pro_epilogue_use (reg));
++	}
++    }
++
++  if (popc)
++    {
++      if (cfun->machine->function_return_type != indirect_branch_keep)
++	{
++	  struct machine_function *m = cfun->machine;
++	  rtx ecx = gen_rtx_REG (SImode, CX_REG);
++	  rtx_insn *insn;
++
++	  /* There is no "pascal" calling convention in any 64bit ABI.  */
++	  gcc_assert (!TARGET_64BIT);
++
++	  insn = emit_insn (gen_pop (ecx));
++	  m->fs.cfa_offset -= UNITS_PER_WORD;
++	  m->fs.sp_offset -= UNITS_PER_WORD;
++
++	  rtx x = plus_constant (Pmode, stack_pointer_rtx,
++				 UNITS_PER_WORD);
++	  x = gen_rtx_SET (stack_pointer_rtx, x);
++	  add_reg_note (insn, REG_CFA_ADJUST_CFA, x);
++	  add_reg_note (insn, REG_CFA_REGISTER,
++			gen_rtx_SET (ecx, pc_rtx));
++	  RTX_FRAME_RELATED_P (insn) = 1;
++
++	  x = gen_rtx_PLUS (Pmode, stack_pointer_rtx, popc);
++	  x = gen_rtx_SET (stack_pointer_rtx, x);
++	  insn = emit_insn (x);
++	  add_reg_note (insn, REG_CFA_ADJUST_CFA, copy_rtx (x));
++	  RTX_FRAME_RELATED_P (insn) = 1;
++
++	  /* Mark ECX in use  */
++	  emit_insn (gen_pro_epilogue_use (ecx));
++
++	  /* Now return address is in ECX.  */
++	  emit_jump_insn (gen_simple_return_indirect_internal (ecx));
++	}
++      else
++	emit_jump_insn (gen_simple_return_pop_internal_1 (popc));
++    }
++  else
++    emit_jump_insn (gen_simple_return_internal_1 ());
+ }
+ 
+ /* Errors in the source file can cause expand_expr to return const0_rtx
+diff --git a/gcc/config/i386/i386-options.c b/gcc/config/i386/i386-options.c
+index 5c21fce06a4..c9bf79c7a43 100644
+--- a/gcc/config/i386/i386-options.c
++++ b/gcc/config/i386/i386-options.c
+@@ -3040,6 +3040,46 @@ ix86_set_func_type (tree fndecl)
+     }
+ }
+ 
++/* Set the zero_caller_saved_regs_type field from the function FNDECL.  */
++
++static void
++ix86_set_zero_caller_saved_regs_type (tree fndecl)
++{
++  if (cfun->machine->zero_caller_saved_regs_type
++      == zero_caller_saved_regs_unset)
++    {
++      tree attr = lookup_attribute ("zero_caller_saved_regs",
++				    DECL_ATTRIBUTES (fndecl));
++      if (attr != NULL)
++	{
++	  tree args = TREE_VALUE (attr);
++	  if (args == NULL)
++	    gcc_unreachable ();
++	  tree cst = TREE_VALUE (args);
++	  if (strcmp (TREE_STRING_POINTER (cst), "skip") == 0)
++	    cfun->machine->zero_caller_saved_regs_type
++	      = zero_caller_saved_regs_skip;
++	  else if (strcmp (TREE_STRING_POINTER (cst), "used-gpr") == 0)
++	    cfun->machine->zero_caller_saved_regs_type
++	      = zero_caller_saved_regs_used_gpr;
++	  else if (strcmp (TREE_STRING_POINTER (cst), "all-gpr") == 0)
++	    cfun->machine->zero_caller_saved_regs_type
++	      = zero_caller_saved_regs_all_gpr;
++	  else if (strcmp (TREE_STRING_POINTER (cst), "used") == 0)
++	    cfun->machine->zero_caller_saved_regs_type
++	      = zero_caller_saved_regs_used;
++	  else if (strcmp (TREE_STRING_POINTER (cst), "all") == 0)
++	    cfun->machine->zero_caller_saved_regs_type
++	      = zero_caller_saved_regs_all;
++	  else
++	    gcc_unreachable ();
++	}
++      else
++	cfun->machine->zero_caller_saved_regs_type
++	  = ix86_zero_caller_saved_regs;
++    }
++}
++
+ /* Set the indirect_branch_type field from the function FNDECL.  */
+ 
+ static void
+@@ -3154,6 +3194,7 @@ ix86_set_current_function (tree fndecl)
+ 	{
+ 	  ix86_set_func_type (fndecl);
+ 	  ix86_set_indirect_branch_type (fndecl);
++	  ix86_set_zero_caller_saved_regs_type (fndecl);
+ 	}
+       return;
+     }
+@@ -3175,6 +3216,7 @@ ix86_set_current_function (tree fndecl)
+ 
+   ix86_set_func_type (fndecl);
+   ix86_set_indirect_branch_type (fndecl);
++  ix86_set_zero_caller_saved_regs_type (fndecl);
+ 
+   tree new_tree = DECL_FUNCTION_SPECIFIC_TARGET (fndecl);
+   if (new_tree == NULL_TREE)
+@@ -3635,6 +3677,29 @@ ix86_handle_fndecl_attribute (tree *node, tree name, tree args, int,
+ 	}
+     }
+ 
++  if (is_attribute_p ("zero_caller_saved_regs", name))
++    {
++      tree cst = TREE_VALUE (args);
++      if (TREE_CODE (cst) != STRING_CST)
++	{
++	  warning (OPT_Wattributes,
++		   "%qE attribute requires a string constant argument",
++		   name);
++	  *no_add_attrs = true;
++	}
++      else if (strcmp (TREE_STRING_POINTER (cst), "skip") != 0
++	       && strcmp (TREE_STRING_POINTER (cst), "used-gpr") != 0
++	       && strcmp (TREE_STRING_POINTER (cst), "all-gpr") != 0
++	       && strcmp (TREE_STRING_POINTER (cst), "used") != 0
++	       && strcmp (TREE_STRING_POINTER (cst), "all") != 0)
++	{
++	  warning (OPT_Wattributes,
++		   "argument to %qE attribute is not (skip|used-gpr|all-gpr|used|all)",
++		   name);
++	  *no_add_attrs = true;
++	}
++    }
++
+   return NULL_TREE;
+ }
+ 
+@@ -3787,6 +3852,8 @@ const struct attribute_spec ix86_attribute_table[] =
+     ix86_handle_fentry_name, NULL },
+   { "cf_check", 0, 0, true, false, false, false,
+     ix86_handle_fndecl_attribute, NULL },
++  { "zero_caller_saved_regs", 1, 1, true, false, false, false,
++    ix86_handle_fndecl_attribute, NULL },
+ 
+   /* End element.  */
+   { NULL, 0, 0, false, false, false, false, NULL, NULL }
+diff --git a/gcc/config/i386/i386-opts.h b/gcc/config/i386/i386-opts.h
+index b40317b2427..c45677add98 100644
+--- a/gcc/config/i386/i386-opts.h
++++ b/gcc/config/i386/i386-opts.h
+@@ -125,4 +125,13 @@ enum instrument_return {
+   instrument_return_nop5
+ };
+ 
++enum zero_caller_saved_regs {
++  zero_caller_saved_regs_unset = 0,
++  zero_caller_saved_regs_skip,
++  zero_caller_saved_regs_used_gpr,
++  zero_caller_saved_regs_all_gpr,
++  zero_caller_saved_regs_used,
++  zero_caller_saved_regs_all
++};
++
+ #endif
+diff --git a/gcc/config/i386/i386-protos.h b/gcc/config/i386/i386-protos.h
+index 39fcaa0ad5f..01732a225f4 100644
+--- a/gcc/config/i386/i386-protos.h
++++ b/gcc/config/i386/i386-protos.h
+@@ -331,7 +331,7 @@ extern const char * ix86_output_call_insn (rtx_insn *insn, rtx call_op);
+ extern const char * ix86_output_indirect_jmp (rtx call_op);
+ extern const char * ix86_output_function_return (bool long_p);
+ extern const char * ix86_output_indirect_function_return (rtx ret_op);
+-extern void ix86_split_simple_return_pop_internal (rtx);
++extern void ix86_split_simple_return_internal (rtx);
+ extern bool ix86_operands_ok_for_move_multiple (rtx *operands, bool load,
+ 						machine_mode mode);
+ extern int ix86_min_insn_size (rtx_insn *);
+diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
+index 59101d8028a..96aaeab06a6 100644
+--- a/gcc/config/i386/i386.c
++++ b/gcc/config/i386/i386.c
+@@ -8510,7 +8510,7 @@ ix86_expand_prologue (void)
+       insn = emit_insn (gen_set_got (pic));
+       RTX_FRAME_RELATED_P (insn) = 1;
+       add_reg_note (insn, REG_CFA_FLUSH_QUEUE, NULL_RTX);
+-      emit_insn (gen_prologue_use (pic));
++      emit_insn (gen_pro_epilogue_use (pic));
+       /* Deleting already emmitted SET_GOT if exist and allocated to
+ 	 REAL_PIC_OFFSET_TABLE_REGNUM.  */
+       ix86_elim_entry_set_got (pic);
+@@ -8539,7 +8539,7 @@ ix86_expand_prologue (void)
+      Further, prevent alloca modifications to the stack pointer from being
+      combined with prologue modifications.  */
+   if (TARGET_SEH)
+-    emit_insn (gen_prologue_use (stack_pointer_rtx));
++    emit_insn (gen_pro_epilogue_use (stack_pointer_rtx));
+ }
+ 
+ /* Emit code to restore REG using a POP insn.  */
+@@ -9263,7 +9263,7 @@ ix86_expand_epilogue (int style)
+ 	  emit_jump_insn (gen_simple_return_indirect_internal (ecx));
+ 	}
+       else
+-	emit_jump_insn (gen_simple_return_pop_internal (popc));
++	ix86_split_simple_return_internal (popc);
+     }
+   else if (!m->call_ms2sysv || !restore_stub_is_tail)
+     {
+@@ -9290,7 +9290,7 @@ ix86_expand_epilogue (int style)
+ 	  emit_jump_insn (gen_simple_return_indirect_internal (ecx));
+ 	}
+       else
+-	emit_jump_insn (gen_simple_return_internal ());
++	ix86_split_simple_return_internal (NULL_RTX);
+     }
+ 
+   /* Restore the state back to the state from the prologue,
+diff --git a/gcc/config/i386/i386.h b/gcc/config/i386/i386.h
+index b8dddfc1594..6c4fb369be0 100644
+--- a/gcc/config/i386/i386.h
++++ b/gcc/config/i386/i386.h
+@@ -2816,6 +2816,10 @@ struct GTY(()) machine_function {
+      the "interrupt" or "no_caller_saved_registers" attribute.  */
+   BOOL_BITFIELD no_caller_saved_registers : 1;
+ 
++  /* How to clear caller-saved general registers upon function
++     return.  */
++  ENUM_BITFIELD(zero_caller_saved_regs) zero_caller_saved_regs_type : 5;
++
+   /* If true, there is register available for argument passing.  This
+      is used only in ix86_function_ok_for_sibcall by 32-bit to determine
+      if there is scratch register available for indirect sibcall.  In
+@@ -2846,6 +2850,12 @@ struct GTY(()) machine_function {
+   /* True if the function needs a stack frame.  */
+   BOOL_BITFIELD stack_frame_required : 1;
+ 
++  /* Integer registers live at exit.  */
++  unsigned int live_outgoing_int_regs;
++
++  /* Vector registers live at exit.  */
++  unsigned int live_outgoing_vector_regs;
++
+   /* The largest alignment, in bytes, of stack slot actually used.  */
+   unsigned int max_used_stack_alignment;
+ 
+@@ -2948,6 +2958,12 @@ extern void debug_dispatch_window (int);
+   (ix86_indirect_branch_register \
+    || cfun->machine->indirect_branch_type != indirect_branch_keep)
+ 
++#define TARGET_POP_SCRATCH_REGISTER \
++  (TARGET_64BIT \
++   || (cfun->machine->zero_caller_saved_regs_type \
++       == zero_caller_saved_regs_skip) \
++   || cfun->machine->function_return_type == indirect_branch_keep)
++
+ #define IX86_HLE_ACQUIRE (1 << 16)
+ #define IX86_HLE_RELEASE (1 << 17)
+ 
+diff --git a/gcc/config/i386/i386.md b/gcc/config/i386/i386.md
+index b426c21d3dd..7256158ef56 100644
+--- a/gcc/config/i386/i386.md
++++ b/gcc/config/i386/i386.md
+@@ -184,6 +184,8 @@
+   UNSPEC_PDEP
+   UNSPEC_PEXT
+ 
++  UNSPEC_SIMPLE_RETURN
++
+   ;; IRET support
+   UNSPEC_INTERRUPT_RETURN
+ ])
+@@ -194,7 +196,7 @@
+   UNSPECV_STACK_PROBE
+   UNSPECV_PROBE_STACK_RANGE
+   UNSPECV_ALIGN
+-  UNSPECV_PROLOGUE_USE
++  UNSPECV_PRO_EPILOGUE_USE
+   UNSPECV_SPLIT_STACK_RETURN
+   UNSPECV_CLD
+   UNSPECV_NOPS
+@@ -13286,8 +13288,8 @@
+ 
+ ;; As USE insns aren't meaningful after reload, this is used instead
+ ;; to prevent deleting instructions setting registers for PIC code
+-(define_insn "prologue_use"
+-  [(unspec_volatile [(match_operand 0)] UNSPECV_PROLOGUE_USE)]
++(define_insn "pro_epilogue_use"
++  [(unspec_volatile [(match_operand 0)] UNSPECV_PRO_EPILOGUE_USE)]
+   ""
+   ""
+   [(set_attr "length" "0")])
+@@ -13328,10 +13330,23 @@
+     }
+ })
+ 
+-(define_insn "simple_return_internal"
++(define_insn_and_split "simple_return_internal"
+   [(simple_return)]
+   "reload_completed"
+   "* return ix86_output_function_return (false);"
++  "&& epilogue_completed"
++  [(const_int 0)]
++  "ix86_split_simple_return_internal (NULL_RTX); DONE;"
++  [(set_attr "length" "1")
++   (set_attr "atom_unit" "jeu")
++   (set_attr "length_immediate" "0")
++   (set_attr "modrm" "0")])
++
++(define_insn "simple_return_internal_1"
++  [(simple_return)
++   (unspec [(const_int 0)] UNSPEC_SIMPLE_RETURN)]
++  "reload_completed"
++  "* return ix86_output_function_return (false);"
+   [(set_attr "length" "1")
+    (set_attr "atom_unit" "jeu")
+    (set_attr "length_immediate" "0")
+@@ -13364,9 +13379,21 @@
+    (use (match_operand:SI 0 "const_int_operand"))]
+   "reload_completed"
+   "%!ret\t%0"
+-  "&& cfun->machine->function_return_type != indirect_branch_keep"
++  "&& (epilogue_completed
++       || cfun->machine->function_return_type != indirect_branch_keep)"
+   [(const_int 0)]
+-  "ix86_split_simple_return_pop_internal (operands[0]); DONE;"
++  "ix86_split_simple_return_internal (operands[0]); DONE;"
++  [(set_attr "length" "3")
++   (set_attr "atom_unit" "jeu")
++   (set_attr "length_immediate" "2")
++   (set_attr "modrm" "0")])
++
++(define_insn "simple_return_pop_internal_1"
++  [(simple_return)
++   (use (match_operand:SI 0 "const_int_operand"))
++   (unspec [(const_int 0)] UNSPEC_SIMPLE_RETURN)]
++  "reload_completed"
++  "%!ret\t%0"
+   [(set_attr "length" "3")
+    (set_attr "atom_unit" "jeu")
+    (set_attr "length_immediate" "2")
+@@ -19760,6 +19787,11 @@
+    (set (mem:W (pre_dec:P (reg:P SP_REG))) (match_dup 1))])
+ 
+ ;; Convert epilogue deallocator to pop.
++;; Don't do it when
++;; -mfunction-return= -mzero-caller-saved-regs=
++;; is used in 32-bit snce return with stack pop needs to increment
++;; stack register and scratch registers must be zeroed.  Pop scratch
++;; register will load value from stack.
+ (define_peephole2
+   [(match_scratch:W 1 "r")
+    (parallel [(set (reg:P SP_REG)
+@@ -19768,6 +19800,7 @@
+ 	      (clobber (reg:CC FLAGS_REG))
+ 	      (clobber (mem:BLK (scratch)))])]
+   "(TARGET_SINGLE_POP || optimize_insn_for_size_p ())
++   && TARGET_POP_SCRATCH_REGISTER
+    && INTVAL (operands[0]) == GET_MODE_SIZE (word_mode)"
+   [(parallel [(set (match_dup 1) (mem:W (post_inc:P (reg:P SP_REG))))
+ 	      (clobber (mem:BLK (scratch)))])])
+@@ -19783,6 +19816,7 @@
+ 	      (clobber (reg:CC FLAGS_REG))
+ 	      (clobber (mem:BLK (scratch)))])]
+   "(TARGET_DOUBLE_POP || optimize_insn_for_size_p ())
++   && TARGET_POP_SCRATCH_REGISTER
+    && INTVAL (operands[0]) == 2*GET_MODE_SIZE (word_mode)"
+   [(parallel [(set (match_dup 1) (mem:W (post_inc:P (reg:P SP_REG))))
+ 	      (clobber (mem:BLK (scratch)))])
+@@ -19796,6 +19830,7 @@
+ 	      (clobber (reg:CC FLAGS_REG))
+ 	      (clobber (mem:BLK (scratch)))])]
+   "optimize_insn_for_size_p ()
++   && TARGET_POP_SCRATCH_REGISTER
+    && INTVAL (operands[0]) == 2*GET_MODE_SIZE (word_mode)"
+   [(parallel [(set (match_dup 1) (mem:W (post_inc:P (reg:P SP_REG))))
+ 	      (clobber (mem:BLK (scratch)))])
+@@ -19808,7 +19843,8 @@
+ 		   (plus:P (reg:P SP_REG)
+ 			   (match_operand:P 0 "const_int_operand")))
+ 	      (clobber (reg:CC FLAGS_REG))])]
+-  "INTVAL (operands[0]) == GET_MODE_SIZE (word_mode)"
++  "TARGET_POP_SCRATCH_REGISTER
++   && INTVAL (operands[0]) == GET_MODE_SIZE (word_mode)"
+   [(set (match_dup 1) (mem:W (post_inc:P (reg:P SP_REG))))])
+ 
+ ;; Two pops case is tricky, since pop causes dependency
+@@ -19820,7 +19856,8 @@
+ 		   (plus:P (reg:P SP_REG)
+ 			   (match_operand:P 0 "const_int_operand")))
+ 	      (clobber (reg:CC FLAGS_REG))])]
+-  "INTVAL (operands[0]) == 2*GET_MODE_SIZE (word_mode)"
++  "TARGET_POP_SCRATCH_REGISTER
++   && INTVAL (operands[0]) == 2*GET_MODE_SIZE (word_mode)"
+   [(set (match_dup 1) (mem:W (post_inc:P (reg:P SP_REG))))
+    (set (match_dup 2) (mem:W (post_inc:P (reg:P SP_REG))))])
+ 
+@@ -19831,6 +19868,7 @@
+ 			   (match_operand:P 0 "const_int_operand")))
+ 	      (clobber (reg:CC FLAGS_REG))])]
+   "optimize_insn_for_size_p ()
++   && TARGET_POP_SCRATCH_REGISTER
+    && INTVAL (operands[0]) == 2*GET_MODE_SIZE (word_mode)"
+   [(set (match_dup 1) (mem:W (post_inc:P (reg:P SP_REG))))
+    (set (match_dup 1) (mem:W (post_inc:P (reg:P SP_REG))))])
+diff --git a/gcc/config/i386/i386.opt b/gcc/config/i386/i386.opt
+index 185a1d0686b..10ddacbc23b 100644
+--- a/gcc/config/i386/i386.opt
++++ b/gcc/config/i386/i386.opt
+@@ -1107,3 +1107,26 @@ AVX512BF16 built-in functions and code generation.
+ menqcmd
+ Target Report Mask(ISA2_ENQCMD) Var(ix86_isa_flags2) Save
+ Support ENQCMD built-in functions and code generation.
++
++mzero-caller-saved-regs=
++Target Report RejectNegative Joined Enum(zero_caller_saved_regs) Var(ix86_zero_caller_saved_regs) Init(zero_caller_saved_regs_skip)
++Clear caller-saved registers upon function return.
++
++Enum
++Name(zero_caller_saved_regs) Type(enum zero_caller_saved_regs)
++Known choices of clearing caller-saved registers upon function return (for use with the -mzero-caller-saved-regs= option):
++
++EnumValue
++Enum(zero_caller_saved_regs) String(skip) Value(zero_caller_saved_regs_skip)
++
++EnumValue
++Enum(zero_caller_saved_regs) String(used-gpr) Value(zero_caller_saved_regs_used_gpr)
++
++EnumValue
++Enum(zero_caller_saved_regs) String(all-gpr) Value(zero_caller_saved_regs_all_gpr)
++
++EnumValue
++Enum(zero_caller_saved_regs) String(used) Value(zero_caller_saved_regs_used)
++
++EnumValue
++Enum(zero_caller_saved_regs) String(all) Value(zero_caller_saved_regs_all)
+diff --git a/gcc/doc/extend.texi b/gcc/doc/extend.texi
+index 936c22e2fe7..8037dcb305f 100644
+--- a/gcc/doc/extend.texi
++++ b/gcc/doc/extend.texi
+@@ -6740,6 +6740,18 @@ On x86 targets, the @code{fentry_section} attribute sets the name
+ of the section to record function entry instrumentation calls in when
+ enabled with @option{-pg -mrecord-mcount}
+ 
++@item zero_caller_saved_regs("@var{choice}")
++@cindex @code{zero_caller_saved_regs} function attribute, x86
++On x86 targets, the @code{zero_caller_saved_regs} attribute causes the
++compiler to zero caller-saved integer registers at function return
++according to @var{choice}.  @samp{skip} doesn't zero caller-saved
++registers.  @samp{used-gpr} zeros caller-saved integer registers which
++are used in function.  @samp{all-gpr} zeros all caller-saved integer and
++vector registers.  @samp{used} zeros caller-saved integer and vector
++registers which are used in function.  @samp{all} zeros all caller-saved
++integer and vector registers.  The default for the attribute is
++controlled by @option{-mzero-caller-saved-regs}.
++
+ @end table
+ 
+ On the x86, the inliner does not inline a
+diff --git a/gcc/doc/invoke.texi b/gcc/doc/invoke.texi
+index 527d362533a..277ec12725f 100644
+--- a/gcc/doc/invoke.texi
++++ b/gcc/doc/invoke.texi
+@@ -1365,7 +1365,7 @@ See RS/6000 and PowerPC Options.
+ -mstack-protector-guard-symbol=@var{symbol} @gol
+ -mgeneral-regs-only  -mcall-ms2sysv-xlogues @gol
+ -mindirect-branch=@var{choice}  -mfunction-return=@var{choice} @gol
+--mindirect-branch-register}
++-mindirect-branch-register -mzero-caller-saved-regs=@var{choice}}
+ 
+ @emph{x86 Windows Options}
+ @gccoptlist{-mconsole  -mcygwin  -mno-cygwin  -mdll @gol
+@@ -30127,6 +30127,18 @@ not be reachable in the large code model.
+ @opindex mindirect-branch-register
+ Force indirect call and jump via register.
+ 
++@item -mzero-caller-saved-regs=@var{choice}
++@opindex mzero-caller-saved-regs
++Zero caller-saved registers at function return according to
++@var{choice}.  @samp{skip}, which is the default, doesn't zero
++caller-saved registers.  @samp{used-gpr} zeros caller-saved integer
++registers which are used in function.  @samp{all-gpr} zeros all
++caller-saved integer and vector registers.  @samp{used} zeros
++caller-saved integer and vector registers which are used in function.
++@samp{all} zeros all caller-saved integer and vector registers.  You
++can control this behavior for a specific function by using the function
++attribute @code{zero_caller_saved_regs}.  @xref{Function Attributes}.
++
+ @end table
+ 
+ These @samp{-m} switches are supported in addition to the above
+diff --git a/gcc/testsuite/gcc.target/i386/zero-scratch-regs-1.c b/gcc/testsuite/gcc.target/i386/zero-scratch-regs-1.c
+new file mode 100644
+index 00000000000..4c9e6d68dab
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/zero-scratch-regs-1.c
+@@ -0,0 +1,12 @@
++/* { dg-do compile { target *-*-linux* } } */
++/* { dg-options "-O2 -mzero-caller-saved-regs=used" } */
++
++void
++foo (void)
++{
++}
++
++/* { dg-final { scan-assembler-not "vzeroall" } } */
++/* { dg-final { scan-assembler-not "%xmm" } } */
++/* { dg-final { scan-assembler-not "xorl\[ \t\]*%" } } */
++/* { dg-final { scan-assembler-not "movl\[ \t\]*%" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/zero-scratch-regs-10.c b/gcc/testsuite/gcc.target/i386/zero-scratch-regs-10.c
+new file mode 100644
+index 00000000000..ea614ecba53
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/zero-scratch-regs-10.c
+@@ -0,0 +1,21 @@
++/* { dg-do compile { target *-*-linux* } } */
++/* { dg-options "-O2 -mzero-caller-saved-regs=skip" } */
++
++extern int foo (int) __attribute__ ((zero_caller_saved_regs("all-gpr")));
++
++int
++foo (int x)
++{
++  return x;
++}
++
++/* { dg-final { scan-assembler-not "vzeroall" } } */
++/* { dg-final { scan-assembler-not "%xmm" } } */
++/* { dg-final { scan-assembler "xorl\[ \t\]*%edx, %edx" } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%edx, %ecx" } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%edx, %esi" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%edx, %edi" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%edx, %r8d" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%edx, %r9d" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%edx, %r10d" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%edx, %r11d" { target { ! ia32 } } } } */
+diff --git a/gcc/testsuite/gcc.target/i386/zero-scratch-regs-11.c b/gcc/testsuite/gcc.target/i386/zero-scratch-regs-11.c
+new file mode 100644
+index 00000000000..f19ed7c9a68
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/zero-scratch-regs-11.c
+@@ -0,0 +1,39 @@
++/* { dg-do run { target *-*-linux* } } */
++/* { dg-options "-O2 -mzero-caller-saved-regs=used-gpr" } */
++
++struct S { int i; };
++__attribute__((const, noinline, noclone))
++struct S foo (int x)
++{
++  struct S s;
++  s.i = x;
++  return s;
++}
++
++int a[2048], b[2048], c[2048], d[2048];
++struct S e[2048];
++
++__attribute__((noinline, noclone)) void
++bar (void)
++{
++  int i;
++  for (i = 0; i < 1024; i++)
++    {
++      e[i] = foo (i);
++      a[i+2] = a[i] + a[i+1];
++      b[10] = b[10] + i;
++      c[i] = c[2047 - i];
++      d[i] = d[i + 1];
++    }
++}
++
++int
++main ()
++{
++  int i;
++  bar ();
++  for (i = 0; i < 1024; i++)
++    if (e[i].i != i)
++      __builtin_abort ();
++  return 0;
++}
+diff --git a/gcc/testsuite/gcc.target/i386/zero-scratch-regs-12.c b/gcc/testsuite/gcc.target/i386/zero-scratch-regs-12.c
+new file mode 100644
+index 00000000000..f0283d9e750
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/zero-scratch-regs-12.c
+@@ -0,0 +1,39 @@
++/* { dg-do run { target *-*-linux* } } */
++/* { dg-options "-O2 -mzero-caller-saved-regs=all-gpr" } */
++
++struct S { int i; };
++__attribute__((const, noinline, noclone))
++struct S foo (int x)
++{
++  struct S s;
++  s.i = x;
++  return s;
++}
++
++int a[2048], b[2048], c[2048], d[2048];
++struct S e[2048];
++
++__attribute__((noinline, noclone)) void
++bar (void)
++{
++  int i;
++  for (i = 0; i < 1024; i++)
++    {
++      e[i] = foo (i);
++      a[i+2] = a[i] + a[i+1];
++      b[10] = b[10] + i;
++      c[i] = c[2047 - i];
++      d[i] = d[i + 1];
++    }
++}
++
++int
++main ()
++{
++  int i;
++  bar ();
++  for (i = 0; i < 1024; i++)
++    if (e[i].i != i)
++      __builtin_abort ();
++  return 0;
++}
+diff --git a/gcc/testsuite/gcc.target/i386/zero-scratch-regs-13.c b/gcc/testsuite/gcc.target/i386/zero-scratch-regs-13.c
+new file mode 100644
+index 00000000000..044da02e244
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/zero-scratch-regs-13.c
+@@ -0,0 +1,21 @@
++/* { dg-do compile { target *-*-linux* } } */
++/* { dg-options "-O2 -mzero-caller-saved-regs=all -march=corei7" } */
++
++void
++foo (void)
++{
++}
++
++/* { dg-final { scan-assembler-not "vzeroall" } } */
++/* { dg-final { scan-assembler "pxor\[ \t\]*%xmm0, %xmm0" } } */
++/* { dg-final { scan-assembler-times "movaps\[ \t\]*%xmm0, %xmm\[0-9\]+" 7 { target { ia32 } } } } */
++/* { dg-final { scan-assembler-times "movaps\[ \t\]*%xmm0, %xmm\[0-9\]+" 15 { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "xorl\[ \t\]*%eax, %eax" } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %edx" } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %ecx" } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %esi" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %edi" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %r8d" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %r9d" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %r10d" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %r11d" { target { ! ia32 } } } } */
+diff --git a/gcc/testsuite/gcc.target/i386/zero-scratch-regs-14.c b/gcc/testsuite/gcc.target/i386/zero-scratch-regs-14.c
+new file mode 100644
+index 00000000000..31487d51f53
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/zero-scratch-regs-14.c
+@@ -0,0 +1,19 @@
++/* { dg-do compile { target *-*-linux* } } */
++/* { dg-options "-O2 -mzero-caller-saved-regs=all -march=corei7 -mavx" } */
++
++void
++foo (void)
++{
++}
++
++/* { dg-final { scan-assembler-times "vzeroall" 1 } } */
++/* { dg-final { scan-assembler-not "%xmm" } } */
++/* { dg-final { scan-assembler "xorl\[ \t\]*%eax, %eax" } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %edx" } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %ecx" } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %esi" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %edi" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %r8d" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %r9d" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %r10d" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %r11d" { target { ! ia32 } } } } */
+diff --git a/gcc/testsuite/gcc.target/i386/zero-scratch-regs-15.c b/gcc/testsuite/gcc.target/i386/zero-scratch-regs-15.c
+new file mode 100644
+index 00000000000..dc561b0c71d
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/zero-scratch-regs-15.c
+@@ -0,0 +1,14 @@
++/* { dg-do compile { target *-*-linux* } } */
++/* { dg-options "-O2 -mzero-caller-saved-regs=skip" } */
++
++extern void foo (void) __attribute__ ((zero_caller_saved_regs("used")));
++
++void
++foo (void)
++{
++}
++
++/* { dg-final { scan-assembler-not "vzeroall" } } */
++/* { dg-final { scan-assembler-not "%xmm" } } */
++/* { dg-final { scan-assembler-not "xorl\[ \t\]*%" } } */
++/* { dg-final { scan-assembler-not "movl\[ \t\]*%" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/zero-scratch-regs-16.c b/gcc/testsuite/gcc.target/i386/zero-scratch-regs-16.c
+new file mode 100644
+index 00000000000..24824b0355e
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/zero-scratch-regs-16.c
+@@ -0,0 +1,14 @@
++/* { dg-do compile { target *-*-linux* } } */
++/* { dg-options "-O2 -mzero-caller-saved-regs=all" } */
++
++extern void foo (void) __attribute__ ((zero_caller_saved_regs("skip")));
++
++void
++foo (void)
++{
++}
++
++/* { dg-final { scan-assembler-not "vzeroall" } } */
++/* { dg-final { scan-assembler-not "%xmm" } } */
++/* { dg-final { scan-assembler-not "xorl\[ \t\]*%" } } */
++/* { dg-final { scan-assembler-not "movl\[ \t\]*%" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/zero-scratch-regs-17.c b/gcc/testsuite/gcc.target/i386/zero-scratch-regs-17.c
+new file mode 100644
+index 00000000000..9ba4f547401
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/zero-scratch-regs-17.c
+@@ -0,0 +1,13 @@
++/* { dg-do compile { target *-*-linux* } } */
++/* { dg-options "-O2 -mzero-caller-saved-regs=used" } */
++
++int
++foo (int x)
++{
++  return x;
++}
++
++/* { dg-final { scan-assembler-not "vzeroall" } } */
++/* { dg-final { scan-assembler-not "%xmm" } } */
++/* { dg-final { scan-assembler-not "xorl\[ \t\]*%" { target ia32 } } } */
++/* { dg-final { scan-assembler "xorl\[ \t\]*%edi, %edi" { target { ! ia32 } } } } */
+diff --git a/gcc/testsuite/gcc.target/i386/zero-scratch-regs-18.c b/gcc/testsuite/gcc.target/i386/zero-scratch-regs-18.c
+new file mode 100644
+index 00000000000..529adc26ad1
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/zero-scratch-regs-18.c
+@@ -0,0 +1,13 @@
++/* { dg-do compile { target *-*-linux* } } */
++/* { dg-options "-O2 -mzero-caller-saved-regs=used -march=corei7" } */
++
++float
++foo (float z, float y, float x)
++{
++  return x + y;
++}
++
++/* { dg-final { scan-assembler-not "vzeroall" } } */
++/* { dg-final { scan-assembler "pxor\[ \t\]*%xmm1, %xmm1" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movaps\[ \t\]*%xmm1, %xmm2" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler-not "xorl\[ \t\]*%" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/zero-scratch-regs-19.c b/gcc/testsuite/gcc.target/i386/zero-scratch-regs-19.c
+new file mode 100644
+index 00000000000..ac6201e27c9
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/zero-scratch-regs-19.c
+@@ -0,0 +1,12 @@
++/* { dg-do compile { target *-*-linux* } } */
++/* { dg-options "-O2 -mzero-caller-saved-regs=used -march=corei7" } */
++
++float
++foo (float z, float y, float x)
++{
++  return x;
++}
++
++/* { dg-final { scan-assembler-not "vzeroall" } } */
++/* { dg-final { scan-assembler "pxor\[ \t\]*%xmm2, %xmm2" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler-not "xorl\[ \t\]*%" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/zero-scratch-regs-2.c b/gcc/testsuite/gcc.target/i386/zero-scratch-regs-2.c
+new file mode 100644
+index 00000000000..6b9e25abf13
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/zero-scratch-regs-2.c
+@@ -0,0 +1,19 @@
++/* { dg-do compile { target *-*-linux* } } */
++/* { dg-options "-O2 -mzero-caller-saved-regs=all-gpr" } */
++
++void
++foo (void)
++{
++}
++
++/* { dg-final { scan-assembler-not "vzeroall" } } */
++/* { dg-final { scan-assembler-not "%xmm" } } */
++/* { dg-final { scan-assembler "xorl\[ \t\]*%eax, %eax" } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %edx" } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %ecx" } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %esi" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %edi" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %r8d" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %r9d" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %r10d" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %r11d" { target { ! ia32 } } } } */
+diff --git a/gcc/testsuite/gcc.target/i386/zero-scratch-regs-20.c b/gcc/testsuite/gcc.target/i386/zero-scratch-regs-20.c
+new file mode 100644
+index 00000000000..e8e9c781ed1
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/zero-scratch-regs-20.c
+@@ -0,0 +1,23 @@
++/* { dg-do compile { target *-*-linux* } } */
++/* { dg-options "-O2 -mzero-caller-saved-regs=all -march=corei7" } */
++
++float
++foo (float z, float y, float x)
++{
++  return x + y;
++}
++
++/* { dg-final { scan-assembler-not "vzeroall" } } */
++/* { dg-final { scan-assembler "pxor\[ \t\]*%xmm0, %xmm0" { target { ia32 } } } } */
++/* { dg-final { scan-assembler "pxor\[ \t\]*%xmm1, %xmm1" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler-times "movaps\[ \t\]*%xmm0, %xmm\[0-9\]+" 7 { target { ia32 } } } } */
++/* { dg-final { scan-assembler-times "movaps\[ \t\]*%xmm1, %xmm\[0-9\]+" 14 { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "xorl\[ \t\]*%eax, %eax" } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %edx" } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %ecx" } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %esi" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %edi" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %r8d" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %r9d" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %r10d" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %r11d" { target { ! ia32 } } } } */
+diff --git a/gcc/testsuite/gcc.target/i386/zero-scratch-regs-21.c b/gcc/testsuite/gcc.target/i386/zero-scratch-regs-21.c
+new file mode 100644
+index 00000000000..3052eb05503
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/zero-scratch-regs-21.c
+@@ -0,0 +1,14 @@
++/* { dg-do compile { target *-*-linux* } } */
++/* { dg-options "-O2 -mzero-caller-saved-regs=skip -march=corei7" } */
++
++__attribute__ ((zero_caller_saved_regs("used")))
++float
++foo (float z, float y, float x)
++{
++  return x + y;
++}
++
++/* { dg-final { scan-assembler-not "vzeroall" } } */
++/* { dg-final { scan-assembler "pxor\[ \t\]*%xmm1, %xmm1" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movaps\[ \t\]*%xmm1, %xmm2" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler-not "xorl\[ \t\]*%" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/zero-scratch-regs-22.c b/gcc/testsuite/gcc.target/i386/zero-scratch-regs-22.c
+new file mode 100644
+index 00000000000..71369f56159
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/zero-scratch-regs-22.c
+@@ -0,0 +1,19 @@
++/* { dg-do compile { target *-*-linux* } } */
++/* { dg-options "-O2 -mzero-caller-saved-regs=all -march=corei7 -mavx" } */
++
++void
++foo (void)
++{
++}
++
++/* { dg-final { scan-assembler "vzeroall" } } */
++/* { dg-final { scan-assembler-not "%xmm" } } */
++/* { dg-final { scan-assembler "xorl\[ \t\]*%eax, %eax" } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %edx" } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %ecx" } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %esi" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %edi" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %r8d" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %r9d" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %r10d" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %r11d" { target { ! ia32 } } } } */
+diff --git a/gcc/testsuite/gcc.target/i386/zero-scratch-regs-23.c b/gcc/testsuite/gcc.target/i386/zero-scratch-regs-23.c
+new file mode 100644
+index 00000000000..9a31af9516a
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/zero-scratch-regs-23.c
+@@ -0,0 +1,19 @@
++/* { dg-do compile { target *-*-linux* } } */
++/* { dg-options "-O2 -mzero-caller-saved-regs=all -march=corei7 -mavx512f" } */
++
++void
++foo (void)
++{
++}
++
++/* { dg-final { scan-assembler "vzeroall" } } */
++/* { dg-final { scan-assembler-not "%xmm" } } */
++/* { dg-final { scan-assembler "xorl\[ \t\]*%eax, %eax" } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %edx" } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %ecx" } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %esi" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %edi" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %r8d" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %r9d" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %r10d" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %r11d" { target { ! ia32 } } } } */
+diff --git a/gcc/testsuite/gcc.target/i386/zero-scratch-regs-3.c b/gcc/testsuite/gcc.target/i386/zero-scratch-regs-3.c
+new file mode 100644
+index 00000000000..a6f8eb7233a
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/zero-scratch-regs-3.c
+@@ -0,0 +1,12 @@
++/* { dg-do compile { target *-*-linux* } } */
++/* { dg-options "-O2 -mzero-caller-saved-regs=skip" } */
++
++void
++foo (void)
++{
++}
++
++/* { dg-final { scan-assembler-not "vzeroall" } } */
++/* { dg-final { scan-assembler-not "%xmm" } } */
++/* { dg-final { scan-assembler-not "xorl\[ \t\]*%" } } */
++/* { dg-final { scan-assembler-not "movl\[ \t\]*%" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/zero-scratch-regs-4.c b/gcc/testsuite/gcc.target/i386/zero-scratch-regs-4.c
+new file mode 100644
+index 00000000000..bada4c73719
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/zero-scratch-regs-4.c
+@@ -0,0 +1,14 @@
++/* { dg-do compile { target *-*-linux* } } */
++/* { dg-options "-O2 -mzero-caller-saved-regs=skip" } */
++
++extern void foo (void) __attribute__ ((zero_caller_saved_regs("used-gpr")));
++
++void
++foo (void)
++{
++}
++
++/* { dg-final { scan-assembler-not "vzeroall" } } */
++/* { dg-final { scan-assembler-not "%xmm" } } */
++/* { dg-final { scan-assembler-not "xorl\[ \t\]*%" } } */
++/* { dg-final { scan-assembler-not "movl\[ \t\]*%" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/zero-scratch-regs-5.c b/gcc/testsuite/gcc.target/i386/zero-scratch-regs-5.c
+new file mode 100644
+index 00000000000..b93719a11df
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/zero-scratch-regs-5.c
+@@ -0,0 +1,20 @@
++/* { dg-do compile { target *-*-linux* } } */
++/* { dg-options "-O2 -mzero-caller-saved-regs=skip" } */
++
++__attribute__ ((zero_caller_saved_regs("all-gpr")))
++void
++foo (void)
++{
++}
++
++/* { dg-final { scan-assembler-not "vzeroall" } } */
++/* { dg-final { scan-assembler-not "%xmm" } } */
++/* { dg-final { scan-assembler "xorl\[ \t\]*%eax, %eax" } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %edx" } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %ecx" } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %esi" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %edi" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %r8d" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %r9d" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %r10d" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%eax, %r11d" { target { ! ia32 } } } } */
+diff --git a/gcc/testsuite/gcc.target/i386/zero-scratch-regs-6.c b/gcc/testsuite/gcc.target/i386/zero-scratch-regs-6.c
+new file mode 100644
+index 00000000000..bef1d36eca5
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/zero-scratch-regs-6.c
+@@ -0,0 +1,14 @@
++/* { dg-do compile { target *-*-linux* } } */
++/* { dg-options "-O2 -mzero-caller-saved-regs=all-gpr" } */
++
++extern void foo (void) __attribute__ ((zero_caller_saved_regs("skip")));
++
++void
++foo (void)
++{
++}
++
++/* { dg-final { scan-assembler-not "vzeroall" } } */
++/* { dg-final { scan-assembler-not "%xmm" } } */
++/* { dg-final { scan-assembler-not "xorl\[ \t\]*%" } } */
++/* { dg-final { scan-assembler-not "movl\[ \t\]*%" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/zero-scratch-regs-7.c b/gcc/testsuite/gcc.target/i386/zero-scratch-regs-7.c
+new file mode 100644
+index 00000000000..73a766c1be9
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/zero-scratch-regs-7.c
+@@ -0,0 +1,13 @@
++/* { dg-do compile { target *-*-linux* } } */
++/* { dg-options "-O2 -mzero-caller-saved-regs=used-gpr" } */
++
++int
++foo (int x)
++{
++  return x;
++}
++
++/* { dg-final { scan-assembler-not "vzeroall" } } */
++/* { dg-final { scan-assembler-not "%xmm" } } */
++/* { dg-final { scan-assembler-not "xorl\[ \t\]*%" { target ia32 } } } */
++/* { dg-final { scan-assembler "xorl\[ \t\]*%edi, %edi" { target { ! ia32 } } } } */
+diff --git a/gcc/testsuite/gcc.target/i386/zero-scratch-regs-8.c b/gcc/testsuite/gcc.target/i386/zero-scratch-regs-8.c
+new file mode 100644
+index 00000000000..cd982ce27db
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/zero-scratch-regs-8.c
+@@ -0,0 +1,19 @@
++/* { dg-do compile { target *-*-linux* } } */
++/* { dg-options "-O2 -mzero-caller-saved-regs=all-gpr" } */
++
++int
++foo (int x)
++{
++  return x;
++}
++
++/* { dg-final { scan-assembler-not "vzeroall" } } */
++/* { dg-final { scan-assembler-not "%xmm" } } */
++/* { dg-final { scan-assembler "xorl\[ \t\]*%edx, %edx" } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%edx, %ecx" } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%edx, %esi" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%edx, %edi" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%edx, %r8d" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%edx, %r9d" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%edx, %r10d" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*%edx, %r11d" { target { ! ia32 } } } } */
+diff --git a/gcc/testsuite/gcc.target/i386/zero-scratch-regs-9.c b/gcc/testsuite/gcc.target/i386/zero-scratch-regs-9.c
+new file mode 100644
+index 00000000000..23dbed50ab9
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/zero-scratch-regs-9.c
+@@ -0,0 +1,15 @@
++/* { dg-do compile { target *-*-linux* } } */
++/* { dg-options "-O2 -mzero-caller-saved-regs=skip" } */
++
++extern int foo (int) __attribute__ ((zero_caller_saved_regs("used-gpr")));
++
++int
++foo (int x)
++{
++  return x;
++}
++
++/* { dg-final { scan-assembler-not "vzeroall" } } */
++/* { dg-final { scan-assembler-not "%xmm" } } */
++/* { dg-final { scan-assembler-not "xorl\[ \t\]*%" { target ia32 } } } */
++/* { dg-final { scan-assembler "xorl\[ \t\]*%edi, %edi" { target { ! ia32 } } } } */
+-- 
+2.26.2
+
