@@ -3,8 +3,8 @@
 %define libstdcxx_maj 6
 %define libstdcxx_full 6.0.26
 %define isl_version 0.16.1
-%define gccver 9
-%define gccpath gcc-9.3.0
+%define gccver 10
+%define gccpath gcc-10.1.0
 # Highest optimisation ABI we target
 %define mtune haswell
 
@@ -13,10 +13,10 @@
 %define march westmere
 
 Name     : gcc
-Version  : 9.3.1
-Release  : 853
+Version  : 10.1.0
+Release  : 855
 URL      : http://www.gnu.org/software/gcc/
-Source0  : https://gcc.gnu.org/pub/gcc/releases/gcc-9.3.0/gcc-9.3.0.tar.xz
+Source0  : https://gcc.gnu.org/pub/gcc/releases/gcc-10.1.0/gcc-10.1.0.tar.xz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.16.1.tar.bz2
 Source2  : DATESTAMP
 Source3  : REVISION
@@ -42,7 +42,7 @@ Patch17  : icelake.patch
 Patch18  : libiberty-sync.patch
 
 # zero registers on ret to make ROP harder
-Patch21  : zero-regs-gcc8.patch
+Patch21  : 0001-x86-Add-mzero-caller.patch
 
 # cves: 1xx
 
@@ -226,7 +226,7 @@ GNU cc and gcc C compilers.
 %patch15 -p1
 %patch16 -p1
 %patch17 -p1
-%patch18 -p1
+# %patch18 -p1
 
 #%patch20 -p1
 
@@ -708,7 +708,7 @@ cat *.lang > gcc.lang
 %exclude /usr/lib64/haswell/libgcc_s.so.1
 
 #avx512
-%exclude /usr/lib64/haswell/avx512_1/libgcc_s.so.1
+# %exclude /usr/lib64/haswell/avx512_1/libgcc_s.so.1
 
 %files libs-math
 /usr/lib64/libssp.so*
@@ -737,8 +737,8 @@ cat *.lang > gcc.lang
 /usr/lib64/haswell/avx512_1/libgfortran.so.5.0.0
 
 %files libgcc32
-/usr/lib32/libasan.so.5
-/usr/lib32/libasan.so.5.0.0
+/usr/lib32/libasan.so.6
+/usr/lib32/libasan.so.6.0.0
 /usr/lib32/libasan_preinit.o
 /usr/lib32/libatomic.so.1
 /usr/lib32/libatomic.so.1.2.0
