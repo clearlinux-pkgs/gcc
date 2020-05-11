@@ -1,5 +1,11 @@
-GCC Administrator (1):
+GCC Administrator (4):
       Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+
+Iain Sandoe (1):
+      coroutines: Update TREE_SIDE_EFFECTS on inserted bind exprs.
 
 Jakub Jelinek (11):
       Bump BASE-VER.
@@ -17,11 +23,19 @@ Jakub Jelinek (11):
 Jonathan Wakely (1):
       libstdc++: Replace deduced return type in ranges::iter_move (PR 92894)
 
-Marek Polacek (1):
+Marek Polacek (2):
       c++: ICE in value_dependent_expression_p in C++98 mode [PR94938]
+      c++: Parenthesized-init of aggregates accepts invalid code [PR94885]
 
-Martin Liska (1):
+Mark Eggleston (1):
+      Fortran : Spurious warning message with -Wsurprising PR59107
+
+Martin Liska (2):
       Fix optindex entries for 2 options.
+      Fix typo in fprofile-prefix-path.
+
+Sebastian Huber (1):
+      RTEMS: Improve GCC specification
 
 Uros Bizjak (1):
       alpha: Implement the PR94780 fix for alpha.
@@ -34,10 +48,35 @@ index 4149c39eec6..23127993ac0 100644
 -10.1.0
 +10.1.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index caef1920f92..676a707b4a5 100644
+index caef1920f92..d89e3c66c77 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,51 @@
+@@ -1,3 +1,76 @@
++2020-05-11  Sebastian Huber  <sebastian.huber@embedded-brains.de>
++
++	Backport from mainline
++	2020-05-05  Sebastian Huber  <sebastian.huber@embedded-brains.de>
++
++	* config/rtems.h (RTEMS_STARTFILE_SPEC): Define if undefined.
++	(RTEMS_ENDFILE_SPEC): Likewise.
++	(STARTFILE_SPEC): Update comment.  Add RTEMS_STARTFILE_SPEC.
++	(ENDFILE_SPEC): Add RTEMS_ENDFILE_SPEC.
++	(LIB_SPECS): Support -nodefaultlibs option.
++	* config/or1k/rtems.h (RTEMS_STARTFILE_SPEC): Define.
++	(RTEMS_ENDFILE_SPEC): Likewise.
++	* config/rs6000/rtems.h (RTEMS_STARTFILE_SPEC): Likewise.
++	(RTEMS_ENDFILE_SPEC): Likewise.
++	* config/v850/rtems.h (RTEMS_STARTFILE_SPEC): Likewise.
++	(RTEMS_ENDFILE_SPEC): Likewise.
++
++2020-05-11  Martin Liska  <mliska@suse.cz>
++
++	Backport from mainline
++	2020-05-11  Martin Liska  <mliska@suse.cz>
++
++	PR c/95040
++	* common.opt: Fix typo in option description.
++
 +2020-05-08  Jakub Jelinek  <jakub@redhat.com>
 +
 +	PR middle-end/94724
@@ -197,6 +236,19 @@ index 4c324f38660..f69413a34d0 100644
  		  /* Avoid using a register that may already been marked
  		     dead by an earlier instruction.  */
  		  && ! unmentioned_reg_p (note, SET_SRC (set))
+diff --git a/gcc/common.opt b/gcc/common.opt
+index d33383b523c..65a82410abc 100644
+--- a/gcc/common.opt
++++ b/gcc/common.opt
+@@ -2210,7 +2210,7 @@ Enum(profile_update) String(prefer-atomic) Value(PROFILE_UPDATE_PREFER_ATOMIC)
+ 
+ fprofile-prefix-path=
+ Common Joined RejectNegative Var(profile_prefix_path)
+-Remove prefix from absolute path before manging name for -fprofile-generate= and -fprofile-use=.
++Remove prefix from absolute path before mangling name for -fprofile-generate= and -fprofile-use=.
+ 
+ fprofile-generate
+ Common
 diff --git a/gcc/config/alpha/alpha.c b/gcc/config/alpha/alpha.c
 index 7e5d1cbb0c4..49b5a24d4b0 100644
 --- a/gcc/config/alpha/alpha.c
@@ -240,6 +292,17 @@ index c3f195bb34a..472f90f9bc1 100644
    "(TARGET_MMX || TARGET_MMX_WITH_SSE)
     && (TARGET_SSE || TARGET_3DNOW_A)"
    "@
+diff --git a/gcc/config/or1k/rtems.h b/gcc/config/or1k/rtems.h
+index 94731435f44..d4b8fef3dc7 100644
+--- a/gcc/config/or1k/rtems.h
++++ b/gcc/config/or1k/rtems.h
+@@ -28,3 +28,6 @@
+ 	builtin_assert ("system=rtems");	\
+     }						\
+   while (0)
++
++#define RTEMS_STARTFILE_SPEC "crtbegin%O%s"
++#define RTEMS_ENDFILE_SPEC "crtend%O%s"
 diff --git a/gcc/config/riscv/riscv-builtins.c b/gcc/config/riscv/riscv-builtins.c
 index 201fdb52f20..a45108e0355 100644
 --- a/gcc/config/riscv/riscv-builtins.c
@@ -255,11 +318,102 @@ index 201fdb52f20..a45108e0355 100644
    *clear = build_call_expr (fsflags, 1, old_flags);
    *update = NULL_TREE;
  }
+diff --git a/gcc/config/rs6000/rtems.h b/gcc/config/rs6000/rtems.h
+index 6ce05bfc6d6..40db6606f17 100644
+--- a/gcc/config/rs6000/rtems.h
++++ b/gcc/config/rs6000/rtems.h
+@@ -292,3 +292,6 @@
+   "%{mads|myellowknife|mmvme|msim:%G %L %G;" \
+   "!mcall-*|mcall-linux:" GNU_USER_TARGET_LINK_GCC_C_SEQUENCE_SPEC ";" \
+   ":%G %L %G}"
++
++#define RTEMS_STARTFILE_SPEC "ecrti%O%s rtems_crti%O%s crtbegin%O%s"
++#define RTEMS_ENDFILE_SPEC "crtend%O%s rtems_crtn%O%s ecrtn%O%s"
+diff --git a/gcc/config/rtems.h b/gcc/config/rtems.h
+index 55d568f83b5..30ad6258949 100644
+--- a/gcc/config/rtems.h
++++ b/gcc/config/rtems.h
+@@ -22,15 +22,25 @@
+    see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
+    <http://www.gnu.org/licenses/>.  */
+ 
++#ifndef RTEMS_STARTFILE_SPEC
++#define RTEMS_STARTFILE_SPEC "crti%O%s crtbegin%O%s"
++#endif
++
++#ifndef RTEMS_ENDFILE_SPEC
++#define RTEMS_ENDFILE_SPEC "crtend%O%s crtn%O%s"
++#endif
++
+ /*
+- * Dummy start/end specification to let linker work as
+- * needed by autoconf scripts using this compiler.
++ * The crt0.o is a dummy start file to let the linker work as needed by
++ * autoconf scripts using this compiler.
+  */
+ #undef STARTFILE_SPEC
+-#define STARTFILE_SPEC "crt0.o%s"
++#define STARTFILE_SPEC "%{!qrtems:crt0%O%s} " \
++"%{qrtems:%{!nostdlib:%{!nostartfiles:" RTEMS_STARTFILE_SPEC "}}}"
+ 
+ #undef ENDFILE_SPEC
+-#define ENDFILE_SPEC   ""
++#define ENDFILE_SPEC \
++"%{qrtems:%{!nostdlib:%{!nostartfiles:" RTEMS_ENDFILE_SPEC "}}}"
+ 
+ /*
+  * Some targets do not set up LIB_SPECS, override it, here.
+@@ -38,10 +48,10 @@
+ #define STD_LIB_SPEC "%{!shared:%{g*:-lg} %{!p:%{!pg:-lc}}%{p:-lc_p}%{pg:-lc_p}}"
+ 
+ #undef LIB_SPEC
+-#define LIB_SPEC "%{!qrtems: " STD_LIB_SPEC "} " \
+-"%{!nostdlib: %{qrtems: --start-group \
+- -lrtemsbsp -lrtemscpu \
+- -latomic -lc -lgcc --end-group %{!qnolinkcmds: -T linkcmds%s}}}"
++#define LIB_SPEC "%{!qrtems:" STD_LIB_SPEC "} " \
++"%{qrtems:%{!nostdlib:%{!nodefaultlibs:" \
++"--start-group -lrtemsbsp -lrtemscpu -latomic -lc -lgcc --end-group} " \
++"%{!qnolinkcmds:-T linkcmds%s}}}"
+ 
+ #define TARGET_POSIX_IO
+ 
+diff --git a/gcc/config/v850/rtems.h b/gcc/config/v850/rtems.h
+index 3f7d39a2cd1..e261ea3b417 100644
+--- a/gcc/config/v850/rtems.h
++++ b/gcc/config/v850/rtems.h
+@@ -39,3 +39,6 @@
+ %{!mv850es:%{!mv850e1:%{mv*:-mv%*}} \
+ %{m8byte-align:-m8byte-align} \
+ %{mgcc-abi:-mgcc-abi}}"
++
++#define RTEMS_STARTFILE_SPEC ""
++#define RTEMS_ENDFILE_SPEC ""
 diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
-index e99485b12db..4d0a69c1586 100644
+index e99485b12db..b009a7810ca 100644
 --- a/gcc/cp/ChangeLog
 +++ b/gcc/cp/ChangeLog
-@@ -1,3 +1,27 @@
+@@ -1,3 +1,47 @@
++2020-05-10  Iain Sandoe  <iain@sandoe.co.uk>
++
++	Backported from mainline
++	2020-05-08  Iain Sandoe  <iain@sandoe.co.uk>
++
++	PR c++/95003
++	* coroutines.cc (build_actor_fn): Ensure that bind scopes
++	are marked as having side-effects where necessary.
++	(replace_statement_captures): Likewise.
++	(morph_fn_to_coro): Likewise.
++
++2020-05-08  Marek Polacek  <polacek@redhat.com>
++
++	Backported from mainline
++	2020-05-01  Marek Polacek  <polacek@redhat.com>
++
++	PR c++/94885
++	* typeck2.c (process_init_constructor_record): Return PICFLAG_ERRONEOUS
++	if an initializer element was erroneous.
++
 +2020-05-07  Marek Polacek  <polacek@redhat.com>
 +	
 +	Backported from mainline
@@ -287,6 +441,71 @@ index e99485b12db..4d0a69c1586 100644
  2020-05-07  Release Manager
  
  	* GCC 10.1.0 released.
+diff --git a/gcc/cp/coroutines.cc b/gcc/cp/coroutines.cc
+index e90d3d5a3b3..db687c32b97 100644
+--- a/gcc/cp/coroutines.cc
++++ b/gcc/cp/coroutines.cc
+@@ -1971,8 +1971,6 @@ build_actor_fn (location_t loc, tree coro_frame_type, tree actor, tree fnbody,
+   current_stmt_tree ()->stmts_are_full_exprs_p = 1;
+   tree stmt = begin_compound_stmt (BCS_FN_BODY);
+ 
+-  /* ??? Can we dispense with the enclosing bind if the function body does
+-     not start with a bind_expr? (i.e. there's no contained scopes).  */
+   tree actor_bind = build3 (BIND_EXPR, void_type_node, NULL, NULL, NULL);
+   tree top_block = make_node (BLOCK);
+   BIND_EXPR_BLOCK (actor_bind) = top_block;
+@@ -2423,8 +2421,8 @@ build_actor_fn (location_t loc, tree coro_frame_type, tree actor, tree fnbody,
+ 		       continue_label, continuation, 2};
+   cp_walk_tree (&actor_body, await_statement_expander, &data, NULL);
+ 
+-  actor_body = pop_stmt_list (actor_body);
+-  BIND_EXPR_BODY (actor_bind) = actor_body;
++  BIND_EXPR_BODY (actor_bind) = pop_stmt_list (actor_body);
++  TREE_SIDE_EFFECTS (actor_bind) = true;
+ 
+   finish_compound_stmt (stmt);
+   DECL_SAVED_TREE (actor) = pop_stmt_list (actor_outer);
+@@ -2889,6 +2887,7 @@ replace_statement_captures (tree *stmt, void *d)
+ 	}
+     }
+   BIND_EXPR_BLOCK (aw_bind) = b_block;
++  TREE_SIDE_EFFECTS (aw_bind) = TREE_SIDE_EFFECTS (BIND_EXPR_BODY (aw_bind));
+   *stmt = aw_bind;
+ }
+ 
+@@ -3602,10 +3601,13 @@ morph_fn_to_coro (tree orig, tree *resumer, tree *destroyer)
+ 	{
+ 	  tree tlist = NULL_TREE;
+ 	  append_to_statement_list_force (fnbody, &tlist);
++	  TREE_SIDE_EFFECTS (tlist) = TREE_SIDE_EFFECTS (fnbody);
+ 	  BIND_EXPR_BODY (update_body) = tlist;
+ 	}
+       tree new_body_list = NULL_TREE;
+-      append_to_statement_list_force (update_body, &new_body_list);
++      TREE_SIDE_EFFECTS (update_body) = true;
++      append_to_statement_list (update_body, &new_body_list);
++      TREE_SIDE_EFFECTS (new_body_list) = true;
+       fnbody = new_body_list;
+     }
+ 
+@@ -4301,7 +4303,9 @@ morph_fn_to_coro (tree orig, tree *resumer, tree *destroyer)
+   /* Finish up the ramp function.  */
+   BIND_EXPR_VARS (gro_context_bind) = gro_bind_vars;
+   BIND_EXPR_BODY (gro_context_bind) = pop_stmt_list (gro_context_body);
++  TREE_SIDE_EFFECTS (gro_context_bind) = true;
+   BIND_EXPR_BODY (ramp_bind) = pop_stmt_list (ramp_body);
++  TREE_SIDE_EFFECTS (ramp_bind) = true;
+ 
+   /* We know the "real" promise and have a frame layout with a slot for each
+      suspend point, so we can build an actor function (which contains the
+@@ -4420,6 +4424,7 @@ morph_fn_to_coro (tree orig, tree *resumer, tree *destroyer)
+ 	  BLOCK_SUPERCONTEXT (replace_blk) = tcb_block;
+ 	  BLOCK_SUBBLOCKS (tcb_block) = replace_blk;
+ 	  BIND_EXPR_BLOCK (fnbody) = tcb_block;
++	  TREE_SIDE_EFFECTS (fnbody) = true;
+ 	}
+     }
+   else if (pedantic)
 diff --git a/gcc/cp/method.c b/gcc/cp/method.c
 index fb2dd47013f..47f96aa845e 100644
 --- a/gcc/cp/method.c
@@ -384,6 +603,23 @@ index 8e3188a415d..13d9602c32b 100644
  
        return build_nop_reinterpret (type, expr);
      }
+diff --git a/gcc/cp/typeck2.c b/gcc/cp/typeck2.c
+index 56fd9bafa7e..9e5d145a6cd 100644
+--- a/gcc/cp/typeck2.c
++++ b/gcc/cp/typeck2.c
+@@ -1661,7 +1661,11 @@ process_init_constructor_record (tree type, tree init, int nested, int flags,
+ 	      ++idx;
+ 	    }
+ 	}
+-      if (next)
++      if (next == error_mark_node)
++	/* We skip initializers for empty bases/fields, so skipping an invalid
++	   one could make us accept invalid code.  */
++	return PICFLAG_ERRONEOUS;
++      else if (next)
+ 	/* Already handled above.  */;
+       else if (DECL_INITIAL (field))
+ 	{
 diff --git a/gcc/doc/invoke.texi b/gcc/doc/invoke.texi
 index 527d362533a..f98161391a0 100644
 --- a/gcc/doc/invoke.texi
@@ -405,6 +641,108 @@ index 527d362533a..f98161391a0 100644
  
  This option can be used in combination with
  @option{profile-generate=}@var{profile_dir} and
+diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
+index fb2537dd8ec..5ccf52a45b4 100644
+--- a/gcc/fortran/ChangeLog
++++ b/gcc/fortran/ChangeLog
+@@ -1,3 +1,20 @@
++2020-05-11  Mark Eggleston  <markeggleston@gcc.gnu.org>
++    
++	Backported from mainline
++	2020-05-11  Janus Weil  <janus@gcc.gnu.org>
++		    Dominique d'Humieres  <dominiq@lps.ens.fr>
++    
++	PR fortran/59107
++	* gfortran.h: Rename field resolved as resolve_symbol_called
++	and assign two 2 bits instead of 1.
++	* interface.c (check_dtio_interface1): Use new field name.
++	(gfc_find_typebound_dtio_proc): Use new field name.
++	* resolve.c (gfc_resolve_intrinsic): Replace check of the formal
++	field with resolve_symbol_called is at least 2, if it is not
++	set the field to 2.  (resolve_typebound_procedure): Use new field
++	name.  (resolve_symbol): Use new field name and check whether it
++	is at least 1, if it is not set the field to 1.
++
+ 2020-05-07  Release Manager
+ 
+ 	* GCC 10.1.0 released.
+diff --git a/gcc/fortran/gfortran.h b/gcc/fortran/gfortran.h
+index 4e1da8c88a0..7094791e871 100644
+--- a/gcc/fortran/gfortran.h
++++ b/gcc/fortran/gfortran.h
+@@ -1621,7 +1621,10 @@ typedef struct gfc_symbol
+   /* Set if the symbol is used in a function result specification .  */
+   unsigned fn_result_spec:1;
+   /* Used to avoid multiple resolutions of a single symbol.  */
+-  unsigned resolved:1;
++  /* = 2 if this has already been resolved as an intrinsic,
++       in gfc_resolve_intrinsic,
++     = 1 if it has been resolved in resolve_symbol.  */
++  unsigned resolve_symbol_called:2;
+   /* Set if this is a module function or subroutine with the
+      abreviated declaration in a submodule.  */
+   unsigned abr_modproc_decl:1;
+diff --git a/gcc/fortran/interface.c b/gcc/fortran/interface.c
+index ba1c8bc322e..f33c6632b45 100644
+--- a/gcc/fortran/interface.c
++++ b/gcc/fortran/interface.c
+@@ -5015,7 +5015,7 @@ check_dtio_interface1 (gfc_symbol *derived, gfc_symtree *tb_io_st,
+     gfc_error ("DTIO procedure %qs at %L must be a subroutine",
+ 	       dtio_sub->name, &dtio_sub->declared_at);
+ 
+-  if (!dtio_sub->resolved)
++  if (!dtio_sub->resolve_symbol_called)
+     gfc_resolve_formal_arglist (dtio_sub);
+ 
+   arg_num = 0;
+@@ -5149,7 +5149,8 @@ gfc_find_typebound_dtio_proc (gfc_symbol *derived, bool write, bool formatted)
+   gfc_symtree *tb_io_st = NULL;
+   bool t = false;
+ 
+-  if (!derived || !derived->resolved || derived->attr.flavor != FL_DERIVED)
++  if (!derived || !derived->resolve_symbol_called
++      || derived->attr.flavor != FL_DERIVED)
+     return NULL;
+ 
+   /* Try to find a typebound DTIO binding.  */
+diff --git a/gcc/fortran/resolve.c b/gcc/fortran/resolve.c
+index fd3b025a84f..88ba88d8bf3 100644
+--- a/gcc/fortran/resolve.c
++++ b/gcc/fortran/resolve.c
+@@ -1753,9 +1753,11 @@ gfc_resolve_intrinsic (gfc_symbol *sym, locus *loc)
+   gfc_intrinsic_sym* isym = NULL;
+   const char* symstd;
+ 
+-  if (sym->formal)
++  if (sym->resolve_symbol_called >= 2)
+     return true;
+ 
++  sym->resolve_symbol_called = 2;
++
+   /* Already resolved.  */
+   if (sym->from_intmod && sym->ts.type != BT_UNKNOWN)
+     return true;
+@@ -13909,7 +13911,7 @@ resolve_typebound_procedure (gfc_symtree* stree)
+     {
+       /* If proc has not been resolved at this point, proc->name may
+ 	 actually be a USE associated entity. See PR fortran/89647. */
+-      if (!proc->resolved
++      if (!proc->resolve_symbol_called
+ 	  && proc->attr.function == 0 && proc->attr.subroutine == 0)
+ 	{
+ 	  gfc_symbol *tmp;
+@@ -15154,9 +15156,9 @@ resolve_symbol (gfc_symbol *sym)
+   gfc_array_spec *as;
+   bool saved_specification_expr;
+ 
+-  if (sym->resolved)
++  if (sym->resolve_symbol_called >= 1)
+     return;
+-  sym->resolved = 1;
++  sym->resolve_symbol_called = 1;
+ 
+   /* No symbol will ever have union type; only components can be unions.
+      Union type declaration symbols have type BT_UNKNOWN but flavor FL_UNION
 diff --git a/gcc/opts.c b/gcc/opts.c
 index c212a1a57dc..4429d82e61f 100644
 --- a/gcc/opts.c
@@ -445,10 +783,26 @@ index c212a1a57dc..4429d82e61f 100644
  
    return "gcc/Warning-Options.html";
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 348894049cc..4ae9129a796 100644
+index 348894049cc..b98472df541 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,35 @@
+@@ -1,3 +1,51 @@
++2020-05-11  Mark Eggleston  <markeggleston@gcc.gnu.org>
++    
++	Backported from mainline
++	2020-05-11  Mark Eggleston  <markeggleston@gcc.gnu.org>
++
++	PR fortran/59107
++	* gfortran.dg/pr59107.f90: New test.
++
++2020-05-10  Iain Sandoe  <iain@sandoe.co.uk>
++
++	Backported from mainline
++	2020-05-08  Iain Sandoe  <iain@sandoe.co.uk>
++
++	PR c++/95003
++	* g++.dg/coroutines/torture/pr95003.C: New test.
++
 +2020-05-07  Jakub Jelinek  <jakub@redhat.com>
 +
 +	PR c++/94946
@@ -484,6 +838,82 @@ index 348894049cc..4ae9129a796 100644
  2020-05-07  Release Manager
  
  	* GCC 10.1.0 released.
+diff --git a/gcc/testsuite/g++.dg/coroutines/torture/pr95003.C b/gcc/testsuite/g++.dg/coroutines/torture/pr95003.C
+new file mode 100644
+index 00000000000..eda785827ec
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/coroutines/torture/pr95003.C
+@@ -0,0 +1,50 @@
++// { dg-do run }
++
++#include "../coro.h"
++#include "../coro1-ret-int-yield-int.h"
++
++// This tests that, when we insert bind scopes to contain variables that
++// have been promoted from compiler temporaries to extend their lifetimes
++// to a containing full expression, the inserted bind scopes have their
++// tree-side-effects set.
++
++struct Awaitable {
++  int v;
++  Awaitable (int _v) : v(_v) {}
++  bool await_ready() { return false; }
++  void await_suspend(std::coroutine_handle<coro1::promise_type>) {}
++  int await_resume() { return v; }
++  auto operator co_await() { return *this; }
++};
++
++coro1
++my_coro
++(int x)
++{
++  int sum = 0;
++  for (unsigned i = 0; i < 100; ++i) {
++    sum += co_await Awaitable{x+1};
++  }
++  co_return sum;
++}
++
++int main ()
++{
++  PRINT ("main: create coro1");
++  struct coro1 f_coro = my_coro (0);
++
++  PRINT ("main: OK -- looping");
++
++  do {
++    f_coro.handle.resume();
++  } while (!f_coro.handle.done());
++
++  int y = f_coro.handle.promise().get_value();
++  if (y != 100)
++    {
++      PRINTF ("main: y is wrong : %d, should be 100\n", y);
++      abort ();
++    }
++  puts ("main: done");
++  return 0;
++}
+diff --git a/gcc/testsuite/g++.dg/cpp2a/paren-init26.C b/gcc/testsuite/g++.dg/cpp2a/paren-init26.C
+new file mode 100644
+index 00000000000..0b98ebf43bb
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp2a/paren-init26.C
+@@ -0,0 +1,14 @@
++// PR c++/94885 - paren-init of aggregates accepts invalid code.
++// { dg-do compile { target c++2a } }
++
++template <typename T, typename = decltype(T(0))> // { dg-error "could not convert" }
++void foo();
++
++struct base {};
++struct derived : base {};
++
++void
++bar()
++{
++  foo<derived>(); // { dg-error "no matching function" }
++}
 diff --git a/gcc/testsuite/g++.dg/cpp2a/spaceship-synth8.C b/gcc/testsuite/g++.dg/cpp2a/spaceship-synth8.C
 new file mode 100644
 index 00000000000..d0d68c7fa6f
@@ -723,6 +1153,23 @@ index 00000000000..b20f7a62e91
 +  U x = ((union { W a; U b; })w).b + q + (U)s + (U)r;
 +  return x;
 +}
+diff --git a/gcc/testsuite/gfortran.dg/pr59107.f90 b/gcc/testsuite/gfortran.dg/pr59107.f90
+new file mode 100644
+index 00000000000..a84328f0851
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr59107.f90
+@@ -0,0 +1,11 @@
++! { dg-compile }
++! { dg-options "-Wsurprising" }
++
++! There should be no surprising warnings
++
++program p
++  Integer :: nargs
++  intrinsic :: command_argument_count
++  nargs = command_argument_count()
++end
++
 diff --git a/gcc/tree.c b/gcc/tree.c
 index e451401822c..397474900ff 100644
 --- a/gcc/tree.c
