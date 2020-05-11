@@ -563,6 +563,7 @@ cat *.lang > gcc.lang
 /usr/bin/gcov-tool
 /usr/lib/cpp
 /usr/bin/cpp
+/usr/bin/lto-dump
 #/usr/lib64/libvtv*
 /usr/lib64/libcc1*
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/include-fixed/
