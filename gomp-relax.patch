@@ -6,7 +6,7 @@
      else
 -      cpu_relax ();
 +      if (i < count/2) 
-+	       __asm__ __volatile__("nop\nnop\nnop\nnop\nvzeroall\n": : :"memory");
++	       __asm__ __volatile__("nop\nnop\nnop\nnop\n": : :"memory");
 +      else
 +	      cpu_relax ();
    return 1;
