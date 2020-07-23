@@ -4,7 +4,7 @@
 %define libstdcxx_full 6.0.26
 %define isl_version 0.16.1
 %define gccver 10
-%define gccpath gcc-10.1.0
+%define gccpath gcc-10.2.0
 # Highest optimisation ABI we target
 %define mtune haswell
 
@@ -13,10 +13,10 @@
 %define march westmere
 
 Name     : gcc
-Version  : 10.1.0
-Release  : 928
+Version  : 10.2.0
+Release  : 929
 URL      : http://www.gnu.org/software/gcc/
-Source0  : https://gcc.gnu.org/pub/gcc/releases/gcc-10.1.0/gcc-10.1.0.tar.xz
+Source0  : https://gcc.gnu.org/pub/gcc/releases/gcc-10.2.0/gcc-10.2.0.tar.xz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.16.1.tar.bz2
 Source2  : DATESTAMP
 Source3  : REVISION
