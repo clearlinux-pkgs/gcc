@@ -1,12 +1,120 @@
+GCC Administrator (1):
+      Daily bump.
+
+Harald Anlauf (4):
+      PR fortran/89574 - ICE in conv_function_val, at fortran/trans-expr.c:3792
+      PR fortran/96086 - ICE in gfc_match_select_rank, at fortran/match.c:6645
+      PR fortran/95980 - ICE on using sync images with -fcheck=bounds
+      PR fortran/95980 - ICE in get_unique_type_string, at fortran/class.c:485
+
+Ian Lance Taylor (1):
+      libgo: update to Go 1.14.6 release
+
+Jonathan Wakely (1):
+      gcc-changelog: Fix typo in output
+
 Kito Cheng (1):
       PR target/96260 - KASAN should work even back-end not porting anything.
 
-Martin Liska (1):
+Martin Liska (2):
       Fix ChangeLog entry: reverted backport commit.
+      gcc-changelog: fix when somebody reverts a backport
+
+Peter Bergner (1):
+      rs6000: __builtin_mma_disassemble_acc() doesn't store elements correctly in LE mode
 
 Richard Biener (1):
       Update BASE-VER after GCC 10.2 release
 
+Sergei Trofimovich (1):
+      sparc/sparc64: use crtendS.o for default-pie executables [PR96190]
+
+Thomas Koenig (2):
+      Fix handling of implicit_pure by checking if non-pure procedures are called.
+      Always use name from c_interop_kinds_table for -fc-prototypes.
+
+diff --git a/contrib/ChangeLog b/contrib/ChangeLog
+index 303b9854c37..88c668a53ca 100644
+--- a/contrib/ChangeLog
++++ b/contrib/ChangeLog
+@@ -1,3 +1,18 @@
++2020-07-23  Martin Liska  <mliska@suse.cz>
++
++	Backported from master:
++	2020-07-23  Martin Liska  <mliska@suse.cz>
++
++	* gcc-changelog/git_commit.py: When reverting a backport,
++	we should print only Revert header.
++
++2020-07-23  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2020-07-17  Jonathan Wakely  <jwakely@redhat.com>
++
++	* gcc-changelog/git_update_version.py: Fix typo.
++
+ 2020-07-23  Release Manager
+ 
+ 	* GCC 10.2.0 released.
+diff --git a/contrib/gcc-changelog/git_commit.py b/contrib/gcc-changelog/git_commit.py
+index 827976c2f84..5a9cc4c7563 100755
+--- a/contrib/gcc-changelog/git_commit.py
++++ b/contrib/gcc-changelog/git_commit.py
+@@ -628,7 +628,11 @@ class GitCommit:
+         for entry in self.changelog_entries:
+             output = ''
+             timestamp = entry.datetime
+-            if self.cherry_pick_commit:
++            if self.revert_commit:
++                timestamp = current_timestamp
++                orig_date = self.original_info.date
++                current_timestamp = orig_date.strftime(DATE_FORMAT)
++            elif self.cherry_pick_commit:
+                 info = self.commit_to_info_hook(self.cherry_pick_commit)
+                 # it can happen that it is a cherry-pick for a different
+                 # repository
+@@ -636,10 +640,6 @@ class GitCommit:
+                     timestamp = info.date.strftime(DATE_FORMAT)
+                 else:
+                     timestamp = current_timestamp
+-            elif self.revert_commit:
+-                timestamp = current_timestamp
+-                orig_date = self.original_info.date
+-                current_timestamp = orig_date.strftime(DATE_FORMAT)
+             elif not timestamp or use_commit_ts:
+                 timestamp = current_timestamp
+             authors = entry.authors if entry.authors else [self.info.author]
+@@ -649,12 +649,13 @@ class GitCommit:
+                     authors.append(author)
+ 
+             if self.cherry_pick_commit or self.revert_commit:
+-                output += self.format_authors_in_changelog([self.info.author],
++                original_author = self.original_info.author
++                output += self.format_authors_in_changelog([original_author],
+                                                            current_timestamp)
+-                if self.cherry_pick_commit:
+-                    output += '\tBackported from master:\n'
+-                else:
++                if self.revert_commit:
+                     output += '\tRevert:\n'
++                else:
++                    output += '\tBackported from master:\n'
+                 output += self.format_authors_in_changelog(authors,
+                                                            timestamp, '\t')
+             else:
+diff --git a/contrib/gcc-changelog/git_update_version.py b/contrib/gcc-changelog/git_update_version.py
+index ac1b206d238..d2cadb8811c 100755
+--- a/contrib/gcc-changelog/git_update_version.py
++++ b/contrib/gcc-changelog/git_update_version.py
+@@ -39,7 +39,7 @@ def prepend_to_changelog_files(repo, folder, git_commit, add_to_git):
+         raise AssertionError()
+     for entry, output in git_commit.to_changelog_entries(use_commit_ts=True):
+         full_path = os.path.join(folder, entry, 'ChangeLog')
+-        print('writting to %s' % full_path)
++        print('writing to %s' % full_path)
+         if os.path.exists(full_path):
+             with open(full_path) as f:
+                 content = f.read()
 diff --git a/gcc/BASE-VER b/gcc/BASE-VER
 index 2bd6f7e3927..26ee5b054e1 100644
 --- a/gcc/BASE-VER
@@ -15,10 +123,45 @@ index 2bd6f7e3927..26ee5b054e1 100644
 -10.2.0
 +10.2.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 0aa626ccc0a..f91a7c2b223 100644
+index 0aa626ccc0a..fa5830e15b6 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -71,9 +71,9 @@
+@@ -1,3 +1,34 @@
++2020-07-23  Sergei Trofimovich  <siarheit@google.com>
++
++	Backported from master:
++	2020-07-20  Sergei Trofimovich  <siarheit@google.com>
++
++	PR target/96190
++	* config/sparc/linux.h (ENDFILE_SPEC): Use GNU_USER_TARGET_ENDFILE_SPEC
++	to get crtendS.o for !no-pie mode.
++	* config/sparc/linux64.h (ENDFILE_SPEC): Ditto.
++
++2020-07-23  Peter Bergner  <bergner@linux.ibm.com>
++
++	Backported from master:
++	2020-07-22  Peter Bergner  <bergner@linux.ibm.com>
++
++	PR target/96236
++	* config/rs6000/rs6000-call.c (rs6000_gimple_fold_mma_builtin): Handle
++	little-endian memory ordering.
++
++2020-07-23  Kito Cheng  <kito.cheng@sifive.com>
++
++	Backported from master:
++	2020-07-23  Kito Cheng  <kito.cheng@sifive.com>
++
++	PR target/96260
++	* asan.c (asan_shadow_offset_set_p): New.
++	* asan.h (asan_shadow_offset_set_p): Ditto.
++	* toplev.c (process_options): Allow -fsanitize=kernel-address
++	even TARGET_ASAN_SHADOW_OFFSET not implemented, only check when
++	asan stack protection is enabled.
++
+ 2020-07-23  Release Manager
+ 
+ 	* GCC 10.2.0 released.
+@@ -71,9 +102,9 @@
  	_mm512_mask_cmpord_ps_mask): Move outside of __OPTIMIZE__ guarded
  	section.
  
@@ -61,6 +204,705 @@ index 9efd33f9b86..114b457ef91 100644
  extern void set_sanitized_sections (const char *);
  
  extern bool asan_sanitize_stack_p (void);
+diff --git a/gcc/config/rs6000/rs6000-call.c b/gcc/config/rs6000/rs6000-call.c
+index 243601e90c1..6af7e2d50c6 100644
+--- a/gcc/config/rs6000/rs6000-call.c
++++ b/gcc/config/rs6000/rs6000-call.c
+@@ -10834,11 +10834,12 @@ rs6000_gimple_fold_mma_builtin (gimple_stmt_iterator *gsi)
+       tree src_array = build1 (VIEW_CONVERT_EXPR, array_type, src);
+       for (unsigned i = 0; i < 4; i++)
+ 	{
++	  unsigned index = WORDS_BIG_ENDIAN ? i : 3 - i;
+ 	  tree ref = build4 (ARRAY_REF, unsigned_V16QI_type_node, src_array,
+ 			     build_int_cst (size_type_node, i),
+ 			     NULL_TREE, NULL_TREE);
+ 	  tree dst = build2 (MEM_REF, unsigned_V16QI_type_node, dst_base,
+-			     build_int_cst (dst_type, i * 16));
++			     build_int_cst (dst_type, index * 16));
+ 	  gimplify_assign (dst, ref, &new_seq);
+ 	}
+       pop_gimplify_context (NULL);
+diff --git a/gcc/config/sparc/linux.h b/gcc/config/sparc/linux.h
+index 81201e67a2f..63853e60c03 100644
+--- a/gcc/config/sparc/linux.h
++++ b/gcc/config/sparc/linux.h
+@@ -27,16 +27,10 @@ along with GCC; see the file COPYING3.  If not see
+     }						\
+   while (0)
+ 
+-/* Provide a ENDFILE_SPEC appropriate for GNU/Linux.  Here we tack on
+-   the GNU/Linux magical crtend.o file (see crtstuff.c) which
+-   provides part of the support for getting C++ file-scope static
+-   object constructed before entering `main', followed by a normal
+-   GNU/Linux "finalizer" file, `crtn.o'.  */
+-
+ #undef  ENDFILE_SPEC
+ #define ENDFILE_SPEC \
+-  "%{shared|pie:crtendS.o%s;:crtend.o%s} crtn.o%s\
+-   %{Ofast|ffast-math|funsafe-math-optimizations:crtfastmath.o%s}"
++  GNU_USER_TARGET_ENDFILE_SPEC \
++  "%{Ofast|ffast-math|funsafe-math-optimizations:crtfastmath.o%s}"
+ 
+ /* -mcpu=native handling only makes sense with compiler running on
+    a SPARC chip.  */
+diff --git a/gcc/config/sparc/linux64.h b/gcc/config/sparc/linux64.h
+index a1a0efd8f28..19ce84d7adb 100644
+--- a/gcc/config/sparc/linux64.h
++++ b/gcc/config/sparc/linux64.h
+@@ -44,16 +44,10 @@ along with GCC; see the file COPYING3.  If not see
+ #undef ASM_CPU64_DEFAULT_SPEC
+ #define ASM_CPU64_DEFAULT_SPEC "-Av9a"
+ 
+-/* Provide a ENDFILE_SPEC appropriate for GNU/Linux.  Here we tack on
+-   the GNU/Linux magical crtend.o file (see crtstuff.c) which
+-   provides part of the support for getting C++ file-scope static
+-   object constructed before entering `main', followed by a normal
+-   GNU/Linux "finalizer" file, `crtn.o'.  */
+-
+ #undef	ENDFILE_SPEC
+ #define ENDFILE_SPEC \
+-  "%{shared|pie:crtendS.o%s;:crtend.o%s} crtn.o%s\
+-   %{Ofast|ffast-math|funsafe-math-optimizations:crtfastmath.o%s}"
++  GNU_USER_TARGET_ENDFILE_SPEC \
++  "%{Ofast|ffast-math|funsafe-math-optimizations:crtfastmath.o%s}"
+ 
+ /* The default code model.  */
+ #undef SPARC_DEFAULT_CMODEL
+diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
+index 2fdd3e8daa8..9cfa0c10c11 100644
+--- a/gcc/fortran/ChangeLog
++++ b/gcc/fortran/ChangeLog
+@@ -1,3 +1,68 @@
++2020-07-23  Harald Anlauf  <anlauf@gmx.de>
++
++	Backported from master:
++	2020-07-10  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/95980
++	* class.c (gfc_add_component_ref, gfc_build_class_symbol):
++	Add checks for NULL pointer dereference.
++	* primary.c (gfc_variable_attr): Likewise.
++	* resolve.c (resolve_variable, resolve_assoc_var)
++	(resolve_fl_var_and_proc, resolve_fl_variable_derived)
++	(resolve_symbol): Likewise.
++
++2020-07-23  Harald Anlauf  <anlauf@gmx.de>
++
++	Backported from master:
++	2020-07-06  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/95980
++	* match.c (copy_ts_from_selector_to_associate, build_class_sym):
++	Distinguish between unlimited polymorphic and ordinary variables
++	to avoid NULL pointer dereference.
++	* resolve.c (resolve_select_type):
++	Distinguish between unlimited polymorphic and ordinary variables
++	to avoid NULL pointer dereference.
++
++2020-07-23  Harald Anlauf  <anlauf@gmx.de>
++
++	Backported from master:
++	2020-07-10  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/96086
++	* match.c (gfc_match_select_rank): Catch NULL pointer
++	dereference.
++	* resolve.c (resolve_assoc_var): Catch NULL pointer dereference
++	that may occur after an illegal declaration.
++
++2020-07-23  Harald Anlauf  <anlauf@gmx.de>
++
++	Backported from master:
++	2020-07-21  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/89574
++	* trans-decl.c (gfc_get_extern_function_decl): Check whether a
++	symbol belongs to a different module.
++
++2020-07-23  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	Backported from master:
++	2020-07-19  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	PR fortran/96220
++	* dump-parse-tree.c (get_c_type_name): Always use the entries from
++	c_interop_kinds_table to find the correct C type.
++
++2020-07-23  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	PR fortran/96018
++	* frontend-passes.c (gfc_check_externals): Adjust formatting.
++	(implicit_pure_call): New function.
++	(implicit_pure_expr): New function.
++	(gfc_fix_implicit_pure): New function.
++	* gfortran.h (gfc_fix_implicit_pure): New prototype.
++	* parse.c (translate_all_program_units): Call gfc_fix_implicit_pure.
++
+ 2020-07-23  Release Manager
+ 
+ 	* GCC 10.2.0 released.
+diff --git a/gcc/fortran/class.c b/gcc/fortran/class.c
+index d6847eb0004..dfa48400712 100644
+--- a/gcc/fortran/class.c
++++ b/gcc/fortran/class.c
+@@ -228,7 +228,7 @@ gfc_add_component_ref (gfc_expr *e, const char *name)
+ 	break;
+       tail = &((*tail)->next);
+     }
+-  if (derived->components && derived->components->next &&
++  if (derived && derived->components && derived->components->next &&
+       derived->components->next->ts.type == BT_DERIVED &&
+       derived->components->next->ts.u.derived == NULL)
+     {
+@@ -663,6 +663,10 @@ gfc_build_class_symbol (gfc_typespec *ts, symbol_attribute *attr,
+ 
+   /* Determine the name of the encapsulating type.  */
+   rank = !(*as) || (*as)->rank == -1 ? GFC_MAX_DIMENSIONS : (*as)->rank;
++
++  if (!ts->u.derived)
++    return false;
++
+   get_unique_hashed_string (tname, ts->u.derived);
+   if ((*as) && attr->allocatable)
+     name = xasprintf ("__class_%s_%d_%da", tname, rank, (*as)->corank);
+diff --git a/gcc/fortran/dump-parse-tree.c b/gcc/fortran/dump-parse-tree.c
+index f32330685e7..e79494d59bf 100644
+--- a/gcc/fortran/dump-parse-tree.c
++++ b/gcc/fortran/dump-parse-tree.c
+@@ -3257,45 +3257,28 @@ get_c_type_name (gfc_typespec *ts, gfc_array_spec *as, const char **pre,
+   if (ts->type == BT_REAL || ts->type == BT_INTEGER || ts->type == BT_COMPLEX)
+     {
+       if (ts->is_c_interop && ts->interop_kind)
+-	{
+-	  *type_name = ts->interop_kind->name + 2;
+-	  if (strcmp (*type_name, "signed_char") == 0)
+-	    *type_name = "signed char";
+-	  else if (strcmp (*type_name, "size_t") == 0)
+-	    *type_name = "ssize_t";
+-	  else if (strcmp (*type_name, "float_complex") == 0)
+-	    *type_name = "__GFORTRAN_FLOAT_COMPLEX";
+-	  else if (strcmp (*type_name, "double_complex") == 0)
+-	    *type_name = "__GFORTRAN_DOUBLE_COMPLEX";
+-	  else if (strcmp (*type_name, "long_double_complex") == 0)
+-	    *type_name = "__GFORTRAN_LONG_DOUBLE_COMPLEX";
+-
+-	  ret = T_OK;
+-	}
++	ret = T_OK;
+       else
++	ret = T_WARN;
++
++      for (int i = 0; i < ISOCBINDING_NUMBER; i++)
+ 	{
+-	  /* The user did not specify a C interop type.  Let's look through
+-	     the available table and use the first one, but warn.  */
+-	  for (int i = 0; i < ISOCBINDING_NUMBER; i++)
++	  if (c_interop_kinds_table[i].f90_type == ts->type
++	      && c_interop_kinds_table[i].value == ts->kind)
+ 	    {
+-	      if (c_interop_kinds_table[i].f90_type == ts->type
+-		  && c_interop_kinds_table[i].value == ts->kind)
+-		{
+-		  *type_name = c_interop_kinds_table[i].name + 2;
+-		  if (strcmp (*type_name, "signed_char") == 0)
+-		    *type_name = "signed char";
+-		  else if (strcmp (*type_name, "size_t") == 0)
+-		    *type_name = "ssize_t";
+-		  else if (strcmp (*type_name, "float_complex") == 0)
+-		    *type_name = "__GFORTRAN_FLOAT_COMPLEX";
+-		  else if (strcmp (*type_name, "double_complex") == 0)
+-		    *type_name = "__GFORTRAN_DOUBLE_COMPLEX";
+-		  else if (strcmp (*type_name, "long_double_complex") == 0)
+-		    *type_name = "__GFORTRAN_LONG_DOUBLE_COMPLEX";
+-
+-		  ret = T_WARN;
+-		  break;
+-		}
++	      *type_name = c_interop_kinds_table[i].name + 2;
++	      if (strcmp (*type_name, "signed_char") == 0)
++		*type_name = "signed char";
++	      else if (strcmp (*type_name, "size_t") == 0)
++		*type_name = "ssize_t";
++	      else if (strcmp (*type_name, "float_complex") == 0)
++		*type_name = "__GFORTRAN_FLOAT_COMPLEX";
++	      else if (strcmp (*type_name, "double_complex") == 0)
++		*type_name = "__GFORTRAN_DOUBLE_COMPLEX";
++	      else if (strcmp (*type_name, "long_double_complex") == 0)
++		*type_name = "__GFORTRAN_LONG_DOUBLE_COMPLEX";
++
++	      break;
+ 	    }
+ 	}
+     }
+diff --git a/gcc/fortran/frontend-passes.c b/gcc/fortran/frontend-passes.c
+index d5d71b5fda4..5e768b12854 100644
+--- a/gcc/fortran/frontend-passes.c
++++ b/gcc/fortran/frontend-passes.c
+@@ -5516,3 +5516,77 @@ gfc_check_externals (gfc_namespace *ns)
+ 
+   gfc_errors_to_warnings (false);
+ }
++
++/* Callback function. If there is a call to a subroutine which is
++   neither pure nor implicit_pure, unset the implicit_pure flag for
++   the caller and return -1.  */
++
++static int
++implicit_pure_call (gfc_code **c, int *walk_subtrees ATTRIBUTE_UNUSED,
++		    void *sym_data)
++{
++  gfc_code *co = *c;
++  gfc_symbol *caller_sym;
++  symbol_attribute *a;
++
++  if (co->op != EXEC_CALL || co->resolved_sym == NULL)
++    return 0;
++
++  a = &co->resolved_sym->attr;
++  if (a->intrinsic || a->pure || a->implicit_pure)
++    return 0;
++
++  caller_sym = (gfc_symbol *) sym_data;
++  gfc_unset_implicit_pure (caller_sym);
++  return 1;
++}
++
++/* Callback function. If there is a call to a function which is
++   neither pure nor implicit_pure, unset the implicit_pure flag for
++   the caller and return 1.  */
++
++static int
++implicit_pure_expr (gfc_expr **e, int *walk ATTRIBUTE_UNUSED, void *sym_data)
++{
++  gfc_expr *expr = *e;
++  gfc_symbol *caller_sym;
++  gfc_symbol *sym;
++  symbol_attribute *a;
++
++  if (expr->expr_type != EXPR_FUNCTION || expr->value.function.isym)
++    return 0;
++
++  sym = expr->symtree->n.sym;
++  a = &sym->attr;
++  if (a->pure || a->implicit_pure)
++    return 0;
++
++  caller_sym = (gfc_symbol *) sym_data;
++  gfc_unset_implicit_pure (caller_sym);
++  return 1;
++}
++
++/* Go through all procedures in the namespace and unset the
++   implicit_pure attribute for any procedure that calls something not
++   pure or implicit pure.  */
++
++bool
++gfc_fix_implicit_pure (gfc_namespace *ns)
++{
++  bool changed = false;
++  gfc_symbol *proc = ns->proc_name;
++
++  if (proc && proc->attr.flavor == FL_PROCEDURE && proc->attr.implicit_pure
++      && ns->code
++      && gfc_code_walker (&ns->code, implicit_pure_call, implicit_pure_expr,
++			  (void *) ns->proc_name))
++    changed = true;
++
++  for (ns = ns->contained; ns; ns = ns->sibling)
++    {
++      if (gfc_fix_implicit_pure (ns))
++	changed = true;
++    }
++
++  return changed;
++}
+diff --git a/gcc/fortran/gfortran.h b/gcc/fortran/gfortran.h
+index 24c5101c4cb..264822ef9f8 100644
+--- a/gcc/fortran/gfortran.h
++++ b/gcc/fortran/gfortran.h
+@@ -3623,6 +3623,7 @@ int gfc_expr_walker (gfc_expr **, walk_expr_fn_t, void *);
+ int gfc_code_walker (gfc_code **, walk_code_fn_t, walk_expr_fn_t, void *);
+ bool gfc_has_dimen_vector_ref (gfc_expr *e);
+ void gfc_check_externals (gfc_namespace *);
++bool gfc_fix_implicit_pure (gfc_namespace *);
+ 
+ /* simplify.c */
+ 
+diff --git a/gcc/fortran/match.c b/gcc/fortran/match.c
+index db5174f3f21..cb09c5f8ec5 100644
+--- a/gcc/fortran/match.c
++++ b/gcc/fortran/match.c
+@@ -6159,14 +6159,18 @@ copy_ts_from_selector_to_associate (gfc_expr *associate, gfc_expr *selector)
+   while (ref && ref->next)
+     ref = ref->next;
+ 
+-  if (selector->ts.type == BT_CLASS && CLASS_DATA (selector)->as
++  if (selector->ts.type == BT_CLASS
++      && CLASS_DATA (selector)
++      && CLASS_DATA (selector)->as
+       && CLASS_DATA (selector)->as->type == AS_ASSUMED_RANK)
+     {
+       assoc_sym->attr.dimension = 1;
+       assoc_sym->as = gfc_copy_array_spec (CLASS_DATA (selector)->as);
+       goto build_class_sym;
+     }
+-  else if (selector->ts.type == BT_CLASS && CLASS_DATA (selector)->as
++  else if (selector->ts.type == BT_CLASS
++	   && CLASS_DATA (selector)
++	   && CLASS_DATA (selector)->as
+ 	   && ref && ref->type == REF_ARRAY)
+     {
+       /* Ensure that the array reference type is set.  We cannot use
+@@ -6223,7 +6227,8 @@ build_class_sym:
+     {
+       /* The correct class container has to be available.  */
+       assoc_sym->ts.type = BT_CLASS;
+-      assoc_sym->ts.u.derived = CLASS_DATA (selector)->ts.u.derived;
++      assoc_sym->ts.u.derived = CLASS_DATA (selector)
++	? CLASS_DATA (selector)->ts.u.derived : selector->ts.u.derived;
+       assoc_sym->attr.pointer = 1;
+       gfc_build_class_symbol (&assoc_sym->ts, &assoc_sym->attr, &assoc_sym->as);
+     }
+@@ -6642,7 +6647,8 @@ gfc_match_select_rank (void)
+       if (expr2->symtree)
+ 	{
+ 	  sym2 = expr2->symtree->n.sym;
+-	  as = sym2->ts.type == BT_CLASS ? CLASS_DATA (sym2)->as : sym2->as;
++	  as = (sym2->ts.type == BT_CLASS
++		&& CLASS_DATA (sym2)) ? CLASS_DATA (sym2)->as : sym2->as;
+ 	}
+ 
+       if (expr2->expr_type != EXPR_VARIABLE
+@@ -6654,7 +6660,7 @@ gfc_match_select_rank (void)
+ 	  goto cleanup;
+ 	}
+ 
+-      if (expr2->ts.type == BT_CLASS)
++      if (expr2->ts.type == BT_CLASS && CLASS_DATA (sym2))
+ 	{
+ 	  copy_ts_from_selector_to_associate (expr1, expr2);
+ 
+diff --git a/gcc/fortran/parse.c b/gcc/fortran/parse.c
+index f71a95dd871..3e19d5fdfbe 100644
+--- a/gcc/fortran/parse.c
++++ b/gcc/fortran/parse.c
+@@ -6446,6 +6446,11 @@ loop:
+ 
+   gfc_resolve (gfc_current_ns);
+ 
++  /* Fix the implicit_pure attribute for those procedures who should
++     not have it.  */
++  while (gfc_fix_implicit_pure (gfc_current_ns))
++    ;
++
+   /* Dump the parse tree if requested.  */
+   if (flag_dump_fortran_original)
+     gfc_dump_parse_tree (gfc_current_ns, stdout);
+@@ -6491,6 +6496,23 @@ done:
+   /* Do the resolution.  */
+   resolve_all_program_units (gfc_global_ns_list);
+ 
++  /* Go through all top-level namespaces and unset the implicit_pure
++     attribute for any procedures that call something not pure or
++     implicit_pure.  Because the a procedure marked as not implicit_pure
++     in one sweep may be called by another routine, we repeat this
++     process until there are no more changes.  */
++  bool changed;
++  do
++    {
++      changed = false;
++      for (gfc_current_ns = gfc_global_ns_list; gfc_current_ns;
++	   gfc_current_ns = gfc_current_ns->sibling)
++	{
++	  if (gfc_fix_implicit_pure (gfc_current_ns))
++	    changed = true;
++	}
++    }
++  while (changed);
+ 
+   /* Fixup for external procedures.  */
+   for (gfc_current_ns = gfc_global_ns_list; gfc_current_ns;
+diff --git a/gcc/fortran/primary.c b/gcc/fortran/primary.c
+index 7c221c8d209..a6626c806fd 100644
+--- a/gcc/fortran/primary.c
++++ b/gcc/fortran/primary.c
+@@ -2597,7 +2597,7 @@ gfc_variable_attr (gfc_expr *expr, gfc_typespec *ts)
+   sym = expr->symtree->n.sym;
+   attr = sym->attr;
+ 
+-  if (sym->ts.type == BT_CLASS && sym->attr.class_ok)
++  if (sym->ts.type == BT_CLASS && sym->attr.class_ok && sym->ts.u.derived)
+     {
+       dimension = CLASS_DATA (sym)->attr.dimension;
+       codimension = CLASS_DATA (sym)->attr.codimension;
+diff --git a/gcc/fortran/resolve.c b/gcc/fortran/resolve.c
+index 354702bda0b..3166cc3afc4 100644
+--- a/gcc/fortran/resolve.c
++++ b/gcc/fortran/resolve.c
+@@ -5557,6 +5557,7 @@ resolve_variable (gfc_expr *e)
+     }
+   /* TS 29113, C535b.  */
+   else if (((sym->ts.type == BT_CLASS && sym->attr.class_ok
++	     && sym->ts.u.derived && CLASS_DATA (sym)
+ 	     && CLASS_DATA (sym)->as
+ 	     && CLASS_DATA (sym)->as->type == AS_ASSUMED_RANK)
+ 	    || (sym->ts.type != BT_CLASS && sym->as
+@@ -5604,6 +5605,7 @@ resolve_variable (gfc_expr *e)
+ 
+   /* TS 29113, C535b.  */
+   if (((sym->ts.type == BT_CLASS && sym->attr.class_ok
++	&& sym->ts.u.derived && CLASS_DATA (sym)
+ 	&& CLASS_DATA (sym)->as
+ 	&& CLASS_DATA (sym)->as->type == AS_ASSUMED_RANK)
+        || (sym->ts.type != BT_CLASS && sym->as
+@@ -8998,7 +9000,9 @@ resolve_assoc_var (gfc_symbol* sym, bool resolve_target)
+ 	  if (as->corank != 0)
+ 	    sym->attr.codimension = 1;
+ 	}
+-      else if (sym->ts.type == BT_CLASS && (!CLASS_DATA (sym)->as || sym->assoc->rankguessed))
++      else if (sym->ts.type == BT_CLASS
++	       && CLASS_DATA (sym)
++	       && (!CLASS_DATA (sym)->as || sym->assoc->rankguessed))
+ 	{
+ 	  if (!CLASS_DATA (sym)->as)
+ 	    CLASS_DATA (sym)->as = gfc_get_array_spec ();
+@@ -9015,7 +9019,7 @@ resolve_assoc_var (gfc_symbol* sym, bool resolve_target)
+     {
+       /* target's rank is 0, but the type of the sym is still array valued,
+ 	 which has to be corrected.  */
+-      if (sym->ts.type == BT_CLASS
++      if (sym->ts.type == BT_CLASS && sym->ts.u.derived
+ 	  && CLASS_DATA (sym) && CLASS_DATA (sym)->as)
+ 	{
+ 	  gfc_array_spec *as;
+@@ -9227,7 +9231,8 @@ resolve_select_type (gfc_code *code, gfc_namespace *old_ns)
+ 	{
+ 	  if (code->expr1->symtree->n.sym->attr.untyped)
+ 	    code->expr1->symtree->n.sym->ts = code->expr2->ts;
+-	  selector_type = CLASS_DATA (code->expr2)->ts.u.derived;
++	  selector_type = CLASS_DATA (code->expr2)
++	    ? CLASS_DATA (code->expr2)->ts.u.derived : code->expr2->ts.u.derived;
+ 	}
+ 
+       if (code->expr2->rank && CLASS_DATA (code->expr1)->as)
+@@ -12600,7 +12605,8 @@ resolve_fl_var_and_proc (gfc_symbol *sym, int mp_flag)
+ {
+   gfc_array_spec *as;
+ 
+-  if (sym->ts.type == BT_CLASS && sym->attr.class_ok)
++  if (sym->ts.type == BT_CLASS && sym->attr.class_ok
++      && sym->ts.u.derived && CLASS_DATA (sym))
+     as = CLASS_DATA (sym)->as;
+   else
+     as = sym->as;
+@@ -12610,7 +12616,8 @@ resolve_fl_var_and_proc (gfc_symbol *sym, int mp_flag)
+     {
+       bool pointer, allocatable, dimension;
+ 
+-      if (sym->ts.type == BT_CLASS && sym->attr.class_ok)
++      if (sym->ts.type == BT_CLASS && sym->attr.class_ok
++	  && sym->ts.u.derived && CLASS_DATA (sym))
+ 	{
+ 	  pointer = CLASS_DATA (sym)->attr.class_pointer;
+ 	  allocatable = CLASS_DATA (sym)->attr.allocatable;
+@@ -12661,6 +12668,7 @@ resolve_fl_var_and_proc (gfc_symbol *sym, int mp_flag)
+     {
+       /* F03:C502.  */
+       if (sym->attr.class_ok
++	  && sym->ts.u.derived
+ 	  && !sym->attr.select_type_temporary
+ 	  && !UNLIMITED_POLY (sym)
+ 	  && !gfc_type_is_extensible (CLASS_DATA (sym)->ts.u.derived))
+@@ -12699,7 +12707,8 @@ resolve_fl_variable_derived (gfc_symbol *sym, int no_init_flag)
+      associated by the presence of another class I symbol in the same
+      namespace.  14.6.1.3 of the standard and the discussion on
+      comp.lang.fortran.  */
+-  if (sym->ns != sym->ts.u.derived->ns
++  if (sym->ts.u.derived
++      && sym->ns != sym->ts.u.derived->ns
+       && !sym->ts.u.derived->attr.use_assoc
+       && sym->ns->proc_name->attr.if_source != IFSRC_IFBODY)
+     {
+@@ -15330,7 +15339,7 @@ resolve_symbol (gfc_symbol *sym)
+       specification_expr = saved_specification_expr;
+     }
+ 
+-  if (sym->ts.type == BT_CLASS && sym->attr.class_ok)
++  if (sym->ts.type == BT_CLASS && sym->attr.class_ok && sym->ts.u.derived)
+     {
+       as = CLASS_DATA (sym)->as;
+       class_attr = CLASS_DATA (sym)->attr;
+@@ -15731,6 +15740,7 @@ resolve_symbol (gfc_symbol *sym)
+   /* F2008, C525.  */
+   if ((((sym->ts.type == BT_DERIVED && sym->ts.u.derived->attr.coarray_comp)
+ 	 || (sym->ts.type == BT_CLASS && sym->attr.class_ok
++	     && sym->ts.u.derived && CLASS_DATA (sym)
+ 	     && CLASS_DATA (sym)->attr.coarray_comp))
+        || class_attr.codimension)
+       && (sym->attr.result || sym->result == sym))
+@@ -15752,6 +15762,7 @@ resolve_symbol (gfc_symbol *sym)
+   /* F2008, C525.  */
+   if (((sym->ts.type == BT_DERIVED && sym->ts.u.derived->attr.coarray_comp)
+ 	|| (sym->ts.type == BT_CLASS && sym->attr.class_ok
++	    && sym->ts.u.derived && CLASS_DATA (sym)
+ 	    && CLASS_DATA (sym)->attr.coarray_comp))
+       && (class_attr.codimension || class_attr.pointer || class_attr.dimension
+ 	  || class_attr.allocatable))
+@@ -15795,6 +15806,7 @@ resolve_symbol (gfc_symbol *sym)
+   /* F2008, C541.  */
+   if ((((sym->ts.type == BT_DERIVED && sym->ts.u.derived->attr.coarray_comp)
+ 	|| (sym->ts.type == BT_CLASS && sym->attr.class_ok
++	    && sym->ts.u.derived && CLASS_DATA (sym)
+ 	    && CLASS_DATA (sym)->attr.coarray_comp))
+        || (class_attr.codimension && class_attr.allocatable))
+       && sym->attr.dummy && sym->attr.intent == INTENT_OUT)
+diff --git a/gcc/fortran/trans-decl.c b/gcc/fortran/trans-decl.c
+index 769ab20c82d..45a739ac860 100644
+--- a/gcc/fortran/trans-decl.c
++++ b/gcc/fortran/trans-decl.c
+@@ -2090,12 +2090,17 @@ gfc_get_extern_function_decl (gfc_symbol * sym, gfc_actual_arglist *actual_args)
+       if (gsym && !gsym->bind_c)
+ 	gsym = NULL;
+     }
+-  else
++  else if (sym->module == NULL)
+     {
+       gsym = gfc_find_gsymbol (gfc_gsym_root, sym->name);
+       if (gsym && gsym->bind_c)
+ 	gsym = NULL;
+     }
++  else
++    {
++      /* Procedure from a different module.  */
++      gsym = NULL;
++    }
+ 
+   if (gsym && !gsym->defined)
+     gsym = NULL;
+diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
+index ae34d8ee366..46a61e437ad 100644
+--- a/gcc/testsuite/ChangeLog
++++ b/gcc/testsuite/ChangeLog
+@@ -1,3 +1,60 @@
++2020-07-23  Harald Anlauf  <anlauf@gmx.de>
++
++	Backported from master:
++	2020-07-10  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/95980
++	* gfortran.dg/pr95980_2.f90: New file.
++
++2020-07-23  Harald Anlauf  <anlauf@gmx.de>
++
++	Backported from master:
++	2020-07-06  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/95980
++	* gfortran.dg/pr95980.f90: New file.
++
++2020-07-23  Harald Anlauf  <anlauf@gmx.de>
++
++	Backported from master:
++	2020-07-10  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/96086
++	* gfortran.dg/pr96086.f90: New file.
++
++2020-07-23  Harald Anlauf  <anlauf@gmx.de>
++
++	Backported from master:
++	2020-07-21  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/89574
++	* gfortran.dg/pr89574.f90: New file.
++
++2020-07-23  Peter Bergner  <bergner@linux.ibm.com>
++
++	Backported from master:
++	2020-07-22  Peter Bergner  <bergner@linux.ibm.com>
++
++	PR target/96236
++	* gcc.target/powerpc/mma-double-test.c: Update storing results for
++	correct little-endian ordering.
++	* gcc.target/powerpc/mma-single-test.c: Likewise.
++
++2020-07-23  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	PR fortran/96018
++	* gfortran.dg/implicit_pure_5.c: New file.
++	* gfortran.dg/implicit_pure_5.f90: New file.
++
++2020-07-23  Kito Cheng  <kito.cheng@sifive.com>
++
++	Backported from master:
++	2020-07-23  Kito Cheng  <kito.cheng@sifive.com>
++
++	PR target/96260
++	* gcc.target/riscv/pr91441.c: Update warning message.
++	* gcc.target/riscv/pr96260.c: New.
++
+ 2020-07-23  Release Manager
+ 
+ 	* GCC 10.2.0 released.
+diff --git a/gcc/testsuite/gcc.target/powerpc/mma-double-test.c b/gcc/testsuite/gcc.target/powerpc/mma-double-test.c
+index ac84ae30004..044a288ebcc 100755
+--- a/gcc/testsuite/gcc.target/powerpc/mma-double-test.c
++++ b/gcc/testsuite/gcc.target/powerpc/mma-double-test.c
+@@ -12,13 +12,13 @@ typedef double v4sf_t __attribute__ ((vector_size (16)));
+ #define SAVE_ACC(ACC, ldc, J)  \
+ 	  __builtin_mma_disassemble_acc (result, ACC); \
+ 	  rowC = (v4sf_t *) &CO[0*ldc+J]; \
+-          rowC[0] += result[3] ; \
++          rowC[0] += result[0]; \
+           rowC = (v4sf_t *) &CO[1*ldc+J]; \
+-          rowC[0] += result[2] ; \
++          rowC[0] += result[1]; \
+           rowC = (v4sf_t *) &CO[2*ldc+J]; \
+-          rowC[0] += result[1] ; \
++          rowC[0] += result[2]; \
+           rowC = (v4sf_t *) &CO[3*ldc+J]; \
+-	  rowC[0] += result[0] ;
++	  rowC[0] += result[3];
+ 
+ void
+ MMA (int m, int n, int k, double *A, double *B, double *C)
+diff --git a/gcc/testsuite/gcc.target/powerpc/mma-single-test.c b/gcc/testsuite/gcc.target/powerpc/mma-single-test.c
+index 15369a64025..7e628df45b7 100755
+--- a/gcc/testsuite/gcc.target/powerpc/mma-single-test.c
++++ b/gcc/testsuite/gcc.target/powerpc/mma-single-test.c
+@@ -12,24 +12,24 @@ typedef float v4sf_t __attribute__ ((vector_size (16)));
+ #define SAVE_ACC(ACC, ldc,J)  \
+ 	  __builtin_mma_disassemble_acc (result, ACC); \
+ 	  rowC = (v4sf_t *) &CO[0*ldc+J]; \
+-          rowC[0] += result[3] ; \
++          rowC[0] += result[0]; \
+           rowC = (v4sf_t *) &CO[1*ldc+J]; \
+-          rowC[0] += result[2] ; \
++          rowC[0] += result[1]; \
+           rowC = (v4sf_t *) &CO[2*ldc+J]; \
+-          rowC[0] += result[1] ; \
++          rowC[0] += result[2]; \
+           rowC = (v4sf_t *) &CO[3*ldc+J]; \
+-	  rowC[0] += result[0] ;
++	  rowC[0] += result[3];
+ 
+ #define SAVE_ACC1(ACC,ldc, J)  \
+ 	  __builtin_mma_disassemble_acc (result, ACC); \
+ 	  rowC = (v4sf_t *) &CO[4* ldc+J]; \
+-          rowC[0] += result[3] ; \
++          rowC[0] += result[0]; \
+           rowC = (v4sf_t *) &CO[5*ldc+J]; \
+-          rowC[0] += result[2] ; \
++          rowC[0] += result[1]; \
+           rowC = (v4sf_t *) &CO[6*ldc+J]; \
+-          rowC[0] += result[1] ; \
++          rowC[0] += result[2]; \
+           rowC = (v4sf_t *) &CO[7*ldc+J]; \
+-	  rowC[0] += result[0] ;
++	  rowC[0] += result[3];
+ void
+ MMA (int m, int n, int k, float *A, float *B, float *C)
+ {
 diff --git a/gcc/testsuite/gcc.target/riscv/pr91441.c b/gcc/testsuite/gcc.target/riscv/pr91441.c
 index 593a2972a0f..b55df5e7f00 100644
 --- a/gcc/testsuite/gcc.target/riscv/pr91441.c
@@ -86,6 +928,170 @@ index 00000000000..229997f877b
 +{
 +  return bar(&a);
 +}
+diff --git a/gcc/testsuite/gfortran.dg/implicit_pure_5.c b/gcc/testsuite/gfortran.dg/implicit_pure_5.c
+new file mode 100644
+index 00000000000..67a6d9ca45e
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/implicit_pure_5.c
+@@ -0,0 +1,7 @@
++#include <stdio.h>
++
++extern int num_calls;
++int side_effect_c()
++{
++  num_calls ++;
++}
+diff --git a/gcc/testsuite/gfortran.dg/implicit_pure_5.f90 b/gcc/testsuite/gfortran.dg/implicit_pure_5.f90
+new file mode 100644
+index 00000000000..7f1c887e3f9
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/implicit_pure_5.f90
+@@ -0,0 +1,63 @@
++! { dg-do run }
++! { dg-additional-sources implicit_pure_5.c }
++! PR fortran/96018 - a wrongly marked implicit_pure
++! function caused wrong code.
++module wrapper
++  use, intrinsic :: iso_c_binding, only : c_int
++  implicit none
++  integer(kind=c_int), bind(C) :: num_calls
++contains
++
++  integer function call_side_effect() result(ierr)
++    call side_effect(ierr)
++  end function call_side_effect
++
++  integer function inner_3d(array) result(ierr)
++    real, intent(in) :: array(:,:,:)
++    integer dimensions(3)
++    dimensions = shape(array)
++    ierr = call_side_effect()
++  end function inner_3d
++
++  integer function inner_4d(array) result(ierr)
++    real, intent(in) :: array(:,:,:,:)
++    integer dimensions(4)
++    dimensions = shape(array)
++    ierr = call_side_effect()
++  end function inner_4d
++
++  subroutine write_3d()
++    real :: array(1,1,1)
++    integer ierr
++    ierr = inner_3d(array)
++    ierr = call_side_effect()
++  end subroutine write_3d
++
++  subroutine write_4d()
++    real array(1,1,1,1)
++    integer ierr
++    ierr = inner_4d(array)
++    ierr = call_side_effect()
++  end subroutine write_4d
++
++  subroutine side_effect(ierr)
++    integer, intent(out) :: ierr        ! Error code
++    interface
++       integer(c_int) function side_effect_c() bind(C,name='side_effect_c')
++         use, intrinsic :: iso_c_binding, only: c_int
++       end function side_effect_c
++    end interface
++    ierr = side_effect_c()
++  end subroutine side_effect
++
++end module wrapper
++
++program self_contained
++  use wrapper
++  implicit none
++  call write_3d()
++  if (num_calls /= 2) stop 1
++  call write_4d()
++  if (num_calls /= 4) stop 2
++end program self_contained
++
+diff --git a/gcc/testsuite/gfortran.dg/pr89574.f90 b/gcc/testsuite/gfortran.dg/pr89574.f90
+new file mode 100644
+index 00000000000..48dd0680a48
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr89574.f90
+@@ -0,0 +1,29 @@
++! { dg-do compile }
++! PR fortran/89574 - ICE in conv_function_val, at fortran/trans-expr.c:3792
++
++module mod1
++contains
++  subroutine init
++  end subroutine
++end module
++
++module mod2
++contains
++  subroutine init
++  end subroutine
++end module
++
++module init
++  use mod1, only : test_init1 => init
++  use mod2, only : test_init2 => init
++  implicit none
++contains
++  subroutine sub
++    call test_init1
++    call test_init2
++    call init
++  contains
++    subroutine init
++    end subroutine
++  end subroutine
++end module
+diff --git a/gcc/testsuite/gfortran.dg/pr95980.f90 b/gcc/testsuite/gfortran.dg/pr95980.f90
+new file mode 100644
+index 00000000000..7c8260a96e0
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr95980.f90
+@@ -0,0 +1,10 @@
++! { dg-do compile }
++! PR fortran/95980 - ICE in get_unique_type_string, at fortran/class.c:485
++
++program p
++  type t
++  end type t
++  class(t) :: x        ! { dg-error "must be dummy, allocatable or pointer" }
++  select type (y => x)
++  end select
++end
+diff --git a/gcc/testsuite/gfortran.dg/pr95980_2.f90 b/gcc/testsuite/gfortran.dg/pr95980_2.f90
+new file mode 100644
+index 00000000000..d1fe9c76bd0
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr95980_2.f90
+@@ -0,0 +1,11 @@
++! { dg-do compile }
++! PR fortran/95980 - ICE in get_unique_type_string, at fortran/class.c:485
++
++program p
++  type t
++     integer :: a
++  end type t
++  class(t) :: x         ! { dg-error "must be dummy, allocatable or pointer" }
++  select type (y => x)
++  end select
++end
+diff --git a/gcc/testsuite/gfortran.dg/pr96086.f90 b/gcc/testsuite/gfortran.dg/pr96086.f90
+new file mode 100644
+index 00000000000..b80967a7a07
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr96086.f90
+@@ -0,0 +1,8 @@
++! { dg-do compile }
++! PR fortran/96086 - ICE in gfc_match_select_rank, at fortran/match.c:6645
++
++subroutine s
++  class(*) :: x(..)     ! { dg-error "Assumed-rank array" }
++  select rank (y => x)  ! { dg-error "CLASS variable" }
++  end select
++end
 diff --git a/gcc/toplev.c b/gcc/toplev.c
 index deccd7f15ba..42af2f587af 100644
 --- a/gcc/toplev.c
@@ -126,3 +1132,3197 @@ index deccd7f15ba..42af2f587af 100644
   /* Do not use IPA optimizations for register allocation if profiler is active
      or patchable function entries are inserted for run-time instrumentation
      or port does not emit prologue and epilogue as RTL.  */
+diff --git a/libgo/MERGE b/libgo/MERGE
+index 07547d064a1..4f8589371d3 100644
+--- a/libgo/MERGE
++++ b/libgo/MERGE
+@@ -1,4 +1,4 @@
+-83b181c68bf332ac7948f145f33d128377a09c42
++edfd6f28486017dcb136cd3f3ec252706d4b326e
+ 
+ The first line of this file holds the git revision number of the
+ last merge done from the master library sources.
+diff --git a/libgo/VERSION b/libgo/VERSION
+index d8281a2e996..398d25321fb 100644
+--- a/libgo/VERSION
++++ b/libgo/VERSION
+@@ -1 +1 @@
+-go1.14.4
++go1.14.6
+diff --git a/libgo/go/cmd/go/go_test.go b/libgo/go/cmd/go/go_test.go
+index d535ea0ad34..40999f22f8d 100644
+--- a/libgo/go/cmd/go/go_test.go
++++ b/libgo/go/cmd/go/go_test.go
+@@ -3956,45 +3956,6 @@ func TestCgoFlagContainsSpace(t *testing.T) {
+ 	tg.grepStderrNot(`"-L[^"]+c flags".*"-L[^"]+c flags"`, "found too many quoted ld flags")
+ }
+ 
+-// Issue 9737: verify that GOARM and GO386 affect the computed build ID.
+-func TestBuildIDContainsArchModeEnv(t *testing.T) {
+-	if testing.Short() {
+-		t.Skip("skipping in short mode")
+-	}
+-
+-	var tg *testgoData
+-	testWith := func(before, after func()) func(*testing.T) {
+-		return func(t *testing.T) {
+-			tg = testgo(t)
+-			defer tg.cleanup()
+-			tg.tempFile("src/mycmd/x.go", `package main
+-func main() {}`)
+-			tg.setenv("GOPATH", tg.path("."))
+-
+-			tg.cd(tg.path("src/mycmd"))
+-			tg.setenv("GOOS", "linux")
+-			before()
+-			tg.run("install", "mycmd")
+-			after()
+-			tg.wantStale("mycmd", "stale dependency", "should be stale after environment variable change")
+-		}
+-	}
+-
+-	t.Run("386", testWith(func() {
+-		tg.setenv("GOARCH", "386")
+-		tg.setenv("GO386", "387")
+-	}, func() {
+-		tg.setenv("GO386", "sse2")
+-	}))
+-
+-	t.Run("arm", testWith(func() {
+-		tg.setenv("GOARCH", "arm")
+-		tg.setenv("GOARM", "5")
+-	}, func() {
+-		tg.setenv("GOARM", "7")
+-	}))
+-}
+-
+ func TestListTests(t *testing.T) {
+ 	tooSlow(t)
+ 	var tg *testgoData
+diff --git a/libgo/go/cmd/go/testdata/test_regexps.txt b/libgo/go/cmd/go/testdata/test_regexps.txt
+new file mode 100644
+index 00000000000..a616195caba
+--- /dev/null
++++ b/libgo/go/cmd/go/testdata/test_regexps.txt
+@@ -0,0 +1,75 @@
++go test -cpu=1 -run=X/Y -bench=X/Y -count=2 -v testregexp
++
++# Test the following:
++
++# TestX is run, twice
++stdout -count=2 '^=== RUN   TestX$'
++stdout -count=2 '^    x_test.go:6: LOG: X running$'
++
++# TestX/Y is run, twice
++stdout -count=2 '^=== RUN   TestX/Y$'
++stdout -count=2 '^    x_test.go:8: LOG: Y running$'
++
++# TestXX is run, twice
++stdout -count=2 '^=== RUN   TestXX$'
++stdout -count=2 '^    z_test.go:10: LOG: XX running'
++
++# TestZ is not run
++! stdout '^=== RUN   TestZ$'
++
++# BenchmarkX is run with N=1 once, only to discover what sub-benchmarks it has,
++# and should not print a final summary line.
++stdout -count=1 '^    x_test.go:13: LOG: X running N=1$'
++! stdout '^\s+BenchmarkX: x_test.go:13: LOG: X running N=\d\d+'
++! stdout 'BenchmarkX\s+\d+'
++
++# Same for BenchmarkXX.
++stdout -count=1 '^    z_test.go:18: LOG: XX running N=1$'
++! stdout  '^    z_test.go:18: LOG: XX running N=\d\d+'
++! stdout 'BenchmarkXX\s+\d+'
++
++# BenchmarkX/Y is run in full twice due to -count=2.
++# "Run in full" means that it runs for approximately the default benchtime,
++# but may cap out at N=1e9.
++# We don't actually care what the final iteration count is, but it should be
++# a large number, and the last iteration count prints right before the results.
++stdout -count=2 '^    x_test.go:15: LOG: Y running N=[1-9]\d{4,}\nBenchmarkX/Y\s+\d+'
++
++-- testregexp/x_test.go --
++package x
++
++import "testing"
++
++func TestX(t *testing.T) {
++	t.Logf("LOG: X running")
++	t.Run("Y", func(t *testing.T) {
++		t.Logf("LOG: Y running")
++	})
++}
++
++func BenchmarkX(b *testing.B) {
++	b.Logf("LOG: X running N=%d", b.N)
++	b.Run("Y", func(b *testing.B) {
++		b.Logf("LOG: Y running N=%d", b.N)
++	})
++}
++-- testregexp/z_test.go --
++package x
++
++import "testing"
++
++func TestZ(t *testing.T) {
++	t.Logf("LOG: Z running")
++}
++
++func TestXX(t *testing.T) {
++	t.Logf("LOG: XX running")
++}
++
++func BenchmarkZ(b *testing.B) {
++	b.Logf("LOG: Z running N=%d", b.N)
++}
++
++func BenchmarkXX(b *testing.B) {
++	b.Logf("LOG: XX running N=%d", b.N)
++}
+diff --git a/libgo/go/crypto/x509/root_windows.go b/libgo/go/crypto/x509/root_windows.go
+index 34d585318d4..1e0f3acb670 100644
+--- a/libgo/go/crypto/x509/root_windows.go
++++ b/libgo/go/crypto/x509/root_windows.go
+@@ -88,6 +88,9 @@ func checkChainTrustStatus(c *Certificate, chainCtx *syscall.CertChainContext) e
+ 		switch status {
+ 		case syscall.CERT_TRUST_IS_NOT_TIME_VALID:
+ 			return CertificateInvalidError{c, Expired, ""}
++		case syscall.CERT_TRUST_IS_NOT_VALID_FOR_USAGE:
++			return CertificateInvalidError{c, IncompatibleUsage, ""}
++		// TODO(filippo): surface more error statuses.
+ 		default:
+ 			return UnknownAuthorityError{c, nil, nil}
+ 		}
+@@ -138,11 +141,19 @@ func checkChainSSLServerPolicy(c *Certificate, chainCtx *syscall.CertChainContex
+ 	return nil
+ }
+ 
++// windowsExtKeyUsageOIDs are the C NUL-terminated string representations of the
++// OIDs for use with the Windows API.
++var windowsExtKeyUsageOIDs = make(map[ExtKeyUsage][]byte, len(extKeyUsageOIDs))
++
++func init() {
++	for _, eku := range extKeyUsageOIDs {
++		windowsExtKeyUsageOIDs[eku.extKeyUsage] = []byte(eku.oid.String() + "\x00")
++	}
++}
++
+ // systemVerify is like Verify, except that it uses CryptoAPI calls
+ // to build certificate chains and verify them.
+ func (c *Certificate) systemVerify(opts *VerifyOptions) (chains [][]*Certificate, err error) {
+-	hasDNSName := opts != nil && len(opts.DNSName) > 0
+-
+ 	storeCtx, err := createStoreContext(c, opts)
+ 	if err != nil {
+ 		return nil, err
+@@ -152,17 +163,26 @@ func (c *Certificate) systemVerify(opts *VerifyOptions) (chains [][]*Certificate
+ 	para := new(syscall.CertChainPara)
+ 	para.Size = uint32(unsafe.Sizeof(*para))
+ 
+-	// If there's a DNSName set in opts, assume we're verifying
+-	// a certificate from a TLS server.
+-	if hasDNSName {
+-		oids := []*byte{
+-			&syscall.OID_PKIX_KP_SERVER_AUTH[0],
+-			// Both IE and Chrome allow certificates with
+-			// Server Gated Crypto as well. Some certificates
+-			// in the wild require them.
+-			&syscall.OID_SERVER_GATED_CRYPTO[0],
+-			&syscall.OID_SGC_NETSCAPE[0],
++	keyUsages := opts.KeyUsages
++	if len(keyUsages) == 0 {
++		keyUsages = []ExtKeyUsage{ExtKeyUsageServerAuth}
++	}
++	oids := make([]*byte, 0, len(keyUsages))
++	for _, eku := range keyUsages {
++		if eku == ExtKeyUsageAny {
++			oids = nil
++			break
++		}
++		if oid, ok := windowsExtKeyUsageOIDs[eku]; ok {
++			oids = append(oids, &oid[0])
+ 		}
++		// Like the standard verifier, accept SGC EKUs as equivalent to ServerAuth.
++		if eku == ExtKeyUsageServerAuth {
++			oids = append(oids, &syscall.OID_SERVER_GATED_CRYPTO[0])
++			oids = append(oids, &syscall.OID_SGC_NETSCAPE[0])
++		}
++	}
++	if oids != nil {
+ 		para.RequestedUsage.Type = syscall.USAGE_MATCH_TYPE_OR
+ 		para.RequestedUsage.Usage.Length = uint32(len(oids))
+ 		para.RequestedUsage.Usage.UsageIdentifiers = &oids[0]
+@@ -208,7 +228,7 @@ func (c *Certificate) systemVerify(opts *VerifyOptions) (chains [][]*Certificate
+ 		return nil, err
+ 	}
+ 
+-	if hasDNSName {
++	if opts != nil && len(opts.DNSName) > 0 {
+ 		err = checkChainSSLServerPolicy(c, chainCtx, opts)
+ 		if err != nil {
+ 			return nil, err
+diff --git a/libgo/go/crypto/x509/verify.go b/libgo/go/crypto/x509/verify.go
+index 358fca4705b..c80b5ac825d 100644
+--- a/libgo/go/crypto/x509/verify.go
++++ b/libgo/go/crypto/x509/verify.go
+@@ -188,23 +188,32 @@ var errNotParsed = errors.New("x509: missing ASN.1 contents; use ParseCertificat
+ // VerifyOptions contains parameters for Certificate.Verify. It's a structure
+ // because other PKIX verification APIs have ended up needing many options.
+ type VerifyOptions struct {
+-	DNSName       string
++	// DNSName, if set, is checked against the leaf certificate with
++	// Certificate.VerifyHostname or the platform verifier.
++	DNSName string
++
++	// Intermediates is an optional pool of certificates that are not trust
++	// anchors, but can be used to form a chain from the leaf certificate to a
++	// root certificate.
+ 	Intermediates *CertPool
+-	Roots         *CertPool // if nil, the system roots are used
+-	CurrentTime   time.Time // if zero, the current time is used
+-	// KeyUsage specifies which Extended Key Usage values are acceptable. A leaf
+-	// certificate is accepted if it contains any of the listed values. An empty
+-	// list means ExtKeyUsageServerAuth. To accept any key usage, include
+-	// ExtKeyUsageAny.
+-	//
+-	// Certificate chains are required to nest these extended key usage values.
+-	// (This matches the Windows CryptoAPI behavior, but not the spec.)
++	// Roots is the set of trusted root certificates the leaf certificate needs
++	// to chain up to. If nil, the system roots or the platform verifier are used.
++	Roots *CertPool
++
++	// CurrentTime is used to check the validity of all certificates in the
++	// chain. If zero, the current time is used.
++	CurrentTime time.Time
++
++	// KeyUsages specifies which Extended Key Usage values are acceptable. A
++	// chain is accepted if it allows any of the listed values. An empty list
++	// means ExtKeyUsageServerAuth. To accept any key usage, include ExtKeyUsageAny.
+ 	KeyUsages []ExtKeyUsage
++
+ 	// MaxConstraintComparisions is the maximum number of comparisons to
+ 	// perform when checking a given certificate's name constraints. If
+ 	// zero, a sensible default is used. This limit prevents pathological
+ 	// certificates from consuming excessive amounts of CPU time when
+-	// validating.
++	// validating. It does not apply to the platform verifier.
+ 	MaxConstraintComparisions int
+ }
+ 
+@@ -717,8 +726,9 @@ func (c *Certificate) isValid(certType int, currentChain []*Certificate, opts *V
+ // needed. If successful, it returns one or more chains where the first
+ // element of the chain is c and the last element is from opts.Roots.
+ //
+-// If opts.Roots is nil and system roots are unavailable the returned error
+-// will be of type SystemRootsError.
++// If opts.Roots is nil, the platform verifier might be used, and
++// verification details might differ from what is described below. If system
++// roots are unavailable the returned error will be of type SystemRootsError.
+ //
+ // Name constraints in the intermediates will be applied to all names claimed
+ // in the chain, not just opts.DNSName. Thus it is invalid for a leaf to claim
+@@ -726,9 +736,10 @@ func (c *Certificate) isValid(certType int, currentChain []*Certificate, opts *V
+ // the name being validated. Note that DirectoryName constraints are not
+ // supported.
+ //
+-// Extended Key Usage values are enforced down a chain, so an intermediate or
+-// root that enumerates EKUs prevents a leaf from asserting an EKU not in that
+-// list.
++// Extended Key Usage values are enforced nested down a chain, so an intermediate
++// or root that enumerates EKUs prevents a leaf from asserting an EKU not in that
++// list. (While this is not specified, it is common practice in order to limit
++// the types of certificates a CA can issue.)
+ //
+ // WARNING: this function doesn't do any revocation checking.
+ func (c *Certificate) Verify(opts VerifyOptions) (chains [][]*Certificate, err error) {
+diff --git a/libgo/go/crypto/x509/verify_test.go b/libgo/go/crypto/x509/verify_test.go
+index 86fe76a57d7..bbb68db8578 100644
+--- a/libgo/go/crypto/x509/verify_test.go
++++ b/libgo/go/crypto/x509/verify_test.go
+@@ -21,34 +21,24 @@ import (
+ )
+ 
+ type verifyTest struct {
+-	leaf                 string
+-	intermediates        []string
+-	roots                []string
+-	currentTime          int64
+-	dnsName              string
+-	systemSkip           bool
+-	keyUsages            []ExtKeyUsage
+-	testSystemRootsError bool
+-	sha2                 bool
+-	ignoreCN             bool
+-
+-	errorCallback  func(*testing.T, int, error) bool
++	name          string
++	leaf          string
++	intermediates []string
++	roots         []string
++	currentTime   int64
++	dnsName       string
++	systemSkip    bool
++	systemLax     bool
++	keyUsages     []ExtKeyUsage
++	ignoreCN      bool
++
++	errorCallback  func(*testing.T, error)
+ 	expectedChains [][]string
+ }
+ 
+ var verifyTests = []verifyTest{
+ 	{
+-		leaf:                 googleLeaf,
+-		intermediates:        []string{giag2Intermediate},
+-		currentTime:          1395785200,
+-		dnsName:              "www.google.com",
+-		testSystemRootsError: true,
+-
+-		// Without any roots specified we should get a system roots
+-		// error.
+-		errorCallback: expectSystemRootsError,
+-	},
+-	{
++		name:          "Valid",
+ 		leaf:          googleLeaf,
+ 		intermediates: []string{giag2Intermediate},
+ 		roots:         []string{geoTrustRoot},
+@@ -60,6 +50,7 @@ var verifyTests = []verifyTest{
+ 		},
+ 	},
+ 	{
++		name:          "MixedCase",
+ 		leaf:          googleLeaf,
+ 		intermediates: []string{giag2Intermediate},
+ 		roots:         []string{geoTrustRoot},
+@@ -71,6 +62,7 @@ var verifyTests = []verifyTest{
+ 		},
+ 	},
+ 	{
++		name:          "HostnameMismatch",
+ 		leaf:          googleLeaf,
+ 		intermediates: []string{giag2Intermediate},
+ 		roots:         []string{geoTrustRoot},
+@@ -80,6 +72,7 @@ var verifyTests = []verifyTest{
+ 		errorCallback: expectHostnameError("certificate is valid for"),
+ 	},
+ 	{
++		name:          "IPMissing",
+ 		leaf:          googleLeaf,
+ 		intermediates: []string{giag2Intermediate},
+ 		roots:         []string{geoTrustRoot},
+@@ -89,6 +82,7 @@ var verifyTests = []verifyTest{
+ 		errorCallback: expectHostnameError("doesn't contain any IP SANs"),
+ 	},
+ 	{
++		name:          "Expired",
+ 		leaf:          googleLeaf,
+ 		intermediates: []string{giag2Intermediate},
+ 		roots:         []string{geoTrustRoot},
+@@ -98,6 +92,7 @@ var verifyTests = []verifyTest{
+ 		errorCallback: expectExpired,
+ 	},
+ 	{
++		name:        "MissingIntermediate",
+ 		leaf:        googleLeaf,
+ 		roots:       []string{geoTrustRoot},
+ 		currentTime: 1395785200,
+@@ -109,6 +104,7 @@ var verifyTests = []verifyTest{
+ 		errorCallback: expectAuthorityUnknown,
+ 	},
+ 	{
++		name:          "RootInIntermediates",
+ 		leaf:          googleLeaf,
+ 		intermediates: []string{geoTrustRoot, giag2Intermediate},
+ 		roots:         []string{geoTrustRoot},
+@@ -119,31 +115,50 @@ var verifyTests = []verifyTest{
+ 			{"Google", "Google Internet Authority", "GeoTrust"},
+ 		},
+ 		// CAPI doesn't build the chain with the duplicated GeoTrust
+-		// entry so the results don't match. Thus we skip this test
+-		// until that's fixed.
++		// entry so the results don't match.
++		systemLax: true,
++	},
++	{
++		name:          "dnssec-exp",
++		leaf:          dnssecExpLeaf,
++		intermediates: []string{startComIntermediate},
++		roots:         []string{startComRoot},
++		currentTime:   1302726541,
++
++		// The StartCom root is not trusted by Windows when the default
++		// ServerAuth EKU is requested.
+ 		systemSkip: true,
++
++		expectedChains: [][]string{
++			{"dnssec-exp", "StartCom Class 1", "StartCom Certification Authority"},
++		},
+ 	},
+ 	{
++		name:          "dnssec-exp/AnyEKU",
+ 		leaf:          dnssecExpLeaf,
+ 		intermediates: []string{startComIntermediate},
+ 		roots:         []string{startComRoot},
+ 		currentTime:   1302726541,
++		keyUsages:     []ExtKeyUsage{ExtKeyUsageAny},
+ 
+ 		expectedChains: [][]string{
+ 			{"dnssec-exp", "StartCom Class 1", "StartCom Certification Authority"},
+ 		},
+ 	},
+ 	{
++		name:          "dnssec-exp/RootInIntermediates",
+ 		leaf:          dnssecExpLeaf,
+ 		intermediates: []string{startComIntermediate, startComRoot},
+ 		roots:         []string{startComRoot},
+ 		currentTime:   1302726541,
++		systemSkip:    true, // see dnssec-exp test
+ 
+ 		expectedChains: [][]string{
+ 			{"dnssec-exp", "StartCom Class 1", "StartCom Certification Authority"},
+ 		},
+ 	},
+ 	{
++		name:          "InvalidHash",
+ 		leaf:          googleLeafWithInvalidHash,
+ 		intermediates: []string{giag2Intermediate},
+ 		roots:         []string{geoTrustRoot},
+@@ -152,50 +167,52 @@ var verifyTests = []verifyTest{
+ 
+ 		// The specific error message may not occur when using system
+ 		// verification.
+-		systemSkip:    true,
++		systemLax:     true,
+ 		errorCallback: expectHashError,
+ 	},
++	// EKULeaf tests use an unconstrained chain leading to a leaf certificate
++	// with an E-mail Protection EKU but not a Server Auth one, checking that
++	// the EKUs on the leaf are enforced.
+ 	{
+-		// The default configuration should reject an S/MIME chain.
+-		leaf:        smimeLeaf,
+-		roots:       []string{smimeIntermediate},
+-		currentTime: 1339436154,
++		name:          "EKULeaf",
++		leaf:          smimeLeaf,
++		intermediates: []string{smimeIntermediate},
++		roots:         []string{smimeRoot},
++		currentTime:   1594673418,
+ 
+-		// Key usage not implemented for Windows yet.
+-		systemSkip:    true,
+ 		errorCallback: expectUsageError,
+ 	},
+ 	{
+-		leaf:        smimeLeaf,
+-		roots:       []string{smimeIntermediate},
+-		currentTime: 1339436154,
+-		keyUsages:   []ExtKeyUsage{ExtKeyUsageServerAuth},
++		name:          "EKULeafExplicit",
++		leaf:          smimeLeaf,
++		intermediates: []string{smimeIntermediate},
++		roots:         []string{smimeRoot},
++		currentTime:   1594673418,
++		keyUsages:     []ExtKeyUsage{ExtKeyUsageServerAuth},
+ 
+-		// Key usage not implemented for Windows yet.
+-		systemSkip:    true,
+ 		errorCallback: expectUsageError,
+ 	},
+ 	{
+-		leaf:        smimeLeaf,
+-		roots:       []string{smimeIntermediate},
+-		currentTime: 1339436154,
+-		keyUsages:   []ExtKeyUsage{ExtKeyUsageEmailProtection},
++		name:          "EKULeafValid",
++		leaf:          smimeLeaf,
++		intermediates: []string{smimeIntermediate},
++		roots:         []string{smimeRoot},
++		currentTime:   1594673418,
++		keyUsages:     []ExtKeyUsage{ExtKeyUsageEmailProtection},
+ 
+-		// Key usage not implemented for Windows yet.
+-		systemSkip: true,
+ 		expectedChains: [][]string{
+-			{"Ryan Hurst", "GlobalSign PersonalSign 2 CA - G2"},
++			{"CORPORATIVO FICTICIO ACTIVO", "EAEko Herri Administrazioen CA - CA AAPP Vascas (2)", "IZENPE S.A."},
+ 		},
+ 	},
+ 	{
++		name:          "SGCIntermediate",
+ 		leaf:          megaLeaf,
+ 		intermediates: []string{comodoIntermediate1},
+ 		roots:         []string{comodoRoot},
+ 		currentTime:   1360431182,
+ 
+-		// CryptoAPI can find alternative validation paths so we don't
+-		// perform this test with system validation.
+-		systemSkip: true,
++		// CryptoAPI can find alternative validation paths.
++		systemLax: true,
+ 		expectedChains: [][]string{
+ 			{"mega.co.nz", "EssentialSSL CA", "COMODO Certification Authority"},
+ 		},
+@@ -203,6 +220,7 @@ var verifyTests = []verifyTest{
+ 	{
+ 		// Check that a name constrained intermediate works even when
+ 		// it lists multiple constraints.
++		name:          "MultipleConstraints",
+ 		leaf:          nameConstraintsLeaf,
+ 		intermediates: []string{nameConstraintsIntermediate1, nameConstraintsIntermediate2},
+ 		roots:         []string{globalSignRoot},
+@@ -221,17 +239,16 @@ var verifyTests = []verifyTest{
+ 	{
+ 		// Check that SHA-384 intermediates (which are popping up)
+ 		// work.
++		name:          "SHA-384",
+ 		leaf:          moipLeafCert,
+ 		intermediates: []string{comodoIntermediateSHA384, comodoRSAAuthority},
+ 		roots:         []string{addTrustRoot},
+ 		currentTime:   1397502195,
+ 		dnsName:       "api.moip.com.br",
+ 
+-		// CryptoAPI can find alternative validation paths so we don't
+-		// perform this test with system validation.
+-		systemSkip: true,
++		// CryptoAPI can find alternative validation paths.
++		systemLax: true,
+ 
+-		sha2: true,
+ 		expectedChains: [][]string{
+ 			{
+ 				"api.moip.com.br",
+@@ -244,11 +261,12 @@ var verifyTests = []verifyTest{
+ 	{
+ 		// Putting a certificate as a root directly should work as a
+ 		// way of saying “exactly this”.
++		name:        "LeafInRoots",
+ 		leaf:        selfSigned,
+ 		roots:       []string{selfSigned},
+ 		currentTime: 1471624472,
+ 		dnsName:     "foo.example",
+-		systemSkip:  true,
++		systemSkip:  true, // does not chain to a system root
+ 
+ 		expectedChains: [][]string{
+ 			{"Acme Co"},
+@@ -257,11 +275,12 @@ var verifyTests = []verifyTest{
+ 	{
+ 		// Putting a certificate as a root directly should not skip
+ 		// other checks however.
++		name:        "LeafInRootsInvalid",
+ 		leaf:        selfSigned,
+ 		roots:       []string{selfSigned},
+ 		currentTime: 1471624472,
+ 		dnsName:     "notfoo.example",
+-		systemSkip:  true,
++		systemSkip:  true, // does not chain to a system root
+ 
+ 		errorCallback: expectHostnameError("certificate is valid for"),
+ 	},
+@@ -269,87 +288,95 @@ var verifyTests = []verifyTest{
+ 		// The issuer name in the leaf doesn't exactly match the
+ 		// subject name in the root. Go does not perform
+ 		// canonicalization and so should reject this. See issue 14955.
++		name:        "IssuerSubjectMismatch",
+ 		leaf:        issuerSubjectMatchLeaf,
+ 		roots:       []string{issuerSubjectMatchRoot},
+ 		currentTime: 1475787715,
+-		systemSkip:  true,
++		systemSkip:  true, // does not chain to a system root
+ 
+ 		errorCallback: expectSubjectIssuerMismatcthError,
+ 	},
+ 	{
+ 		// An X.509 v1 certificate should not be accepted as an
+ 		// intermediate.
++		name:          "X509v1Intermediate",
+ 		leaf:          x509v1TestLeaf,
+ 		intermediates: []string{x509v1TestIntermediate},
+ 		roots:         []string{x509v1TestRoot},
+ 		currentTime:   1481753183,
+-		systemSkip:    true,
++		systemSkip:    true, // does not chain to a system root
+ 
+ 		errorCallback: expectNotAuthorizedError,
+ 	},
+ 	{
+ 		// If any SAN extension is present (even one without any DNS
+ 		// names), the CN should be ignored.
++		name:        "IgnoreCNWithSANs",
+ 		leaf:        ignoreCNWithSANLeaf,
+ 		dnsName:     "foo.example.com",
+ 		roots:       []string{ignoreCNWithSANRoot},
+ 		currentTime: 1486684488,
+-		systemSkip:  true,
++		systemSkip:  true, // does not chain to a system root
+ 
+ 		errorCallback: expectHostnameError("certificate is not valid for any names"),
+ 	},
+ 	{
+ 		// Test that excluded names are respected.
++		name:          "ExcludedNames",
+ 		leaf:          excludedNamesLeaf,
+ 		dnsName:       "bender.local",
+ 		intermediates: []string{excludedNamesIntermediate},
+ 		roots:         []string{excludedNamesRoot},
+ 		currentTime:   1486684488,
+-		systemSkip:    true,
++		systemSkip:    true, // does not chain to a system root
+ 
+ 		errorCallback: expectNameConstraintsError,
+ 	},
+ 	{
+ 		// Test that unknown critical extensions in a leaf cause a
+ 		// verify error.
++		name:          "CriticalExtLeaf",
+ 		leaf:          criticalExtLeafWithExt,
+ 		dnsName:       "example.com",
+ 		intermediates: []string{criticalExtIntermediate},
+ 		roots:         []string{criticalExtRoot},
+ 		currentTime:   1486684488,
+-		systemSkip:    true,
++		systemSkip:    true, // does not chain to a system root
+ 
+ 		errorCallback: expectUnhandledCriticalExtension,
+ 	},
+ 	{
+ 		// Test that unknown critical extensions in an intermediate
+ 		// cause a verify error.
++		name:          "CriticalExtIntermediate",
+ 		leaf:          criticalExtLeaf,
+ 		dnsName:       "example.com",
+ 		intermediates: []string{criticalExtIntermediateWithExt},
+ 		roots:         []string{criticalExtRoot},
+ 		currentTime:   1486684488,
+-		systemSkip:    true,
++		systemSkip:    true, // does not chain to a system root
+ 
+ 		errorCallback: expectUnhandledCriticalExtension,
+ 	},
+ 	{
+ 		// Test that invalid CN are ignored.
++		name:        "InvalidCN",
+ 		leaf:        invalidCNWithoutSAN,
+ 		dnsName:     "foo,invalid",
+ 		roots:       []string{invalidCNRoot},
+ 		currentTime: 1540000000,
+-		systemSkip:  true,
++		systemSkip:  true, // does not chain to a system root
+ 
+ 		errorCallback: expectHostnameError("Common Name is not a valid hostname"),
+ 	},
+ 	{
+ 		// Test that valid CN are respected.
++		name:        "ValidCN",
+ 		leaf:        validCNWithoutSAN,
+ 		dnsName:     "foo.example.com",
+ 		roots:       []string{invalidCNRoot},
+ 		currentTime: 1540000000,
+-		systemSkip:  true,
++		systemSkip:  true, // does not chain to a system root
+ 
+ 		expectedChains: [][]string{
+ 			{"foo.example.com", "Test root"},
+@@ -357,31 +384,34 @@ var verifyTests = []verifyTest{
+ 	},
+ 	// Replicate CN tests with ignoreCN = true
+ 	{
++		name:        "IgnoreCNWithSANs/ignoreCN",
+ 		leaf:        ignoreCNWithSANLeaf,
+ 		dnsName:     "foo.example.com",
+ 		roots:       []string{ignoreCNWithSANRoot},
+ 		currentTime: 1486684488,
+-		systemSkip:  true,
++		systemSkip:  true, // does not chain to a system root
+ 		ignoreCN:    true,
+ 
+ 		errorCallback: expectHostnameError("certificate is not valid for any names"),
+ 	},
+ 	{
++		name:        "InvalidCN/ignoreCN",
+ 		leaf:        invalidCNWithoutSAN,
+ 		dnsName:     "foo,invalid",
+ 		roots:       []string{invalidCNRoot},
+ 		currentTime: 1540000000,
+-		systemSkip:  true,
++		systemSkip:  true, // does not chain to a system root
+ 		ignoreCN:    true,
+ 
+ 		errorCallback: expectHostnameError("Common Name is not a valid hostname"),
+ 	},
+ 	{
++		name:        "ValidCN/ignoreCN",
+ 		leaf:        validCNWithoutSAN,
+ 		dnsName:     "foo.example.com",
+ 		roots:       []string{invalidCNRoot},
+ 		currentTime: 1540000000,
+-		systemSkip:  true,
++		systemSkip:  true, // does not chain to a system root
+ 		ignoreCN:    true,
+ 
+ 		errorCallback: expectHostnameError("not valid for any names"),
+@@ -389,11 +419,12 @@ var verifyTests = []verifyTest{
+ 	{
+ 		// A certificate with an AKID should still chain to a parent without SKID.
+ 		// See Issue 30079.
++		name:        "AKIDNoSKID",
+ 		leaf:        leafWithAKID,
+ 		roots:       []string{rootWithoutSKID},
+ 		currentTime: 1550000000,
+ 		dnsName:     "example",
+-		systemSkip:  true,
++		systemSkip:  true, // does not chain to a system root
+ 
+ 		expectedChains: [][]string{
+ 			{"Acme LLC", "Acme Co"},
+@@ -401,98 +432,70 @@ var verifyTests = []verifyTest{
+ 	},
+ }
+ 
+-func expectHostnameError(msg string) func(*testing.T, int, error) bool {
+-	return func(t *testing.T, i int, err error) (ok bool) {
++func expectHostnameError(msg string) func(*testing.T, error) {
++	return func(t *testing.T, err error) {
+ 		if _, ok := err.(HostnameError); !ok {
+-			t.Errorf("#%d: error was not a HostnameError: %v", i, err)
+-			return false
++			t.Fatalf("error was not a HostnameError: %v", err)
+ 		}
+ 		if !strings.Contains(err.Error(), msg) {
+-			t.Errorf("#%d: HostnameError did not contain %q: %v", i, msg, err)
++			t.Fatalf("HostnameError did not contain %q: %v", msg, err)
+ 		}
+-		return true
+ 	}
+ }
+ 
+-func expectExpired(t *testing.T, i int, err error) (ok bool) {
++func expectExpired(t *testing.T, err error) {
+ 	if inval, ok := err.(CertificateInvalidError); !ok || inval.Reason != Expired {
+-		t.Errorf("#%d: error was not Expired: %v", i, err)
+-		return false
++		t.Fatalf("error was not Expired: %v", err)
+ 	}
+-	return true
+ }
+ 
+-func expectUsageError(t *testing.T, i int, err error) (ok bool) {
++func expectUsageError(t *testing.T, err error) {
+ 	if inval, ok := err.(CertificateInvalidError); !ok || inval.Reason != IncompatibleUsage {
+-		t.Errorf("#%d: error was not IncompatibleUsage: %v", i, err)
+-		return false
++		t.Fatalf("error was not IncompatibleUsage: %v", err)
+ 	}
+-	return true
+ }
+ 
+-func expectAuthorityUnknown(t *testing.T, i int, err error) (ok bool) {
++func expectAuthorityUnknown(t *testing.T, err error) {
+ 	e, ok := err.(UnknownAuthorityError)
+ 	if !ok {
+-		t.Errorf("#%d: error was not UnknownAuthorityError: %v", i, err)
+-		return false
++		t.Fatalf("error was not UnknownAuthorityError: %v", err)
+ 	}
+ 	if e.Cert == nil {
+-		t.Errorf("#%d: error was UnknownAuthorityError, but missing Cert: %v", i, err)
+-		return false
++		t.Fatalf("error was UnknownAuthorityError, but missing Cert: %v", err)
+ 	}
+-	return true
+ }
+ 
+-func expectSystemRootsError(t *testing.T, i int, err error) bool {
+-	if _, ok := err.(SystemRootsError); !ok {
+-		t.Errorf("#%d: error was not SystemRootsError: %v", i, err)
+-		return false
+-	}
+-	return true
+-}
+-
+-func expectHashError(t *testing.T, i int, err error) bool {
++func expectHashError(t *testing.T, err error) {
+ 	if err == nil {
+-		t.Errorf("#%d: no error resulted from invalid hash", i)
+-		return false
++		t.Fatalf("no error resulted from invalid hash")
+ 	}
+ 	if expected := "algorithm unimplemented"; !strings.Contains(err.Error(), expected) {
+-		t.Errorf("#%d: error resulting from invalid hash didn't contain '%s', rather it was: %v", i, expected, err)
+-		return false
++		t.Fatalf("error resulting from invalid hash didn't contain '%s', rather it was: %v", expected, err)
+ 	}
+-	return true
+ }
+ 
+-func expectSubjectIssuerMismatcthError(t *testing.T, i int, err error) (ok bool) {
++func expectSubjectIssuerMismatcthError(t *testing.T, err error) {
+ 	if inval, ok := err.(CertificateInvalidError); !ok || inval.Reason != NameMismatch {
+-		t.Errorf("#%d: error was not a NameMismatch: %v", i, err)
+-		return false
++		t.Fatalf("error was not a NameMismatch: %v", err)
+ 	}
+-	return true
+ }
+ 
+-func expectNameConstraintsError(t *testing.T, i int, err error) (ok bool) {
++func expectNameConstraintsError(t *testing.T, err error) {
+ 	if inval, ok := err.(CertificateInvalidError); !ok || inval.Reason != CANotAuthorizedForThisName {
+-		t.Errorf("#%d: error was not a CANotAuthorizedForThisName: %v", i, err)
+-		return false
++		t.Fatalf("error was not a CANotAuthorizedForThisName: %v", err)
+ 	}
+-	return true
+ }
+ 
+-func expectNotAuthorizedError(t *testing.T, i int, err error) (ok bool) {
++func expectNotAuthorizedError(t *testing.T, err error) {
+ 	if inval, ok := err.(CertificateInvalidError); !ok || inval.Reason != NotAuthorizedToSign {
+-		t.Errorf("#%d: error was not a NotAuthorizedToSign: %v", i, err)
+-		return false
++		t.Fatalf("error was not a NotAuthorizedToSign: %v", err)
+ 	}
+-	return true
+ }
+ 
+-func expectUnhandledCriticalExtension(t *testing.T, i int, err error) (ok bool) {
++func expectUnhandledCriticalExtension(t *testing.T, err error) {
+ 	if _, ok := err.(UnhandledCriticalExtension); !ok {
+-		t.Errorf("#%d: error was not an UnhandledCriticalExtension: %v", i, err)
+-		return false
++		t.Fatalf("error was not an UnhandledCriticalExtension: %v", err)
+ 	}
+-	return true
+ }
+ 
+ func certificateFromPEM(pemBytes string) (*Certificate, error) {
+@@ -503,107 +506,91 @@ func certificateFromPEM(pemBytes string) (*Certificate, error) {
+ 	return ParseCertificate(block.Bytes)
+ }
+ 
+-func testVerify(t *testing.T, useSystemRoots bool) {
+-	defer func(savedIgnoreCN bool) {
+-		ignoreCN = savedIgnoreCN
+-	}(ignoreCN)
+-	for i, test := range verifyTests {
+-		if useSystemRoots && test.systemSkip {
+-			continue
+-		}
+-		if runtime.GOOS == "windows" && test.testSystemRootsError {
+-			continue
+-		}
+-
+-		ignoreCN = test.ignoreCN
+-		opts := VerifyOptions{
+-			Intermediates: NewCertPool(),
+-			DNSName:       test.dnsName,
+-			CurrentTime:   time.Unix(test.currentTime, 0),
+-			KeyUsages:     test.keyUsages,
+-		}
++func testVerify(t *testing.T, test verifyTest, useSystemRoots bool) {
++	defer func(savedIgnoreCN bool) { ignoreCN = savedIgnoreCN }(ignoreCN)
+ 
+-		if !useSystemRoots {
+-			opts.Roots = NewCertPool()
+-			for j, root := range test.roots {
+-				ok := opts.Roots.AppendCertsFromPEM([]byte(root))
+-				if !ok {
+-					t.Errorf("#%d: failed to parse root #%d", i, j)
+-					return
+-				}
+-			}
+-		}
++	ignoreCN = test.ignoreCN
++	opts := VerifyOptions{
++		Intermediates: NewCertPool(),
++		DNSName:       test.dnsName,
++		CurrentTime:   time.Unix(test.currentTime, 0),
++		KeyUsages:     test.keyUsages,
++	}
+ 
+-		for j, intermediate := range test.intermediates {
+-			ok := opts.Intermediates.AppendCertsFromPEM([]byte(intermediate))
++	if !useSystemRoots {
++		opts.Roots = NewCertPool()
++		for j, root := range test.roots {
++			ok := opts.Roots.AppendCertsFromPEM([]byte(root))
+ 			if !ok {
+-				t.Errorf("#%d: failed to parse intermediate #%d", i, j)
+-				return
++				t.Fatalf("failed to parse root #%d", j)
+ 			}
+ 		}
++	}
+ 
+-		leaf, err := certificateFromPEM(test.leaf)
+-		if err != nil {
+-			t.Errorf("#%d: failed to parse leaf: %v", i, err)
+-			return
+-		}
+-
+-		var oldSystemRoots *CertPool
+-		if test.testSystemRootsError {
+-			oldSystemRoots = systemRootsPool()
+-			systemRoots = nil
+-			opts.Roots = nil
++	for j, intermediate := range test.intermediates {
++		ok := opts.Intermediates.AppendCertsFromPEM([]byte(intermediate))
++		if !ok {
++			t.Fatalf("failed to parse intermediate #%d", j)
+ 		}
++	}
+ 
+-		chains, err := leaf.Verify(opts)
++	leaf, err := certificateFromPEM(test.leaf)
++	if err != nil {
++		t.Fatalf("failed to parse leaf: %v", err)
++	}
+ 
+-		if test.testSystemRootsError {
+-			systemRoots = oldSystemRoots
+-		}
++	chains, err := leaf.Verify(opts)
+ 
+-		if test.errorCallback == nil && err != nil {
+-			t.Errorf("#%d: unexpected error: %v", i, err)
+-		}
+-		if test.errorCallback != nil {
+-			if !test.errorCallback(t, i, err) {
+-				return
++	if test.errorCallback == nil && err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++	if test.errorCallback != nil {
++		if useSystemRoots && test.systemLax {
++			if err == nil {
++				t.Fatalf("expected error")
+ 			}
++		} else {
++			test.errorCallback(t, err)
+ 		}
++	}
+ 
+-		if len(chains) != len(test.expectedChains) {
+-			t.Errorf("#%d: wanted %d chains, got %d", i, len(test.expectedChains), len(chains))
+-		}
++	if len(chains) != len(test.expectedChains) {
++		t.Errorf("wanted %d chains, got %d", len(test.expectedChains), len(chains))
++	}
+ 
+-		// We check that each returned chain matches a chain from
+-		// expectedChains but an entry in expectedChains can't match
+-		// two chains.
+-		seenChains := make([]bool, len(chains))
+-	NextOutputChain:
+-		for _, chain := range chains {
+-		TryNextExpected:
+-			for j, expectedChain := range test.expectedChains {
+-				if seenChains[j] {
+-					continue
+-				}
+-				if len(chain) != len(expectedChain) {
+-					continue
+-				}
+-				for k, cert := range chain {
+-					if !strings.Contains(nameToKey(&cert.Subject), expectedChain[k]) {
+-						continue TryNextExpected
+-					}
++	// We check that each returned chain matches a chain from
++	// expectedChains but an entry in expectedChains can't match
++	// two chains.
++	seenChains := make([]bool, len(chains))
++NextOutputChain:
++	for _, chain := range chains {
++	TryNextExpected:
++		for j, expectedChain := range test.expectedChains {
++			if seenChains[j] {
++				continue
++			}
++			if len(chain) != len(expectedChain) {
++				continue
++			}
++			for k, cert := range chain {
++				if !strings.Contains(nameToKey(&cert.Subject), expectedChain[k]) {
++					continue TryNextExpected
+ 				}
+-				// we matched
+-				seenChains[j] = true
+-				continue NextOutputChain
+ 			}
+-			t.Errorf("#%d: No expected chain matched %s", i, chainToDebugString(chain))
++			// we matched
++			seenChains[j] = true
++			continue NextOutputChain
+ 		}
++		t.Errorf("no expected chain matched %s", chainToDebugString(chain))
+ 	}
+ }
+ 
+ func TestGoVerify(t *testing.T) {
+-	testVerify(t, false)
++	for _, test := range verifyTests {
++		t.Run(test.name, func(t *testing.T) {
++			testVerify(t, test, false)
++		})
++	}
+ }
+ 
+ func TestSystemVerify(t *testing.T) {
+@@ -611,7 +598,14 @@ func TestSystemVerify(t *testing.T) {
+ 		t.Skipf("skipping verify test using system APIs on %q", runtime.GOOS)
+ 	}
+ 
+-	testVerify(t, true)
++	for _, test := range verifyTests {
++		t.Run(test.name, func(t *testing.T) {
++			if test.systemSkip {
++				t.SkipNow()
++			}
++			testVerify(t, test, true)
++		})
++	}
+ }
+ 
+ func chainToDebugString(chain []*Certificate) string {
+@@ -648,8 +642,7 @@ tQWVYrmm3ok9Nns4d0iXrKYgjy6myQzCsplFAMfOEVEiIuCl6rYVSAlk6l5PdPcF
+ PseKUgzbFbS9bZvlxrFUaKnjaZC2mqUPuLk/IH2uSrW4nOQdtqvmlKXBx4Ot2/Un
+ hw4EbNX/3aBd7YdStysVAq45pmp06drE57xNNB6pXE0zX5IJL4hmXXeXxx12E6nV
+ 5fEWCRE11azbJHFwLJhWC9kXtNHjUStedejV0NxPNO3CBWaAocvmMw==
+------END CERTIFICATE-----
+-`
++-----END CERTIFICATE-----`
+ 
+ const giag2Intermediate = `-----BEGIN CERTIFICATE-----
+ MIIEBDCCAuygAwIBAgIDAjppMA0GCSqGSIb3DQEBBQUAMEIxCzAJBgNVBAYTAlVT
+@@ -674,8 +667,7 @@ zG+FA1jDaFETzf3I93k9mTXwVqO94FntT0QJo544evZG0R0SnU++0ED8Vf4GXjza
+ HFa9llF7b1cq26KqltyMdMKVvvBulRP/F/A8rLIQjcxz++iPAsbw+zOzlTvjwsto
+ WHPbqCRiOwY1nQ2pM714A5AuTHhdUDqB1O6gyHA43LL5Z/qHQF1hwFGPa4NrzQU6
+ yuGnBXj8ytqU0CwIPX4WecigUCAkVDNx
+------END CERTIFICATE-----
+-`
++-----END CERTIFICATE-----`
+ 
+ const googleLeaf = `-----BEGIN CERTIFICATE-----
+ MIIEdjCCA16gAwIBAgIIcR5k4dkoe04wDQYJKoZIhvcNAQEFBQAwSTELMAkGA1UE
+@@ -702,8 +694,7 @@ tJAW0kYGJ+wqKm53wG/JaOADTnnq2Mt/j6F2uvjgN/ouns1nRHufIvd370N0LeH+
+ orKqTuAPzXK7imQk6+OycYABbqCtC/9qmwRd8wwn7sF97DtYfK8WuNHtFalCAwyi
+ 8LxJJYJCLWoMhZ+V8GZm+FOex5qkQAjnZrtNlbQJ8ro4r+rpKXtmMFFhfa+7L+PA
+ Kom08eUK8skxAzfDDijZPh10VtJ66uBoiDPdT+uCBehcBIcmSTrKjFGX
+------END CERTIFICATE-----
+-`
++-----END CERTIFICATE-----`
+ 
+ // googleLeafWithInvalidHash is the same as googleLeaf, but the signature
+ // algorithm in the certificate contains a nonsense OID.
+@@ -732,8 +723,7 @@ tJAW0kYGJ+wqKm53wG/JaOADTnnq2Mt/j6F2uvjgN/ouns1nRHufIvd370N0LeH+
+ orKqTuAPzXK7imQk6+OycYABbqCtC/9qmwRd8wwn7sF97DtYfK8WuNHtFalCAwyi
+ 8LxJJYJCLWoMhZ+V8GZm+FOex5qkQAjnZrtNlbQJ8ro4r+rpKXtmMFFhfa+7L+PA
+ Kom08eUK8skxAzfDDijZPh10VtJ66uBoiDPdT+uCBehcBIcmSTrKjFGX
+------END CERTIFICATE-----
+-`
++-----END CERTIFICATE-----`
+ 
+ const dnssecExpLeaf = `-----BEGIN CERTIFICATE-----
+ MIIGzTCCBbWgAwIBAgIDAdD6MA0GCSqGSIb3DQEBBQUAMIGMMQswCQYDVQQGEwJJ
+@@ -858,58 +848,127 @@ NOsF/5oirpt9P/FlUQqmMGqz9IgcgA38corog14=
+ -----END CERTIFICATE-----`
+ 
+ const smimeLeaf = `-----BEGIN CERTIFICATE-----
+-MIIFBjCCA+6gAwIBAgISESFvrjT8XcJTEe6rBlPptILlMA0GCSqGSIb3DQEBBQUA
+-MFQxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWduIG52LXNhMSowKAYD
+-VQQDEyFHbG9iYWxTaWduIFBlcnNvbmFsU2lnbiAyIENBIC0gRzIwHhcNMTIwMTIz
+-MTYzNjU5WhcNMTUwMTIzMTYzNjU5WjCBlDELMAkGA1UEBhMCVVMxFjAUBgNVBAgT
+-DU5ldyBIYW1zcGhpcmUxEzARBgNVBAcTClBvcnRzbW91dGgxGTAXBgNVBAoTEEds
+-b2JhbFNpZ24sIEluYy4xEzARBgNVBAMTClJ5YW4gSHVyc3QxKDAmBgkqhkiG9w0B
+-CQEWGXJ5YW4uaHVyc3RAZ2xvYmFsc2lnbi5jb20wggEiMA0GCSqGSIb3DQEBAQUA
+-A4IBDwAwggEKAoIBAQC4ASSTvavmsFQAob60ukSSwOAL9nT/s99ltNUCAf5fPH5j
+-NceMKxaQse2miOmRRIXaykcq1p/TbI70Ztce38r2mbOwqDHHPVi13GxJEyUXWgaR
+-BteDMu5OGyWNG1kchVsGWpbstT0Z4v0md5m1BYFnxB20ebJyOR2lXDxsFK28nnKV
+-+5eMj76U8BpPQ4SCH7yTMG6y0XXsB3cCrBKr2o3TOYgEKv+oNnbaoMt3UxMt9nSf
+-9jyIshjqfnT5Aew3CUNMatO55g5FXXdIukAweg1YSb1ls05qW3sW00T3d7dQs9/7
+-NuxCg/A2elmVJSoy8+MLR8JSFEf/aMgjO/TyLg/jAgMBAAGjggGPMIIBizAOBgNV
+-HQ8BAf8EBAMCBaAwTQYDVR0gBEYwRDBCBgorBgEEAaAyASgKMDQwMgYIKwYBBQUH
+-AgEWJmh0dHBzOi8vd3d3Lmdsb2JhbHNpZ24uY29tL3JlcG9zaXRvcnkvMCQGA1Ud
+-EQQdMBuBGXJ5YW4uaHVyc3RAZ2xvYmFsc2lnbi5jb20wCQYDVR0TBAIwADAdBgNV
+-HSUEFjAUBggrBgEFBQcDAgYIKwYBBQUHAwQwQwYDVR0fBDwwOjA4oDagNIYyaHR0
+-cDovL2NybC5nbG9iYWxzaWduLmNvbS9ncy9nc3BlcnNvbmFsc2lnbjJnMi5jcmww
+-VQYIKwYBBQUHAQEESTBHMEUGCCsGAQUFBzAChjlodHRwOi8vc2VjdXJlLmdsb2Jh
+-bHNpZ24uY29tL2NhY2VydC9nc3BlcnNvbmFsc2lnbjJnMi5jcnQwHQYDVR0OBBYE
+-FFWiECe0/L72eVYqcWYnLV6SSjzhMB8GA1UdIwQYMBaAFD8V0m18L+cxnkMKBqiU
+-bCw7xe5lMA0GCSqGSIb3DQEBBQUAA4IBAQAhQi6hLPeudmf3IBF4IDzCvRI0FaYd
+-BKfprSk/H0PDea4vpsLbWpA0t0SaijiJYtxKjlM4bPd+2chb7ejatDdyrZIzmDVy
+-q4c30/xMninGKokpYA11/Ve+i2dvjulu65qasrtQRGybAuuZ67lrp/K3OMFgjV5N
+-C3AHYLzvNU4Dwc4QQ1BaMOg6KzYSrKbABRZajfrpC9uiePsv7mDIXLx/toBPxWNl
+-a5vJm5DrZdn7uHdvBCE6kMykbOLN5pmEK0UIlwKh6Qi5XD0pzlVkEZliFkBMJgub
+-d/eF7xeg7TKPWC5xyOFp9SdMolJM7LTC3wnSO3frBAev+q/nGs9Xxyvs
++MIIIPDCCBiSgAwIBAgIQaMDxFS0pOMxZZeOBxoTJtjANBgkqhkiG9w0BAQsFADCB
++nTELMAkGA1UEBhMCRVMxFDASBgNVBAoMC0laRU5QRSBTLkEuMTowOAYDVQQLDDFB
++WlogWml1cnRhZ2lyaSBwdWJsaWtvYSAtIENlcnRpZmljYWRvIHB1YmxpY28gU0NB
++MTwwOgYDVQQDDDNFQUVrbyBIZXJyaSBBZG1pbmlzdHJhemlvZW4gQ0EgLSBDQSBB
++QVBQIFZhc2NhcyAoMikwHhcNMTcwNzEyMDg1MzIxWhcNMjEwNzEyMDg1MzIxWjCC
++AQwxDzANBgNVBAoMBklaRU5QRTE4MDYGA1UECwwvWml1cnRhZ2lyaSBrb3Jwb3Jh
++dGlib2EtQ2VydGlmaWNhZG8gY29ycG9yYXRpdm8xQzBBBgNVBAsMOkNvbmRpY2lv
++bmVzIGRlIHVzbyBlbiB3d3cuaXplbnBlLmNvbSBub2xhIGVyYWJpbGkgamFraXRl
++a28xFzAVBgNVBC4TDi1kbmkgOTk5OTk5ODlaMSQwIgYDVQQDDBtDT1JQT1JBVElW
++TyBGSUNUSUNJTyBBQ1RJVk8xFDASBgNVBCoMC0NPUlBPUkFUSVZPMREwDwYDVQQE
++DAhGSUNUSUNJTzESMBAGA1UEBRMJOTk5OTk5ODlaMIIBIjANBgkqhkiG9w0BAQEF
++AAOCAQ8AMIIBCgKCAQEAwVOMwUDfBtsH0XuxYnb+v/L774jMH8valX7RPH8cl2Lb
++SiqSo0RchW2RGA2d1yuYHlpChC9jGmt0X/g66/E/+q2hUJlfJtqVDJFwtFYV4u2S
++yzA3J36V4PRkPQrKxAsbzZriFXAF10XgiHQz9aVeMMJ9GBhmh9+DK8Tm4cMF6i8l
+++AuC35KdngPF1x0ealTYrYZplpEJFO7CiW42aLi6vQkDR2R7nmZA4AT69teqBWsK
++0DZ93/f0G/3+vnWwNTBF0lB6dIXoaz8OMSyHLqGnmmAtMrzbjAr/O/WWgbB/BqhR
++qjJQ7Ui16cuDldXaWQ/rkMzsxmsAox0UF+zdQNvXUQIDAQABo4IDBDCCAwAwgccG
++A1UdEgSBvzCBvIYVaHR0cDovL3d3dy5pemVucGUuY29tgQ9pbmZvQGl6ZW5wZS5j
++b22kgZEwgY4xRzBFBgNVBAoMPklaRU5QRSBTLkEuIC0gQ0lGIEEwMTMzNzI2MC1S
++TWVyYy5WaXRvcmlhLUdhc3RlaXogVDEwNTUgRjYyIFM4MUMwQQYDVQQJDDpBdmRh
++IGRlbCBNZWRpdGVycmFuZW8gRXRvcmJpZGVhIDE0IC0gMDEwMTAgVml0b3JpYS1H
++YXN0ZWl6MB4GA1UdEQQXMBWBE2ZpY3RpY2lvQGl6ZW5wZS5ldXMwDgYDVR0PAQH/
++BAQDAgXgMCkGA1UdJQQiMCAGCCsGAQUFBwMCBggrBgEFBQcDBAYKKwYBBAGCNxQC
++AjAdBgNVHQ4EFgQUyeoOD4cgcljKY0JvrNuX2waFQLAwHwYDVR0jBBgwFoAUwKlK
++90clh/+8taaJzoLSRqiJ66MwggEnBgNVHSAEggEeMIIBGjCCARYGCisGAQQB8zkB
++AQEwggEGMDMGCCsGAQUFBwIBFidodHRwOi8vd3d3Lml6ZW5wZS5jb20vcnBhc2Nh
++Y29ycG9yYXRpdm8wgc4GCCsGAQUFBwICMIHBGoG+Wml1cnRhZ2lyaWEgRXVza2Fs
++IEF1dG9ub21pYSBFcmtpZGVnb2tvIHNla3RvcmUgcHVibGlrb2tvIGVyYWt1bmRl
++ZW4gYmFybmUtc2FyZWV0YW4gYmFrYXJyaWsgZXJhYmlsIGRhaXRla2UuIFVzbyBy
++ZXN0cmluZ2lkbyBhbCBhbWJpdG8gZGUgcmVkZXMgaW50ZXJuYXMgZGUgRW50aWRh
++ZGVzIGRlbCBTZWN0b3IgUHVibGljbyBWYXNjbzAyBggrBgEFBQcBAQQmMCQwIgYI
++KwYBBQUHMAGGFmh0dHA6Ly9vY3NwLml6ZW5wZS5jb20wOgYDVR0fBDMwMTAvoC2g
++K4YpaHR0cDovL2NybC5pemVucGUuY29tL2NnaS1iaW4vY3JsaW50ZXJuYTIwDQYJ
++KoZIhvcNAQELBQADggIBAIy5PQ+UZlCRq6ig43vpHwlwuD9daAYeejV0Q+ZbgWAE
++GtO0kT/ytw95ZEJMNiMw3fYfPRlh27ThqiT0VDXZJDlzmn7JZd6QFcdXkCsiuv4+
++ZoXAg/QwnA3SGUUO9aVaXyuOIIuvOfb9MzoGp9xk23SMV3eiLAaLMLqwB5DTfBdt
++BGI7L1MnGJBv8RfP/TL67aJ5bgq2ri4S8vGHtXSjcZ0+rCEOLJtmDNMnTZxancg3
++/H5edeNd+n6Z48LO+JHRxQufbC4mVNxVLMIP9EkGUejlq4E4w6zb5NwCQczJbSWL
++i31rk2orsNsDlyaLGsWZp3JSNX6RmodU4KAUPor4jUJuUhrrm3Spb73gKlV/gcIw
++bCE7mML1Kss3x1ySaXsis6SZtLpGWKkW2iguPWPs0ydV6RPhmsCxieMwPPIJ87vS
++5IejfgyBae7RSuAIHyNFy4uI5xwvwUFf6OZ7az8qtW7ImFOgng3Ds+W9k1S2CNTx
++d0cnKTfA6IpjGo8EeHcxnIXT8NPImWaRj0qqonvYady7ci6U4m3lkNSdXNn1afgw
++mYust+gxVtOZs1gk2MUCgJ1V1X+g7r/Cg7viIn6TLkLrpS1kS1hvMqkl9M+7XqPo
++Qd95nJKOkusQpy99X4dF/lfbYAQnnjnqh3DLD2gvYObXFaAYFaiBKTiMTV2X72F+
+ -----END CERTIFICATE-----`
+ 
+ const smimeIntermediate = `-----BEGIN CERTIFICATE-----
+-MIIEFjCCAv6gAwIBAgILBAAAAAABL07hL1IwDQYJKoZIhvcNAQEFBQAwVzELMAkG
+-A1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2ExEDAOBgNVBAsTB1Jv
+-b3QgQ0ExGzAZBgNVBAMTEkdsb2JhbFNpZ24gUm9vdCBDQTAeFw0xMTA0MTMxMDAw
+-MDBaFw0xOTA0MTMxMDAwMDBaMFQxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9i
+-YWxTaWduIG52LXNhMSowKAYDVQQDEyFHbG9iYWxTaWduIFBlcnNvbmFsU2lnbiAy
+-IENBIC0gRzIwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDBa0H5Nez4
+-En3dIlFpX7e5E0YndxQ74xOBbz7kdBd+DLX0LOQMjVPU3DAgKL9ujhH+ZhHkURbH
+-3X/94TQSUL/z2JjsaQvS0NqyZXHhM5eeuquzOJRzEQ8+odETzHg2G0Erv7yjSeww
+-gkwDWDJnYUDlOjYTDUEG6+i+8Mn425reo4I0E277wD542kmVWeW7+oHv5dZo9e1Q
+-yWwiKTEP6BEQVVSBgThXMG4traSSDRUt3T1eQTZx5EObpiBEBO4OTqiBTJfg4vEI
+-YgkXzKLpnfszTB6YMDpR9/QS6p3ANB3kfAb+t6udSO3WCst0DGrwHDLBFGDR4UeY
+-T5KGGnI7cWL7AgMBAAGjgeUwgeIwDgYDVR0PAQH/BAQDAgEGMBIGA1UdEwEB/wQI
+-MAYBAf8CAQAwHQYDVR0OBBYEFD8V0m18L+cxnkMKBqiUbCw7xe5lMEcGA1UdIARA
+-MD4wPAYEVR0gADA0MDIGCCsGAQUFBwIBFiZodHRwczovL3d3dy5nbG9iYWxzaWdu
+-LmNvbS9yZXBvc2l0b3J5LzAzBgNVHR8ELDAqMCigJqAkhiJodHRwOi8vY3JsLmds
+-b2JhbHNpZ24ubmV0L3Jvb3QuY3JsMB8GA1UdIwQYMBaAFGB7ZhpFDZfKiVAvfQTN
+-NKj//P1LMA0GCSqGSIb3DQEBBQUAA4IBAQBDc3nMpMxJMQMcYUCB3+C73UpvwDE8
+-eCOr7t2F/uaQKKcyqqstqLZc6vPwI/rcE9oDHugY5QEjQzIBIEaTnN6P0vege2IX
+-eCOr7t2F/uaQKKcyqqstqLZc6vPwI/rcE9oDHugY5QEjQzIBIEaTnN6P0vege2IX
+-YEvTWbWwGdPytDFPYIl3/6OqNSXSnZ7DxPcdLJq2uyiga8PB/TTIIHYkdM2+1DE0
+-7y3rH/7TjwDVD7SLu5/SdOfKskuMPTjOEvz3K161mymW06klVhubCIWOro/Gx1Q2
+-2FQOZ7/2k4uYoOdBTSlb8kTAuzZNgIE0rB2BIYCTz/P6zZIKW0ogbRSH
++MIIHNzCCBSGgAwIBAgIQJMXIqlZvjuhMvqcFXOFkpDALBgkqhkiG9w0BAQswODEL
++MAkGA1UEBhMCRVMxFDASBgNVBAoMC0laRU5QRSBTLkEuMRMwEQYDVQQDDApJemVu
++cGUuY29tMB4XDTEwMTAyMDA4MjMzM1oXDTM3MTIxMjIzMDAwMFowgZ0xCzAJBgNV
++BAYTAkVTMRQwEgYDVQQKDAtJWkVOUEUgUy5BLjE6MDgGA1UECwwxQVpaIFppdXJ0
++YWdpcmkgcHVibGlrb2EgLSBDZXJ0aWZpY2FkbyBwdWJsaWNvIFNDQTE8MDoGA1UE
++AwwzRUFFa28gSGVycmkgQWRtaW5pc3RyYXppb2VuIENBIC0gQ0EgQUFQUCBWYXNj
++YXMgKDIpMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAoIM7nEdI0N1h
++rR5T4xuV/usKDoMIasaiKvfLhbwxaNtTt+a7W/6wV5bv3svQFIy3sUXjjdzV1nG2
++To2wo/YSPQiOt8exWvOapvL21ogiof+kelWnXFjWaKJI/vThHYLgIYEMj/y4HdtU
++ojI646rZwqsb4YGAopwgmkDfUh5jOhV2IcYE3TgJAYWVkj6jku9PLaIsHiarAHjD
++PY8dig8a4SRv0gm5Yk7FXLmW1d14oxQBDeHZ7zOEXfpafxdEDO2SNaRJjpkh8XRr
++PGqkg2y1Q3gT6b4537jz+StyDIJ3omylmlJsGCwqT7p8mEqjGJ5kC5I2VnjXKuNn
++soShc72khWZVUJiJo5SGuAkNE2ZXqltBVm5Jv6QweQKsX6bkcMc4IZok4a+hx8FM
++8IBpGf/I94pU6HzGXqCyc1d46drJgDY9mXa+6YDAJFl3xeXOOW2iGCfwXqhiCrKL
++MYvyMZzqF3QH5q4nb3ZnehYvraeMFXJXDn+Utqp8vd2r7ShfQJz01KtM4hgKdgSg
++jtW+shkVVN5ng/fPN85ovfAH2BHXFfHmQn4zKsYnLitpwYM/7S1HxlT61cdQ7Nnk
++3LZTYEgAoOmEmdheklT40WAYakksXGM5VrzG7x9S7s1Tm+Vb5LSThdHC8bxxwyTb
++KsDRDNJ84N9fPDO6qHnzaL2upQ43PycCAwEAAaOCAdkwggHVMIHHBgNVHREEgb8w
++gbyGFWh0dHA6Ly93d3cuaXplbnBlLmNvbYEPaW5mb0BpemVucGUuY29tpIGRMIGO
++MUcwRQYDVQQKDD5JWkVOUEUgUy5BLiAtIENJRiBBMDEzMzcyNjAtUk1lcmMuVml0
++b3JpYS1HYXN0ZWl6IFQxMDU1IEY2MiBTODFDMEEGA1UECQw6QXZkYSBkZWwgTWVk
++aXRlcnJhbmVvIEV0b3JiaWRlYSAxNCAtIDAxMDEwIFZpdG9yaWEtR2FzdGVpejAP
++BgNVHRMBAf8EBTADAQH/MA4GA1UdDwEB/wQEAwIBBjAdBgNVHQ4EFgQUwKlK90cl
++h/+8taaJzoLSRqiJ66MwHwYDVR0jBBgwFoAUHRxlDqjyJXu0kc/ksbHmvVV0bAUw
++OgYDVR0gBDMwMTAvBgRVHSAAMCcwJQYIKwYBBQUHAgEWGWh0dHA6Ly93d3cuaXpl
++bnBlLmNvbS9jcHMwNwYIKwYBBQUHAQEEKzApMCcGCCsGAQUFBzABhhtodHRwOi8v
++b2NzcC5pemVucGUuY29tOjgwOTQwMwYDVR0fBCwwKjAooCagJIYiaHR0cDovL2Ny
++bC5pemVucGUuY29tL2NnaS1iaW4vYXJsMjALBgkqhkiG9w0BAQsDggIBAMbjc3HM
++3DG9ubWPkzsF0QsktukpujbTTcGk4h20G7SPRy1DiiTxrRzdAMWGjZioOP3/fKCS
++M539qH0M+gsySNie+iKlbSZJUyE635T1tKw+G7bDUapjlH1xyv55NC5I6wCXGC6E
++3TEP5B/E7dZD0s9E4lS511ubVZivFgOzMYo1DO96diny/N/V1enaTCpRl1qH1OyL
++xUYTijV4ph2gL6exwuG7pxfRcVNHYlrRaXWfTz3F6NBKyULxrI3P/y6JAtN1GqT4
++VF/+vMygx22n0DufGepBwTQz6/rr1ulSZ+eMnuJiTXgh/BzQnkUsXTb8mHII25iR
++0oYF2qAsk6ecWbLiDpkHKIDHmML21MZE13MS8NSvTHoqJO4LyAmDe6SaeNHtrPlK
++b6mzE1BN2ug+ZaX8wLA5IMPFaf0jKhb/Cxu8INsxjt00brsErCc9ip1VNaH0M4bi
++1tGxfiew2436FaeyUxW7Pl6G5GgkNbuUc7QIoRy06DdU/U38BxW3uyJMY60zwHvS
++FlKAn0OvYp4niKhAJwaBVN3kowmJuOU5Rid+TUnfyxbJ9cttSgzaF3hP/N4zgMEM
++5tikXUskeckt8LUK96EH0QyssavAMECUEb/xrupyRdYWwjQGvNLq6T5+fViDGyOw
++k+lzD44wofy8paAy9uC9Owae0zMEzhcsyRm7
++-----END CERTIFICATE-----`
++
++const smimeRoot = `-----BEGIN CERTIFICATE-----
++MIIF8TCCA9mgAwIBAgIQALC3WhZIX7/hy/WL1xnmfTANBgkqhkiG9w0BAQsFADA4
++MQswCQYDVQQGEwJFUzEUMBIGA1UECgwLSVpFTlBFIFMuQS4xEzARBgNVBAMMCkl6
++ZW5wZS5jb20wHhcNMDcxMjEzMTMwODI4WhcNMzcxMjEzMDgyNzI1WjA4MQswCQYD
++VQQGEwJFUzEUMBIGA1UECgwLSVpFTlBFIFMuQS4xEzARBgNVBAMMCkl6ZW5wZS5j
++b20wggIiMA0GCSqGSIb3DQEBAQUAA4ICDwAwggIKAoICAQDJ03rKDx6sp4boFmVq
++scIbRTJxldn+EFvMr+eleQGPicPK8lVx93e+d5TzcqQsRNiekpsUOqHnJJAKClaO
++xdgmlOHZSOEtPtoKct2jmRXagaKH9HtuJneJWK3W6wyyQXpzbm3benhB6QiIEn6H
++LmYRY2xU+zydcsC8Lv/Ct90NduM61/e0aL6i9eOBbsFGb12N4E3GVFWJGjMxCrFX
++uaOKmMPsOzTFlUFpfnXCPCDFYbpRR6AgkJOhkEvzTnyFRVSa0QUmQbC1TR0zvsQD
++yCV8wXDbO/QJLVQnSKwv4cSsPsjLkkxTOTcj7NMB+eAJRE1NZMDhDVqHIrytG6P+
++JrUV86f8hBnp7KGItERphIPzidF0BqnMC9bC3ieFUCbKF7jJeodWLBoBHmy+E60Q
++rLUk9TiRodZL2vG70t5HtfG8gfZZa88ZU+mNFctKy6lvROUbQc/hhqfK0GqfvEyN
++BjNaooXlkDWgYlwWTvDjovoDGrQscbNYLN57C9saD+veIR8GdwYDsMnvmfzAuU8L
++hij+0rnq49qlw0dpEuDb8PYZi+17cNcC1u2HGCgsBCRMd+RIihrGO5rUD8r6ddIB
++QFqNeb+Lz0vPqhbBleStTIo+F5HUsWLlguWABKQDfo2/2n+iD5dPDNMN+9fR5XJ+
++HMh3/1uaD7euBUbl8agW7EekFwIDAQABo4H2MIHzMIGwBgNVHREEgagwgaWBD2lu
++Zm9AaXplbnBlLmNvbaSBkTCBjjFHMEUGA1UECgw+SVpFTlBFIFMuQS4gLSBDSUYg
++QTAxMzM3MjYwLVJNZXJjLlZpdG9yaWEtR2FzdGVpeiBUMTA1NSBGNjIgUzgxQzBB
++BgNVBAkMOkF2ZGEgZGVsIE1lZGl0ZXJyYW5lbyBFdG9yYmlkZWEgMTQgLSAwMTAx
++MCBWaXRvcmlhLUdhc3RlaXowDwYDVR0TAQH/BAUwAwEB/zAOBgNVHQ8BAf8EBAMC
++AQYwHQYDVR0OBBYEFB0cZQ6o8iV7tJHP5LGx5r1VdGwFMA0GCSqGSIb3DQEBCwUA
++A4ICAQB4pgwWSp9MiDrAyw6lFn2fuUhfGI8NYjb2zRlrrKvV9pF9rnHzP7MOeIWb
++laQnIUdCSnxIOvVFfLMMjlF4rJUT3sb9fbgakEyrkgPH7UIBzg/YsfqikuFgba56
++awmqxinuaElnMIAkejEWOVt+8Rwu3WwJrfIxwYJOubv5vr8qhT/AQKM6WfxZSzwo
++JNu0FXWuDYi6LnPAvViH5ULy617uHjAimcs30cQhbIHsvm0m5hzkQiCeR7Csg1lw
++LDXWrzY0tM07+DKo7+N4ifuNRSzanLh+QBxh5z6ikixL8s36mLYp//Pye6kfLqCT
++VyvehQP5aTfLnnhqBbTFMXiJ7HqnheG5ezzevh55hM6fcA5ZwjUukCox2eRFekGk
++LhObNA5me0mrZJfQRsN5nXJQY6aYWwa9SG3YOYNw6DXwBdGqvOPbyALqfP2C2sJb
++UjWumDqtujWTI6cfSN01RpiyEGjkpTHCClguGYEQyVB1/OpaFs4R1+7vUIgtYf8/
++QnMFlEPVjjxOAToZpR9GTnfQXeWBIiGH/pR9hNiTrdZoQ0iy2+tzJOeRf1SktoA+
++naM8THLCV8Sg1Mw4J87VBp6iSNnpn86CcDaTmjvfliHjWbcM2pE38P1ZWrOZyGls
++QyYBNWNgVYkDOnXYukrZVP/u3oDYLdE41V4tC5h9Pmzb/CaIxw==
+ -----END CERTIFICATE-----`
+ 
+ var megaLeaf = `-----BEGIN CERTIFICATE-----
+@@ -1315,50 +1374,7 @@ vRAvOtNiKtPzFeQVdbRPOskC4rcHyPeiDAMAMixeLi63+CFty4da3r5lRezeedCE
+ cw3ESZzThBwWqvPOtJdpXdm+r57pDW8qD+/0lY8wfImMNkQAyCUCLg/1Lxt/hrBj
+ -----END CERTIFICATE-----`
+ 
+-const issuerSubjectMatchRoot = `
+-Certificate:
+-    Data:
+-        Version: 3 (0x2)
+-        Serial Number: 161640039802297062 (0x23e42c281e55ae6)
+-    Signature Algorithm: sha256WithRSAEncryption
+-        Issuer: O=Golang, CN=Root ca
+-        Validity
+-            Not Before: Jan  1 00:00:00 2015 GMT
+-            Not After : Jan  1 00:00:00 2025 GMT
+-        Subject: O=Golang, CN=Root ca
+-        Subject Public Key Info:
+-            Public Key Algorithm: rsaEncryption
+-                Public-Key: (1024 bit)
+-                Modulus:
+-                    00:e9:0e:7f:11:0c:e6:5a:e6:86:83:70:f6:51:07:
+-                    2e:02:78:11:f5:b2:24:92:38:ee:26:62:02:c7:94:
+-                    f1:3e:a1:77:6a:c0:8f:d5:22:68:b6:5d:e2:4c:da:
+-                    e0:85:11:35:c2:92:72:49:8d:81:b4:88:97:6b:b7:
+-                    fc:b2:44:5b:d9:4d:06:70:f9:0c:c6:8f:e9:b3:df:
+-                    a3:6a:84:6c:43:59:be:9d:b2:d0:76:9b:c3:d7:fa:
+-                    99:59:c3:b8:e5:f3:53:03:bd:49:d6:b3:cc:a2:43:
+-                    fe:ad:c2:0b:b9:01:b8:56:29:94:03:24:a7:0d:28:
+-                    21:29:a9:ae:94:5b:4a:f9:9f
+-                Exponent: 65537 (0x10001)
+-        X509v3 extensions:
+-            X509v3 Key Usage: critical
+-                Certificate Sign
+-            X509v3 Extended Key Usage:
+-                TLS Web Server Authentication, TLS Web Client Authentication
+-            X509v3 Basic Constraints: critical
+-                CA:TRUE
+-            X509v3 Subject Key Identifier:
+-                40:37:D7:01:FB:40:2F:B8:1C:7E:54:04:27:8C:59:01
+-    Signature Algorithm: sha256WithRSAEncryption
+-         6f:84:df:49:e0:99:d4:71:66:1d:32:86:56:cb:ea:5a:6b:0e:
+-         00:6a:d1:5a:6e:1f:06:23:07:ff:cb:d1:1a:74:e4:24:43:0b:
+-         aa:2a:a0:73:75:25:82:bc:bf:3f:a9:f8:48:88:ac:ed:3a:94:
+-         3b:0d:d3:88:c8:67:44:61:33:df:71:6c:c5:af:ed:16:8c:bf:
+-         82:f9:49:bb:e3:2a:07:53:36:37:25:77:de:91:a4:77:09:7f:
+-         6f:b2:91:58:c4:05:89:ea:8e:fa:e1:3b:19:ef:f8:f6:94:b7:
+-         7b:27:e6:e4:84:dd:2b:f5:93:f5:3c:d8:86:c5:38:01:56:5c:
+-         9f:6d
+------BEGIN CERTIFICATE-----
++const issuerSubjectMatchRoot = `-----BEGIN CERTIFICATE-----
+ MIICIDCCAYmgAwIBAgIIAj5CwoHlWuYwDQYJKoZIhvcNAQELBQAwIzEPMA0GA1UE
+ ChMGR29sYW5nMRAwDgYDVQQDEwdSb290IGNhMB4XDTE1MDEwMTAwMDAwMFoXDTI1
+ MDEwMTAwMDAwMFowIzEPMA0GA1UEChMGR29sYW5nMRAwDgYDVQQDEwdSb290IGNh
+@@ -1373,53 +1389,7 @@ RGEz33Fsxa/tFoy/gvlJu+MqB1M2NyV33pGkdwl/b7KRWMQFieqO+uE7Ge/49pS3
+ eyfm5ITdK/WT9TzYhsU4AVZcn20=
+ -----END CERTIFICATE-----`
+ 
+-const issuerSubjectMatchLeaf = `
+-Certificate:
+-    Data:
+-        Version: 3 (0x2)
+-        Serial Number: 16785088708916013734 (0xe8f09d3fe25beaa6)
+-    Signature Algorithm: sha256WithRSAEncryption
+-        Issuer: O=Golang, CN=Root CA
+-        Validity
+-            Not Before: Jan  1 00:00:00 2015 GMT
+-            Not After : Jan  1 00:00:00 2025 GMT
+-        Subject: O=Golang, CN=Leaf
+-        Subject Public Key Info:
+-            Public Key Algorithm: rsaEncryption
+-                Public-Key: (1024 bit)
+-                Modulus:
+-                    00:db:46:7d:93:2e:12:27:06:48:bc:06:28:21:ab:
+-                    7e:c4:b6:a2:5d:fe:1e:52:45:88:7a:36:47:a5:08:
+-                    0d:92:42:5b:c2:81:c0:be:97:79:98:40:fb:4f:6d:
+-                    14:fd:2b:13:8b:c2:a5:2e:67:d8:d4:09:9e:d6:22:
+-                    38:b7:4a:0b:74:73:2b:c2:34:f1:d1:93:e5:96:d9:
+-                    74:7b:f3:58:9f:6c:61:3c:c0:b0:41:d4:d9:2b:2b:
+-                    24:23:77:5b:1c:3b:bd:75:5d:ce:20:54:cf:a1:63:
+-                    87:1d:1e:24:c4:f3:1d:1a:50:8b:aa:b6:14:43:ed:
+-                    97:a7:75:62:f4:14:c8:52:d7
+-                Exponent: 65537 (0x10001)
+-        X509v3 extensions:
+-            X509v3 Key Usage: critical
+-                Digital Signature, Key Encipherment
+-            X509v3 Extended Key Usage:
+-                TLS Web Server Authentication, TLS Web Client Authentication
+-            X509v3 Basic Constraints: critical
+-                CA:FALSE
+-            X509v3 Subject Key Identifier:
+-                9F:91:16:1F:43:43:3E:49:A6:DE:6D:B6:80:D7:9F:60
+-            X509v3 Authority Key Identifier:
+-                keyid:40:37:D7:01:FB:40:2F:B8:1C:7E:54:04:27:8C:59:01
+-
+-    Signature Algorithm: sha256WithRSAEncryption
+-         8d:86:05:da:89:f5:1d:c5:16:14:41:b9:34:87:2b:5c:38:99:
+-         e3:d9:5a:5b:7a:5b:de:0b:5c:08:45:09:6f:1c:9d:31:5f:08:
+-         ca:7a:a3:99:da:83:0b:22:be:4f:02:35:91:4e:5d:5c:37:bf:
+-         89:22:58:7d:30:76:d2:2f:d0:a0:ee:77:9e:77:c0:d6:19:eb:
+-         ec:a0:63:35:6a:80:9b:80:1a:80:de:64:bc:40:38:3c:22:69:
+-         ad:46:26:a2:3d:ea:f4:c2:92:49:16:03:96:ae:64:21:b9:7c:
+-         ee:64:91:47:81:aa:b4:0c:09:2b:12:1a:b2:f3:af:50:b3:b1:
+-         ce:24
+------BEGIN CERTIFICATE-----
++const issuerSubjectMatchLeaf = `-----BEGIN CERTIFICATE-----
+ MIICODCCAaGgAwIBAgIJAOjwnT/iW+qmMA0GCSqGSIb3DQEBCwUAMCMxDzANBgNV
+ BAoTBkdvbGFuZzEQMA4GA1UEAxMHUm9vdCBDQTAeFw0xNTAxMDEwMDAwMDBaFw0y
+ NTAxMDEwMDAwMDBaMCAxDzANBgNVBAoTBkdvbGFuZzENMAsGA1UEAxMETGVhZjCB
+@@ -1432,11 +1402,9 @@ Q0M+SabebbaA159gMBsGA1UdIwQUMBKAEEA31wH7QC+4HH5UBCeMWQEwDQYJKoZI
+ hvcNAQELBQADgYEAjYYF2on1HcUWFEG5NIcrXDiZ49laW3pb3gtcCEUJbxydMV8I
+ ynqjmdqDCyK+TwI1kU5dXDe/iSJYfTB20i/QoO53nnfA1hnr7KBjNWqAm4AagN5k
+ vEA4PCJprUYmoj3q9MKSSRYDlq5kIbl87mSRR4GqtAwJKxIasvOvULOxziQ=
+------END CERTIFICATE-----
+-`
++-----END CERTIFICATE-----`
+ 
+-const x509v1TestRoot = `
+------BEGIN CERTIFICATE-----
++const x509v1TestRoot = `-----BEGIN CERTIFICATE-----
+ MIICIDCCAYmgAwIBAgIIAj5CwoHlWuYwDQYJKoZIhvcNAQELBQAwIzEPMA0GA1UE
+ ChMGR29sYW5nMRAwDgYDVQQDEwdSb290IENBMB4XDTE1MDEwMTAwMDAwMFoXDTI1
+ MDEwMTAwMDAwMFowIzEPMA0GA1UEChMGR29sYW5nMRAwDgYDVQQDEwdSb290IENB
+@@ -1451,8 +1419,7 @@ h2NtN34ard0hEfHc8qW8mkXdsysVmq6cPvFYaHz+dBtkHuHDoy8YQnC0zdN/WyYB
+ /1JmacUUofl+HusHuLkDxmadogI=
+ -----END CERTIFICATE-----`
+ 
+-const x509v1TestIntermediate = `
+------BEGIN CERTIFICATE-----
++const x509v1TestIntermediate = `-----BEGIN CERTIFICATE-----
+ MIIByjCCATMCCQCCdEMsT8ykqTANBgkqhkiG9w0BAQsFADAjMQ8wDQYDVQQKEwZH
+ b2xhbmcxEDAOBgNVBAMTB1Jvb3QgQ0EwHhcNMTUwMTAxMDAwMDAwWhcNMjUwMTAx
+ MDAwMDAwWjAwMQ8wDQYDVQQKEwZHb2xhbmcxHTAbBgNVBAMTFFguNTA5djEgaW50
+@@ -1465,8 +1432,7 @@ zWE77kJDibzd141u21ZbLsKvEdUJXjla43bdyMmEqf5VGpC3D4sFt3QVH7lGeRur
+ x5Wlq1u3YDL/j6s1nU2dQ3ySB/oP7J+vQ9V4QeM+
+ -----END CERTIFICATE-----`
+ 
+-const x509v1TestLeaf = `
+------BEGIN CERTIFICATE-----
++const x509v1TestLeaf = `-----BEGIN CERTIFICATE-----
+ MIICMzCCAZygAwIBAgIJAPo99mqJJrpJMA0GCSqGSIb3DQEBCwUAMDAxDzANBgNV
+ BAoTBkdvbGFuZzEdMBsGA1UEAxMUWC41MDl2MSBpbnRlcm1lZGlhdGUwHhcNMTUw
+ MTAxMDAwMDAwWhcNMjUwMTAxMDAwMDAwWjArMQ8wDQYDVQQKEwZHb2xhbmcxGDAW
+@@ -1481,8 +1447,7 @@ CwUAA4GBADYzYUvaToO/ucBskPdqXV16AaakIhhSENswYVSl97/sODaxsjishKq9
+ /jt8qszOXCv2vYdUTPNuPqufXLWMoirpuXrr1liJDmedCcAHepY/
+ -----END CERTIFICATE-----`
+ 
+-const ignoreCNWithSANRoot = `
+------BEGIN CERTIFICATE-----
++const ignoreCNWithSANRoot = `-----BEGIN CERTIFICATE-----
+ MIIDPzCCAiegAwIBAgIIJkzCwkNrPHMwDQYJKoZIhvcNAQELBQAwMDEQMA4GA1UE
+ ChMHVEVTVElORzEcMBoGA1UEAxMTKipUZXN0aW5nKiogUm9vdCBDQTAeFw0xNTAx
+ MDEwMDAwMDBaFw0yNTAxMDEwMDAwMDBaMDAxEDAOBgNVBAoTB1RFU1RJTkcxHDAa
+@@ -1503,8 +1468,7 @@ aSLjI/Ya0zwUARMmyZ3RRGCyhIarPb20mKSaMf1/Nb23pS3k1QgmZhk5pAnXYsWu
+ BJ6bvwEAasFiLGP6Zbdmxb2hIA==
+ -----END CERTIFICATE-----`
+ 
+-const ignoreCNWithSANLeaf = `
+------BEGIN CERTIFICATE-----
++const ignoreCNWithSANLeaf = `-----BEGIN CERTIFICATE-----
+ MIIDaTCCAlGgAwIBAgIJAONakvRTxgJhMA0GCSqGSIb3DQEBCwUAMDAxEDAOBgNV
+ BAoTB1RFU1RJTkcxHDAaBgNVBAMTEyoqVGVzdGluZyoqIFJvb3QgQ0EwHhcNMTUw
+ MTAxMDAwMDAwWhcNMjUwMTAxMDAwMDAwWjAsMRAwDgYDVQQKEwdURVNUSU5HMRgw
+@@ -1526,8 +1490,7 @@ j2kBQyvnyKsXHLAKUoUOpd6t/1PHrfXnGj+HmzZNloJ/BZ1kiWb4eLvMljoLGkZn
+ xZbqP3Krgjj4XNaXjg==
+ -----END CERTIFICATE-----`
+ 
+-const excludedNamesLeaf = `
+------BEGIN CERTIFICATE-----
++const excludedNamesLeaf = `-----BEGIN CERTIFICATE-----
+ MIID4DCCAsigAwIBAgIHDUSFtJknhzANBgkqhkiG9w0BAQsFADCBnjELMAkGA1UE
+ BhMCVVMxEzARBgNVBAgMCkNhbGlmb3JuaWExEjAQBgNVBAcMCUxvcyBHYXRvczEU
+ MBIGA1UECgwLTmV0ZmxpeCBJbmMxLTArBgNVBAsMJFBsYXRmb3JtIFNlY3VyaXR5
+@@ -1549,11 +1512,9 @@ hDt8MCFJ8eSjCyKdtZh1MPMLrLVymmJV+Rc9JUUYM9TIeERkpl0rskcO1YGewkYt
+ qKlWE+0S16+pzsWvKn831uylqwIb8ANBPsCX4aM4muFBHavSWAHgRO+P+yXVw8Q+
+ VQDnMHUe5PbZd1/+1KKVs1K/CkBCtoHNHp1d/JT+2zUQJphwja9CcgfFdVhSnHL4
+ oEEOFtqVMIuQfR2isi08qW/JGOHc4sFoLYB8hvdaxKWSE19A
+------END CERTIFICATE-----
+-`
++-----END CERTIFICATE-----`
+ 
+-const excludedNamesIntermediate = `
+------BEGIN CERTIFICATE-----
++const excludedNamesIntermediate = `-----BEGIN CERTIFICATE-----
+ MIIDzTCCArWgAwIBAgIHDUSFqYeczDANBgkqhkiG9w0BAQsFADCBmTELMAkGA1UE
+ BhMCVVMxEzARBgNVBAgMCkNhbGlmb3JuaWExEjAQBgNVBAcMCUxvcyBHYXRvczEU
+ MBIGA1UECgwLTmV0ZmxpeCBJbmMxLTArBgNVBAsMJFBsYXRmb3JtIFNlY3VyaXR5
+@@ -1577,8 +1538,7 @@ LbIjZCSfgZnk/LK1KU1j91FI2bc2ULYZvAC1PAg8/zvIgxn6YM2Q7ZsdEgWw0FpS
+ zMBX1/lk4wkFckeUIlkD55Y=
+ -----END CERTIFICATE-----`
+ 
+-const excludedNamesRoot = `
+------BEGIN CERTIFICATE-----
++const excludedNamesRoot = `-----BEGIN CERTIFICATE-----
+ MIIEGTCCAwGgAwIBAgIHDUSFpInn/zANBgkqhkiG9w0BAQsFADCBozELMAkGA1UE
+ BhMCVVMxEzARBgNVBAgMCkNhbGlmb3JuaWExEjAQBgNVBAcMCUxvcyBHYXRvczEU
+ MBIGA1UECgwLTmV0ZmxpeCBJbmMxLTArBgNVBAsMJFBsYXRmb3JtIFNlY3VyaXR5
+@@ -1603,46 +1563,16 @@ yU1yRHUqUYpN0DWFpsPbBqgM6uUAVO2ayBFhPgWUaqkmSbZ/Nq7isGvknaTmcIwT
+ +NQCZDd5eFeU8PpNX7rgaYE4GPq+EEmLVCBYmdctr8QVdqJ//8Xu3+1phjDy
+ -----END CERTIFICATE-----`
+ 
+-const invalidCNRoot = `
+------BEGIN CERTIFICATE-----
++const invalidCNRoot = `-----BEGIN CERTIFICATE-----
+ MIIBFjCBvgIJAIsu4r+jb70UMAoGCCqGSM49BAMCMBQxEjAQBgNVBAsMCVRlc3Qg
+ cm9vdDAeFw0xODA3MTExODMyMzVaFw0yODA3MDgxODMyMzVaMBQxEjAQBgNVBAsM
+ CVRlc3Qgcm9vdDBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABF6oDgMg0LV6YhPj
+ QXaPXYCc2cIyCdqp0ROUksRz0pOLTc5iY2nraUheRUD1vRRneq7GeXOVNn7uXONg
+ oCGMjNwwCgYIKoZIzj0EAwIDRwAwRAIgDSiwgIn8g1lpruYH0QD1GYeoWVunfmrI
+ XzZZl0eW/ugCICgOfXeZ2GGy3wIC0352BaC3a8r5AAb2XSGNe+e9wNN6
+------END CERTIFICATE-----
+-`
+-
+-const invalidCNWithoutSAN = `
+-Certificate:
+-    Data:
+-        Version: 1 (0x0)
+-        Serial Number:
+-            07:ba:bc:b7:d9:ab:0c:02:fe:50:1d:4e:15:a3:0d:e4:11:16:14:a2
+-        Signature Algorithm: ecdsa-with-SHA256
+-        Issuer: OU = Test root
+-        Validity
+-            Not Before: Jul 11 18:35:21 2018 GMT
+-            Not After : Jul  8 18:35:21 2028 GMT
+-        Subject: CN = "foo,invalid"
+-        Subject Public Key Info:
+-            Public Key Algorithm: id-ecPublicKey
+-                Public-Key: (256 bit)
+-                pub:
+-                    04:a7:a6:7c:22:33:a7:47:7f:08:93:2d:5f:61:35:
+-                    2e:da:45:67:76:f2:97:73:18:b0:01:12:4a:1a:d5:
+-                    b7:6f:41:3c:bb:05:69:f4:06:5d:ff:eb:2b:a7:85:
+-                    0b:4c:f7:45:4e:81:40:7a:a9:c6:1d:bb:ba:d9:b9:
+-                    26:b3:ca:50:90
+-                ASN1 OID: prime256v1
+-                NIST CURVE: P-256
+-    Signature Algorithm: ecdsa-with-SHA256
+-         30:45:02:21:00:85:96:75:b6:72:3c:67:12:a0:7f:86:04:81:
+-         d2:dd:c8:67:50:d7:5f:85:c0:54:54:fc:e6:6b:45:08:93:d3:
+-         2a:02:20:60:86:3e:d6:28:a6:4e:da:dd:6e:95:89:cc:00:76:
+-         78:1c:03:80:85:a6:5a:0b:eb:c5:f3:9c:2e:df:ef:6e:fa
+------BEGIN CERTIFICATE-----
++-----END CERTIFICATE-----`
++
++const invalidCNWithoutSAN = `-----BEGIN CERTIFICATE-----
+ MIIBJDCBywIUB7q8t9mrDAL+UB1OFaMN5BEWFKIwCgYIKoZIzj0EAwIwFDESMBAG
+ A1UECwwJVGVzdCByb290MB4XDTE4MDcxMTE4MzUyMVoXDTI4MDcwODE4MzUyMVow
+ FjEUMBIGA1UEAwwLZm9vLGludmFsaWQwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNC
+@@ -1650,38 +1580,9 @@ AASnpnwiM6dHfwiTLV9hNS7aRWd28pdzGLABEkoa1bdvQTy7BWn0Bl3/6yunhQtM
+ 90VOgUB6qcYdu7rZuSazylCQMAoGCCqGSM49BAMCA0gAMEUCIQCFlnW2cjxnEqB/
+ hgSB0t3IZ1DXX4XAVFT85mtFCJPTKgIgYIY+1iimTtrdbpWJzAB2eBwDgIWmWgvr
+ xfOcLt/vbvo=
+------END CERTIFICATE-----
+-`
+-
+-const validCNWithoutSAN = `
+-Certificate:
+-    Data:
+-        Version: 1 (0x0)
+-        Serial Number:
+-            07:ba:bc:b7:d9:ab:0c:02:fe:50:1d:4e:15:a3:0d:e4:11:16:14:a4
+-        Signature Algorithm: ecdsa-with-SHA256
+-        Issuer: OU = Test root
+-        Validity
+-            Not Before: Jul 11 18:47:24 2018 GMT
+-            Not After : Jul  8 18:47:24 2028 GMT
+-        Subject: CN = foo.example.com
+-        Subject Public Key Info:
+-            Public Key Algorithm: id-ecPublicKey
+-                Public-Key: (256 bit)
+-                pub:
+-                    04:a7:a6:7c:22:33:a7:47:7f:08:93:2d:5f:61:35:
+-                    2e:da:45:67:76:f2:97:73:18:b0:01:12:4a:1a:d5:
+-                    b7:6f:41:3c:bb:05:69:f4:06:5d:ff:eb:2b:a7:85:
+-                    0b:4c:f7:45:4e:81:40:7a:a9:c6:1d:bb:ba:d9:b9:
+-                    26:b3:ca:50:90
+-                ASN1 OID: prime256v1
+-                NIST CURVE: P-256
+-    Signature Algorithm: ecdsa-with-SHA256
+-         30:44:02:20:53:6c:d7:b7:59:61:51:72:a5:18:a3:4b:0d:52:
+-         ea:15:fa:d0:93:30:32:54:4b:ed:0f:58:85:b8:a8:1a:82:3b:
+-         02:20:14:77:4b:0e:7e:4f:0a:4f:64:26:97:dc:d0:ed:aa:67:
+-         1d:37:85:da:b4:87:ba:25:1c:2a:58:f7:23:11:8b:3d
+------BEGIN CERTIFICATE-----
++-----END CERTIFICATE-----`
++
++const validCNWithoutSAN = `-----BEGIN CERTIFICATE-----
+ MIIBJzCBzwIUB7q8t9mrDAL+UB1OFaMN5BEWFKQwCgYIKoZIzj0EAwIwFDESMBAG
+ A1UECwwJVGVzdCByb290MB4XDTE4MDcxMTE4NDcyNFoXDTI4MDcwODE4NDcyNFow
+ GjEYMBYGA1UEAwwPZm9vLmV4YW1wbGUuY29tMFkwEwYHKoZIzj0CAQYIKoZIzj0D
+@@ -1689,48 +1590,9 @@ AQcDQgAEp6Z8IjOnR38Iky1fYTUu2kVndvKXcxiwARJKGtW3b0E8uwVp9AZd/+sr
+ p4ULTPdFToFAeqnGHbu62bkms8pQkDAKBggqhkjOPQQDAgNHADBEAiBTbNe3WWFR
+ cqUYo0sNUuoV+tCTMDJUS+0PWIW4qBqCOwIgFHdLDn5PCk9kJpfc0O2qZx03hdq0
+ h7olHCpY9yMRiz0=
+------END CERTIFICATE-----
+-`
+-
+-const (
+-	rootWithoutSKID = `
+-Certificate:
+-    Data:
+-        Version: 3 (0x2)
+-        Serial Number:
+-            78:29:2a:dc:2f:12:39:7f:c9:33:93:ea:61:39:7d:70
+-        Signature Algorithm: ecdsa-with-SHA256
+-        Issuer: O = Acme Co
+-        Validity
+-            Not Before: Feb  4 22:56:34 2019 GMT
+-            Not After : Feb  1 22:56:34 2029 GMT
+-        Subject: O = Acme Co
+-        Subject Public Key Info:
+-            Public Key Algorithm: id-ecPublicKey
+-                Public-Key: (256 bit)
+-                pub:
+-                    04:84:a6:8c:69:53:af:87:4b:39:64:fe:04:24:e6:
+-                    d8:fc:d6:46:39:35:0e:92:dc:48:08:7e:02:5f:1e:
+-                    07:53:5c:d9:e0:56:c5:82:07:f6:a3:e2:ad:f6:ad:
+-                    be:a0:4e:03:87:39:67:0c:9c:46:91:68:6b:0e:8e:
+-                    f8:49:97:9d:5b
+-                ASN1 OID: prime256v1
+-                NIST CURVE: P-256
+-        X509v3 extensions:
+-            X509v3 Key Usage: critical
+-                Digital Signature, Key Encipherment, Certificate Sign
+-            X509v3 Extended Key Usage:
+-                TLS Web Server Authentication
+-            X509v3 Basic Constraints: critical
+-                CA:TRUE
+-            X509v3 Subject Alternative Name:
+-                DNS:example
+-    Signature Algorithm: ecdsa-with-SHA256
+-         30:46:02:21:00:c6:81:61:61:42:8d:37:e7:d0:c3:72:43:44:
+-         17:bd:84:ff:88:81:68:9a:99:08:ab:3c:3a:c0:1e:ea:8c:ba:
+-         c0:02:21:00:de:c9:fa:e5:5e:c6:e2:db:23:64:43:a9:37:42:
+-         72:92:7f:6e:89:38:ea:9e:2a:a7:fd:2f:ea:9a:ff:20:21:e7
+------BEGIN CERTIFICATE-----
++-----END CERTIFICATE-----`
++
++const rootWithoutSKID = `-----BEGIN CERTIFICATE-----
+ MIIBbzCCARSgAwIBAgIQeCkq3C8SOX/JM5PqYTl9cDAKBggqhkjOPQQDAjASMRAw
+ DgYDVQQKEwdBY21lIENvMB4XDTE5MDIwNDIyNTYzNFoXDTI5MDIwMTIyNTYzNFow
+ EjEQMA4GA1UEChMHQWNtZSBDbzBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABISm
+@@ -1739,49 +1601,9 @@ ZwycRpFoaw6O+EmXnVujTDBKMA4GA1UdDwEB/wQEAwICpDATBgNVHSUEDDAKBggr
+ BgEFBQcDATAPBgNVHRMBAf8EBTADAQH/MBIGA1UdEQQLMAmCB2V4YW1wbGUwCgYI
+ KoZIzj0EAwIDSQAwRgIhAMaBYWFCjTfn0MNyQ0QXvYT/iIFompkIqzw6wB7qjLrA
+ AiEA3sn65V7G4tsjZEOpN0Jykn9uiTjqniqn/S/qmv8gIec=
+------END CERTIFICATE-----
+-`
+-	leafWithAKID = `
+-	Certificate:
+-    Data:
+-        Version: 3 (0x2)
+-        Serial Number:
+-            f0:8a:62:f0:03:84:a2:cf:69:63:ad:71:3b:b6:5d:8c
+-        Signature Algorithm: ecdsa-with-SHA256
+-        Issuer: O = Acme Co
+-        Validity
+-            Not Before: Feb  4 23:06:52 2019 GMT
+-            Not After : Feb  1 23:06:52 2029 GMT
+-        Subject: O = Acme LLC
+-        Subject Public Key Info:
+-            Public Key Algorithm: id-ecPublicKey
+-                Public-Key: (256 bit)
+-                pub:
+-                    04:5a:4e:4d:fb:ff:17:f7:b6:13:e8:29:45:34:81:
+-                    39:ff:8c:9c:d9:8c:0a:9f:dd:b5:97:4c:2b:20:91:
+-                    1c:4f:6b:be:53:27:66:ec:4a:ad:08:93:6d:66:36:
+-                    0c:02:70:5d:01:ca:7f:c3:29:e9:4f:00:ba:b4:14:
+-                    ec:c5:c3:34:b3
+-                ASN1 OID: prime256v1
+-                NIST CURVE: P-256
+-        X509v3 extensions:
+-            X509v3 Key Usage: critical
+-                Digital Signature, Key Encipherment
+-            X509v3 Extended Key Usage:
+-                TLS Web Server Authentication
+-            X509v3 Basic Constraints: critical
+-                CA:FALSE
+-            X509v3 Authority Key Identifier:
+-                keyid:C2:2B:5F:91:78:34:26:09:42:8D:6F:51:B2:C5:AF:4C:0B:DE:6A:42
+-
+-            X509v3 Subject Alternative Name:
+-                DNS:example
+-    Signature Algorithm: ecdsa-with-SHA256
+-         30:44:02:20:64:e0:ba:56:89:63:ce:22:5e:4f:22:15:fd:3c:
+-         35:64:9a:3a:6b:7b:9a:32:a0:7f:f7:69:8c:06:f0:00:58:b8:
+-         02:20:09:e4:9f:6d:8b:9e:38:e1:b6:01:d5:ee:32:a4:94:65:
+-         93:2a:78:94:bb:26:57:4b:c7:dd:6c:3d:40:2b:63:90
+------BEGIN CERTIFICATE-----
++-----END CERTIFICATE-----`
++
++const leafWithAKID = `-----BEGIN CERTIFICATE-----
+ MIIBjTCCATSgAwIBAgIRAPCKYvADhKLPaWOtcTu2XYwwCgYIKoZIzj0EAwIwEjEQ
+ MA4GA1UEChMHQWNtZSBDbzAeFw0xOTAyMDQyMzA2NTJaFw0yOTAyMDEyMzA2NTJa
+ MBMxETAPBgNVBAoTCEFjbWUgTExDMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE
+@@ -1791,9 +1613,7 @@ CCsGAQUFBwMBMAwGA1UdEwEB/wQCMAAwHwYDVR0jBBgwFoAUwitfkXg0JglCjW9R
+ ssWvTAveakIwEgYDVR0RBAswCYIHZXhhbXBsZTAKBggqhkjOPQQDAgNHADBEAiBk
+ 4LpWiWPOIl5PIhX9PDVkmjpre5oyoH/3aYwG8ABYuAIgCeSfbYueOOG2AdXuMqSU
+ ZZMqeJS7JldLx91sPUArY5A=
+------END CERTIFICATE-----
+-`
+-)
++-----END CERTIFICATE-----`
+ 
+ var unknownAuthorityErrorTests = []struct {
+ 	cert     string
+@@ -2124,3 +1944,33 @@ func TestLongChain(t *testing.T) {
+ 	}
+ 	t.Logf("verification took %v", time.Since(start))
+ }
++
++func TestSystemRootsError(t *testing.T) {
++	if runtime.GOOS == "windows" {
++		t.Skip("Windows does not use (or support) systemRoots")
++	}
++
++	defer func(oldSystemRoots *CertPool) { systemRoots = oldSystemRoots }(systemRootsPool())
++
++	opts := VerifyOptions{
++		Intermediates: NewCertPool(),
++		DNSName:       "www.google.com",
++		CurrentTime:   time.Unix(1395785200, 0),
++	}
++
++	if ok := opts.Intermediates.AppendCertsFromPEM([]byte(giag2Intermediate)); !ok {
++		t.Fatalf("failed to parse intermediate")
++	}
++
++	leaf, err := certificateFromPEM(googleLeaf)
++	if err != nil {
++		t.Fatalf("failed to parse leaf: %v", err)
++	}
++
++	systemRoots = nil
++
++	_, err = leaf.Verify(opts)
++	if _, ok := err.(SystemRootsError); !ok {
++		t.Errorf("error was not SystemRootsError: %v", err)
++	}
++}
+diff --git a/libgo/go/database/sql/driver/driver.go b/libgo/go/database/sql/driver/driver.go
+index 316e7cea375..a0ba7ecf694 100644
+--- a/libgo/go/database/sql/driver/driver.go
++++ b/libgo/go/database/sql/driver/driver.go
+@@ -255,12 +255,9 @@ type ConnBeginTx interface {
+ // SessionResetter may be implemented by Conn to allow drivers to reset the
+ // session state associated with the connection and to signal a bad connection.
+ type SessionResetter interface {
+-	// ResetSession is called while a connection is in the connection
+-	// pool. No queries will run on this connection until this method returns.
+-	//
+-	// If the connection is bad this should return driver.ErrBadConn to prevent
+-	// the connection from being returned to the connection pool. Any other
+-	// error will be discarded.
++	// ResetSession is called prior to executing a query on the connection
++	// if the connection has been used before. If the driver returns ErrBadConn
++	// the connection is discarded.
+ 	ResetSession(ctx context.Context) error
+ }
+ 
+diff --git a/libgo/go/database/sql/fakedb_test.go b/libgo/go/database/sql/fakedb_test.go
+index a0028be0e57..0ec72d409d3 100644
+--- a/libgo/go/database/sql/fakedb_test.go
++++ b/libgo/go/database/sql/fakedb_test.go
+@@ -390,12 +390,19 @@ func setStrictFakeConnClose(t *testing.T) {
+ 
+ func (c *fakeConn) ResetSession(ctx context.Context) error {
+ 	c.dirtySession = false
++	c.currTx = nil
+ 	if c.isBad() {
+ 		return driver.ErrBadConn
+ 	}
+ 	return nil
+ }
+ 
++var _ validator = (*fakeConn)(nil)
++
++func (c *fakeConn) IsValid() bool {
++	return !c.isBad()
++}
++
+ func (c *fakeConn) Close() (err error) {
+ 	drv := fdriver.(*fakeDriver)
+ 	defer func() {
+@@ -728,6 +735,9 @@ var hookExecBadConn func() bool
+ func (s *fakeStmt) Exec(args []driver.Value) (driver.Result, error) {
+ 	panic("Using ExecContext")
+ }
++
++var errFakeConnSessionDirty = errors.New("fakedb: session is dirty")
++
+ func (s *fakeStmt) ExecContext(ctx context.Context, args []driver.NamedValue) (driver.Result, error) {
+ 	if s.panic == "Exec" {
+ 		panic(s.panic)
+@@ -740,7 +750,7 @@ func (s *fakeStmt) ExecContext(ctx context.Context, args []driver.NamedValue) (d
+ 		return nil, driver.ErrBadConn
+ 	}
+ 	if s.c.isDirtyAndMark() {
+-		return nil, errors.New("fakedb: session is dirty")
++		return nil, errFakeConnSessionDirty
+ 	}
+ 
+ 	err := checkSubsetTypes(s.c.db.allowAny, args)
+@@ -854,7 +864,7 @@ func (s *fakeStmt) QueryContext(ctx context.Context, args []driver.NamedValue) (
+ 		return nil, driver.ErrBadConn
+ 	}
+ 	if s.c.isDirtyAndMark() {
+-		return nil, errors.New("fakedb: session is dirty")
++		return nil, errFakeConnSessionDirty
+ 	}
+ 
+ 	err := checkSubsetTypes(s.c.db.allowAny, args)
+@@ -887,6 +897,37 @@ func (s *fakeStmt) QueryContext(ctx context.Context, args []driver.NamedValue) (
+ 				}
+ 			}
+ 		}
++		if s.table == "tx_status" && s.colName[0] == "tx_status" {
++			txStatus := "autocommit"
++			if s.c.currTx != nil {
++				txStatus = "transaction"
++			}
++			cursor := &rowsCursor{
++				parentMem: s.c,
++				posRow:    -1,
++				rows: [][]*row{
++					[]*row{
++						{
++							cols: []interface{}{
++								txStatus,
++							},
++						},
++					},
++				},
++				cols: [][]string{
++					[]string{
++						"tx_status",
++					},
++				},
++				colType: [][]string{
++					[]string{
++						"string",
++					},
++				},
++				errPos: -1,
++			}
++			return cursor, nil
++		}
+ 
+ 		t.mu.Lock()
+ 
+diff --git a/libgo/go/database/sql/sql.go b/libgo/go/database/sql/sql.go
+index 0f5bbc01c9e..a0b7ca8f087 100644
+--- a/libgo/go/database/sql/sql.go
++++ b/libgo/go/database/sql/sql.go
+@@ -421,7 +421,6 @@ type DB struct {
+ 	// It is closed during db.Close(). The close tells the connectionOpener
+ 	// goroutine to exit.
+ 	openerCh          chan struct{}
+-	resetterCh        chan *driverConn
+ 	closed            bool
+ 	dep               map[finalCloser]depSet
+ 	lastPut           map[*driverConn]string // stacktrace of last conn's put; debug only
+@@ -458,10 +457,10 @@ type driverConn struct {
+ 
+ 	sync.Mutex  // guards following
+ 	ci          driver.Conn
++	needReset   bool // The connection session should be reset before use if true.
+ 	closed      bool
+ 	finalClosed bool // ci.Close has been called
+ 	openStmt    map[*driverStmt]bool
+-	lastErr     error // lastError captures the result of the session resetter.
+ 
+ 	// guarded by db.mu
+ 	inUse      bool
+@@ -486,6 +485,41 @@ func (dc *driverConn) expired(timeout time.Duration) bool {
+ 	return dc.createdAt.Add(timeout).Before(nowFunc())
+ }
+ 
++// resetSession checks if the driver connection needs the
++// session to be reset and if required, resets it.
++func (dc *driverConn) resetSession(ctx context.Context) error {
++	dc.Lock()
++	defer dc.Unlock()
++
++	if !dc.needReset {
++		return nil
++	}
++	if cr, ok := dc.ci.(driver.SessionResetter); ok {
++		return cr.ResetSession(ctx)
++	}
++	return nil
++}
++
++// validator was introduced for Go1.15, but backported to Go1.14.
++type validator interface {
++	IsValid() bool
++}
++
++// validateConnection checks if the connection is valid and can
++// still be used. It also marks the session for reset if required.
++func (dc *driverConn) validateConnection(needsReset bool) bool {
++	dc.Lock()
++	defer dc.Unlock()
++
++	if needsReset {
++		dc.needReset = true
++	}
++	if cv, ok := dc.ci.(validator); ok {
++		return cv.IsValid()
++	}
++	return true
++}
++
+ // prepareLocked prepares the query on dc. When cg == nil the dc must keep track of
+ // the prepared statements in a pool.
+ func (dc *driverConn) prepareLocked(ctx context.Context, cg stmtConnGrabber, query string) (*driverStmt, error) {
+@@ -511,19 +545,6 @@ func (dc *driverConn) prepareLocked(ctx context.Context, cg stmtConnGrabber, que
+ 	return ds, nil
+ }
+ 
+-// resetSession resets the connection session and sets the lastErr
+-// that is checked before returning the connection to another query.
+-//
+-// resetSession assumes that the embedded mutex is locked when the connection
+-// was returned to the pool. This unlocks the mutex.
+-func (dc *driverConn) resetSession(ctx context.Context) {
+-	defer dc.Unlock() // In case of panic.
+-	if dc.closed {    // Check if the database has been closed.
+-		return
+-	}
+-	dc.lastErr = dc.ci.(driver.SessionResetter).ResetSession(ctx)
+-}
+-
+ // the dc.db's Mutex is held.
+ func (dc *driverConn) closeDBLocked() func() error {
+ 	dc.Lock()
+@@ -713,14 +734,12 @@ func OpenDB(c driver.Connector) *DB {
+ 	db := &DB{
+ 		connector:    c,
+ 		openerCh:     make(chan struct{}, connectionRequestQueueSize),
+-		resetterCh:   make(chan *driverConn, 50),
+ 		lastPut:      make(map[*driverConn]string),
+ 		connRequests: make(map[uint64]chan connRequest),
+ 		stop:         cancel,
+ 	}
+ 
+ 	go db.connectionOpener(ctx)
+-	go db.connectionResetter(ctx)
+ 
+ 	return db
+ }
+@@ -1058,23 +1077,6 @@ func (db *DB) connectionOpener(ctx context.Context) {
+ 	}
+ }
+ 
+-// connectionResetter runs in a separate goroutine to reset connections async
+-// to exported API.
+-func (db *DB) connectionResetter(ctx context.Context) {
+-	for {
+-		select {
+-		case <-ctx.Done():
+-			close(db.resetterCh)
+-			for dc := range db.resetterCh {
+-				dc.Unlock()
+-			}
+-			return
+-		case dc := <-db.resetterCh:
+-			dc.resetSession(ctx)
+-		}
+-	}
+-}
+-
+ // Open one new connection
+ func (db *DB) openNewConnection(ctx context.Context) {
+ 	// maybeOpenNewConnctions has already executed db.numOpen++ before it sent
+@@ -1155,14 +1157,13 @@ func (db *DB) conn(ctx context.Context, strategy connReuseStrategy) (*driverConn
+ 			conn.Close()
+ 			return nil, driver.ErrBadConn
+ 		}
+-		// Lock around reading lastErr to ensure the session resetter finished.
+-		conn.Lock()
+-		err := conn.lastErr
+-		conn.Unlock()
+-		if err == driver.ErrBadConn {
++
++		// Reset the session if required.
++		if err := conn.resetSession(ctx); err == driver.ErrBadConn {
+ 			conn.Close()
+ 			return nil, driver.ErrBadConn
+ 		}
++
+ 		return conn, nil
+ 	}
+ 
+@@ -1204,18 +1205,22 @@ func (db *DB) conn(ctx context.Context, strategy connReuseStrategy) (*driverConn
+ 			if !ok {
+ 				return nil, errDBClosed
+ 			}
+-			if ret.err == nil && ret.conn.expired(lifetime) {
++			// Only check if the connection is expired if the strategy is cachedOrNewConns.
++			// If we require a new connection, just re-use the connection without looking
++			// at the expiry time. If it is expired, it will be checked when it is placed
++			// back into the connection pool.
++			// This prioritizes giving a valid connection to a client over the exact connection
++			// lifetime, which could expire exactly after this point anyway.
++			if strategy == cachedOrNewConn && ret.err == nil && ret.conn.expired(lifetime) {
+ 				ret.conn.Close()
+ 				return nil, driver.ErrBadConn
+ 			}
+ 			if ret.conn == nil {
+ 				return nil, ret.err
+ 			}
+-			// Lock around reading lastErr to ensure the session resetter finished.
+-			ret.conn.Lock()
+-			err := ret.conn.lastErr
+-			ret.conn.Unlock()
+-			if err == driver.ErrBadConn {
++
++			// Reset the session if required.
++			if err := ret.conn.resetSession(ctx); err == driver.ErrBadConn {
+ 				ret.conn.Close()
+ 				return nil, driver.ErrBadConn
+ 			}
+@@ -1275,13 +1280,23 @@ const debugGetPut = false
+ // putConn adds a connection to the db's free pool.
+ // err is optionally the last error that occurred on this connection.
+ func (db *DB) putConn(dc *driverConn, err error, resetSession bool) {
++	if err != driver.ErrBadConn {
++		if !dc.validateConnection(resetSession) {
++			err = driver.ErrBadConn
++		}
++	}
+ 	db.mu.Lock()
+ 	if !dc.inUse {
++		db.mu.Unlock()
+ 		if debugGetPut {
+ 			fmt.Printf("putConn(%v) DUPLICATE was: %s\n\nPREVIOUS was: %s", dc, stack(), db.lastPut[dc])
+ 		}
+ 		panic("sql: connection returned that was never out")
+ 	}
++
++	if err != driver.ErrBadConn && dc.expired(db.maxLifetime) {
++		err = driver.ErrBadConn
++	}
+ 	if debugGetPut {
+ 		db.lastPut[dc] = stack()
+ 	}
+@@ -1305,41 +1320,13 @@ func (db *DB) putConn(dc *driverConn, err error, resetSession bool) {
+ 	if putConnHook != nil {
+ 		putConnHook(db, dc)
+ 	}
+-	if db.closed {
+-		// Connections do not need to be reset if they will be closed.
+-		// Prevents writing to resetterCh after the DB has closed.
+-		resetSession = false
+-	}
+-	if resetSession {
+-		if _, resetSession = dc.ci.(driver.SessionResetter); resetSession {
+-			// Lock the driverConn here so it isn't released until
+-			// the connection is reset.
+-			// The lock must be taken before the connection is put into
+-			// the pool to prevent it from being taken out before it is reset.
+-			dc.Lock()
+-		}
+-	}
+ 	added := db.putConnDBLocked(dc, nil)
+ 	db.mu.Unlock()
+ 
+ 	if !added {
+-		if resetSession {
+-			dc.Unlock()
+-		}
+ 		dc.Close()
+ 		return
+ 	}
+-	if !resetSession {
+-		return
+-	}
+-	select {
+-	default:
+-		// If the resetterCh is blocking then mark the connection
+-		// as bad and continue on.
+-		dc.lastErr = driver.ErrBadConn
+-		dc.Unlock()
+-	case db.resetterCh <- dc:
+-	}
+ }
+ 
+ // Satisfy a connRequest or put the driverConn in the idle pool and return true
+@@ -1701,7 +1688,11 @@ func (db *DB) begin(ctx context.Context, opts *TxOptions, strategy connReuseStra
+ // beginDC starts a transaction. The provided dc must be valid and ready to use.
+ func (db *DB) beginDC(ctx context.Context, dc *driverConn, release func(error), opts *TxOptions) (tx *Tx, err error) {
+ 	var txi driver.Tx
++	keepConnOnRollback := false
+ 	withLock(dc, func() {
++		_, hasSessionResetter := dc.ci.(driver.SessionResetter)
++		_, hasConnectionValidator := dc.ci.(validator)
++		keepConnOnRollback = hasSessionResetter && hasConnectionValidator
+ 		txi, err = ctxDriverBegin(ctx, opts, dc.ci)
+ 	})
+ 	if err != nil {
+@@ -1713,12 +1704,13 @@ func (db *DB) beginDC(ctx context.Context, dc *driverConn, release func(error),
+ 	// The cancel function in Tx will be called after done is set to true.
+ 	ctx, cancel := context.WithCancel(ctx)
+ 	tx = &Tx{
+-		db:          db,
+-		dc:          dc,
+-		releaseConn: release,
+-		txi:         txi,
+-		cancel:      cancel,
+-		ctx:         ctx,
++		db:                 db,
++		dc:                 dc,
++		releaseConn:        release,
++		txi:                txi,
++		cancel:             cancel,
++		keepConnOnRollback: keepConnOnRollback,
++		ctx:                ctx,
+ 	}
+ 	go tx.awaitDone()
+ 	return tx, nil
+@@ -1980,6 +1972,11 @@ type Tx struct {
+ 	// Use atomic operations on value when checking value.
+ 	done int32
+ 
++	// keepConnOnRollback is true if the driver knows
++	// how to reset the connection's session and if need be discard
++	// the connection.
++	keepConnOnRollback bool
++
+ 	// All Stmts prepared for this transaction. These will be closed after the
+ 	// transaction has been committed or rolled back.
+ 	stmts struct {
+@@ -2005,7 +2002,10 @@ func (tx *Tx) awaitDone() {
+ 	// transaction is closed and the resources are released.  This
+ 	// rollback does nothing if the transaction has already been
+ 	// committed or rolled back.
+-	tx.rollback(true)
++	// Do not discard the connection if the connection knows
++	// how to reset the session.
++	discardConnection := !tx.keepConnOnRollback
++	tx.rollback(discardConnection)
+ }
+ 
+ func (tx *Tx) isDone() bool {
+@@ -2016,14 +2016,10 @@ func (tx *Tx) isDone() bool {
+ // that has already been committed or rolled back.
+ var ErrTxDone = errors.New("sql: transaction has already been committed or rolled back")
+ 
+-// close returns the connection to the pool and
+-// must only be called by Tx.rollback or Tx.Commit.
+-func (tx *Tx) close(err error) {
+-	tx.cancel()
+-
+-	tx.closemu.Lock()
+-	defer tx.closemu.Unlock()
+-
++// closeLocked returns the connection to the pool and
++// must only be called by Tx.rollback or Tx.Commit while
++// closemu is Locked and tx already canceled.
++func (tx *Tx) closeLocked(err error) {
+ 	tx.releaseConn(err)
+ 	tx.dc = nil
+ 	tx.txi = nil
+@@ -2090,6 +2086,15 @@ func (tx *Tx) Commit() error {
+ 	if !atomic.CompareAndSwapInt32(&tx.done, 0, 1) {
+ 		return ErrTxDone
+ 	}
++
++	// Cancel the Tx to release any active R-closemu locks.
++	// This is safe to do because tx.done has already transitioned
++	// from 0 to 1. Hold the W-closemu lock prior to rollback
++	// to ensure no other connection has an active query.
++	tx.cancel()
++	tx.closemu.Lock()
++	defer tx.closemu.Unlock()
++
+ 	var err error
+ 	withLock(tx.dc, func() {
+ 		err = tx.txi.Commit()
+@@ -2097,16 +2102,31 @@ func (tx *Tx) Commit() error {
+ 	if err != driver.ErrBadConn {
+ 		tx.closePrepared()
+ 	}
+-	tx.close(err)
++	tx.closeLocked(err)
+ 	return err
+ }
+ 
++var rollbackHook func()
++
+ // rollback aborts the transaction and optionally forces the pool to discard
+ // the connection.
+ func (tx *Tx) rollback(discardConn bool) error {
+ 	if !atomic.CompareAndSwapInt32(&tx.done, 0, 1) {
+ 		return ErrTxDone
+ 	}
++
++	if rollbackHook != nil {
++		rollbackHook()
++	}
++
++	// Cancel the Tx to release any active R-closemu locks.
++	// This is safe to do because tx.done has already transitioned
++	// from 0 to 1. Hold the W-closemu lock prior to rollback
++	// to ensure no other connection has an active query.
++	tx.cancel()
++	tx.closemu.Lock()
++	defer tx.closemu.Unlock()
++
+ 	var err error
+ 	withLock(tx.dc, func() {
+ 		err = tx.txi.Rollback()
+@@ -2117,7 +2137,7 @@ func (tx *Tx) rollback(discardConn bool) error {
+ 	if discardConn {
+ 		err = driver.ErrBadConn
+ 	}
+-	tx.close(err)
++	tx.closeLocked(err)
+ 	return err
+ }
+ 
+diff --git a/libgo/go/database/sql/sql_test.go b/libgo/go/database/sql/sql_test.go
+index 6f59260cdab..a9e18004fb4 100644
+--- a/libgo/go/database/sql/sql_test.go
++++ b/libgo/go/database/sql/sql_test.go
+@@ -80,6 +80,11 @@ func newTestDBConnector(t testing.TB, fc *fakeConnector, name string) *DB {
+ 		exec(t, db, "CREATE|magicquery|op=string,millis=int32")
+ 		exec(t, db, "INSERT|magicquery|op=sleep,millis=10")
+ 	}
++	if name == "tx_status" {
++		// Magic table name and column, known by fakedb_test.go.
++		exec(t, db, "CREATE|tx_status|tx_status=string")
++		exec(t, db, "INSERT|tx_status|tx_status=invalid")
++	}
+ 	return db
+ }
+ 
+@@ -437,6 +442,7 @@ func TestTxContextWait(t *testing.T) {
+ 		}
+ 		t.Fatal(err)
+ 	}
++	tx.keepConnOnRollback = false
+ 
+ 	// This will trigger the *fakeConn.Prepare method which will take time
+ 	// performing the query. The ctxDriverPrepare func will check the context
+@@ -449,6 +455,35 @@ func TestTxContextWait(t *testing.T) {
+ 	waitForFree(t, db, 5*time.Second, 0)
+ }
+ 
++// TestTxContextWaitNoDiscard is the same as TestTxContextWait, but should not discard
++// the final connection.
++func TestTxContextWaitNoDiscard(t *testing.T) {
++	db := newTestDB(t, "people")
++	defer closeDB(t, db)
++
++	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Millisecond)
++	defer cancel()
++
++	tx, err := db.BeginTx(ctx, nil)
++	if err != nil {
++		// Guard against the context being canceled before BeginTx completes.
++		if err == context.DeadlineExceeded {
++			t.Skip("tx context canceled prior to first use")
++		}
++		t.Fatal(err)
++	}
++
++	// This will trigger the *fakeConn.Prepare method which will take time
++	// performing the query. The ctxDriverPrepare func will check the context
++	// after this and close the rows and return an error.
++	_, err = tx.QueryContext(ctx, "WAIT|1s|SELECT|people|age,name|")
++	if err != context.DeadlineExceeded {
++		t.Fatalf("expected QueryContext to error with context deadline exceeded but returned %v", err)
++	}
++
++	waitForFree(t, db, 5*time.Second, 1)
++}
++
+ // TestUnsupportedOptions checks that the database fails when a driver that
+ // doesn't implement ConnBeginTx is used with non-default options and an
+ // un-cancellable context.
+@@ -1525,6 +1560,37 @@ func TestConnTx(t *testing.T) {
+ 	}
+ }
+ 
++// TestConnIsValid verifies that a database connection that should be discarded,
++// is actually discarded and does not re-enter the connection pool.
++// If the IsValid method from *fakeConn is removed, this test will fail.
++func TestConnIsValid(t *testing.T) {
++	db := newTestDB(t, "people")
++	defer closeDB(t, db)
++
++	db.SetMaxOpenConns(1)
++
++	ctx := context.Background()
++
++	c, err := db.Conn(ctx)
++	if err != nil {
++		t.Fatal(err)
++	}
++
++	err = c.Raw(func(raw interface{}) error {
++		dc := raw.(*fakeConn)
++		dc.stickyBad = true
++		return nil
++	})
++	if err != nil {
++		t.Fatal(err)
++	}
++	c.Close()
++
++	if len(db.freeConn) > 0 && db.freeConn[0].ci.(*fakeConn).stickyBad {
++		t.Fatal("bad connection returned to pool; expected bad connection to be discarded")
++	}
++}
++
+ // Tests fix for issue 2542, that we release a lock when querying on
+ // a closed connection.
+ func TestIssue2542Deadlock(t *testing.T) {
+@@ -2658,6 +2724,159 @@ func TestManyErrBadConn(t *testing.T) {
+ 	}
+ }
+ 
++// Issue 34755: Ensure that a Tx cannot commit after a rollback.
++func TestTxCannotCommitAfterRollback(t *testing.T) {
++	db := newTestDB(t, "tx_status")
++	defer closeDB(t, db)
++
++	// First check query reporting is correct.
++	var txStatus string
++	err := db.QueryRow("SELECT|tx_status|tx_status|").Scan(&txStatus)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if g, w := txStatus, "autocommit"; g != w {
++		t.Fatalf("tx_status=%q, wanted %q", g, w)
++	}
++
++	ctx, cancel := context.WithCancel(context.Background())
++	defer cancel()
++
++	tx, err := db.BeginTx(ctx, nil)
++	if err != nil {
++		t.Fatal(err)
++	}
++
++	// Ignore dirty session for this test.
++	// A failing test should trigger the dirty session flag as well,
++	// but that isn't exactly what this should test for.
++	tx.txi.(*fakeTx).c.skipDirtySession = true
++
++	defer tx.Rollback()
++
++	err = tx.QueryRow("SELECT|tx_status|tx_status|").Scan(&txStatus)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if g, w := txStatus, "transaction"; g != w {
++		t.Fatalf("tx_status=%q, wanted %q", g, w)
++	}
++
++	// 1. Begin a transaction.
++	// 2. (A) Start a query, (B) begin Tx rollback through a ctx cancel.
++	// 3. Check if 2.A has committed in Tx (pass) or outside of Tx (fail).
++	sendQuery := make(chan struct{})
++	hookTxGrabConn = func() {
++		cancel()
++		<-sendQuery
++	}
++	rollbackHook = func() {
++		close(sendQuery)
++	}
++	defer func() {
++		hookTxGrabConn = nil
++		rollbackHook = nil
++	}()
++
++	err = tx.QueryRow("SELECT|tx_status|tx_status|").Scan(&txStatus)
++	if err != nil {
++		// A failure here would be expected if skipDirtySession was not set to true above.
++		t.Fatal(err)
++	}
++	if g, w := txStatus, "transaction"; g != w {
++		t.Fatalf("tx_status=%q, wanted %q", g, w)
++	}
++}
++
++// Issue32530 encounters an issue where a connection may
++// expire right after it comes out of a used connection pool
++// even when a new connection is requested.
++func TestConnExpiresFreshOutOfPool(t *testing.T) {
++	execCases := []struct {
++		expired  bool
++		badReset bool
++	}{
++		{false, false},
++		{true, false},
++		{false, true},
++	}
++
++	t0 := time.Unix(1000000, 0)
++	offset := time.Duration(0)
++	offsetMu := sync.RWMutex{}
++
++	nowFunc = func() time.Time {
++		offsetMu.RLock()
++		defer offsetMu.RUnlock()
++		return t0.Add(offset)
++	}
++	defer func() { nowFunc = time.Now }()
++
++	ctx, cancel := context.WithCancel(context.Background())
++	defer cancel()
++
++	db := newTestDB(t, "magicquery")
++	defer closeDB(t, db)
++
++	db.SetMaxOpenConns(1)
++
++	for _, ec := range execCases {
++		ec := ec
++		name := fmt.Sprintf("expired=%t,badReset=%t", ec.expired, ec.badReset)
++		t.Run(name, func(t *testing.T) {
++			db.clearAllConns(t)
++
++			db.SetMaxIdleConns(1)
++			db.SetConnMaxLifetime(10 * time.Second)
++
++			conn, err := db.conn(ctx, alwaysNewConn)
++			if err != nil {
++				t.Fatal(err)
++			}
++
++			afterPutConn := make(chan struct{})
++			waitingForConn := make(chan struct{})
++
++			go func() {
++				conn, err := db.conn(ctx, alwaysNewConn)
++				if err != nil {
++					t.Fatal(err)
++				}
++				db.putConn(conn, err, false)
++				close(afterPutConn)
++			}()
++			go func() {
++				for {
++					db.mu.Lock()
++					ct := len(db.connRequests)
++					db.mu.Unlock()
++					if ct > 0 {
++						close(waitingForConn)
++						return
++					}
++					time.Sleep(10 * time.Millisecond)
++				}
++			}()
++
++			<-waitingForConn
++
++			offsetMu.Lock()
++			if ec.expired {
++				offset = 11 * time.Second
++			} else {
++				offset = time.Duration(0)
++			}
++			offsetMu.Unlock()
++
++			conn.ci.(*fakeConn).stickyBad = ec.badReset
++
++			db.putConn(conn, err, true)
++
++			<-afterPutConn
++		})
++	}
++}
++
+ // TestIssue20575 ensures the Rows from query does not block
+ // closing a transaction. Ensure Rows is closed while closing a trasaction.
+ func TestIssue20575(t *testing.T) {
+diff --git a/libgo/go/encoding/json/decode.go b/libgo/go/encoding/json/decode.go
+index b60e2bb0b2c..86d8a69db7e 100644
+--- a/libgo/go/encoding/json/decode.go
++++ b/libgo/go/encoding/json/decode.go
+@@ -213,9 +213,6 @@ type decodeState struct {
+ 	savedError            error
+ 	useNumber             bool
+ 	disallowUnknownFields bool
+-	// safeUnquote is the number of current string literal bytes that don't
+-	// need to be unquoted. When negative, no bytes need unquoting.
+-	safeUnquote int
+ }
+ 
+ // readIndex returns the position of the last byte read.
+@@ -317,27 +314,13 @@ func (d *decodeState) rescanLiteral() {
+ Switch:
+ 	switch data[i-1] {
+ 	case '"': // string
+-		// safeUnquote is initialized at -1, which means that all bytes
+-		// checked so far can be unquoted at a later time with no work
+-		// at all. When reaching the closing '"', if safeUnquote is
+-		// still -1, all bytes can be unquoted with no work. Otherwise,
+-		// only those bytes up until the first '\\' or non-ascii rune
+-		// can be safely unquoted.
+-		safeUnquote := -1
+ 		for ; i < len(data); i++ {
+-			if c := data[i]; c == '\\' {
+-				if safeUnquote < 0 { // first unsafe byte
+-					safeUnquote = int(i - d.off)
+-				}
++			switch data[i] {
++			case '\\':
+ 				i++ // escaped char
+-			} else if c == '"' {
+-				d.safeUnquote = safeUnquote
++			case '"':
+ 				i++ // tokenize the closing quote too
+ 				break Switch
+-			} else if c >= utf8.RuneSelf {
+-				if safeUnquote < 0 { // first unsafe byte
+-					safeUnquote = int(i - d.off)
+-				}
+ 			}
+ 		}
+ 	case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-': // number
+@@ -691,7 +674,7 @@ func (d *decodeState) object(v reflect.Value) error {
+ 		start := d.readIndex()
+ 		d.rescanLiteral()
+ 		item := d.data[start:d.readIndex()]
+-		key, ok := d.unquoteBytes(item)
++		key, ok := unquoteBytes(item)
+ 		if !ok {
+ 			panic(phasePanicMsg)
+ 		}
+@@ -892,7 +875,7 @@ func (d *decodeState) literalStore(item []byte, v reflect.Value, fromQuoted bool
+ 			d.saveError(&UnmarshalTypeError{Value: val, Type: v.Type(), Offset: int64(d.readIndex())})
+ 			return nil
+ 		}
+-		s, ok := d.unquoteBytes(item)
++		s, ok := unquoteBytes(item)
+ 		if !ok {
+ 			if fromQuoted {
+ 				return fmt.Errorf("json: invalid use of ,string struct tag, trying to unmarshal %q into %v", item, v.Type())
+@@ -943,7 +926,7 @@ func (d *decodeState) literalStore(item []byte, v reflect.Value, fromQuoted bool
+ 		}
+ 
+ 	case '"': // string
+-		s, ok := d.unquoteBytes(item)
++		s, ok := unquoteBytes(item)
+ 		if !ok {
+ 			if fromQuoted {
+ 				return fmt.Errorf("json: invalid use of ,string struct tag, trying to unmarshal %q into %v", item, v.Type())
+@@ -1103,7 +1086,7 @@ func (d *decodeState) objectInterface() map[string]interface{} {
+ 		start := d.readIndex()
+ 		d.rescanLiteral()
+ 		item := d.data[start:d.readIndex()]
+-		key, ok := d.unquote(item)
++		key, ok := unquote(item)
+ 		if !ok {
+ 			panic(phasePanicMsg)
+ 		}
+@@ -1152,7 +1135,7 @@ func (d *decodeState) literalInterface() interface{} {
+ 		return c == 't'
+ 
+ 	case '"': // string
+-		s, ok := d.unquote(item)
++		s, ok := unquote(item)
+ 		if !ok {
+ 			panic(phasePanicMsg)
+ 		}
+@@ -1195,33 +1178,40 @@ func getu4(s []byte) rune {
+ 
+ // unquote converts a quoted JSON string literal s into an actual string t.
+ // The rules are different than for Go, so cannot use strconv.Unquote.
+-// The first byte in s must be '"'.
+-func (d *decodeState) unquote(s []byte) (t string, ok bool) {
+-	s, ok = d.unquoteBytes(s)
++func unquote(s []byte) (t string, ok bool) {
++	s, ok = unquoteBytes(s)
+ 	t = string(s)
+ 	return
+ }
+ 
+-func (d *decodeState) unquoteBytes(s []byte) (t []byte, ok bool) {
+-	// We already know that s[0] == '"'. However, we don't know that the
+-	// closing quote exists in all cases, such as when the string is nested
+-	// via the ",string" option.
+-	if len(s) < 2 || s[len(s)-1] != '"' {
++func unquoteBytes(s []byte) (t []byte, ok bool) {
++	if len(s) < 2 || s[0] != '"' || s[len(s)-1] != '"' {
+ 		return
+ 	}
+ 	s = s[1 : len(s)-1]
+ 
+-	// If there are no unusual characters, no unquoting is needed, so return
+-	// a slice of the original bytes.
+-	r := d.safeUnquote
+-	if r == -1 {
++	// Check for unusual characters. If there are none,
++	// then no unquoting is needed, so return a slice of the
++	// original bytes.
++	r := 0
++	for r < len(s) {
++		c := s[r]
++		if c == '\\' || c == '"' || c < ' ' {
++			break
++		}
++		if c < utf8.RuneSelf {
++			r++
++			continue
++		}
++		rr, size := utf8.DecodeRune(s[r:])
++		if rr == utf8.RuneError && size == 1 {
++			break
++		}
++		r += size
++	}
++	if r == len(s) {
+ 		return s, true
+ 	}
+-	// Only perform up to one safe unquote for each re-scanned string
+-	// literal. In some edge cases, the decoder unquotes a literal a second
+-	// time, even after another literal has been re-scanned. Thus, only the
+-	// first unquote can safely use safeUnquote.
+-	d.safeUnquote = 0
+ 
+ 	b := make([]byte, len(s)+2*utf8.UTFMax)
+ 	w := copy(b, s[0:r])
+diff --git a/libgo/go/encoding/json/decode_test.go b/libgo/go/encoding/json/decode_test.go
+index a49181e9823..689cc34c243 100644
+--- a/libgo/go/encoding/json/decode_test.go
++++ b/libgo/go/encoding/json/decode_test.go
+@@ -2459,4 +2459,20 @@ func TestUnmarshalRescanLiteralMangledUnquote(t *testing.T) {
+ 	if t1 != t2 {
+ 		t.Errorf("Marshal and Unmarshal roundtrip mismatch: want %q got %q", t1, t2)
+ 	}
++
++	// See golang.org/issues/39555.
++	input := map[textUnmarshalerString]string{"FOO": "", `"`: ""}
++
++	encoded, err := Marshal(input)
++	if err != nil {
++		t.Fatalf("Marshal unexpected error: %v", err)
++	}
++	var got map[textUnmarshalerString]string
++	if err := Unmarshal(encoded, &got); err != nil {
++		t.Fatalf("Unmarshal unexpected error: %v", err)
++	}
++	want := map[textUnmarshalerString]string{"foo": "", `"`: ""}
++	if !reflect.DeepEqual(want, got) {
++		t.Fatalf("Unexpected roundtrip result:\nwant: %q\ngot:  %q", want, got)
++	}
+ }
+diff --git a/libgo/go/golang.org/x/tools/go/analysis/passes/printf/printf.go b/libgo/go/golang.org/x/tools/go/analysis/passes/printf/printf.go
+index a81dba91251..e6177f2ea9b 100644
+--- a/libgo/go/golang.org/x/tools/go/analysis/passes/printf/printf.go
++++ b/libgo/go/golang.org/x/tools/go/analysis/passes/printf/printf.go
+@@ -801,6 +801,7 @@ var printVerbs = []printVerb{
+ 	{'g', sharpNumFlag, argFloat | argComplex},
+ 	{'G', sharpNumFlag, argFloat | argComplex},
+ 	{'o', sharpNumFlag, argInt | argPointer},
++	{'O', sharpNumFlag, argInt | argPointer},
+ 	{'p', "-#", argPointer},
+ 	{'q', " -+.0#", argRune | argInt | argString},
+ 	{'s', " -+.0", argString},
+diff --git a/libgo/go/net/http/fs.go b/libgo/go/net/http/fs.go
+index d2144857e84..b8a68cc460f 100644
+--- a/libgo/go/net/http/fs.go
++++ b/libgo/go/net/http/fs.go
+@@ -411,6 +411,7 @@ func checkIfNoneMatch(w ResponseWriter, r *Request) condResult {
+ 		}
+ 		if buf[0] == ',' {
+ 			buf = buf[1:]
++			continue
+ 		}
+ 		if buf[0] == '*' {
+ 			return condFalse
+diff --git a/libgo/go/net/http/fs_test.go b/libgo/go/net/http/fs_test.go
+index 435e34be3af..c082ceee71b 100644
+--- a/libgo/go/net/http/fs_test.go
++++ b/libgo/go/net/http/fs_test.go
+@@ -849,6 +849,15 @@ func TestServeContent(t *testing.T) {
+ 			wantStatus:      200,
+ 			wantContentType: "text/css; charset=utf-8",
+ 		},
++		"if_none_match_malformed": {
++			file:      "testdata/style.css",
++			serveETag: `"foo"`,
++			reqHeader: map[string]string{
++				"If-None-Match": `,`,
++			},
++			wantStatus:      200,
++			wantContentType: "text/css; charset=utf-8",
++		},
+ 		"range_good": {
+ 			file:      "testdata/style.css",
+ 			serveETag: `"A"`,
+diff --git a/libgo/go/net/http/server.go b/libgo/go/net/http/server.go
+index 77329b2708a..6e6514dbddb 100644
+--- a/libgo/go/net/http/server.go
++++ b/libgo/go/net/http/server.go
+@@ -425,6 +425,16 @@ type response struct {
+ 	wants10KeepAlive bool               // HTTP/1.0 w/ Connection "keep-alive"
+ 	wantsClose       bool               // HTTP request has Connection "close"
+ 
++	// canWriteContinue is a boolean value accessed as an atomic int32
++	// that says whether or not a 100 Continue header can be written
++	// to the connection.
++	// writeContinueMu must be held while writing the header.
++	// These two fields together synchronize the body reader
++	// (the expectContinueReader, which wants to write 100 Continue)
++	// against the main writer.
++	canWriteContinue atomicBool
++	writeContinueMu  sync.Mutex
++
+ 	w  *bufio.Writer // buffers output in chunks to chunkWriter
+ 	cw chunkWriter
+ 
+@@ -515,6 +525,7 @@ type atomicBool int32
+ 
+ func (b *atomicBool) isSet() bool { return atomic.LoadInt32((*int32)(b)) != 0 }
+ func (b *atomicBool) setTrue()    { atomic.StoreInt32((*int32)(b), 1) }
++func (b *atomicBool) setFalse()   { atomic.StoreInt32((*int32)(b), 0) }
+ 
+ // declareTrailer is called for each Trailer header when the
+ // response header is written. It notes that a header will need to be
+@@ -877,21 +888,27 @@ type expectContinueReader struct {
+ 	resp       *response
+ 	readCloser io.ReadCloser
+ 	closed     bool
+-	sawEOF     bool
++	sawEOF     atomicBool
+ }
+ 
+ func (ecr *expectContinueReader) Read(p []byte) (n int, err error) {
+ 	if ecr.closed {
+ 		return 0, ErrBodyReadAfterClose
+ 	}
+-	if !ecr.resp.wroteContinue && !ecr.resp.conn.hijacked() {
+-		ecr.resp.wroteContinue = true
+-		ecr.resp.conn.bufw.WriteString("HTTP/1.1 100 Continue\r\n\r\n")
+-		ecr.resp.conn.bufw.Flush()
++	w := ecr.resp
++	if !w.wroteContinue && w.canWriteContinue.isSet() && !w.conn.hijacked() {
++		w.wroteContinue = true
++		w.writeContinueMu.Lock()
++		if w.canWriteContinue.isSet() {
++			w.conn.bufw.WriteString("HTTP/1.1 100 Continue\r\n\r\n")
++			w.conn.bufw.Flush()
++			w.canWriteContinue.setFalse()
++		}
++		w.writeContinueMu.Unlock()
+ 	}
+ 	n, err = ecr.readCloser.Read(p)
+ 	if err == io.EOF {
+-		ecr.sawEOF = true
++		ecr.sawEOF.setTrue()
+ 	}
+ 	return
+ }
+@@ -1315,7 +1332,7 @@ func (cw *chunkWriter) writeHeader(p []byte) {
+ 	// because we don't know if the next bytes on the wire will be
+ 	// the body-following-the-timer or the subsequent request.
+ 	// See Issue 11549.
+-	if ecr, ok := w.req.Body.(*expectContinueReader); ok && !ecr.sawEOF {
++	if ecr, ok := w.req.Body.(*expectContinueReader); ok && !ecr.sawEOF.isSet() {
+ 		w.closeAfterReply = true
+ 	}
+ 
+@@ -1565,6 +1582,17 @@ func (w *response) write(lenData int, dataB []byte, dataS string) (n int, err er
+ 		}
+ 		return 0, ErrHijacked
+ 	}
++
++	if w.canWriteContinue.isSet() {
++		// Body reader wants to write 100 Continue but hasn't yet.
++		// Tell it not to. The store must be done while holding the lock
++		// because the lock makes sure that there is not an active write
++		// this very moment.
++		w.writeContinueMu.Lock()
++		w.canWriteContinue.setFalse()
++		w.writeContinueMu.Unlock()
++	}
++
+ 	if !w.wroteHeader {
+ 		w.WriteHeader(StatusOK)
+ 	}
+@@ -1876,6 +1904,7 @@ func (c *conn) serve(ctx context.Context) {
+ 			if req.ProtoAtLeast(1, 1) && req.ContentLength != 0 {
+ 				// Wrap the Body reader with one that replies on the connection
+ 				req.Body = &expectContinueReader{readCloser: req.Body, resp: w}
++				w.canWriteContinue.setTrue()
+ 			}
+ 		} else if req.Header.get("Expect") != "" {
+ 			w.sendExpectationFailed()
+diff --git a/libgo/go/reflect/all_test.go b/libgo/go/reflect/all_test.go
+index 33d02aea849..e5ec052f7de 100644
+--- a/libgo/go/reflect/all_test.go
++++ b/libgo/go/reflect/all_test.go
+@@ -789,6 +789,11 @@ var loop1, loop2 Loop
+ var loopy1, loopy2 Loopy
+ var cycleMap1, cycleMap2, cycleMap3 map[string]interface{}
+ 
++type structWithSelfPtr struct {
++	p *structWithSelfPtr
++	s string
++}
++
+ func init() {
+ 	loop1 = &loop2
+ 	loop2 = &loop1
+@@ -845,6 +850,7 @@ var deepEqualTests = []DeepEqualTest{
+ 	{[]float64{math.NaN()}, self{}, true},
+ 	{map[float64]float64{math.NaN(): 1}, map[float64]float64{1: 2}, false},
+ 	{map[float64]float64{math.NaN(): 1}, self{}, true},
++	{&structWithSelfPtr{p: &structWithSelfPtr{s: "a"}}, &structWithSelfPtr{p: &structWithSelfPtr{s: "b"}}, false},
+ 
+ 	// Nil vs empty: not the same.
+ 	{[]int{}, []int(nil), false},
+diff --git a/libgo/go/reflect/deepequal.go b/libgo/go/reflect/deepequal.go
+index f2d46165b50..8a2bf8b09e2 100644
+--- a/libgo/go/reflect/deepequal.go
++++ b/libgo/go/reflect/deepequal.go
+@@ -45,8 +45,20 @@ func deepValueEqual(v1, v2 Value, visited map[visit]bool, depth int) bool {
+ 	}
+ 
+ 	if hard(v1, v2) {
+-		addr1 := v1.ptr
+-		addr2 := v2.ptr
++		// For a Ptr or Map value, we need to check flagIndir,
++		// which we do by calling the pointer method.
++		// For Slice or Interface, flagIndir is always set,
++		// and using v.ptr suffices.
++		ptrval := func(v Value) unsafe.Pointer {
++			switch v.Kind() {
++			case Ptr, Map:
++				return v.pointer()
++			default:
++				return v.ptr
++			}
++		}
++		addr1 := ptrval(v1)
++		addr2 := ptrval(v2)
+ 		if uintptr(addr1) > uintptr(addr2) {
+ 			// Canonicalize order to reduce number of entries in visited.
+ 			// Assumes non-moving garbage collector.
+diff --git a/libgo/go/reflect/type.go b/libgo/go/reflect/type.go
+index 9c003a43dd9..2ce1901f556 100644
+--- a/libgo/go/reflect/type.go
++++ b/libgo/go/reflect/type.go
+@@ -2477,6 +2477,7 @@ func ifaceIndir(t *rtype) bool {
+ 	return t.kind&kindDirectIface == 0
+ }
+ 
++// Note: this type must agree with runtime.bitvector.
+ type bitVector struct {
+ 	n    uint32 // number of bits
+ 	data []byte
+diff --git a/libgo/go/reflect/value.go b/libgo/go/reflect/value.go
+index 147a9c47298..7c6a3e8a935 100644
+--- a/libgo/go/reflect/value.go
++++ b/libgo/go/reflect/value.go
+@@ -2175,6 +2175,7 @@ func NewAt(typ Type, p unsafe.Pointer) Value {
+ // assignTo returns a value v that can be assigned directly to typ.
+ // It panics if v is not assignable to typ.
+ // For a conversion to an interface type, target is a suggested scratch space to use.
++// target must be initialized memory (or nil).
+ func (v Value) assignTo(context string, dst *rtype, target unsafe.Pointer) Value {
+ 	if v.flag&flagMethod != 0 {
+ 		v = makeMethodValue(context, v)
+diff --git a/libgo/go/testing/benchmark.go b/libgo/go/testing/benchmark.go
+index 88ba0f02420..52766005bf6 100644
+--- a/libgo/go/testing/benchmark.go
++++ b/libgo/go/testing/benchmark.go
+@@ -526,6 +526,7 @@ func runBenchmarks(importPath string, matchString func(pat, str string) (bool, e
+ 			name:   "Main",
+ 			w:      os.Stdout,
+ 			chatty: *chatty,
++			bench:  true,
+ 		},
+ 		importPath: importPath,
+ 		benchFunc: func(b *B) {
+@@ -559,6 +560,7 @@ func (ctx *benchContext) processBench(b *B) {
+ 						name:   b.name,
+ 						w:      b.w,
+ 						chatty: b.chatty,
++						bench:  true,
+ 					},
+ 					benchFunc: b.benchFunc,
+ 					benchTime: b.benchTime,
+@@ -624,6 +626,7 @@ func (b *B) Run(name string, f func(b *B)) bool {
+ 			creator: pc[:n],
+ 			w:       b.w,
+ 			chatty:  b.chatty,
++			bench:   true,
+ 		},
+ 		importPath: b.importPath,
+ 		benchFunc:  f,
+diff --git a/libgo/go/testing/sub_test.go b/libgo/go/testing/sub_test.go
+index 95f8220f815..8eb0084b1c8 100644
+--- a/libgo/go/testing/sub_test.go
++++ b/libgo/go/testing/sub_test.go
+@@ -438,8 +438,6 @@ func TestTRun(t *T) {
+ 	}, {
+ 		// A chatty test should always log with fmt.Print, even if the
+ 		// parent test has completed.
+-		// TODO(deklerk) Capture the log of fmt.Print and assert that the
+-		// subtest message is not lost.
+ 		desc:   "log in finished sub test with chatty",
+ 		ok:     false,
+ 		chatty: true,
+@@ -477,35 +475,37 @@ func TestTRun(t *T) {
+ 		},
+ 	}}
+ 	for _, tc := range testCases {
+-		ctx := newTestContext(tc.maxPar, newMatcher(regexp.MatchString, "", ""))
+-		buf := &bytes.Buffer{}
+-		root := &T{
+-			common: common{
+-				signal: make(chan bool),
+-				name:   "Test",
+-				w:      buf,
+-				chatty: tc.chatty,
+-			},
+-			context: ctx,
+-		}
+-		ok := root.Run(tc.desc, tc.f)
+-		ctx.release()
++		t.Run(tc.desc, func(t *T) {
++			ctx := newTestContext(tc.maxPar, newMatcher(regexp.MatchString, "", ""))
++			buf := &bytes.Buffer{}
++			root := &T{
++				common: common{
++					signal: make(chan bool),
++					name:   "Test",
++					w:      buf,
++					chatty: tc.chatty,
++				},
++				context: ctx,
++			}
++			ok := root.Run(tc.desc, tc.f)
++			ctx.release()
+ 
+-		if ok != tc.ok {
+-			t.Errorf("%s:ok: got %v; want %v", tc.desc, ok, tc.ok)
+-		}
+-		if ok != !root.Failed() {
+-			t.Errorf("%s:root failed: got %v; want %v", tc.desc, !ok, root.Failed())
+-		}
+-		if ctx.running != 0 || ctx.numWaiting != 0 {
+-			t.Errorf("%s:running and waiting non-zero: got %d and %d", tc.desc, ctx.running, ctx.numWaiting)
+-		}
+-		got := strings.TrimSpace(buf.String())
+-		want := strings.TrimSpace(tc.output)
+-		re := makeRegexp(want)
+-		if ok, err := regexp.MatchString(re, got); !ok || err != nil {
+-			t.Errorf("%s:output:\ngot:\n%s\nwant:\n%s", tc.desc, got, want)
+-		}
++			if ok != tc.ok {
++				t.Errorf("%s:ok: got %v; want %v", tc.desc, ok, tc.ok)
++			}
++			if ok != !root.Failed() {
++				t.Errorf("%s:root failed: got %v; want %v", tc.desc, !ok, root.Failed())
++			}
++			if ctx.running != 0 || ctx.numWaiting != 0 {
++				t.Errorf("%s:running and waiting non-zero: got %d and %d", tc.desc, ctx.running, ctx.numWaiting)
++			}
++			got := strings.TrimSpace(buf.String())
++			want := strings.TrimSpace(tc.output)
++			re := makeRegexp(want)
++			if ok, err := regexp.MatchString(re, got); !ok || err != nil {
++				t.Errorf("%s:output:\ngot:\n%s\nwant:\n%s", tc.desc, got, want)
++			}
++		})
+ 	}
+ }
+ 
+@@ -655,43 +655,45 @@ func TestBRun(t *T) {
+ 		},
+ 	}}
+ 	for _, tc := range testCases {
+-		var ok bool
+-		buf := &bytes.Buffer{}
+-		// This is almost like the Benchmark function, except that we override
+-		// the benchtime and catch the failure result of the subbenchmark.
+-		root := &B{
+-			common: common{
+-				signal: make(chan bool),
+-				name:   "root",
+-				w:      buf,
+-				chatty: tc.chatty,
+-			},
+-			benchFunc: func(b *B) { ok = b.Run("test", tc.f) }, // Use Run to catch failure.
+-			benchTime: benchTimeFlag{d: 1 * time.Microsecond},
+-		}
+-		root.runN(1)
+-		if ok != !tc.failed {
+-			t.Errorf("%s:ok: got %v; want %v", tc.desc, ok, !tc.failed)
+-		}
+-		if !ok != root.Failed() {
+-			t.Errorf("%s:root failed: got %v; want %v", tc.desc, !ok, root.Failed())
+-		}
+-		// All tests are run as subtests
+-		if root.result.N != 1 {
+-			t.Errorf("%s: N for parent benchmark was %d; want 1", tc.desc, root.result.N)
+-		}
+-		got := strings.TrimSpace(buf.String())
+-		want := strings.TrimSpace(tc.output)
+-		re := makeRegexp(want)
+-		if ok, err := regexp.MatchString(re, got); !ok || err != nil {
+-			t.Errorf("%s:output:\ngot:\n%s\nwant:\n%s", tc.desc, got, want)
+-		}
++		t.Run(tc.desc, func(t *T) {
++			var ok bool
++			buf := &bytes.Buffer{}
++			// This is almost like the Benchmark function, except that we override
++			// the benchtime and catch the failure result of the subbenchmark.
++			root := &B{
++				common: common{
++					signal: make(chan bool),
++					name:   "root",
++					w:      buf,
++					chatty: tc.chatty,
++				},
++				benchFunc: func(b *B) { ok = b.Run("test", tc.f) }, // Use Run to catch failure.
++				benchTime: benchTimeFlag{d: 1 * time.Microsecond},
++			}
++			root.runN(1)
++			if ok != !tc.failed {
++				t.Errorf("%s:ok: got %v; want %v", tc.desc, ok, !tc.failed)
++			}
++			if !ok != root.Failed() {
++				t.Errorf("%s:root failed: got %v; want %v", tc.desc, !ok, root.Failed())
++			}
++			// All tests are run as subtests
++			if root.result.N != 1 {
++				t.Errorf("%s: N for parent benchmark was %d; want 1", tc.desc, root.result.N)
++			}
++			got := strings.TrimSpace(buf.String())
++			want := strings.TrimSpace(tc.output)
++			re := makeRegexp(want)
++			if ok, err := regexp.MatchString(re, got); !ok || err != nil {
++				t.Errorf("%s:output:\ngot:\n%s\nwant:\n%s", tc.desc, got, want)
++			}
++		})
+ 	}
+ }
+ 
+ func makeRegexp(s string) string {
+ 	s = regexp.QuoteMeta(s)
+-	s = strings.ReplaceAll(s, ":NNN:", `:\d\d\d:`)
++	s = strings.ReplaceAll(s, ":NNN:", `:\d\d\d\d?:`)
+ 	s = strings.ReplaceAll(s, "N\\.NNs", `\d*\.\d*s`)
+ 	return s
+ }
+diff --git a/libgo/go/testing/testing.go b/libgo/go/testing/testing.go
+index 758af7487c7..9f47eb8584f 100644
+--- a/libgo/go/testing/testing.go
++++ b/libgo/go/testing/testing.go
+@@ -320,6 +320,7 @@ var (
+ 	cpuListStr           *string
+ 	parallel             *int
+ 	testlog              *string
++	printer              *testPrinter
+ 
+ 	haveExamples bool // are there examples?
+ 
+@@ -329,6 +330,48 @@ var (
+ 	numFailed uint32 // number of test failures
+ )
+ 
++type testPrinter struct {
++	chatty bool
++
++	lastNameMu sync.Mutex // guards lastName
++	lastName   string     // last printed test name in chatty mode
++}
++
++func newTestPrinter(chatty bool) *testPrinter {
++	return &testPrinter{
++		chatty: chatty,
++	}
++}
++
++func (p *testPrinter) Print(testName, out string) {
++	p.Fprint(os.Stdout, testName, out)
++}
++
++func (p *testPrinter) Fprint(w io.Writer, testName, out string) {
++	p.lastNameMu.Lock()
++	defer p.lastNameMu.Unlock()
++
++	if !p.chatty ||
++		strings.HasPrefix(out, "--- PASS") ||
++		strings.HasPrefix(out, "--- FAIL") ||
++		strings.HasPrefix(out, "=== CONT") ||
++		strings.HasPrefix(out, "=== RUN") {
++		p.lastName = testName
++		fmt.Fprint(w, out)
++		return
++	}
++
++	if p.lastName == "" {
++		p.lastName = testName
++	} else if p.lastName != testName {
++		// Always printed as-is, with 0 decoration or indentation. So, we skip
++		// printing to w.
++		fmt.Printf("=== CONT  %s\n", testName)
++		p.lastName = testName
++	}
++	fmt.Fprint(w, out)
++}
++
+ // The maximum number of stack frames to go through when skipping helper functions for
+ // the purpose of decorating log messages.
+ const maxStackLen = 50
+@@ -347,10 +390,11 @@ type common struct {
+ 	cleanup func()              // optional function to be called at the end of the test
+ 
+ 	chatty     bool   // A copy of the chatty flag.
++	bench      bool   // Whether the current test is a benchmark.
+ 	finished   bool   // Test function has completed.
+-	hasSub     int32  // written atomically
+-	raceErrors int    // number of races detected during test
+-	runner     string // function name of tRunner running the test
++	hasSub     int32  // Written atomically.
++	raceErrors int    // Number of races detected during test.
++	runner     string // Function name of tRunner running the test.
+ 
+ 	parent   *common
+ 	level    int       // Nesting depth of test or benchmark.
+@@ -480,9 +524,6 @@ func (c *common) decorate(s string, skip int) string {
+ 	buf := new(strings.Builder)
+ 	// Every line is indented at least 4 spaces.
+ 	buf.WriteString("    ")
+-	if c.chatty {
+-		fmt.Fprintf(buf, "%s: ", c.name)
+-	}
+ 	fmt.Fprintf(buf, "%s:%d: ", file, line)
+ 	lines := strings.Split(s, "\n")
+ 	if l := len(lines); l > 1 && lines[l-1] == "" {
+@@ -501,12 +542,12 @@ func (c *common) decorate(s string, skip int) string {
+ 
+ // flushToParent writes c.output to the parent after first writing the header
+ // with the given format and arguments.
+-func (c *common) flushToParent(format string, args ...interface{}) {
++func (c *common) flushToParent(testName, format string, args ...interface{}) {
+ 	p := c.parent
+ 	p.mu.Lock()
+ 	defer p.mu.Unlock()
+ 
+-	fmt.Fprintf(p.w, format, args...)
++	printer.Fprint(p.w, testName, fmt.Sprintf(format, args...))
+ 
+ 	c.mu.Lock()
+ 	defer c.mu.Unlock()
+@@ -680,7 +721,14 @@ func (c *common) logDepth(s string, depth int) {
+ 		panic("Log in goroutine after " + c.name + " has completed")
+ 	} else {
+ 		if c.chatty {
+-			fmt.Print(c.decorate(s, depth+1))
++			if c.bench {
++				// Benchmarks don't print === CONT, so we should skip the test
++				// printer and just print straight to stdout.
++				fmt.Print(c.decorate(s, depth+1))
++			} else {
++				printer.Print(c.name, c.decorate(s, depth+1))
++			}
++
+ 			return
+ 		}
+ 		c.output = append(c.output, c.decorate(s, depth+1)...)
+@@ -909,7 +957,7 @@ func (t *T) Parallel() {
+ 		for ; root.parent != nil; root = root.parent {
+ 		}
+ 		root.mu.Lock()
+-		fmt.Fprintf(root.w, "=== CONT  %s\n", t.name)
++		printer.Fprint(root.w, t.name, fmt.Sprintf("=== CONT  %s\n", t.name))
+ 		root.mu.Unlock()
+ 	}
+ 
+@@ -968,7 +1016,7 @@ func tRunner(t *T, fn func(t *T)) {
+ 				root.duration += time.Since(root.start)
+ 				d := root.duration
+ 				root.mu.Unlock()
+-				root.flushToParent("--- FAIL: %s (%s)\n", root.name, fmtDuration(d))
++				root.flushToParent(root.name, "--- FAIL: %s (%s)\n", root.name, fmtDuration(d))
+ 				if r := root.parent.runCleanup(recoverAndReturnPanic); r != nil {
+ 					fmt.Fprintf(root.parent.w, "cleanup panicked with %v", r)
+ 				}
+@@ -1067,7 +1115,7 @@ func (t *T) Run(name string, f func(t *T)) bool {
+ 		for ; root.parent != nil; root = root.parent {
+ 		}
+ 		root.mu.Lock()
+-		fmt.Fprintf(root.w, "=== RUN   %s\n", t.name)
++		printer.Fprint(root.w, t.name, fmt.Sprintf("=== RUN   %s\n", t.name))
+ 		root.mu.Unlock()
+ 	}
+ 	// Instead of reducing the running count of this test before calling the
+@@ -1215,6 +1263,8 @@ func (m *M) Run() int {
+ 		flag.Parse()
+ 	}
+ 
++	printer = newTestPrinter(Verbose())
++
+ 	if *parallel < 1 {
+ 		fmt.Fprintln(os.Stderr, "testing: -parallel can only be given a positive integer")
+ 		flag.Usage()
+@@ -1254,12 +1304,12 @@ func (t *T) report() {
+ 	dstr := fmtDuration(t.duration)
+ 	format := "--- %s: %s (%s)\n"
+ 	if t.Failed() {
+-		t.flushToParent(format, "FAIL", t.name, dstr)
++		t.flushToParent(t.name, format, "FAIL", t.name, dstr)
+ 	} else if t.chatty {
+ 		if t.Skipped() {
+-			t.flushToParent(format, "SKIP", t.name, dstr)
++			t.flushToParent(t.name, format, "SKIP", t.name, dstr)
+ 		} else {
+-			t.flushToParent(format, "PASS", t.name, dstr)
++			t.flushToParent(t.name, format, "PASS", t.name, dstr)
+ 		}
+ 	}
+ }
