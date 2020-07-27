@@ -1,4 +1,11 @@
-GCC Administrator (1):
+Dominique d'Humieres (2):
+      PR 93592 - Invalid UP/DOWN rounding with EN descriptor.
+      PR 93567, G edit descriptor uses E instead of F editing in rounding mode UP.
+
+GCC Administrator (4):
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
 
 Harald Anlauf (4):
@@ -16,9 +23,14 @@ Jonathan Wakely (1):
 Kito Cheng (1):
       PR target/96260 - KASAN should work even back-end not porting anything.
 
-Martin Liska (2):
+Mark Eggleston (2):
+      Fortran  : ICE in gfc_check_reshape PR95585
+      Fortran  : ICE in gfc_check_pointer_assign PR95612
+
+Martin Liska (3):
       Fix ChangeLog entry: reverted backport commit.
       gcc-changelog: fix when somebody reverts a backport
+      Use vec::reserve before vec_safe_grow_cleared is called
 
 Peter Bergner (1):
       rs6000: __builtin_mma_disassemble_acc() doesn't store elements correctly in LE mode
@@ -269,10 +281,20 @@ index a1a0efd8f28..19ce84d7adb 100644
  /* The default code model.  */
  #undef SPARC_DEFAULT_CMODEL
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index 2fdd3e8daa8..9cfa0c10c11 100644
+index 2fdd3e8daa8..b0e1a540213 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,68 @@
+@@ -1,3 +1,78 @@
++2020-07-26  Mark Eggleston  <markeggleston@gcc.gnu.org>
++
++	Backported from master:
++	2020-06-22  Steven G. Kargl  <kargl@gcc.gnu.org>
++		    Mark Eggleston  <markeggleston@gcc.gnu.org>
++
++	PR fortran/95585
++	* check.c (gfc_check_reshape): Add check for a value when
++	the symbol has an attribute flavor FL_PARAMETER.
++
 +2020-07-23  Harald Anlauf  <anlauf@gmx.de>
 +
 +	Backported from master:
@@ -341,6 +363,20 @@ index 2fdd3e8daa8..9cfa0c10c11 100644
  2020-07-23  Release Manager
  
  	* GCC 10.2.0 released.
+diff --git a/gcc/fortran/check.c b/gcc/fortran/check.c
+index 148a3269815..4d50906a3f3 100644
+--- a/gcc/fortran/check.c
++++ b/gcc/fortran/check.c
+@@ -4742,7 +4742,8 @@ gfc_check_reshape (gfc_expr *source, gfc_expr *shape,
+ 	   && shape->ref->u.ar.as->lower[0]->ts.type == BT_INTEGER
+ 	   && shape->ref->u.ar.as->upper[0]->expr_type == EXPR_CONSTANT
+ 	   && shape->ref->u.ar.as->upper[0]->ts.type == BT_INTEGER
+-	   && shape->symtree->n.sym->attr.flavor == FL_PARAMETER)
++	   && shape->symtree->n.sym->attr.flavor == FL_PARAMETER
++	   && shape->symtree->n.sym->value)
+     {
+       int i, extent;
+       gfc_expr *e, *v;
 diff --git a/gcc/fortran/class.c b/gcc/fortran/class.c
 index d6847eb0004..dfa48400712 100644
 --- a/gcc/fortran/class.c
@@ -434,6 +470,32 @@ index f32330685e7..e79494d59bf 100644
  	    }
  	}
      }
+diff --git a/gcc/fortran/expr.c b/gcc/fortran/expr.c
+index 8daa7bb8d06..569f4d9bf06 100644
+--- a/gcc/fortran/expr.c
++++ b/gcc/fortran/expr.c
+@@ -4271,7 +4271,20 @@ gfc_check_pointer_assign (gfc_expr *lvalue, gfc_expr *rvalue,
+       gfc_symbol *sym;
+       bool target;
+ 
+-      gcc_assert (rvalue->symtree);
++      if (gfc_is_size_zero_array (rvalue))
++	{
++	  gfc_error ("Zero-sized array detected at %L where an entity with "
++		     "the TARGET attribute is expected", &rvalue->where);
++	  return false;
++	}
++      else if (!rvalue->symtree)
++	{
++	  gfc_error ("Pointer assignment target in initialization expression "
++		     "does not have the TARGET attribute at %L",
++		     &rvalue->where);
++	  return false;
++	}
++
+       sym = rvalue->symtree->n.sym;
+ 
+       if (sym->ts.type == BT_CLASS && sym->attr.class_ok)
 diff --git a/gcc/fortran/frontend-passes.c b/gcc/fortran/frontend-passes.c
 index d5d71b5fda4..5e768b12854 100644
 --- a/gcc/fortran/frontend-passes.c
@@ -779,11 +841,70 @@ index 769ab20c82d..45a739ac860 100644
  
    if (gsym && !gsym->defined)
      gsym = NULL;
+diff --git a/gcc/symbol-summary.h b/gcc/symbol-summary.h
+index a38eb1db778..fa1df5c8015 100644
+--- a/gcc/symbol-summary.h
++++ b/gcc/symbol-summary.h
+@@ -354,8 +354,11 @@ public:
+       id = this->m_symtab->assign_summary_id (node);
+ 
+     if ((unsigned int)id >= m_vector->length ())
+-      vec_safe_grow_cleared (m_vector,
+-			     this->m_symtab->cgraph_max_summary_id);
++      {
++	int newlen = this->m_symtab->cgraph_max_summary_id;
++	vec_safe_reserve (m_vector, newlen - m_vector->length ());
++	m_vector->quick_grow_cleared (newlen);
++      }
+ 
+     if ((*m_vector)[id] == NULL)
+       (*m_vector)[id] = this->allocate_new ();
+@@ -812,7 +815,11 @@ public:
+       id = this->m_symtab->assign_summary_id (edge);
+ 
+     if ((unsigned)id >= m_vector->length ())
+-      vec_safe_grow_cleared (m_vector, this->m_symtab->edges_max_summary_id);
++      {
++	int newlen = this->m_symtab->edges_max_summary_id;
++	m_vector->reserve (newlen - m_vector->length ());
++	m_vector->quick_grow_cleared (newlen);
++      }
+ 
+     if ((*m_vector)[id] == NULL)
+       (*m_vector)[id] = this->allocate_new ();
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index ae34d8ee366..46a61e437ad 100644
+index ae34d8ee366..a1a18d8f7b1 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,60 @@
+@@ -1,3 +1,88 @@
++2020-07-26  Mark Eggleston  <markeggleston@gcc.gnu.org>
++
++	Backported from master:
++	2020-06-22  Steven G. Kargl  <kargl@gcc.gnu.org>
++
++	PR fortran/95585
++	* gfortran.dg/pr95585.f90: New test.
++
++2020-07-25  Dominique d'Humieres  <dhumieres.dominique@free.fr>
++
++	Backported from master:
++	2020-07-24  Dominique d'Humieres  <dhumieres.dominique@free.fr>
++
++	PR fortran/93567
++	* gfortran.dg/round_3.f08: Add test cases.
++
++2020-07-25  Dominique d'Humieres  <dhumieres.dominique@free.fr>
++
++	Backported from master:
++	2020-07-24  Dominique d'Humieres  <dhumieres.dominique@free.fr>
++
++	PR fortran/93592
++	* gfortran.dg/fmt_en.f90: Adjust test.
++	* gfortran.dg/fmt_en_rd.f90: New test.
++	* gfortran.dg/fmt_en_rn.f90: New test.
++	* gfortran.dg/fmt_en_ru.f90: New test.
++	* gfortran.dg/fmt_en_rz.f90: New test.
++
 +2020-07-23  Harald Anlauf  <anlauf@gmx.de>
 +
 +	Backported from master:
@@ -928,6 +1049,798 @@ index 00000000000..229997f877b
 +{
 +  return bar(&a);
 +}
+diff --git a/gcc/testsuite/gfortran.dg/fmt_en.f90 b/gcc/testsuite/gfortran.dg/fmt_en.f90
+index 89011b32368..d7e51b3fa21 100644
+--- a/gcc/testsuite/gfortran.dg/fmt_en.f90
++++ b/gcc/testsuite/gfortran.dg/fmt_en.f90
+@@ -10,7 +10,6 @@ use ISO_FORTRAN_ENV
+     integer :: n_tst = 0, n_cnt = 0, n_skip = 0
+     character(len=20) :: s, s1
+ 
+-    open (unit = 10, file = 'fmt_en.res')
+ !   Check that the default rounding mode is to nearest and to even on tie.
+     do i=1,size(real_kinds)
+       if (i == 1) then
+@@ -149,8 +148,7 @@ use ISO_FORTRAN_ENV
+ 
+     ! print *, n_tst, n_cnt, n_skip
+     if (n_cnt /= 0) STOP 1
+-    if (all(.not. l_skip)) write (10, *) "All kinds rounded to nearest"
+-    close (10)
++    if (all(.not. l_skip)) print *, "All kinds rounded to nearest"
+ 
+ contains
+     subroutine checkfmt(fmt, x, cmp)
+@@ -182,4 +180,4 @@ contains
+         
+     end subroutine
+ end program
+-! { dg-final { scan-file fmt_en.res "All kinds rounded to nearest" { xfail hppa*-*-hpux* } } }
++! { dg-output "All kinds rounded to nearest" { xfail { i?86-*-solaris2.9* hppa*-*-hpux* } } }
+diff --git a/gcc/testsuite/gfortran.dg/fmt_en_rd.f90 b/gcc/testsuite/gfortran.dg/fmt_en_rd.f90
+new file mode 100644
+index 00000000000..ea914e0901c
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/fmt_en_rd.f90
+@@ -0,0 +1,185 @@
++! { dg-do run }
++! PR60128 Invalid outputs with EN descriptors
++! Test case provided by Walt Brainerd.
++program pr60128
++use ISO_FORTRAN_ENV
++    implicit none
++    integer, parameter :: j(size(real_kinds)+4)=[REAL_KINDS, [4, 4, 4, 4]]
++    logical :: l_skip(4) = .false.
++    integer :: i
++    integer :: n_tst = 0, n_cnt = 0, n_skip = 0
++    character(len=20,kind=4) :: s, s1
++
++!   Check that the default rounding mode is to nearest and to even on tie.
++    do i=1,size(real_kinds)
++      if (i == 1) then
++        write(s, '(2F4.1,2F4.0)') real(-9.49999905,kind=j(1)), &
++                                  real(9.49999905,kind=j(1)),  &
++                                  real(9.5,kind=j(1)), real(8.5,kind=j(1))
++        write(s1, '(3PE10.3,2PE10.3)') real(987350.,kind=j(1)), &
++                                       real(98765.0,kind=j(1))
++      else if (i == 2) then
++        write(s, '(2F4.1,2F4.0)') real(-9.49999905,kind=j(2)), &
++                                  real(9.49999905,kind=j(2)),  &
++                                  real(9.5,kind=j(2)), real(8.5,kind=j(2))
++        write(s1, '(3PE10.3,2PE10.3)') real(987350.,kind=j(2)), &
++                                       real(98765.0,kind=j(2))
++      else if (i == 3) then
++        write(s, '(2F4.1,2F4.0)') real(-9.49999905,kind=j(3)), &
++                                  real(9.49999905,kind=j(3)),  &
++                                  real(9.5,kind=j(3)), real(8.5,kind=j(3))
++        write(s1, '(3PE10.3,2PE10.3)') real(987350.,kind=j(3)), &
++                                       real(98765.0,kind=j(3))
++      else if (i == 4) then
++        write(s, '(2F4.1,2F4.0)') real(-9.49999905,kind=j(4)), &
++                                  real(9.49999905,kind=j(4)),  &
++                                  real(9.5,kind=j(4)), real(8.5,kind=j(4))
++        write(s1, '(3PE10.3,2PE10.3)') real(987350.,kind=j(4)), &
++                                       real(98765.0,kind=j(4))
++      end if
++      if (s /= 4_'-9.5 9.5 10.  8.' .or. s1 /= 4_' 987.4E+03 98.76E+03') then
++        l_skip(i) = .true.
++        print "('Unsupported rounding for real(',i0,')')", j(i)
++      end if
++    end do
++        
++
++! Original test.
++    call checkfmt("(en15.2)", -.44444,    4_"    -444.44E-03")
++
++! Test for the bug in comment 6.
++    call checkfmt("(rd,en15.0)", 1.0,        4_"         1.E+00")
++    call checkfmt("(rd,en15.0)", 1.00000012, 4_"         1.E+00")
++    call checkfmt("(rd,en15.0)", 0.99999994, 4_"       999.E-03")
++    call checkfmt("(rd,en15.0)", 10.0,       4_"        10.E+00")
++    call checkfmt("(rd,en15.0)", 10.0000010, 4_"        10.E+00")
++    call checkfmt("(rd,en15.0)", 9.99999905, 4_"         9.E+00")
++    call checkfmt("(ru,en15.0)", 100.0,      4_"       100.E+00")
++    call checkfmt("(rd,en15.0)", 100.000008, 4_"       100.E+00")
++    call checkfmt("(rd,en15.0)", 99.9999924, 4_"        99.E+00")
++    call checkfmt("(rd,en15.0)", 1000.0,     4_"         1.E+03")
++    call checkfmt("(rd,en15.0)", 1000.00006, 4_"         1.E+03")
++    call checkfmt("(rd,en15.0)", 999.999939, 4_"       999.E+00")
++    call checkfmt("(rd,en15.0)", 9.5,        4_"         9.E+00")
++    call checkfmt("(rd,en15.0)", 9.50000095, 4_"         9.E+00")
++    call checkfmt("(rd,en15.0)", 9.49999905, 4_"         9.E+00")
++    call checkfmt("(rd,en15.0)", 99.5,       4_"        99.E+00")
++    call checkfmt("(rd,en15.0)", 99.5000076, 4_"        99.E+00")
++    call checkfmt("(rd,en15.0)", 99.4999924, 4_"        99.E+00")
++    call checkfmt("(rd,en15.0)", 999.5,      4_"       999.E+00")
++    call checkfmt("(rd,en15.0)", 999.500061, 4_"       999.E+00")
++    call checkfmt("(rd,en15.0)", 999.499939, 4_"       999.E+00")
++    call checkfmt("(rd,en15.0)", 9500.0,     4_"         9.E+03")
++    call checkfmt("(rd,en15.0)", 9500.00098, 4_"         9.E+03")
++    call checkfmt("(rd,en15.0)", 9499.99902, 4_"         9.E+03")
++    call checkfmt("(rd,en15.1)", 9950.0,     4_"        9.9E+03")
++    call checkfmt("(rd,en15.2)", 9995.0,     4_"       9.99E+03")
++    call checkfmt("(rd,en15.3)", 9999.5,     4_"      9.999E+03")
++    call checkfmt("(rd,en15.1)", 9.5,        4_"        9.5E+00")
++    call checkfmt("(rd,en15.1)", 9.50000095, 4_"        9.5E+00")
++    call checkfmt("(rd,en15.1)", 9.49999905, 4_"        9.4E+00")
++    call checkfmt("(rd,en15.1)", 0.099951,   4_"       99.9E-03")
++    call checkfmt("(rd,en15.1)", 0.009951,   4_"        9.9E-03")
++    call checkfmt("(rd,en15.1)", 0.000999951,4_"      999.9E-06")
++
++    call checkfmt("(rd,en15.0)", -1.0,        4_"        -1.E+00")
++    call checkfmt("(rd,en15.0)", -1.00000012, 4_"        -2.E+00")
++    call checkfmt("(rd,en15.0)", -0.99999994, 4_"        -1.E+00")
++    call checkfmt("(rd,en15.0)", -10.0,       4_"       -10.E+00")
++    call checkfmt("(rd,en15.0)", -10.0000010, 4_"       -11.E+00")
++    call checkfmt("(rd,en15.0)", -9.99999905, 4_"       -10.E+00")
++    call checkfmt("(rd,en15.0)", -100.0,      4_"      -100.E+00")
++    call checkfmt("(rd,en15.0)", -100.000008, 4_"      -101.E+00")
++    call checkfmt("(rd,en15.0)", -99.9999924, 4_"      -100.E+00")
++    call checkfmt("(rd,en15.0)", -1000.0,     4_"        -1.E+03")
++    call checkfmt("(rd,en15.0)", -1000.00006, 4_"        -2.E+03")
++    call checkfmt("(rd,en15.0)", -999.999939, 4_"        -1.E+03")
++    call checkfmt("(rd,en15.0)", -9.5,        4_"       -10.E+00")
++    call checkfmt("(rd,en15.0)", -9.50000095, 4_"       -10.E+00")
++    call checkfmt("(rd,en15.0)", -9.49999905, 4_"       -10.E+00")
++    call checkfmt("(rd,en15.0)", -99.5,       4_"      -100.E+00")
++    call checkfmt("(rd,en15.0)", -99.5000076, 4_"      -100.E+00")
++    call checkfmt("(rd,en15.0)", -99.4999924, 4_"      -100.E+00")
++    call checkfmt("(rd,en15.0)", -999.5,      4_"        -1.E+03")
++    call checkfmt("(rd,en15.0)", -999.500061, 4_"        -1.E+03")
++    call checkfmt("(rd,en15.0)", -999.499939, 4_"        -1.E+03")
++    call checkfmt("(rd,en15.0)", -9500.0,     4_"       -10.E+03")
++    call checkfmt("(rd,en15.0)", -9500.00098, 4_"       -10.E+03")
++    call checkfmt("(rd,en15.0)", -9499.99902, 4_"       -10.E+03")
++    call checkfmt("(rd,en15.1)", -9950.0,     4_"      -10.0E+03")
++    call checkfmt("(rd,en15.2)", -9995.0,     4_"     -10.00E+03")
++    call checkfmt("(rd,en15.3)", -9999.5,     4_"    -10.000E+03")
++    call checkfmt("(rd,en15.1)", -9.5,        4_"       -9.5E+00")
++    call checkfmt("(rd,en15.1)", -9.50000095, 4_"       -9.6E+00")
++    call checkfmt("(rd,en15.1)", -9.49999905, 4_"       -9.5E+00")
++    call checkfmt("(rd,en15.1)", -0.099951,   4_"     -100.0E-03")
++    call checkfmt("(rd,en15.1)", -0.009951,   4_"      -10.0E-03")
++    call checkfmt("(rd,en15.1)", -0.000999951,4_"       -1.0E-03")
++
++    call checkfmt("(rd,en15.1)", 987350.,     4_"      987.3E+03")
++    call checkfmt("(rd,en15.2)", 98735.,      4_"      98.73E+03")
++    call checkfmt("(rd,en15.3)", 9873.5,      4_"      9.873E+03")
++    call checkfmt("(rd,en15.1)", 987650.,     4_"      987.6E+03")
++    call checkfmt("(rd,en15.2)", 98765.,      4_"      98.76E+03")
++    call checkfmt("(rd,en15.3)", 9876.5,      4_"      9.876E+03")
++    call checkfmt("(rd,en15.1)", 3.125E-02,   4_"       31.2E-03")
++    call checkfmt("(rd,en15.1)", 9.375E-02,   4_"       93.7E-03")
++    call checkfmt("(rd,en15.2)", 1.5625E-02,  4_"      15.62E-03")
++    call checkfmt("(rd,en15.2)", 4.6875E-02,  4_"      46.87E-03")
++    call checkfmt("(rd,en15.3)", 7.8125E-03,  4_"      7.812E-03")
++    call checkfmt("(rd,en15.3)", 2.34375E-02, 4_"     23.437E-03")
++    call checkfmt("(rd,en15.3)", 9.765625E-04,4_"    976.562E-06")
++    call checkfmt("(rd,en15.6)", 2.9296875E-03,4_"   2.929687E-03")
++
++    call checkfmt("(rd,en15.1)", -987350.,     4_"     -987.4E+03")
++    call checkfmt("(rd,en15.2)", -98735.,      4_"     -98.74E+03")
++    call checkfmt("(rd,en15.3)", -9873.5,      4_"     -9.874E+03")
++    call checkfmt("(rd,en15.1)", -987650.,     4_"     -987.7E+03")
++    call checkfmt("(rd,en15.2)", -98765.,      4_"     -98.77E+03")
++    call checkfmt("(rd,en15.3)", -9876.5,      4_"     -9.877E+03")
++    call checkfmt("(rd,en15.1)", -3.125E-02,   4_"      -31.3E-03")
++    call checkfmt("(rd,en15.1)", -9.375E-02,   4_"      -93.8E-03")
++    call checkfmt("(rd,en15.2)", -1.5625E-02,  4_"     -15.63E-03")
++    call checkfmt("(rd,en15.2)", -4.6875E-02,  4_"     -46.88E-03")
++    call checkfmt("(rd,en15.3)", -7.8125E-03,  4_"     -7.813E-03")
++    call checkfmt("(rd,en15.3)", -2.34375E-02, 4_"    -23.438E-03")
++    call checkfmt("(rd,en15.3)", -9.765625E-04,4_"   -976.563E-06")
++    call checkfmt("(rd,en15.6)", -2.9296875E-03,4_"  -2.929688E-03")
++
++    print *, n_tst, n_cnt, n_skip
++    if (n_cnt /= 0) stop n_cnt
++    if (all(.not. l_skip)) print *, "All kinds rounded down"
++
++contains
++    subroutine checkfmt(fmt, x, cmp)
++        implicit none
++        integer :: i
++        character(len=*), intent(in) :: fmt
++        real, intent(in) :: x
++        character(len=*, kind=4), intent(in) :: cmp
++        do i=1,size(real_kinds)
++          if (l_skip(i)) cycle
++          if (i == 1) then
++            write(s, fmt) real(x,kind=j(1))
++          else if (i == 2) then
++            write(s, fmt) real(x,kind=j(2))
++          else if (i == 3) then
++            write(s, fmt) real(x,kind=j(3))
++          else if (i == 4) then
++            write(s, fmt) real(x,kind=j(4))
++          end if
++          n_tst = n_tst + 1
++          if (s /= cmp) then
++            if (l_skip(i)) then
++              n_skip = n_skip + 1
++            else
++              print "(a,1x,a,' expected: ',1x,a)", fmt, s, cmp
++              n_cnt = n_cnt + 1
++            end if
++          end if
++        end do
++        
++    end subroutine
++end program
++! { dg-output "All kinds rounded down" { xfail { i?86-*-solaris2.9* hppa*-*-hpux* } } }
++! { dg-final { cleanup-saved-temps } }
+diff --git a/gcc/testsuite/gfortran.dg/fmt_en_rn.f90 b/gcc/testsuite/gfortran.dg/fmt_en_rn.f90
+new file mode 100644
+index 00000000000..b0ada5c672d
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/fmt_en_rn.f90
+@@ -0,0 +1,185 @@
++! { dg-do run }
++! PR60128 Invalid outputs with EN descriptors
++! Test case provided by Walt Brainerd.
++program pr60128
++use ISO_FORTRAN_ENV
++    implicit none
++    integer, parameter :: j(size(real_kinds)+4)=[REAL_KINDS, [4, 4, 4, 4]]
++    logical :: l_skip(4) = .false.
++    integer :: i
++    integer :: n_tst = 0, n_cnt = 0, n_skip = 0
++    character(len=20,kind=4) :: s, s1
++
++!   Check that the default rounding mode is to nearest and to even on tie.
++    do i=1,size(real_kinds)
++      if (i == 1) then
++        write(s, '(2F4.1,2F4.0)') real(-9.49999905,kind=j(1)), &
++                                  real(9.49999905,kind=j(1)),  &
++                                  real(9.5,kind=j(1)), real(8.5,kind=j(1))
++        write(s1, '(3PE10.3,2PE10.3)') real(987350.,kind=j(1)), &
++                                       real(98765.0,kind=j(1))
++      else if (i == 2) then
++        write(s, '(2F4.1,2F4.0)') real(-9.49999905,kind=j(2)), &
++                                  real(9.49999905,kind=j(2)),  &
++                                  real(9.5,kind=j(2)), real(8.5,kind=j(2))
++        write(s1, '(3PE10.3,2PE10.3)') real(987350.,kind=j(2)), &
++                                       real(98765.0,kind=j(2))
++      else if (i == 3) then
++        write(s, '(2F4.1,2F4.0)') real(-9.49999905,kind=j(3)), &
++                                  real(9.49999905,kind=j(3)),  &
++                                  real(9.5,kind=j(3)), real(8.5,kind=j(3))
++        write(s1, '(3PE10.3,2PE10.3)') real(987350.,kind=j(3)), &
++                                       real(98765.0,kind=j(3))
++      else if (i == 4) then
++        write(s, '(2F4.1,2F4.0)') real(-9.49999905,kind=j(4)), &
++                                  real(9.49999905,kind=j(4)),  &
++                                  real(9.5,kind=j(4)), real(8.5,kind=j(4))
++        write(s1, '(3PE10.3,2PE10.3)') real(987350.,kind=j(4)), &
++                                       real(98765.0,kind=j(4))
++      end if
++      if (s /= 4_'-9.5 9.5 10.  8.' .or. s1 /= 4_' 987.4E+03 98.76E+03') then
++        l_skip(i) = .true.
++        print "('Unsupported rounding for real(',i0,')')", j(i)
++      end if
++    end do
++        
++
++! Original test.
++    call checkfmt("(en15.2)", -.44444,    4_"    -444.44E-03")
++
++! Test for the bug in comment 6.
++    call checkfmt("(rn,en15.0)", 1.0,        4_"         1.E+00")
++    call checkfmt("(rn,en15.0)", 1.00000012, 4_"         1.E+00")
++    call checkfmt("(rn,en15.0)", 0.99999994, 4_"         1.E+00")
++    call checkfmt("(rn,en15.0)", 10.0,       4_"        10.E+00")
++    call checkfmt("(rn,en15.0)", 10.0000010, 4_"        10.E+00")
++    call checkfmt("(rn,en15.0)", 9.99999905, 4_"        10.E+00")
++    call checkfmt("(rn,en15.0)", 100.0,      4_"       100.E+00")
++    call checkfmt("(rn,en15.0)", 100.000008, 4_"       100.E+00")
++    call checkfmt("(rn,en15.0)", 99.9999924, 4_"       100.E+00")
++    call checkfmt("(rn,en15.0)", 1000.0,     4_"         1.E+03")
++    call checkfmt("(rn,en15.0)", 1000.00006, 4_"         1.E+03")
++    call checkfmt("(rn,en15.0)", 999.999939, 4_"         1.E+03")
++    call checkfmt("(rn,en15.0)", 9.5,        4_"        10.E+00")
++    call checkfmt("(rn,en15.0)", 9.50000095, 4_"        10.E+00")
++    call checkfmt("(rn,en15.0)", 9.49999905, 4_"         9.E+00")
++    call checkfmt("(rn,en15.0)", 99.5,       4_"       100.E+00")
++    call checkfmt("(rn,en15.0)", 99.5000076, 4_"       100.E+00")
++    call checkfmt("(rn,en15.0)", 99.4999924, 4_"        99.E+00")
++    call checkfmt("(rn,en15.0)", 999.5,      4_"         1.E+03")
++    call checkfmt("(rn,en15.0)", 999.500061, 4_"         1.E+03")
++    call checkfmt("(rn,en15.0)", 999.499939, 4_"       999.E+00")
++    call checkfmt("(rn,en15.0)", 9500.0,     4_"        10.E+03")
++    call checkfmt("(rn,en15.0)", 9500.00098, 4_"        10.E+03")
++    call checkfmt("(rn,en15.0)", 9499.99902, 4_"         9.E+03")
++    call checkfmt("(rn,en15.1)", 9950.0,     4_"       10.0E+03")
++    call checkfmt("(rn,en15.2)", 9995.0,     4_"      10.00E+03")
++    call checkfmt("(rn,en15.3)", 9999.5,     4_"     10.000E+03")
++    call checkfmt("(rn,en15.1)", 9.5,        4_"        9.5E+00")
++    call checkfmt("(rn,en15.1)", 9.50000095, 4_"        9.5E+00")
++    call checkfmt("(rn,en15.1)", 9.49999905, 4_"        9.5E+00")
++    call checkfmt("(rn,en15.1)", 0.099951,   4_"      100.0E-03")
++    call checkfmt("(rn,en15.1)", 0.009951,   4_"       10.0E-03")
++    call checkfmt("(rn,en15.1)", 0.000999951,4_"        1.0E-03")
++
++    call checkfmt("(rn,en15.0)", -1.0,        4_"        -1.E+00")
++    call checkfmt("(rn,en15.0)", -1.00000012, 4_"        -1.E+00")
++    call checkfmt("(rn,en15.0)", -0.99999994, 4_"        -1.E+00")
++    call checkfmt("(rn,en15.0)", -10.0,       4_"       -10.E+00")
++    call checkfmt("(rn,en15.0)", -10.0000010, 4_"       -10.E+00")
++    call checkfmt("(rn,en15.0)", -9.99999905, 4_"       -10.E+00")
++    call checkfmt("(rn,en15.0)", -100.0,      4_"      -100.E+00")
++    call checkfmt("(rn,en15.0)", -100.000008, 4_"      -100.E+00")
++    call checkfmt("(rn,en15.0)", -99.9999924, 4_"      -100.E+00")
++    call checkfmt("(rn,en15.0)", -1000.0,     4_"        -1.E+03")
++    call checkfmt("(rn,en15.0)", -1000.00006, 4_"        -1.E+03")
++    call checkfmt("(rn,en15.0)", -999.999939, 4_"        -1.E+03")
++    call checkfmt("(rn,en15.0)", -9.5,        4_"       -10.E+00")
++    call checkfmt("(rn,en15.0)", -9.50000095, 4_"       -10.E+00")
++    call checkfmt("(rn,en15.0)", -9.49999905, 4_"        -9.E+00")
++    call checkfmt("(rn,en15.0)", -99.5,       4_"      -100.E+00")
++    call checkfmt("(rn,en15.0)", -99.5000076, 4_"      -100.E+00")
++    call checkfmt("(rn,en15.0)", -99.4999924, 4_"       -99.E+00")
++    call checkfmt("(rn,en15.0)", -999.5,      4_"        -1.E+03")
++    call checkfmt("(rn,en15.0)", -999.500061, 4_"        -1.E+03")
++    call checkfmt("(rn,en15.0)", -999.499939, 4_"      -999.E+00")
++    call checkfmt("(rn,en15.0)", -9500.0,     4_"       -10.E+03")
++    call checkfmt("(rn,en15.0)", -9500.00098, 4_"       -10.E+03")
++    call checkfmt("(rn,en15.0)", -9499.99902, 4_"        -9.E+03")
++    call checkfmt("(rn,en15.1)", -9950.0,     4_"      -10.0E+03")
++    call checkfmt("(rn,en15.2)", -9995.0,     4_"     -10.00E+03")
++    call checkfmt("(rn,en15.3)", -9999.5,     4_"    -10.000E+03")
++    call checkfmt("(rn,en15.1)", -9.5,        4_"       -9.5E+00")
++    call checkfmt("(rn,en15.1)", -9.50000095, 4_"       -9.5E+00")
++    call checkfmt("(rn,en15.1)", -9.49999905, 4_"       -9.5E+00")
++    call checkfmt("(rn,en15.1)", -0.099951,   4_"     -100.0E-03")
++    call checkfmt("(rn,en15.1)", -0.009951,   4_"      -10.0E-03")
++    call checkfmt("(rn,en15.1)", -0.000999951,4_"       -1.0E-03")
++
++    call checkfmt("(rn,en15.1)", 987350.,     4_"      987.4E+03")
++    call checkfmt("(rn,en15.2)", 98735.,      4_"      98.74E+03")
++    call checkfmt("(rn,en15.3)", 9873.5,      4_"      9.874E+03")
++    call checkfmt("(rn,en15.1)", 987650.,     4_"      987.6E+03")
++    call checkfmt("(rn,en15.2)", 98765.,      4_"      98.76E+03")
++    call checkfmt("(rn,en15.3)", 9876.5,      4_"      9.876E+03")
++    call checkfmt("(rn,en15.1)", 3.125E-02,   4_"       31.2E-03")
++    call checkfmt("(rn,en15.1)", 9.375E-02,   4_"       93.8E-03")
++    call checkfmt("(rn,en15.2)", 1.5625E-02,  4_"      15.62E-03")
++    call checkfmt("(rn,en15.2)", 4.6875E-02,  4_"      46.88E-03")
++    call checkfmt("(rn,en15.3)", 7.8125E-03,  4_"      7.812E-03")
++    call checkfmt("(rn,en15.3)", 2.34375E-02, 4_"     23.438E-03")
++    call checkfmt("(rn,en15.3)", 9.765625E-04,4_"    976.562E-06")
++    call checkfmt("(rn,en15.6)", 2.9296875E-03,4_"   2.929688E-03")
++
++    call checkfmt("(rn,en15.1)", -987350.,     4_"     -987.4E+03")
++    call checkfmt("(rn,en15.2)", -98735.,      4_"     -98.74E+03")
++    call checkfmt("(rn,en15.3)", -9873.5,      4_"     -9.874E+03")
++    call checkfmt("(rn,en15.1)", -987650.,     4_"     -987.6E+03")
++    call checkfmt("(rn,en15.2)", -98765.,      4_"     -98.76E+03")
++    call checkfmt("(rn,en15.3)", -9876.5,      4_"     -9.876E+03")
++    call checkfmt("(rn,en15.1)", -3.125E-02,   4_"      -31.2E-03")
++    call checkfmt("(rn,en15.1)", -9.375E-02,   4_"      -93.8E-03")
++    call checkfmt("(rn,en15.2)", -1.5625E-02,  4_"     -15.62E-03")
++    call checkfmt("(rn,en15.2)", -4.6875E-02,  4_"     -46.88E-03")
++    call checkfmt("(rn,en15.3)", -7.8125E-03,  4_"     -7.812E-03")
++    call checkfmt("(rn,en15.3)", -2.34375E-02, 4_"    -23.438E-03")
++    call checkfmt("(rn,en15.3)", -9.765625E-04,4_"   -976.562E-06")
++    call checkfmt("(rn,en15.6)", -2.9296875E-03,4_"  -2.929688E-03")
++
++    print *, n_tst, n_cnt, n_skip
++    if (n_cnt /= 0) stop n_cnt
++    if (all(.not. l_skip)) print *, "All kinds rounded to nearest"
++
++contains
++    subroutine checkfmt(fmt, x, cmp)
++        implicit none
++        integer :: i
++        character(len=*), intent(in) :: fmt
++        real, intent(in) :: x
++        character(len=*, kind=4), intent(in) :: cmp
++        do i=1,size(real_kinds)
++          if (l_skip(i)) cycle
++          if (i == 1) then
++            write(s, fmt) real(x,kind=j(1))
++          else if (i == 2) then
++            write(s, fmt) real(x,kind=j(2))
++          else if (i == 3) then
++            write(s, fmt) real(x,kind=j(3))
++          else if (i == 4) then
++            write(s, fmt) real(x,kind=j(4))
++          end if
++          n_tst = n_tst + 1
++          if (s /= cmp) then
++            if (l_skip(i)) then
++              n_skip = n_skip + 1
++            else
++              print "(a,1x,a,' expected: ',1x,a)", fmt, s, cmp
++              n_cnt = n_cnt + 1
++            end if
++          end if
++        end do
++        
++    end subroutine
++end program
++! { dg-output "All kinds rounded to nearest" { xfail { i?86-*-solaris2.9* hppa*-*-hpux* } } }
++! { dg-final { cleanup-saved-temps } }
+diff --git a/gcc/testsuite/gfortran.dg/fmt_en_ru.f90 b/gcc/testsuite/gfortran.dg/fmt_en_ru.f90
+new file mode 100644
+index 00000000000..7834e2880bd
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/fmt_en_ru.f90
+@@ -0,0 +1,185 @@
++! { dg-do run }
++! PR60128 Invalid outputs with EN descriptors
++! Test case provided by Walt Brainerd.
++program pr60128
++use ISO_FORTRAN_ENV
++    implicit none
++    integer, parameter :: j(size(real_kinds)+4)=[REAL_KINDS, [4, 4, 4, 4]]
++    logical :: l_skip(4) = .false.
++    integer :: i
++    integer :: n_tst = 0, n_cnt = 0, n_skip = 0
++    character(len=20,kind=4) :: s, s1
++
++!   Check that the default rounding mode is to nearest and to even on tie.
++    do i=1,size(real_kinds)
++      if (i == 1) then
++        write(s, '(2F4.1,2F4.0)') real(-9.49999905,kind=j(1)), &
++                                  real(9.49999905,kind=j(1)),  &
++                                  real(9.5,kind=j(1)), real(8.5,kind=j(1))
++        write(s1, '(3PE10.3,2PE10.3)') real(987350.,kind=j(1)), &
++                                       real(98765.0,kind=j(1))
++      else if (i == 2) then
++        write(s, '(2F4.1,2F4.0)') real(-9.49999905,kind=j(2)), &
++                                  real(9.49999905,kind=j(2)),  &
++                                  real(9.5,kind=j(2)), real(8.5,kind=j(2))
++        write(s1, '(3PE10.3,2PE10.3)') real(987350.,kind=j(2)), &
++                                       real(98765.0,kind=j(2))
++      else if (i == 3) then
++        write(s, '(2F4.1,2F4.0)') real(-9.49999905,kind=j(3)), &
++                                  real(9.49999905,kind=j(3)),  &
++                                  real(9.5,kind=j(3)), real(8.5,kind=j(3))
++        write(s1, '(3PE10.3,2PE10.3)') real(987350.,kind=j(3)), &
++                                       real(98765.0,kind=j(3))
++      else if (i == 4) then
++        write(s, '(2F4.1,2F4.0)') real(-9.49999905,kind=j(4)), &
++                                  real(9.49999905,kind=j(4)),  &
++                                  real(9.5,kind=j(4)), real(8.5,kind=j(4))
++        write(s1, '(3PE10.3,2PE10.3)') real(987350.,kind=j(4)), &
++                                       real(98765.0,kind=j(4))
++      end if
++      if (s /= 4_'-9.5 9.5 10.  8.' .or. s1 /= 4_' 987.4E+03 98.76E+03') then
++        l_skip(i) = .true.
++        print "('Unsupported rounding for real(',i0,')')", j(i)
++      end if
++    end do
++        
++
++! Original test.
++    call checkfmt("(en15.2)", -.44444,    4_"    -444.44E-03")
++
++! Test for the bug in comment 6.
++    call checkfmt("(ru,en15.0)", 1.0,        4_"         1.E+00")
++    call checkfmt("(ru,en15.0)", 1.00000012, 4_"         2.E+00")
++    call checkfmt("(ru,en15.0)", 0.99999994, 4_"         1.E+00")
++    call checkfmt("(ru,en15.0)", 10.0,       4_"        10.E+00")
++    call checkfmt("(ru,en15.0)", 10.0000010, 4_"        11.E+00")
++    call checkfmt("(ru,en15.0)", 9.99999905, 4_"        10.E+00")
++    call checkfmt("(ru,en15.0)", 100.0,      4_"       100.E+00")
++    call checkfmt("(ru,en15.0)", 100.000008, 4_"       101.E+00")
++    call checkfmt("(ru,en15.0)", 99.9999924, 4_"       100.E+00")
++    call checkfmt("(ru,en15.0)", 1000.0,     4_"         1.E+03")
++    call checkfmt("(ru,en15.0)", 1000.00006, 4_"         2.E+03")
++    call checkfmt("(ru,en15.0)", 999.999939, 4_"         1.E+03")
++    call checkfmt("(ru,en15.0)", 9.5,        4_"        10.E+00")
++    call checkfmt("(ru,en15.0)", 9.50000095, 4_"        10.E+00")
++    call checkfmt("(ru,en15.0)", 9.49999905, 4_"        10.E+00")
++    call checkfmt("(ru,en15.0)", 99.5,       4_"       100.E+00")
++    call checkfmt("(ru,en15.0)", 99.5000076, 4_"       100.E+00")
++    call checkfmt("(ru,en15.0)", 99.4999924, 4_"       100.E+00")
++    call checkfmt("(ru,en15.0)", 999.5,      4_"         1.E+03")
++    call checkfmt("(ru,en15.0)", 999.500061, 4_"         1.E+03")
++    call checkfmt("(ru,en15.0)", 999.499939, 4_"         1.E+03")
++    call checkfmt("(ru,en15.0)", 9500.0,     4_"        10.E+03")
++    call checkfmt("(ru,en15.0)", 9500.00098, 4_"        10.E+03")
++    call checkfmt("(ru,en15.0)", 9499.99902, 4_"        10.E+03")
++    call checkfmt("(ru,en15.1)", 9950.0,     4_"       10.0E+03")
++    call checkfmt("(ru,en15.2)", 9995.0,     4_"      10.00E+03")
++    call checkfmt("(ru,en15.3)", 9999.5,     4_"     10.000E+03")
++    call checkfmt("(ru,en15.1)", 9.5,        4_"        9.5E+00")
++    call checkfmt("(ru,en15.1)", 9.50000095, 4_"        9.6E+00")
++    call checkfmt("(ru,en15.1)", 9.49999905, 4_"        9.5E+00")
++    call checkfmt("(ru,en15.1)", 0.099951,   4_"      100.0E-03")
++    call checkfmt("(ru,en15.1)", 0.009951,   4_"       10.0E-03")
++    call checkfmt("(ru,en15.1)", 0.000999951,4_"        1.0E-03")
++
++    call checkfmt("(ru,en15.0)", -1.0,        4_"        -1.E+00")
++    call checkfmt("(ru,en15.0)", -1.00000012, 4_"        -1.E+00")
++    call checkfmt("(ru,en15.0)", -0.99999994, 4_"      -999.E-03")
++    call checkfmt("(ru,en15.0)", -10.0,       4_"       -10.E+00")
++    call checkfmt("(ru,en15.0)", -10.0000010, 4_"       -10.E+00")
++    call checkfmt("(ru,en15.0)", -9.99999905, 4_"        -9.E+00")
++    call checkfmt("(ru,en15.0)", -100.0,      4_"      -100.E+00")
++    call checkfmt("(ru,en15.0)", -100.000008, 4_"      -100.E+00")
++    call checkfmt("(ru,en15.0)", -99.9999924, 4_"       -99.E+00")
++    call checkfmt("(ru,en15.0)", -1000.0,     4_"        -1.E+03")
++    call checkfmt("(ru,en15.0)", -1000.00006, 4_"        -1.E+03")
++    call checkfmt("(ru,en15.0)", -999.999939, 4_"      -999.E+00")
++    call checkfmt("(ru,en15.0)", -9.5,        4_"        -9.E+00")
++    call checkfmt("(ru,en15.0)", -9.50000095, 4_"        -9.E+00")
++    call checkfmt("(ru,en15.0)", -9.49999905, 4_"        -9.E+00")
++    call checkfmt("(ru,en15.0)", -99.5,       4_"       -99.E+00")
++    call checkfmt("(ru,en15.0)", -99.5000076, 4_"       -99.E+00")
++    call checkfmt("(ru,en15.0)", -99.4999924, 4_"       -99.E+00")
++    call checkfmt("(ru,en15.0)", -999.5,      4_"      -999.E+00")
++    call checkfmt("(ru,en15.0)", -999.500061, 4_"      -999.E+00")
++    call checkfmt("(ru,en15.0)", -999.499939, 4_"      -999.E+00")
++    call checkfmt("(ru,en15.0)", -9500.0,     4_"        -9.E+03")
++    call checkfmt("(ru,en15.0)", -9500.00098, 4_"        -9.E+03")
++    call checkfmt("(ru,en15.0)", -9499.99902, 4_"        -9.E+03")
++    call checkfmt("(ru,en15.1)", -9950.0,     4_"       -9.9E+03")
++    call checkfmt("(ru,en15.2)", -9995.0,     4_"      -9.99E+03")
++    call checkfmt("(ru,en15.3)", -9999.5,     4_"     -9.999E+03")
++    call checkfmt("(ru,en15.1)", -9.5,        4_"       -9.5E+00")
++    call checkfmt("(ru,en15.1)", -9.50000095, 4_"       -9.5E+00")
++    call checkfmt("(ru,en15.1)", -9.49999905, 4_"       -9.4E+00")
++    call checkfmt("(ru,en15.1)", -0.099951,   4_"      -99.9E-03")
++    call checkfmt("(ru,en15.1)", -0.009951,   4_"       -9.9E-03")
++    call checkfmt("(ru,en15.1)", -0.000999951,4_"     -999.9E-06")
++
++    call checkfmt("(ru,en15.1)", 987350.,     4_"      987.4E+03")
++    call checkfmt("(ru,en15.2)", 98735.,      4_"      98.74E+03")
++    call checkfmt("(ru,en15.3)", 9873.5,      4_"      9.874E+03")
++    call checkfmt("(ru,en15.1)", 987650.,     4_"      987.7E+03")
++    call checkfmt("(ru,en15.2)", 98765.,      4_"      98.77E+03")
++    call checkfmt("(ru,en15.3)", 9876.5,      4_"      9.877E+03")
++    call checkfmt("(ru,en15.1)", 3.125E-02,   4_"       31.3E-03")
++    call checkfmt("(ru,en15.1)", 9.375E-02,   4_"       93.8E-03")
++    call checkfmt("(ru,en15.2)", 1.5625E-02,  4_"      15.63E-03")
++    call checkfmt("(ru,en15.2)", 4.6875E-02,  4_"      46.88E-03")
++    call checkfmt("(ru,en15.3)", 7.8125E-03,  4_"      7.813E-03")
++    call checkfmt("(ru,en15.3)", 2.34375E-02, 4_"     23.438E-03")
++    call checkfmt("(ru,en15.3)", 9.765625E-04,4_"    976.563E-06")
++    call checkfmt("(ru,en15.6)", 2.9296875E-03,4_"   2.929688E-03")
++
++    call checkfmt("(ru,en15.1)", -987350.,     4_"     -987.3E+03")
++    call checkfmt("(ru,en15.2)", -98735.,      4_"     -98.73E+03")
++    call checkfmt("(ru,en15.3)", -9873.5,      4_"     -9.873E+03")
++    call checkfmt("(ru,en15.1)", -987650.,     4_"     -987.6E+03")
++    call checkfmt("(ru,en15.2)", -98765.,      4_"     -98.76E+03")
++    call checkfmt("(ru,en15.3)", -9876.5,      4_"     -9.876E+03")
++    call checkfmt("(ru,en15.1)", -3.125E-02,   4_"      -31.2E-03")
++    call checkfmt("(ru,en15.1)", -9.375E-02,   4_"      -93.7E-03")
++    call checkfmt("(ru,en15.2)", -1.5625E-02,  4_"     -15.62E-03")
++    call checkfmt("(ru,en15.2)", -4.6875E-02,  4_"     -46.87E-03")
++    call checkfmt("(ru,en15.3)", -7.8125E-03,  4_"     -7.812E-03")
++    call checkfmt("(ru,en15.3)", -2.34375E-02, 4_"    -23.437E-03")
++    call checkfmt("(ru,en15.3)", -9.765625E-04,4_"   -976.562E-06")
++    call checkfmt("(ru,en15.6)", -2.9296875E-03,4_"  -2.929687E-03")
++
++    print *, n_tst, n_cnt, n_skip
++    if (n_cnt /= 0) stop n_cnt
++    if (all(.not. l_skip)) print *, "All kinds rounded up"
++
++contains
++    subroutine checkfmt(fmt, x, cmp)
++        implicit none
++        integer :: i
++        character(len=*), intent(in) :: fmt
++        real, intent(in) :: x
++        character(len=*, kind=4), intent(in) :: cmp
++        do i=1,size(real_kinds)
++          if (l_skip(i)) cycle
++          if (i == 1) then
++            write(s, fmt) real(x,kind=j(1))
++          else if (i == 2) then
++            write(s, fmt) real(x,kind=j(2))
++          else if (i == 3) then
++            write(s, fmt) real(x,kind=j(3))
++          else if (i == 4) then
++            write(s, fmt) real(x,kind=j(4))
++          end if
++          n_tst = n_tst + 1
++          if (s /= cmp) then
++            if (l_skip(i)) then
++              n_skip = n_skip + 1
++            else
++              print "(a,1x,a,' expected: ',1x,a)", fmt, s, cmp
++              n_cnt = n_cnt + 1
++            end if
++          end if
++        end do
++        
++    end subroutine
++end program
++! { dg-output "All kinds rounded up" { xfail { i?86-*-solaris2.9* hppa*-*-hpux* } } }
++! { dg-final { cleanup-saved-temps } }
+diff --git a/gcc/testsuite/gfortran.dg/fmt_en_rz.f90 b/gcc/testsuite/gfortran.dg/fmt_en_rz.f90
+new file mode 100644
+index 00000000000..c07847cad6d
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/fmt_en_rz.f90
+@@ -0,0 +1,185 @@
++! { dg-do run }
++! PR60128 Invalid outputs with EN descriptors
++! Test case provided by Walt Brainerd.
++program pr60128
++use ISO_FORTRAN_ENV
++    implicit none
++    integer, parameter :: j(size(real_kinds)+4)=[REAL_KINDS, [4, 4, 4, 4]]
++    logical :: l_skip(4) = .false.
++    integer :: i
++    integer :: n_tst = 0, n_cnt = 0, n_skip = 0
++    character(len=20,kind=4) :: s, s1
++
++!   Check that the default rounding mode is to nearest and to even on tie.
++    do i=1,size(real_kinds)
++      if (i == 1) then
++        write(s, '(2F4.1,2F4.0)') real(-9.49999905,kind=j(1)), &
++                                  real(9.49999905,kind=j(1)),  &
++                                  real(9.5,kind=j(1)), real(8.5,kind=j(1))
++        write(s1, '(3PE10.3,2PE10.3)') real(987350.,kind=j(1)), &
++                                       real(98765.0,kind=j(1))
++      else if (i == 2) then
++        write(s, '(2F4.1,2F4.0)') real(-9.49999905,kind=j(2)), &
++                                  real(9.49999905,kind=j(2)),  &
++                                  real(9.5,kind=j(2)), real(8.5,kind=j(2))
++        write(s1, '(3PE10.3,2PE10.3)') real(987350.,kind=j(2)), &
++                                       real(98765.0,kind=j(2))
++      else if (i == 3) then
++        write(s, '(2F4.1,2F4.0)') real(-9.49999905,kind=j(3)), &
++                                  real(9.49999905,kind=j(3)),  &
++                                  real(9.5,kind=j(3)), real(8.5,kind=j(3))
++        write(s1, '(3PE10.3,2PE10.3)') real(987350.,kind=j(3)), &
++                                       real(98765.0,kind=j(3))
++      else if (i == 4) then
++        write(s, '(2F4.1,2F4.0)') real(-9.49999905,kind=j(4)), &
++                                  real(9.49999905,kind=j(4)),  &
++                                  real(9.5,kind=j(4)), real(8.5,kind=j(4))
++        write(s1, '(3PE10.3,2PE10.3)') real(987350.,kind=j(4)), &
++                                       real(98765.0,kind=j(4))
++      end if
++      if (s /= 4_'-9.5 9.5 10.  8.' .or. s1 /= 4_' 987.4E+03 98.76E+03') then
++        l_skip(i) = .true.
++        print "('Unsupported rounding for real(',i0,')')", j(i)
++      end if
++    end do
++        
++
++! Original test.
++    call checkfmt("(en15.2)", -.44444,    4_"    -444.44E-03")
++
++! Test for the bug in comment 6.
++    call checkfmt("(rz,en15.0)", 1.0,        4_"         1.E+00")
++    call checkfmt("(rz,en15.0)", 1.00000012, 4_"         1.E+00")
++    call checkfmt("(rz,en15.0)", 0.99999994, 4_"       999.E-03")
++    call checkfmt("(rz,en15.0)", 10.0,       4_"        10.E+00")
++    call checkfmt("(rz,en15.0)", 10.0000010, 4_"        10.E+00")
++    call checkfmt("(rz,en15.0)", 9.99999905, 4_"         9.E+00")
++    call checkfmt("(rz,en15.0)", 100.0,      4_"       100.E+00")
++    call checkfmt("(rz,en15.0)", 100.000008, 4_"       100.E+00")
++    call checkfmt("(rz,en15.0)", 99.9999924, 4_"        99.E+00")
++    call checkfmt("(rz,en15.0)", 1000.0,     4_"         1.E+03")
++    call checkfmt("(rz,en15.0)", 1000.00006, 4_"         1.E+03")
++    call checkfmt("(rz,en15.0)", 999.999939, 4_"       999.E+00")
++    call checkfmt("(rz,en15.0)", 9.5,        4_"         9.E+00")
++    call checkfmt("(rz,en15.0)", 9.50000095, 4_"         9.E+00")
++    call checkfmt("(rz,en15.0)", 9.49999905, 4_"         9.E+00")
++    call checkfmt("(rz,en15.0)", 99.5,       4_"        99.E+00")
++    call checkfmt("(rz,en15.0)", 99.5000076, 4_"        99.E+00")
++    call checkfmt("(rz,en15.0)", 99.4999924, 4_"        99.E+00")
++    call checkfmt("(rz,en15.0)", 999.5,      4_"       999.E+00")
++    call checkfmt("(rz,en15.0)", 999.500061, 4_"       999.E+00")
++    call checkfmt("(rz,en15.0)", 999.499939, 4_"       999.E+00")
++    call checkfmt("(rz,en15.0)", 9500.0,     4_"         9.E+03")
++    call checkfmt("(rz,en15.0)", 9500.00098, 4_"         9.E+03")
++    call checkfmt("(rz,en15.0)", 9499.99902, 4_"         9.E+03")
++    call checkfmt("(rz,en15.1)", 9950.0,     4_"        9.9E+03")
++    call checkfmt("(rz,en15.2)", 9995.0,     4_"       9.99E+03")
++    call checkfmt("(rz,en15.3)", 9999.5,     4_"      9.999E+03")
++    call checkfmt("(rz,en15.1)", 9.5,        4_"        9.5E+00")
++    call checkfmt("(rz,en15.1)", 9.50000095, 4_"        9.5E+00")
++    call checkfmt("(rz,en15.1)", 9.49999905, 4_"        9.4E+00")
++    call checkfmt("(rz,en15.1)", 0.099951,   4_"       99.9E-03")
++    call checkfmt("(rz,en15.1)", 0.009951,   4_"        9.9E-03")
++    call checkfmt("(rz,en15.1)", 0.000999951,4_"      999.9E-06")
++
++    call checkfmt("(rz,en15.0)", -1.0,        4_"        -1.E+00")
++    call checkfmt("(rz,en15.0)", -1.00000012, 4_"        -1.E+00")
++    call checkfmt("(rz,en15.0)", -0.99999994, 4_"      -999.E-03")
++    call checkfmt("(rz,en15.0)", -10.0,       4_"       -10.E+00")
++    call checkfmt("(rz,en15.0)", -10.0000010, 4_"       -10.E+00")
++    call checkfmt("(rz,en15.0)", -9.99999905, 4_"        -9.E+00")
++    call checkfmt("(rz,en15.0)", -100.0,      4_"      -100.E+00")
++    call checkfmt("(rz,en15.0)", -100.000008, 4_"      -100.E+00")
++    call checkfmt("(rz,en15.0)", -99.9999924, 4_"       -99.E+00")
++    call checkfmt("(rz,en15.0)", -1000.0,     4_"        -1.E+03")
++    call checkfmt("(rz,en15.0)", -1000.00006, 4_"        -1.E+03")
++    call checkfmt("(rz,en15.0)", -999.999939, 4_"      -999.E+00")
++    call checkfmt("(rz,en15.0)", -9.5,        4_"        -9.E+00")
++    call checkfmt("(rz,en15.0)", -9.50000095, 4_"        -9.E+00")
++    call checkfmt("(rz,en15.0)", -9.49999905, 4_"        -9.E+00")
++    call checkfmt("(rz,en15.0)", -99.5,       4_"       -99.E+00")
++    call checkfmt("(rz,en15.0)", -99.5000076, 4_"       -99.E+00")
++    call checkfmt("(rz,en15.0)", -99.4999924, 4_"       -99.E+00")
++    call checkfmt("(rz,en15.0)", -999.5,      4_"      -999.E+00")
++    call checkfmt("(rz,en15.0)", -999.500061, 4_"      -999.E+00")
++    call checkfmt("(rz,en15.0)", -999.499939, 4_"      -999.E+00")
++    call checkfmt("(rz,en15.0)", -9500.0,     4_"        -9.E+03")
++    call checkfmt("(rz,en15.0)", -9500.00098, 4_"        -9.E+03")
++    call checkfmt("(rz,en15.0)", -9499.99902, 4_"        -9.E+03")
++    call checkfmt("(rz,en15.1)", -9950.0,     4_"       -9.9E+03")
++    call checkfmt("(rz,en15.2)", -9995.0,     4_"      -9.99E+03")
++    call checkfmt("(rz,en15.3)", -9999.5,     4_"     -9.999E+03")
++    call checkfmt("(rz,en15.1)", -9.5,        4_"       -9.5E+00")
++    call checkfmt("(rz,en15.1)", -9.50000095, 4_"       -9.5E+00")
++    call checkfmt("(rz,en15.1)", -9.49999905, 4_"       -9.4E+00")
++    call checkfmt("(rz,en15.1)", -0.099951,   4_"      -99.9E-03")
++    call checkfmt("(rz,en15.1)", -0.009951,   4_"       -9.9E-03")
++    call checkfmt("(rz,en15.1)", -0.000999951,4_"     -999.9E-06")
++
++    call checkfmt("(rz,en15.1)", 987350.,     4_"      987.3E+03")
++    call checkfmt("(rz,en15.2)", 98735.,      4_"      98.73E+03")
++    call checkfmt("(rz,en15.3)", 9873.5,      4_"      9.873E+03")
++    call checkfmt("(rz,en15.1)", 987650.,     4_"      987.6E+03")
++    call checkfmt("(rz,en15.2)", 98765.,      4_"      98.76E+03")
++    call checkfmt("(rz,en15.3)", 9876.5,      4_"      9.876E+03")
++    call checkfmt("(rz,en15.1)", 3.125E-02,   4_"       31.2E-03")
++    call checkfmt("(rz,en15.1)", 9.375E-02,   4_"       93.7E-03")
++    call checkfmt("(rz,en15.2)", 1.5625E-02,  4_"      15.62E-03")
++    call checkfmt("(rz,en15.2)", 4.6875E-02,  4_"      46.87E-03")
++    call checkfmt("(rz,en15.3)", 7.8125E-03,  4_"      7.812E-03")
++    call checkfmt("(rz,en15.3)", 2.34375E-02, 4_"     23.437E-03")
++    call checkfmt("(rz,en15.3)", 9.765625E-04,4_"    976.562E-06")
++    call checkfmt("(rz,en15.6)", 2.9296875E-03,4_"   2.929687E-03")
++
++    call checkfmt("(rz,en15.1)", -987350.,     4_"     -987.3E+03")
++    call checkfmt("(rz,en15.2)", -98735.,      4_"     -98.73E+03")
++    call checkfmt("(rz,en15.3)", -9873.5,      4_"     -9.873E+03")
++    call checkfmt("(rz,en15.1)", -987650.,     4_"     -987.6E+03")
++    call checkfmt("(rz,en15.2)", -98765.,      4_"     -98.76E+03")
++    call checkfmt("(rz,en15.3)", -9876.5,      4_"     -9.876E+03")
++    call checkfmt("(rz,en15.1)", -3.125E-02,   4_"      -31.2E-03")
++    call checkfmt("(rz,en15.1)", -9.375E-02,   4_"      -93.7E-03")
++    call checkfmt("(rz,en15.2)", -1.5625E-02,  4_"     -15.62E-03")
++    call checkfmt("(rz,en15.2)", -4.6875E-02,  4_"     -46.87E-03")
++    call checkfmt("(rz,en15.3)", -7.8125E-03,  4_"     -7.812E-03")
++    call checkfmt("(rz,en15.3)", -2.34375E-02, 4_"    -23.437E-03")
++    call checkfmt("(rz,en15.3)", -9.765625E-04,4_"   -976.562E-06")
++    call checkfmt("(rz,en15.6)", -2.9296875E-03,4_"  -2.929687E-03")
++
++    print *, n_tst, n_cnt, n_skip
++    if (n_cnt /= 0) stop n_cnt
++    if (all(.not. l_skip)) print *, "All kinds rounded to zero"
++
++contains
++    subroutine checkfmt(fmt, x, cmp)
++        implicit none
++        integer :: i
++        character(len=*), intent(in) :: fmt
++        real, intent(in) :: x
++        character(len=*, kind=4), intent(in) :: cmp
++        do i=1,size(real_kinds)
++          if (l_skip(i)) cycle
++          if (i == 1) then
++            write(s, fmt) real(x,kind=j(1))
++          else if (i == 2) then
++            write(s, fmt) real(x,kind=j(2))
++          else if (i == 3) then
++            write(s, fmt) real(x,kind=j(3))
++          else if (i == 4) then
++            write(s, fmt) real(x,kind=j(4))
++          end if
++          n_tst = n_tst + 1
++          if (s /= cmp) then
++            if (l_skip(i)) then
++              n_skip = n_skip + 1
++            else
++              print "(a,1x,a,' expected: ',1x,a)", fmt, s, cmp
++              n_cnt = n_cnt + 1
++            end if
++          end if
++        end do
++        
++    end subroutine
++end program
++! { dg-output "All kinds rounded to zero" { xfail { i?86-*-solaris2.9* hppa*-*-hpux* } } }
++! { dg-final { cleanup-saved-temps } }
 diff --git a/gcc/testsuite/gfortran.dg/implicit_pure_5.c b/gcc/testsuite/gfortran.dg/implicit_pure_5.c
 new file mode 100644
 index 00000000000..67a6d9ca45e
@@ -1045,6 +1958,31 @@ index 00000000000..48dd0680a48
 +    end subroutine
 +  end subroutine
 +end module
+diff --git a/gcc/testsuite/gfortran.dg/pr95585.f90 b/gcc/testsuite/gfortran.dg/pr95585.f90
+new file mode 100644
+index 00000000000..b0e6cdc5bea
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr95585.f90
+@@ -0,0 +1,6 @@
++! { dg-do compile }
++
++program test
++  integer, parameter :: a(2) = reshape([1, 2], a) ! { dg-error "before its definition" }
++end program
++
+diff --git a/gcc/testsuite/gfortran.dg/pr95612.f90 b/gcc/testsuite/gfortran.dg/pr95612.f90
+new file mode 100644
+index 00000000000..b3cac8c1d81
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr95612.f90
+@@ -0,0 +1,7 @@
++! { dg-do compile }
++
++program p
++   integer, pointer :: y(:) => shape(1)   ! { dg-error "Zero-sized array detected at .1. where an entity with the TARGET attribute is expected" }
++   integer, pointer :: z(:) => shape([1]) ! { dg-error "Pointer assignment target in initialization expression does not have the TARGET attribute at .1." }
++end
++
 diff --git a/gcc/testsuite/gfortran.dg/pr95980.f90 b/gcc/testsuite/gfortran.dg/pr95980.f90
 new file mode 100644
 index 00000000000..7c8260a96e0
@@ -1092,6 +2030,49 @@ index 00000000000..b80967a7a07
 +  select rank (y => x)  ! { dg-error "CLASS variable" }
 +  end select
 +end
+diff --git a/gcc/testsuite/gfortran.dg/round_3.f08 b/gcc/testsuite/gfortran.dg/round_3.f08
+index 57d83395531..4a0a692fa7b 100644
+--- a/gcc/testsuite/gfortran.dg/round_3.f08
++++ b/gcc/testsuite/gfortran.dg/round_3.f08
+@@ -110,6 +110,30 @@ program pr48615
+     call checkfmt("(RU,E17.1)", nearest(2.0, 1.0),     "          0.3E+01")
+     call checkfmt("(RD,E17.1)", nearest(3.0, -1.0),    "          0.2E+01")
+ 
++    call checkfmt("(G12.2)", 99.0,       "     99.    ")
++    call checkfmt("(G12.2)", 99.5,       "    0.10E+03")
++    call checkfmt("(G12.2)", 100.0,      "    0.10E+03")
++    call checkfmt("(G12.2)", -99.0,      "    -99.    ")
++    call checkfmt("(G12.2)", -99.5,      "   -0.10E+03")
++    call checkfmt("(G12.2)", -100.0,     "   -0.10E+03")
++    call checkfmt("(RU,G12.2)", 99.0,    "     99.    ")    ! pr93567
++    call checkfmt("(RU,G12.2)", 99.01,   "    0.10E+03")
++    call checkfmt("(RU,G12.2)", -99.0,   "    -99.    ")
++    call checkfmt("(RU,G12.2)", -99.01,  "    -99.    ")
++    call checkfmt("(RU,G12.2)", -100.01, "   -0.10E+03")
++    call checkfmt("(RU,G12.4)", 99.0 ,   "   99.00    ")
++    call checkfmt("(RU,G12.4)", 99.01,   "   99.02    ")
++    call checkfmt("(RD,G12.2)", 99.0,    "     99.    ")
++    call checkfmt("(RD,G12.2)", 99.01,   "     99.    ")
++    call checkfmt("(RD,G12.2)", 100.01,  "    0.10E+03")
++    call checkfmt("(RD,G12.2)", -99.0,   "    -99.    ")
++    call checkfmt("(RD,G12.2)", -99.01,  "   -0.10E+03")
++    call checkfmt("(RD,G12.2)", -100.00, "   -0.10E+03")
++    call checkfmt("(Rz,G12.2)", 99.01,   "     99.    ")
++    call checkfmt("(Rz,G12.2)", 100.01,  "    0.10E+03")
++    call checkfmt("(Rz,G12.2)", -99.01,  "    -99.    ")
++    call checkfmt("(Rz,G12.2)", -100.01, "   -0.10E+03")
++
+ contains
+     subroutine checkfmt(fmt, x, cmp)
+         character(len=*), intent(in) :: fmt
+@@ -119,6 +143,6 @@ contains
+         
+         write(s, fmt) x
+         if (s /= cmp) STOP 1
+-        !if (s /= cmp) print "(a,1x,a,' expected: ',1x)", fmt, s, cmp
++        !if (s /= cmp) print "(a,1x,a,' expected: ',1x,a)", fmt, s, cmp
+     end subroutine
+ end program
 diff --git a/gcc/toplev.c b/gcc/toplev.c
 index deccd7f15ba..42af2f587af 100644
 --- a/gcc/toplev.c
@@ -1132,6 +2113,101 @@ index deccd7f15ba..42af2f587af 100644
   /* Do not use IPA optimizations for register allocation if profiler is active
      or patchable function entries are inserted for run-time instrumentation
      or port does not emit prologue and epilogue as RTL.  */
+diff --git a/gcc/vec.h b/gcc/vec.h
+index bd7c7351dcd..3ad99b83690 100644
+--- a/gcc/vec.h
++++ b/gcc/vec.h
+@@ -753,6 +753,17 @@ vec_safe_grow_cleared (vec<T, va_heap, vl_ptr> *&v,
+   v->safe_grow_cleared (len PASS_MEM_STAT);
+ }
+ 
++/* If V does not have space for NELEMS elements, call
++   V->reserve(NELEMS, EXACT).  */
++
++template<typename T>
++inline bool
++vec_safe_reserve (vec<T, va_heap, vl_ptr> *&v, unsigned nelems, bool exact = false
++		  CXX_MEM_STAT_INFO)
++{
++  return v->reserve (nelems, exact);
++}
++
+ 
+ /* If V is NULL return false, otherwise return V->iterate(IX, PTR).  */
+ template<typename T, typename A>
+diff --git a/libgfortran/ChangeLog b/libgfortran/ChangeLog
+index b47ae6b62a0..2aa54095648 100644
+--- a/libgfortran/ChangeLog
++++ b/libgfortran/ChangeLog
+@@ -1,3 +1,21 @@
++2020-07-25  Dominique d'Humieres  <dhumieres.dominique@free.fr>
++
++	Backported from master:
++	2020-07-24  Dominique d'Humieres  <dhumieres.dominique@free.fr>
++
++	PR fortran/93567
++	* io/write_float.def (determine_en_precision): Fix switch between
++	FMT_E and FMT_F.
++
++2020-07-25  Dominique d'Humieres  <dhumieres.dominique@free.fr>
++
++	Backported from master:
++	2020-07-24  Dominique d'Humieres  <dhumieres.dominique@free.fr>
++
++	PR fortran/93592
++	* io/write_float.def (build_float_string): Do not reset
++	  nbefore for FMT_F and FMT_EN.
++
+ 2020-07-23  Release Manager
+ 
+ 	* GCC 10.2.0 released.
+diff --git a/libgfortran/io/write_float.def b/libgfortran/io/write_float.def
+index 8a1be054371..9a4462c1117 100644
+--- a/libgfortran/io/write_float.def
++++ b/libgfortran/io/write_float.def
+@@ -399,7 +399,8 @@ build_float_string (st_parameter_dt *dtp, const fnode *f, char *buffer,
+   updown:
+ 
+   rchar = '0';
+-  if (ft != FMT_F && w > 0 && d == 0 && p == 0)
++  /* Do not reset nbefore for FMT_F and FMT_EN.  */
++  if (ft != FMT_F && ft !=FMT_EN && w > 0 && d == 0 && p == 0)
+     nbefore = 1;
+   /* Scan for trailing zeros to see if we really need to round it.  */
+   for(i = nbefore + nafter; i < ndigits; i++)
+@@ -987,16 +988,19 @@ determine_en_precision (st_parameter_dt *dtp, const fnode *f,
+ 	  w = default_width;\
+ 	  d = precision;\
+ 	}\
++      /* The switch between FMT_E and FMT_F is based on the absolute value.  \
++         Set r=0 for rounding toward zero and r = 1 otherwise.  \
++	 If (exp_d - m) == 1 there is no rounding needed.  */\
+       switch (dtp->u.p.current_unit->round_status)\
+ 	{\
+ 	  case ROUND_ZERO:\
+-	    r = sign_bit ? 1.0 : 0.0;\
++	    r = 0.0;\
+ 	    break;\
+ 	  case ROUND_UP:\
+-	    r = 1.0;\
++	    r = sign_bit ? 0.0 : 1.0;\
+ 	    break;\
+ 	  case ROUND_DOWN:\
+-	    r = 0.0;\
++	    r = sign_bit ? 1.0 : 0.0;\
+ 	    break;\
+ 	  default:\
+ 	    break;\
+@@ -1004,7 +1008,8 @@ determine_en_precision (st_parameter_dt *dtp, const fnode *f,
+       exp_d = calculate_exp_ ## x (d);\
+       r_sc = (1 - r / exp_d);\
+       temp = 0.1 * r_sc;\
+-      if ((m > 0.0 && ((m < temp) || (r >= (exp_d - m))))\
++      if ((m > 0.0 && ((m < temp) || (r < 1 && r >= (exp_d - m))\
++				  || (r == 1 && 1 > (exp_d - m))))\
+ 	  || ((m == 0.0) && !(compile_options.allow_std\
+ 			      & (GFC_STD_F2003 | GFC_STD_F2008)))\
+ 	  ||  d == 0)\
 diff --git a/libgo/MERGE b/libgo/MERGE
 index 07547d064a1..4f8589371d3 100644
 --- a/libgo/MERGE
