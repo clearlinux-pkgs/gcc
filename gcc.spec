@@ -40,6 +40,7 @@ Patch15  : 0001-Ignore-Werror-if-GCC_IGNORE_WERROR-environment-varia.patch
 Patch16  : 0001-Always-use-z-now-when-linking-with-pie.patch
 Patch17  : icelake.patch
 Patch18  : libiberty-sync.patch
+Patch19  : tune-inline.patch
 
 # zero registers on ret to make ROP harder
 Patch21  : 0001-x86-Add-mzero-caller.patch
@@ -227,6 +228,7 @@ GNU cc and gcc C compilers.
 %patch16 -p1
 #%patch17 -p1
 # %patch18 -p1
+%patch19 -p1
 
 #%patch20 -p1
 
