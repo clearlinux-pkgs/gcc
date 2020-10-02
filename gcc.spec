@@ -14,7 +14,7 @@
 
 Name     : gcc
 Version  : 10.2.0
-Release  : 983
+Release  : 984
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://gcc.gnu.org/pub/gcc/releases/gcc-10.2.0/gcc-10.2.0.tar.xz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.16.1.tar.bz2
@@ -536,8 +536,10 @@ find -type f \! -path ./32/\* | while read f; do
     ) > rpm-tmp-hdr
     mv rpm-tmp-hdr $f
 done
-rm -rf 32
-ln -s . 32
+for f in ./32/*; do
+  rm -rf $f
+  ln -s ../$(basename $f) $f
+done
 popd
 
 # Also clang compat
