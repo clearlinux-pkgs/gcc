@@ -1,10 +1,9 @@
 PKG_NAME := gcc
-URL := https://mirrors.kernel.org/gnu/gcc/gcc-9.1.0/gcc-9.1.0.tar.gz
 
 include ../common/Makefile.common
 
 GCCGIT = ~/git/gcc
-GCCVER = 10.2.0
+GCCVER = 10.3.0
 
 GCCTAG = releases/gcc-$(GCCVER)
 GCCBRANCH = origin/releases/gcc-$(shell echo $(GCCVER) | sed 's/\..*//')
