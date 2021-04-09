@@ -19,7 +19,7 @@ update:
 	cat new.patch~ >> gcc-stable-branch.patch
 	rm -f *.patch~
 	git -C $(GCCGIT) show $(GCCBRANCH):gcc/DATESTAMP > DATESTAMP
-	git -C $(GCCGIT) describe --abbrev=10 $(GCCBRANCH) > REVISION
+	git -C $(GCCGIT) describe --abbrev=10 --match 'releases/*' $(GCCBRANCH) > REVISION
 	$(MAKE) bumpnogit
 	git commit -m "stable update to `cat REVISION`" -a
 	test -n "$(NO_KOJI)" || $(MAKE) koji-nowait
