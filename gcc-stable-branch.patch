@@ -2,7 +2,10 @@ François Dumont (2):
       libstdc++: Fix [multi]map/[multi]set move constructors noexcept qualification
       libstdc++: Fix unordered containers move constructors noexcept qualification
 
-GCC Administrator (1):
+GCC Administrator (4):
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
 
 Jonathan Wakely (12):
@@ -19,11 +22,28 @@ Jonathan Wakely (12):
       libstdc++: Fix invalid constexpr function in C++11 mode [PR 99985]
       libstdc++: Fix bootstrap error due to inconsistent noexcept-specifier [PR 99983]
 
+Marek Polacek (12):
+      c++: ICE when late parsing noexcept/NSDMI [PR98333]
+      c++: ICE with delayed noexcept and attribute used [PR97966]
+      c++: Fix bogus -Wvolatile warning in C++20 [PR98947]
+      c++: Pointer-to-member fn conversion with noexcept [PR99374]
+      c++: ICE with -Wshadow and enumerator in template [PR99120]
+      c++: const_cast of null pointer in constant expr [PR99176]
+      c++: -Wconversion vs value-dependent expressions [PR99331]
+      c++: GC collects live data when synthesizing operator== [PR99831]
+      c++: GC during late parsing collects live data [PR91416]
+      c++: Fix two issues with auto function parameter [PR99806]
+      c++: ICE with real-to-int conversion in template [PR97973]
+      c++: Use FOR_EACH_VEC_ELT instead of range-based for loop.
+
 Richard Biener (1):
       Increment BASE-VER after release
 
 Thomas Schwinge (1):
       Add 'libgomp.oacc-c-c++-common/static-variable-1.c' [PR84991, PR84992, PR90779]
+
+Tobias Burnus (1):
+      Fortran: Fix fndecl with -fcoarray=lib [PR99817]
 
 diff --git a/gcc/BASE-VER b/gcc/BASE-VER
 index 0719d810258..a9368325816 100644
@@ -41,6 +61,1050 @@ index 3b1384e707f..29813eb5fc6 100644
 +
 +	PR lto/99898
 +	* lto-streamer.h (LTO_minor_version): Bump.
++
+ 2021-04-08  Release Manager
+ 
+ 	* GCC 10.3.0 released.
+diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
+index b576f9a3678..d8cbfaada9e 100644
+--- a/gcc/cp/ChangeLog
++++ b/gcc/cp/ChangeLog
+@@ -1,3 +1,110 @@
++2021-04-11  Marek Polacek  <polacek@redhat.com>
++
++	PR c++/97966
++	* pt.c (instantiate_class_template_1): Use FOR_EACH_VEC_ELT instead
++	of range-based for loop.
++
++2021-04-10  Marek Polacek  <polacek@redhat.com>
++
++	PR c++/97973
++	* call.c (conv_unsafe_in_template_p): New.
++	(convert_like): Use it.
++
++2021-04-09  Marek Polacek  <polacek@redhat.com>
++
++	Backported from master:
++	2021-04-09  Marek Polacek  <polacek@redhat.com>
++
++	PR c++/99806
++	* parser.c (cp_parser_member_declaration): Call
++	cp_parser_save_default_args even for function templates.  Use
++	STRIP_TEMPLATE on the declaration we're passing.
++
++2021-04-09  Marek Polacek  <polacek@redhat.com>
++
++	Backported from master:
++	2021-04-03  Marek Polacek  <polacek@redhat.com>
++
++	PR c++/91416
++	* parser.c: Create a GC root for attributes in a decl specifier.
++	(cp_parser_type_specifier): Push/pop ->attributes onto/from it.
++
++2021-04-09  Marek Polacek  <polacek@redhat.com>
++
++	Backported from master:
++	2021-04-01  Marek Polacek  <polacek@redhat.com>
++
++	PR c++/99831
++	* method.c (defaulted_late_check): ++ and -- function_depth around
++	the call to synthesize_method.
++	* pt.c: Remove the saved_trees global.
++
++2021-04-09  Marek Polacek  <polacek@redhat.com>
++
++	Backported from master:
++	2021-03-25  Marek Polacek  <polacek@redhat.com>
++
++	PR c++/99331
++	* call.c (build_converted_constant_expr_internal): Don't emit
++	-Wconversion warnings.
++
++2021-04-09  Marek Polacek  <polacek@redhat.com>
++
++	DR 1312
++	PR c++/99176
++	* constexpr.c (is_std_construct_at): New overload.
++	(is_std_allocator_allocate): New overload.
++	(cxx_eval_call_expression): Use the new overloads.
++	(cxx_eval_constant_expression): Reject casting
++	from void * as per DR 1312.  Don't check can_convert.
++
++2021-04-09  Marek Polacek  <polacek@redhat.com>
++
++	Backported from master:
++	2021-03-05  Marek Polacek  <polacek@redhat.com>
++
++	PR c++/99120
++	* name-lookup.c (check_local_shadow): Check if the type of decl
++	is non-null before checking TYPE_PTR*.
++
++2021-04-09  Marek Polacek  <polacek@redhat.com>
++
++	Backported from master:
++	2021-03-05  Marek Polacek  <polacek@redhat.com>
++
++	PR c++/99374
++	* call.c (standard_conversion): When converting pointers to
++	member, don't return NULL when the bases are equivalent but
++	incomplete.
++
++2021-04-09  Marek Polacek  <polacek@redhat.com>
++
++	Backported from master:
++	2021-02-05  Marek Polacek  <polacek@redhat.com>
++
++	PR c++/98947
++	* call.c (build_conditional_expr_1): Don't call mark_lvalue_use
++	on arg2/arg3.
++	* expr.c (mark_use) <case MODIFY_EXPR>: Don't check read_p when
++	issuing the -Wvolatile warning.  Only set TREE_THIS_VOLATILE if
++	a warning was emitted.
++
++2021-04-09  Marek Polacek  <polacek@redhat.com>
++
++	PR c++/97966
++	* pt.c (instantiate_class_template_1): Instantiate members
++	marked with attribute used only after we're done instantiating
++	the class.
++
++2021-04-09  Marek Polacek  <polacek@redhat.com>
++
++	Backported from master:
++	2021-01-19  Marek Polacek  <polacek@redhat.com>
++
++	PR c++/98333
++	* parser.c (cp_parser_class_specifier_1): Perform late-parsing
++	of NSDMIs before late-parsing of noexcept-specifiers.
++
+ 2021-04-08  Release Manager
+ 
+ 	* GCC 10.3.0 released.
+diff --git a/gcc/cp/call.c b/gcc/cp/call.c
+index aa8d84fa90c..d4515f21e04 100644
+--- a/gcc/cp/call.c
++++ b/gcc/cp/call.c
+@@ -1434,7 +1434,9 @@ standard_conversion (tree to, tree from, tree expr, bool c_cast_p,
+       tree fbase = class_of_this_parm (fromfn);
+       tree tbase = class_of_this_parm (tofn);
+ 
+-      if (!DERIVED_FROM_P (fbase, tbase))
++      /* If FBASE and TBASE are equivalent but incomplete, DERIVED_FROM_P
++	 yields false.  But a pointer to member of incomplete class is OK.  */
++      if (!same_type_p (fbase, tbase) && !DERIVED_FROM_P (fbase, tbase))
+ 	return NULL;
+ 
+       tree fstat = static_fn_type (fromfn);
+@@ -4392,6 +4394,9 @@ build_converted_constant_expr_internal (tree type, tree expr,
+ 	  && processing_template_decl)
+ 	conv = next_conversion (conv);
+ 
++      /* Issuing conversion warnings for value-dependent expressions is
++	 likely too noisy.  */
++      warning_sentinel w (warn_conversion);
+       conv->check_narrowing = true;
+       conv->check_narrowing_const_only = true;
+       expr = convert_like (conv, expr, complain);
+@@ -5474,8 +5479,6 @@ build_conditional_expr_1 (const op_location_t &loc,
+       && same_type_p (arg2_type, arg3_type))
+     {
+       result_type = arg2_type;
+-      arg2 = mark_lvalue_use (arg2);
+-      arg3 = mark_lvalue_use (arg3);
+       goto valid_operands;
+     }
+ 
+@@ -7302,6 +7305,27 @@ maybe_warn_array_conv (location_t loc, conversion *c, tree expr)
+ 	     "are only available with %<-std=c++2a%> or %<-std=gnu++2a%>");
+ }
+ 
++/* Return true if converting FROM to TO is unsafe in a template.  */
++
++static bool
++conv_unsafe_in_template_p (tree to, tree from)
++{
++  /* Converting classes involves TARGET_EXPR.  */
++  if (CLASS_TYPE_P (to) || CLASS_TYPE_P (from))
++    return true;
++
++  /* Converting real to integer produces FIX_TRUNC_EXPR which tsubst
++     doesn't handle.  */
++  if (SCALAR_FLOAT_TYPE_P (from) && INTEGRAL_OR_ENUMERATION_TYPE_P (to))
++    return true;
++
++  /* Converting integer to real isn't a trivial conversion, either.  */
++  if (INTEGRAL_OR_ENUMERATION_TYPE_P (from) && SCALAR_FLOAT_TYPE_P (to))
++    return true;
++
++  return false;
++}
++
+ /* Wrapper for convert_like_real_1 that handles creating IMPLICIT_CONV_EXPR.  */
+ 
+ static tree
+@@ -7317,7 +7341,7 @@ convert_like_real (conversion *convs, tree expr, tree fn, int argnum,
+   tree conv_expr = NULL_TREE;
+   if (processing_template_decl
+       && convs->kind != ck_identity
+-      && (CLASS_TYPE_P (convs->type) || CLASS_TYPE_P (TREE_TYPE (expr))))
++      && conv_unsafe_in_template_p (convs->type, TREE_TYPE (expr)))
+     {
+       conv_expr = build1 (IMPLICIT_CONV_EXPR, convs->type, expr);
+       if (convs->kind != ck_ref_bind)
+diff --git a/gcc/cp/constexpr.c b/gcc/cp/constexpr.c
+index ad3853940ff..3611a826013 100644
+--- a/gcc/cp/constexpr.c
++++ b/gcc/cp/constexpr.c
+@@ -1769,6 +1769,16 @@ is_std_construct_at (tree fndecl)
+   return name && id_equal (name, "construct_at");
+ }
+ 
++/* Overload for the above taking constexpr_call*.  */
++
++static inline bool
++is_std_construct_at (const constexpr_call *call)
++{
++  return (call
++	  && call->fundef
++	  && is_std_construct_at (call->fundef->decl));
++}
++
+ /* Return true if FNDECL is std::allocator<T>::{,de}allocate.  */
+ 
+ static inline bool
+@@ -1791,6 +1801,16 @@ is_std_allocator_allocate (tree fndecl)
+   return decl_in_std_namespace_p (decl);
+ }
+ 
++/* Overload for the above taking constexpr_call*.  */
++
++static inline bool
++is_std_allocator_allocate (const constexpr_call *call)
++{
++  return (call
++	  && call->fundef
++	  && is_std_allocator_allocate (call->fundef->decl));
++}
++
+ /* Return true if FNDECL is __dynamic_cast.  */
+ 
+ static inline bool
+@@ -2197,9 +2217,7 @@ cxx_eval_call_expression (const constexpr_ctx *ctx, tree t,
+       if (TREE_CODE (t) == CALL_EXPR
+ 	  && cxx_replaceable_global_alloc_fn (fun)
+ 	  && (CALL_FROM_NEW_OR_DELETE_P (t)
+-	      || (ctx->call
+-		  && ctx->call->fundef
+-		  && is_std_allocator_allocate (ctx->call->fundef->decl))))
++	      || is_std_allocator_allocate (ctx->call)))
+ 	{
+ 	  const int nargs = call_expr_nargs (t);
+ 	  tree arg0 = NULL_TREE;
+@@ -2267,9 +2285,7 @@ cxx_eval_call_expression (const constexpr_ctx *ctx, tree t,
+ 	 argument.  */
+       if (TREE_CODE (t) == CALL_EXPR
+ 	  && cxx_placement_new_fn (fun)
+-	  && ctx->call
+-	  && ctx->call->fundef
+-	  && is_std_construct_at (ctx->call->fundef->decl))
++	  && is_std_construct_at (ctx->call))
+ 	{
+ 	  const int nargs = call_expr_nargs (t);
+ 	  tree arg1 = NULL_TREE;
+@@ -6270,6 +6286,36 @@ cxx_eval_constant_expression (const constexpr_ctx *ctx, tree t,
+ 	if (VOID_TYPE_P (type))
+ 	  return void_node;
+ 
++	/* [expr.const]: a conversion from type cv void* to a pointer-to-object
++	   type cannot be part of a core constant expression as a resolution to
++	   DR 1312.  */
++	if (integer_zerop (op) /* FIXME: Remove in GCC 12.  */
++	    && TYPE_PTROB_P (type)
++	    && TYPE_PTR_P (TREE_TYPE (op))
++	    && VOID_TYPE_P (TREE_TYPE (TREE_TYPE (op)))
++	    /* Inside a call to std::construct_at or to
++	       std::allocator<T>::{,de}allocate, we permit casting from void*
++	       because that is compiler-generated code.  */
++	    && !is_std_construct_at (ctx->call)
++	    && !is_std_allocator_allocate (ctx->call))
++	  {
++	    /* Likewise, don't error when casting from void* when OP is
++	       &heap uninit and similar.  */
++	    tree sop = tree_strip_nop_conversions (op);
++	    if (TREE_CODE (sop) == ADDR_EXPR
++		&& VAR_P (TREE_OPERAND (sop, 0))
++		&& DECL_ARTIFICIAL (TREE_OPERAND (sop, 0)))
++	      /* OK */;
++	    else
++	      {
++		if (!ctx->quiet)
++		  error_at (loc, "cast from %qT is not allowed",
++			    TREE_TYPE (op));
++		*non_constant_p = true;
++		return t;
++	      }
++	  }
++
+ 	if (TREE_CODE (op) == PTRMEM_CST && !TYPE_PTRMEM_P (type))
+ 	  op = cplus_expand_constant (op);
+ 
+@@ -6288,26 +6334,10 @@ cxx_eval_constant_expression (const constexpr_ctx *ctx, tree t,
+ 		if (TYPE_REF_P (type))
+ 		  {
+ 		    if (!ctx->quiet)
+-		      error_at (loc,
+-				"dereferencing a null pointer");
++		      error_at (loc, "dereferencing a null pointer");
+ 		    *non_constant_p = true;
+ 		    return t;
+ 		  }
+-		else if (TYPE_PTR_P (TREE_TYPE (op)))
+-		  {
+-		    tree from = TREE_TYPE (op);
+-
+-		    if (!can_convert (type, from, tf_none))
+-		      {
+-			if (!ctx->quiet)
+-			  error_at (loc,
+-				    "conversion of %qT null pointer to %qT "
+-				    "is not a constant expression",
+-				    from, type);
+-			*non_constant_p = true;
+-			return t;
+-		      }
+-		  }
+ 	      }
+ 	    else
+ 	      {
+diff --git a/gcc/cp/expr.c b/gcc/cp/expr.c
+index 9b535708c57..6a7569418b1 100644
+--- a/gcc/cp/expr.c
++++ b/gcc/cp/expr.c
+@@ -226,17 +226,17 @@ mark_use (tree expr, bool rvalue_p, bool read_p,
+ 	     a volatile-qualified type is deprecated unless the assignment
+ 	     is either a discarded-value expression or appears in an
+ 	     unevaluated context."  */
+-	  if (read_p
+-	      && !cp_unevaluated_operand
++	  if (!cp_unevaluated_operand
+ 	      && (TREE_THIS_VOLATILE (lhs)
+ 		  || CP_TYPE_VOLATILE_P (TREE_TYPE (lhs)))
+ 	      && !TREE_THIS_VOLATILE (expr))
+ 	    {
+-	      warning_at (location_of (expr), OPT_Wvolatile,
+-			  "using value of simple assignment with %<volatile%>-"
+-			  "qualified left operand is deprecated");
+-	      /* Make sure not to warn about this assignment again.  */
+-	      TREE_THIS_VOLATILE (expr) = true;
++	      if (warning_at (location_of (expr), OPT_Wvolatile,
++			      "using value of simple assignment with "
++			      "%<volatile%>-qualified left operand is "
++			      "deprecated"))
++		/* Make sure not to warn about this assignment again.  */
++		TREE_THIS_VOLATILE (expr) = true;
+ 	    }
+ 	  break;
+ 	}
+diff --git a/gcc/cp/method.c b/gcc/cp/method.c
+index 3a3e060843e..bfd1004dcaa 100644
+--- a/gcc/cp/method.c
++++ b/gcc/cp/method.c
+@@ -2934,7 +2934,12 @@ defaulted_late_check (tree fn)
+       /* If the function was declared constexpr, check that the definition
+ 	 qualifies.  Otherwise we can define the function lazily.  */
+       if (DECL_DECLARED_CONSTEXPR_P (fn) && !DECL_INITIAL (fn))
+-	synthesize_method (fn);
++	{
++	  /* Prevent GC.  */
++	  function_depth++;
++	  synthesize_method (fn);
++	  function_depth--;
++	}
+       return;
+     }
+ 
+diff --git a/gcc/cp/name-lookup.c b/gcc/cp/name-lookup.c
+index 76f3edb04c8..533d79542c9 100644
+--- a/gcc/cp/name-lookup.c
++++ b/gcc/cp/name-lookup.c
+@@ -2802,7 +2802,7 @@ check_local_shadow (tree decl)
+   /* Don't warn for artificial things that are not implicit typedefs.  */
+   if (DECL_ARTIFICIAL (decl) && !DECL_IMPLICIT_TYPEDEF_P (decl))
+     return;
+-  
++
+   if (nonlambda_method_basetype ())
+     if (tree member = lookup_member (current_nonlambda_class_type (),
+ 				     DECL_NAME (decl), /*protect=*/0,
+@@ -2814,8 +2814,9 @@ check_local_shadow (tree decl)
+ 	   is a function or a pointer-to-function.  */
+ 	if (!OVL_P (member)
+ 	    || TREE_CODE (decl) == FUNCTION_DECL
+-	    || TYPE_PTRFN_P (TREE_TYPE (decl))
+-	    || TYPE_PTRMEMFUNC_P (TREE_TYPE (decl)))
++	    || (TREE_TYPE (decl)
++		&& (TYPE_PTRFN_P (TREE_TYPE (decl))
++		    || TYPE_PTRMEMFUNC_P (TREE_TYPE (decl)))))
+ 	  {
+ 	    auto_diagnostic_group d;
+ 	    if (warning_at (DECL_SOURCE_LOCATION (decl), OPT_Wshadow,
+diff --git a/gcc/cp/parser.c b/gcc/cp/parser.c
+index 1f4a28ff7c0..d486cf5998f 100644
+--- a/gcc/cp/parser.c
++++ b/gcc/cp/parser.c
+@@ -17631,6 +17631,11 @@ cp_parser_explicit_specialization (cp_parser* parser)
+   --parser->num_template_parameter_lists;
+ }
+ 
++/* Preserve the attributes across a garbage collect (by making it a GC
++   root), which can occur when parsing a member function.  */
++
++static GTY(()) vec<tree, va_gc> *cp_parser_decl_specs_attrs;
++
+ /* Parse a type-specifier.
+ 
+    type-specifier:
+@@ -17723,8 +17728,12 @@ cp_parser_type_specifier (cp_parser* parser,
+       /* Parse tentatively so that we can back up if we don't find a
+ 	 class-specifier.  */
+       cp_parser_parse_tentatively (parser);
++      if (decl_specs->attributes)
++	vec_safe_push (cp_parser_decl_specs_attrs, decl_specs->attributes);
+       /* Look for the class-specifier.  */
+       type_spec = cp_parser_class_specifier (parser);
++      if (decl_specs->attributes)
++	cp_parser_decl_specs_attrs->pop ();
+       invoke_plugin_callbacks (PLUGIN_FINISH_TYPE, type_spec);
+       /* If that worked, we're done.  */
+       if (cp_parser_parse_definitely (parser))
+@@ -24091,31 +24100,10 @@ cp_parser_class_specifier_1 (cp_parser* parser)
+ 	  maybe_end_member_template_processing ();
+ 	}
+       vec_safe_truncate (unparsed_funs_with_default_args, 0);
+-      /* Now parse any NSDMIs.  */
+-      save_ccp = current_class_ptr;
+-      save_ccr = current_class_ref;
+-      FOR_EACH_VEC_SAFE_ELT (unparsed_nsdmis, ix, decl)
+-	{
+-	  if (class_type != DECL_CONTEXT (decl))
+-	    {
+-	      if (pushed_scope)
+-		pop_scope (pushed_scope);
+-	      class_type = DECL_CONTEXT (decl);
+-	      pushed_scope = push_scope (class_type);
+-	    }
+-	  inject_this_parameter (class_type, TYPE_UNQUALIFIED);
+-	  cp_parser_late_parsing_nsdmi (parser, decl);
+-	}
+-      vec_safe_truncate (unparsed_nsdmis, 0);
+-      current_class_ptr = save_ccp;
+-      current_class_ref = save_ccr;
+-      if (pushed_scope)
+-	pop_scope (pushed_scope);
+ 
+       /* If there are noexcept-specifiers that have not yet been processed,
+-	 take care of them now.  */
+-      class_type = NULL_TREE;
+-      pushed_scope = NULL_TREE;
++	 take care of them now.  Do this before processing NSDMIs as they
++	 may depend on noexcept-specifiers already having been processed.  */
+       FOR_EACH_VEC_SAFE_ELT (unparsed_noexcepts, ix, decl)
+ 	{
+ 	  tree ctx = DECL_CONTEXT (decl);
+@@ -24163,6 +24151,25 @@ cp_parser_class_specifier_1 (cp_parser* parser)
+ 	  maybe_end_member_template_processing ();
+ 	}
+       vec_safe_truncate (unparsed_noexcepts, 0);
++
++      /* Now parse any NSDMIs.  */
++      save_ccp = current_class_ptr;
++      save_ccr = current_class_ref;
++      FOR_EACH_VEC_SAFE_ELT (unparsed_nsdmis, ix, decl)
++	{
++	  if (class_type != DECL_CONTEXT (decl))
++	    {
++	      if (pushed_scope)
++		pop_scope (pushed_scope);
++	      class_type = DECL_CONTEXT (decl);
++	      pushed_scope = push_scope (class_type);
++	    }
++	  inject_this_parameter (class_type, TYPE_UNQUALIFIED);
++	  cp_parser_late_parsing_nsdmi (parser, decl);
++	}
++      vec_safe_truncate (unparsed_nsdmis, 0);
++      current_class_ptr = save_ccp;
++      current_class_ref = save_ccr;
+       if (pushed_scope)
+ 	pop_scope (pushed_scope);
+ 
+@@ -25430,8 +25437,8 @@ cp_parser_member_declaration (cp_parser* parser)
+ 		  || !DECL_DECLARES_FUNCTION_P (decl))
+ 		finish_member_declaration (decl);
+ 
+-	      if (TREE_CODE (decl) == FUNCTION_DECL)
+-		cp_parser_save_default_args (parser, decl);
++	      if (DECL_DECLARES_FUNCTION_P (decl))
++		cp_parser_save_default_args (parser, STRIP_TEMPLATE (decl));
+ 	      else if (TREE_CODE (decl) == FIELD_DECL
+ 		       && DECL_INITIAL (decl))
+ 		/* Add DECL to the queue of NSDMI to be parsed later.  */
+diff --git a/gcc/cp/pt.c b/gcc/cp/pt.c
+index d329c0128ba..c1752fd1894 100644
+--- a/gcc/cp/pt.c
++++ b/gcc/cp/pt.c
+@@ -63,7 +63,6 @@ static GTY(()) struct pending_template *last_pending_template;
+ int processing_template_parmlist;
+ static int template_header_count;
+ 
+-static GTY(()) tree saved_trees;
+ static vec<int> inline_parm_levels;
+ 
+ static GTY(()) struct tinst_level *current_tinst_level;
+@@ -11762,6 +11761,9 @@ instantiate_class_template_1 (tree type)
+      class, except we also need to push the enclosing classes.  */
+   push_nested_class (type);
+ 
++  /* A vector to hold members marked with attribute used. */
++  auto_vec<tree> used;
++
+   /* Now members are processed in the order of declaration.  */
+   for (member = CLASSTYPE_DECL_LIST (pattern);
+        member; member = TREE_CHAIN (member))
+@@ -11839,7 +11841,7 @@ instantiate_class_template_1 (tree type)
+ 	      finish_member_declaration (r);
+ 	      /* Instantiate members marked with attribute used.  */
+ 	      if (r != error_mark_node && DECL_PRESERVE_P (r))
+-		mark_used (r);
++		used.safe_push (r);
+ 	      if (TREE_CODE (r) == FUNCTION_DECL
+ 		  && DECL_OMP_DECLARE_REDUCTION_P (r))
+ 		cp_check_omp_declare_reduction (r);
+@@ -11917,7 +11919,7 @@ instantiate_class_template_1 (tree type)
+ 			     /*flags=*/0);
+ 			  /* Instantiate members marked with attribute used. */
+ 			  if (r != error_mark_node && DECL_PRESERVE_P (r))
+-			    mark_used (r);
++			    used.safe_push (r);
+ 			}
+ 		      else if (TREE_CODE (r) == FIELD_DECL)
+ 			{
+@@ -12130,6 +12132,13 @@ instantiate_class_template_1 (tree type)
+   if (TYPE_CONTAINS_VPTR_P (type) && CLASSTYPE_KEY_METHOD (type))
+     vec_safe_push (keyed_classes, type);
+ 
++  /* Now that we've gone through all the members, instantiate those
++     marked with attribute used.  */
++  unsigned int i;
++  tree x;
++  FOR_EACH_VEC_ELT (used, i, x)
++    mark_used (x);
++
+   return type;
+ }
+ 
+diff --git a/gcc/fortran/trans-types.c b/gcc/fortran/trans-types.c
+index d3fef08b4b9..68d903d47ae 100644
+--- a/gcc/fortran/trans-types.c
++++ b/gcc/fortran/trans-types.c
+@@ -3115,14 +3115,14 @@ gfc_get_function_type (gfc_symbol * sym, gfc_actual_arglist *actual_args)
+ 	vec_safe_push (typelist, boolean_type_node);
+       /* Coarrays which are descriptorless or assumed-shape pass with
+ 	 -fcoarray=lib the token and the offset as hidden arguments.  */
+-      else if (arg
+-	       && flag_coarray == GFC_FCOARRAY_LIB
+-	       && ((arg->ts.type != BT_CLASS
+-		    && arg->attr.codimension
+-		    && !arg->attr.allocatable)
+-		   || (arg->ts.type == BT_CLASS
+-		       && CLASS_DATA (arg)->attr.codimension
+-		       && !CLASS_DATA (arg)->attr.allocatable)))
++      if (arg
++	  && flag_coarray == GFC_FCOARRAY_LIB
++	  && ((arg->ts.type != BT_CLASS
++	       && arg->attr.codimension
++	       && !arg->attr.allocatable)
++	      || (arg->ts.type == BT_CLASS
++		  && CLASS_DATA (arg)->attr.codimension
++		  && !CLASS_DATA (arg)->attr.allocatable)))
+ 	{
+ 	  vec_safe_push (typelist, pvoid_type_node);  /* caf_token.  */
+ 	  vec_safe_push (typelist, gfc_array_index_type);  /* caf_offset.  */
+diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
+index 2913065bf31..4cf6c547a7e 100644
+--- a/gcc/testsuite/ChangeLog
++++ b/gcc/testsuite/ChangeLog
+@@ -1,3 +1,86 @@
++2021-04-10  Marek Polacek  <polacek@redhat.com>
++
++	PR c++/97973
++	* g++.dg/conversion/real-to-int1.C: New test.
++
++2021-04-09  Marek Polacek  <polacek@redhat.com>
++
++	Backported from master:
++	2021-04-09  Marek Polacek  <polacek@redhat.com>
++
++	PR c++/99806
++	* g++.dg/concepts/abbrev10.C: New test.
++	* g++.dg/concepts/abbrev11.C: New test.
++
++2021-04-09  Marek Polacek  <polacek@redhat.com>
++
++	Backported from master:
++	2021-04-03  Marek Polacek  <polacek@redhat.com>
++
++	PR c++/91416
++	* g++.dg/other/gc7.C: New test.
++
++2021-04-09  Marek Polacek  <polacek@redhat.com>
++
++	Backported from master:
++	2021-04-01  Marek Polacek  <polacek@redhat.com>
++
++	PR c++/99831
++	* g++.dg/other/gc6.C: New test.
++
++2021-04-09  Marek Polacek  <polacek@redhat.com>
++
++	Backported from master:
++	2021-03-25  Marek Polacek  <polacek@redhat.com>
++
++	PR c++/99331
++	* g++.dg/warn/Wconversion5.C: New test.
++
++2021-04-09  Marek Polacek  <polacek@redhat.com>
++
++	DR 1312
++	PR c++/99176
++	* g++.dg/cpp0x/constexpr-nullptr-2.C: Adjust dg-error.
++	* g++.dg/cpp0x/constexpr-cast2.C: New test.
++	* g++.dg/cpp0x/constexpr-cast3.C: New test.
++
++2021-04-09  Marek Polacek  <polacek@redhat.com>
++
++	Backported from master:
++	2021-03-05  Marek Polacek  <polacek@redhat.com>
++
++	PR c++/99120
++	* g++.dg/warn/Wshadow-17.C: New test.
++
++2021-04-09  Marek Polacek  <polacek@redhat.com>
++
++	Backported from master:
++	2021-03-05  Marek Polacek  <polacek@redhat.com>
++
++	PR c++/99374
++	* g++.dg/cpp1z/noexcept-type23.C: New test.
++
++2021-04-09  Marek Polacek  <polacek@redhat.com>
++
++	Backported from master:
++	2021-02-05  Marek Polacek  <polacek@redhat.com>
++
++	PR c++/98947
++	* g++.dg/cpp2a/volatile5.C: New test.
++
++2021-04-09  Marek Polacek  <polacek@redhat.com>
++
++	PR c++/97966
++	* g++.dg/cpp0x/noexcept63.C: New test.
++
++2021-04-09  Marek Polacek  <polacek@redhat.com>
++
++	Backported from master:
++	2021-01-19  Marek Polacek  <polacek@redhat.com>
++
++	PR c++/98333
++	* g++.dg/cpp0x/noexcept62.C: New test.
++
+ 2021-04-08  Release Manager
+ 
+ 	* GCC 10.3.0 released.
+diff --git a/gcc/testsuite/g++.dg/concepts/abbrev10.C b/gcc/testsuite/g++.dg/concepts/abbrev10.C
+new file mode 100644
+index 00000000000..b611346e926
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/concepts/abbrev10.C
+@@ -0,0 +1,18 @@
++// PR c++/99806
++// { dg-do compile { target c++14 } }
++// { dg-additional-options "-fconcepts" }
++
++struct S {
++  void f(auto, auto, int = 3);
++  void f2(auto, auto, int = 3) { }
++  template<typename T> static T g(T, auto, int = 3);
++};
++
++void
++g ()
++{
++  S::g(1, 2);
++  S s;
++  s.f(1, 2);
++  s.f2(1, 2);
++}
+diff --git a/gcc/testsuite/g++.dg/concepts/abbrev11.C b/gcc/testsuite/g++.dg/concepts/abbrev11.C
+new file mode 100644
+index 00000000000..ddb479313df
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/concepts/abbrev11.C
+@@ -0,0 +1,10 @@
++// PR c++/99806
++// { dg-do compile { target c++14 } }
++// { dg-additional-options "-fconcepts" }
++
++template <typename T> concept C = requires (T a) { a.f(0); };
++struct S {
++  void f(auto) noexcept(B);
++  static constexpr bool B = true;
++};
++static_assert(C<S>, "");
+diff --git a/gcc/testsuite/g++.dg/conversion/real-to-int1.C b/gcc/testsuite/g++.dg/conversion/real-to-int1.C
+new file mode 100644
+index 00000000000..f7b990b3f4b
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/conversion/real-to-int1.C
+@@ -0,0 +1,17 @@
++// PR c++/97973
++
++void (*foo[1])(const int &);
++void (*foo2[1])(const double &);
++
++template<typename>
++void f ()
++{
++  (foo[0])(1.1);
++  (foo2[0])(1);
++}
++
++void
++g ()
++{
++  f<char> ();
++}
+diff --git a/gcc/testsuite/g++.dg/cpp0x/constexpr-cast2.C b/gcc/testsuite/g++.dg/cpp0x/constexpr-cast2.C
+new file mode 100644
+index 00000000000..7c37f6a3f5a
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp0x/constexpr-cast2.C
+@@ -0,0 +1,16 @@
++// DR 1312 - Simulated reinterpret_cast in constant expressions.
++// PR c++/99176
++// { dg-do compile { target c++11 } }
++
++static int i;
++constexpr void *vp0 = nullptr;
++constexpr void *vpi = &i;
++constexpr int *p1 = (int *) vp0; // { dg-error "cast from .void\\*. is not allowed" }
++constexpr int *p2 = (int *) vpi; // { dg-error "cast from .void\\*. is not allowed" "integer_zerop" { xfail *-*-* } }
++constexpr int *p3 = static_cast<int *>(vp0); // { dg-error "cast from .void\\*. is not allowed" }
++constexpr int *p4 = static_cast<int *>(vpi); // { dg-error "cast from .void\\*. is not allowed" "integer_zerop" { xfail *-*-* } }
++constexpr void *p5 = vp0;
++constexpr void *p6 = vpi;
++
++constexpr int *pi = &i;
++constexpr bool b = ((int *)(void *) pi == pi); // { dg-error "cast from .void\\*. is not allowed" "integer_zerop" { xfail *-*-* } }
+diff --git a/gcc/testsuite/g++.dg/cpp0x/constexpr-cast3.C b/gcc/testsuite/g++.dg/cpp0x/constexpr-cast3.C
+new file mode 100644
+index 00000000000..a330a99f7de
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp0x/constexpr-cast3.C
+@@ -0,0 +1,14 @@
++// PR c++/99176
++// { dg-do compile { target c++11 } }
++
++constexpr const int *p = nullptr;
++constexpr int *q1 = const_cast<int*>(p);
++constexpr int *q2 = (int *)(const int *) nullptr;
++
++struct B { };
++struct D : B { };
++constexpr B *q3 = static_cast<B*>(nullptr);
++constexpr D *pd = nullptr;
++constexpr B *pb = nullptr;
++constexpr B *q4 = static_cast<B*>(pd);
++constexpr D *q5 = static_cast<D*>(pb);
+diff --git a/gcc/testsuite/g++.dg/cpp0x/constexpr-nullptr-2.C b/gcc/testsuite/g++.dg/cpp0x/constexpr-nullptr-2.C
+index afb4b37be5a..92f3bbdc0a6 100644
+--- a/gcc/testsuite/g++.dg/cpp0x/constexpr-nullptr-2.C
++++ b/gcc/testsuite/g++.dg/cpp0x/constexpr-nullptr-2.C
+@@ -163,7 +163,7 @@ constexpr const void *pv2 = pv0;
+ constexpr void *pv3 = pv2;      // { dg-error "invalid conversion|not a constant expression" }
+ constexpr const void *pv4 = pv2;
+ 
+-constexpr X *px4 = pv0;	 // { dg-error "invalid conversion|not a constant expression" }
++constexpr X *px4 = pv0;	 // { dg-error "cast from|invalid conversion|not a constant expression" }
+ 
+ }
+ 
+@@ -226,7 +226,7 @@ constexpr A *pa3 = pd0;		   // { dg-error "ambiguous base" }
+ constexpr A *pa4 = static_cast<A*>(pd0);  // { dg-error "ambiguous base" }
+ 
+ constexpr B *pb1 = pa0;		   // { dg-error "invalid conversion|not a constant expression" }
+-constexpr B *pb2 = static_cast<B*>(pa0);  // { dg-error "not a constant expression" }
++constexpr B *pb2 = static_cast<B*>(pa0);
+ 
+ constexpr C *pc1 = pa0;		   // { dg-error "invalid conversion|not a constant expression" }
+ constexpr D *pd1 = pa0;		   // { dg-error "ambiguous base|invalid conversion" }
+diff --git a/gcc/testsuite/g++.dg/cpp0x/noexcept62.C b/gcc/testsuite/g++.dg/cpp0x/noexcept62.C
+new file mode 100644
+index 00000000000..53606c79142
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp0x/noexcept62.C
+@@ -0,0 +1,10 @@
++// PR c++/98333
++// { dg-do compile { target c++11 } }
++
++struct T {
++  template <bool N>
++  struct S {
++    S () noexcept (N) {}
++  };
++  int a = __has_nothrow_constructor (S<true>);
++};
+diff --git a/gcc/testsuite/g++.dg/cpp0x/noexcept63.C b/gcc/testsuite/g++.dg/cpp0x/noexcept63.C
+new file mode 100644
+index 00000000000..cf048f56c2a
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp0x/noexcept63.C
+@@ -0,0 +1,63 @@
++// PR c++/97966
++// { dg-do compile { target c++11 } }
++
++template <int>
++struct S1 {
++  __attribute__((used)) S1() noexcept(noexcept(this->foo())) { }
++  void foo();
++};
++
++template <int>
++struct S2 {
++  __attribute__((used)) void bar() noexcept(noexcept(this->foo())) { }
++  void foo();
++};
++
++template <int>
++struct S3 {
++  void __attribute__((used)) bar() noexcept(noexcept(this->foo())) { }
++  void foo();
++};
++
++template <int>
++struct S4 {
++  [[gnu::used]] void bar() noexcept(noexcept(this->foo())) { }
++  void foo();
++};
++
++template <int>
++struct S5 {
++  void bar() noexcept(noexcept(this->foo())) __attribute__((used)) { }
++  void foo();
++};
++
++template <int>
++struct S6 {
++  template <int>
++  struct N {
++    [[gnu::used]] void bar() noexcept(noexcept(this->foo())) { }
++    void foo();
++  };
++};
++
++void
++g ()
++{
++  S1<1> s1;
++  S2<1> s2;
++  S3<1> s3;
++  S4<1> s4;
++  S5<1> s5;
++  S6<1>::N<1> n;
++}
++
++// Make sure that we did emit the functions marked with attribute used
++// even though they're not referenced in this TU.  (Well, the S1()
++// constructor is.)
++// { dg-final { scan-assembler "_ZN2S1ILi1EEC1Ev" } }
++// { dg-final { scan-assembler "_ZN2S1ILi1EEC2Ev" } }
++// { dg-final { scan-assembler "_ZN2S2ILi1EE3barEv" } }
++// { dg-final { scan-assembler "_ZN2S3ILi1EE3barEv" } }
++// { dg-final { scan-assembler "_ZN2S4ILi1EE3barEv" } }
++// { dg-final { scan-assembler "_ZN2S5ILi1EE3barEv" } }
++// { dg-final { scan-assembler "_ZN2S6ILi1EE1NILi1EE3barEv" } }
+diff --git a/gcc/testsuite/g++.dg/cpp1z/noexcept-type23.C b/gcc/testsuite/g++.dg/cpp1z/noexcept-type23.C
+new file mode 100644
+index 00000000000..612dd6ceb5e
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp1z/noexcept-type23.C
+@@ -0,0 +1,14 @@
++// PR c++/99374
++// { dg-do compile { target c++17 } }
++
++struct S;
++struct R;
++using F1 = int (S::*)();
++using F2 = int (S::*)() noexcept;
++using F3 = int (R::*)() noexcept;
++using T = S;
++using F4 = int (T::*)() noexcept;
++F1 f21 = F2();
++F1 f41 = F4();
++F2 f12 = F1(); // { dg-error "cannot convert" }
++F1 f31 = F3(); // { dg-error "cannot convert" }
+diff --git a/gcc/testsuite/g++.dg/cpp2a/volatile5.C b/gcc/testsuite/g++.dg/cpp2a/volatile5.C
+new file mode 100644
+index 00000000000..1f9d23845b4
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp2a/volatile5.C
+@@ -0,0 +1,15 @@
++// PR c++/98947
++// { dg-do compile }
++
++volatile int x, y, z;
++
++void
++f (bool b)
++{
++  (b ? x : y) = 1;
++  (b ? x : y) += 1; // { dg-warning "compound assignment" "" { target c++20 } }
++  z = (b ? x : y) = 1; // { dg-warning "using value of simple assignment" "" { target c++20 } }
++  ((z = 2) ? x : y) = 1; // { dg-warning "using value of simple assignment" "" { target c++20 } }
++  (b ? (x = 2) : y) = 1; // { dg-warning "using value of simple assignment" "" { target c++20 } }
++  (b ? x : (y = 5)) = 1; // { dg-warning "using value of simple assignment" "" { target c++20 } }
++}
+diff --git a/gcc/testsuite/g++.dg/other/gc6.C b/gcc/testsuite/g++.dg/other/gc6.C
+new file mode 100644
+index 00000000000..ff45dd313d6
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/other/gc6.C
+@@ -0,0 +1,16 @@
++// PR c++/99831
++// { dg-do compile { target c++20 } }
++// { dg-options "--param ggc-min-heapsize=0 --param ggc-min-expand=0" }
++
++template <int N> struct S {
++  constexpr S(const char (&str)[N]) : value{} { }
++  char value[N];
++};
++template <S> struct string {
++  constexpr bool operator==(const string &) const = default;
++};
++template <S L2> void operator+(string<L2>) {
++  char value[1];
++  S{value};
++}
++static_assert(string<"a">{} == string<"a">{});
+diff --git a/gcc/testsuite/g++.dg/other/gc7.C b/gcc/testsuite/g++.dg/other/gc7.C
+new file mode 100644
+index 00000000000..ab436bac72f
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/other/gc7.C
+@@ -0,0 +1,16 @@
++// PR c++/91416 - GC during late parsing collects live data.
++// { dg-do compile }
++// { dg-options "--param ggc-min-heapsize=0 --param ggc-min-expand=0" }
++
++__attribute__ ((unused)) struct S {
++  S() { }
++} s;
++
++__attribute__ ((unused)) struct X {
++  void fn ()
++  {
++    __attribute__ ((unused)) struct N {
++	N() { }
++    } n;
++  }
++} x;
+diff --git a/gcc/testsuite/g++.dg/warn/Wconversion5.C b/gcc/testsuite/g++.dg/warn/Wconversion5.C
+new file mode 100644
+index 00000000000..f5ae6312bc5
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/warn/Wconversion5.C
+@@ -0,0 +1,19 @@
++// PR c++/99331
++// { dg-do compile { target c++11 } }
++// { dg-options "-Wconversion" }
++// Don't issue -Wconversion warnings for value-dependent expressions.
++
++template <int> struct X {};
++template <signed char> struct Y {};
++template <typename T> X<sizeof(T)> foo();
++template <typename T> X<alignof(T)> foo2();
++template<int I> Y<I> foo3();
++template<int> Y<1024> foo4(); // { dg-error "narrowing conversion" }
++template<int> Y<1u> foo5();
++template<int> X<__INT_MAX__ + 1U> foo6(); // { dg-error "narrowing conversion" }
++
++template <typename T>
++struct S {
++  using t = X<sizeof(T)>;
++  using u = X<alignof(T)>;
++};
+diff --git a/gcc/testsuite/g++.dg/warn/Wshadow-17.C b/gcc/testsuite/g++.dg/warn/Wshadow-17.C
+new file mode 100644
+index 00000000000..0dee397796f
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/warn/Wshadow-17.C
+@@ -0,0 +1,11 @@
++// PR c++/99120
++// { dg-options "-Wshadow" }
++
++struct S {
++  void X();
++
++  template<typename T>
++  void fn () {
++    enum { X };
++  }
++};
+diff --git a/gcc/testsuite/gfortran.dg/coarray/dummy_2.f90 b/gcc/testsuite/gfortran.dg/coarray/dummy_2.f90
+new file mode 100644
+index 00000000000..35263745bb8
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/coarray/dummy_2.f90
+@@ -0,0 +1,26 @@
++! { dg-do compile }
++!
++! PR fortran/99817
++!
++! Contributed by G. Steinmetz
++!
++subroutine s1 (x)
++   character(*) :: x(*)[*]
++end
++
++subroutine s2 (x)
++   character(*), dimension(*), codimension[*] :: x
++   integer :: i
++   i = len(x)
++end
++
++subroutine s3 (x, y)
++   character(*), dimension(:) :: x[*]
++   character(*) :: y
++end
++
++subroutine s4 (x, y, z)
++   character(*), dimension(:) :: x[2, *]
++   character(*), dimension(*) :: y
++   character(*) :: z
++end
+diff --git a/libgomp/ChangeLog b/libgomp/ChangeLog
+index f76d32e398c..8f820af776b 100644
+--- a/libgomp/ChangeLog
++++ b/libgomp/ChangeLog
+@@ -1,3 +1,13 @@
++2021-04-09  Thomas Schwinge  <thomas@codesourcery.com>
++
++	Backported from master:
++	2021-04-09  Thomas Schwinge  <thomas@codesourcery.com>
++
++	PR middle-end/84991
++	PR middle-end/84992
++	PR middle-end/90779
++	* testsuite/libgomp.oacc-c-c++-common/static-variable-1.c: New.
 +
  2021-04-08  Release Manager
  
@@ -512,10 +1576,54 @@ index 00000000000..1d415cdcf76
 +  return 0;
 +}
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
-index fdd63cbff1a..82c0b4a7c94 100644
+index fdd63cbff1a..8c0f50a4241 100644
 --- a/libstdc++-v3/ChangeLog
 +++ b/libstdc++-v3/ChangeLog
-@@ -1,3 +1,219 @@
+@@ -1,3 +1,263 @@
++2021-04-09  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR bootstrap/99983
++	* include/bits/hashtable.h (_Hashtable): Fix noexcept-speciofier
++	on definition to match the one on the declaration.
++
++2021-04-09  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2021-04-09  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/99985
++	* include/bits/hashtable.h (_Hashtable::_S_nothrow_move()): Fix
++	to be a valid constexpr function in C++11.
++	* testsuite/23_containers/unordered_set/cons/99985.cc: New test.
++
++2021-04-09  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2021-04-09  Jonathan Wakely  <jwakely@redhat.com>
++
++	* include/bits/fs_fwd.h: Fix doxygen group command.
++	* include/bits/streambuf_iterator.h: Likewise.
++	* include/std/chrono: Likewise.
++	* include/std/memory: Likewise.
++	* include/std/thread: Likewise.
++	* include/tr1/complex: Likewise.
++
++2021-04-09  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2021-04-08  Jonathan Wakely  <jwakely@redhat.com>
++
++	* include/bits/basic_string.h: Tweak doxygen comment.
++
++2021-04-09  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2021-04-08  Jonathan Wakely  <jwakely@redhat.com>
++
++	* include/bits/random.h: Fix doxygen group commands.
++	* include/bits/regex_constants.h: Likewise.
++	* include/tr1/random.h: Likewise.
++
 +2021-04-08  Jonathan Wakely  <jwakely@redhat.com>
 +
 +	Backported from master:
