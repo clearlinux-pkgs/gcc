@@ -1,8 +1,12 @@
+Eric Botcazou (1):
+      Fix thinko in libcpp preparation patch for modules
+
 François Dumont (2):
       libstdc++: Fix [multi]map/[multi]set move constructors noexcept qualification
       libstdc++: Fix unordered containers move constructors noexcept qualification
 
-GCC Administrator (4):
+GCC Administrator (5):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -604,6 +608,23 @@ index d329c0128ba..c1752fd1894 100644
    return type;
  }
  
+diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
+index aa5932be872..8ab8f4d0125 100644
+--- a/gcc/fortran/ChangeLog
++++ b/gcc/fortran/ChangeLog
+@@ -1,3 +1,12 @@
++2021-04-12  Tobias Burnus  <tobias@codesourcery.com>
++
++	Backported from master:
++	2021-04-09  Tobias Burnus  <tobias@codesourcery.com>
++
++	PR fortran/99817
++	* trans-types.c (gfc_get_function_type): Also generate hidden
++	coarray argument for character arguments.
++
+ 2021-04-08  Release Manager
+ 
+ 	* GCC 10.3.0 released.
 diff --git a/gcc/fortran/trans-types.c b/gcc/fortran/trans-types.c
 index d3fef08b4b9..68d903d47ae 100644
 --- a/gcc/fortran/trans-types.c
@@ -632,10 +653,18 @@ index d3fef08b4b9..68d903d47ae 100644
  	  vec_safe_push (typelist, pvoid_type_node);  /* caf_token.  */
  	  vec_safe_push (typelist, gfc_array_index_type);  /* caf_offset.  */
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 2913065bf31..4cf6c547a7e 100644
+index 2913065bf31..77daafb94e8 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,86 @@
+@@ -1,3 +1,94 @@
++2021-04-12  Tobias Burnus  <tobias@codesourcery.com>
++
++	Backported from master:
++	2021-04-09  Tobias Burnus  <tobias@codesourcery.com>
++
++	PR fortran/99817
++	* gfortran.dg/coarray/dummy_2.f90: New test.
++
 +2021-04-10  Marek Polacek  <polacek@redhat.com>
 +
 +	PR c++/97973
@@ -1093,6 +1122,53 @@ index 00000000000..35263745bb8
 +   character(*), dimension(*) :: y
 +   character(*) :: z
 +end
+diff --git a/libcpp/include/line-map.h b/libcpp/include/line-map.h
+index dbbc13762e3..916cdebcd6a 100644
+--- a/libcpp/include/line-map.h
++++ b/libcpp/include/line-map.h
+@@ -561,7 +561,7 @@ struct GTY((tag ("2"))) line_map_macro : public line_map {
+ #define linemap_assert_fails(EXPR) (! (EXPR))
+ #endif
+ 
+-/* Get whether location LOC is an ad-hoc, ordinary or macro location.  */
++/* Get whether location LOC is an ordinary location.  */
+ 
+ inline bool
+ IS_ORDINARY_LOC (location_t loc)
+@@ -569,18 +569,14 @@ IS_ORDINARY_LOC (location_t loc)
+   return loc < LINE_MAP_MAX_LOCATION;
+ }
+ 
++/* Get whether location LOC is an ad-hoc location.  */
++
+ inline bool
+ IS_ADHOC_LOC (location_t loc)
+ {
+   return loc > MAX_LOCATION_T;
+ }
+ 
+-inline bool
+-IS_MACRO_LOC (location_t loc)
+-{
+-  return !IS_ORDINARY_LOC (loc) && !IS_ADHOC_LOC (loc);
+-}
+-
+ /* Categorize line map kinds.  */
+ 
+ inline bool
+diff --git a/libcpp/line-map.c b/libcpp/line-map.c
+index 8a390d0857b..1dce2292522 100644
+--- a/libcpp/line-map.c
++++ b/libcpp/line-map.c
+@@ -1244,7 +1244,7 @@ linemap_location_from_macro_expansion_p (const class line_maps *set,
+   if (IS_ADHOC_LOC (location))
+     location = get_location_from_adhoc_loc (set, location);
+ 
+-  return IS_MACRO_LOC (location);
++  return location >= LINEMAPS_MACRO_LOWEST_LOCATION (set);
+ }
+ 
+ /* Given two virtual locations *LOC0 and *LOC1, return the first
 diff --git a/libgomp/ChangeLog b/libgomp/ChangeLog
 index f76d32e398c..8f820af776b 100644
 --- a/libgomp/ChangeLog
@@ -1578,10 +1654,33 @@ index 00000000000..1d415cdcf76
 +  return 0;
 +}
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
-index fdd63cbff1a..8c0f50a4241 100644
+index fdd63cbff1a..0913c65a8a9 100644
 --- a/libstdc++-v3/ChangeLog
 +++ b/libstdc++-v3/ChangeLog
-@@ -1,3 +1,263 @@
+@@ -1,3 +1,286 @@
++2021-04-12  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2021-04-12  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/100044
++	* include/std/ranges (__detail::__iterator_sentinel_pair):
++	Remove helper concept.
++	(subrange(_Pr), subrange(Pr, __make_unsigned_like<...>)): Remove
++	deduction guides, as per LWG 3404.
++	* testsuite/std/ranges/subrange/lwg3282_neg.cc: Check that class
++	template argument deduction fails.
++
++2021-04-12  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2020-08-24  Jonathan Wakely  <jwakely@redhat.com>
++
++	* include/bits/iterator_concepts.h (indirectly_readable): Add
++	partial specializations to resolve ambiguities (LWG 3446).
++	* testsuite/24_iterators/associated_types/readable.traits.cc:
++	Check types with both value_type and element_type.
++
 +2021-04-09  Jonathan Wakely  <jwakely@redhat.com>
 +
 +	PR bootstrap/99983
