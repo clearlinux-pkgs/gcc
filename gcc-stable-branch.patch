@@ -6,7 +6,8 @@ François Dumont (2):
       libstdc++: Fix [multi]map/[multi]set move constructors noexcept qualification
       libstdc++: Fix unordered containers move constructors noexcept qualification
 
-GCC Administrator (6):
+GCC Administrator (7):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -57,6 +58,23 @@ Thomas Schwinge (1):
 Tobias Burnus (1):
       Fortran: Fix fndecl with -fcoarray=lib [PR99817]
 
+diff --git a/contrib/ChangeLog b/contrib/ChangeLog
+index cfcc8b12b53..977fcbcf1e8 100644
+--- a/contrib/ChangeLog
++++ b/contrib/ChangeLog
+@@ -1,3 +1,12 @@
++2021-04-14  Martin Liska  <mliska@suse.cz>
++
++	* gcc-changelog/git_commit.py: Sync with master.
++	* gcc-changelog/git_email.py: Likewise.
++	* gcc-changelog/git_update_version.py: Likewise.
++	* gcc-changelog/setup.cfg: Likewise.
++	* gcc-changelog/test_email.py: Likewise.
++	* gcc-changelog/test_patches.txt: Likewise.
++
+ 2021-04-08  Release Manager
+ 
+ 	* GCC 10.3.0 released.
 diff --git a/contrib/gcc-changelog/git_commit.py b/contrib/gcc-changelog/git_commit.py
 index ee1973371be..b28f7deac23 100755
 --- a/contrib/gcc-changelog/git_commit.py
