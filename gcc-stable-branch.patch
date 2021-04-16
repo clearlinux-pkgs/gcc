@@ -6,7 +6,8 @@ François Dumont (2):
       libstdc++: Fix [multi]map/[multi]set move constructors noexcept qualification
       libstdc++: Fix unordered containers move constructors noexcept qualification
 
-GCC Administrator (7):
+GCC Administrator (8):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -51,6 +52,9 @@ Martin Liska (1):
 
 Richard Biener (1):
       Increment BASE-VER after release
+
+Tamar Christina (1):
+      SVE: Fix wrong sve predicate split (PR100048)
 
 Thomas Schwinge (1):
       Add 'libgomp.oacc-c-c++-common/static-variable-1.c' [PR84991, PR84992, PR90779]
@@ -580,6 +584,65 @@ index 7ecf321c250..a2cbaae2326 100644
  /* Post an error message.  MSG is the error message, properly annotated.
     NODE is the node at which to post the error and the node to use for the
     '&' substitution.  */
+diff --git a/gcc/config/aarch64/aarch64-sve.md b/gcc/config/aarch64/aarch64-sve.md
+index d17a7770690..bd51323e57d 100644
+--- a/gcc/config/aarch64/aarch64-sve.md
++++ b/gcc/config/aarch64/aarch64-sve.md
+@@ -8455,6 +8455,20 @@
+   "<perm_insn>\t%0.<Vetype>, %1.<Vetype>, %2.<Vetype>"
+ )
+ 
++;; Special purpose permute used by the predicate generation instructions.
++;; Unlike the normal permute patterns, these instructions operate on VNx16BI
++;; regardless of the element size, so that all input and output bits are
++;; well-defined.  Operand 3 then indicates the size of the permute.
++(define_insn "@aarch64_sve_trn1_conv<mode>"
++  [(set (match_operand:VNx16BI 0 "register_operand" "=Upa")
++	(unspec:VNx16BI [(match_operand:VNx16BI 1 "register_operand" "Upa")
++			 (match_operand:VNx16BI 2 "register_operand" "Upa")
++			 (match_operand:PRED_ALL 3 "aarch64_simd_imm_zero")]
++			UNSPEC_TRN1_CONV))]
++  "TARGET_SVE"
++  "trn1\t%0.<PRED_ALL:Vetype>, %1.<PRED_ALL:Vetype>, %2.<PRED_ALL:Vetype>"
++)
++
+ ;; =========================================================================
+ ;; == Conversions
+ ;; =========================================================================
+diff --git a/gcc/config/aarch64/aarch64.c b/gcc/config/aarch64/aarch64.c
+index 9b400c49ac6..688f6986741 100644
+--- a/gcc/config/aarch64/aarch64.c
++++ b/gcc/config/aarch64/aarch64.c
+@@ -5067,12 +5067,12 @@ aarch64_expand_sve_const_pred_trn (rtx target, rtx_vector_builder &builder,
+ 	}
+     }
+ 
+-  /* Emit the TRN1 itself.  */
++  /* Emit the TRN1 itself.  We emit a TRN that operates on VNx16BI
++     operands but permutes them as though they had mode MODE.  */
+   machine_mode mode = aarch64_sve_pred_mode (permute_size).require ();
+-  target = aarch64_target_reg (target, mode);
+-  emit_insn (gen_aarch64_sve (UNSPEC_TRN1, mode, target,
+-			      gen_lowpart (mode, a),
+-			      gen_lowpart (mode, b)));
++  target = aarch64_target_reg (target, GET_MODE (a));
++  rtx type_reg = CONST0_RTX (mode);
++  emit_insn (gen_aarch64_sve_trn1_conv (mode, target, a, b, type_reg));
+   return target;
+ }
+ 
+diff --git a/gcc/config/aarch64/iterators.md b/gcc/config/aarch64/iterators.md
+index 0a7145281fa..ff5b23d71b1 100644
+--- a/gcc/config/aarch64/iterators.md
++++ b/gcc/config/aarch64/iterators.md
+@@ -633,6 +633,7 @@
+     UNSPEC_UZP2Q	; Used in aarch64-sve.md.
+     UNSPEC_ZIP1Q	; Used in aarch64-sve.md.
+     UNSPEC_ZIP2Q	; Used in aarch64-sve.md.
++    UNSPEC_TRN1_CONV	; Used in aarch64-sve.md.
+     UNSPEC_COND_CMPEQ_WIDE ; Used in aarch64-sve.md.
+     UNSPEC_COND_CMPGE_WIDE ; Used in aarch64-sve.md.
+     UNSPEC_COND_CMPGT_WIDE ; Used in aarch64-sve.md.
 diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
 index b576f9a3678..d8cbfaada9e 100644
 --- a/gcc/cp/ChangeLog
@@ -1599,6 +1662,37 @@ index 00000000000..0dee397796f
 +    enum { X };
 +  }
 +};
+diff --git a/gcc/testsuite/gcc.target/aarch64/sve/pr100048.c b/gcc/testsuite/gcc.target/aarch64/sve/pr100048.c
+new file mode 100644
+index 00000000000..525933863f7
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/sve/pr100048.c
+@@ -0,0 +1,25 @@
++/* { dg-additional-options "-O2 -fno-schedule-insns" } */
++/* { dg-final { check-function-bodies "**" "" "-DCHECK_ASM" } } */
++
++#include "arm_sve.h"
++
++/*
++** foo:
++**        ptrue   (p[0-7])\.d, all
++**        pfalse  (p[0-7])\.b
++**        ptrue   (p[0-7])\.s, all
++**        trn1    (p[0-7])\.d, \2\.d, \3\.d
++**        trn1    \2\.d, \1\.d, \3\.d
++**        faddv   (h[0-31]), \4\, (z[0-31]).h
++**        faddv   (h[0-31]), \2\, \6\.h
++**        str     \5, [x0]
++**        str     \7, [x0, 2]
++**        ret
++*/
++void foo(svfloat16_t in, float16_t *dst) {
++  const svbool_t pg_q0 = svdupq_n_b16(1, 0, 1, 0, 0, 0, 0, 0);
++  const svbool_t pg_f0 = svdupq_n_b16(1, 0, 0, 0, 0, 0, 0, 0);
++  dst[0] = svaddv_f16(pg_f0, in);
++  dst[1] = svaddv_f16(pg_q0, in);
++}
++
 diff --git a/gcc/testsuite/gfortran.dg/coarray/dummy_2.f90 b/gcc/testsuite/gfortran.dg/coarray/dummy_2.f90
 new file mode 100644
 index 00000000000..35263745bb8

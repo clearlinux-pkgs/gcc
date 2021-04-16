@@ -14,7 +14,7 @@
 
 Name     : gcc
 Version  : 10.3.0
-Release  : 1166
+Release  : 1167
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://gcc.gnu.org/pub/gcc/releases/gcc-10.3.0/gcc-10.3.0.tar.xz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.16.1.tar.bz2
