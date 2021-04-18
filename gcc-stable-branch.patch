@@ -6,7 +6,7 @@ François Dumont (2):
       libstdc++: Fix [multi]map/[multi]set move constructors noexcept qualification
       libstdc++: Fix unordered containers move constructors noexcept qualification
 
-GCC Administrator (8):
+GCC Administrator (10):
       Daily bump.
       Daily bump.
       Daily bump.
@@ -15,6 +15,14 @@ GCC Administrator (8):
       Daily bump.
       Daily bump.
       Daily bump.
+      Daily bump.
+      Daily bump.
+
+Hafiz Abid Qadeer (1):
+      [OpenACC] Fix an ICE where a loop with GT condition is collapsed.
+
+Harald Anlauf (1):
+      PR fortran/63797 - Bogus ambiguous reference to 'sqrt'
 
 Jonathan Wakely (15):
       libstdc++: Fix Doxygen warning about ambiguous file name
@@ -443,10 +451,21 @@ index 0719d810258..a9368325816 100644
 -10.3.0
 +10.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 3b1384e707f..29813eb5fc6 100644
+index 3b1384e707f..5fd8c10fe33 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,8 @@
+@@ -1,3 +1,19 @@
++2021-04-16  Tamar Christina  <tamar.christina@arm.com>
++
++	Backported from master:
++	2021-04-16  Tamar Christina  <tamar.christina@arm.com>
++
++	PR target/100048
++	* config/aarch64/aarch64-sve.md (@aarch64_sve_trn1_conv<mode>): New.
++	* config/aarch64/aarch64.c (aarch64_expand_sve_const_pred_trn): Use new
++	TRN optab.
++	* config/aarch64/iterators.md (UNSPEC_TRN1_CONV): New.
++
 +2021-04-08  Richard Biener  <rguenther@suse.de>
 +
 +	PR lto/99898
@@ -1197,6 +1216,28 @@ index aa5932be872..8ab8f4d0125 100644
  2021-04-08  Release Manager
  
  	* GCC 10.3.0 released.
+diff --git a/gcc/fortran/module.c b/gcc/fortran/module.c
+index 9a5b1cb7625..0c14f2a8105 100644
+--- a/gcc/fortran/module.c
++++ b/gcc/fortran/module.c
+@@ -6078,6 +6078,17 @@ write_symtree (gfc_symtree *st)
+   if (check_unique_name (st->name))
+     return;
+ 
++  /* From F2003 onwards, intrinsic procedures are no longer subject to
++     the restriction, "that an elemental intrinsic function here be of
++     type integer or character and each argument must be an initialization
++     expr of type integer or character" is lifted so that intrinsic
++     procedures can be over-ridden. This requires that the intrinsic
++     symbol not appear in the module file, thereby preventing ambiguity
++     when USEd.  */
++  if (strcmp (sym->module, "(intrinsic)") == 0
++      && (gfc_option.allow_std & GFC_STD_F2003))
++    return;
++
+   p = find_pointer (sym);
+   if (p == NULL)
+     gfc_internal_error ("write_symtree(): Symbol not written");
 diff --git a/gcc/fortran/trans-types.c b/gcc/fortran/trans-types.c
 index d3fef08b4b9..68d903d47ae 100644
 --- a/gcc/fortran/trans-types.c
@@ -1224,11 +1265,32 @@ index d3fef08b4b9..68d903d47ae 100644
  	{
  	  vec_safe_push (typelist, pvoid_type_node);  /* caf_token.  */
  	  vec_safe_push (typelist, gfc_array_index_type);  /* caf_offset.  */
+diff --git a/gcc/omp-expand.c b/gcc/omp-expand.c
+index 90df5c90547..b73fcf0b0a2 100644
+--- a/gcc/omp-expand.c
++++ b/gcc/omp-expand.c
+@@ -1569,7 +1569,7 @@ expand_oacc_collapse_init (const struct omp_for_data *fd,
+       tree diff_type = iter_type;
+       tree plus_type = iter_type;
+ 
+-      gcc_assert (loop->cond_code == fd->loop.cond_code);
++      gcc_assert (loop->cond_code == LT_EXPR || loop->cond_code == GT_EXPR);
+ 
+       if (POINTER_TYPE_P (iter_type))
+ 	plus_type = sizetype;
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 2913065bf31..77daafb94e8 100644
+index 2913065bf31..91b7fa8dd33 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,94 @@
+@@ -1,3 +1,102 @@
++2021-04-16  Tamar Christina  <tamar.christina@arm.com>
++
++	Backported from master:
++	2021-04-16  Tamar Christina  <tamar.christina@arm.com>
++
++	PR target/100048
++	* gcc.target/aarch64/sve/pr100048.c: New test.
++
 +2021-04-12  Tobias Burnus  <tobias@codesourcery.com>
 +
 +	Backported from master:
@@ -1323,6 +1385,68 @@ index 2913065bf31..77daafb94e8 100644
  2021-04-08  Release Manager
  
  	* GCC 10.3.0 released.
+diff --git a/gcc/testsuite/c-c++-common/goacc/collapse-2.c b/gcc/testsuite/c-c++-common/goacc/collapse-2.c
+new file mode 100644
+index 00000000000..e46028cd5c4
+--- /dev/null
++++ b/gcc/testsuite/c-c++-common/goacc/collapse-2.c
+@@ -0,0 +1,56 @@
++/* Test for ICE as reported in PR98088.  */
++
++int i, j;
++
++void
++f1 (void)
++{
++  #pragma acc parallel
++  #pragma acc loop collapse (2)
++  for (i = 5; i > 5; i--)
++	for (j = 5; j > 0; j--)
++	  ;
++}
++
++void
++f2 (void)
++{
++  #pragma acc parallel
++  #pragma acc loop collapse (2)
++  for (i = 0; i < 5; i++)
++	for (j = 5; j > 0; j--)
++	  ;
++}
++
++void
++f3 (void)
++{
++  #pragma acc parallel
++  #pragma acc loop collapse (2)
++  for (i = 5; i >= 0; i--)
++	for (j = 5; j >= 0; j--)
++	  ;
++}
++
++void f4 ()
++{
++  #pragma acc parallel loop tile(2, 3)
++  for (int i = 0; i > 8; i++)
++    for (int j = 0; j > 8; j++);
++}
++
++void f5 ()
++{
++  #pragma acc parallel loop tile(2, 3)
++  for (int i = 0; i > 8; i++)
++    for (long j = 0; j > 8; j++);
++}
++
++void
++f6 (int a[32][32])
++{
++  #pragma acc parallel loop collapse(2)
++  for (int i = 16; i > 8; i--)
++    for (int j = 16; j > 8; j--)
++      a[i][j] = i + j;
++}
 diff --git a/gcc/testsuite/g++.dg/concepts/abbrev10.C b/gcc/testsuite/g++.dg/concepts/abbrev10.C
 new file mode 100644
 index 00000000000..b611346e926
@@ -1725,6 +1849,72 @@ index 00000000000..35263745bb8
 +   character(*), dimension(*) :: y
 +   character(*) :: z
 +end
+diff --git a/gcc/testsuite/gfortran.dg/pr63797.f90 b/gcc/testsuite/gfortran.dg/pr63797.f90
+new file mode 100644
+index 00000000000..1131e8167b1
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr63797.f90
+@@ -0,0 +1,60 @@
++! { dg-do compile }
++! PR63797 - Bogus ambiguous reference to 'sqrt'
++
++module mod1
++  implicit none
++  real, parameter :: z = sqrt (0.0)
++  real            :: w = sqrt (1.0)
++  interface
++     pure real function sqrt_ifc (x)
++       real, intent(in) :: x
++     end function sqrt_ifc
++  end interface
++contains
++  pure function myroot () result (f)
++    procedure(sqrt_ifc), pointer :: f
++    intrinsic :: sqrt
++    f => sqrt
++  end function myroot
++end module mod1
++
++module mod2
++  implicit none
++  type t
++     real :: a = 0.
++  end type
++  interface sqrt
++     module procedure sqrt
++  end interface
++contains
++  elemental function sqrt (a)
++    type(t), intent(in) :: a
++    type(t)             :: sqrt
++    sqrt% a = a% a
++  end function sqrt
++end module mod2
++
++module mod3
++  implicit none
++  abstract interface
++     function real_func (x)
++       real              :: real_func
++       real, intent (in) :: x
++     end function real_func
++  end interface
++  intrinsic :: sqrt
++  procedure(real_func), pointer :: real_root => sqrt
++end module mod3
++
++program test
++  use mod1
++  use mod2
++  use mod3
++  implicit none
++  type(t) :: x, y
++  procedure(sqrt_ifc), pointer :: root
++  root => myroot ()
++  y    = sqrt (x)
++  y% a = sqrt (x% a) + z - w + root (x% a)
++  y% a = real_root (x% a)
++end program test
 diff --git a/libcpp/ChangeLog b/libcpp/ChangeLog
 index 0d1120a6dd9..34065338294 100644
 --- a/libcpp/ChangeLog
@@ -1804,6 +1994,87 @@ index f76d32e398c..8f820af776b 100644
  2021-04-08  Release Manager
  
  	* GCC 10.3.0 released.
+diff --git a/libgomp/testsuite/libgomp.oacc-c-c++-common/collapse-2.c b/libgomp/testsuite/libgomp.oacc-c-c++-common/collapse-2.c
+index 1ea0a6b846d..7a8cfd2f3d4 100644
+--- a/libgomp/testsuite/libgomp.oacc-c-c++-common/collapse-2.c
++++ b/libgomp/testsuite/libgomp.oacc-c-c++-common/collapse-2.c
+@@ -5,7 +5,7 @@
+ int
+ main (void)
+ {
+-  int i, j, k, l = 0, f = 0, x = 0;
++  int i, j, k, l = 0, f = 0, x = 0, l2 = 0;
+   int m1 = 4, m2 = -5, m3 = 17;
+ 
+ #pragma acc parallel
+@@ -20,6 +20,19 @@ main (void)
+ 	    }
+ 	}
+ 
++  /*  Test loop with > condition.  */
++#pragma acc parallel
++  #pragma acc loop seq collapse(3) reduction(+:l2)
++    for (i = -2; i < m1; i++)
++      for (j = -3; j > (m2 - 1); j--)
++	{
++	  for (k = 13; k < m3; k++)
++	    {
++	      if ((i + 2) * 12 + (j + 5) * 4 + (k - 13) !=  9 + f++)
++		l2++;
++	    }
++	}
++
+     for (i = -2; i < m1; i++)
+       for (j = m2; j < -2; j++)
+ 	{
+@@ -30,7 +43,7 @@ main (void)
+ 	    }
+ 	}
+ 
+-  if (l != x)
++  if (l != x || l2 != x)
+     abort ();
+ 
+   return 0;
+diff --git a/libgomp/testsuite/libgomp.oacc-c-c++-common/collapse-3.c b/libgomp/testsuite/libgomp.oacc-c-c++-common/collapse-3.c
+index 680042892e4..50f538d0a32 100644
+--- a/libgomp/testsuite/libgomp.oacc-c-c++-common/collapse-3.c
++++ b/libgomp/testsuite/libgomp.oacc-c-c++-common/collapse-3.c
+@@ -7,7 +7,7 @@
+ int
+ main (void)
+ {
+-  int i2, l = 0, r = 0;
++  int i2, l = 0, r = 0, l2 = 0;
+   int a[3][3][3];
+ 
+   memset (a, '\0', sizeof (a));
+@@ -27,13 +27,24 @@ main (void)
+ 		l += 1;
+     }
+ 
++  /*  Test loop with >= condition.  */
++#pragma acc parallel
++    {
++      #pragma acc loop collapse(2) reduction(|:l2)
++	for (i2 = 0; i2 < 2; i2++)
++	  for (int j = 1; j >= 0; j--)
++	    for (int k = 0; k < 2; k++)
++	      if (a[i2][j][k] != i2 + j * 4 + k * 16)
++		l2 += 1;
++    }
++
+     for (i2 = 0; i2 < 2; i2++)
+       for (int j = 0; j < 2; j++)
+ 	for (int k = 0; k < 2; k++)
+ 	  if (a[i2][j][k] != i2 + j * 4 + k * 16)
+ 	    r += 1;
+ 
+-  if (l != r)
++  if (l != r || l2 != r)
+     abort ();
+   return 0;
+ }
 diff --git a/libgomp/testsuite/libgomp.oacc-c-c++-common/static-variable-1.c b/libgomp/testsuite/libgomp.oacc-c-c++-common/static-variable-1.c
 new file mode 100644
 index 00000000000..1d415cdcf76
