@@ -1,12 +1,15 @@
-Eric Botcazou (2):
+Eric Botcazou (3):
       Fix thinko in libcpp preparation patch for modules
       Further increase the limit on the size of accepted Ada files
+      Fix another -freorder-blocks-and-partition glitch with Windows SEH
 
-François Dumont (2):
+François Dumont (3):
       libstdc++: Fix [multi]map/[multi]set move constructors noexcept qualification
       libstdc++: Fix unordered containers move constructors noexcept qualification
+      libstdc++: [_GLIBCXX_DEBUG] Fix management of __dp_sign_max_size [PR 99402]
 
-GCC Administrator (10):
+GCC Administrator (11):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -24,7 +27,7 @@ Hafiz Abid Qadeer (1):
 Harald Anlauf (1):
       PR fortran/63797 - Bogus ambiguous reference to 'sqrt'
 
-Jonathan Wakely (15):
+Jonathan Wakely (16):
       libstdc++: Fix Doxygen warning about ambiguous file name
       maintainer-scripts: Disable multilib when generating libstdc++ docs
       libstdc++: Fix doxygen markup for group close commands
@@ -40,6 +43,7 @@ Jonathan Wakely (15):
       libstdc++: Fix std::indirectly_readable ambiguity [LWG 3446]
       libstdc++: Implement LWG 3404 for C++20 subrange [PR 100044]
       libstdc++: Fix <bit> to work freestanding [PR 100060]
+      libstdc++: Fix declarations of memalign etc. for freestanding [PR 97570]
 
 Marek Polacek (12):
       c++: ICE when late parsing noexcept/NSDMI [PR98333]
@@ -67,8 +71,9 @@ Tamar Christina (1):
 Thomas Schwinge (1):
       Add 'libgomp.oacc-c-c++-common/static-variable-1.c' [PR84991, PR84992, PR90779]
 
-Tobias Burnus (1):
+Tobias Burnus (2):
       Fortran: Fix fndecl with -fcoarray=lib [PR99817]
+      OpenACC: Fix integer-type issue with collapse/tile [PR97880]
 
 diff --git a/contrib/ChangeLog b/contrib/ChangeLog
 index cfcc8b12b53..977fcbcf1e8 100644
@@ -451,10 +456,19 @@ index 0719d810258..a9368325816 100644
 -10.3.0
 +10.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 3b1384e707f..5fd8c10fe33 100644
+index 3b1384e707f..15d41f05ec9 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,19 @@
+@@ -1,3 +1,28 @@
++2021-04-18  Hafiz Abid Qadeer  <abidh@codesourcery.com>
++
++	Backported from master:
++	2021-04-11  Hafiz Abid Qadeer  <abidh@codesourcery.com>
++
++	PR middle-end/98088
++	* omp-expand.c (expand_oacc_collapse_init): Update condition in
++	a gcc_assert.
++
 +2021-04-16  Tamar Christina  <tamar.christina@arm.com>
 +
 +	Backported from master:
@@ -662,6 +676,43 @@ index 0a7145281fa..ff5b23d71b1 100644
      UNSPEC_COND_CMPEQ_WIDE ; Used in aarch64-sve.md.
      UNSPEC_COND_CMPGE_WIDE ; Used in aarch64-sve.md.
      UNSPEC_COND_CMPGT_WIDE ; Used in aarch64-sve.md.
+diff --git a/gcc/config/i386/winnt.c b/gcc/config/i386/winnt.c
+index 201f69e74c4..a39d09f06da 100644
+--- a/gcc/config/i386/winnt.c
++++ b/gcc/config/i386/winnt.c
+@@ -921,15 +921,17 @@ i386_pe_seh_cold_init (FILE *f, const char *name)
+ 
+   /* In the normal case, the frame pointer is near the bottom of the frame
+      so we can do the full stack allocation and set it afterwards.  There
+-     is an exception when the function accesses prior frames so, in this
+-     case, we need to pre-allocate a small chunk before setting it.  */
+-  if (crtl->accesses_prior_frames)
+-    alloc_offset = seh->cfa_offset;
+-  else
++     is an exception if the function overflows the SEH maximum frame size
++     or accesses prior frames so, in this case, we need to pre-allocate a
++     small chunk of stack before setting it.  */
++  offset = seh->sp_offset - INCOMING_FRAME_SP_OFFSET;
++  if (offset < SEH_MAX_FRAME_SIZE && !crtl->accesses_prior_frames)
+     alloc_offset = seh->sp_offset;
++  else
++    alloc_offset = MIN (seh->cfa_offset + 240, seh->sp_offset);
+ 
+   offset = alloc_offset - INCOMING_FRAME_SP_OFFSET;
+-  if (offset > 0 && offset < SEH_MAX_FRAME_SIZE)
++  if (offset > 0)
+     fprintf (f, "\t.seh_stackalloc\t" HOST_WIDE_INT_PRINT_DEC "\n", offset);
+ 
+   for (int regno = 0; regno < FIRST_PSEUDO_REGISTER; regno++)
+@@ -958,7 +960,7 @@ i386_pe_seh_cold_init (FILE *f, const char *name)
+       fprintf (f, ", " HOST_WIDE_INT_PRINT_DEC "\n", offset);
+     }
+ 
+-  if (crtl->accesses_prior_frames)
++  if (alloc_offset != seh->sp_offset)
+     {
+       offset = seh->sp_offset - alloc_offset;
+       if (offset > 0 && offset < SEH_MAX_FRAME_SIZE)
 diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
 index b576f9a3678..d8cbfaada9e 100644
 --- a/gcc/cp/ChangeLog
@@ -1200,10 +1251,20 @@ index d329c0128ba..c1752fd1894 100644
  }
  
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index aa5932be872..8ab8f4d0125 100644
+index aa5932be872..39bab1f2b2d 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,12 @@
+@@ -1,3 +1,22 @@
++2021-04-18  Harald Anlauf  <anlauf@gmx.de>
++
++	Backported from master:
++	2021-04-16  Harald Anlauf  <anlauf@gmx.de>
++		    Paul Thomas  <pault@gcc.gnu.org>
++
++	PR fortran/63797
++	* module.c (write_symtree): Do not write interface of intrinsic
++	procedure to module file for F2003 and newer.
++
 +2021-04-12  Tobias Burnus  <tobias@codesourcery.com>
 +
 +	Backported from master:
@@ -1266,11 +1327,25 @@ index d3fef08b4b9..68d903d47ae 100644
  	  vec_safe_push (typelist, pvoid_type_node);  /* caf_token.  */
  	  vec_safe_push (typelist, gfc_array_index_type);  /* caf_offset.  */
 diff --git a/gcc/omp-expand.c b/gcc/omp-expand.c
-index 90df5c90547..b73fcf0b0a2 100644
+index 90df5c90547..af4059cc2ab 100644
 --- a/gcc/omp-expand.c
 +++ b/gcc/omp-expand.c
-@@ -1569,7 +1569,7 @@ expand_oacc_collapse_init (const struct omp_for_data *fd,
-       tree diff_type = iter_type;
+@@ -1548,8 +1548,8 @@ struct oacc_collapse
+ static tree
+ expand_oacc_collapse_init (const struct omp_for_data *fd,
+ 			   gimple_stmt_iterator *gsi,
+-			   oacc_collapse *counts, tree bound_type,
+-			   location_t loc)
++			   oacc_collapse *counts, tree diff_type,
++			   tree bound_type, location_t loc)
+ {
+   tree tiling = fd->tiling;
+   tree total = build_int_cst (bound_type, 1);
+@@ -1566,17 +1566,12 @@ expand_oacc_collapse_init (const struct omp_for_data *fd,
+       const omp_for_data_loop *loop = &fd->loops[ix];
+ 
+       tree iter_type = TREE_TYPE (loop->v);
+-      tree diff_type = iter_type;
        tree plus_type = iter_type;
  
 -      gcc_assert (loop->cond_code == fd->loop.cond_code);
@@ -1278,11 +1353,103 @@ index 90df5c90547..b73fcf0b0a2 100644
  
        if (POINTER_TYPE_P (iter_type))
  	plus_type = sizetype;
+-      if (POINTER_TYPE_P (diff_type) || TYPE_UNSIGNED (diff_type))
+-	diff_type = signed_type_for (diff_type);
+-      if (TYPE_PRECISION (diff_type) < TYPE_PRECISION (integer_type_node))
+-	diff_type = integer_type_node;
+ 
+       if (tiling)
+ 	{
+@@ -1664,7 +1659,8 @@ expand_oacc_collapse_init (const struct omp_for_data *fd,
+ static void
+ expand_oacc_collapse_vars (const struct omp_for_data *fd, bool inner,
+ 			   gimple_stmt_iterator *gsi,
+-			   const oacc_collapse *counts, tree ivar)
++			   const oacc_collapse *counts, tree ivar,
++			   tree diff_type)
+ {
+   tree ivar_type = TREE_TYPE (ivar);
+ 
+@@ -1676,7 +1672,6 @@ expand_oacc_collapse_vars (const struct omp_for_data *fd, bool inner,
+       const oacc_collapse *collapse = &counts[ix];
+       tree v = inner ? loop->v : collapse->outer;
+       tree iter_type = TREE_TYPE (v);
+-      tree diff_type = TREE_TYPE (collapse->step);
+       tree plus_type = iter_type;
+       enum tree_code plus_code = PLUS_EXPR;
+       tree expr;
+@@ -1698,7 +1693,7 @@ expand_oacc_collapse_vars (const struct omp_for_data *fd, bool inner,
+ 	}
+ 
+       expr = fold_build2 (MULT_EXPR, diff_type, fold_convert (diff_type, expr),
+-			  collapse->step);
++			  fold_convert (diff_type, collapse->step));
+       expr = fold_build2 (plus_code, iter_type,
+ 			  inner ? collapse->outer : collapse->base,
+ 			  fold_convert (plus_type, expr));
+@@ -6039,6 +6034,12 @@ expand_oacc_for (struct omp_region *region, struct omp_for_data *fd)
+       plus_code = POINTER_PLUS_EXPR;
+       plus_type = sizetype;
+     }
++  for (int ix = fd->collapse; ix--;)
++    {
++      tree diff_type2 = TREE_TYPE (fd->loops[ix].step);
++      if (TYPE_PRECISION (diff_type) < TYPE_PRECISION (diff_type2))
++	diff_type = diff_type2;
++    }
+   if (POINTER_TYPE_P (diff_type) || TYPE_UNSIGNED (diff_type))
+     diff_type = signed_type_for (diff_type);
+   if (TYPE_PRECISION (diff_type) < TYPE_PRECISION (integer_type_node))
+@@ -6122,7 +6123,7 @@ expand_oacc_for (struct omp_region *region, struct omp_for_data *fd)
+     {
+       gcc_assert (!gimple_in_ssa_p (cfun) && up);
+       counts = XALLOCAVEC (struct oacc_collapse, fd->collapse);
+-      tree total = expand_oacc_collapse_init (fd, &gsi, counts,
++      tree total = expand_oacc_collapse_init (fd, &gsi, counts, diff_type,
+ 					      TREE_TYPE (fd->loop.n2), loc);
+ 
+       if (SSA_VAR_P (fd->loop.n2))
+@@ -6284,7 +6285,7 @@ expand_oacc_for (struct omp_region *region, struct omp_for_data *fd)
+       gsi_insert_before (&gsi, ass, GSI_SAME_STMT);
+ 
+       if (fd->collapse > 1 || fd->tiling)
+-	expand_oacc_collapse_vars (fd, false, &gsi, counts, v);
++	expand_oacc_collapse_vars (fd, false, &gsi, counts, v, diff_type);
+ 
+       if (fd->tiling)
+ 	{
+@@ -6354,7 +6355,8 @@ expand_oacc_for (struct omp_region *region, struct omp_for_data *fd)
+ 
+ 	  /* Initialize the user's loop vars.  */
+ 	  gsi = gsi_start_bb (elem_body_bb);
+-	  expand_oacc_collapse_vars (fd, true, &gsi, counts, e_offset);
++	  expand_oacc_collapse_vars (fd, true, &gsi, counts, e_offset,
++				     diff_type);
+ 	}
+     }
+ 
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 2913065bf31..91b7fa8dd33 100644
+index 2913065bf31..57c688431b6 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,102 @@
+@@ -1,3 +1,119 @@
++2021-04-18  Harald Anlauf  <anlauf@gmx.de>
++
++	Backported from master:
++	2021-04-16  Harald Anlauf  <anlauf@gmx.de>
++		    Paul Thomas  <pault@gcc.gnu.org>
++
++	PR fortran/63797
++	* gfortran.dg/pr63797.f90: New test.
++
++2021-04-18  Hafiz Abid Qadeer  <abidh@codesourcery.com>
++
++	Backported from master:
++	2021-04-11  Hafiz Abid Qadeer  <abidh@codesourcery.com>
++
++	PR middle-end/98088
++	* c-c++-common/goacc/collapse-2.c: New.
++
 +2021-04-16  Tamar Christina  <tamar.christina@arm.com>
 +
 +	Backported from master:
@@ -1786,6 +1953,22 @@ index 00000000000..0dee397796f
 +    enum { X };
 +  }
 +};
+diff --git a/gcc/testsuite/gcc.dg/goacc/tile-1.c b/gcc/testsuite/gcc.dg/goacc/tile-1.c
+new file mode 100644
+index 00000000000..6898397ad5e
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/goacc/tile-1.c
+@@ -0,0 +1,10 @@
++/* { dg-do compile } */
++
++/* PR c/97880 */
++
++void f ()
++{
++  #pragma acc parallel loop tile(2, 3)
++  for (int i = 0; i < 8; i++)
++    for (long j = 0; j < 8; j++);
++}
 diff --git a/gcc/testsuite/gcc.target/aarch64/sve/pr100048.c b/gcc/testsuite/gcc.target/aarch64/sve/pr100048.c
 new file mode 100644
 index 00000000000..525933863f7
@@ -1915,6 +2098,50 @@ index 00000000000..1131e8167b1
 +  y% a = sqrt (x% a) + z - w + root (x% a)
 +  y% a = real_root (x% a)
 +end program test
+diff --git a/gcc/testsuite/gnat.dg/opt92.adb b/gcc/testsuite/gnat.dg/opt92.adb
+new file mode 100644
+index 00000000000..f6eb6a034ec
+--- /dev/null
++++ b/gcc/testsuite/gnat.dg/opt92.adb
+@@ -0,0 +1,38 @@
++-- { dg-do compile { target { lp64 || llp64 } } }
++-- { dg-options "-O2 -gnatws" }
++
++procedure Main is
++
++   subtype Int64 is Long_Long_Integer;
++
++   type Arr is array (Int64 range <>) of Boolean;
++
++   Pow : constant := 10;
++
++   procedure Compute (B : in out Arr) is
++      Factor : Int64 := 3;
++      Num    : Int64;
++   begin
++      while Factor <= 10 ** (Pow / 2) loop
++         Num := Factor;
++         while Num < 10 ** Pow loop
++            if B (Num) then
++               Factor := Num;
++               exit;
++            end if;
++            Num := Num + 2;
++         end loop;
++         Num := Factor * Factor;
++         while Num < 10 ** Pow loop
++            B (Num) := False;
++            Num        := Num + Factor * 2;
++         end loop;
++         Factor := Factor + 2;
++      end loop;
++   end;
++
++   B : Arr (1 .. 10 ** Pow) := (others => True);
++
++begin
++   Compute (B);   
++end;
 diff --git a/libcpp/ChangeLog b/libcpp/ChangeLog
 index 0d1120a6dd9..34065338294 100644
 --- a/libcpp/ChangeLog
@@ -1977,10 +2204,20 @@ index 8a390d0857b..1dce2292522 100644
  
  /* Given two virtual locations *LOC0 and *LOC1, return the first
 diff --git a/libgomp/ChangeLog b/libgomp/ChangeLog
-index f76d32e398c..8f820af776b 100644
+index f76d32e398c..9bd9c3d2c56 100644
 --- a/libgomp/ChangeLog
 +++ b/libgomp/ChangeLog
-@@ -1,3 +1,13 @@
+@@ -1,3 +1,23 @@
++2021-04-18  Hafiz Abid Qadeer  <abidh@codesourcery.com>
++
++	Backported from master:
++	2021-04-11  Hafiz Abid Qadeer  <abidh@codesourcery.com>
++
++	PR middle-end/98088
++	* testsuite/libgomp.oacc-c-c++-common/collapse-2.c: Add check
++	for loop with GT/GE condition.
++	* testsuite/libgomp.oacc-c-c++-common/collapse-3.c: Likewise.
++
 +2021-04-09  Thomas Schwinge  <thomas@codesourcery.com>
 +
 +	Backported from master:
@@ -5764,6 +6001,306 @@ index c9c9e9f38b7..c942978557d 100644
  
        // hash policy.
  
+diff --git a/libstdc++-v3/include/debug/helper_functions.h b/libstdc++-v3/include/debug/helper_functions.h
+index 62d5309257f..9e2d206f06c 100644
+--- a/libstdc++-v3/include/debug/helper_functions.h
++++ b/libstdc++-v3/include/debug/helper_functions.h
+@@ -64,7 +64,7 @@ namespace __gnu_debug
+     {
+     private:
+       typedef
+-      typename std::iterator_traits<_Iterator>::difference_type _ItDiffType;
++	typename std::iterator_traits<_Iterator>::difference_type _ItDiffType;
+ 
+       template<typename _DiffType,
+ 	       typename = typename std::__is_void<_DiffType>::__type>
+@@ -287,6 +287,18 @@ namespace __gnu_debug
+     __can_advance(const _Safe_iterator<_Iterator, _Sequence, _Category>&,
+ 		  _Size);
+ 
++  template<typename _InputIterator, typename _Diff>
++    _GLIBCXX_CONSTEXPR
++    inline bool
++    __can_advance(_InputIterator, const std::pair<_Diff, _Distance_precision>&, int)
++    { return true; }
++
++  template<typename _Iterator, typename _Sequence, typename _Category,
++	   typename _Diff>
++    bool
++    __can_advance(const _Safe_iterator<_Iterator, _Sequence, _Category>&,
++		  const std::pair<_Diff, _Distance_precision>&, int);
++
+   /** Helper function to extract base iterator of random access safe iterator
+    *  in order to reduce performance impact of debug mode.  Limited to random
+    *  access iterator because it is the only category for which it is possible
+diff --git a/libstdc++-v3/include/debug/macros.h b/libstdc++-v3/include/debug/macros.h
+index 73fb50d0cbd..1f45f8e0adc 100644
+--- a/libstdc++-v3/include/debug/macros.h
++++ b/libstdc++-v3/include/debug/macros.h
+@@ -104,6 +104,12 @@ _GLIBCXX_DEBUG_VERIFY(__gnu_debug::__can_advance(_First, _Size),	\
+ 		      ._M_iterator(_First, #_First)			\
+ 		      ._M_integer(_Size, #_Size))
+ 
++#define __glibcxx_check_can_increment_dist(_First,_Dist,_Way)		\
++  _GLIBCXX_DEBUG_VERIFY(__gnu_debug::__can_advance(_First, _Dist, _Way), \
++		      _M_message(__gnu_debug::__msg_iter_subscript_oob)	\
++		      ._M_iterator(_First, #_First)			\
++		      ._M_integer(_Way * _Dist.first, #_Dist))
++
+ #define __glibcxx_check_can_increment_range(_First1,_Last1,_First2)	\
+   do									\
+   {									\
+@@ -115,7 +121,7 @@ _GLIBCXX_DEBUG_VERIFY(__gnu_debug::__can_advance(_First, _Size),	\
+ 			._M_iterator(_Last1, #_Last1),			\
+ 			__FILE__,__LINE__,__PRETTY_FUNCTION__);		\
+     _GLIBCXX_DEBUG_VERIFY_COND_AT(					\
+-			__gnu_debug::__can_advance(_First2, __dist.first),\
++			__gnu_debug::__can_advance(_First2, __dist, 1), \
+ 			_M_message(__gnu_debug::__msg_iter_subscript_oob)\
+ 			._M_iterator(_First2, #_First2)			\
+ 			._M_integer(__dist.first),			\
+@@ -133,7 +139,7 @@ _GLIBCXX_DEBUG_VERIFY(__gnu_debug::__can_advance(_First, _Size),	\
+ 			._M_iterator(_Last1, #_Last1),			\
+ 			__FILE__,__LINE__,__PRETTY_FUNCTION__);		\
+     _GLIBCXX_DEBUG_VERIFY_COND_AT(					\
+-			__gnu_debug::__can_advance(_First2, -__dist.first),\
++			__gnu_debug::__can_advance(_First2, __dist, -1), \
+ 			_M_message(__gnu_debug::__msg_iter_subscript_oob)\
+ 			._M_iterator(_First2, #_First2)			\
+ 			._M_integer(-__dist.first),			\
+diff --git a/libstdc++-v3/include/debug/safe_iterator.h b/libstdc++-v3/include/debug/safe_iterator.h
+index 687b844fd75..2f51618dd88 100644
+--- a/libstdc++-v3/include/debug/safe_iterator.h
++++ b/libstdc++-v3/include/debug/safe_iterator.h
+@@ -405,6 +405,12 @@ namespace __gnu_debug
+       bool
+       _M_can_advance(difference_type __n, bool __strict = false) const;
+ 
++      // Can we advance the iterator using @p __dist in @p __way direction.
++      template<typename _Diff>
++	bool
++	_M_can_advance(const std::pair<_Diff, _Distance_precision>& __dist,
++		       int __way) const;
++
+       // Is the iterator range [*this, __rhs) valid?
+       bool
+       _M_valid_range(const _Safe_iterator& __rhs,
+@@ -956,6 +962,14 @@ namespace __gnu_debug
+ 		  _Size __n)
+     { return __it._M_can_advance(__n); }
+ 
++  template<typename _Iterator, typename _Sequence, typename _Category,
++	   typename _Diff>
++    inline bool
++    __can_advance(const _Safe_iterator<_Iterator, _Sequence, _Category>& __it,
++		  const std::pair<_Diff, _Distance_precision>& __dist,
++		  int __way)
++    { return __it._M_can_advance(__dist, __way); }
++
+   template<typename _Iterator, typename _Sequence>
+     _Iterator
+     __base(const _Safe_iterator<_Iterator, _Sequence,
+diff --git a/libstdc++-v3/include/debug/safe_iterator.tcc b/libstdc++-v3/include/debug/safe_iterator.tcc
+index 312a88911ee..79a8ee28d97 100644
+--- a/libstdc++-v3/include/debug/safe_iterator.tcc
++++ b/libstdc++-v3/include/debug/safe_iterator.tcc
+@@ -92,24 +92,32 @@ namespace __gnu_debug
+       if (__n == 0)
+ 	return true;
+ 
++      std::pair<difference_type, _Distance_precision> __dist = __n < 0
++	? _M_get_distance_from_begin()
++	: _M_get_distance_to_end();
++
+       if (__n < 0)
+-	{
+-	  std::pair<difference_type, _Distance_precision> __dist =
+-	    _M_get_distance_from_begin();
+-	  return __dist.second == __dp_exact
+-	    ? __dist.first >= -__n
+-	    : !__strict && __dist.first > 0;
+-	}
+-      else
+-	{
+-	  std::pair<difference_type, _Distance_precision> __dist =
+-	    _M_get_distance_to_end();
+-	  return __dist.second == __dp_exact
+-	    ? __dist.first >= __n
+-	    : !__strict && __dist.first > 0;
+-	}
++	__n = -__n;
++
++      return __dist.second > __dp_sign
++	? __dist.first >= __n
++	: !__strict && __dist.first > 0;
+     }
+ 
++  template<typename _Iterator, typename _Sequence, typename _Category>
++    template<typename _Diff>
++      bool
++      _Safe_iterator<_Iterator, _Sequence, _Category>::
++      _M_can_advance(const std::pair<_Diff, _Distance_precision>& __dist,
++		     int __way) const
++      {
++	return __dist.second == __dp_exact
++	  ? _M_can_advance(__way * __dist.first)
++	  : _M_can_advance(__way * (__dist.first == 0
++				    ? 0
++				    : __dist.first < 0 ? -1 : 1));
++      }
++
+   template<typename _Iterator, typename _Sequence, typename _Category>
+     typename _Distance_traits<_Iterator>::__type
+     _Safe_iterator<_Iterator, _Sequence, _Category>::
+@@ -191,19 +199,12 @@ namespace __gnu_debug
+ 
+       /* Determine iterators order */
+       __dist = _M_get_distance_to(__rhs);
+-      switch (__dist.second)
++      if (__dist.second != __dp_equality)
+ 	{
+-	case __dp_equality:
+-	  if (__dist.first == 0)
+-	    return true;
+-	  break;
+-
+-	case __dp_sign:
+-	case __dp_exact:
+ 	  // If range is not empty first iterator must be dereferenceable.
+-	  if (__dist.first > 0)
+-	    return !__check_dereferenceable || _M_dereferenceable();
+-	  return __dist.first == 0;
++	  return __dist.first == 0
++	    || (__dist.first > 0
++		&& (!__check_dereferenceable || _M_dereferenceable()));
+ 	}
+ 
+       // Assume that this is a valid range; we can't check anything else.
+@@ -224,9 +225,8 @@ namespace __gnu_debug
+       __dist = std::make_pair(__rhs.base() - this->base(), __dp_exact);
+ 
+       // If range is not empty first iterator must be dereferenceable.
+-      if (__dist.first > 0)
+-	return this->_M_dereferenceable();
+-      return __dist.first == 0;
++      return __dist.first == 0
++	|| (__dist.first > 0 && this->_M_dereferenceable());
+     }
+ } // namespace __gnu_debug
+ 
+@@ -244,7 +244,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+     {
+       typename ::__gnu_debug::_Distance_traits<_Ite>::__type __dist;
+       __glibcxx_check_valid_range2(__first, __last, __dist);
+-      __glibcxx_check_can_increment(__result, __dist.first);
++      __glibcxx_check_can_increment_dist(__result, __dist, 1);
+ 
+       if (__dist.second > ::__gnu_debug::__dp_equality)
+ 	return std::__copy_move_a<_IsMove>(__first.base(), __last.base(),
+@@ -261,7 +261,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+     {
+       typename ::__gnu_debug::_Distance_traits<_II>::__type __dist;
+       __glibcxx_check_valid_range2(__first, __last, __dist);
+-      __glibcxx_check_can_increment(__result, __dist.first);
++      __glibcxx_check_can_increment_dist(__result, __dist, 1);
+ 
+       if (__dist.second > ::__gnu_debug::__dp_sign
+ 	  && __result._M_can_advance(__dist.first, true))
+@@ -283,7 +283,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+     {
+       typename ::__gnu_debug::_Distance_traits<_IIte>::__type __dist;
+       __glibcxx_check_valid_range2(__first, __last, __dist);
+-      __glibcxx_check_can_increment(__result, __dist.first);
++      __glibcxx_check_can_increment_dist(__result, __dist, 1);
+ 
+       if (__dist.second > ::__gnu_debug::__dp_equality)
+ 	{
+@@ -311,7 +311,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+     {
+       typename ::__gnu_debug::_Distance_traits<_Ite>::__type __dist;
+       __glibcxx_check_valid_range2(__first, __last, __dist);
+-      __glibcxx_check_can_increment(__result, -__dist.first);
++      __glibcxx_check_can_increment_dist(__result, __dist, -1);
+ 
+       if (__dist.second > ::__gnu_debug::__dp_equality)
+ 	return std::__copy_move_backward_a<_IsMove>(
+@@ -328,7 +328,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+     {
+       typename ::__gnu_debug::_Distance_traits<_II>::__type __dist;
+       __glibcxx_check_valid_range2(__first, __last, __dist);
+-      __glibcxx_check_can_increment(__result, -__dist.first);
++      __glibcxx_check_can_increment_dist(__result, __dist, -1);
+ 
+       if (__dist.second > ::__gnu_debug::__dp_sign
+ 	  && __result._M_can_advance(-__dist.first, true))
+@@ -351,7 +351,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+     {
+       typename ::__gnu_debug::_Distance_traits<_IIte>::__type __dist;
+       __glibcxx_check_valid_range2(__first, __last, __dist);
+-      __glibcxx_check_can_increment(__result, -__dist.first);
++      __glibcxx_check_can_increment_dist(__result, __dist, -1);
+ 
+       if (__dist.second > ::__gnu_debug::__dp_equality)
+ 	{
+@@ -416,7 +416,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+     {
+       typename ::__gnu_debug::_Distance_traits<_II1>::__type __dist;
+       __glibcxx_check_valid_range2(__first1, __last1, __dist);
+-      __glibcxx_check_can_increment(__first2, __dist.first);
++      __glibcxx_check_can_increment_dist(__first2, __dist, 1);
+ 
+       if (__dist.second > ::__gnu_debug::__dp_equality)
+ 	return std::__equal_aux(__first1.base(), __last1.base(), __first2);
+@@ -431,7 +431,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+     {
+       typename ::__gnu_debug::_Distance_traits<_II1>::__type __dist;
+       __glibcxx_check_valid_range2(__first1, __last1, __dist);
+-      __glibcxx_check_can_increment(__first2, __dist.first);
++      __glibcxx_check_can_increment_dist(__first2, __dist, 1);
+ 
+       if (__dist.second > ::__gnu_debug::__dp_sign
+ 	  && __first2._M_can_advance(__dist.first, true))
+@@ -450,7 +450,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+     {
+       typename ::__gnu_debug::_Distance_traits<_II1>::__type __dist;
+       __glibcxx_check_valid_range2(__first1, __last1, __dist);
+-      __glibcxx_check_can_increment(__first2, __dist.first);
++      __glibcxx_check_can_increment_dist(__first2, __dist, 1);
+ 
+       if (__dist.second > ::__gnu_debug::__dp_equality)
+ 	{
+diff --git a/libstdc++-v3/include/debug/stl_iterator.h b/libstdc++-v3/include/debug/stl_iterator.h
+index 6044f3588d9..02adb6e3c06 100644
+--- a/libstdc++-v3/include/debug/stl_iterator.h
++++ b/libstdc++-v3/include/debug/stl_iterator.h
+@@ -52,6 +52,13 @@ namespace __gnu_debug
+     __can_advance(const std::reverse_iterator<_Iterator>& __it, _Size __n)
+     { return __can_advance(__it.base(), -__n); }
+ 
++  template<typename _Iterator, typename _Diff>
++    inline bool
++    __can_advance(const std::reverse_iterator<_Iterator>& __it,
++		  const std::pair<_Diff, _Distance_precision>& __dist,
++		  int __way)
++    { return __can_advance(__it.base(), __dist, -__way); }
++
+   template<typename _Iterator, typename _Sequence>
+     inline std::reverse_iterator<_Iterator>
+     __base(const std::reverse_iterator<_Safe_iterator<
+@@ -101,6 +108,13 @@ namespace __gnu_debug
+     __can_advance(const std::move_iterator<_Iterator>& __it, _Size __n)
+     { return __can_advance(__it.base(), __n); }
+ 
++  template<typename _Iterator, typename _Diff>
++    inline bool
++    __can_advance(const std::move_iterator<_Iterator>& __it,
++		  const std::pair<_Diff, _Distance_precision>& __dist,
++		  int __way)
++    { return __can_advance(__it.base(), __dist, __way); }
++
+   template<typename _Iterator>
+     inline auto
+     __unsafe(const std::move_iterator<_Iterator>& __it)
 diff --git a/libstdc++-v3/include/debug/unordered_map b/libstdc++-v3/include/debug/unordered_map
 index 17fbba3aade..54a8cba1c7b 100644
 --- a/libstdc++-v3/include/debug/unordered_map
@@ -8003,6 +8540,26 @@ index 1a9c603ae49..04302521e2e 100644
  } // namespace std
  
  } // extern "C++"
+diff --git a/libstdc++-v3/libsupc++/new_opa.cc b/libstdc++-v3/libsupc++/new_opa.cc
+index b935936e19a..732fe827cda 100644
+--- a/libstdc++-v3/libsupc++/new_opa.cc
++++ b/libstdc++-v3/libsupc++/new_opa.cc
+@@ -26,7 +26,6 @@
+ #include <bits/c++config.h>
+ #include <stdlib.h>
+ #include <stdint.h>
+-#include <bits/exception_defines.h>
+ #include <bit>
+ #include "new"
+ 
+@@ -44,6 +43,7 @@ using std::new_handler;
+ using std::bad_alloc;
+ 
+ #if ! _GLIBCXX_HOSTED
++using std::size_t;
+ extern "C"
+ {
+ # if _GLIBCXX_HAVE_ALIGNED_ALLOC
 diff --git a/libstdc++-v3/src/c++17/fs_path.cc b/libstdc++-v3/src/c++17/fs_path.cc
 index edfb91fc6c5..812f39fe253 100644
 --- a/libstdc++-v3/src/c++17/fs_path.cc
@@ -9132,6 +9689,47 @@ index b503b0cdc1e..3c9c3927153 100644
 +  using element_type = long;
 +};
 +static_assert( ! has_alias<I4> );
+diff --git a/libstdc++-v3/testsuite/25_algorithms/copy/debug/99402.cc b/libstdc++-v3/testsuite/25_algorithms/copy/debug/99402.cc
+new file mode 100644
+index 00000000000..041d222d079
+--- /dev/null
++++ b/libstdc++-v3/testsuite/25_algorithms/copy/debug/99402.cc
+@@ -0,0 +1,35 @@
++// Copyright (C) 2021 Free Software Foundation, Inc.
++//
++// This file is part of the GNU ISO C++ Library.  This library is free
++// software; you can redistribute it and/or modify it under the
++// terms of the GNU General Public License as published by the
++// Free Software Foundation; either version 3, or (at your option)
++// any later version.
++
++// This library is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++
++// You should have received a copy of the GNU General Public License along
++// with this library; see the file COPYING3.  If not see
++// <http://www.gnu.org/licenses/>.
++
++// { dg-options "-D_GLIBCXX_DEBUG" }
++// { dg-do run }
++
++#include <algorithm>
++#include <set>
++#include <vector>
++
++// PR libstdc++/99402
++
++using namespace std;
++
++int main()
++{
++    // any container with non-random access iterators:
++    const set<int> source = { 0, 1 };
++    vector<int> dest(1);
++    copy(source.begin(), ++source.begin(), dest.begin());
++}
 diff --git a/libstdc++-v3/testsuite/27_io/filesystem/path/decompose/parent_path.cc b/libstdc++-v3/testsuite/27_io/filesystem/path/decompose/parent_path.cc
 index cf3724025f7..16175c4072a 100644
 --- a/libstdc++-v3/testsuite/27_io/filesystem/path/decompose/parent_path.cc
