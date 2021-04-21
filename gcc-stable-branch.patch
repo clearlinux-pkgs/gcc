@@ -8,7 +8,8 @@ François Dumont (3):
       libstdc++: Fix unordered containers move constructors noexcept qualification
       libstdc++: [_GLIBCXX_DEBUG] Fix management of __dp_sign_max_size [PR 99402]
 
-GCC Administrator (12):
+GCC Administrator (13):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -31,7 +32,7 @@ Harald Anlauf (1):
 Iain Buclaw (1):
       d: Fix ICE in when formating a string with '%' or '`' characters (PR98457)
 
-Jakub Jelinek (13):
+Jakub Jelinek (14):
       rs6000: Fix up libgcc ABI when built with --with-long-double-format=ieee [PR97653]
       dse: Fix up hard reg conflict checking in replace_read [PR99863]
       c++: Don't cache constexpr functions which are passed pointers to heap or static vars being constructed [PR99859]
@@ -45,8 +46,9 @@ Jakub Jelinek (13):
       c++: Fix empty base stores in cxx_eval_store_expression [PR100111]
       intl: Add --enable-host-shared support [PR100096]
       sanitizer: Fix asan against glibc 2.34 [PR100114]
+      cprop: Fix -fcompare-debug bug in constprop_register [PR100148]
 
-Jonathan Wakely (16):
+Jonathan Wakely (17):
       libstdc++: Fix Doxygen warning about ambiguous file name
       maintainer-scripts: Disable multilib when generating libstdc++ docs
       libstdc++: Fix doxygen markup for group close commands
@@ -63,6 +65,7 @@ Jonathan Wakely (16):
       libstdc++: Implement LWG 3404 for C++20 subrange [PR 100044]
       libstdc++: Fix <bit> to work freestanding [PR 100060]
       libstdc++: Fix declarations of memalign etc. for freestanding [PR 97570]
+      libstdc++: Disable test for non-gthreads targets [PR 100180]
 
 Marek Polacek (12):
       c++: ICE when late parsing noexcept/NSDMI [PR98333]
@@ -81,8 +84,20 @@ Marek Polacek (12):
 Martin Liska (1):
       Sync gcc-changelog scripts.
 
-Richard Biener (1):
+Patrick Palka (9):
+      c++: Fix deduction with reference NTTP [PR83476]
+      c++: Fix tsubsting CLASS_PLACEHOLDER_TEMPLATE [PR95434]
+      c++: ICE in dependent_type_p with constrained auto [PR97052]
+      libstdc++: Don't initialize from *this inside some views [PR97600]
+      libstdc++: Fix elements_view::operator* and operator[] [LWG 3502]
+      libstdc++: Simplify copy-pasted algorithms in <ranges>
+      libstdc++: Fix split_view::_OuterIter::operator++ [LWG 3505]
+      c++: alias_ctad_tweaks and constrained dguide [PR95486]
+      c++: std::is_constant_evaluated inside constraint [PR97051]
+
+Richard Biener (2):
       Increment BASE-VER after release
+      testsuite/100176 - fix struct-layout-1_generate.c compile
 
 Tamar Christina (1):
       SVE: Fix wrong sve predicate split (PR100048)
@@ -475,10 +490,70 @@ index 0719d810258..a9368325816 100644
 -10.3.0
 +10.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 3b1384e707f..e71bf05954f 100644
+index 3b1384e707f..df397e46454 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,44 @@
+@@ -1,3 +1,104 @@
++2021-04-20  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2021-04-16  Jakub Jelinek  <jakub@redhat.com>
++
++	PR target/99767
++	* tree-vect-loop.c (vect_transform_loop): Don't remove just
++	dead scalar .MASK_LOAD calls, but also dead .COND_* calls - replace
++	them by their last argument.
++
++2021-04-20  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2021-04-12  Jakub Jelinek  <jakub@redhat.com>
++
++	PR rtl-optimization/99905
++	* combine.c (expand_compound_operation): If pos + len > modewidth,
++	perform the right shift by pos in inner_mode and then convert to mode,
++	instead of trying to simplify a shift of rtx with inner_mode by pos
++	as if it was a shift in mode.
++
++2021-04-20  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2021-04-12  Jakub Jelinek  <jakub@redhat.com>
++
++	PR debug/99830
++	* combine.c (simplify_and_const_int_1): Don't optimize varop
++	away if it has side-effects.
++
++2021-04-20  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2021-04-10  Jakub Jelinek  <jakub@redhat.com>
++
++	PR lto/99849
++	* expr.c (expand_expr_addr_expr_1): Test is_global_var rather than
++	just TREE_STATIC on COMPOUND_LITERAL_EXPR_DECLs.
++
++2021-04-20  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2021-04-10  Jakub Jelinek  <jakub@redhat.com>
++
++	PR rtl-optimization/98601
++	* rtlanal.c (rtx_addr_can_trap_p_1): Allow in assert unknown size
++	not just for BLKmode, but also for VOIDmode.  For STRICT_ALIGNMENT
++	unaligned_mems handle VOIDmode like BLKmode.
++
++2021-04-20  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2021-04-03  Jakub Jelinek  <jakub@redhat.com>
++
++	PR rtl-optimization/99863
++	* dse.c (replace_read): Drop regs_live argument.  Instead of
++	regs_live, use store_insn->fixed_regs_live if non-NULL,
++	otherwise punt if insns sequence clobbers or sets any hard
++	registers.
++
 +2021-04-19  Tobias Burnus  <tobias@codesourcery.com>
 +
 +	Backported from master:
@@ -652,6 +727,23 @@ index 7ecf321c250..a2cbaae2326 100644
  /* Post an error message.  MSG is the error message, properly annotated.
     NODE is the node at which to post the error and the node to use for the
     '&' substitution.  */
+diff --git a/gcc/c/ChangeLog b/gcc/c/ChangeLog
+index ecd1741df24..8fd5fa92b1a 100644
+--- a/gcc/c/ChangeLog
++++ b/gcc/c/ChangeLog
+@@ -1,3 +1,12 @@
++2021-04-20  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2021-04-10  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c/99990
++	* c-decl.c (finish_decl): Don't overwrite TREE_TYPE of
++	error_mark_node.
++
+ 2021-04-08  Release Manager
+ 
+ 	* GCC 10.3.0 released.
 diff --git a/gcc/c/c-decl.c b/gcc/c/c-decl.c
 index b3e05be0af8..8e24b522ee4 100644
 --- a/gcc/c/c-decl.c
@@ -796,10 +888,71 @@ index 201f69e74c4..a39d09f06da 100644
        offset = seh->sp_offset - alloc_offset;
        if (offset > 0 && offset < SEH_MAX_FRAME_SIZE)
 diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
-index b576f9a3678..d8cbfaada9e 100644
+index b576f9a3678..3bf6a9a4c1b 100644
 --- a/gcc/cp/ChangeLog
 +++ b/gcc/cp/ChangeLog
-@@ -1,3 +1,110 @@
+@@ -1,3 +1,171 @@
++2021-04-20  Patrick Palka  <ppalka@redhat.com>
++
++	Backported from master:
++	2020-10-08  Patrick Palka  <ppalka@redhat.com>
++
++	PR c++/97052
++	* constraint.cc (build_type_constraint): Temporarily increment
++	processing_template_decl before calling build_concept_check.
++	* pt.c (make_constrained_placeholder_type): Likewise.
++
++2021-04-20  Patrick Palka  <ppalka@redhat.com>
++
++	Backported from master:
++	2021-01-20  Patrick Palka  <ppalka@redhat.com>
++
++	PR c++/95434
++	* pt.c (tsubst) <case TEMPLATE_TYPE_PARM>: If tsubsting
++	CLASS_PLACEHOLDER_TEMPLATE yields a TEMPLATE_TEMPLATE_PARM,
++	adjust to its TEMPLATE_TEMPLATE_PARM_TEMPLATE_DECL.
++
++2021-04-20  Patrick Palka  <ppalka@redhat.com>
++
++	Backported from master:
++	2021-04-14  Patrick Palka  <ppalka@redhat.com>
++
++	PR c++/83476
++	PR c++/99885
++	* pt.c (deducible_expression): Look through implicit
++	INDIRECT_REFs as well.
++
++2021-04-20  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2021-04-16  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/100111
++	* constexpr.c (cxx_eval_store_expression): Don't add CONSTRUCTORs
++	for empty classes into *valp when types don't match even when *valp
++	is NULL.
++
++2021-04-20  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2021-04-16  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/99833
++	* pt.c (extract_locals_r): When handling DECL_EXPR of a structured
++	binding, add to data.internal also all corresponding structured
++	binding decls.
++
++2021-04-20  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2021-04-08  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/99859
++	* constexpr.c (addr_of_non_const_var): New function.
++	(cxx_bind_parameters_in_call): Set *non_constant_args to true
++	even if cp_walk_tree on arg with addr_of_non_const_var callback
++	returns true.
++
 +2021-04-11  Marek Polacek  <polacek@redhat.com>
 +
 +	PR c++/97966
@@ -1169,6 +1322,30 @@ index ad3853940ff..d6fda8b96ee 100644
  	      }
  	    else
  	      {
+diff --git a/gcc/cp/constraint.cc b/gcc/cp/constraint.cc
+index 5f6488e514f..f28239a35d6 100644
+--- a/gcc/cp/constraint.cc
++++ b/gcc/cp/constraint.cc
+@@ -1420,7 +1420,9 @@ tree
+ build_type_constraint (tree decl, tree args, tsubst_flags_t complain)
+ {
+   tree wildcard = build_nt (WILDCARD_DECL);
++  ++processing_template_decl;
+   tree check = build_concept_check (decl, wildcard, args, complain);
++  --processing_template_decl;
+   if (check == error_mark_node)
+     return error_mark_node;
+   return unpack_concept_check (check);
+@@ -2628,7 +2630,8 @@ satisfy_atom (tree t, tree args, subst_info info)
+     result = cxx_constant_value (result);
+   else
+     {
+-      result = maybe_constant_value (result);
++      result = maybe_constant_value (result, NULL_TREE,
++				     /*manifestly_const_eval=*/true);
+       if (!TREE_CONSTANT (result))
+ 	result = error_mark_node;
+     }
 diff --git a/gcc/cp/expr.c b/gcc/cp/expr.c
 index 9b535708c57..6a7569418b1 100644
 --- a/gcc/cp/expr.c
@@ -1342,7 +1519,7 @@ index 1f4a28ff7c0..d486cf5998f 100644
  		       && DECL_INITIAL (decl))
  		/* Add DECL to the queue of NSDMI to be parsed later.  */
 diff --git a/gcc/cp/pt.c b/gcc/cp/pt.c
-index d329c0128ba..1e2dc46641f 100644
+index d329c0128ba..ae396e056c5 100644
 --- a/gcc/cp/pt.c
 +++ b/gcc/cp/pt.c
 @@ -63,7 +63,6 @@ static GTY(()) struct pending_template *last_pending_template;
@@ -1424,6 +1601,76 @@ index d329c0128ba..1e2dc46641f 100644
    else if (tree spec = retrieve_local_specialization (*tp))
      {
        if (data.internal.contains (*tp))
+@@ -15486,6 +15515,8 @@ tsubst (tree t, tree args, tsubst_flags_t complain, tree in_decl)
+ 		    else if (tree pl = CLASS_PLACEHOLDER_TEMPLATE (t))
+ 		      {
+ 			pl = tsubst_copy (pl, args, complain, in_decl);
++			if (TREE_CODE (pl) == TEMPLATE_TEMPLATE_PARM)
++			  pl = TEMPLATE_TEMPLATE_PARM_TEMPLATE_DECL (pl);
+ 			CLASS_PLACEHOLDER_TEMPLATE (r) = pl;
+ 		      }
+ 		  }
+@@ -21670,8 +21701,10 @@ static bool uses_deducible_template_parms (tree type);
+ static bool
+ deducible_expression (tree expr)
+ {
+-  /* Strip implicit conversions.  */
+-  while (CONVERT_EXPR_P (expr) || TREE_CODE (expr) == VIEW_CONVERT_EXPR)
++  /* Strip implicit conversions and implicit INDIRECT_REFs.  */
++  while (CONVERT_EXPR_P (expr)
++	 || TREE_CODE (expr) == VIEW_CONVERT_EXPR
++	 || REFERENCE_REF_P (expr))
+     expr = TREE_OPERAND (expr, 0);
+   return (TREE_CODE (expr) == TEMPLATE_PARM_INDEX);
+ }
+@@ -27964,7 +27997,9 @@ make_constrained_placeholder_type (tree type, tree con, tree args)
+   tree expr = tmpl;
+   if (TREE_CODE (con) == FUNCTION_DECL)
+     expr = ovl_make (tmpl);
++  ++processing_template_decl;
+   expr = build_concept_check (expr, type, args, tf_warning_or_error);
++  --processing_template_decl;
+ 
+   PLACEHOLDER_TYPE_CONSTRAINTS (type) = expr;
+ 
+@@ -28788,7 +28823,10 @@ alias_ctad_tweaks (tree tmpl, tree uguides)
+ 	    }
+ 
+ 	  if (ci)
+-	    set_constraints (fprime, ci);
++	    {
++	      remove_constraints (fprime);
++	      set_constraints (fprime, ci);
++	    }
+ 	}
+       else
+ 	{
+diff --git a/gcc/cprop.c b/gcc/cprop.c
+index 169ca804e33..e084250380c 100644
+--- a/gcc/cprop.c
++++ b/gcc/cprop.c
+@@ -1007,16 +1007,18 @@ static int
+ constprop_register (rtx from, rtx src, rtx_insn *insn)
+ {
+   rtx sset;
++  rtx_insn *next_insn;
+ 
+   /* Check for reg or cc0 setting instructions followed by
+      conditional branch instructions first.  */
+   if ((sset = single_set (insn)) != NULL
+-      && NEXT_INSN (insn)
+-      && any_condjump_p (NEXT_INSN (insn)) && onlyjump_p (NEXT_INSN (insn)))
++      && (next_insn = next_nondebug_insn (insn)) != NULL
++      && any_condjump_p (next_insn)
++      && onlyjump_p (next_insn))
+     {
+       rtx dest = SET_DEST (sset);
+       if ((REG_P (dest) || CC0_P (dest))
+-	  && cprop_jump (BLOCK_FOR_INSN (insn), insn, NEXT_INSN (insn),
++	  && cprop_jump (BLOCK_FOR_INSN (insn), insn, next_insn,
+ 			 from, src))
+ 	return 1;
+     }
 diff --git a/gcc/d/ChangeLog b/gcc/d/ChangeLog
 index 8bc729ae32d..afe5976027b 100644
 --- a/gcc/d/ChangeLog
@@ -1807,10 +2054,120 @@ index 0ebde7622db..e65d06d5bca 100644
        poly_int64 actual_offset = offset;
  
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 2913065bf31..ba467fe2982 100644
+index 2913065bf31..817b05ec730 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,139 @@
+@@ -1,3 +1,249 @@
++2021-04-20  Patrick Palka  <ppalka@redhat.com>
++
++	Backported from master:
++	2020-10-08  Patrick Palka  <ppalka@redhat.com>
++
++	PR c++/97052
++	* g++.dg/cpp2a/concepts-defarg2.C: New test.
++
++2021-04-20  Patrick Palka  <ppalka@redhat.com>
++
++	Backported from master:
++	2021-01-20  Patrick Palka  <ppalka@redhat.com>
++
++	PR c++/95434
++	* g++.dg/cpp2a/lambda-generic9.C: New test.
++
++2021-04-20  Patrick Palka  <ppalka@redhat.com>
++
++	Backported from master:
++	2021-04-14  Patrick Palka  <ppalka@redhat.com>
++
++	PR c++/83476
++	PR c++/99885
++	* g++.dg/cpp1z/class-deduction85.C: New test.
++	* g++.dg/template/ref11.C: New test.
++
++2021-04-20  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2021-04-16  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/100111
++	* g++.dg/cpp0x/constexpr-100111.C: New test.
++
++2021-04-20  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2021-04-16  Jakub Jelinek  <jakub@redhat.com>
++
++	PR target/99767
++	* gcc.target/aarch64/pr99767.c: New test.
++
++2021-04-20  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2021-04-16  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/99833
++	* g++.dg/cpp1z/pr99833.C: New test.
++	* g++.dg/cpp2a/pr99833.C: New test.
++
++2021-04-20  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2021-04-12  Jakub Jelinek  <jakub@redhat.com>
++
++	PR rtl-optimization/99905
++	* gcc.target/i386/pr99905.c: New test.
++
++2021-04-20  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2021-04-12  Jakub Jelinek  <jakub@redhat.com>
++
++	PR debug/99830
++	* gcc.dg/pr99830.c: New test.
++
++2021-04-20  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2021-04-10  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c/99990
++	* gcc.dg/pr99990.c: New test.
++
++2021-04-20  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2021-04-10  Jakub Jelinek  <jakub@redhat.com>
++
++	PR lto/99849
++	* gcc.dg/lto/pr99849_0.c: New test.
++
++2021-04-20  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2021-04-10  Jakub Jelinek  <jakub@redhat.com>
++
++	PR rtl-optimization/98601
++	* gcc.dg/torture/pr98601.c: New test.
++
++2021-04-20  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2021-04-08  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/99859
++	* g++.dg/cpp1y/constexpr-99859-1.C: New test.
++	* g++.dg/cpp1y/constexpr-99859-2.C: New test.
++	* g++.dg/cpp2a/constexpr-new18.C: New test.
++	* g++.dg/cpp2a/constexpr-new19.C: New test.
++
++2021-04-20  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2021-04-03  Jakub Jelinek  <jakub@redhat.com>
++
++	PR rtl-optimization/99863
++	* gcc.target/i386/pr99863.c: New test.
++
 +2021-04-19  Iain Buclaw  <ibuclaw@gdcproject.org>
 +
 +	Backported from master:
@@ -2012,6 +2369,19 @@ index 00000000000..e46028cd5c4
 +    for (int j = 16; j > 8; j--)
 +      a[i][j] = i + j;
 +}
+diff --git a/gcc/testsuite/g++.dg/compat/struct-layout-1_generate.c b/gcc/testsuite/g++.dg/compat/struct-layout-1_generate.c
+index 990e6f439e5..e9ece645cd0 100644
+--- a/gcc/testsuite/g++.dg/compat/struct-layout-1_generate.c
++++ b/gcc/testsuite/g++.dg/compat/struct-layout-1_generate.c
+@@ -983,6 +983,8 @@ subvalues (struct entry *e, char *p, char *letter)
+       if (e[0].len != 0)
+ 	output_FNB ('B', e);
+       return 1;
++    default:
++      return 0;
+     }
+ }
+ 
 diff --git a/gcc/testsuite/g++.dg/concepts/abbrev10.C b/gcc/testsuite/g++.dg/concepts/abbrev10.C
 new file mode 100644
 index 00000000000..b611346e926
@@ -2285,6 +2655,28 @@ index 00000000000..a249f474666
 +
 +constexpr A a = A();
 +static_assert (a.i == 1, "");
+diff --git a/gcc/testsuite/g++.dg/cpp1z/class-deduction85.C b/gcc/testsuite/g++.dg/cpp1z/class-deduction85.C
+new file mode 100644
+index 00000000000..0b22f8eb982
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp1z/class-deduction85.C
+@@ -0,0 +1,16 @@
++// PR c++/99885
++// { dg-do compile { target c++17 } }
++
++template <auto const& A>
++struct Foo {};
++
++template <auto const& A>
++struct Bar {
++    constexpr auto foo() const -> Foo<A> {
++        return {};
++    }
++};
++
++constexpr int a = 1;
++constexpr Bar<a> bar;
++Foo foo = bar.foo(); // <-- CTAD failure
 diff --git a/gcc/testsuite/g++.dg/cpp1z/noexcept-type23.C b/gcc/testsuite/g++.dg/cpp1z/noexcept-type23.C
 new file mode 100644
 index 00000000000..612dd6ceb5e
@@ -2322,6 +2714,42 @@ index 00000000000..f7c995887f8
 +  [](auto d) { if constexpr (auto [a, b]{d}; sizeof (a) > 0) a++; } (S{});
 +}
 +template void foo<S> ();
+diff --git a/gcc/testsuite/g++.dg/cpp2a/class-deduction-alias3.C b/gcc/testsuite/g++.dg/cpp2a/class-deduction-alias3.C
+new file mode 100644
+index 00000000000..318d4c942ce
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp2a/class-deduction-alias3.C
+@@ -0,0 +1,11 @@
++// PR c++/95486
++// { dg-do compile { target c++20 } }
++
++template<class T, class U>
++struct X { X(U) requires __is_same(U, int) {} };
++
++template<class U>
++using Y = X<void, U>;
++
++Y y{1};
++Y z{'a'}; // { dg-error "failed|no match" }
+diff --git a/gcc/testsuite/g++.dg/cpp2a/concepts-defarg2.C b/gcc/testsuite/g++.dg/cpp2a/concepts-defarg2.C
+new file mode 100644
+index 00000000000..a63ca4e133d
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp2a/concepts-defarg2.C
+@@ -0,0 +1,13 @@
++// PR c++/97052
++// { dg-do compile { target c++20 } }
++
++template<typename T, typename U = typename T::type>
++concept C = true;
++
++constexpr bool f(C auto) {
++  return true;
++}
++
++static_assert(f(0));
++
++C auto x = 0;
 diff --git a/gcc/testsuite/g++.dg/cpp2a/constexpr-new18.C b/gcc/testsuite/g++.dg/cpp2a/constexpr-new18.C
 new file mode 100644
 index 00000000000..24b298aafd4
@@ -2422,6 +2850,43 @@ index 00000000000..7a73deed693
 +}
 +
 +static_assert (qux () == 2);
+diff --git a/gcc/testsuite/g++.dg/cpp2a/is-constant-evaluated11.C b/gcc/testsuite/g++.dg/cpp2a/is-constant-evaluated11.C
+new file mode 100644
+index 00000000000..a31867f74fb
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp2a/is-constant-evaluated11.C
+@@ -0,0 +1,16 @@
++// PR c++/97051
++// { dg-do compile { target c++20 } }
++
++namespace std {
++  constexpr inline bool
++  is_constant_evaluated () noexcept
++  {
++    return __builtin_is_constant_evaluated ();
++  }
++}
++
++template<typename>
++  requires (std::is_constant_evaluated())
++constexpr int a = 0;
++
++constexpr int b = a<int>;
+diff --git a/gcc/testsuite/g++.dg/cpp2a/lambda-generic9.C b/gcc/testsuite/g++.dg/cpp2a/lambda-generic9.C
+new file mode 100644
+index 00000000000..043301ba015
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp2a/lambda-generic9.C
+@@ -0,0 +1,9 @@
++// PR c++/95434
++// { dg-do compile { target c++20 } }
++
++template <class>
++void f() {
++  [] <template <class> class U> () { U{0}; };
++}
++
++template void f<int>();
 diff --git a/gcc/testsuite/g++.dg/cpp2a/pr99833.C b/gcc/testsuite/g++.dg/cpp2a/pr99833.C
 new file mode 100644
 index 00000000000..33230535e10
@@ -2467,6 +2932,39 @@ index 00000000000..1f9d23845b4
 +  (b ? (x = 2) : y) = 1; // { dg-warning "using value of simple assignment" "" { target c++20 } }
 +  (b ? x : (y = 5)) = 1; // { dg-warning "using value of simple assignment" "" { target c++20 } }
 +}
+diff --git a/gcc/testsuite/g++.dg/opt/pr100148.C b/gcc/testsuite/g++.dg/opt/pr100148.C
+new file mode 100644
+index 00000000000..d038879b6b8
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/opt/pr100148.C
+@@ -0,0 +1,27 @@
++// PR rtl-optimization/100148
++// { dg-do compile }
++// { dg-options "-O2 -fno-dce -fno-tree-dce -fno-tree-dominator-opts -fno-tree-sink -fcompare-debug" }
++
++int i;
++enum E { } e, ee;
++
++bool
++baz (int)
++{
++  return ee;
++}
++
++bool bar ();
++bool a, b;
++
++void
++foo ()
++{
++  switch (ee)
++    {
++    case 0:
++      e = E (a ? : i);
++    case 1:
++      !(b || baz (0) && bar ());
++    }
++}
 diff --git a/gcc/testsuite/g++.dg/other/gc6.C b/gcc/testsuite/g++.dg/other/gc6.C
 new file mode 100644
 index 00000000000..ff45dd313d6
@@ -2511,6 +3009,21 @@ index 00000000000..ab436bac72f
 +    } n;
 +  }
 +} x;
+diff --git a/gcc/testsuite/g++.dg/template/ref11.C b/gcc/testsuite/g++.dg/template/ref11.C
+new file mode 100644
+index 00000000000..c43c67edf70
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/template/ref11.C
+@@ -0,0 +1,9 @@
++// PR c++/83476
++
++int n;
++template <int& V> struct A {};
++template <int& V> void f(A<V>);
++int main() {
++  A<n> a;
++  f(a);
++}
 diff --git a/gcc/testsuite/g++.dg/warn/Wconversion5.C b/gcc/testsuite/g++.dg/warn/Wconversion5.C
 new file mode 100644
 index 00000000000..f5ae6312bc5
@@ -2553,6 +3066,19 @@ index 00000000000..0dee397796f
 +    enum { X };
 +  }
 +};
+diff --git a/gcc/testsuite/gcc.dg/compat/struct-layout-1_generate.c b/gcc/testsuite/gcc.dg/compat/struct-layout-1_generate.c
+index 75e902cd1f4..35dff89c377 100644
+--- a/gcc/testsuite/gcc.dg/compat/struct-layout-1_generate.c
++++ b/gcc/testsuite/gcc.dg/compat/struct-layout-1_generate.c
+@@ -1280,6 +1280,8 @@ subvalues (struct entry *e, char *p, char *letter)
+       if (e[0].len != 0)
+ 	output_FNB ('B', e);
+       return 1;
++    default:
++      return 0;
+     }
+ }
+ 
 diff --git a/gcc/testsuite/gcc.dg/goacc/tile-1.c b/gcc/testsuite/gcc.dg/goacc/tile-1.c
 new file mode 100644
 index 00000000000..6898397ad5e
@@ -2974,6 +3500,24 @@ index 899b5608745..60d7b74a57e 100644
  	}
      }				/* BBs in loop */
  
+diff --git a/intl/ChangeLog b/intl/ChangeLog
+index e45e393b790..3c50c7bc259 100644
+--- a/intl/ChangeLog
++++ b/intl/ChangeLog
+@@ -1,3 +1,13 @@
++2021-04-20  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2021-04-16  Jakub Jelinek  <jakub@redhat.com>
++
++	PR jit/100096
++	* configure.ac: Add --enable-host-shared support.
++	* Makefile.in: Update copyright.  Add @PICFLAG@ to CFLAGS.
++	* configure: Regenerated.
++
+ 2021-04-08  Release Manager
+ 
+ 	* GCC 10.3.0 released.
 diff --git a/intl/Makefile.in b/intl/Makefile.in
 index 356c8ab9b65..ec8c648b7a9 100644
 --- a/intl/Makefile.in
@@ -3115,6 +3659,25 @@ index 8a390d0857b..1dce2292522 100644
  }
  
  /* Given two virtual locations *LOC0 and *LOC1, return the first
+diff --git a/libgcc/ChangeLog b/libgcc/ChangeLog
+index 1f9de3d5091..f208dfc2042 100644
+--- a/libgcc/ChangeLog
++++ b/libgcc/ChangeLog
+@@ -1,3 +1,14 @@
++2021-04-20  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2021-04-03  Jakub Jelinek  <jakub@redhat.com>
++
++	PR target/97653
++	* config/rs6000/t-linux (IBM128_STATIC_OBJS): Fix spelling, use
++	$(objext) instead of $(object).  Use _floatunditf instead of
++	_floatunsditf.  Add tf <-> ti conversion objects.
++	(IBM128_SHARED_OBJS): Use proper substitution reference syntax.
++
+ 2021-04-08  Release Manager
+ 
+ 	* GCC 10.3.0 released.
 diff --git a/libgcc/config/rs6000/t-linux b/libgcc/config/rs6000/t-linux
 index 72e9c2770a6..500210ddaf2 100644
 --- a/libgcc/config/rs6000/t-linux
@@ -3711,6 +4274,24 @@ index 00000000000..1d415cdcf76
 +
 +  return 0;
 +}
+diff --git a/libsanitizer/ChangeLog b/libsanitizer/ChangeLog
+index ceea82c4f70..fc4371afad5 100644
+--- a/libsanitizer/ChangeLog
++++ b/libsanitizer/ChangeLog
+@@ -1,3 +1,13 @@
++2021-04-20  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2021-04-17  Jakub Jelinek  <jakub@redhat.com>
++
++	PR sanitizer/100114
++	* sanitizer_common/sanitizer_posix_libcdep.cpp: Cherry-pick
++	llvm-project revisions 82150606fb11d28813ae6da1101f5bda638165fe
++	and b93629dd335ffee2fc4b9b619bf86c3f9e6b0023.
++
+ 2021-04-08  Release Manager
+ 
+ 	* GCC 10.3.0 released.
 diff --git a/libsanitizer/sanitizer_common/sanitizer_posix_libcdep.cpp b/libsanitizer/sanitizer_common/sanitizer_posix_libcdep.cpp
 index 304b3a01a08..ac88fbe074e 100644
 --- a/libsanitizer/sanitizer_common/sanitizer_posix_libcdep.cpp
@@ -8850,7 +9431,7 @@ index 9a80adf3a5a..97ff1cee4e6 100644
    // Standard basic_ostream manipulators
  
 diff --git a/libstdc++-v3/include/std/ranges b/libstdc++-v3/include/std/ranges
-index 8e00222c2e8..a8ec806235d 100644
+index 8e00222c2e8..446585f0003 100644
 --- a/libstdc++-v3/include/std/ranges
 +++ b/libstdc++-v3/include/std/ranges
 @@ -222,11 +222,6 @@ namespace ranges
@@ -8882,6 +9463,481 @@ index 8e00222c2e8..a8ec806235d 100644
    template<borrowed_range _Rng>
      subrange(_Rng&&)
        -> subrange<iterator_t<_Rng>, sentinel_t<_Rng>,
+@@ -973,7 +958,7 @@ namespace views
+       {
+ 	if (_M_stream != nullptr)
+ 	  *_M_stream >> _M_object;
+-	return _Iterator{*this};
++	return _Iterator{this};
+       }
+ 
+       constexpr default_sentinel_t
+@@ -994,8 +979,8 @@ namespace views
+ 	_Iterator() = default;
+ 
+ 	constexpr explicit
+-	_Iterator(basic_istream_view& __parent) noexcept
+-	  : _M_parent(std::__addressof(__parent))
++	_Iterator(basic_istream_view* __parent) noexcept
++	  : _M_parent(__parent)
+ 	{ }
+ 
+ 	_Iterator(const _Iterator&) = delete;
+@@ -1292,65 +1277,50 @@ namespace views
+ 
+   } // namespace views
+ 
+-  // XXX: the following algos are copied from ranges_algo.h to avoid a circular
+-  // dependency with that header.
++  // The following simple algos are transcribed from ranges_algo.h to avoid
++  // having to include that entire header.
+   namespace __detail
+   {
+-    template<input_iterator _Iter, sentinel_for<_Iter> _Sent,
+-	     typename _Proj = identity,
+-	     indirect_unary_predicate<projected<_Iter, _Proj>> _Pred>
++    template<typename _Iter, typename _Sent, typename _Tp>
+       constexpr _Iter
+-      find_if(_Iter __first, _Sent __last, _Pred __pred, _Proj __proj = {})
++      find(_Iter __first, _Sent __last, const _Tp& __value)
+       {
+ 	while (__first != __last
+-	    && !(bool)std::__invoke(__pred, std::__invoke(__proj, *__first)))
++	       && !(bool)(*__first == __value))
+ 	  ++__first;
+ 	return __first;
+       }
+ 
+-    template<input_iterator _Iter, sentinel_for<_Iter> _Sent,
+-	     typename _Proj = identity,
+-	     indirect_unary_predicate<projected<_Iter, _Proj>> _Pred>
++    template<typename _Iter, typename _Sent, typename _Pred>
+       constexpr _Iter
+-      find_if_not(_Iter __first, _Sent __last, _Pred __pred, _Proj __proj = {})
++      find_if(_Iter __first, _Sent __last, _Pred __pred)
+       {
+ 	while (__first != __last
+-	    && (bool)std::__invoke(__pred, std::__invoke(__proj, *__first)))
++	       && !(bool)std::__invoke(__pred, *__first))
+ 	  ++__first;
+ 	return __first;
+       }
+ 
+-    template<typename _Tp, typename _Proj = identity,
+-	     indirect_strict_weak_order<projected<const _Tp*, _Proj>>
+-	       _Comp = ranges::less>
+-      constexpr const _Tp&
+-      min(const _Tp& __a, const _Tp& __b, _Comp __comp = {}, _Proj __proj = {})
++    template<typename _Iter, typename _Sent, typename _Pred>
++      constexpr _Iter
++      find_if_not(_Iter __first, _Sent __last, _Pred __pred)
+       {
+-	if (std::__invoke(std::move(__comp),
+-			  std::__invoke(__proj, __b),
+-			  std::__invoke(__proj, __a)))
+-	  return __b;
+-	else
+-	  return __a;
++	while (__first != __last
++	       && (bool)std::__invoke(__pred, *__first))
++	  ++__first;
++	return __first;
+       }
+ 
+-    template<input_iterator _Iter1, sentinel_for<_Iter1> _Sent1,
+-	     input_iterator _Iter2, sentinel_for<_Iter2> _Sent2,
+-	     typename _Pred = ranges::equal_to,
+-	     typename _Proj1 = identity, typename _Proj2 = identity>
+-      requires indirectly_comparable<_Iter1, _Iter2, _Pred, _Proj1, _Proj2>
++    template<typename _Iter1, typename _Sent1, typename _Iter2, typename _Sent2>
+       constexpr pair<_Iter1, _Iter2>
+-      mismatch(_Iter1 __first1, _Sent1 __last1, _Iter2 __first2, _Sent2 __last2,
+-	       _Pred __pred = {}, _Proj1 __proj1 = {}, _Proj2 __proj2 = {})
++      mismatch(_Iter1 __first1, _Sent1 __last1, _Iter2 __first2, _Sent2 __last2)
+       {
+ 	while (__first1 != __last1 && __first2 != __last2
+-	       && (bool)std::__invoke(__pred,
+-				      std::__invoke(__proj1, *__first1),
+-				      std::__invoke(__proj2, *__first2)))
+-	{
+-	  ++__first1;
+-	  ++__first2;
+-	}
++	       && (bool)ranges::equal_to{}(*__first1, *__first2))
++	  {
++	    ++__first1;
++	    ++__first2;
++	  }
+ 	return { std::move(__first1), std::move(__first2) };
+       }
+   } // namespace __detail
+@@ -1482,9 +1452,9 @@ namespace views
+ 	_Iterator() = default;
+ 
+ 	constexpr
+-	_Iterator(filter_view& __parent, _Vp_iter __current)
++	_Iterator(filter_view* __parent, _Vp_iter __current)
+ 	  : _M_current(std::move(__current)),
+-	    _M_parent(std::__addressof(__parent))
++	    _M_parent(__parent)
+ 	{ }
+ 
+ 	constexpr _Vp_iter
+@@ -1574,8 +1544,8 @@ namespace views
+ 	_Sentinel() = default;
+ 
+ 	constexpr explicit
+-	_Sentinel(filter_view& __parent)
+-	  : _M_end(ranges::end(__parent._M_base))
++	_Sentinel(filter_view* __parent)
++	  : _M_end(ranges::end(__parent->_M_base))
+ 	{ }
+ 
+ 	constexpr sentinel_t<_Vp>
+@@ -1615,23 +1585,23 @@ namespace views
+       begin()
+       {
+ 	if (_M_cached_begin._M_has_value())
+-	  return {*this, _M_cached_begin._M_get(_M_base)};
++	  return {this, _M_cached_begin._M_get(_M_base)};
+ 
+ 	__glibcxx_assert(_M_pred.has_value());
+ 	auto __it = __detail::find_if(ranges::begin(_M_base),
+ 				      ranges::end(_M_base),
+ 				      std::ref(*_M_pred));
+ 	_M_cached_begin._M_set(_M_base, __it);
+-	return {*this, std::move(__it)};
++	return {this, std::move(__it)};
+       }
+ 
+       constexpr auto
+       end()
+       {
+ 	if constexpr (common_range<_Vp>)
+-	  return _Iterator{*this, ranges::end(_M_base)};
++	  return _Iterator{this, ranges::end(_M_base)};
+ 	else
+-	  return _Sentinel{*this};
++	  return _Sentinel{this};
+       }
+     };
+ 
+@@ -1710,9 +1680,9 @@ namespace views
+ 	  _Iterator() = default;
+ 
+ 	  constexpr
+-	  _Iterator(_Parent& __parent, _Base_iter __current)
++	  _Iterator(_Parent* __parent, _Base_iter __current)
+ 	    : _M_current(std::move(__current)),
+-	      _M_parent(std::__addressof(__parent))
++	      _M_parent(__parent)
+ 	  { }
+ 
+ 	  constexpr
+@@ -1825,17 +1795,17 @@ namespace views
+ 	  friend constexpr _Iterator
+ 	  operator+(_Iterator __i, difference_type __n)
+ 	    requires random_access_range<_Base>
+-	  { return {*__i._M_parent, __i._M_current + __n}; }
++	  { return {__i._M_parent, __i._M_current + __n}; }
+ 
+ 	  friend constexpr _Iterator
+ 	  operator+(difference_type __n, _Iterator __i)
+ 	    requires random_access_range<_Base>
+-	  { return {*__i._M_parent, __i._M_current + __n}; }
++	  { return {__i._M_parent, __i._M_current + __n}; }
+ 
+ 	  friend constexpr _Iterator
+ 	  operator-(_Iterator __i, difference_type __n)
+ 	    requires random_access_range<_Base>
+-	  { return {*__i._M_parent, __i._M_current - __n}; }
++	  { return {__i._M_parent, __i._M_current - __n}; }
+ 
+ 	  // _GLIBCXX_RESOLVE_LIB_DEFECTS
+ 	  // 3483. transform_view::iterator's difference is overconstrained
+@@ -1946,13 +1916,13 @@ namespace views
+ 
+       constexpr _Iterator<false>
+       begin()
+-      { return _Iterator<false>{*this, ranges::begin(_M_base)}; }
++      { return _Iterator<false>{this, ranges::begin(_M_base)}; }
+ 
+       constexpr _Iterator<true>
+       begin() const
+ 	requires range<const _Vp>
+ 	  && regular_invocable<const _Fp&, range_reference_t<const _Vp>>
+-      { return _Iterator<true>{*this, ranges::begin(_M_base)}; }
++      { return _Iterator<true>{this, ranges::begin(_M_base)}; }
+ 
+       constexpr _Sentinel<false>
+       end()
+@@ -1960,7 +1930,7 @@ namespace views
+ 
+       constexpr _Iterator<false>
+       end() requires common_range<_Vp>
+-      { return _Iterator<false>{*this, ranges::end(_M_base)}; }
++      { return _Iterator<false>{this, ranges::end(_M_base)}; }
+ 
+       constexpr _Sentinel<true>
+       end() const
+@@ -1972,7 +1942,7 @@ namespace views
+       end() const
+ 	requires common_range<const _Vp>
+ 	  && regular_invocable<const _Fp&, range_reference_t<const _Vp>>
+-      { return _Iterator<true>{*this, ranges::end(_M_base)}; }
++      { return _Iterator<true>{this, ranges::end(_M_base)}; }
+ 
+       constexpr auto
+       size() requires sized_range<_Vp>
+@@ -2127,14 +2097,14 @@ namespace views
+       size() requires sized_range<_Vp>
+       {
+ 	auto __n = ranges::size(_M_base);
+-	return __detail::min(__n, static_cast<decltype(__n)>(_M_count));
++	return std::min(__n, static_cast<decltype(__n)>(_M_count));
+       }
+ 
+       constexpr auto
+       size() const requires sized_range<const _Vp>
+       {
+ 	auto __n = ranges::size(_M_base);
+-	return __detail::min(__n, static_cast<decltype(__n)>(_M_count));
++	return std::min(__n, static_cast<decltype(__n)>(_M_count));
+       }
+     };
+ 
+@@ -2529,9 +2499,9 @@ namespace views
+ 	  _Iterator() = default;
+ 
+ 	  constexpr
+-	  _Iterator(_Parent& __parent, _Outer_iter __outer)
++	  _Iterator(_Parent* __parent, _Outer_iter __outer)
+ 	    : _M_outer(std::move(__outer)),
+-	      _M_parent(std::__addressof(__parent))
++	      _M_parent(__parent)
+ 	  { _M_satisfy(); }
+ 
+ 	  constexpr
+@@ -2653,8 +2623,8 @@ namespace views
+ 	  _Sentinel() = default;
+ 
+ 	  constexpr explicit
+-	  _Sentinel(_Parent& __parent)
+-	    : _M_end(ranges::end(__parent._M_base))
++	  _Sentinel(_Parent* __parent)
++	    : _M_end(ranges::end(__parent->_M_base))
+ 	  { }
+ 
+ 	  constexpr
+@@ -2702,7 +2672,7 @@ namespace views
+ 	constexpr bool __use_const
+ 	  = (__detail::__simple_view<_Vp>
+ 	     && is_reference_v<range_reference_t<_Vp>>);
+-	return _Iterator<__use_const>{*this, ranges::begin(_M_base)};
++	return _Iterator<__use_const>{this, ranges::begin(_M_base)};
+       }
+ 
+       constexpr auto
+@@ -2710,7 +2680,7 @@ namespace views
+ 	requires input_range<const _Vp>
+ 	  && is_reference_v<range_reference_t<const _Vp>>
+       {
+-	return _Iterator<true>{*this, ranges::begin(_M_base)};
++	return _Iterator<true>{this, ranges::begin(_M_base)};
+       }
+ 
+       constexpr auto
+@@ -2719,10 +2689,10 @@ namespace views
+ 	if constexpr (forward_range<_Vp> && is_reference_v<_InnerRange>
+ 		      && forward_range<_InnerRange>
+ 		      && common_range<_Vp> && common_range<_InnerRange>)
+-	  return _Iterator<__detail::__simple_view<_Vp>>{*this,
++	  return _Iterator<__detail::__simple_view<_Vp>>{this,
+ 							 ranges::end(_M_base)};
+ 	else
+-	  return _Sentinel<__detail::__simple_view<_Vp>>{*this};
++	  return _Sentinel<__detail::__simple_view<_Vp>>{this};
+       }
+ 
+       constexpr auto
+@@ -2735,9 +2705,9 @@ namespace views
+ 		      && forward_range<range_reference_t<const _Vp>>
+ 		      && common_range<const _Vp>
+ 		      && common_range<range_reference_t<const _Vp>>)
+-	  return _Iterator<true>{*this, ranges::end(_M_base)};
++	  return _Iterator<true>{this, ranges::end(_M_base)};
+ 	else
+-	  return _Sentinel<true>{*this};
++	  return _Sentinel<true>{this};
+       }
+     };
+ 
+@@ -2856,14 +2826,14 @@ namespace views
+ 	  _OuterIter() = default;
+ 
+ 	  constexpr explicit
+-	  _OuterIter(_Parent& __parent) requires (!forward_range<_Base>)
+-	    : _M_parent(std::__addressof(__parent))
++	  _OuterIter(_Parent* __parent) requires (!forward_range<_Base>)
++	    : _M_parent(__parent)
+ 	  { }
+ 
+ 	  constexpr
+-	  _OuterIter(_Parent& __parent, iterator_t<_Base> __current)
++	  _OuterIter(_Parent* __parent, iterator_t<_Base> __current)
+ 	    requires forward_range<_Base>
+-	    : _M_parent(std::__addressof(__parent)),
++	    : _M_parent(__parent),
+ 	      _M_current(std::move(__current))
+ 	  { }
+ 
+@@ -2881,21 +2851,31 @@ namespace views
+ 	  constexpr _OuterIter&
+ 	  operator++()
+ 	  {
++	    // _GLIBCXX_RESOLVE_LIB_DEFECTS
++	    // 3505. split_view::outer-iterator::operator++ misspecified
+ 	    const auto __end = ranges::end(_M_parent->_M_base);
+ 	    if (__current() == __end)
+ 	      return *this;
+ 	    const auto [__pbegin, __pend] = subrange{_M_parent->_M_pattern};
+ 	    if (__pbegin == __pend)
+ 	      ++__current();
++	    else if constexpr (__detail::__tiny_range<_Pattern>)
++	      {
++		__current() = __detail::find(std::move(__current()), __end,
++					     *__pbegin);
++		if (__current() != __end)
++		  ++__current();
++	      }
+ 	    else
+ 	      do
+ 		{
+ 		  auto [__b, __p]
+-		    = __detail::mismatch(std::move(__current()), __end,
+-					 __pbegin, __pend);
+-		  __current() = std::move(__b);
++		    = __detail::mismatch(__current(), __end, __pbegin, __pend);
+ 		  if (__p == __pend)
+-		    break;
++		    {
++		      __current() = __b;
++		      break;
++		    }
+ 		} while (++__current() != __end);
+ 	    return *this;
+ 	  }
+@@ -3089,25 +3069,25 @@ namespace views
+       {
+ 	if constexpr (forward_range<_Vp>)
+ 	  return _OuterIter<__detail::__simple_view<_Vp>>{
+-	      *this, ranges::begin(_M_base)};
++	      this, ranges::begin(_M_base)};
+ 	else
+ 	  {
+ 	    _M_current = ranges::begin(_M_base);
+-	    return _OuterIter<false>{*this};
++	    return _OuterIter<false>{this};
+ 	  }
+       }
+ 
+       constexpr auto
+       begin() const requires forward_range<_Vp> && forward_range<const _Vp>
+       {
+-	return _OuterIter<true>{*this, ranges::begin(_M_base)};
++	return _OuterIter<true>{this, ranges::begin(_M_base)};
+       }
+ 
+       constexpr auto
+       end() requires forward_range<_Vp> && common_range<_Vp>
+       {
+ 	return _OuterIter<__detail::__simple_view<_Vp>>{
+-	    *this, ranges::end(_M_base)};
++	    this, ranges::end(_M_base)};
+       }
+ 
+       constexpr auto
+@@ -3116,7 +3096,7 @@ namespace views
+ 	if constexpr (forward_range<_Vp>
+ 		      && forward_range<const _Vp>
+ 		      && common_range<const _Vp>)
+-	  return _OuterIter<true>{*this, ranges::end(_M_base)};
++	  return _OuterIter<true>{this, ranges::end(_M_base)};
+ 	else
+ 	  return default_sentinel;
+       }
+@@ -3388,6 +3368,10 @@ namespace views
+ 	{ std::get<_Nm>(__t) }
+ 	  -> convertible_to<const tuple_element_t<_Nm, _Tp>&>;
+       };
++
++    template<typename _Tp, size_t _Nm>
++      concept __returnable_element
++	= is_reference_v<_Tp> || move_constructible<tuple_element_t<_Nm, _Tp>>;
+   }
+ 
+   template<input_range _Vp, size_t _Nm>
+@@ -3395,6 +3379,7 @@ namespace views
+       && __detail::__has_tuple_element<range_value_t<_Vp>, _Nm>
+       && __detail::__has_tuple_element<remove_reference_t<range_reference_t<_Vp>>,
+ 				       _Nm>
++      && __detail::__returnable_element<range_reference_t<_Vp>, _Nm>
+     class elements_view : public view_interface<elements_view<_Vp, _Nm>>
+     {
+     public:
+@@ -3452,10 +3437,23 @@ namespace views
+       template<bool _Const>
+ 	struct _Iterator
+ 	{
++	private:
+ 	  using _Base = __detail::__maybe_const_t<_Const, _Vp>;
+ 
+ 	  iterator_t<_Base> _M_current = iterator_t<_Base>();
+ 
++	  static constexpr decltype(auto)
++	  _S_get_element(const iterator_t<_Base>& __i)
++	  {
++	    if constexpr (is_reference_v<range_reference_t<_Base>>)
++	      return std::get<_Nm>(*__i);
++	    else
++	      {
++		using _Et = remove_cv_t<tuple_element_t<_Nm, range_reference_t<_Base>>>;
++		return static_cast<_Et>(std::get<_Nm>(*__i));
++	      }
++	  }
++
+ 	  friend _Iterator<!_Const>;
+ 
+ 	public:
+@@ -3488,8 +3486,8 @@ namespace views
+ 	  { return std::move(_M_current); }
+ 
+ 	  constexpr decltype(auto)
+-	    operator*() const
+-	  { return std::get<_Nm>(*_M_current); }
++	  operator*() const
++	  { return _S_get_element(_M_current); }
+ 
+ 	  constexpr _Iterator&
+ 	  operator++()
+@@ -3499,7 +3497,7 @@ namespace views
+ 	  }
+ 
+ 	  constexpr void
+-	  operator++(int) requires (!forward_range<_Base>)
++	  operator++(int)
+ 	  { ++_M_current; }
+ 
+ 	  constexpr _Iterator
+@@ -3544,7 +3542,7 @@ namespace views
+ 	  constexpr decltype(auto)
+ 	  operator[](difference_type __n) const
+ 	    requires random_access_range<_Base>
+-	  { return std::get<_Nm>(*(_M_current + __n)); }
++	  { return _S_get_element(_M_current + __n); }
+ 
+ 	  friend constexpr bool
+ 	  operator==(const _Iterator& __x, const _Iterator& __y)
 diff --git a/libstdc++-v3/include/std/ratio b/libstdc++-v3/include/std/ratio
 index 83c8c792793..293ed9a8e7c 100644
 --- a/libstdc++-v3/include/std/ratio
@@ -10787,6 +11843,115 @@ index cf3724025f7..16175c4072a 100644
    test01();
    test02();
 +  test03();
+ }
+diff --git a/libstdc++-v3/testsuite/experimental/net/internet/address/v6/members.cc b/libstdc++-v3/testsuite/experimental/net/internet/address/v6/members.cc
+index b77d6a29e3d..5fffdd97691 100644
+--- a/libstdc++-v3/testsuite/experimental/net/internet/address/v6/members.cc
++++ b/libstdc++-v3/testsuite/experimental/net/internet/address/v6/members.cc
+@@ -17,6 +17,7 @@
+ 
+ // { dg-do run { target c++14 } }
+ // { dg-add-options net_ts }
++// { dg-require-gthreads "" }
+ 
+ #include <experimental/internet>
+ #include <sstream>
+diff --git a/libstdc++-v3/testsuite/std/ranges/97600.cc b/libstdc++-v3/testsuite/std/ranges/97600.cc
+new file mode 100644
+index 00000000000..d992318259d
+--- /dev/null
++++ b/libstdc++-v3/testsuite/std/ranges/97600.cc
+@@ -0,0 +1,32 @@
++// Copyright (C) 2020 Free Software Foundation, Inc.
++//
++// This file is part of the GNU ISO C++ Library.  This library is free
++// software; you can redistribute it and/or modify it under the
++// terms of the GNU General Public License as published by the
++// Free Software Foundation; either version 3, or (at your option)
++// any later version.
++
++// This library is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++
++// You should have received a copy of the GNU General Public License along
++// with this library; see the file COPYING3.  If not see
++// <http://www.gnu.org/licenses/>.
++
++// { dg-options "-std=gnu++2a" }
++// { dg-do compile { target c++2a } }
++
++// PR libstdc++/97600
++
++#include <sstream>
++#include <ranges>
++
++void
++test01()
++{
++  std::ranges::basic_istream_view<int, char, std::char_traits<char>> v;
++  v.begin();
++  static_assert(std::ranges::range<decltype(v)>);
++}
+diff --git a/libstdc++-v3/testsuite/std/ranges/adaptors/elements.cc b/libstdc++-v3/testsuite/std/ranges/adaptors/elements.cc
+index 94dd7c94505..2e15250d31e 100644
+--- a/libstdc++-v3/testsuite/std/ranges/adaptors/elements.cc
++++ b/libstdc++-v3/testsuite/std/ranges/adaptors/elements.cc
+@@ -89,10 +89,26 @@ test03()
+   VERIFY( (next(b_const, 2) - b_const) == 2 );
+ }
+ 
++void
++test05()
++{
++  // LWG 3502
++  std::vector<int> vec = {42};
++  auto r1 = vec
++    | views::transform([](auto c) { return std::make_tuple(c, c); })
++    | views::keys;
++  VERIFY( ranges::equal(r1, (int[]){42}) );
++
++  std::tuple<int, int> a[] = {{1,2},{3,4}};
++  auto r2 = a | views::keys;
++  VERIFY( r2[0] == 1 && r2[1] == 3 );
++}
++
+ int
+ main()
+ {
+   test01();
+   test02();
+   test03();
++  test05();
+ }
+diff --git a/libstdc++-v3/testsuite/std/ranges/adaptors/split.cc b/libstdc++-v3/testsuite/std/ranges/adaptors/split.cc
+index fe895827fc5..661b55dca2c 100644
+--- a/libstdc++-v3/testsuite/std/ranges/adaptors/split.cc
++++ b/libstdc++-v3/testsuite/std/ranges/adaptors/split.cc
+@@ -152,6 +152,17 @@ test08()
+   VERIFY( i == v.end() );
+ }
+ 
++void
++test10()
++{
++  // LWG 3505
++  auto to_string = [] (auto r) {
++    return std::string(r.begin(), ranges::next(r.begin(), r.end()));
++  };
++  auto v = "xxyx"sv | views::split("xy"sv) | views::transform(to_string);
++  VERIFY( ranges::equal(v, (std::string_view[]){"x", "x"}) );
++}
++
+ int
+ main()
+ {
+@@ -163,4 +174,5 @@ main()
+   test06();
+   test07();
+   test08();
++  test10();
  }
 diff --git a/libstdc++-v3/testsuite/std/ranges/subrange/lwg3282_neg.cc b/libstdc++-v3/testsuite/std/ranges/subrange/lwg3282_neg.cc
 index 5c2f1de45ad..3d21774c966 100644
