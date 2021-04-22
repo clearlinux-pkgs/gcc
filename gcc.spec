@@ -221,7 +221,7 @@ GNU cc and gcc C compilers.
 %patch9 -p1
 #%patch11 -p1
 
-%patch12 -p1
+#%patch12 -p1
 
 %patch14 -p1
 
