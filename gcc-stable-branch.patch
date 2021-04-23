@@ -1,3 +1,6 @@
+Alex Coplan (1):
+      aarch64: Fix SVE ACLE builtins with LTO [PR99216]
+
 Eric Botcazou (3):
       Fix thinko in libcpp preparation patch for modules
       Further increase the limit on the size of accepted Ada files
@@ -8,7 +11,9 @@ François Dumont (3):
       libstdc++: Fix unordered containers move constructors noexcept qualification
       libstdc++: [_GLIBCXX_DEBUG] Fix management of __dp_sign_max_size [PR 99402]
 
-GCC Administrator (13):
+GCC Administrator (15):
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -490,10 +495,37 @@ index 0719d810258..a9368325816 100644
 -10.3.0
 +10.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 3b1384e707f..df397e46454 100644
+index 3b1384e707f..c5d29d132d9 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,104 @@
+@@ -1,3 +1,131 @@
++2021-04-22  Alex Coplan  <alex.coplan@arm.com>
++
++	PR target/99216
++	* config/aarch64/aarch64-sve-builtins.cc
++	(function_builder::add_function): Add placeholder_p argument, use
++	placeholder decls if this is set.
++	(function_builder::add_unique_function): Instead of conditionally adding
++	direct overloads, unconditionally add either a direct overload or a
++	placeholder.
++	(function_builder::add_overloaded_function): Set placeholder_p if we're
++	using C++ overloads. Use the obstack for string storage instead
++	of relying on the tree nodes.
++	(function_builder::add_overloaded_functions): Don't return early for
++	m_direct_overloads: we need to add placeholders.
++	* config/aarch64/aarch64-sve-builtins.h
++	(function_builder::add_function): Add placeholder_p argument.
++	* lto-streamer.h (LTO_minor_version): Bump.
++
++2021-04-21  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2021-04-21  Jakub Jelinek  <jakub@redhat.com>
++
++	PR rtl-optimization/100148
++	* cprop.c (constprop_register): Use next_nondebug_insn instead of
++	NEXT_INSN.
++
 +2021-04-20  Jakub Jelinek  <jakub@redhat.com>
 +
 +	Backported from master:
@@ -791,6 +823,127 @@ index 35505cc5311..bc3f5166669 100644
      return const0_rtx;
  
    /* If VAROP is a NEG of something known to be zero or 1 and CONSTOP is
+diff --git a/gcc/config/aarch64/aarch64-sve-builtins.cc b/gcc/config/aarch64/aarch64-sve-builtins.cc
+index d534ca923d9..336a1db662b 100644
+--- a/gcc/config/aarch64/aarch64-sve-builtins.cc
++++ b/gcc/config/aarch64/aarch64-sve-builtins.cc
+@@ -995,12 +995,29 @@ registered_function &
+ function_builder::add_function (const function_instance &instance,
+ 				const char *name, tree fntype, tree attrs,
+ 				uint64_t required_extensions,
+-				bool overloaded_p)
++				bool overloaded_p,
++				bool placeholder_p)
+ {
+   unsigned int code = vec_safe_length (registered_functions);
+   code = (code << AARCH64_BUILTIN_SHIFT) | AARCH64_BUILTIN_SVE;
+-  tree decl = simulate_builtin_function_decl (input_location, name, fntype,
+-					      code, NULL, attrs);
++
++  /* We need to be able to generate placeholders to enusre that we have a
++     consistent numbering scheme for function codes between the C and C++
++     frontends, so that everything ties up in LTO.
++
++     Currently, tree-streamer-in.c:unpack_ts_function_decl_value_fields
++     validates that tree nodes returned by TARGET_BUILTIN_DECL are non-NULL and
++     some node other than error_mark_node. This is a holdover from when builtin
++     decls were streamed by code rather than by value.
++
++     Ultimately, we should be able to remove this validation of BUILT_IN_MD
++     nodes and remove the target hook. For now, however, we need to appease the
++     validation and return a non-NULL, non-error_mark_node node, so we
++     arbitrarily choose integer_zero_node.  */
++  tree decl = placeholder_p
++    ? integer_zero_node
++    : simulate_builtin_function_decl (input_location, name, fntype,
++				      code, NULL, attrs);
+ 
+   registered_function &rfn = *ggc_alloc <registered_function> ();
+   rfn.instance = instance;
+@@ -1032,7 +1049,7 @@ function_builder::add_unique_function (const function_instance &instance,
+ 					   argument_types.address ());
+   tree attrs = get_attributes (instance);
+   registered_function &rfn = add_function (instance, name, fntype, attrs,
+-					   required_extensions, false);
++					   required_extensions, false, false);
+ 
+   /* Enter the function into the hash table.  */
+   hashval_t hash = instance.hash ();
+@@ -1043,16 +1060,14 @@ function_builder::add_unique_function (const function_instance &instance,
+ 
+   /* Also add the function under its overloaded alias, if we want
+      a separate decl for each instance of an overloaded function.  */
+-  if (m_direct_overloads || force_direct_overloads)
++  char *overload_name = get_name (instance, true);
++  if (strcmp (name, overload_name) != 0)
+     {
+-      char *overload_name = get_name (instance, true);
+-      if (strcmp (name, overload_name) != 0)
+-	{
+-	  /* Attribute lists shouldn't be shared.  */
+-	  tree attrs = get_attributes (instance);
+-	  add_function (instance, overload_name, fntype, attrs,
+-			required_extensions, false);
+-	}
++      /* Attribute lists shouldn't be shared.  */
++      tree attrs = get_attributes (instance);
++      bool placeholder_p = !(m_direct_overloads || force_direct_overloads);
++      add_function (instance, overload_name, fntype, attrs,
++		    required_extensions, false, placeholder_p);
+     }
+ 
+   obstack_free (&m_string_obstack, name);
+@@ -1073,18 +1088,19 @@ function_builder::add_overloaded_function (const function_instance &instance,
+ {
+   char *name = get_name (instance, true);
+   if (registered_function **map_value = m_overload_names.get (name))
+-    gcc_assert ((*map_value)->instance == instance
+-		&& ((*map_value)->required_extensions
+-		    & ~required_extensions) == 0);
++    {
++      gcc_assert ((*map_value)->instance == instance
++		  && ((*map_value)->required_extensions
++		      & ~required_extensions) == 0);
++      obstack_free (&m_string_obstack, name);
++    }
+   else
+     {
+       registered_function &rfn
+ 	= add_function (instance, name, m_overload_type, NULL_TREE,
+-			required_extensions, true);
+-      const char *permanent_name = IDENTIFIER_POINTER (DECL_NAME (rfn.decl));
+-      m_overload_names.put (permanent_name, &rfn);
++			required_extensions, true, m_direct_overloads);
++      m_overload_names.put (name, &rfn);
+     }
+-  obstack_free (&m_string_obstack, name);
+ }
+ 
+ /* If we are using manual overload resolution, add one function decl
+@@ -1094,9 +1110,6 @@ void
+ function_builder::add_overloaded_functions (const function_group_info &group,
+ 					    mode_suffix_index mode)
+ {
+-  if (m_direct_overloads)
+-    return;
+-
+   unsigned int explicit_type0 = (*group.shape)->explicit_type_suffix_p (0);
+   unsigned int explicit_type1 = (*group.shape)->explicit_type_suffix_p (1);
+   for (unsigned int pi = 0; group.preds[pi] != NUM_PREDS; ++pi)
+diff --git a/gcc/config/aarch64/aarch64-sve-builtins.h b/gcc/config/aarch64/aarch64-sve-builtins.h
+index 526d9f55e7b..5ffc58cab0a 100644
+--- a/gcc/config/aarch64/aarch64-sve-builtins.h
++++ b/gcc/config/aarch64/aarch64-sve-builtins.h
+@@ -337,7 +337,8 @@ private:
+   tree get_attributes (const function_instance &);
+ 
+   registered_function &add_function (const function_instance &,
+-				     const char *, tree, tree, uint64_t, bool);
++				     const char *, tree, tree,
++				     uint64_t, bool, bool);
+ 
+   /* The function type to use for functions that are resolved by
+      function_resolver.  */
 diff --git a/gcc/config/aarch64/aarch64-sve.md b/gcc/config/aarch64/aarch64-sve.md
 index d17a7770690..bd51323e57d 100644
 --- a/gcc/config/aarch64/aarch64-sve.md
@@ -888,10 +1041,28 @@ index 201f69e74c4..a39d09f06da 100644
        offset = seh->sp_offset - alloc_offset;
        if (offset > 0 && offset < SEH_MAX_FRAME_SIZE)
 diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
-index b576f9a3678..3bf6a9a4c1b 100644
+index b576f9a3678..77fcd8988a8 100644
 --- a/gcc/cp/ChangeLog
 +++ b/gcc/cp/ChangeLog
-@@ -1,3 +1,171 @@
+@@ -1,3 +1,189 @@
++2021-04-21  Patrick Palka  <ppalka@redhat.com>
++
++	Backported from master:
++	2020-09-19  Patrick Palka  <ppalka@redhat.com>
++
++	PR c++/97051
++	* constraint.cc (satisfy_atom): Pass true as the
++	manifestly_const_eval argument to maybe_constant_value.
++
++2021-04-21  Patrick Palka  <ppalka@redhat.com>
++
++	Backported from master:
++	2020-07-30  Patrick Palka  <ppalka@redhat.com>
++
++	PR c++/95486
++	* pt.c (alias_ctad_tweaks): Call remove_constraints before
++	calling set_constraints.
++
 +2021-04-20  Patrick Palka  <ppalka@redhat.com>
 +
 +	Backported from master:
@@ -1927,6 +2098,19 @@ index d3fef08b4b9..68d903d47ae 100644
  	{
  	  vec_safe_push (typelist, pvoid_type_node);  /* caf_token.  */
  	  vec_safe_push (typelist, gfc_array_index_type);  /* caf_offset.  */
+diff --git a/gcc/lto-streamer.h b/gcc/lto-streamer.h
+index 03440f0254c..7ac3b63fd33 100644
+--- a/gcc/lto-streamer.h
++++ b/gcc/lto-streamer.h
+@@ -121,7 +121,7 @@ along with GCC; see the file COPYING3.  If not see
+      form followed by the data for the string.  */
+ 
+ #define LTO_major_version 9
+-#define LTO_minor_version 3
++#define LTO_minor_version 4
+ 
+ typedef unsigned char	lto_decl_flags_t;
+ 
 diff --git a/gcc/omp-expand.c b/gcc/omp-expand.c
 index 90df5c90547..af4059cc2ab 100644
 --- a/gcc/omp-expand.c
@@ -2054,10 +2238,48 @@ index 0ebde7622db..e65d06d5bca 100644
        poly_int64 actual_offset = offset;
  
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 2913065bf31..817b05ec730 100644
+index 2913065bf31..e351398e4d1 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,249 @@
+@@ -1,3 +1,287 @@
++2021-04-22  Alex Coplan  <alex.coplan@arm.com>
++
++	PR target/99216
++	* g++.target/aarch64/sve/pr99216.C: New test.
++
++2021-04-21  Patrick Palka  <ppalka@redhat.com>
++
++	Backported from master:
++	2020-09-19  Patrick Palka  <ppalka@redhat.com>
++
++	PR c++/97051
++	* g++.dg/cpp2a/is-constant-evaluated11.C: New test.
++
++2021-04-21  Patrick Palka  <ppalka@redhat.com>
++
++	Backported from master:
++	2020-07-30  Patrick Palka  <ppalka@redhat.com>
++
++	PR c++/95486
++	* g++.dg/cpp2a/class-deduction-alias3.C: New test.
++
++2021-04-21  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2021-04-21  Richard Biener  <rguenther@suse.de>
++
++	PR testsuite/100176
++	* g++.dg/compat/struct-layout-1_generate.c: Add missing return.
++	* gcc.dg/compat/struct-layout-1_generate.c: Likewise.
++
++2021-04-21  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2021-04-21  Jakub Jelinek  <jakub@redhat.com>
++
++	PR rtl-optimization/100148
++	* g++.dg/opt/pr100148.C: New test.
++
 +2021-04-20  Patrick Palka  <ppalka@redhat.com>
 +
 +	Backported from master:
@@ -3066,6 +3288,17 @@ index 00000000000..0dee397796f
 +    enum { X };
 +  }
 +};
+diff --git a/gcc/testsuite/g++.target/aarch64/sve/pr99216.C b/gcc/testsuite/g++.target/aarch64/sve/pr99216.C
+new file mode 100644
+index 00000000000..61a58a7fcf4
+--- /dev/null
++++ b/gcc/testsuite/g++.target/aarch64/sve/pr99216.C
+@@ -0,0 +1,5 @@
++/* { dg-do link { target aarch64_asm_sve_ok } } */
++/* { dg-additional-options "-flto" } */
++#include <arm_sve.h>
++bool a;
++int main() { a = svaddv(svptrue_b8(), svdup_s8(0)); }
 diff --git a/gcc/testsuite/gcc.dg/compat/struct-layout-1_generate.c b/gcc/testsuite/gcc.dg/compat/struct-layout-1_generate.c
 index 75e902cd1f4..35dff89c377 100644
 --- a/gcc/testsuite/gcc.dg/compat/struct-layout-1_generate.c
@@ -4332,10 +4565,88 @@ index 304b3a01a08..ac88fbe074e 100644
    UnmapOrDie(oldstack.ss_sp, oldstack.ss_size);
  }
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
-index fdd63cbff1a..c841cbab075 100644
+index fdd63cbff1a..2e7efeb6ccd 100644
 --- a/libstdc++-v3/ChangeLog
 +++ b/libstdc++-v3/ChangeLog
-@@ -1,3 +1,335 @@
+@@ -1,3 +1,413 @@
++2021-04-21  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/100180
++	* testsuite/experimental/net/internet/address/v6/members.cc:
++	Require gthreads.
++
++2021-04-21  Patrick Palka  <ppalka@redhat.com>
++
++	Backported from master:
++	2021-04-08  Patrick Palka  <ppalka@redhat.com>
++
++	* include/std/ranges (__detail::find): Define.
++	(split_view::_OuterIter::operator++): Apply proposed resolution
++	of LWG 3505.
++	* testsuite/std/ranges/adaptors/split.cc (test10): New test.
++
++2021-04-21  Patrick Palka  <ppalka@redhat.com>
++
++	Backported from master:
++	2021-04-08  Patrick Palka  <ppalka@redhat.com>
++
++	* include/std/ranges (__detail::find_if): Simplify.
++	(__detail::find_if_not): Likewise.
++	(__detail::min): Remove.
++	(__detail::mismatch): Simplify.
++	(take_view::size): Use std::min instead of __detail::min.
++
++2021-04-21  Patrick Palka  <ppalka@redhat.com>
++
++	Backported from master:
++	2021-04-08  Patrick Palka  <ppalka@redhat.com>
++
++	* include/std/ranges (__detail::__returnable_element): New
++	concept.
++	(elements_view): Use this concept in its constraints.  Add
++	missing private access specifier.
++	(elements_view::_S_get_element): Define as per LWG 3502.
++	(elements_view::operator*, elements_view::operator[]): Use
++	_S_get_element.
++	(elements_view::operator++): Remove unnecessary constraint
++	as per LWG 3492.
++	* testsuite/std/ranges/adaptors/elements.cc (test05): New test.
++
++2021-04-21  Patrick Palka  <ppalka@redhat.com>
++
++	Backported from master:
++	2020-10-31  Patrick Palka  <ppalka@redhat.com>
++
++	PR libstdc++/97600
++	* include/std/ranges (basic_istream_view::begin): Initialize
++	_Iterator from 'this' instead of '*this'.
++	(basic_istream_view::_Iterator::_Iterator): Adjust constructor
++	accordingly.
++	(filter_view::_Iterator::_Iterator): Take a filter_view*
++	argument instead of a filter_view& argument.
++	(filter_view::_Sentinel::_Sentinel): Likewise.
++	(filter_view::begin): Initialize _Iterator from 'this' instead
++	of '*this'.
++	(filter_view::end): Likewise.
++	(transform_view::_Iterator::_Iterator): Take a _Parent* instead
++	of a _Parent&.
++	(filter_view::_Iterator::operator+): Adjust accordingly.
++	(filter_view::_Iterator::operator-): Likewise.
++	(filter_view::begin): Initialize _Iterator from 'this' instead
++	of '*this'.
++	(filter_view::end): Likewise.
++	(join_view::_Iterator): Take a _Parent* instead of a _Parent&.
++	(join_view::_Sentinel): Likewise.
++	(join_view::begin): Initialize _Iterator from 'this' instead of
++	'*this'.
++	(join_view::end): Initialize _Sentinel from 'this' instead of
++	'*this'.
++	(split_view::_OuterIter): Take a _Parent& instead of a _Parent*.
++	(split_view::begin): Initialize _OuterIter from 'this' instead
++	of '*this'.
++	(split_view::end): Likewise.
++	* testsuite/std/ranges/97600.cc: New test.
++
 +2021-04-19  François Dumont  <fdumont@gcc.gnu.org>
 +
 +	PR libstdc++/99402
