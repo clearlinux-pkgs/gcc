@@ -1,5 +1,9 @@
-Alex Coplan (1):
+Alex Coplan (2):
       aarch64: Fix SVE ACLE builtins with LTO [PR99216]
+      arm: Fix PCS for SFmode -> SImode libcalls [PR99748]
+
+Bin Cheng (1):
+      tree-optimization/98736 - use programing order preserved RPO in ldist
 
 Eric Botcazou (3):
       Fix thinko in libcpp preparation patch for modules
@@ -100,9 +104,19 @@ Patrick Palka (9):
       c++: alias_ctad_tweaks and constrained dguide [PR95486]
       c++: std::is_constant_evaluated inside constraint [PR97051]
 
-Richard Biener (2):
+Richard Biener (5):
       Increment BASE-VER after release
       testsuite/100176 - fix struct-layout-1_generate.c compile
+      middle-end/98726 - fix VECTOR_CST element access
+      remove write-only array in rev_post_order_and_mark_dfs_back_seme
+      Compute RPO with adjacent SCC members, expose toplevel SCC extents
+
+Richard Sandiford (5):
+      data-ref: Tighten index-based alias checks [PR99726]
+      gimple-fold: Recompute ADDR_EXPR flags after folding a TMR [PR98268]
+      aarch64: Tweak post-RA handling of CONST_INT moves [PR98136]
+      Handle CONST_POLY_INTs in CONST_VECTORs [PR97141, PR98726]
+      aarch64: Handle more SVE vector constants [PR99246]
 
 Tamar Christina (1):
       SVE: Fix wrong sve predicate split (PR100048)
@@ -789,6 +803,494 @@ index b3e05be0af8..8e24b522ee4 100644
  	TREE_TYPE (DECL_INITIAL (decl)) = type;
  
        relayout_decl (decl);
+diff --git a/gcc/cfganal.c b/gcc/cfganal.c
+index 395b810262a..24ae41bcac5 100644
+--- a/gcc/cfganal.c
++++ b/gcc/cfganal.c
+@@ -1060,113 +1060,389 @@ pre_and_rev_post_order_compute (int *pre_order, int *rev_post_order,
+   return pre_order_num;
+ }
+ 
+-/* Unlike pre_and_rev_post_order_compute we fill rev_post_order backwards
+-   so iterating in RPO order needs to start with rev_post_order[n - 1]
+-   going to rev_post_order[0].  If FOR_ITERATION is true then try to
+-   make CFG cycles fit into small contiguous regions of the RPO order.
+-   When FOR_ITERATION is true this requires up-to-date loop structures.  */
++
++/* Per basic-block data for rev_post_order_and_mark_dfs_back_seme,
++   element of a sparsely populated array indexed by basic-block number.  */
++typedef auto_vec<int, 2> scc_exit_vec_t;
++struct rpoamdbs_bb_data {
++    int depth;
++    int bb_to_pre;
++    /* The basic-block index of the SCC entry of the block visited first
++       (the SCC leader).  */
++    int scc;
++    /* The index into the RPO array where the blocks SCC entries end
++       (only valid for the SCC leader).  */
++    int scc_end;
++    /* The indexes of the exits destinations of this SCC (only valid
++       for the SCC leader).  Initialized upon discovery of SCC leaders.  */
++    scc_exit_vec_t scc_exits;
++};
++
++/* Tag H as a header of B, weaving H and its loop header list into the
++   current loop header list of B.  */
++
++static void
++tag_header (int b, int h, rpoamdbs_bb_data *bb_data)
++{
++  if (h == -1 || b == h)
++    return;
++  int cur1 = b;
++  int cur2 = h;
++  while (bb_data[cur1].scc != -1)
++    {
++      int ih = bb_data[cur1].scc;
++      if (ih == cur2)
++	return;
++      if (bb_data[ih].depth < bb_data[cur2].depth)
++	{
++	  bb_data[cur1].scc = cur2;
++	  cur1 = cur2;
++	  cur2 = ih;
++	}
++      else
++	cur1 = ih;
++    }
++  bb_data[cur1].scc = cur2;
++}
++
++/* Comparator for a sort of two edges destinations E1 and E2 after their index
++   in the PRE array as specified by BB_TO_PRE.  */
++
++static int
++cmp_edge_dest_pre (const void *e1_, const void *e2_, void *data_)
++{
++  const int *e1 = (const int *)e1_;
++  const int *e2 = (const int *)e2_;
++  rpoamdbs_bb_data *bb_data = (rpoamdbs_bb_data *)data_;
++  return (bb_data[*e1].bb_to_pre - bb_data[*e2].bb_to_pre);
++}
++
++/* Compute the reverse completion number of a depth first search
++   on the SEME region denoted by the ENTRY edge and the EXIT_BBS set of
++   exit block indexes and store it in the array REV_POST_ORDER.
++   Also sets the EDGE_DFS_BACK edge flags according to this visitation
++   order.
++   Returns the number of nodes visited.
++
++   In case the function has unreachable blocks the number of nodes
++   visited does not include them.
++
++   If FOR_ITERATION is true then compute an RPO where SCCs form a
++   contiguous region in the RPO array.
++   *TOPLEVEL_SCC_EXTENTS if not NULL is filled with pairs of
++   *REV_POST_ORDER indexes denoting extents of the toplevel SCCs in
++   this region.  */
+ 
+ int
+ rev_post_order_and_mark_dfs_back_seme (struct function *fn, edge entry,
+ 				       bitmap exit_bbs, bool for_iteration,
+-				       int *rev_post_order)
++				       int *rev_post_order,
++				       vec<std::pair<int, int> >
++					 *toplevel_scc_extents)
+ {
+-  int pre_order_num = 0;
+   int rev_post_order_num = 0;
+ 
+-  /* Allocate stack for back-tracking up CFG.  Worst case we need
+-     O(n^2) edges but the following should suffice in practice without
+-     a need to re-allocate.  */
+-  auto_vec<edge, 20> stack (2 * n_basic_blocks_for_fn (fn));
+-
+-  int *pre = XNEWVEC (int, 2 * last_basic_block_for_fn (fn));
+-  int *post = pre + last_basic_block_for_fn (fn);
+-
+   /* BB flag to track nodes that have been visited.  */
+   auto_bb_flag visited (fn);
+-  /* BB flag to track which nodes have post[] assigned to avoid
+-     zeroing post.  */
+-  auto_bb_flag post_assigned (fn);
+-
+-  /* Push the first edge on to the stack.  */
+-  stack.quick_push (entry);
+ 
+-  while (!stack.is_empty ())
+-    {
+-      basic_block src;
+-      basic_block dest;
++  /* Lazily initialized per-BB data for the two DFS walks below.  */
++  rpoamdbs_bb_data *bb_data
++    = XNEWVEC (rpoamdbs_bb_data, last_basic_block_for_fn (fn));
+ 
+-      /* Look at the edge on the top of the stack.  */
+-      int idx = stack.length () - 1;
+-      edge e = stack[idx];
+-      src = e->src;
+-      dest = e->dest;
+-      e->flags &= ~EDGE_DFS_BACK;
++  /* First DFS walk, loop discovery according to
++      A New Algorithm for Identifying Loops in Decompilation
++     by Tao Wei, Jian Mao, Wei Zou and You Chen of the Institute of
++     Computer Science and Technology of the Peking University.  */
++  auto_vec<edge_iterator, 20> ei_stack (n_basic_blocks_for_fn (fn) + 1);
++  auto_bb_flag is_header (fn);
++  int depth = 1;
++  unsigned n_sccs = 0;
+ 
+-      /* Check if the edge destination has been visited yet.  */
+-      if (! bitmap_bit_p (exit_bbs, dest->index)
+-	  && ! (dest->flags & visited))
++  basic_block dest = entry->dest;
++  edge_iterator ei;
++  int pre_num = 0;
++
++  /* DFS process DEST.  */
++find_loops:
++  bb_data[dest->index].bb_to_pre = pre_num++;
++  bb_data[dest->index].depth = depth;
++  bb_data[dest->index].scc = -1;
++  depth++;
++  gcc_assert ((dest->flags & (is_header|visited)) == 0);
++  dest->flags |= visited;
++  ei = ei_start (dest->succs);
++  while (!ei_end_p (ei))
++    {
++      ei_edge (ei)->flags &= ~EDGE_DFS_BACK;
++      if (bitmap_bit_p (exit_bbs, ei_edge (ei)->dest->index))
++	;
++      else if (!(ei_edge (ei)->dest->flags & visited))
+ 	{
+-	  /* Mark that we have visited the destination.  */
+-	  dest->flags |= visited;
+-
+-	  pre[dest->index] = pre_order_num++;
+-
+-	  if (EDGE_COUNT (dest->succs) > 0)
++	  ei_stack.quick_push (ei);
++	  dest = ei_edge (ei)->dest;
++	  /* DFS recurse on DEST.  */
++	  goto find_loops;
++
++ret_from_find_loops:
++	  /* Return point of DFS recursion.  */
++	  ei = ei_stack.pop ();
++	  dest = ei_edge (ei)->src;
++	  int header = bb_data[ei_edge (ei)->dest->index].scc;
++	  tag_header (dest->index, header, bb_data);
++	  depth = bb_data[dest->index].depth + 1;
++	}
++      else
++	{
++	  if (bb_data[ei_edge (ei)->dest->index].depth > 0) /* on the stack */
+ 	    {
+-	      /* Since the DEST node has been visited for the first
+-		 time, check its successors.  */
+-	      /* Push the edge vector in reverse to match previous behavior.  */
+-	      stack.reserve (EDGE_COUNT (dest->succs));
+-	      for (int i = EDGE_COUNT (dest->succs) - 1; i >= 0; --i)
+-		stack.quick_push (EDGE_SUCC (dest, i));
+-	      /* Generalize to handle more successors?  */
+-	      if (for_iteration
+-		  && EDGE_COUNT (dest->succs) == 2)
+-		{
+-		  edge &e1 = stack[stack.length () - 2];
+-		  if (loop_exit_edge_p (e1->src->loop_father, e1))
+-		    std::swap (e1, stack.last ());
+-		}
++	      ei_edge (ei)->flags |= EDGE_DFS_BACK;
++	      n_sccs++;
++	      ei_edge (ei)->dest->flags |= is_header;
++	      ::new (&bb_data[ei_edge (ei)->dest->index].scc_exits)
++		auto_vec<int, 2> ();
++	      tag_header (dest->index, ei_edge (ei)->dest->index, bb_data);
+ 	    }
++	  else if (bb_data[ei_edge (ei)->dest->index].scc == -1)
++	    ;
+ 	  else
+ 	    {
+-	      /* There are no successors for the DEST node so assign
+-		 its reverse completion number.  */
+-	      post[dest->index] = rev_post_order_num;
+-	      dest->flags |= post_assigned;
+-	      rev_post_order[rev_post_order_num] = dest->index;
+-	      rev_post_order_num++;
++	      int header = bb_data[ei_edge (ei)->dest->index].scc;
++	      if (bb_data[header].depth > 0)
++		tag_header (dest->index, header, bb_data);
++	      else
++		{
++		  /* A re-entry into an existing loop.  */
++		  /* ???  Need to mark is_header?  */
++		  while (bb_data[header].scc != -1)
++		    {
++		      header = bb_data[header].scc;
++		      if (bb_data[header].depth > 0)
++			{
++			  tag_header (dest->index, header, bb_data);
++			  break;
++			}
++		    }
++		}
+ 	    }
+ 	}
+-      else
+-	{
+-	  if (dest->flags & visited
+-	      && src != entry->src
+-	      && pre[src->index] >= pre[dest->index]
+-	      && !(dest->flags & post_assigned))
+-	    e->flags |= EDGE_DFS_BACK;
++      ei_next (&ei);
++    }
++  rev_post_order[rev_post_order_num++] = dest->index;
++  /* not on the stack anymore */
++  bb_data[dest->index].depth = -bb_data[dest->index].depth;
++  if (!ei_stack.is_empty ())
++    /* Return from DFS recursion.  */
++    goto ret_from_find_loops;
++
++  /* Optimize for no SCCs found or !for_iteration.  */
++  if (n_sccs == 0 || !for_iteration)
++    {
++      /* Clear the temporarily allocated flags.  */
++      for (int i = 0; i < rev_post_order_num; ++i)
++	BASIC_BLOCK_FOR_FN (fn, rev_post_order[i])->flags
++	  &= ~(is_header|visited);
++      /* And swap elements.  */
++      for (int i = 0; i < rev_post_order_num/2; ++i)
++	std::swap (rev_post_order[i], rev_post_order[rev_post_order_num-i-1]);
++      XDELETEVEC (bb_data);
++
++      return rev_post_order_num;
++    }
+ 
+-	  if (idx != 0 && stack[idx - 1]->src != src)
++  /* Next find SCC exits, clear the visited flag and compute an upper bound
++     for the edge stack below.  */
++  unsigned edge_count = 0;
++  for (int i = 0; i < rev_post_order_num; ++i)
++    {
++      int bb = rev_post_order[i];
++      BASIC_BLOCK_FOR_FN (fn, bb)->flags &= ~visited;
++      edge e;
++      FOR_EACH_EDGE (e, ei, BASIC_BLOCK_FOR_FN (fn, bb)->succs)
++	{
++	  if (bitmap_bit_p (exit_bbs, e->dest->index))
++	    continue;
++	  edge_count++;
++	  /* if e is an exit from e->src, record it for
++	     bb_data[e->src].scc.  */
++	  int src_scc = e->src->index;
++	  if (!(e->src->flags & is_header))
++	    src_scc = bb_data[src_scc].scc;
++	  if (src_scc == -1)
++	    continue;
++	  int dest_scc = e->dest->index;
++	  if (!(e->dest->flags & is_header))
++	    dest_scc = bb_data[dest_scc].scc;
++	  if (src_scc == dest_scc)
++	    continue;
++	  /* When dest_scc is nested insde src_scc it's not an
++	     exit.  */
++	  int tem_dest_scc = dest_scc;
++	  unsigned dest_scc_depth = 0;
++	  while (tem_dest_scc != -1)
+ 	    {
+-	      /* There are no more successors for the SRC node
+-		 so assign its reverse completion number.  */
+-	      post[src->index] = rev_post_order_num;
+-	      src->flags |= post_assigned;
+-	      rev_post_order[rev_post_order_num] = src->index;
+-	      rev_post_order_num++;
++	      dest_scc_depth++;
++	      if ((tem_dest_scc = bb_data[tem_dest_scc].scc) == src_scc)
++		break;
++	    }
++	  if (tem_dest_scc != -1)
++	    continue;
++	  /* When src_scc is nested inside dest_scc record an
++	     exit from the outermost SCC this edge exits.  */
++	  int tem_src_scc = src_scc;
++	  unsigned src_scc_depth = 0;
++	  while (tem_src_scc != -1)
++	    {
++	      if (bb_data[tem_src_scc].scc == dest_scc)
++		{
++		  edge_count++;
++		  bb_data[tem_src_scc].scc_exits.safe_push (e->dest->index);
++		  break;
++		}
++	      tem_src_scc = bb_data[tem_src_scc].scc;
++	      src_scc_depth++;
++	    }
++	  /* Else find the outermost SCC this edge exits (exits
++	     from the inner SCCs are not important for the DFS
++	     walk adjustment).  Do so by computing the common
++	     ancestor SCC where the immediate child it to the source
++	     SCC is the exited SCC.  */
++	  if (tem_src_scc == -1)
++	    {
++	      edge_count++;
++	      while (src_scc_depth > dest_scc_depth)
++		{
++		  src_scc = bb_data[src_scc].scc;
++		  src_scc_depth--;
++		}
++	      while (dest_scc_depth > src_scc_depth)
++		{
++		  dest_scc = bb_data[dest_scc].scc;
++		  dest_scc_depth--;
++		}
++	      while (bb_data[src_scc].scc != bb_data[dest_scc].scc)
++		{
++		  src_scc = bb_data[src_scc].scc;
++		  dest_scc = bb_data[dest_scc].scc;
++		}
++	      bb_data[src_scc].scc_exits.safe_push (e->dest->index);
+ 	    }
+-
+-	  stack.pop ();
+ 	}
+     }
+ 
+-  XDELETEVEC (pre);
++  /* Now the second DFS walk to compute a RPO where the extent of SCCs
++     is minimized thus SCC members are adjacent in the RPO array.
++     This is done by performing a DFS walk computing RPO with first visiting
++     extra direct edges from SCC entry to its exits.
++     That simulates a DFS walk over the graph with SCCs collapsed and
++     walking the SCCs themselves only when all outgoing edges from the
++     SCCs have been visited.
++     SCC_END[scc-header-index] is the position in the RPO array of the
++     last member of the SCC.  */
++  auto_vec<std::pair<basic_block, basic_block>, 20> estack (edge_count + 1);
++  int idx = rev_post_order_num;
++  basic_block edest;
++  dest = entry->dest;
++
++  /* DFS process DEST.  */
++dfs_rpo:
++  gcc_checking_assert ((dest->flags & visited) == 0);
++  /* Verify we enter SCCs through the same header and SCC nesting appears
++     the same.  */
++  gcc_assert (bb_data[dest->index].scc == -1
++	      || (BASIC_BLOCK_FOR_FN (fn, bb_data[dest->index].scc)->flags
++		  & visited));
++  dest->flags |= visited;
++  bb_data[dest->index].scc_end = -1;
++  if ((dest->flags & is_header)
++      && !bb_data[dest->index].scc_exits.is_empty ())
++    {
++      /* Push the all SCC exits as outgoing edges from its header to
++	 be visited first.
++	 To process exits in the same relative order as in the first
++	 DFS walk sort them after their destination PRE order index.  */
++      gcc_sort_r (&bb_data[dest->index].scc_exits[0],
++		  bb_data[dest->index].scc_exits.length (),
++		  sizeof (int), cmp_edge_dest_pre, bb_data);
++      /* Process edges in reverse to match previous DFS walk order.  */
++      for (int i = bb_data[dest->index].scc_exits.length () - 1; i >= 0; --i)
++	estack.quick_push (std::make_pair
++	  (dest, BASIC_BLOCK_FOR_FN (fn, bb_data[dest->index].scc_exits[i])));
++    }
++  else
++    {
++      if (dest->flags & is_header)
++	bb_data[dest->index].scc_end = idx - 1;
++      /* Push the edge vector in reverse to match the iteration order
++	 from the DFS walk above.  */
++      for (int i = EDGE_COUNT (dest->succs) - 1; i >= 0; --i)
++	if (!bitmap_bit_p (exit_bbs, EDGE_SUCC (dest, i)->dest->index))
++	  estack.quick_push (std::make_pair (dest,
++					     EDGE_SUCC (dest, i)->dest));
++    }
++  while (!estack.is_empty ()
++	 && estack.last ().first == dest)
++    {
++      edest = estack.last ().second;
++      if (!(edest->flags & visited))
++	{
++	  dest = edest;
++	  /* DFS recurse on DEST.  */
++	  goto dfs_rpo;
+ 
+-  /* Clear the temporarily allocated flags.  */
++ret_from_dfs_rpo:
++	  /* Return point of DFS recursion.  */
++	  dest = estack.last ().first;
++	}
++      estack.pop ();
++      /* If we processed all SCC exits from DEST mark the SCC end
++	 since all RPO entries up to DEST itself will now belong
++	 to its SCC.  The special-case of no SCC exits is already
++	 dealt with above.  */
++      if (dest->flags & is_header
++	  /* When the last exit edge was processed mark the SCC end
++	     and push the regular edges.  */
++	  && bb_data[dest->index].scc_end == -1
++	  && (estack.is_empty ()
++	      || estack.last ().first != dest))
++	{
++	  bb_data[dest->index].scc_end = idx - 1;
++	  /* Push the edge vector in reverse to match the iteration order
++	     from the DFS walk above.  */
++	  for (int i = EDGE_COUNT (dest->succs) - 1; i >= 0; --i)
++	    if (!bitmap_bit_p (exit_bbs, EDGE_SUCC (dest, i)->dest->index))
++	      estack.quick_push (std::make_pair (dest,
++						 EDGE_SUCC (dest, i)->dest));
++	}
++    }
++  rev_post_order[--idx] = dest->index;
++  if (!estack.is_empty ())
++    /* Return from DFS recursion.  */
++    goto ret_from_dfs_rpo;
++
++  /* Each SCC extends are from the position of the header inside
++     the RPO array up to RPO array index scc_end[header-index].  */
++  if (toplevel_scc_extents)
++    for (int i = 0; i < rev_post_order_num; i++)
++      {
++	basic_block bb = BASIC_BLOCK_FOR_FN (fn, rev_post_order[i]);
++	if (bb->flags & is_header)
++	  {
++	    toplevel_scc_extents->safe_push
++	      (std::make_pair (i, bb_data[bb->index].scc_end));
++	    i = bb_data[bb->index].scc_end;
++	  }
++      }
++
++  /* Clear the temporarily allocated flags and free memory.  */
+   for (int i = 0; i < rev_post_order_num; ++i)
+-    BASIC_BLOCK_FOR_FN (fn, rev_post_order[i])->flags
+-      &= ~(post_assigned|visited);
++    {
++      basic_block bb = BASIC_BLOCK_FOR_FN (fn, rev_post_order[i]);
++      if (bb->flags & is_header)
++	bb_data[bb->index].scc_exits.~scc_exit_vec_t ();
++      bb->flags &= ~(visited|is_header);
++    }
++
++  XDELETEVEC (bb_data);
+ 
+   return rev_post_order_num;
+ }
+diff --git a/gcc/cfganal.h b/gcc/cfganal.h
+index 849e537eddb..06830b7f469 100644
+--- a/gcc/cfganal.h
++++ b/gcc/cfganal.h
+@@ -68,7 +68,8 @@ extern int pre_and_rev_post_order_compute_fn (struct function *,
+ 					      int *, int *, bool);
+ extern int pre_and_rev_post_order_compute (int *, int *, bool);
+ extern int rev_post_order_and_mark_dfs_back_seme (struct function *, edge,
+-						  bitmap, bool, int *);
++						  bitmap, bool, int *,
++						  vec<std::pair<int, int> > *);
+ extern int dfs_enumerate_from (basic_block, int,
+ 			       bool (*)(const_basic_block, const void *),
+ 			       basic_block *, int, const void *);
 diff --git a/gcc/combine.c b/gcc/combine.c
 index 35505cc5311..bc3f5166669 100644
 --- a/gcc/combine.c
@@ -823,6 +1325,28 @@ index 35505cc5311..bc3f5166669 100644
      return const0_rtx;
  
    /* If VAROP is a NEG of something known to be zero or 1 and CONSTOP is
+diff --git a/gcc/config/aarch64/aarch64-simd.md b/gcc/config/aarch64/aarch64-simd.md
+index 6049adc3f3b..e16bc784bb4 100644
+--- a/gcc/config/aarch64/aarch64-simd.md
++++ b/gcc/config/aarch64/aarch64-simd.md
+@@ -35,6 +35,17 @@
+ 		&& aarch64_mem_pair_operand (operands[0], DImode))
+ 	       || known_eq (GET_MODE_SIZE (<MODE>mode), 8))))
+       operands[1] = force_reg (<MODE>mode, operands[1]);
++
++  /* If a constant is too complex to force to memory (e.g. because it
++     contains CONST_POLY_INTs), build it up from individual elements instead.
++     We should only need to do this before RA; aarch64_legitimate_constant_p
++     should ensure that we don't try to rematerialize the constant later.  */
++  if (GET_CODE (operands[1]) == CONST_VECTOR
++      && targetm.cannot_force_const_mem (<MODE>mode, operands[1]))
++    {
++      aarch64_expand_vector_init (operands[0], operands[1]);
++      DONE;
++    }
+   "
+ )
+ 
 diff --git a/gcc/config/aarch64/aarch64-sve-builtins.cc b/gcc/config/aarch64/aarch64-sve-builtins.cc
 index d534ca923d9..336a1db662b 100644
 --- a/gcc/config/aarch64/aarch64-sve-builtins.cc
@@ -970,10 +1494,78 @@ index d17a7770690..bd51323e57d 100644
  ;; == Conversions
  ;; =========================================================================
 diff --git a/gcc/config/aarch64/aarch64.c b/gcc/config/aarch64/aarch64.c
-index 9b400c49ac6..688f6986741 100644
+index 9b400c49ac6..554fc7c8c45 100644
 --- a/gcc/config/aarch64/aarch64.c
 +++ b/gcc/config/aarch64/aarch64.c
-@@ -5067,12 +5067,12 @@ aarch64_expand_sve_const_pred_trn (rtx target, rtx_vector_builder &builder,
+@@ -4752,6 +4752,56 @@ aarch64_expand_sve_ld1rq (rtx dest, rtx src)
+   return true;
+ }
+ 
++/* SRC is an SVE CONST_VECTOR that contains N "foreground" values followed
++   by N "background" values.  Try to move it into TARGET using:
++
++      PTRUE PRED.<T>, VL<N>
++      MOV TRUE.<T>, #<foreground>
++      MOV FALSE.<T>, #<background>
++      SEL TARGET.<T>, PRED.<T>, TRUE.<T>, FALSE.<T>
++
++   The PTRUE is always a single instruction but the MOVs might need a
++   longer sequence.  If the background value is zero (as it often is),
++   the sequence can sometimes collapse to a PTRUE followed by a
++   zero-predicated move.
++
++   Return the target on success, otherwise return null.  */
++
++static rtx
++aarch64_expand_sve_const_vector_sel (rtx target, rtx src)
++{
++  gcc_assert (CONST_VECTOR_NELTS_PER_PATTERN (src) == 2);
++
++  /* Make sure that the PTRUE is valid.  */
++  machine_mode mode = GET_MODE (src);
++  machine_mode pred_mode = aarch64_sve_pred_mode (mode);
++  unsigned int npatterns = CONST_VECTOR_NPATTERNS (src);
++  if (aarch64_svpattern_for_vl (pred_mode, npatterns)
++      == AARCH64_NUM_SVPATTERNS)
++    return NULL_RTX;
++
++  rtx_vector_builder pred_builder (pred_mode, npatterns, 2);
++  rtx_vector_builder true_builder (mode, npatterns, 1);
++  rtx_vector_builder false_builder (mode, npatterns, 1);
++  for (unsigned int i = 0; i < npatterns; ++i)
++    {
++      true_builder.quick_push (CONST_VECTOR_ENCODED_ELT (src, i));
++      pred_builder.quick_push (CONST1_RTX (BImode));
++    }
++  for (unsigned int i = 0; i < npatterns; ++i)
++    {
++      false_builder.quick_push (CONST_VECTOR_ENCODED_ELT (src, i + npatterns));
++      pred_builder.quick_push (CONST0_RTX (BImode));
++    }
++  expand_operand ops[4];
++  create_output_operand (&ops[0], target, mode);
++  create_input_operand (&ops[1], true_builder.build (), mode);
++  create_input_operand (&ops[2], false_builder.build (), mode);
++  create_input_operand (&ops[3], pred_builder.build (), pred_mode);
++  expand_insn (code_for_vcond_mask (mode, mode), 4, ops);
++  return target;
++}
++
+ /* Return a register containing CONST_VECTOR SRC, given that SRC has an
+    SVE data mode and isn't a legitimate constant.  Use TARGET for the
+    result if convenient.
+@@ -4886,6 +4936,10 @@ aarch64_expand_sve_const_vector (rtx target, rtx src)
+   if (GET_MODE_NUNITS (mode).is_constant ())
+     return NULL_RTX;
+ 
++  if (nelts_per_pattern == 2)
++    if (rtx res = aarch64_expand_sve_const_vector_sel (target, src))
++      return res;
++
+   /* Expand each pattern individually.  */
+   gcc_assert (npatterns > 1);
+   rtx_vector_builder builder;
+@@ -5067,12 +5121,12 @@ aarch64_expand_sve_const_pred_trn (rtx target, rtx_vector_builder &builder,
  	}
      }
  
@@ -991,6 +1583,74 @@ index 9b400c49ac6..688f6986741 100644
    return target;
  }
  
+@@ -16271,10 +16325,22 @@ aarch64_legitimate_constant_p (machine_mode mode, rtx x)
+ {
+   /* Support CSE and rematerialization of common constants.  */
+   if (CONST_INT_P (x)
+-      || (CONST_DOUBLE_P (x) && GET_MODE_CLASS (mode) == MODE_FLOAT)
+-      || GET_CODE (x) == CONST_VECTOR)
++      || (CONST_DOUBLE_P (x) && GET_MODE_CLASS (mode) == MODE_FLOAT))
+     return true;
+ 
++  /* Only accept variable-length vector constants if they can be
++     handled directly.
++
++     ??? It would be possible (but complex) to handle rematerialization
++     of other constants via secondary reloads.  */
++  if (!GET_MODE_SIZE (mode).is_constant ())
++    return aarch64_simd_valid_immediate (x, NULL);
++
++  /* Otherwise, accept any CONST_VECTOR that, if all else fails, can at
++     least be forced to memory and loaded from there.  */
++  if (GET_CODE (x) == CONST_VECTOR)
++    return !targetm.cannot_force_const_mem (mode, x);
++
+   /* Do not allow vector struct mode constants for Advanced SIMD.
+      We could support 0 and -1 easily, but they need support in
+      aarch64-simd.md.  */
+@@ -16282,14 +16348,6 @@ aarch64_legitimate_constant_p (machine_mode mode, rtx x)
+   if (vec_flags == (VEC_ADVSIMD | VEC_STRUCT))
+     return false;
+ 
+-  /* Only accept variable-length vector constants if they can be
+-     handled directly.
+-
+-     ??? It would be possible to handle rematerialization of other
+-     constants via secondary reloads.  */
+-  if (vec_flags & VEC_ANY_SVE)
+-    return aarch64_simd_valid_immediate (x, NULL);
+-
+   if (GET_CODE (x) == HIGH)
+     x = XEXP (x, 0);
+ 
+diff --git a/gcc/config/aarch64/aarch64.md b/gcc/config/aarch64/aarch64.md
+index 58445dea941..552aed3ce89 100644
+--- a/gcc/config/aarch64/aarch64.md
++++ b/gcc/config/aarch64/aarch64.md
+@@ -1229,10 +1229,19 @@
+     if (GET_CODE (operands[0]) == MEM && operands[1] != const0_rtx)
+       operands[1] = force_reg (<MODE>mode, operands[1]);
+ 
+-    /* FIXME: RR we still need to fix up what we are doing with
+-       symbol_refs and other types of constants.  */
+-    if (CONSTANT_P (operands[1])
+-        && !CONST_INT_P (operands[1]))
++    /* Lower moves of symbolic constants into individual instructions.
++       Doing this now is sometimes necessary for correctness, since some
++       sequences require temporary pseudo registers.  Lowering now is also
++       often better for optimization, since more RTL passes get the
++       chance to optimize the individual instructions.
++
++       When called after RA, also split multi-instruction moves into
++       smaller pieces now, since we can't be sure that sure that there
++       will be a following split pass.  */
++    if (CONST_INT_P (operands[1])
++	? (reload_completed
++	   && !aarch64_mov_imm_operand (operands[1], <MODE>mode))
++	: CONSTANT_P (operands[1]))
+      {
+        aarch64_expand_mov_immediate (operands[0], operands[1]);
+        DONE;
 diff --git a/gcc/config/aarch64/iterators.md b/gcc/config/aarch64/iterators.md
 index 0a7145281fa..ff5b23d71b1 100644
 --- a/gcc/config/aarch64/iterators.md
@@ -1003,6 +1663,21 @@ index 0a7145281fa..ff5b23d71b1 100644
      UNSPEC_COND_CMPEQ_WIDE ; Used in aarch64-sve.md.
      UNSPEC_COND_CMPGE_WIDE ; Used in aarch64-sve.md.
      UNSPEC_COND_CMPGT_WIDE ; Used in aarch64-sve.md.
+diff --git a/gcc/config/arm/arm.c b/gcc/config/arm/arm.c
+index db37e2b8e71..132ecc5d7e3 100644
+--- a/gcc/config/arm/arm.c
++++ b/gcc/config/arm/arm.c
+@@ -5786,6 +5786,10 @@ arm_libcall_uses_aapcs_base (const_rtx libcall)
+ 		   convert_optab_libfunc (sfix_optab, DImode, SFmode));
+       add_libcall (libcall_htab,
+ 		   convert_optab_libfunc (ufix_optab, DImode, SFmode));
++      add_libcall (libcall_htab,
++		   convert_optab_libfunc (sfix_optab, SImode, SFmode));
++      add_libcall (libcall_htab,
++		   convert_optab_libfunc (ufix_optab, SImode, SFmode));
+ 
+       /* Values from double-precision helper functions are returned in core
+ 	 registers if the selected core only supports single-precision
 diff --git a/gcc/config/i386/winnt.c b/gcc/config/i386/winnt.c
 index 201f69e74c4..a39d09f06da 100644
 --- a/gcc/config/i386/winnt.c
@@ -2009,6 +2684,18 @@ index c8dcf46ed29..68ab4383d50 100644
  	    return;
  
  	  remove = canon_true_dependence (store_info->mem,
+diff --git a/gcc/emit-rtl.c b/gcc/emit-rtl.c
+index 972512e8115..9dbde16989e 100644
+--- a/gcc/emit-rtl.c
++++ b/gcc/emit-rtl.c
+@@ -5936,6 +5936,7 @@ bool
+ valid_for_const_vector_p (machine_mode, rtx x)
+ {
+   return (CONST_SCALAR_INT_P (x)
++	  || CONST_POLY_INT_P (x)
+ 	  || CONST_DOUBLE_AS_FLOAT_P (x)
+ 	  || CONST_FIXED_P (x));
+ }
 diff --git a/gcc/expr.c b/gcc/expr.c
 index 991b26f3341..c4bffd0f199 100644
 --- a/gcc/expr.c
@@ -2098,6 +2785,27 @@ index d3fef08b4b9..68d903d47ae 100644
  	{
  	  vec_safe_push (typelist, pvoid_type_node);  /* caf_token.  */
  	  vec_safe_push (typelist, gfc_array_index_type);  /* caf_offset.  */
+diff --git a/gcc/gimple-fold.c b/gcc/gimple-fold.c
+index da3536ecd4e..b8754dcc105 100644
+--- a/gcc/gimple-fold.c
++++ b/gcc/gimple-fold.c
+@@ -4840,6 +4840,7 @@ static bool
+ maybe_canonicalize_mem_ref_addr (tree *t, bool is_debug = false)
+ {
+   bool res = false;
++  tree *orig_t = t;
+ 
+   if (TREE_CODE (*t) == ADDR_EXPR)
+     t = &TREE_OPERAND (*t, 0);
+@@ -4952,6 +4953,8 @@ maybe_canonicalize_mem_ref_addr (tree *t, bool is_debug = false)
+       if (tem)
+ 	{
+ 	  *t = tem;
++	  if (TREE_CODE (*orig_t) == ADDR_EXPR)
++	    recompute_tree_invariant_for_addr_expr (*orig_t);
+ 	  res = true;
+ 	}
+     }
 diff --git a/gcc/lto-streamer.h b/gcc/lto-streamer.h
 index 03440f0254c..7ac3b63fd33 100644
 --- a/gcc/lto-streamer.h
@@ -2237,6 +2945,55 @@ index 0ebde7622db..e65d06d5bca 100644
      {
        poly_int64 actual_offset = offset;
  
+diff --git a/gcc/rtx-vector-builder.c b/gcc/rtx-vector-builder.c
+index 90a8a1a2ef9..2468cdc5816 100644
+--- a/gcc/rtx-vector-builder.c
++++ b/gcc/rtx-vector-builder.c
+@@ -46,11 +46,11 @@ rtx_vector_builder::build (rtvec v)
+ 
+ rtx
+ rtx_vector_builder::apply_step (rtx base, unsigned int factor,
+-				const wide_int &step) const
++				const poly_wide_int &step) const
+ {
+   scalar_int_mode int_mode = as_a <scalar_int_mode> (GET_MODE_INNER (m_mode));
+-  return immed_wide_int_const (wi::add (rtx_mode_t (base, int_mode),
+-					factor * step),
++  return immed_wide_int_const (wi::to_poly_wide (base, int_mode)
++			       + factor * step,
+ 			       int_mode);
+ }
+ 
+diff --git a/gcc/rtx-vector-builder.h b/gcc/rtx-vector-builder.h
+index 99edad8a950..f33489286a9 100644
+--- a/gcc/rtx-vector-builder.h
++++ b/gcc/rtx-vector-builder.h
+@@ -44,8 +44,8 @@ private:
+   bool equal_p (rtx, rtx) const;
+   bool allow_steps_p () const;
+   bool integral_p (rtx) const;
+-  wide_int step (rtx, rtx) const;
+-  rtx apply_step (rtx, unsigned int, const wide_int &) const;
++  poly_wide_int step (rtx, rtx) const;
++  rtx apply_step (rtx, unsigned int, const poly_wide_int &) const;
+   bool can_elide_p (rtx) const { return true; }
+   void note_representative (rtx *, rtx) {}
+ 
+@@ -115,11 +115,11 @@ rtx_vector_builder::integral_p (rtx elt) const
+ /* Return the value of element ELT2 minus the value of element ELT1.
+    Both elements are known to be CONST_SCALAR_INT_Ps.  */
+ 
+-inline wide_int
++inline poly_wide_int
+ rtx_vector_builder::step (rtx elt1, rtx elt2) const
+ {
+-  return wi::sub (rtx_mode_t (elt2, GET_MODE_INNER (m_mode)),
+-		  rtx_mode_t (elt1, GET_MODE_INNER (m_mode)));
++  return (wi::to_poly_wide (elt2, GET_MODE_INNER (m_mode))
++	  - wi::to_poly_wide (elt1, GET_MODE_INNER (m_mode)));
+ }
+ 
+ #endif
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
 index 2913065bf31..e351398e4d1 100644
 --- a/gcc/testsuite/ChangeLog
@@ -3231,6 +3988,38 @@ index 00000000000..ab436bac72f
 +    } n;
 +  }
 +} x;
+diff --git a/gcc/testsuite/g++.dg/pr98136.C b/gcc/testsuite/g++.dg/pr98136.C
+new file mode 100644
+index 00000000000..f3c27f6b09f
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/pr98136.C
+@@ -0,0 +1,26 @@
++// { dg-do compile { target { ilp32 || lp64 } } }
++
++struct AddIn
++{
++    virtual ~AddIn() {}
++    virtual void AddInCall()=0;
++};
++
++struct Base
++{
++    char b[32*1024*1024];   // Anything bigger than 16mb causes internal compiler error
++    virtual ~Base() {}
++};
++
++struct Deriv : public Base,
++                    public AddIn
++{
++    void AddInCall() {}
++};
++
++int main (int argc, char **argv)
++{
++    Deriv deriv;
++    deriv.AddInCall();
++    return 0;
++}
 diff --git a/gcc/testsuite/g++.dg/template/ref11.C b/gcc/testsuite/g++.dg/template/ref11.C
 new file mode 100644
 index 00000000000..c43c67edf70
@@ -3299,6 +4088,53 @@ index 00000000000..61a58a7fcf4
 +#include <arm_sve.h>
 +bool a;
 +int main() { a = svaddv(svptrue_b8(), svdup_s8(0)); }
+diff --git a/gcc/testsuite/gcc.c-torture/compile/pr97141.c b/gcc/testsuite/gcc.c-torture/compile/pr97141.c
+new file mode 100644
+index 00000000000..1a9ff830a22
+--- /dev/null
++++ b/gcc/testsuite/gcc.c-torture/compile/pr97141.c
+@@ -0,0 +1,8 @@
++int a;
++short b, c;
++short d(short e, short f) { return e + f; }
++void g(void) {
++  a = -9;
++  for (; a != 51; a = d(a, 5))
++    b |= c;
++}
+diff --git a/gcc/testsuite/gcc.c-torture/compile/pr98726.c b/gcc/testsuite/gcc.c-torture/compile/pr98726.c
+new file mode 100644
+index 00000000000..ce24b18ce55
+--- /dev/null
++++ b/gcc/testsuite/gcc.c-torture/compile/pr98726.c
+@@ -0,0 +1,7 @@
++int a, c;
++char b;
++int d() {
++  a = 0;
++  for (; a <= 21; a = (short)a + 1)
++    b &= c;
++}
+diff --git a/gcc/testsuite/gcc.c-torture/execute/pr98736.c b/gcc/testsuite/gcc.c-torture/execute/pr98736.c
+new file mode 100644
+index 00000000000..c066abcd86a
+--- /dev/null
++++ b/gcc/testsuite/gcc.c-torture/execute/pr98736.c
+@@ -0,0 +1,14 @@
++/* PR tree-optimization/98736 */
++
++int a[6];
++char b, c;
++int main() {
++  int d[4] = {0, 0, 0, 0};
++  for (c = 0; c <= 5; c++) {
++    for (b = 2; b != 0; b++)
++      a[c] = 8;
++    a[c] = d[3];
++  }
++  if (a[0] != 0)
++    __builtin_abort();
++}
 diff --git a/gcc/testsuite/gcc.dg/compat/struct-layout-1_generate.c b/gcc/testsuite/gcc.dg/compat/struct-layout-1_generate.c
 index 75e902cd1f4..35dff89c377 100644
 --- a/gcc/testsuite/gcc.dg/compat/struct-layout-1_generate.c
@@ -3391,6 +4227,94 @@ index 00000000000..6878b00ce0d
 +  va_arg (0, long);	/* { dg-error "first argument to 'va_arg' not of type 'va_list'" } */
 +  void *b[] = 0;	/* { dg-error "invalid initializer" } */
 +}
+diff --git a/gcc/testsuite/gcc.dg/torture/20200727-0.c b/gcc/testsuite/gcc.dg/torture/20200727-0.c
+new file mode 100644
+index 00000000000..ab915687b30
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/torture/20200727-0.c
+@@ -0,0 +1,82 @@
++/* { dg-do compile } */
++/* { dg-additional-options "-g" } */
++
++typedef long unsigned int size_t;
++typedef signed int __int32_t;
++typedef __int32_t int32_t;
++typedef long int ptrdiff_t;
++typedef enum {
++  BT_UNKNOWN = 0, BT_INTEGER, BT_LOGICAL, BT_REAL, BT_COMPLEX,   BT_DERIVED, BT_CHARACTER, BT_CLASS, BT_PROCEDURE, BT_HOLLERITH, BT_VOID,   BT_ASSUMED, BT_UNION, BT_BOZ } bt;
++typedef int32_t GFC_INTEGER_4;
++typedef ptrdiff_t index_type;
++typedef size_t gfc_charlen_type;
++typedef struct descriptor_dimension {
++    index_type _stride;
++    index_type lower_bound;
++  } descriptor_dimension;
++typedef struct {
++  descriptor_dimension dim[15];
++ } gfc_full_array_i4;
++typedef void (*formatted_dtio)(void *, GFC_INTEGER_4 *, char *,           gfc_full_array_i4 *,           GFC_INTEGER_4 *, char *,           gfc_charlen_type, gfc_charlen_type);
++typedef enum { DECIMAL_POINT, DECIMAL_COMMA, DECIMAL_UNSPECIFIED } unit_decimal;
++typedef struct st_parameter_dt {
++      union     {
++	  struct  {
++	      struct gfc_unit *current_unit;
++	      unsigned namelist_mode : 1;
++	      unsigned unit_is_internal : 1;
++	      formatted_dtio fdtio_ptr;
++	  } p;
++      } u;
++  } st_parameter_dt;
++typedef struct gfc_unit {
++    int unit_number;
++    unit_decimal decimal_status;
++    int (*next_char_fn_ptr) (st_parameter_dt *);
++    void (*push_char_fn_ptr) (st_parameter_dt *, int);
++  } gfc_unit;
++void read_real (st_parameter_dt *dtp)
++{
++  int c;
++  int seen_dp;
++  seen_dp = 0;
++  for (;;)
++    {
++      c = ((dtp)->u.p.current_unit->next_char_fn_ptr (dtp));
++      if (c == ',' && dtp->u.p.current_unit->decimal_status == DECIMAL_COMMA)
++	c = '.';
++      switch (c)  {
++	case '.':
++	  if (seen_dp)      goto bad_real;
++	  seen_dp = 1;
++	  ((dtp)->u.p.current_unit->push_char_fn_ptr (dtp, c));
++	  goto real_loop;
++	case 'E':
++	case 'e':
++	case 'D':
++	case 'd':
++	case 'Q':
++	case 'q':
++	     goto exp1;
++	case '+':
++	case '-':
++	     ((dtp)->u.p.current_unit->push_char_fn_ptr (dtp, 'e'));
++	     goto got_repeat;
++      }
++    }
++got_repeat:
++real_loop:
++  for (;;)
++    {
++      c = ((dtp)->u.p.current_unit->next_char_fn_ptr (dtp));
++      switch (c)  {
++	case '.':
++	  if (seen_dp)      goto bad_real;
++	  seen_dp = 1;
++	  ((dtp)->u.p.current_unit->push_char_fn_ptr (dtp, c));
++      }
++    }
++exp1:
++bad_real:
++  return;
++}
 diff --git a/gcc/testsuite/gcc.dg/torture/pr98601.c b/gcc/testsuite/gcc.dg/torture/pr98601.c
 new file mode 100644
 index 00000000000..ee9d076c02d
@@ -3433,6 +4357,29 @@ index 00000000000..5bbfcbdcd69
 +      int v = 1 / 0;	/* { dg-warning "division by zero" } */
 +    }
 +}
+diff --git a/gcc/testsuite/gcc.target/aarch64/sve/acle/general/pr99246.c b/gcc/testsuite/gcc.target/aarch64/sve/acle/general/pr99246.c
+new file mode 100644
+index 00000000000..7f1079c1bd6
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/sve/acle/general/pr99246.c
+@@ -0,0 +1,17 @@
++/* { dg-options "-Os" } */
++
++#include <arm_sve.h>
++extern char b[];
++int x;
++void f() {
++  while (x) {
++    x = svaddv(
++        svnot_z(svnot_z(svptrue_pat_b8(SV_VL6),
++                        svmov_z(svptrue_pat_b8(SV_VL1),
++                                svptrue_pat_b16(SV_VL3))),
++                svptrue_pat_b64(SV_VL2)),
++        svdup_s32(8193));
++    for (int j = x; j; j++)
++      b[j] = 0;
++  }
++}
 diff --git a/gcc/testsuite/gcc.target/aarch64/sve/pr100048.c b/gcc/testsuite/gcc.target/aarch64/sve/pr100048.c
 new file mode 100644
 index 00000000000..525933863f7
@@ -3464,6 +4411,92 @@ index 00000000000..525933863f7
 +  dst[1] = svaddv_f16(pg_q0, in);
 +}
 +
+diff --git a/gcc/testsuite/gcc.target/aarch64/sve/pr97141.c b/gcc/testsuite/gcc.target/aarch64/sve/pr97141.c
+new file mode 100644
+index 00000000000..942e4a48d91
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/sve/pr97141.c
+@@ -0,0 +1,10 @@
++/* { dg-options "-O3" } */
++
++int a;
++short b, c;
++short d(short e, short f) { return e + f; }
++void g(void) {
++  a = -9;
++  for (; a != 51; a = d(a, 5))
++    b |= c;
++}
+diff --git a/gcc/testsuite/gcc.target/aarch64/sve/pr98268-1.c b/gcc/testsuite/gcc.target/aarch64/sve/pr98268-1.c
+new file mode 100644
+index 00000000000..fdbe55e0b4e
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/sve/pr98268-1.c
+@@ -0,0 +1,11 @@
++/* { dg-do link } */
++/* { dg-options "-flto -O -ftree-vectorize --param=aarch64-autovec-preference=3" } */
++/* { dg-additional-sources "pr98268-2.c" } */
++
++short d, e;
++void f(char, long*);
++int main() {
++  long x;
++  f(-114, &x);
++  return d == e;
++}
+diff --git a/gcc/testsuite/gcc.target/aarch64/sve/pr98268-2.c b/gcc/testsuite/gcc.target/aarch64/sve/pr98268-2.c
+new file mode 100644
+index 00000000000..de3b05d5e15
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/sve/pr98268-2.c
+@@ -0,0 +1,10 @@
++/* { dg-do compile } */
++/* { dg-options "-O -ftree-vectorize --param=aarch64-autovec-preference=3" } */
++
++extern short d[], e[];
++void f(char a, long *b) {
++  for (int c = 0; c < a - 12; c++) {
++    d[c] = b[c];
++    e[c] = 0;
++  }
++}
+diff --git a/gcc/testsuite/gcc.target/aarch64/sve/pr98726.c b/gcc/testsuite/gcc.target/aarch64/sve/pr98726.c
+new file mode 100644
+index 00000000000..2395cab57e5
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/sve/pr98726.c
+@@ -0,0 +1,9 @@
++/* { dg-options "-O3" } */
++
++int a, c;
++char b;
++int d() {
++  a = 0;
++  for (; a <= 21; a = (short)a + 1)
++    b &= c;
++}
+diff --git a/gcc/testsuite/gcc.target/i386/pr99726.c b/gcc/testsuite/gcc.target/i386/pr99726.c
+new file mode 100644
+index 00000000000..98ccce6a979
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr99726.c
+@@ -0,0 +1,16 @@
++/* { dg-options "-flive-patching=inline-clone -mavx512f -O2 -ftree-loop-vectorize -ftrapv" } */
++/* { dg-additional-options "-floop-nest-optimize" { target fgraphite } } */
++
++extern int a[256][1024];
++int b;
++long c, d;
++unsigned int e;
++
++int
++main ()
++{
++  for (; e < d; e++)
++    for (unsigned j = 1; j < c; j++)
++      a[e][j] = b * a[e - 1][j + 1];
++  return 0;
++}
 diff --git a/gcc/testsuite/gcc.target/i386/pr99863.c b/gcc/testsuite/gcc.target/i386/pr99863.c
 new file mode 100644
 index 00000000000..3d9d405391e
@@ -3699,6 +4732,421 @@ index 00000000000..f6eb6a034ec
 +begin
 +   Compute (B);   
 +end;
+diff --git a/gcc/tree-data-ref.c b/gcc/tree-data-ref.c
+index 2cb54def860..2a4da7a7a18 100644
+--- a/gcc/tree-data-ref.c
++++ b/gcc/tree-data-ref.c
+@@ -1891,8 +1891,8 @@ create_intersect_range_checks_index (class loop *loop, tree *cond_expr,
+ 
+   bool waw_or_war_p = (alias_pair.flags & ~(DR_ALIAS_WAR | DR_ALIAS_WAW)) == 0;
+ 
+-  unsigned int i;
+-  for (i = 0; i < DR_NUM_DIMENSIONS (dr_a.dr); i++)
++  int found = -1;
++  for (unsigned int i = 0; i < DR_NUM_DIMENSIONS (dr_a.dr); i++)
+     {
+       tree access1 = DR_ACCESS_FN (dr_a.dr, i);
+       tree access2 = DR_ACCESS_FN (dr_b.dr, i);
+@@ -1908,155 +1908,166 @@ create_intersect_range_checks_index (class loop *loop, tree *cond_expr,
+ 
+ 	  return false;
+ 	}
+-      /* The two indices must have the same step.  */
+-      if (!operand_equal_p (CHREC_RIGHT (access1), CHREC_RIGHT (access2), 0))
++      if (found >= 0)
+ 	return false;
++      found = i;
++    }
+ 
+-      tree idx_step = CHREC_RIGHT (access1);
+-      /* Index must have const step, otherwise DR_STEP won't be constant.  */
+-      gcc_assert (TREE_CODE (idx_step) == INTEGER_CST);
+-      /* Index must evaluate in the same direction as DR.  */
+-      gcc_assert (!neg_step || tree_int_cst_sign_bit (idx_step) == 1);
++  /* Ought not to happen in practice, since if all accesses are equal then the
++     alias should be decidable at compile time.  */
++  if (found < 0)
++    return false;
+ 
+-      tree min1 = CHREC_LEFT (access1);
+-      tree min2 = CHREC_LEFT (access2);
+-      if (!types_compatible_p (TREE_TYPE (min1), TREE_TYPE (min2)))
+-	return false;
++  /* The two indices must have the same step.  */
++  tree access1 = DR_ACCESS_FN (dr_a.dr, found);
++  tree access2 = DR_ACCESS_FN (dr_b.dr, found);
++  if (!operand_equal_p (CHREC_RIGHT (access1), CHREC_RIGHT (access2), 0))
++    return false;
+ 
+-      /* Ideally, alias can be checked against loop's control IV, but we
+-	 need to prove linear mapping between control IV and reference
+-	 index.  Although that should be true, we check against (array)
+-	 index of data reference.  Like segment length, index length is
+-	 linear function of the number of iterations with index_step as
+-	 the coefficient, i.e, niter_len * idx_step.  */
+-      offset_int abs_idx_step = offset_int::from (wi::to_wide (idx_step),
+-						  SIGNED);
+-      if (neg_step)
+-	abs_idx_step = -abs_idx_step;
+-      poly_offset_int idx_len1 = abs_idx_step * niter_len1;
+-      poly_offset_int idx_len2 = abs_idx_step * niter_len2;
+-      poly_offset_int idx_access1 = abs_idx_step * niter_access1;
+-      poly_offset_int idx_access2 = abs_idx_step * niter_access2;
++  tree idx_step = CHREC_RIGHT (access1);
++  /* Index must have const step, otherwise DR_STEP won't be constant.  */
++  gcc_assert (TREE_CODE (idx_step) == INTEGER_CST);
++  /* Index must evaluate in the same direction as DR.  */
++  gcc_assert (!neg_step || tree_int_cst_sign_bit (idx_step) == 1);
+ 
+-      gcc_assert (known_ge (idx_len1, 0)
+-		  && known_ge (idx_len2, 0)
+-		  && known_ge (idx_access1, 0)
+-		  && known_ge (idx_access2, 0));
++  tree min1 = CHREC_LEFT (access1);
++  tree min2 = CHREC_LEFT (access2);
++  if (!types_compatible_p (TREE_TYPE (min1), TREE_TYPE (min2)))
++    return false;
+ 
+-      /* Each access has the following pattern, with lengths measured
+-	 in units of INDEX:
++  /* Ideally, alias can be checked against loop's control IV, but we
++     need to prove linear mapping between control IV and reference
++     index.  Although that should be true, we check against (array)
++     index of data reference.  Like segment length, index length is
++     linear function of the number of iterations with index_step as
++     the coefficient, i.e, niter_len * idx_step.  */
++  offset_int abs_idx_step = offset_int::from (wi::to_wide (idx_step),
++					      SIGNED);
++  if (neg_step)
++    abs_idx_step = -abs_idx_step;
++  poly_offset_int idx_len1 = abs_idx_step * niter_len1;
++  poly_offset_int idx_len2 = abs_idx_step * niter_len2;
++  poly_offset_int idx_access1 = abs_idx_step * niter_access1;
++  poly_offset_int idx_access2 = abs_idx_step * niter_access2;
+ 
+-	      <-- idx_len -->
+-	      <--- A: -ve step --->
+-	      +-----+-------+-----+-------+-----+
+-	      | n-1 | ..... |  0  | ..... | n-1 |
+-	      +-----+-------+-----+-------+-----+
+-			    <--- B: +ve step --->
+-			    <-- idx_len -->
+-			    |
+-			   min
++  gcc_assert (known_ge (idx_len1, 0)
++	      && known_ge (idx_len2, 0)
++	      && known_ge (idx_access1, 0)
++	      && known_ge (idx_access2, 0));
+ 
+-	 where "n" is the number of scalar iterations covered by the segment
+-	 and where each access spans idx_access units.
++  /* Each access has the following pattern, with lengths measured
++     in units of INDEX:
+ 
+-	 A is the range of bytes accessed when the step is negative,
+-	 B is the range when the step is positive.
++	  <-- idx_len -->
++	  <--- A: -ve step --->
++	  +-----+-------+-----+-------+-----+
++	  | n-1 | ..... |  0  | ..... | n-1 |
++	  +-----+-------+-----+-------+-----+
++			<--- B: +ve step --->
++			<-- idx_len -->
++			|
++		       min
+ 
+-	 When checking for general overlap, we need to test whether
+-	 the range:
++     where "n" is the number of scalar iterations covered by the segment
++     and where each access spans idx_access units.
+ 
+-	   [min1 + low_offset1, min2 + high_offset1 + idx_access1 - 1]
++     A is the range of bytes accessed when the step is negative,
++     B is the range when the step is positive.
+ 
+-	 overlaps:
++     When checking for general overlap, we need to test whether
++     the range:
+ 
+-	   [min2 + low_offset2, min2 + high_offset2 + idx_access2 - 1]
++       [min1 + low_offset1, min1 + high_offset1 + idx_access1 - 1]
+ 
+-	 where:
++     overlaps:
++
++       [min2 + low_offset2, min2 + high_offset2 + idx_access2 - 1]
+ 
+-	    low_offsetN = +ve step ? 0 : -idx_lenN;
+-	   high_offsetN = +ve step ? idx_lenN : 0;
++     where:
+ 
+-	 This is equivalent to testing whether:
++	low_offsetN = +ve step ? 0 : -idx_lenN;
++       high_offsetN = +ve step ? idx_lenN : 0;
++
++     This is equivalent to testing whether:
+ 
+-	   min1 + low_offset1 <= min2 + high_offset2 + idx_access2 - 1
+-	   && min2 + low_offset2 <= min1 + high_offset1 + idx_access1 - 1
++       min1 + low_offset1 <= min2 + high_offset2 + idx_access2 - 1
++       && min2 + low_offset2 <= min1 + high_offset1 + idx_access1 - 1
+ 
+-	 Converting this into a single test, there is an overlap if:
++     Converting this into a single test, there is an overlap if:
+ 
+-	   0 <= min2 - min1 + bias <= limit
++       0 <= min2 - min1 + bias <= limit
+ 
+-	 where  bias = high_offset2 + idx_access2 - 1 - low_offset1
+-	       limit = (high_offset1 - low_offset1 + idx_access1 - 1)
+-		     + (high_offset2 - low_offset2 + idx_access2 - 1)
+-	  i.e. limit = idx_len1 + idx_access1 - 1 + idx_len2 + idx_access2 - 1
++     where  bias = high_offset2 + idx_access2 - 1 - low_offset1
++	   limit = (high_offset1 - low_offset1 + idx_access1 - 1)
++		 + (high_offset2 - low_offset2 + idx_access2 - 1)
++      i.e. limit = idx_len1 + idx_access1 - 1 + idx_len2 + idx_access2 - 1
+ 
+-	 Combining the tests requires limit to be computable in an unsigned
+-	 form of the index type; if it isn't, we fall back to the usual
+-	 pointer-based checks.
++     Combining the tests requires limit to be computable in an unsigned
++     form of the index type; if it isn't, we fall back to the usual
++     pointer-based checks.
+ 
+-	 We can do better if DR_B is a write and if DR_A and DR_B are
+-	 well-ordered in both the original and the new code (see the
+-	 comment above the DR_ALIAS_* flags for details).  In this case
+-	 we know that for each i in [0, n-1], the write performed by
+-	 access i of DR_B occurs after access numbers j<=i of DR_A in
+-	 both the original and the new code.  Any write or anti
+-	 dependencies wrt those DR_A accesses are therefore maintained.
++     We can do better if DR_B is a write and if DR_A and DR_B are
++     well-ordered in both the original and the new code (see the
++     comment above the DR_ALIAS_* flags for details).  In this case
++     we know that for each i in [0, n-1], the write performed by
++     access i of DR_B occurs after access numbers j<=i of DR_A in
++     both the original and the new code.  Any write or anti
++     dependencies wrt those DR_A accesses are therefore maintained.
+ 
+-	 We just need to make sure that each individual write in DR_B does not
+-	 overlap any higher-indexed access in DR_A; such DR_A accesses happen
+-	 after the DR_B access in the original code but happen before it in
+-	 the new code.
++     We just need to make sure that each individual write in DR_B does not
++     overlap any higher-indexed access in DR_A; such DR_A accesses happen
++     after the DR_B access in the original code but happen before it in
++     the new code.
+ 
+-	 We know the steps for both accesses are equal, so by induction, we
+-	 just need to test whether the first write of DR_B overlaps a later
+-	 access of DR_A.  In other words, we need to move min1 along by
+-	 one iteration:
++     We know the steps for both accesses are equal, so by induction, we
++     just need to test whether the first write of DR_B overlaps a later
++     access of DR_A.  In other words, we need to move min1 along by
++     one iteration:
+ 
+-	   min1' = min1 + idx_step
++       min1' = min1 + idx_step
+ 
+-	 and use the ranges:
++     and use the ranges:
+ 
+-	   [min1' + low_offset1', min1' + high_offset1' + idx_access1 - 1]
++       [min1' + low_offset1', min1' + high_offset1' + idx_access1 - 1]
+ 
+-	 and:
++     and:
+ 
+-	   [min2, min2 + idx_access2 - 1]
++       [min2, min2 + idx_access2 - 1]
+ 
+-	 where:
++     where:
+ 
+-	    low_offset1' = +ve step ? 0 : -(idx_len1 - |idx_step|)
+-	   high_offset1' = +ve_step ? idx_len1 - |idx_step| : 0.  */
+-      if (waw_or_war_p)
+-	idx_len1 -= abs_idx_step;
++	low_offset1' = +ve step ? 0 : -(idx_len1 - |idx_step|)
++       high_offset1' = +ve_step ? idx_len1 - |idx_step| : 0.  */
++  if (waw_or_war_p)
++    idx_len1 -= abs_idx_step;
+ 
+-      poly_offset_int limit = idx_len1 + idx_access1 - 1 + idx_access2 - 1;
+-      if (!waw_or_war_p)
+-	limit += idx_len2;
++  poly_offset_int limit = idx_len1 + idx_access1 - 1 + idx_access2 - 1;
++  if (!waw_or_war_p)
++    limit += idx_len2;
+ 
+-      tree utype = unsigned_type_for (TREE_TYPE (min1));
+-      if (!wi::fits_to_tree_p (limit, utype))
+-	return false;
++  tree utype = unsigned_type_for (TREE_TYPE (min1));
++  if (!wi::fits_to_tree_p (limit, utype))
++    return false;
+ 
+-      poly_offset_int low_offset1 = neg_step ? -idx_len1 : 0;
+-      poly_offset_int high_offset2 = neg_step || waw_or_war_p ? 0 : idx_len2;
+-      poly_offset_int bias = high_offset2 + idx_access2 - 1 - low_offset1;
+-      /* Equivalent to adding IDX_STEP to MIN1.  */
+-      if (waw_or_war_p)
+-	bias -= wi::to_offset (idx_step);
+-
+-      tree subject = fold_build2 (MINUS_EXPR, utype,
+-				  fold_convert (utype, min2),
+-				  fold_convert (utype, min1));
+-      subject = fold_build2 (PLUS_EXPR, utype, subject,
+-			     wide_int_to_tree (utype, bias));
+-      tree part_cond_expr = fold_build2 (GT_EXPR, boolean_type_node, subject,
+-					 wide_int_to_tree (utype, limit));
+-      if (*cond_expr)
+-	*cond_expr = fold_build2 (TRUTH_AND_EXPR, boolean_type_node,
+-				  *cond_expr, part_cond_expr);
+-      else
+-	*cond_expr = part_cond_expr;
+-    }
++  poly_offset_int low_offset1 = neg_step ? -idx_len1 : 0;
++  poly_offset_int high_offset2 = neg_step || waw_or_war_p ? 0 : idx_len2;
++  poly_offset_int bias = high_offset2 + idx_access2 - 1 - low_offset1;
++  /* Equivalent to adding IDX_STEP to MIN1.  */
++  if (waw_or_war_p)
++    bias -= wi::to_offset (idx_step);
++
++  tree subject = fold_build2 (MINUS_EXPR, utype,
++			      fold_convert (utype, min2),
++			      fold_convert (utype, min1));
++  subject = fold_build2 (PLUS_EXPR, utype, subject,
++			 wide_int_to_tree (utype, bias));
++  tree part_cond_expr = fold_build2 (GT_EXPR, boolean_type_node, subject,
++				     wide_int_to_tree (utype, limit));
++  if (*cond_expr)
++    *cond_expr = fold_build2 (TRUTH_AND_EXPR, boolean_type_node,
++			      *cond_expr, part_cond_expr);
++  else
++    *cond_expr = part_cond_expr;
+   if (dump_enabled_p ())
+     {
+       if (waw_or_war_p)
+diff --git a/gcc/tree-loop-distribution.c b/gcc/tree-loop-distribution.c
+index 888af48946f..fc48120f1b5 100644
+--- a/gcc/tree-loop-distribution.c
++++ b/gcc/tree-loop-distribution.c
+@@ -3151,11 +3151,19 @@ loop_distribution::distribute_loop (class loop *loop, vec<gimple *> stmts,
+ void loop_distribution::bb_top_order_init (void)
+ {
+   int rpo_num;
+-  int *rpo = XNEWVEC (int, last_basic_block_for_fn (cfun));
++  int *rpo = XNEWVEC (int, n_basic_blocks_for_fn (cfun) - NUM_FIXED_BLOCKS);
++  edge entry = single_succ_edge (ENTRY_BLOCK_PTR_FOR_FN (cfun));
++  bitmap exit_bbs = BITMAP_ALLOC (NULL);
+ 
+   bb_top_order_index = XNEWVEC (int, last_basic_block_for_fn (cfun));
+   bb_top_order_index_size = last_basic_block_for_fn (cfun);
+-  rpo_num = pre_and_rev_post_order_compute_fn (cfun, NULL, rpo, true);
++
++  entry->flags &= ~EDGE_DFS_BACK;
++  bitmap_set_bit (exit_bbs, EXIT_BLOCK);
++  rpo_num = rev_post_order_and_mark_dfs_back_seme (cfun, entry, exit_bbs, true,
++						   rpo, NULL);
++  BITMAP_FREE (exit_bbs);
++
+   for (int i = 0; i < rpo_num; i++)
+     bb_top_order_index[rpo[i]] = i;
+ 
+diff --git a/gcc/tree-ssa-sccvn.c b/gcc/tree-ssa-sccvn.c
+index 926b4a976ae..9628fe67fba 100644
+--- a/gcc/tree-ssa-sccvn.c
++++ b/gcc/tree-ssa-sccvn.c
+@@ -7351,11 +7351,9 @@ do_rpo_vn (function *fn, edge entry, bitmap exit_bbs,
+     e->flags &= ~EDGE_DFS_BACK;
+ 
+   int *rpo = XNEWVEC (int, n_basic_blocks_for_fn (fn) - NUM_FIXED_BLOCKS);
++  auto_vec<std::pair<int, int> > toplevel_scc_extents;
+   int n = rev_post_order_and_mark_dfs_back_seme
+-    (fn, entry, exit_bbs, !loops_state_satisfies_p (LOOPS_NEED_FIXUP), rpo);
+-  /* rev_post_order_and_mark_dfs_back_seme fills RPO in reverse order.  */
+-  for (int i = 0; i < n / 2; ++i)
+-    std::swap (rpo[i], rpo[n-i-1]);
++    (fn, entry, exit_bbs, true, rpo, !iterate ? &toplevel_scc_extents : NULL);
+ 
+   if (!do_region)
+     BITMAP_FREE (exit_bbs);
+@@ -7433,12 +7431,20 @@ do_rpo_vn (function *fn, edge entry, bitmap exit_bbs,
+   vn_valueize = rpo_vn_valueize;
+ 
+   /* Initialize the unwind state and edge/BB executable state.  */
+-  bool need_max_rpo_iterate = false;
++  unsigned curr_scc = 0;
+   for (int i = 0; i < n; ++i)
+     {
+       basic_block bb = BASIC_BLOCK_FOR_FN (fn, rpo[i]);
+       rpo_state[i].visited = 0;
+       rpo_state[i].max_rpo = i;
++      if (!iterate && curr_scc < toplevel_scc_extents.length ())
++	{
++	  if (i >= toplevel_scc_extents[curr_scc].first
++	      && i <= toplevel_scc_extents[curr_scc].second)
++	    rpo_state[i].max_rpo = toplevel_scc_extents[curr_scc].second;
++	  if (i == toplevel_scc_extents[curr_scc].second)
++	    curr_scc++;
++	}
+       bb->flags &= ~BB_EXECUTABLE;
+       bool has_backedges = false;
+       edge e;
+@@ -7450,51 +7456,12 @@ do_rpo_vn (function *fn, edge entry, bitmap exit_bbs,
+ 	  e->flags &= ~EDGE_EXECUTABLE;
+ 	  if (iterate || e == entry || (skip_entry_phis && bb == entry->dest))
+ 	    continue;
+-	  if (bb_to_rpo[e->src->index] > i)
+-	    {
+-	      rpo_state[i].max_rpo = MAX (rpo_state[i].max_rpo,
+-					  bb_to_rpo[e->src->index]);
+-	      need_max_rpo_iterate = true;
+-	    }
+-	  else
+-	    rpo_state[i].max_rpo
+-	      = MAX (rpo_state[i].max_rpo,
+-		     rpo_state[bb_to_rpo[e->src->index]].max_rpo);
+ 	}
+       rpo_state[i].iterate = iterate && has_backedges;
+     }
+   entry->flags |= EDGE_EXECUTABLE;
+   entry->dest->flags |= BB_EXECUTABLE;
+ 
+-  /* When there are irreducible regions the simplistic max_rpo computation
+-     above for the case of backedges doesn't work and we need to iterate
+-     until there are no more changes.  */
+-  unsigned nit = 0;
+-  while (need_max_rpo_iterate)
+-    {
+-      nit++;
+-      need_max_rpo_iterate = false;
+-      for (int i = 0; i < n; ++i)
+-	{
+-	  basic_block bb = BASIC_BLOCK_FOR_FN (fn, rpo[i]);
+-	  edge e;
+-	  edge_iterator ei;
+-	  FOR_EACH_EDGE (e, ei, bb->preds)
+-	    {
+-	      if (e == entry || (skip_entry_phis && bb == entry->dest))
+-		continue;
+-	      int max_rpo = MAX (rpo_state[i].max_rpo,
+-				 rpo_state[bb_to_rpo[e->src->index]].max_rpo);
+-	      if (rpo_state[i].max_rpo != max_rpo)
+-		{
+-		  rpo_state[i].max_rpo = max_rpo;
+-		  need_max_rpo_iterate = true;
+-		}
+-	    }
+-	}
+-    }
+-  statistics_histogram_event (cfun, "RPO max_rpo iterations", nit);
+-
+   /* As heuristic to improve compile-time we handle only the N innermost
+      loops and the outermost one optimistically.  */
+   if (iterate)
 diff --git a/gcc/tree-vect-loop.c b/gcc/tree-vect-loop.c
 index 899b5608745..60d7b74a57e 100644
 --- a/gcc/tree-vect-loop.c
@@ -3733,6 +5181,55 @@ index 899b5608745..60d7b74a57e 100644
  	}
      }				/* BBs in loop */
  
+diff --git a/gcc/tree.c b/gcc/tree.c
+index 3c17694c703..b43bc809823 100644
+--- a/gcc/tree.c
++++ b/gcc/tree.c
+@@ -10982,13 +10982,13 @@ build_opaque_vector_type (tree innertype, poly_int64 nunits)
+ 
+ /* Return the value of element I of VECTOR_CST T as a wide_int.  */
+ 
+-wide_int
++static poly_wide_int
+ vector_cst_int_elt (const_tree t, unsigned int i)
+ {
+   /* First handle elements that are directly encoded.  */
+   unsigned int encoded_nelts = vector_cst_encoded_nelts (t);
+   if (i < encoded_nelts)
+-    return wi::to_wide (VECTOR_CST_ENCODED_ELT (t, i));
++    return wi::to_poly_wide (VECTOR_CST_ENCODED_ELT (t, i));
+ 
+   /* Identify the pattern that contains element I and work out the index of
+      the last encoded element for that pattern.  */
+@@ -10999,13 +10999,13 @@ vector_cst_int_elt (const_tree t, unsigned int i)
+ 
+   /* If there are no steps, the final encoded value is the right one.  */
+   if (!VECTOR_CST_STEPPED_P (t))
+-    return wi::to_wide (VECTOR_CST_ENCODED_ELT (t, final_i));
++    return wi::to_poly_wide (VECTOR_CST_ENCODED_ELT (t, final_i));
+ 
+   /* Otherwise work out the value from the last two encoded elements.  */
+   tree v1 = VECTOR_CST_ENCODED_ELT (t, final_i - npatterns);
+   tree v2 = VECTOR_CST_ENCODED_ELT (t, final_i);
+-  wide_int diff = wi::to_wide (v2) - wi::to_wide (v1);
+-  return wi::to_wide (v2) + (count - 2) * diff;
++  poly_wide_int diff = wi::to_poly_wide (v2) - wi::to_poly_wide (v1);
++  return wi::to_poly_wide (v2) + (count - 2) * diff;
+ }
+ 
+ /* Return the value of element I of VECTOR_CST T.  */
+diff --git a/gcc/tree.h b/gcc/tree.h
+index 328a2d5d226..bb80e81d389 100644
+--- a/gcc/tree.h
++++ b/gcc/tree.h
+@@ -4714,7 +4714,6 @@ extern tree first_field (const_tree);
+ extern bool initializer_zerop (const_tree, bool * = NULL);
+ extern bool initializer_each_zero_or_onep (const_tree);
+ 
+-extern wide_int vector_cst_int_elt (const_tree, unsigned int);
+ extern tree vector_cst_elt (const_tree, unsigned int);
+ 
+ /* Given a vector VEC, return its first element if all elements are
 diff --git a/intl/ChangeLog b/intl/ChangeLog
 index e45e393b790..3c50c7bc259 100644
 --- a/intl/ChangeLog
