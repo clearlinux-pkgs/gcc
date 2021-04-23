@@ -111,12 +111,14 @@ Richard Biener (5):
       remove write-only array in rev_post_order_and_mark_dfs_back_seme
       Compute RPO with adjacent SCC members, expose toplevel SCC extents
 
-Richard Sandiford (5):
+Richard Sandiford (7):
       data-ref: Tighten index-based alias checks [PR99726]
       gimple-fold: Recompute ADDR_EXPR flags after folding a TMR [PR98268]
       aarch64: Tweak post-RA handling of CONST_INT moves [PR98136]
       Handle CONST_POLY_INTs in CONST_VECTORs [PR97141, PR98726]
       aarch64: Handle more SVE vector constants [PR99246]
+      aarch64: Fix target alignment for SVE [PR98119]
+      Check for matching CONST_VECTOR encodings [PR99929]
 
 Tamar Christina (1):
       SVE: Fix wrong sve predicate split (PR100048)
@@ -127,6 +129,10 @@ Thomas Schwinge (1):
 Tobias Burnus (2):
       Fortran: Fix fndecl with -fcoarray=lib [PR99817]
       OpenACC: Fix integer-type issue with collapse/tile [PR97880]
+
+YiFei Zhu (2):
+      bpf: align function entry point to 64 bits
+      bpf: allow BSS symbols to be global symbols
 
 diff --git a/contrib/ChangeLog b/contrib/ChangeLog
 index cfcc8b12b53..977fcbcf1e8 100644
@@ -1494,7 +1500,7 @@ index d17a7770690..bd51323e57d 100644
  ;; == Conversions
  ;; =========================================================================
 diff --git a/gcc/config/aarch64/aarch64.c b/gcc/config/aarch64/aarch64.c
-index 9b400c49ac6..554fc7c8c45 100644
+index 9b400c49ac6..9fb2b4e5cf1 100644
 --- a/gcc/config/aarch64/aarch64.c
 +++ b/gcc/config/aarch64/aarch64.c
 @@ -4752,6 +4752,56 @@ aarch64_expand_sve_ld1rq (rtx dest, rtx src)
@@ -1623,6 +1629,21 @@ index 9b400c49ac6..554fc7c8c45 100644
    if (GET_CODE (x) == HIGH)
      x = XEXP (x, 0);
  
+@@ -18621,10 +18679,11 @@ aarch64_vectorize_preferred_vector_alignment (const_tree type)
+ {
+   if (aarch64_sve_data_mode_p (TYPE_MODE (type)))
+     {
+-      /* If the length of the vector is fixed, try to align to that length,
+-	 otherwise don't try to align at all.  */
++      /* If the length of the vector is a fixed power of 2, try to align
++	 to that length, otherwise don't try to align at all.  */
+       HOST_WIDE_INT result;
+-      if (!BITS_PER_SVE_VECTOR.is_constant (&result))
++      if (!GET_MODE_BITSIZE (TYPE_MODE (type)).is_constant (&result)
++	  || !pow2p_hwi (result))
+ 	result = TYPE_ALIGN (TREE_TYPE (type));
+       return result;
+     }
 diff --git a/gcc/config/aarch64/aarch64.md b/gcc/config/aarch64/aarch64.md
 index 58445dea941..552aed3ce89 100644
 --- a/gcc/config/aarch64/aarch64.md
@@ -1678,6 +1699,40 @@ index db37e2b8e71..132ecc5d7e3 100644
  
        /* Values from double-precision helper functions are returned in core
  	 registers if the selected core only supports single-precision
+diff --git a/gcc/config/bpf/bpf.h b/gcc/config/bpf/bpf.h
+index 359f389a134..88183e69564 100644
+--- a/gcc/config/bpf/bpf.h
++++ b/gcc/config/bpf/bpf.h
+@@ -57,8 +57,8 @@
+    64-bit at any time.  */
+ #define STACK_BOUNDARY 64
+ 
+-/* Function entry points are aligned to 128 bits.  */
+-#define FUNCTION_BOUNDARY 128
++/* Function entry points are aligned to 64 bits.  */
++#define FUNCTION_BOUNDARY 64
+ 
+ /* Maximum alignment required by data of any type.  */
+ #define BIGGEST_ALIGNMENT 64
+@@ -422,9 +422,15 @@ enum reg_class
+    Try to use asm_output_aligned_bss to implement this macro.  */
+ 
+ #define ASM_OUTPUT_ALIGNED_BSS(FILE, DECL, NAME, SIZE, ALIGN)	\
+-  do {								\
+-    ASM_OUTPUT_ALIGNED_LOCAL (FILE, NAME, SIZE, ALIGN);		\
+-  } while (0)
++  do									\
++    {									\
++      ASM_OUTPUT_TYPE_DIRECTIVE (FILE, NAME, "object");			\
++      fprintf ((FILE), "%s", "\t.lcomm\t");				\
++      assemble_name ((FILE), (NAME));					\
++      fprintf ((FILE), "," HOST_WIDE_INT_PRINT_UNSIGNED ",%u\n",	\
++	       (SIZE), (ALIGN) / BITS_PER_UNIT);			\
++    }									\
++  while (0)
+ 
+ /*** Output and Generation of Labels.  */
+ 
 diff --git a/gcc/config/i386/winnt.c b/gcc/config/i386/winnt.c
 index 201f69e74c4..a39d09f06da 100644
 --- a/gcc/config/i386/winnt.c
@@ -2517,6 +2572,38 @@ index 169ca804e33..e084250380c 100644
  			 from, src))
  	return 1;
      }
+diff --git a/gcc/cse.c b/gcc/cse.c
+index 36bcfc354d8..f69a33a82e0 100644
+--- a/gcc/cse.c
++++ b/gcc/cse.c
+@@ -2637,6 +2637,11 @@ exp_equiv_p (const_rtx x, const_rtx y, int validate, bool for_gcse)
+     CASE_CONST_UNIQUE:
+       return x == y;
+ 
++    case CONST_VECTOR:
++      if (!same_vector_encodings_p (x, y))
++	return false;
++      break;
++
+     case LABEL_REF:
+       return label_ref_label (x) == label_ref_label (y);
+ 
+diff --git a/gcc/cselib.c b/gcc/cselib.c
+index 53e9603868d..5ecedef0bb4 100644
+--- a/gcc/cselib.c
++++ b/gcc/cselib.c
+@@ -1048,6 +1048,11 @@ rtx_equal_for_cselib_1 (rtx x, rtx y, machine_mode memmode, int depth)
+     case DEBUG_EXPR:
+       return 0;
+ 
++    case CONST_VECTOR:
++      if (!same_vector_encodings_p (x, y))
++	return false;
++      break;
++
+     case DEBUG_IMPLICIT_PTR:
+       return DEBUG_IMPLICIT_PTR_DECL (x)
+ 	     == DEBUG_IMPLICIT_PTR_DECL (y);
 diff --git a/gcc/d/ChangeLog b/gcc/d/ChangeLog
 index 8bc729ae32d..afe5976027b 100644
 --- a/gcc/d/ChangeLog
@@ -2806,6 +2893,38 @@ index da3536ecd4e..b8754dcc105 100644
  	  res = true;
  	}
      }
+diff --git a/gcc/jump.c b/gcc/jump.c
+index 34a8f209e20..803c297b0fc 100644
+--- a/gcc/jump.c
++++ b/gcc/jump.c
+@@ -1767,6 +1767,11 @@ rtx_renumbered_equal_p (const_rtx x, const_rtx y)
+     CASE_CONST_UNIQUE:
+       return 0;
+ 
++    case CONST_VECTOR:
++      if (!same_vector_encodings_p (x, y))
++	return false;
++      break;
++
+     case LABEL_REF:
+       /* We can't assume nonlocal labels have their following insns yet.  */
+       if (LABEL_REF_NONLOCAL_P (x) || LABEL_REF_NONLOCAL_P (y))
+diff --git a/gcc/lra-constraints.c b/gcc/lra-constraints.c
+index 7cc479b3042..ac6f59fee93 100644
+--- a/gcc/lra-constraints.c
++++ b/gcc/lra-constraints.c
+@@ -751,6 +751,11 @@ operands_match_p (rtx x, rtx y, int y_hard_regno)
+     CASE_CONST_UNIQUE:
+       return false;
+ 
++    case CONST_VECTOR:
++      if (!same_vector_encodings_p (x, y))
++	return false;
++      break;
++
+     case LABEL_REF:
+       return label_ref_label (x) == label_ref_label (y);
+     case SYMBOL_REF:
 diff --git a/gcc/lto-streamer.h b/gcc/lto-streamer.h
 index 03440f0254c..7ac3b63fd33 100644
 --- a/gcc/lto-streamer.h
@@ -2921,6 +3040,78 @@ index 90df5c90547..af4059cc2ab 100644
  	}
      }
  
+diff --git a/gcc/reload.c b/gcc/reload.c
+index 78b4049f465..5f099be43b3 100644
+--- a/gcc/reload.c
++++ b/gcc/reload.c
+@@ -2291,6 +2291,11 @@ operands_match_p (rtx x, rtx y)
+     CASE_CONST_UNIQUE:
+       return 0;
+ 
++    case CONST_VECTOR:
++      if (!same_vector_encodings_p (x, y))
++	return false;
++      break;
++
+     case LABEL_REF:
+       return label_ref_label (x) == label_ref_label (y);
+     case SYMBOL_REF:
+diff --git a/gcc/rtl.c b/gcc/rtl.c
+index 4411e067ba8..63f0a26c912 100644
+--- a/gcc/rtl.c
++++ b/gcc/rtl.c
+@@ -466,6 +466,11 @@ rtx_equal_p_cb (const_rtx x, const_rtx y, rtx_equal_p_callback_function cb)
+     CASE_CONST_UNIQUE:
+       return 0;
+ 
++    case CONST_VECTOR:
++      if (!same_vector_encodings_p (x, y))
++	return false;
++      break;
++
+     case DEBUG_IMPLICIT_PTR:
+       return DEBUG_IMPLICIT_PTR_DECL (x)
+ 	     == DEBUG_IMPLICIT_PTR_DECL (y);
+@@ -608,6 +613,11 @@ rtx_equal_p (const_rtx x, const_rtx y)
+     CASE_CONST_UNIQUE:
+       return 0;
+ 
++    case CONST_VECTOR:
++      if (!same_vector_encodings_p (x, y))
++	return false;
++      break;
++
+     case DEBUG_IMPLICIT_PTR:
+       return DEBUG_IMPLICIT_PTR_DECL (x)
+ 	     == DEBUG_IMPLICIT_PTR_DECL (y);
+diff --git a/gcc/rtl.h b/gcc/rtl.h
+index b29afca8d6b..5d57ac6bc5f 100644
+--- a/gcc/rtl.h
++++ b/gcc/rtl.h
+@@ -3087,6 +3087,23 @@ vec_series_p (const_rtx x, rtx *base_out, rtx *step_out)
+   return const_vec_series_p (x, base_out, step_out);
+ }
+ 
++/* Return true if CONST_VECTORs X and Y, which are known to have the same mode,
++   also have the same encoding.  This means that they are equal whenever their
++   operands are equal.  */
++
++inline bool
++same_vector_encodings_p (const_rtx x, const_rtx y)
++{
++  /* Don't be fussy about the encoding of constant-length vectors,
++     since XVECEXP (X, 0) and XVECEXP (Y, 0) list all the elements anyway.  */
++  if (poly_uint64 (CONST_VECTOR_NUNITS (x)).is_constant ())
++    return true;
++
++  return (CONST_VECTOR_NPATTERNS (x) == CONST_VECTOR_NPATTERNS (y)
++	  && (CONST_VECTOR_NELTS_PER_PATTERN (x)
++	      == CONST_VECTOR_NELTS_PER_PATTERN (y)));
++}
++
+ /* Return the unpromoted (outer) mode of SUBREG_PROMOTED_VAR_P subreg X.  */
+ 
+ inline scalar_int_mode
 diff --git a/gcc/rtlanal.c b/gcc/rtlanal.c
 index 0ebde7622db..e65d06d5bca 100644
 --- a/gcc/rtlanal.c
@@ -4427,6 +4618,25 @@ index 00000000000..942e4a48d91
 +  for (; a != 51; a = d(a, 5))
 +    b |= c;
 +}
+diff --git a/gcc/testsuite/gcc.target/aarch64/sve/pr98119.c b/gcc/testsuite/gcc.target/aarch64/sve/pr98119.c
+new file mode 100644
+index 00000000000..da6208c2ce3
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/sve/pr98119.c
+@@ -0,0 +1,13 @@
++/* { dg-options "-O3 -msve-vector-bits=512 -mtune=thunderx" } */
++
++void
++f (unsigned short *x)
++{
++  for (int i = 0; i < 1000; ++i)
++    x[i] += x[i - 16];
++}
++
++/* { dg-final { scan-assembler-not {\tubfx\t[wx][0-9]+, [wx][0-9]+, #?1, #?5\n} } } */
++/* { dg-final { scan-assembler-not {\tand\tx[0-9]+, x[0-9]+, #?-63\n} } } */
++/* { dg-final { scan-assembler {\tubfx\t[wx][0-9]+, [wx][0-9]+, #?1, #?4\n} } } */
++/* { dg-final { scan-assembler {\tand\tx[0-9]+, x[0-9]+, #?-31\n} } } */
 diff --git a/gcc/testsuite/gcc.target/aarch64/sve/pr98268-1.c b/gcc/testsuite/gcc.target/aarch64/sve/pr98268-1.c
 new file mode 100644
 index 00000000000..fdbe55e0b4e
@@ -4475,6 +4685,39 @@ index 00000000000..2395cab57e5
 +  for (; a <= 21; a = (short)a + 1)
 +    b &= c;
 +}
+diff --git a/gcc/testsuite/gcc.target/aarch64/sve/pr99929_1.c b/gcc/testsuite/gcc.target/aarch64/sve/pr99929_1.c
+new file mode 100644
+index 00000000000..1fe18136e28
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/sve/pr99929_1.c
+@@ -0,0 +1,16 @@
++/* { dg-do run { target aarch64_sve_hw } } */
++/* { dg-options "-O2 -ftree-vectorize" } */
++
++#include <arm_sve.h>
++
++static void e(short *g, short p2) { *g ^= p2; }
++static short m[23];
++int main() {
++  for (unsigned i = 0; i < 23; ++i)
++    m[i] = 4;
++  if (svaddv(svptrue_pat_b32(SV_VL1), svdup_u32(1)) != 1)
++    __builtin_abort();
++  for (unsigned i = 0; i < 3; ++i)
++    e(m, m[i]);
++  return 0;
++}
+diff --git a/gcc/testsuite/gcc.target/aarch64/sve/pr99929_2.c b/gcc/testsuite/gcc.target/aarch64/sve/pr99929_2.c
+new file mode 100644
+index 00000000000..50d432db9b8
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/sve/pr99929_2.c
+@@ -0,0 +1,5 @@
++/* { dg-options "-O2 -ftree-vectorize" } */
++
++#include "pr99929_1.c"
++
++/* { dg-final { scan-assembler {\tptrue\tp[0-7].[bhsd], vl1\n} } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pr99726.c b/gcc/testsuite/gcc.target/i386/pr99726.c
 new file mode 100644
 index 00000000000..98ccce6a979
