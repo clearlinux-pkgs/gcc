@@ -15,7 +15,8 @@ François Dumont (3):
       libstdc++: Fix unordered containers move constructors noexcept qualification
       libstdc++: [_GLIBCXX_DEBUG] Fix management of __dp_sign_max_size [PR 99402]
 
-GCC Administrator (15):
+GCC Administrator (16):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -111,7 +112,7 @@ Richard Biener (5):
       remove write-only array in rev_post_order_and_mark_dfs_back_seme
       Compute RPO with adjacent SCC members, expose toplevel SCC extents
 
-Richard Sandiford (7):
+Richard Sandiford (8):
       data-ref: Tighten index-based alias checks [PR99726]
       gimple-fold: Recompute ADDR_EXPR flags after folding a TMR [PR98268]
       aarch64: Tweak post-RA handling of CONST_INT moves [PR98136]
@@ -119,6 +120,7 @@ Richard Sandiford (7):
       aarch64: Handle more SVE vector constants [PR99246]
       aarch64: Fix target alignment for SVE [PR98119]
       Check for matching CONST_VECTOR encodings [PR99929]
+      lra: Avoid cycling on certain subreg reloads [PR96796]
 
 Tamar Christina (1):
       SVE: Fix wrong sve predicate split (PR100048)
@@ -515,10 +517,163 @@ index 0719d810258..a9368325816 100644
 -10.3.0
 +10.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 3b1384e707f..c5d29d132d9 100644
+index 3b1384e707f..789dd7e0b31 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,131 @@
+@@ -1,3 +1,284 @@
++2021-04-23  YiFei Zhu  <zhuyifei1999@gmail.com>
++
++	Backported from master:
++	2021-04-23  YiFei Zhu  <zhuyifei1999@gmail.com>
++
++	* config/bpf/bpf.h (ASM_OUTPUT_ALIGNED_BSS): Use .type and .lcomm.
++
++2021-04-23  YiFei Zhu  <zhuyifei1999@gmail.com>
++
++	Backported from master:
++	2021-04-23  YiFei Zhu  <zhuyifei1999@gmail.com>
++
++	* config/bpf/bpf.h (FUNCTION_BOUNDARY): Set to 64.
++
++2021-04-23  Richard Sandiford  <richard.sandiford@arm.com>
++
++	Backported from master:
++	2021-04-14  Richard Sandiford  <richard.sandiford@arm.com>
++
++	PR rtl-optimization/99929
++	* rtl.h (same_vector_encodings_p): New function.
++	* cse.c (exp_equiv_p): Check that CONST_VECTORs have the same encoding.
++	* cselib.c (rtx_equal_for_cselib_1): Likewise.
++	* jump.c (rtx_renumbered_equal_p): Likewise.
++	* lra-constraints.c (operands_match_p): Likewise.
++	* reload.c (operands_match_p): Likewise.
++	* rtl.c (rtx_equal_p_cb, rtx_equal_p): Likewise.
++
++2021-04-23  Richard Sandiford  <richard.sandiford@arm.com>
++
++	Backported from master:
++	2021-03-31  Richard Sandiford  <richard.sandiford@arm.com>
++
++	PR target/98119
++	* config/aarch64/aarch64.c
++	(aarch64_vectorize_preferred_vector_alignment): Query the size
++	of the provided SVE vector; do not assume that all SVE vectors
++	have the same size.
++
++2021-04-23  Bin Cheng  <bin.cheng@linux.alibaba.com>
++
++	Backported from master:
++	2021-04-07  Bin Cheng  <bin.cheng@linux.alibaba.com>
++
++	PR tree-optimization/98736
++	* tree-loop-distribution.c
++	* (loop_distribution::bb_top_order_init):
++	Compute RPO with programing order preserved by calling function
++	rev_post_order_and_mark_dfs_back_seme.
++
++2021-04-23  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2020-07-31  Richard Biener  <rguenther@suse.de>
++
++	* cfganal.h (rev_post_order_and_mark_dfs_back_seme): Adjust
++	prototype.
++	* cfganal.c (rpoamdbs_bb_data): New struct with pre BB data.
++	(tag_header): New helper.
++	(cmp_edge_dest_pre): Likewise.
++	(rev_post_order_and_mark_dfs_back_seme): Compute SCCs,
++	find SCC exits and perform a DFS walk with extra edges to
++	compute a RPO with adjacent SCC members when requesting an
++	iteration optimized order and populate the toplevel SCC array.
++	* tree-ssa-sccvn.c (do_rpo_vn): Remove ad-hoc computation
++	of max_rpo and fill it in from SCC extent info instead.
++
++2021-04-23  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2020-07-20  Richard Biener  <rguenther@suse.de>
++
++	* cfganal.c (rev_post_order_and_mark_dfs_back_seme): Remove
++	write-only post array.
++
++2021-04-23  Alex Coplan  <alex.coplan@arm.com>
++
++	Backported from master:
++	2021-04-06  Alex Coplan  <alex.coplan@arm.com>
++
++	PR target/99748
++	* config/arm/arm.c (arm_libcall_uses_aapcs_base): Also use base
++	PCS for [su]fix_optab.
++
++2021-04-23  Richard Sandiford  <richard.sandiford@arm.com>
++
++	Backported from master:
++	2021-04-14  Richard Sandiford  <richard.sandiford@arm.com>
++
++	PR target/99249
++	* config/aarch64/aarch64.c (aarch64_expand_sve_const_vector_sel):
++	New function.
++	(aarch64_expand_sve_const_vector): Use it for nelts_per_pattern==2.
++
++2021-04-23  Richard Sandiford  <richard.sandiford@arm.com>
++
++	Backported from master:
++	2021-03-31  Richard Sandiford  <richard.sandiford@arm.com>
++
++	PR rtl-optimization/97141
++	PR rtl-optimization/98726
++	* emit-rtl.c (valid_for_const_vector_p): Return true for
++	CONST_POLY_INT_P.
++	* rtx-vector-builder.h (rtx_vector_builder::step): Return a
++	poly_wide_int instead of a wide_int.
++	(rtx_vector_builder::apply_set): Take a poly_wide_int instead
++	of a wide_int.
++	* rtx-vector-builder.c (rtx_vector_builder::apply_set): Likewise.
++	* config/aarch64/aarch64.c (aarch64_legitimate_constant_p): Return
++	false for CONST_VECTORs that cannot be forced to memory.
++	* config/aarch64/aarch64-simd.md (mov<mode>): If a CONST_VECTOR
++	is too complex to force to memory, build it up from individual
++	elements instead.
++
++2021-04-23  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2021-01-26  Richard Biener  <rguenther@suse.de>
++
++	PR middle-end/98726
++	* tree.h (vector_cst_int_elt): Remove.
++	* tree.c (vector_cst_int_elt): Use poly_wide_int for computations,
++	make static.
++
++2021-04-23  Richard Sandiford  <richard.sandiford@arm.com>
++
++	Backported from master:
++	2021-03-30  Richard Sandiford  <richard.sandiford@arm.com>
++
++	PR target/98136
++	* config/aarch64/aarch64.md (mov<mode>): Pass multi-instruction
++	CONST_INTs to aarch64_expand_mov_immediate when called after RA.
++
++2021-04-23  Richard Sandiford  <richard.sandiford@arm.com>
++
++	Backported from master:
++	2021-03-31  Richard Sandiford  <richard.sandiford@arm.com>
++
++	PR tree-optimization/98268
++	* gimple-fold.c (maybe_canonicalize_mem_ref_addr): Call
++	recompute_tree_invariant_for_addr_expr after successfully
++	folding a TARGET_MEM_REF that occurs inside an ADDR_EXPR.
++
++2021-04-23  Richard Sandiford  <richard.sandiford@arm.com>
++
++	Backported from master:
++	2021-03-31  Richard Sandiford  <richard.sandiford@arm.com>
++
++	PR tree-optimization/99726
++	* tree-data-ref.c (create_intersect_range_checks_index): Bail
++	out if there is more than one access function SCEV for the loop
++	being versioned.
++
 +2021-04-22  Alex Coplan  <alex.coplan@arm.com>
 +
 +	PR target/99216
@@ -2910,10 +3065,101 @@ index 34a8f209e20..803c297b0fc 100644
        /* We can't assume nonlocal labels have their following insns yet.  */
        if (LABEL_REF_NONLOCAL_P (x) || LABEL_REF_NONLOCAL_P (y))
 diff --git a/gcc/lra-constraints.c b/gcc/lra-constraints.c
-index 7cc479b3042..ac6f59fee93 100644
+index 7cc479b3042..f390c9ffed1 100644
 --- a/gcc/lra-constraints.c
 +++ b/gcc/lra-constraints.c
-@@ -751,6 +751,11 @@ operands_match_p (rtx x, rtx y, int y_hard_regno)
+@@ -235,12 +235,17 @@ get_reg_class (int regno)
+    CL.  Use elimination first if REG is a hard register.  If REG is a
+    reload pseudo created by this constraints pass, assume that it will
+    be allocated a hard register from its allocno class, but allow that
+-   class to be narrowed to CL if it is currently a superset of CL.
++   class to be narrowed to CL if it is currently a superset of CL and
++   if either:
++
++   - ALLOW_ALL_RELOAD_CLASS_CHANGES_P is true or
++   - the instruction we're processing is not a reload move.
+ 
+    If NEW_CLASS is nonnull, set *NEW_CLASS to the new allocno class of
+    REGNO (reg), or NO_REGS if no change in its class was needed.  */
+ static bool
+-in_class_p (rtx reg, enum reg_class cl, enum reg_class *new_class)
++in_class_p (rtx reg, enum reg_class cl, enum reg_class *new_class,
++	    bool allow_all_reload_class_changes_p = false)
+ {
+   enum reg_class rclass, common_class;
+   machine_mode reg_mode;
+@@ -267,7 +272,8 @@ in_class_p (rtx reg, enum reg_class cl, enum reg_class *new_class)
+ 	 typically moves that have many alternatives, and restricting
+ 	 reload pseudos for one alternative may lead to situations
+ 	 where other reload pseudos are no longer allocatable.  */
+-      || (INSN_UID (curr_insn) >= new_insn_uid_start
++      || (!allow_all_reload_class_changes_p
++	  && INSN_UID (curr_insn) >= new_insn_uid_start
+ 	  && src != NULL
+ 	  && ((REG_P (src) || MEM_P (src))
+ 	      || (GET_CODE (src) == SUBREG
+@@ -570,13 +576,12 @@ init_curr_insn_input_reloads (void)
+   curr_insn_input_reloads_num = 0;
+ }
+ 
+-/* Create a new pseudo using MODE, RCLASS, ORIGINAL or reuse already
+-   created input reload pseudo (only if TYPE is not OP_OUT).  Don't
+-   reuse pseudo if IN_SUBREG_P is true and the reused pseudo should be
+-   wrapped up in SUBREG.  The result pseudo is returned through
+-   RESULT_REG.  Return TRUE if we created a new pseudo, FALSE if we
+-   reused the already created input reload pseudo.  Use TITLE to
+-   describe new registers for debug purposes.  */
++/* Create a new pseudo using MODE, RCLASS, ORIGINAL or reuse an existing
++   reload pseudo.  Don't reuse an existing reload pseudo if IN_SUBREG_P
++   is true and the reused pseudo should be wrapped up in a SUBREG.
++   The result pseudo is returned through RESULT_REG.  Return TRUE if we
++   created a new pseudo, FALSE if we reused an existing reload pseudo.
++   Use TITLE to describe new registers for debug purposes.  */
+ static bool
+ get_reload_reg (enum op_type type, machine_mode mode, rtx original,
+ 		enum reg_class rclass, bool in_subreg_p,
+@@ -588,6 +593,40 @@ get_reload_reg (enum op_type type, machine_mode mode, rtx original,
+ 
+   if (type == OP_OUT)
+     {
++      /* Output reload registers tend to start out with a conservative
++	 choice of register class.  Usually this is ALL_REGS, although
++	 a target might narrow it (for performance reasons) through
++	 targetm.preferred_reload_class.  It's therefore quite common
++	 for a reload instruction to require a more restrictive class
++	 than the class that was originally assigned to the reload register.
++
++	 In these situations, it's more efficient to refine the choice
++	 of register class rather than create a second reload register.
++	 This also helps to avoid cycling for registers that are only
++	 used by reload instructions.  */
++      rtx src = curr_insn_set != NULL ? SET_SRC (curr_insn_set) : NULL;
++      if (REG_P (original)
++	  && (int) REGNO (original) >= new_regno_start
++	  && INSN_UID (curr_insn) >= new_insn_uid_start
++	  && in_class_p (original, rclass, &new_class, true)
++	  && src != NULL
++	  && ((REG_P (src) || MEM_P (src))
++	      || (GET_CODE (src) == SUBREG
++		  && (REG_P (SUBREG_REG (src)) || MEM_P (SUBREG_REG (src))))))
++	{
++	  unsigned int regno = REGNO (original);
++	  if (lra_dump_file != NULL)
++	    {
++	      fprintf (lra_dump_file, "	 Reuse r%d for output ", regno);
++	      dump_value_slim (lra_dump_file, original, 1);
++	    }
++	  if (new_class != lra_get_allocno_class (regno))
++	    lra_change_class (regno, new_class, ", change to", false);
++	  if (lra_dump_file != NULL)
++	    fprintf (lra_dump_file, "\n");
++	  *result_reg = original;
++	  return false;
++	}
+       *result_reg
+ 	= lra_create_new_reg_with_unique_value (mode, original, rclass, title);
+       return true;
+@@ -751,6 +790,11 @@ operands_match_p (rtx x, rtx y, int y_hard_regno)
      CASE_CONST_UNIQUE:
        return false;
  
@@ -3186,10 +3432,86 @@ index 99edad8a950..f33489286a9 100644
  
  #endif
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 2913065bf31..e351398e4d1 100644
+index 2913065bf31..2438a9f29d4 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,287 @@
+@@ -1,3 +1,363 @@
++2021-04-23  Richard Sandiford  <richard.sandiford@arm.com>
++
++	Backported from master:
++	2021-04-14  Richard Sandiford  <richard.sandiford@arm.com>
++
++	* gcc.target/aarch64/sve/pr99929_1.c: New file.
++	* gcc.target/aarch64/sve/pr99929_2.c: Likewise.
++
++2021-04-23  Richard Sandiford  <richard.sandiford@arm.com>
++
++	Backported from master:
++	2021-03-31  Richard Sandiford  <richard.sandiford@arm.com>
++
++	PR target/98119
++	* gcc.target/aarch64/sve/pr98119.c: New test.
++
++2021-04-23  Bin Cheng  <bin.cheng@linux.alibaba.com>
++
++	Backported from master:
++	2021-04-07  Bin Cheng  <bin.cheng@linux.alibaba.com>
++
++	PR tree-optimization/98736
++	* gcc.c-torture/execute/pr98736.c: New test.
++
++2021-04-23  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2020-07-31  Richard Biener  <rguenther@suse.de>
++
++	* gcc.dg/torture/20200727-0.c: New testcase.
++
++2021-04-23  Richard Sandiford  <richard.sandiford@arm.com>
++
++	Backported from master:
++	2021-04-14  Richard Sandiford  <richard.sandiford@arm.com>
++
++	PR target/99249
++	* gcc.target/aarch64/sve/acle/general/pr99246.c: New test.
++
++2021-04-23  Richard Sandiford  <richard.sandiford@arm.com>
++
++	Backported from master:
++	2021-03-31  Richard Sandiford  <richard.sandiford@arm.com>
++
++	PR rtl-optimization/97141
++	PR rtl-optimization/98726
++	* gcc.c-torture/compile/pr97141.c: New test.
++	* gcc.c-torture/compile/pr98726.c: Likewise.
++	* gcc.target/aarch64/sve/pr97141.c: Likewise.
++	* gcc.target/aarch64/sve/pr98726.c: Likewise.
++
++2021-04-23  Richard Sandiford  <richard.sandiford@arm.com>
++
++	Backported from master:
++	2021-03-30  Richard Sandiford  <richard.sandiford@arm.com>
++
++	PR target/98136
++	* g++.dg/pr98136.C: New test.
++
++2021-04-23  Richard Sandiford  <richard.sandiford@arm.com>
++
++	Backported from master:
++	2021-03-31  Richard Sandiford  <richard.sandiford@arm.com>
++
++	PR tree-optimization/98268
++	* gcc.target/aarch64/sve/pr98268-1.c: New test.
++	* gcc.target/aarch64/sve/pr98268-2.c: Likewise.
++
++2021-04-23  Richard Sandiford  <richard.sandiford@arm.com>
++
++	Backported from master:
++	2021-03-31  Richard Sandiford  <richard.sandiford@arm.com>
++
++	PR tree-optimization/99726
++	* gcc.target/i386/pr99726.c: New test.
++
 +2021-04-22  Alex Coplan  <alex.coplan@arm.com>
 +
 +	PR target/99216
@@ -4279,6 +4601,67 @@ index 00000000000..61a58a7fcf4
 +#include <arm_sve.h>
 +bool a;
 +int main() { a = svaddv(svptrue_b8(), svdup_s8(0)); }
+diff --git a/gcc/testsuite/gcc.c-torture/compile/pr96796.c b/gcc/testsuite/gcc.c-torture/compile/pr96796.c
+new file mode 100644
+index 00000000000..8808e62fe77
+--- /dev/null
++++ b/gcc/testsuite/gcc.c-torture/compile/pr96796.c
+@@ -0,0 +1,55 @@
++/* { dg-additional-options "-fcommon" } */
++
++struct S0 {
++  signed f0 : 8;
++  unsigned f1;
++  unsigned f4;
++};
++struct S1 {
++  long f3;
++  char f4;
++} g_3_4;
++
++int g_5, func_1_l_32, func_50___trans_tmp_31;
++static struct S0 g_144, g_834, g_1255, g_1261;
++
++int g_273[120] = {};
++int *g_555;
++char **g_979;
++static int g_1092_0;
++static int g_1193;
++int safe_mul_func_int16_t_s_s(int si1, int si2) { return si1 * si2; }
++static struct S0 *func_50();
++int func_1() { func_50(g_3_4, g_5, func_1_l_32, 8, 3); }
++void safe_div_func_int64_t_s_s(int *);
++void safe_mod_func_uint32_t_u_u(struct S0);
++struct S0 *func_50(int p_51, struct S0 p_52, struct S1 p_53, int p_54,
++                   int p_55) {
++  int __trans_tmp_30;
++  char __trans_tmp_22;
++  short __trans_tmp_19;
++  long l_985_1;
++  long l_1191[8];
++  safe_div_func_int64_t_s_s(g_273);
++  __builtin_printf((char*)g_1261.f4);
++  safe_mod_func_uint32_t_u_u(g_834);
++  g_144.f0 += 1;
++  for (;;) {
++    struct S1 l_1350 = {&l_1350};
++    for (; p_53.f3; p_53.f3 -= 1)
++      for (; g_1193 <= 2; g_1193 += 1) {
++        __trans_tmp_19 = safe_mul_func_int16_t_s_s(l_1191[l_985_1 + p_53.f3],
++                                                   p_55 % (**g_979 = 10));
++        __trans_tmp_22 = g_1255.f1 * p_53.f4;
++        __trans_tmp_30 = __trans_tmp_19 + __trans_tmp_22;
++        if (__trans_tmp_30)
++          g_1261.f0 = p_51;
++        else {
++          g_1255.f0 = p_53.f3;
++          int *l_1422 = g_834.f0 = g_144.f4 != (*l_1422)++ > 0 < 0 ^ 51;
++          g_555 = ~0;
++          g_1092_0 |= func_50___trans_tmp_31;
++        }
++      }
++  }
++}
 diff --git a/gcc/testsuite/gcc.c-torture/compile/pr97141.c b/gcc/testsuite/gcc.c-torture/compile/pr97141.c
 new file mode 100644
 index 00000000000..1a9ff830a22
