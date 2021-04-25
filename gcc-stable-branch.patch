@@ -15,7 +15,8 @@ François Dumont (3):
       libstdc++: Fix unordered containers move constructors noexcept qualification
       libstdc++: [_GLIBCXX_DEBUG] Fix management of __dp_sign_max_size [PR 99402]
 
-GCC Administrator (16):
+GCC Administrator (17):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -517,10 +518,19 @@ index 0719d810258..a9368325816 100644
 -10.3.0
 +10.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 3b1384e707f..789dd7e0b31 100644
+index 3b1384e707f..db163c68238 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,284 @@
+@@ -1,3 +1,293 @@
++2021-04-24  Richard Sandiford  <richard.sandiford@arm.com>
++
++	PR rtl-optimization/96796
++	* lra-constraints.c (in_class_p): Add a default-false
++	allow_all_reload_class_changes_p parameter.  Do not treat
++	reload moves specially when the parameter is true.
++	(get_reload_reg): Try to narrow the class of an existing OP_OUT
++	reload if we're reloading a reload pseudo in a reload instruction.
++
 +2021-04-23  YiFei Zhu  <zhuyifei1999@gmail.com>
 +
 +	Backported from master:
@@ -3432,10 +3442,15 @@ index 99edad8a950..f33489286a9 100644
  
  #endif
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 2913065bf31..2438a9f29d4 100644
+index 2913065bf31..a5a8e84f87b 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,363 @@
+@@ -1,3 +1,368 @@
++2021-04-24  Richard Sandiford  <richard.sandiford@arm.com>
++
++	PR rtl-optimization/96796
++	* gcc.c-torture/compile/pr96796.c: New test.
++
 +2021-04-23  Richard Sandiford  <richard.sandiford@arm.com>
 +
 +	Backported from master:
