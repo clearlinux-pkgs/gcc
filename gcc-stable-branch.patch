@@ -1,4 +1,8 @@
-Jakub Jelinek (7):
+Harald Anlauf (2):
+      PR fortran/100154 - ICE in gfc_conv_procedure_call, at fortran/trans-expr.c:6131
+      Fortran - allow target of pointer from evaluation of function-reference
+
+Jakub Jelinek (8):
       Bump BASE-VER
       cprop: Fix -fcompare-debug bug in constprop_register [PR100148]
       testsuite: Add -fchecking to dg-ice tests
@@ -6,9 +10,21 @@ Jakub Jelinek (7):
       cfgcleanup: Fix -fcompare-debug issue in outgoing_edges_match [PR100254]
       veclower: Fix up vec_shl matching of VEC_PERM_EXPR [PR100239]
       aarch64: Fix UB in the compiler [PR100200]
+      aarch64: Fix up last commit [PR100200]
+
+Marek Polacek (2):
+      c++: Don't allow defining types in enum-base [PR96380]
+      c++: Prevent bogus -Wtype-limits warning with NTTP [PR100161]
 
 Michael Meissner (1):
       Backport fix for PR target/98952
+
+Patrick Palka (2):
+      c++: do_class_deduction and dependent init [PR93383]
+      libstdc++: Fix up lambda in join_view::_Iterator::operator++ [PR100290]
+
+Tobias Burnus (1):
+      libgomp/testsuite: Fix checks for dg-excess-errors
 
 diff --git a/gcc/BASE-VER b/gcc/BASE-VER
 index 68d8f15e23c..668182d21a4 100644
@@ -33,7 +49,7 @@ index 8650fb7f264..260a896ac48 100644
      if (!n1 && n2)
        return false;
 diff --git a/gcc/config/aarch64/aarch64.c b/gcc/config/aarch64/aarch64.c
-index 12625a4bee3..7985940ba42 100644
+index 12625a4bee3..e979a51f3af 100644
 --- a/gcc/config/aarch64/aarch64.c
 +++ b/gcc/config/aarch64/aarch64.c
 @@ -10778,7 +10778,7 @@ aarch64_print_operand (FILE *f, rtx x, int code)
@@ -41,7 +57,7 @@ index 12625a4bee3..7985940ba42 100644
  
        if (GET_MODE_CLASS (GET_MODE (x)) == MODE_VECTOR_INT)
 -	asm_fprintf (f, "%wd", -INTVAL (elt));
-+	asm_fprintf (f, "%wd", -UINTVAL (elt));
++	asm_fprintf (f, "%wd", (HOST_WIDE_INT) -UINTVAL (elt));
        else if (GET_MODE_CLASS (GET_MODE (x)) == MODE_VECTOR_FLOAT
  	       && aarch64_print_vector_float_operand (f, x, true))
  	;
@@ -105,6 +121,67 @@ index c55842b9c74..49f02ae0381 100644
  
  (define_predicate "aarch64_plus_operand"
    (ior (match_operand 0 "register_operand")
+diff --git a/gcc/cp/parser.c b/gcc/cp/parser.c
+index 99eccf0c5e4..fba516efa23 100644
+--- a/gcc/cp/parser.c
++++ b/gcc/cp/parser.c
+@@ -19942,6 +19942,10 @@ cp_parser_enum_specifier (cp_parser* parser)
+       /* Consume the `:'.  */
+       cp_lexer_consume_token (parser->lexer);
+ 
++      auto tdf
++	= make_temp_override (parser->type_definition_forbidden_message,
++			      G_("types may not be defined in enum-base"));
++
+       /* Parse the type-specifier-seq.  */
+       cp_parser_type_specifier_seq (parser, CP_PARSER_FLAGS_NONE,
+ 				    /*is_declaration=*/false,
+diff --git a/gcc/cp/pt.c b/gcc/cp/pt.c
+index 19fdafa4c43..d30876ced9c 100644
+--- a/gcc/cp/pt.c
++++ b/gcc/cp/pt.c
+@@ -19900,15 +19900,21 @@ tsubst_copy_and_build (tree t,
+     case MEMBER_REF:
+     case DOTSTAR_EXPR:
+       {
+-	/* If T was type-dependent, suppress warnings that depend on the range
+-	   of the types involved.  */
+-	++processing_template_decl;
+-	const bool was_dep = (potential_constant_expression (t)
+-			      ? value_dependent_expression_p (t)
+-			      : type_dependent_expression_p (t));
+-	--processing_template_decl;
+-	tree op0 = RECUR (TREE_OPERAND (t, 0));
+-	tree op1 = RECUR (TREE_OPERAND (t, 1));
++	/* If either OP0 or OP1 was value- or type-dependent, suppress
++	   warnings that depend on the range of the types involved.  */
++	tree op0 = TREE_OPERAND (t, 0);
++	tree op1 = TREE_OPERAND (t, 1);
++	auto dep_p = [](tree t) {
++	  ++processing_template_decl;
++	  bool r = (potential_constant_expression (t)
++		    ? value_dependent_expression_p (t)
++		    : type_dependent_expression_p (t));
++	  --processing_template_decl;
++	  return r;
++	};
++	const bool was_dep = dep_p (op0) || dep_p (op1);
++	op0 = RECUR (op0);
++	op1 = RECUR (op1);
+ 
+ 	warning_sentinel s1(warn_type_limits, was_dep);
+ 	warning_sentinel s2(warn_div_by_zero, was_dep);
+@@ -29356,6 +29362,10 @@ do_class_deduction (tree ptype, tree tmpl, tree init,
+       return error_mark_node;
+     }
+ 
++  /* Wait until the initializer is non-dependent.  */
++  if (type_dependent_expression_p (init))
++    return ptype;
++
+   tree type = TREE_TYPE (tmpl);
+ 
+   bool try_list_ctor = false;
 diff --git a/gcc/cprop.c b/gcc/cprop.c
 index 73034ce72d0..6f34f6b2418 100644
 --- a/gcc/cprop.c
@@ -131,6 +208,144 @@ index 73034ce72d0..6f34f6b2418 100644
  			 from, src))
  	return 1;
      }
+diff --git a/gcc/fortran/check.c b/gcc/fortran/check.c
+index 82db8e4e1b2..27bf3a7eafe 100644
+--- a/gcc/fortran/check.c
++++ b/gcc/fortran/check.c
+@@ -1055,6 +1055,13 @@ variable_check (gfc_expr *e, int n, bool allow_proc)
+ 	  return true;
+     }
+ 
++  /* F2018:R902: function reference having a data pointer result.  */
++  if (e->expr_type == EXPR_FUNCTION
++      && e->symtree->n.sym->attr.flavor == FL_PROCEDURE
++      && e->symtree->n.sym->attr.function
++      && e->symtree->n.sym->attr.pointer)
++    return true;
++
+   gfc_error ("%qs argument of %qs intrinsic at %L must be a variable",
+ 	     gfc_current_intrinsic_arg[n]->name, gfc_current_intrinsic, &e->where);
+ 
+@@ -5689,6 +5696,19 @@ gfc_check_spread (gfc_expr *source, gfc_expr *dim, gfc_expr *ncopies)
+ /* Functions for checking FGETC, FPUTC, FGET and FPUT (subroutines and
+    functions).  */
+ 
++bool
++arg_strlen_is_zero (gfc_expr *c, int n)
++{
++  if (gfc_var_strlen (c) == 0)
++    {
++      gfc_error ("%qs argument of %qs intrinsic at %L must have "
++		 "length at least 1", gfc_current_intrinsic_arg[n]->name,
++		 gfc_current_intrinsic, &c->where);
++      return true;
++    }
++  return false;
++}
++
+ bool
+ gfc_check_fgetputc_sub (gfc_expr *unit, gfc_expr *c, gfc_expr *status)
+ {
+@@ -5702,13 +5722,19 @@ gfc_check_fgetputc_sub (gfc_expr *unit, gfc_expr *c, gfc_expr *status)
+     return false;
+   if (!kind_value_check (c, 1, gfc_default_character_kind))
+     return false;
++  if (strcmp (gfc_current_intrinsic, "fgetc") == 0
++      && !variable_check (c, 1, false))
++    return false;
++  if (arg_strlen_is_zero (c, 1))
++    return false;
+ 
+   if (status == NULL)
+     return true;
+ 
+   if (!type_check (status, 2, BT_INTEGER)
+       || !kind_value_check (status, 2, gfc_default_integer_kind)
+-      || !scalar_check (status, 2))
++      || !scalar_check (status, 2)
++      || !variable_check (status, 2, false))
+     return false;
+ 
+   return true;
+@@ -5729,13 +5755,19 @@ gfc_check_fgetput_sub (gfc_expr *c, gfc_expr *status)
+     return false;
+   if (!kind_value_check (c, 0, gfc_default_character_kind))
+     return false;
++  if (strcmp (gfc_current_intrinsic, "fget") == 0
++      && !variable_check (c, 0, false))
++    return false;
++  if (arg_strlen_is_zero (c, 0))
++    return false;
+ 
+   if (status == NULL)
+     return true;
+ 
+   if (!type_check (status, 1, BT_INTEGER)
+       || !kind_value_check (status, 1, gfc_default_integer_kind)
+-      || !scalar_check (status, 1))
++      || !scalar_check (status, 1)
++      || !variable_check (status, 1, false))
+     return false;
+ 
+   return true;
+diff --git a/gcc/fortran/expr.c b/gcc/fortran/expr.c
+index 92a6700568d..956003ec605 100644
+--- a/gcc/fortran/expr.c
++++ b/gcc/fortran/expr.c
+@@ -6121,7 +6121,9 @@ gfc_check_vardef_context (gfc_expr* e, bool pointer, bool alloc_obj,
+     }
+   if (!pointer && sym->attr.flavor != FL_VARIABLE
+       && !(sym->attr.flavor == FL_PROCEDURE && sym == sym->result)
+-      && !(sym->attr.flavor == FL_PROCEDURE && sym->attr.proc_pointer))
++      && !(sym->attr.flavor == FL_PROCEDURE && sym->attr.proc_pointer)
++      && !(sym->attr.flavor == FL_PROCEDURE
++	   && sym->attr.function && sym->attr.pointer))
+     {
+       if (context)
+ 	gfc_error ("%qs in variable definition context (%s) at %L is not"
+diff --git a/gcc/fortran/intrinsic.c b/gcc/fortran/intrinsic.c
+index 17fd92eb462..219f04f2317 100644
+--- a/gcc/fortran/intrinsic.c
++++ b/gcc/fortran/intrinsic.c
+@@ -3460,7 +3460,7 @@ add_subroutines (void)
+   /* Argument names.  These are used as argument keywords and so need to
+      match the documentation.  Please keep this list in sorted order.  */
+   static const char
+-    *a = "a", *c = "count", *cm = "count_max", *com = "command",
++    *a = "a", *c_ = "c", *c = "count", *cm = "count_max", *com = "command",
+     *cr = "count_rate", *dt = "date", *errmsg = "errmsg", *f = "from",
+     *fp = "frompos", *gt = "get", *h = "harvest", *han = "handler",
+     *length = "length", *ln = "len", *md = "mode", *msk = "mask",
+@@ -3840,12 +3840,12 @@ add_subroutines (void)
+   add_sym_3s ("fgetc", GFC_ISYM_FGETC, CLASS_IMPURE, BT_UNKNOWN, 0, GFC_STD_GNU,
+ 	      gfc_check_fgetputc_sub, NULL, gfc_resolve_fgetc_sub,
+ 	      ut, BT_INTEGER, di, REQUIRED, INTENT_IN,
+-	      c, BT_CHARACTER, dc, REQUIRED, INTENT_OUT,
++	      c_, BT_CHARACTER, dc, REQUIRED, INTENT_OUT,
+ 	      st, BT_INTEGER, di, OPTIONAL, INTENT_OUT);
+ 
+   add_sym_2s ("fget", GFC_ISYM_FGET, CLASS_IMPURE, BT_UNKNOWN, 0, GFC_STD_GNU,
+ 	      gfc_check_fgetput_sub, NULL, gfc_resolve_fget_sub,
+-	      c, BT_CHARACTER, dc, REQUIRED, INTENT_OUT,
++	      c_, BT_CHARACTER, dc, REQUIRED, INTENT_OUT,
+ 	      st, BT_INTEGER, di, OPTIONAL, INTENT_OUT);
+ 
+   add_sym_1s ("flush", GFC_ISYM_FLUSH, CLASS_IMPURE, BT_UNKNOWN, 0, GFC_STD_GNU,
+@@ -3855,12 +3855,12 @@ add_subroutines (void)
+   add_sym_3s ("fputc", GFC_ISYM_FPUTC, CLASS_IMPURE, BT_UNKNOWN, 0, GFC_STD_GNU,
+ 	      gfc_check_fgetputc_sub, NULL, gfc_resolve_fputc_sub,
+ 	      ut, BT_INTEGER, di, REQUIRED, INTENT_IN,
+-	      c, BT_CHARACTER, dc, REQUIRED, INTENT_IN,
++	      c_, BT_CHARACTER, dc, REQUIRED, INTENT_IN,
+ 	      st, BT_INTEGER, di, OPTIONAL, INTENT_OUT);
+ 
+   add_sym_2s ("fput", GFC_ISYM_FPUT, CLASS_IMPURE, BT_UNKNOWN, 0, GFC_STD_GNU,
+ 	      gfc_check_fgetput_sub, NULL, gfc_resolve_fput_sub,
+-	      c, BT_CHARACTER, dc, REQUIRED, INTENT_IN,
++	      c_, BT_CHARACTER, dc, REQUIRED, INTENT_IN,
+ 	      st, BT_INTEGER, di, OPTIONAL, INTENT_OUT);
+ 
+   add_sym_1s ("free", GFC_ISYM_FREE, CLASS_IMPURE, BT_UNKNOWN, 0, GFC_STD_GNU,
 diff --git a/gcc/testsuite/c-c++-common/goacc/kernels-decompose-ice-1.c b/gcc/testsuite/c-c++-common/goacc/kernels-decompose-ice-1.c
 index d770b91dd09..8c3884bdc00 100644
 --- a/gcc/testsuite/c-c++-common/goacc/kernels-decompose-ice-1.c
@@ -167,6 +382,33 @@ index 2c9d2f9b329..eae0d8c377b 100644
  // { dg-ice "comptypes" }
  
  template<bool b> struct eif { typedef void type; };
+diff --git a/gcc/testsuite/g++.dg/cpp0x/enum_base4.C b/gcc/testsuite/g++.dg/cpp0x/enum_base4.C
+new file mode 100644
+index 00000000000..b3015256386
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp0x/enum_base4.C
+@@ -0,0 +1,8 @@
++// PR c++/96380
++// { dg-do compile { target c++11 } }
++
++extern const int a, b;
++enum struct c;
++template <class>
++enum struct c : union enum struct c { e = b, f = a };  // { dg-error "types may not be defined|expected|elaborated-type-specifier" }
++enum class c {};
+diff --git a/gcc/testsuite/g++.dg/cpp0x/enum_base5.C b/gcc/testsuite/g++.dg/cpp0x/enum_base5.C
+new file mode 100644
+index 00000000000..c01e857e612
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp0x/enum_base5.C
+@@ -0,0 +1,7 @@
++// PR c++/96380
++// { dg-do compile { target c++11 } }
++
++extern const int a, b;
++enum struct c;
++template <class>
++enum struct c : union enum struct c { e = b, f = a }; // { dg-error "types may not be defined|expected|elaborated-type-specifier" }
 diff --git a/gcc/testsuite/g++.dg/cpp0x/vt-88982.C b/gcc/testsuite/g++.dg/cpp0x/vt-88982.C
 index cb9530dcee1..7a868233d73 100644
 --- a/gcc/testsuite/g++.dg/cpp0x/vt-88982.C
@@ -201,16 +443,130 @@ index d6c8bae525f..0cdb400d21c 100644
  
  template <int N>
 diff --git a/gcc/testsuite/g++.dg/cpp2a/nontype-class39.C b/gcc/testsuite/g++.dg/cpp2a/nontype-class39.C
-index f5f79a71ec2..512afad8e4f 100644
+index f5f79a71ec2..9b4da4f02ea 100644
 --- a/gcc/testsuite/g++.dg/cpp2a/nontype-class39.C
 +++ b/gcc/testsuite/g++.dg/cpp2a/nontype-class39.C
-@@ -1,5 +1,6 @@
+@@ -1,6 +1,5 @@
  // PR c++/89565
  // { dg-do compile { target c++20 } }
-+// { dg-additional-options "-fchecking" }
- // { dg-ice "resolve_args" }
+-// { dg-ice "resolve_args" }
  
  template <auto>
+ struct N{};
+diff --git a/gcc/testsuite/g++.dg/cpp2a/nontype-class45.C b/gcc/testsuite/g++.dg/cpp2a/nontype-class45.C
+new file mode 100644
+index 00000000000..e7addf5f291
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp2a/nontype-class45.C
+@@ -0,0 +1,32 @@
++// PR c++/99200
++// { dg-do compile { target c++20 } }
++
++template <int N>
++struct A
++{
++  constexpr A (const char (&s)[N]) { for (int i = 0; i < N; i++) v[i] = s[i]; v[N] = 0; }
++  char v[N + 1];
++};
++
++template <A s>
++struct B
++{
++  constexpr operator const char *() { return s.v; }
++};
++
++template <typename T>
++const char *
++foo ()
++{ 
++  return B<__PRETTY_FUNCTION__>{};
++}
++
++template <typename T>
++const char *
++bar ()
++{ 
++  return B<__FUNCTION__>{};
++}
++
++auto a = foo <int> ();
++auto b = bar <double> ();
+diff --git a/gcc/testsuite/g++.dg/cpp2a/nontype-class46.C b/gcc/testsuite/g++.dg/cpp2a/nontype-class46.C
+new file mode 100644
+index 00000000000..d91e800424f
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp2a/nontype-class46.C
+@@ -0,0 +1,11 @@
++// PR c++/93383
++// { dg-do compile { target c++20 } }
++
++template <int> struct A {};
++
++template <A a> struct B {
++  void foo(B<+a>);
++  void bar(B<a.x>);
++  template <class T> using type = B<T{}>;
++  template <class> static inline auto y = A{0}; // { dg-error "deduction|no match" }
++};
+diff --git a/gcc/testsuite/g++.dg/cpp2a/nontype-class47.C b/gcc/testsuite/g++.dg/cpp2a/nontype-class47.C
+new file mode 100644
+index 00000000000..1f31b9bd530
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp2a/nontype-class47.C
+@@ -0,0 +1,11 @@
++// PR c++/95291
++// { dg-do compile { target c++20 } }
++
++template <typename T = int>
++class xy { };
++
++template <xy _size>
++struct window_root { };
++
++template <typename minion>
++struct flip_horizontally : window_root<minion::size> { };
+diff --git a/gcc/testsuite/g++.dg/cpp2a/nontype-class48.C b/gcc/testsuite/g++.dg/cpp2a/nontype-class48.C
+new file mode 100644
+index 00000000000..9024436cad8
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp2a/nontype-class48.C
+@@ -0,0 +1,36 @@
++// PR c++/99683
++// { dg-do compile { target c++20 } }
++
++template<auto V>
++struct nttp_tag {};
++
++template<typename T>
++struct type_tag {};
++
++
++/************************************************/
++template<bool is_type>
++struct use_ctad
++{
++    template<auto V> requires (!is_type)
++    constexpr use_ctad(nttp_tag<V>) {}
++};
++
++template<auto V>
++use_ctad(nttp_tag<V>) -> use_ctad<false>;
++
++/**********************************************/
++template<use_ctad t>
++struct wrapper 
++{
++    template<typename Tag>
++    wrapper(Tag);
++};
++
++template<typename Tag>
++wrapper(Tag) -> wrapper<use_ctad{Tag()}>;
++
++int main()
++{
++    wrapper t{nttp_tag<42>{}};
++}
 diff --git a/gcc/testsuite/g++.dg/opt/pr100148.C b/gcc/testsuite/g++.dg/opt/pr100148.C
 new file mode 100644
 index 00000000000..d038879b6b8
@@ -351,6 +707,29 @@ index 00000000000..dbdac1638c7
 +  AllocateWindowDescFront<StationViewWindow>(&_station_view_desc,
 +                                             ShowStationViewWindow_station);
 +}
+diff --git a/gcc/testsuite/g++.dg/warn/Wtype-limits6.C b/gcc/testsuite/g++.dg/warn/Wtype-limits6.C
+new file mode 100644
+index 00000000000..9d5886d5323
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/warn/Wtype-limits6.C
+@@ -0,0 +1,17 @@
++// PR c++/100161
++// { dg-additional-options "-Wtype-limits" }
++
++void f(unsigned);
++
++template<unsigned n>
++void g()
++{
++    for (unsigned i = 0; i < n; i++) { // { dg-bogus "always false" }
++        f(i);
++    }
++}
++
++void h()
++{
++    g<0>();
++}
 diff --git a/gcc/testsuite/gcc.dg/pr100239.c b/gcc/testsuite/gcc.dg/pr100239.c
 new file mode 100644
 index 00000000000..1ade810c52b
@@ -403,6 +782,63 @@ index 00000000000..c487fbc403e
 +  __trampoline_setup (tramp, SIZE, 0, 0);
 +  return 0;
 +}
+diff --git a/gcc/testsuite/gfortran.dg/pr100154.f90 b/gcc/testsuite/gfortran.dg/pr100154.f90
+new file mode 100644
+index 00000000000..3a1489aaab8
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr100154.f90
+@@ -0,0 +1,26 @@
++! { dg-do compile }
++! { dg-options "-std=gnu" }
++! PR100154 - ICE in gfc_conv_procedure_call, at fortran/trans-expr.c:6131
++
++program p
++  implicit none
++  integer           :: n
++  character, target :: c
++  character(len=0)  :: c0
++  character(len=:), allocatable :: cc
++  n = fget(cc)
++  n = fget('a')       ! { dg-error "must be a variable" }
++  n = fget(c0)        ! { dg-error "must have length at least 1" }
++  call fget('x')      ! { dg-error "must be a variable" }
++  n = fgetc(5,'a')    ! { dg-error "must be a variable" }
++  call fgetc(5,c0)    ! { dg-error "must have length at least 1" }
++  call fgetc(5,c,1)   ! { dg-error "must be a variable" }
++  call fputc(5,'x',1) ! { dg-error "must be a variable" }
++  n = fget (ptr_returning_func())
++  print *, c
++contains
++  function ptr_returning_func () result (res)
++    character, pointer :: res
++    res => c
++  end
++end
+diff --git a/gcc/testsuite/gfortran.dg/ptr-func-4.f90 b/gcc/testsuite/gfortran.dg/ptr-func-4.f90
+new file mode 100644
+index 00000000000..62b18f6a935
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/ptr-func-4.f90
+@@ -0,0 +1,19 @@
++! { dg-do run }
++! { dg-options "-O2 -std=f2008" }
++! PR fortran/100218 - target of pointer from evaluation of function-reference
++
++program p
++  implicit none
++  integer, target :: z = 0
++  call g (f ())
++  if (z /= 1) stop 1
++contains
++  function f () result (r)
++    integer, pointer :: r
++    r => z
++  end function f
++  subroutine g (x)
++    integer, intent(out) :: x
++    x = 1
++  end subroutine g
++end program p
 diff --git a/gcc/tree-vect-generic.c b/gcc/tree-vect-generic.c
 index c8d8493e6ea..3348545d18b 100644
 --- a/gcc/tree-vect-generic.c
@@ -502,3 +938,141 @@ index 4236a82b402..68baf16de9f 100644
  	srwi	r4,r4,3		/* # doublewords to move */
  	addi	r9,r3,-8	/* adjust pointer for stdu */
  	mtctr	r4
+diff --git a/libgomp/testsuite/lib/libgomp.exp b/libgomp/testsuite/lib/libgomp.exp
+index 14dcfdfd00a..46cce9b8445 100644
+--- a/libgomp/testsuite/lib/libgomp.exp
++++ b/libgomp/testsuite/lib/libgomp.exp
+@@ -340,8 +340,10 @@ proc offload_target_to_openacc_device_type { offload_target } {
+     }
+ }
+ 
+-# Return 1 if compiling for offload target nvptx.
+-proc check_effective_target_offload_target_nvptx { } {
++# Return 1 if compiling for the specified offload target
++# Takes -foffload=... into account by checking OFFLOAD_TARGET_NAMES=
++# in the -v compiler output.
++proc libgomp_check_effective_target_offload_target { target_name } {
+     # Consider all actual options, including the flags passed to
+     # 'gcc-dg-runtest', or 'gfortran-dg-runtest' (see the 'libgomp.*/*.exp'
+     # files; in particular, '-foffload', 'libgomp.oacc-*/*.exp'), which don't
+@@ -354,13 +356,23 @@ proc check_effective_target_offload_target_nvptx { } {
+     set gcc_output [libgomp_target_compile "" "" "none" $options]
+     if [regexp "(?n)^OFFLOAD_TARGET_NAMES=(.*)" $gcc_output dummy offload_targets] {
+ 	verbose "compiling for offload targets: $offload_targets"
+-	return [string match "*:nvptx*:*" ":$offload_targets:"]
++	return [string match "*:$target_name*:*" ":$offload_targets:"]
+     }
+ 
+-    verbose "not compiling for any offload targets"
++    verbose "not compiling for $target_name offload target"
+     return 0
+ }
+ 
++# Return 1 if compiling for offload target nvptx.
++proc check_effective_target_offload_target_nvptx { } {
++    return [libgomp_check_effective_target_offload_target "nvptx"]
++}
++
++# Return 1 if compiling for offload target amdgcn
++proc check_effective_target_offload_target_amdgcn { } {
++    return [libgomp_check_effective_target_offload_target "amdgcn"]
++}
++
+ # Return 1 if offload device is available.
+ proc check_effective_target_offload_device { } {
+     return [check_runtime_nocache offload_device_available_ {
+diff --git a/libgomp/testsuite/libgomp.c-c++-common/function-not-offloaded.c b/libgomp/testsuite/libgomp.c-c++-common/function-not-offloaded.c
+index 9e59ef8864e..bc1ae68941a 100644
+--- a/libgomp/testsuite/libgomp.c-c++-common/function-not-offloaded.c
++++ b/libgomp/testsuite/libgomp.c-c++-common/function-not-offloaded.c
+@@ -1,5 +1,5 @@
+ /* { dg-do link } */
+-/* { dg-excess-errors "unresolved symbol foo, lto1, mkoffload and lto-wrapper fatal errors" { target offload_device_nonshared_as } } */
++/* { dg-excess-errors "unresolved symbol foo, lto1, mkoffload and lto-wrapper fatal errors" { target { offload_target_nvptx || offload_target_amdgcn } } } */
+ /* { dg-additional-sources "function-not-offloaded-aux.c" } */
+ 
+ #pragma omp declare target
+diff --git a/libgomp/testsuite/libgomp.c-c++-common/variable-not-offloaded.c b/libgomp/testsuite/libgomp.c-c++-common/variable-not-offloaded.c
+index bc4b916e9a4..fe2a8b26242 100644
+--- a/libgomp/testsuite/libgomp.c-c++-common/variable-not-offloaded.c
++++ b/libgomp/testsuite/libgomp.c-c++-common/variable-not-offloaded.c
+@@ -1,7 +1,7 @@
+ /* { dg-do link } */
+-/* { dg-excess-errors "lto1, mkoffload and lto-wrapper fatal errors" { target offload_device_nonshared_as } } */
++/* { dg-excess-errors "lto1, mkoffload and lto-wrapper fatal errors" { target { offload_target_nvptx || offload_target_amdgcn } } } */
+ 
+-int var; /* { dg-error "variable 'var' has been referenced in offloaded code but hasn't been marked to be included in the offloaded code" "" { target offload_device_nonshared_as } } */
++int var; /* { dg-error "variable 'var' has been referenced in offloaded code but hasn't been marked to be included in the offloaded code" "" { target { offload_target_nvptx || offload_target_amdgcn } } } */
+ 
+ #pragma omp declare target
+ void  __attribute__((noinline, noclone))
+diff --git a/libgomp/testsuite/libgomp.c/pr86416-1.c b/libgomp/testsuite/libgomp.c/pr86416-1.c
+index ad9370f78f3..6d3869264fd 100644
+--- a/libgomp/testsuite/libgomp.c/pr86416-1.c
++++ b/libgomp/testsuite/libgomp.c/pr86416-1.c
+@@ -2,8 +2,8 @@
+ /* { dg-require-effective-target large_long_double } */
+ 
+ /* PR middle-end/86416  */
+-/* { dg-error "bit-precision floating-point numbers unsupported .mode '.F'." "" { target offload_device } 0 }  */
+-/* { dg-excess-errors "Follow-up errors from mkoffload and lto-wrapper" { target offload_device } }  */
++/* { dg-error "bit-precision floating-point numbers unsupported .mode '.F'." "" { target { offload_target_nvptx || offload_target_amdgcn } } 0 }  */
++/* { dg-excess-errors "Follow-up errors from mkoffload and lto-wrapper" { target { offload_target_nvptx || offload_target_amdgcn } } }  */
+ 
+ #include <stdlib.h>  /* For abort. */
+ 
+diff --git a/libgomp/testsuite/libgomp.c/pr86416-2.c b/libgomp/testsuite/libgomp.c/pr86416-2.c
+index ec45e400f95..cffeb3f7107 100644
+--- a/libgomp/testsuite/libgomp.c/pr86416-2.c
++++ b/libgomp/testsuite/libgomp.c/pr86416-2.c
+@@ -2,8 +2,8 @@
+ /* { dg-add-options __float128 } */
+ 
+ /* PR middle-end/86416  */
+-/* { dg-error "bit-precision floating-point numbers unsupported .mode '.F'." "" { target offload_device } 0 }  */
+-/* { dg-excess-errors "Follow-up errors from mkoffload and lto-wrapper" { target offload_device } }  */
++/* { dg-error "bit-precision floating-point numbers unsupported .mode '.F'." "" { target { offload_target_nvptx || offload_target_amdgcn } } 0 }  */
++/* { dg-excess-errors "Follow-up errors from mkoffload and lto-wrapper" { target { offload_target_nvptx || offload_target_amdgcn } } }  */
+ 
+ #include <stdlib.h>  /* For abort. */
+ 
+diff --git a/libstdc++-v3/include/std/ranges b/libstdc++-v3/include/std/ranges
+index 74075a2d6d3..09115e9b45f 100644
+--- a/libstdc++-v3/include/std/ranges
++++ b/libstdc++-v3/include/std/ranges
+@@ -2389,7 +2389,7 @@ namespace views::__adaptor
+ 	  constexpr _Iterator&
+ 	  operator++()
+ 	  {
+-	    auto&& __inner_range = [this] () -> decltype(auto) {
++	    auto&& __inner_range = [this] () -> auto&& {
+ 	      if constexpr (_S_ref_is_glvalue)
+ 		return *_M_outer;
+ 	      else
+diff --git a/libstdc++-v3/testsuite/std/ranges/adaptors/join.cc b/libstdc++-v3/testsuite/std/ranges/adaptors/join.cc
+index fb06a7698af..e6c71d771de 100644
+--- a/libstdc++-v3/testsuite/std/ranges/adaptors/join.cc
++++ b/libstdc++-v3/testsuite/std/ranges/adaptors/join.cc
+@@ -160,6 +160,16 @@ test09()
+   static_assert(!requires { 0 | join; });
+ }
+ 
++void
++test10()
++{
++  // PR libstdc++/100290
++  auto v = views::single(0)
++    | views::transform([](const auto& s) { return views::single(s); })
++    | views::join;
++  VERIFY( ranges::next(v.begin()) == v.end() );
++}
++
+ int
+ main()
+ {
+@@ -172,4 +182,5 @@ main()
+   test07();
+   test08();
+   test09();
++  test10();
+ }
