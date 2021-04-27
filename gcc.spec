@@ -13,7 +13,7 @@
 %define march westmere
 
 Name     : gcc
-Version  : 10.3.0
+Version  : 11.1.0
 Release  : 1179
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://gcc.gnu.org/pub/gcc/releases/gcc-11.1.0/gcc-11.1.0.tar.xz
@@ -41,10 +41,6 @@ Patch16  : 0001-Always-use-z-now-when-linking-with-pie.patch
 Patch17  : icelake.patch
 Patch18  : libiberty-sync.patch
 Patch19  : tune-inline.patch
-Patch20  : memcpy.patch
-
-# zero registers on ret to make ROP harder
-Patch21  : 0001-x86-Add-mzero-caller.patch
 
 # cves: 1xx
 
@@ -231,9 +227,6 @@ GNU cc and gcc C compilers.
 # %patch18 -p1
 %patch19 -p1
 
-%patch20 -p1
-
-%patch21 -p1
 
 
 %build
@@ -445,7 +438,7 @@ done
 %check
 pushd ../gcc-build
 export CHECK_TEST_FRAMEWORK=1
-make -k  %{?_smp_mflags} check  || :
+#make -k  %{?_smp_mflags} check  || :
 popd
 
 
@@ -579,8 +572,10 @@ cat *.lang > gcc.lang
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/lto-wrapper
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/collect2
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/cc1plus
-/usr/lib64/gcc/%{gcc_target}/%{gccver}/liblto_plugin.so.0.0.0
-/usr/lib64/gcc/%{gcc_target}/%{gccver}/liblto_plugin.so.0
+/usr/lib64/gcc/%{gcc_target}/%{gccver}/g++-mapper-server
+
+#/usr/lib64/gcc/%{gcc_target}/%{gccver}/liblto_plugin.so.0.0.0
+#/usr/lib64/gcc/%{gcc_target}/%{gccver}/liblto_plugin.so.0
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/cc1
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/plugin/gtype.state
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/plugin/*.so.*
