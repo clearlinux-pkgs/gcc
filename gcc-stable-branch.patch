@@ -1,6 +1,7 @@
-Alex Coplan (2):
+Alex Coplan (3):
       aarch64: Fix SVE ACLE builtins with LTO [PR99216]
       arm: Fix PCS for SFmode -> SImode libcalls [PR99748]
+      arm: Various MVE vec_duplicate fixes [PR99647]
 
 Bin Cheng (1):
       tree-optimization/98736 - use programing order preserved RPO in ldist
@@ -15,7 +16,8 @@ François Dumont (3):
       libstdc++: Fix unordered containers move constructors noexcept qualification
       libstdc++: [_GLIBCXX_DEBUG] Fix management of __dp_sign_max_size [PR 99402]
 
-GCC Administrator (18):
+GCC Administrator (19):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -95,6 +97,9 @@ Marek Polacek (12):
 
 Martin Liska (1):
       Sync gcc-changelog scripts.
+
+Michael Meissner (1):
+      Backport fix for PR target/98952
 
 Patrick Palka (9):
       c++: Fix deduction with reference NTTP [PR83476]
@@ -522,10 +527,58 @@ index 0719d810258..a9368325816 100644
 -10.3.0
 +10.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 3b1384e707f..db163c68238 100644
+index 3b1384e707f..914bd84a5cb 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,293 @@
+@@ -1,3 +1,341 @@
++2021-04-26  Alex Coplan  <alex.coplan@arm.com>
++
++	Backported from master:
++	2021-04-08  Alex Coplan  <alex.coplan@arm.com>
++
++	PR target/99647
++	* config/arm/iterators.md (MVE_vecs): New.
++	(V_elem): Also handle V2DF.
++	* config/arm/mve.md (*mve_mov<mode>): Rename to ...
++	(*mve_vdup<mode>): ... this. Remove second alternative since
++	vec_duplicate of const_int is not canonical RTL, and we don't
++	want to match symbol_refs.
++	(*mve_vec_duplicate<mode>): Delete (pattern is redundant).
++
++2021-04-26  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2021-04-13  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/100053
++	* tree-ssa-sccvn.c (vn_nary_op_get_predicated_value): Do
++	not use optimistic dominance queries for backedges to validate
++	predicated values.
++	(dominated_by_p_w_unex): Add parameter to ignore executable
++	state on backedges.
++	(rpo_elim::eliminate_avail): Adjust.
++
++2021-04-26  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2021-04-07  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/99954
++	* tree-loop-distribution.c: Include tree-affine.h.
++	(generate_memcpy_builtin): Try using tree-affine to prove
++	non-overlap.
++	(loop_distribution::classify_builtin_ldst): Always classify
++	as PKIND_MEMMOVE.
++
++2021-04-26  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2021-04-06  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/99880
++	* tree-vect-loop.c (maybe_set_vectorized_backedge_value): Only
++	set vectorized defs of relevant PHIs.
++
 +2021-04-24  Richard Sandiford  <richard.sandiford@arm.com>
 +
 +	PR rtl-optimization/96796
@@ -1868,6 +1921,76 @@ index db37e2b8e71..132ecc5d7e3 100644
  
        /* Values from double-precision helper functions are returned in core
  	 registers if the selected core only supports single-precision
+diff --git a/gcc/config/arm/iterators.md b/gcc/config/arm/iterators.md
+index 846bae7b71f..21a938f71bf 100644
+--- a/gcc/config/arm/iterators.md
++++ b/gcc/config/arm/iterators.md
+@@ -269,6 +269,7 @@
+ 
+ ;; MVE mode iterator.
+ (define_mode_iterator MVE_types [V16QI V8HI V4SI V2DI TI V8HF V4SF V2DF])
++(define_mode_iterator MVE_vecs [V16QI V8HI V4SI V2DI V8HF V4SF V2DF])
+ (define_mode_iterator MVE_VLD_ST [V16QI V8HI V4SI V8HF V4SF])
+ (define_mode_iterator MVE_0 [V8HF V4SF])
+ (define_mode_iterator MVE_1 [V16QI V8HI V4SI V2DI])
+@@ -575,9 +576,10 @@
+ 			  (V4HI "HI") (V8HI "HI")
+ 			  (V4HF "HF") (V8HF "HF")
+ 			  (V4BF "BF") (V8BF "BF")
+-                          (V2SI "SI") (V4SI "SI")
+-                          (V2SF "SF") (V4SF "SF")
+-                          (DI "DI")   (V2DI "DI")])
++			  (V2SI "SI") (V4SI "SI")
++			  (V2SF "SF") (V4SF "SF")
++			  (DI   "DI") (V2DI "DI")
++			  (V2DF "DF")])
+ 
+ ;; As above but in lower case.
+ (define_mode_attr V_elem_l [(V8QI "qi") (V16QI "qi")
+diff --git a/gcc/config/arm/mve.md b/gcc/config/arm/mve.md
+index 11c69443fb9..7614ec37112 100644
+--- a/gcc/config/arm/mve.md
++++ b/gcc/config/arm/mve.md
+@@ -104,18 +104,14 @@
+    (set_attr "thumb2_pool_range" "*,*,*,*,1018,*,*,*,*")
+    (set_attr "neg_pool_range" "*,*,*,*,996,*,*,*,*")])
+ 
+-(define_insn "*mve_mov<mode>"
+-  [(set (match_operand:MVE_types 0 "s_register_operand" "=w,w")
+-	(vec_duplicate:MVE_types
+-	  (match_operand:SI 1 "nonmemory_operand" "r,i")))]
++(define_insn "*mve_vdup<mode>"
++  [(set (match_operand:MVE_vecs 0 "s_register_operand" "=w")
++	(vec_duplicate:MVE_vecs
++	  (match_operand:<V_elem> 1 "s_register_operand" "r")))]
+   "TARGET_HAVE_MVE || TARGET_HAVE_MVE_FLOAT"
+-{
+-  if (which_alternative == 0)
+-    return "vdup.<V_sz_elem>\t%q0, %1";
+-  return "vmov.<V_sz_elem>\t%q0, %1";
+-}
+-  [(set_attr "length" "4,4")
+-   (set_attr "type" "mve_move,mve_move")])
++  "vdup.<V_sz_elem>\t%q0, %1"
++  [(set_attr "length" "4")
++   (set_attr "type" "mve_move")])
+ 
+ ;;
+ ;; [vst4q])
+@@ -10739,13 +10735,6 @@
+  [(set_attr "type" "mve_move")
+   (set_attr "length" "8")])
+ 
+-(define_insn "*mve_vec_duplicate<mode>"
+- [(set (match_operand:MVE_VLD_ST 0 "s_register_operand" "=w")
+-       (vec_duplicate:MVE_VLD_ST (match_operand:<V_elem> 1 "general_operand" "r")))]
+- "TARGET_HAVE_MVE || TARGET_HAVE_MVE_FLOAT"
+- "vdup.<V_sz_elem>\t%q0, %1"
+- [(set_attr "type" "mve_move")])
+-
+ ;; CDE instructions on MVE registers.
+ 
+ (define_insn "arm_vcx1qv16qi"
 diff --git a/gcc/config/bpf/bpf.h b/gcc/config/bpf/bpf.h
 index 359f389a134..88183e69564 100644
 --- a/gcc/config/bpf/bpf.h
@@ -3446,10 +3569,43 @@ index 99edad8a950..f33489286a9 100644
  
  #endif
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 2913065bf31..a5a8e84f87b 100644
+index 2913065bf31..2dfad028454 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,368 @@
+@@ -1,3 +1,401 @@
++2021-04-26  Alex Coplan  <alex.coplan@arm.com>
++
++	Backported from master:
++	2021-04-08  Alex Coplan  <alex.coplan@arm.com>
++
++	PR target/99647
++	* gcc.c-torture/compile/pr99647.c: New test.
++
++2021-04-26  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2021-04-13  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/100053
++	* gcc.dg/torture/pr100053.c: New testcase.
++	* gcc.dg/tree-ssa/ssa-fre-93.c: Likewise.
++
++2021-04-26  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2021-04-07  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/99954
++	* gcc.dg/torture/pr99954.c: New testcase.
++
++2021-04-26  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2021-04-06  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/99880
++	* gcc.dg/torture/pr99880.c: New testcase.
++
 +2021-04-24  Richard Sandiford  <richard.sandiford@arm.com>
 +
 +	PR rtl-optimization/96796
@@ -4708,6 +4864,17 @@ index 00000000000..ce24b18ce55
 +  for (; a <= 21; a = (short)a + 1)
 +    b &= c;
 +}
+diff --git a/gcc/testsuite/gcc.c-torture/compile/pr99647.c b/gcc/testsuite/gcc.c-torture/compile/pr99647.c
+new file mode 100644
+index 00000000000..701155dd856
+--- /dev/null
++++ b/gcc/testsuite/gcc.c-torture/compile/pr99647.c
+@@ -0,0 +1,5 @@
++/* { dg-do assemble } */
++typedef int __attribute((vector_size(16))) V;
++V f(void) {
++  return (V){ (int)f, (int)f, (int)f, (int)f };
++}
 diff --git a/gcc/testsuite/gcc.c-torture/execute/pr98736.c b/gcc/testsuite/gcc.c-torture/execute/pr98736.c
 new file mode 100644
 index 00000000000..c066abcd86a
@@ -5340,6 +5507,40 @@ index 00000000000..6d1b2305a76
 +  L x = foo (0, 0, 0, 0, (E) { }, (I) 0x100 << 63);
 +  if (x != 0x100000001)
 +    __builtin_abort ();
++  return 0;
++}
+diff --git a/gcc/testsuite/gcc.target/powerpc/pr98952.c b/gcc/testsuite/gcc.target/powerpc/pr98952.c
+new file mode 100644
+index 00000000000..c487fbc403e
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/powerpc/pr98952.c
+@@ -0,0 +1,28 @@
++/* { dg-do run { target { powerpc*-*-linux* && ilp32 } } } */
++/* { dg-options "-O2" } */
++
++/* PR 96983 reported that the test in libgcc's tramp.S was backwards and it
++   would abort if the trampoline size passed to the function was greater than
++   the size the runtime was expecting (40).  It should abort if the size is less
++   than 40, not greater than 40.  This test creates a call to __trampoline_setup
++   with a much larger buffer to make sure the function does not abort.
++
++   We do not run this test on 64-bit since __trampoline_setup is not present in
++   64-bit systems.
++
++   We only run the test under Linux in case the other systems have some
++   different variant for __trampoline_setup.  */
++
++#ifndef SIZE
++#define SIZE 100
++#endif
++
++extern void __trampoline_setup (int *, unsigned, void *, void *);
++
++int main (void)
++{
++  int tramp[SIZE / sizeof (int)];
++
++  __trampoline_setup (tramp, SIZE, 0, 0);
 +  return 0;
 +}
 diff --git a/gcc/testsuite/gdc.dg/pr98457.d b/gcc/testsuite/gdc.dg/pr98457.d
@@ -6303,6 +6504,30 @@ index 72e9c2770a6..500210ddaf2 100644
  IBM128_OBJS		= $(IBM128_STATIC_OBJS) $(IBM128_SHARED_OBJS)
  
  IBM128_CFLAGS		= -Wno-psabi -mabi=ibmlongdouble -mno-gnu-attribute
+diff --git a/libgcc/config/rs6000/tramp.S b/libgcc/config/rs6000/tramp.S
+index 9b8fcfe34a3..47f97e93e6a 100644
+--- a/libgcc/config/rs6000/tramp.S
++++ b/libgcc/config/rs6000/tramp.S
+@@ -64,8 +64,7 @@ FUNC_START(__trampoline_setup)
+         mflr	r11
+         addi	r7,r11,trampoline_initial-4-.LCF0 /* trampoline address -4 */
+ 
+-	li	r8,trampoline_size	/* verify that the trampoline is big enough */
+-	cmpw	cr1,r8,r4
++	cmpwi	cr1,r4,trampoline_size	/* verify that the trampoline is big enough */
+ 	srwi	r4,r4,2		/* # words to move */
+ 	addi	r9,r3,-4	/* adjust pointer for lwzu */
+ 	mtctr	r4
+@@ -150,8 +149,7 @@ FUNC_START(__trampoline_setup)
+ 	addis 7,2,.LC0@toc@ha
+ 	ld 7,.LC0@toc@l(7)	/* trampoline address -8 */
+ 
+-	li	r8,trampoline_size	/* verify that the trampoline is big enough */
+-	cmpw	cr1,r8,r4
++	cmpwi	cr1,r4,trampoline_size	/* verify that the trampoline is big enough */
+ 	srwi	r4,r4,3		/* # doublewords to move */
+ 	addi	r9,r3,-8	/* adjust pointer for stdu */
+ 	mtctr	r4
 diff --git a/libgomp/ChangeLog b/libgomp/ChangeLog
 index f76d32e398c..9bd9c3d2c56 100644
 --- a/libgomp/ChangeLog
