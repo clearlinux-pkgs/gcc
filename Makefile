@@ -3,7 +3,7 @@ PKG_NAME := gcc
 include ../common/Makefile.common
 
 GCCGIT = ~/git/gcc
-GCCVER = 10.3.0
+GCCVER = 11.1.0
 
 GCCTAG = releases/gcc-$(GCCVER)
 GCCBRANCH = origin/releases/gcc-$(shell echo $(GCCVER) | sed 's/\..*//')
