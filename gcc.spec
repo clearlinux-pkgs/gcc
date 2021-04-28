@@ -72,8 +72,8 @@ BuildRequires : docbook-xml docbook-utils doxygen
 BuildRequires : util-linux
 
 
-Requires: gcc-libubsan
-Requires: gcc-doc
+Requires: gcc-libubsan = %{version}-%{release}
+Requires: gcc-doc = %{version}-%{release}
 
 Provides:       gcc-symlinks
 Provides:       cpp
@@ -101,8 +101,8 @@ Provides:       libgomp-staticdev
 Provides:       libgcc-s-dev
 Provides:       gcc-plugin-dev
 Provides:       libstdc++-dev
-Requires:       gcc-libs-math
-Requires:       libstdc++
+Requires:       gcc-libs-math = %{version}-%{release}
+Requires:       libstdc++ = %{version}-%{release}
 
 %description -n gcc-dev
 GNU cc and gcc C compilers dev files
