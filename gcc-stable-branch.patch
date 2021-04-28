@@ -1,8 +1,14 @@
+Cui,Lili (1):
+      Synchronize Rocket Lake's processor_names and processor_cost_table with processor_type
+
+GCC Administrator (1):
+      Daily bump.
+
 Harald Anlauf (2):
       PR fortran/100154 - ICE in gfc_conv_procedure_call, at fortran/trans-expr.c:6131
       Fortran - allow target of pointer from evaluation of function-reference
 
-Jakub Jelinek (8):
+Jakub Jelinek (9):
       Bump BASE-VER
       cprop: Fix -fcompare-debug bug in constprop_register [PR100148]
       testsuite: Add -fchecking to dg-ice tests
@@ -11,6 +17,10 @@ Jakub Jelinek (8):
       veclower: Fix up vec_shl matching of VEC_PERM_EXPR [PR100239]
       aarch64: Fix UB in the compiler [PR100200]
       aarch64: Fix up last commit [PR100200]
+      Revert "libstdc++: Add workaround for ia32 floating atomics miscompilations [PR100184]"
+
+Jonathan Wakely (1):
+      libstdc++: Add missing noexcept on std::thread member function [PR 100298]
 
 Marek Polacek (2):
       c++: Don't allow defining types in enum-base [PR96380]
@@ -23,9 +33,30 @@ Patrick Palka (2):
       c++: do_class_deduction and dependent init [PR93383]
       libstdc++: Fix up lambda in join_view::_Iterator::operator++ [PR100290]
 
+Richard Earnshaw (1):
+      arm: fix UB when compiling thumb2 with PIC [PR100236]
+
 Tobias Burnus (1):
       libgomp/testsuite: Fix checks for dg-excess-errors
 
+Uros Bizjak (1):
+      i386: Fix atomic FP peepholes [PR100182]
+
+diff --git a/contrib/ChangeLog b/contrib/ChangeLog
+index 0a7104aea15..fe2e2763aa5 100644
+--- a/contrib/ChangeLog
++++ b/contrib/ChangeLog
+@@ -1,3 +1,10 @@
++2021-04-27  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2021-04-27  Jakub Jelinek  <jakub@redhat.com>
++
++	* gennews (files): Add files for GCC 10 and GCC 11.
++
+ 2021-04-27  Release Manager
+ 
+ 	* GCC 11.1.0 released.
 diff --git a/gcc/BASE-VER b/gcc/BASE-VER
 index 68d8f15e23c..668182d21a4 100644
 --- a/gcc/BASE-VER
@@ -33,6 +64,72 @@ index 68d8f15e23c..668182d21a4 100644
 @@ -1 +1 @@
 -11.1.0
 +11.1.1
+diff --git a/gcc/ChangeLog b/gcc/ChangeLog
+index 85d4f6d546b..be1611a62d9 100644
+--- a/gcc/ChangeLog
++++ b/gcc/ChangeLog
+@@ -1,3 +1,61 @@
++2021-04-27  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2021-04-27  Jakub Jelinek  <jakub@redhat.com>
++
++	PR target/100200
++	* config/aarch64/aarch64.c (aarch64_print_operand): Cast -UINTVAL
++	back to HOST_WIDE_INT.
++
++2021-04-27  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2021-04-27  Jakub Jelinek  <jakub@redhat.com>
++
++	PR target/100200
++	* config/aarch64/predicates.md (aarch64_sub_immediate,
++	aarch64_plus_immediate): Use -UINTVAL instead of -INTVAL.
++	* config/aarch64/aarch64.md (casesi, rotl<mode>3): Likewise.
++	* config/aarch64/aarch64.c (aarch64_print_operand,
++	aarch64_split_atomic_op, aarch64_expand_subvti): Likewise.
++
++2021-04-27  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2021-04-27  Jakub Jelinek  <jakub@redhat.com>
++
++	PR tree-optimization/100239
++	* tree-vect-generic.c (lower_vec_perm): Don't accept constant
++	permutations with all indices from the first zero element as vec_shl.
++
++2021-04-27  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2021-04-27  Jakub Jelinek  <jakub@redhat.com>
++
++	PR rtl-optimization/100254
++	* cfgcleanup.c (outgoing_edges_match): Check REG_EH_REGION on
++	last1 and last2 insns rather than BB_END (bb1) and BB_END (bb2) insns.
++
++2021-04-27  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2021-04-26  Jakub Jelinek  <jakub@redhat.com>
++
++	PR debug/100255
++	* vmsdbgout.c (ASM_OUTPUT_DEBUG_STRING, vmsdbgout_begin_block,
++	vmsdbgout_end_block, lookup_filename, vmsdbgout_source_line): Remove
++	register keywords.
++
++2021-04-27  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2021-04-21  Jakub Jelinek  <jakub@redhat.com>
++
++	PR rtl-optimization/100148
++	* cprop.c (constprop_register): Use next_nondebug_insn instead of
++	NEXT_INSN.
++
+ 2021-04-27  Release Manager
+ 
+ 	* GCC 11.1.0 released.
 diff --git a/gcc/cfgcleanup.c b/gcc/cfgcleanup.c
 index 8650fb7f264..260a896ac48 100644
 --- a/gcc/cfgcleanup.c
@@ -48,6 +145,25 @@ index 8650fb7f264..260a896ac48 100644
  
      if (!n1 && n2)
        return false;
+diff --git a/gcc/common/config/i386/i386-common.c b/gcc/common/config/i386/i386-common.c
+index 1e6c1590ac4..6a7b5c8312f 100644
+--- a/gcc/common/config/i386/i386-common.c
++++ b/gcc/common/config/i386/i386-common.c
+@@ -1743,13 +1743,13 @@ const char *const processor_names[] =
+   "skylake-avx512",
+   "cannonlake",
+   "icelake-client",
+-  "rocketlake",
+   "icelake-server",
+   "cascadelake",
+   "tigerlake",
+   "cooperlake",
+   "sapphirerapids",
+   "alderlake",
++  "rocketlake",
+   "intel",
+   "geode",
+   "k6",
 diff --git a/gcc/config/aarch64/aarch64.c b/gcc/config/aarch64/aarch64.c
 index 12625a4bee3..e979a51f3af 100644
 --- a/gcc/config/aarch64/aarch64.c
@@ -121,6 +237,194 @@ index c55842b9c74..49f02ae0381 100644
  
  (define_predicate "aarch64_plus_operand"
    (ior (match_operand 0 "register_operand")
+diff --git a/gcc/config/arm/arm.c b/gcc/config/arm/arm.c
+index 340f7c95d76..352b2cd6e83 100644
+--- a/gcc/config/arm/arm.c
++++ b/gcc/config/arm/arm.c
+@@ -1051,9 +1051,13 @@ const char *fp_sysreg_names[NB_FP_SYSREGS] = {
+ #define ARM_LSL_NAME "lsl"
+ #define streq(string1, string2) (strcmp (string1, string2) == 0)
+ 
+-#define THUMB2_WORK_REGS (0xff & ~(  (1 << THUMB_HARD_FRAME_POINTER_REGNUM) \
+-				   | (1 << SP_REGNUM) | (1 << PC_REGNUM) \
+-				   | (1 << PIC_OFFSET_TABLE_REGNUM)))
++#define THUMB2_WORK_REGS					\
++  (0xff & ~((1 << THUMB_HARD_FRAME_POINTER_REGNUM)		\
++	    | (1 << SP_REGNUM)					\
++	    | (1 << PC_REGNUM)					\
++	    | (PIC_OFFSET_TABLE_REGNUM != INVALID_REGNUM	\
++	       ? (1 << PIC_OFFSET_TABLE_REGNUM)			\
++	       : 0)))
+ 
+ /* Initialization code.  */
+ 
+diff --git a/gcc/config/i386/i386-options.c b/gcc/config/i386/i386-options.c
+index 91da2849c49..a58968790a3 100644
+--- a/gcc/config/i386/i386-options.c
++++ b/gcc/config/i386/i386-options.c
+@@ -726,12 +726,12 @@ static const struct processor_costs *processor_cost_table[] =
+   &icelake_cost,
+   &icelake_cost,
+   &icelake_cost,
+-  &icelake_cost,
+   &skylake_cost,
+   &icelake_cost,
+   &skylake_cost,
+   &icelake_cost,
+   &icelake_cost,
++  &icelake_cost,
+   &intel_cost,
+   &geode_cost,
+   &k6_cost,
+diff --git a/gcc/config/i386/sync.md b/gcc/config/i386/sync.md
+index c7c508c8de8..7913b918796 100644
+--- a/gcc/config/i386/sync.md
++++ b/gcc/config/i386/sync.md
+@@ -226,12 +226,13 @@
+    (set (match_operand:DI 2 "memory_operand")
+ 	(unspec:DI [(match_dup 0)]
+ 		   UNSPEC_FIST_ATOMIC))
+-   (set (match_operand:DF 3 "any_fp_register_operand")
++   (set (match_operand:DF 3 "sse_reg_operand")
+ 	(match_operand:DF 4 "memory_operand"))]
+   "!TARGET_64BIT
+    && peep2_reg_dead_p (2, operands[0])
+    && rtx_equal_p (XEXP (operands[4], 0), XEXP (operands[2], 0))"
+-  [(set (match_dup 3) (match_dup 5))]
++  [(set (match_dup 3) (match_dup 5))
++   (set (match_dup 4) (match_dup 3))]
+   "operands[5] = gen_lowpart (DFmode, operands[1]);")
+ 
+ (define_peephole2
+@@ -243,7 +244,7 @@
+ 		   UNSPEC_FIST_ATOMIC))
+    (set (mem:BLK (scratch:SI))
+ 	(unspec:BLK [(mem:BLK (scratch:SI))] UNSPEC_MEMORY_BLOCKAGE))
+-   (set (match_operand:DF 3 "any_fp_register_operand")
++   (set (match_operand:DF 3 "sse_reg_operand")
+ 	(match_operand:DF 4 "memory_operand"))]
+   "!TARGET_64BIT
+    && peep2_reg_dead_p (2, operands[0])
+@@ -251,6 +252,7 @@
+   [(const_int 0)]
+ {
+   emit_move_insn (operands[3], gen_lowpart (DFmode, operands[1]));
++  emit_move_insn (operands[4], operands[3]);
+   emit_insn (gen_memory_blockage ());
+   DONE;
+ })
+@@ -262,12 +264,13 @@
+    (set (match_operand:DI 2 "memory_operand")
+ 	(unspec:DI [(match_dup 0)]
+ 		   UNSPEC_STX_ATOMIC))
+-   (set (match_operand:DF 3 "any_fp_register_operand")
++   (set (match_operand:DF 3 "sse_reg_operand")
+ 	(match_operand:DF 4 "memory_operand"))]
+   "!TARGET_64BIT
+    && peep2_reg_dead_p (2, operands[0])
+    && rtx_equal_p (XEXP (operands[4], 0), XEXP (operands[2], 0))"
+-  [(set (match_dup 3) (match_dup 5))]
++  [(set (match_dup 3) (match_dup 5))
++   (set (match_dup 4) (match_dup 3))]
+   "operands[5] = gen_lowpart (DFmode, operands[1]);")
+ 
+ (define_peephole2
+@@ -279,7 +282,7 @@
+ 		   UNSPEC_STX_ATOMIC))
+    (set (mem:BLK (scratch:SI))
+ 	(unspec:BLK [(mem:BLK (scratch:SI))] UNSPEC_MEMORY_BLOCKAGE))
+-   (set (match_operand:DF 3 "any_fp_register_operand")
++   (set (match_operand:DF 3 "sse_reg_operand")
+ 	(match_operand:DF 4 "memory_operand"))]
+   "!TARGET_64BIT
+    && peep2_reg_dead_p (2, operands[0])
+@@ -287,6 +290,7 @@
+   [(const_int 0)]
+ {
+   emit_move_insn (operands[3], gen_lowpart (DFmode, operands[1]));
++  emit_move_insn (operands[4], operands[3]);
+   emit_insn (gen_memory_blockage ());
+   DONE;
+ })
+@@ -392,7 +396,8 @@
+   "!TARGET_64BIT
+    && peep2_reg_dead_p (3, operands[2])
+    && rtx_equal_p (XEXP (operands[0], 0), XEXP (operands[3], 0))"
+-  [(set (match_dup 5) (match_dup 1))]
++  [(set (match_dup 0) (match_dup 1))
++   (set (match_dup 5) (match_dup 1))]
+   "operands[5] = gen_lowpart (DFmode, operands[4]);")
+ 
+ (define_peephole2
+@@ -411,6 +416,7 @@
+    && rtx_equal_p (XEXP (operands[0], 0), XEXP (operands[3], 0))"
+   [(const_int 0)]
+ {
++  emit_move_insn (operands[0], operands[1]);
+   emit_insn (gen_memory_blockage ());
+   emit_move_insn (gen_lowpart (DFmode, operands[4]), operands[1]);
+   DONE;
+@@ -428,7 +434,8 @@
+   "!TARGET_64BIT
+    && peep2_reg_dead_p (3, operands[2])
+    && rtx_equal_p (XEXP (operands[0], 0), XEXP (operands[3], 0))"
+-  [(set (match_dup 5) (match_dup 1))]
++  [(set (match_dup 0) (match_dup 1))
++   (set (match_dup 5) (match_dup 1))]
+   "operands[5] = gen_lowpart (DFmode, operands[4]);")
+ 
+ (define_peephole2
+@@ -447,6 +454,7 @@
+    && rtx_equal_p (XEXP (operands[0], 0), XEXP (operands[3], 0))"
+   [(const_int 0)]
+ {
++  emit_move_insn (operands[0], operands[1]);
+   emit_insn (gen_memory_blockage ());
+   emit_move_insn (gen_lowpart (DFmode, operands[4]), operands[1]);
+   DONE;
+diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
+index 4b536fa4474..15b44f35854 100644
+--- a/gcc/cp/ChangeLog
++++ b/gcc/cp/ChangeLog
+@@ -1,3 +1,38 @@
++2021-04-27  Patrick Palka  <ppalka@redhat.com>
++
++	Backported from master:
++	2021-04-24  Patrick Palka  <ppalka@redhat.com>
++
++	PR c++/89565
++	PR c++/93383
++	PR c++/95291
++	PR c++/99200
++	PR c++/99683
++	* pt.c (do_class_deduction): Punt if the initializer is
++	type-dependent.
++
++2021-04-27  Marek Polacek  <polacek@redhat.com>
++
++	Backported from master:
++	2021-04-22  Marek Polacek  <polacek@redhat.com>
++
++	PR c++/100161
++	* pt.c (tsubst_copy_and_build) <case PLUS_EXPR>: Test op0 and
++	op1 separately for value- or type-dependence.
++
++2021-04-27  Marek Polacek  <polacek@redhat.com>
++
++	Backported from master:
++	2021-04-21  Marek Polacek  <polacek@redhat.com>
++
++	PR c++/96380
++	* parser.c (cp_parser_enum_specifier): Don't allow defining
++	types in enum-base.
++
++2021-04-27  Jakub Jelinek  <jakub@redhat.com>
++
++	* module.cc: Remove #error that triggers if DEV-PHASE is empty.
++
+ 2021-04-27  Release Manager
+ 
+ 	* GCC 11.1.0 released.
 diff --git a/gcc/cp/parser.c b/gcc/cp/parser.c
 index 99eccf0c5e4..fba516efa23 100644
 --- a/gcc/cp/parser.c
@@ -208,6 +512,38 @@ index 73034ce72d0..6f34f6b2418 100644
  			 from, src))
  	return 1;
      }
+diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
+index 0e8580b40af..1a552875160 100644
+--- a/gcc/fortran/ChangeLog
++++ b/gcc/fortran/ChangeLog
+@@ -1,3 +1,27 @@
++2021-04-27  Harald Anlauf  <anlauf@gmx.de>
++
++	Backported from master:
++	2021-04-24  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/100218
++	* expr.c (gfc_check_vardef_context): Extend check to allow pointer
++	from a function reference.
++
++2021-04-27  Harald Anlauf  <anlauf@gmx.de>
++
++	Backported from master:
++	2021-04-24  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/100154
++	* check.c (variable_check): Allow function reference having a data
++	pointer result.
++	(arg_strlen_is_zero): New function.
++	(gfc_check_fgetputc_sub): Add static check of character and status
++	arguments.
++	(gfc_check_fgetput_sub): Likewise.
++	* intrinsic.c (add_subroutines): Fix argument name for the
++	character argument to intrinsic subroutines fget[c], fput[c].
++
+ 2021-04-27  Release Manager
+ 
+ 	* GCC 11.1.0 released.
 diff --git a/gcc/fortran/check.c b/gcc/fortran/check.c
 index 82db8e4e1b2..27bf3a7eafe 100644
 --- a/gcc/fortran/check.c
@@ -346,6 +682,108 @@ index 17fd92eb462..219f04f2317 100644
  	      st, BT_INTEGER, di, OPTIONAL, INTENT_OUT);
  
    add_sym_1s ("free", GFC_ISYM_FREE, CLASS_IMPURE, BT_UNKNOWN, 0, GFC_STD_GNU,
+diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
+index c181744f655..aef2d124332 100644
+--- a/gcc/testsuite/ChangeLog
++++ b/gcc/testsuite/ChangeLog
+@@ -1,3 +1,97 @@
++2021-04-27  Patrick Palka  <ppalka@redhat.com>
++
++	Backported from master:
++	2021-04-24  Patrick Palka  <ppalka@redhat.com>
++
++	PR c++/89565
++	PR c++/93383
++	PR c++/95291
++	PR c++/99200
++	PR c++/99683
++	* g++.dg/cpp2a/nontype-class39.C: Remove dg-ice directive.
++	* g++.dg/cpp2a/nontype-class45.C: New test.
++	* g++.dg/cpp2a/nontype-class46.C: New test.
++	* g++.dg/cpp2a/nontype-class47.C: New test.
++	* g++.dg/cpp2a/nontype-class48.C: New test.
++
++2021-04-27  Harald Anlauf  <anlauf@gmx.de>
++
++	Backported from master:
++	2021-04-24  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/100218
++	* gfortran.dg/ptr-func-4.f90: New test.
++
++2021-04-27  Harald Anlauf  <anlauf@gmx.de>
++
++	Backported from master:
++	2021-04-24  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/100154
++	* gfortran.dg/pr100154.f90: New test.
++
++2021-04-27  Marek Polacek  <polacek@redhat.com>
++
++	Backported from master:
++	2021-04-22  Marek Polacek  <polacek@redhat.com>
++
++	PR c++/100161
++	* g++.dg/warn/Wtype-limits6.C: New test.
++
++2021-04-27  Marek Polacek  <polacek@redhat.com>
++
++	Backported from master:
++	2021-04-21  Marek Polacek  <polacek@redhat.com>
++
++	PR c++/96380
++	* g++.dg/cpp0x/enum_base4.C: New test.
++	* g++.dg/cpp0x/enum_base5.C: New test.
++
++2021-04-27  Michael Meissner  <meissner@linux.ibm.com>
++
++	PR target/98952
++	* gcc.target/powerpc/pr98952.c: New test.  Test backported from
++	trunk change on 4/23, 886b6c1e8af502b69e3f318b9830b73b88215878.
++
++2021-04-27  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2021-04-27  Jakub Jelinek  <jakub@redhat.com>
++
++	PR tree-optimization/100239
++	* gcc.dg/pr100239.c: New test.
++
++2021-04-27  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2021-04-27  Jakub Jelinek  <jakub@redhat.com>
++
++	PR rtl-optimization/100254
++	* g++.dg/opt/pr100254.C: New test.
++
++2021-04-27  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2021-04-21  Jakub Jelinek  <jakub@redhat.com>
++
++	* g++.dg/cpp1z/constexpr-lambda26.C: Add dg-additional-options
++	-fchecking.
++	* g++.dg/cpp1y/auto-fn61.C: Likewise.
++	* g++.dg/cpp2a/nontype-class39.C: Likewise.
++	* g++.dg/cpp0x/constexpr-52830.C: Likewise.
++	* g++.dg/cpp0x/vt-88982.C: Likewise.
++	* c-c++-common/goacc/kernels-decompose-ice-1.c: Add -fchecking to
++	dg-additional-options.
++	* c-c++-common/goacc/kernels-decompose-ice-2.c: Likewise.
++
++2021-04-27  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2021-04-21  Jakub Jelinek  <jakub@redhat.com>
++
++	PR rtl-optimization/100148
++	* g++.dg/opt/pr100148.C: New test.
++
+ 2021-04-27  Release Manager
+ 
+ 	* GCC 11.1.0 released.
 diff --git a/gcc/testsuite/c-c++-common/goacc/kernels-decompose-ice-1.c b/gcc/testsuite/c-c++-common/goacc/kernels-decompose-ice-1.c
 index d770b91dd09..8c3884bdc00 100644
 --- a/gcc/testsuite/c-c++-common/goacc/kernels-decompose-ice-1.c
@@ -748,6 +1186,62 @@ index 00000000000..1ade810c52b
 +{
 +  w = __builtin_shuffle (v != v, 0 < (V) {}, (V) {192} >> 5);
 +}
+diff --git a/gcc/testsuite/gcc.target/i386/pr100182.c b/gcc/testsuite/gcc.target/i386/pr100182.c
+new file mode 100644
+index 00000000000..2f92a04db73
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr100182.c
+@@ -0,0 +1,30 @@
++/* { dg-do run { target ia32 } } */
++/* { dg-options "-O2 -march=i686" } */
++
++struct S { double _M_fp; };
++union U { double d; unsigned long long int l; };
++
++void
++__attribute__((noipa))
++foo (void)
++{
++  struct S a0, a1;
++  union U u;
++  double d0, d1;
++  a0._M_fp = 0.0;
++  a1._M_fp = 1.0;
++  __atomic_store_8 (&a0._M_fp, __atomic_load_8 (&a1._M_fp, __ATOMIC_SEQ_CST), __ATOMIC_SEQ_CST);
++  u.l = __atomic_load_8 (&a0._M_fp, __ATOMIC_SEQ_CST);
++  d0 = u.d;
++  u.l = __atomic_load_8 (&a1._M_fp, __ATOMIC_SEQ_CST);
++  d1 = u.d;
++  if (d0 != d1)
++    __builtin_abort ();
++}
++
++int
++main ()
++{
++  foo ();
++  return 0;
++}
+diff --git a/gcc/testsuite/gcc.target/i386/pr71245-1.c b/gcc/testsuite/gcc.target/i386/pr71245-1.c
+index be0b7602a8c..02c0dcb80b6 100644
+--- a/gcc/testsuite/gcc.target/i386/pr71245-1.c
++++ b/gcc/testsuite/gcc.target/i386/pr71245-1.c
+@@ -19,4 +19,4 @@ void foo_d (void)
+   __atomic_store_n (&d.ll, tmp.ll, __ATOMIC_SEQ_CST);
+ }
+ 
+-/* { dg-final { scan-assembler-not "(fistp|fild)" } } */
++/* { dg-final { scan-assembler-not "(fistp|fild)" { xfail *-*-* } } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr71245-2.c b/gcc/testsuite/gcc.target/i386/pr71245-2.c
+index 65c139849d5..bf37a8cbb71 100644
+--- a/gcc/testsuite/gcc.target/i386/pr71245-2.c
++++ b/gcc/testsuite/gcc.target/i386/pr71245-2.c
+@@ -19,4 +19,4 @@ void foo_d (void)
+   __atomic_store_n (&d.ll, tmp.ll, __ATOMIC_SEQ_CST);
+ }
+ 
+-/* { dg-final { scan-assembler-not "movlps" } } */
++/* { dg-final { scan-assembler-not "movlps" { xfail *-*-* } } } */
 diff --git a/gcc/testsuite/gcc.target/powerpc/pr98952.c b/gcc/testsuite/gcc.target/powerpc/pr98952.c
 new file mode 100644
 index 00000000000..c487fbc403e
@@ -914,6 +1408,25 @@ index a7640004b87..c226bc69c85 100644
                         int discriminator, bool is_stmt)
  {
    if (write_symbols == VMS_AND_DWARF2_DEBUG)
+diff --git a/libgcc/ChangeLog b/libgcc/ChangeLog
+index b99bb2516af..fae5149f07e 100644
+--- a/libgcc/ChangeLog
++++ b/libgcc/ChangeLog
+@@ -1,3 +1,14 @@
++2021-04-27  Michael Meissner  <meissner@linux.ibm.com>
++
++	PR target/98952
++	* config/rs6000/tramp.S (__trampoline_setup, elfv1 #ifdef): Fix
++	trampoline size comparison in 32-bit by reversing test and
++	combining load immediate with compare.  Fix backported from trunk
++	change on 4/23, 886b6c1e8af502b69e3f318b9830b73b88215878.
++	(__trampoline_setup, elfv2 #ifdef): Fix trampoline size comparison
++	in 32-bit by reversing test and combining load immediate with
++	compare.
++
+ 2021-04-27  Release Manager
+ 
+ 	* GCC 11.1.0 released.
 diff --git a/libgcc/config/rs6000/tramp.S b/libgcc/config/rs6000/tramp.S
 index 4236a82b402..68baf16de9f 100644
 --- a/libgcc/config/rs6000/tramp.S
@@ -938,6 +1451,29 @@ index 4236a82b402..68baf16de9f 100644
  	srwi	r4,r4,3		/* # doublewords to move */
  	addi	r9,r3,-8	/* adjust pointer for stdu */
  	mtctr	r4
+diff --git a/libgomp/ChangeLog b/libgomp/ChangeLog
+index a58d590216d..f9877142191 100644
+--- a/libgomp/ChangeLog
++++ b/libgomp/ChangeLog
+@@ -1,3 +1,18 @@
++2021-04-27  Tobias Burnus  <tobias@codesourcery.com>
++
++	Backported from master:
++	2021-04-21  Tobias Burnus  <tobias@codesourcery.com>
++
++	* testsuite/lib/libgomp.exp (offload_target_to_openacc_device_type):
++	New, based on check_effective_target_offload_target_nvptx.
++	(check_effective_target_offload_target_nvptx): Call it.
++	(check_effective_target_offload_target_amdgcn): New.
++	* testsuite/libgomp.c-c++-common/function-not-offloaded.c:
++	Require target offload_target_nvptx || offload_target_amdgcn.
++	* testsuite/libgomp.c-c++-common/variable-not-offloaded.c: Likewise.
++	* testsuite/libgomp.c/pr86416-1.c: Likewise.
++	* testsuite/libgomp.c/pr86416-2.c: Likewise.
++
+ 2021-04-27  Release Manager
+ 
+ 	* GCC 11.1.0 released.
 diff --git a/libgomp/testsuite/lib/libgomp.exp b/libgomp/testsuite/lib/libgomp.exp
 index 14dcfdfd00a..46cce9b8445 100644
 --- a/libgomp/testsuite/lib/libgomp.exp
@@ -1036,6 +1572,38 @@ index ec45e400f95..cffeb3f7107 100644
  
  #include <stdlib.h>  /* For abort. */
  
+diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
+index 4cf343403a1..a65b843c4a3 100644
+--- a/libstdc++-v3/ChangeLog
++++ b/libstdc++-v3/ChangeLog
+@@ -1,3 +1,14 @@
++2021-04-27  Patrick Palka  <ppalka@redhat.com>
++
++	Backported from master:
++	2021-04-27  Patrick Palka  <ppalka@redhat.com>
++
++	PR libstdc++/100290
++	* include/std/ranges (join_view::_Iterator::operator++): Correct
++	the return type of the lambda to avoid returning a copy of
++	_M_parent->_M_inner.
++	* testsuite/std/ranges/adaptors/join.cc (test10): New test.
++
+ 2021-04-27  Release Manager
+ 
+ 	* GCC 11.1.0 released.
+diff --git a/libstdc++-v3/include/bits/std_thread.h b/libstdc++-v3/include/bits/std_thread.h
+index 70cb31a5331..2a500bf1777 100644
+--- a/libstdc++-v3/include/bits/std_thread.h
++++ b/libstdc++-v3/include/bits/std_thread.h
+@@ -270,7 +270,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+ #ifndef _GLIBCXX_HAS_GTHREADS
+   inline void thread::join() { std::__throw_system_error(EINVAL); }
+   inline void thread::detach() { std::__throw_system_error(EINVAL); }
+-  inline unsigned int thread::hardware_concurrency() { return 0; }
++  inline unsigned int thread::hardware_concurrency() noexcept { return 0; }
+ #endif
+ 
+   inline void
 diff --git a/libstdc++-v3/include/std/ranges b/libstdc++-v3/include/std/ranges
 index 74075a2d6d3..09115e9b45f 100644
 --- a/libstdc++-v3/include/std/ranges
@@ -1049,6 +1617,30 @@ index 74075a2d6d3..09115e9b45f 100644
  	      if constexpr (_S_ref_is_glvalue)
  		return *_M_outer;
  	      else
+diff --git a/libstdc++-v3/testsuite/29_atomics/atomic_float/1.cc b/libstdc++-v3/testsuite/29_atomics/atomic_float/1.cc
+index 797d3b7ecbe..b2008368a95 100644
+--- a/libstdc++-v3/testsuite/29_atomics/atomic_float/1.cc
++++ b/libstdc++-v3/testsuite/29_atomics/atomic_float/1.cc
+@@ -18,7 +18,6 @@
+ // { dg-add-options ieee }
+ // { dg-options "-std=gnu++2a" }
+ // { dg-do run { target c++2a } }
+-// { dg-xfail-run-if "PR100182" { ia32 } }
+ 
+ #include <atomic>
+ #include <testsuite_hooks.h>
+diff --git a/libstdc++-v3/testsuite/29_atomics/atomic_float/wait_notify.cc b/libstdc++-v3/testsuite/29_atomics/atomic_float/wait_notify.cc
+index e0ff34dbf24..01768da290b 100644
+--- a/libstdc++-v3/testsuite/29_atomics/atomic_float/wait_notify.cc
++++ b/libstdc++-v3/testsuite/29_atomics/atomic_float/wait_notify.cc
+@@ -2,7 +2,6 @@
+ // { dg-do run { target c++2a } }
+ // { dg-require-gthreads "" }
+ // { dg-additional-options "-pthread" { target pthread } }
+-// { dg-skip-if "PR100182" { ia32 } }
+ // { dg-add-options libatomic }
+ 
+ // Copyright (C) 2020-2021 Free Software Foundation, Inc.
 diff --git a/libstdc++-v3/testsuite/std/ranges/adaptors/join.cc b/libstdc++-v3/testsuite/std/ranges/adaptors/join.cc
 index fb06a7698af..e6c71d771de 100644
 --- a/libstdc++-v3/testsuite/std/ranges/adaptors/join.cc
