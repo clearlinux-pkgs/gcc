@@ -42,6 +42,10 @@ Tobias Burnus (1):
 Uros Bizjak (1):
       i386: Fix atomic FP peepholes [PR100182]
 
+YiFei Zhu (2):
+      bpf: align function entry point to 64 bits
+      bpf: allow BSS symbols to be global symbols
+
 diff --git a/contrib/ChangeLog b/contrib/ChangeLog
 index 0a7104aea15..fe2e2763aa5 100644
 --- a/contrib/ChangeLog
@@ -257,6 +261,40 @@ index 340f7c95d76..352b2cd6e83 100644
 +	       : 0)))
  
  /* Initialization code.  */
+ 
+diff --git a/gcc/config/bpf/bpf.h b/gcc/config/bpf/bpf.h
+index 9e2f5260900..4c5b19e262b 100644
+--- a/gcc/config/bpf/bpf.h
++++ b/gcc/config/bpf/bpf.h
+@@ -57,8 +57,8 @@
+    64-bit at any time.  */
+ #define STACK_BOUNDARY 64
+ 
+-/* Function entry points are aligned to 128 bits.  */
+-#define FUNCTION_BOUNDARY 128
++/* Function entry points are aligned to 64 bits.  */
++#define FUNCTION_BOUNDARY 64
+ 
+ /* Maximum alignment required by data of any type.  */
+ #define BIGGEST_ALIGNMENT 64
+@@ -422,9 +422,15 @@ enum reg_class
+    Try to use asm_output_aligned_bss to implement this macro.  */
+ 
+ #define ASM_OUTPUT_ALIGNED_BSS(FILE, DECL, NAME, SIZE, ALIGN)	\
+-  do {								\
+-    ASM_OUTPUT_ALIGNED_LOCAL (FILE, NAME, SIZE, ALIGN);		\
+-  } while (0)
++  do									\
++    {									\
++      ASM_OUTPUT_TYPE_DIRECTIVE (FILE, NAME, "object");			\
++      fprintf ((FILE), "%s", "\t.lcomm\t");				\
++      assemble_name ((FILE), (NAME));					\
++      fprintf ((FILE), "," HOST_WIDE_INT_PRINT_UNSIGNED ",%u\n",	\
++	       (SIZE), (ALIGN) / BITS_PER_UNIT);			\
++    }									\
++  while (0)
+ 
+ /*** Output and Generation of Labels.  */
  
 diff --git a/gcc/config/i386/i386-options.c b/gcc/config/i386/i386-options.c
 index 91da2849c49..a58968790a3 100644
