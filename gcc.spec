@@ -6,7 +6,7 @@
 %define gccver 11
 %define gccpath gcc-11.1.0
 # Highest optimisation ABI we target
-%define mtune haswell
+%define mtune skylake-avx512
 
 # Lowest compatible ABI (must be lowest of current targets & OBS builders)
 # avoton (silvermont target) && ivybridge (OBS builders) = westmere
@@ -243,8 +243,8 @@ mkdir ../gcc-build
 pushd ../gcc-build
 unset CFLAGS
 unset CXXFLAGS
-export CFLAGS="-march=westmere -g1 -O3 -fstack-protector -Wl,-z -Wl,now -Wl,-z -Wl,relro  -Wl,-z,max-page-size=0x1000 -mtune=skylake"
-export CXXFLAGS="-march=westmere -g1 -O3  -Wl,-z,max-page-size=0x1000 -mtune=skylake"
+export CFLAGS="-march=westmere -g1 -O3 -fstack-protector -Wl,-z -Wl,now -Wl,-z -Wl,relro  -Wl,-z,max-page-size=0x1000 -mtune=skylake-avx512"
+export CXXFLAGS="-march=westmere -g1 -O3  -Wl,-z,max-page-size=0x1000 -mtune=skylake-avx512"
 export CFLAGS_FOR_TARGET="$CFLAGS"
 export CXXFLAGS_FOR_TARGET="$CXXFLAGS"
 export FFLAGS_FOR_TARGET="$FFLAGS"
@@ -283,7 +283,7 @@ export LIBRARY_PATH=/usr/lib64
     --with-glibc-version=2.19 \
     --disable-libunwind-exceptions \
     --with-gnu-ld \
-    --with-tune=haswell \
+    --with-tune=skylake-avx512 \
     --with-arch=westmere \
     --enable-cet \
     --disable-libmpx \
@@ -301,9 +301,9 @@ unset CFLAGS
 unset CXXFLAGS
 export CFLAGS="-march=ivybridge -g -O3 -fstack-protector -Wl,-z -Wl,now -Wl,-z -Wl,relro  -Wl,-z,max-page-size=0x1000"
 export CXXFLAGS="-march=ivybridge -g -O3  -Wl,-z,max-page-size=0x1000"
-export CFLAGS_FOR_TARGET="$CFLAGS -march=haswell -mtune=skylake -fno-semantic-interposition "
-export CXXFLAGS_FOR_TARGET="$CXXFLAGS -march=haswell -mtune=skylake -fno-semantic-interposition "
-export FFLAGS_FOR_TARGET="$FFLAGS -march=haswell -mtune=skylake -fno-semantic-interposition "
+export CFLAGS_FOR_TARGET="$CFLAGS -march=haswell -mtune=skylake-avx512 -fno-semantic-interposition "
+export CXXFLAGS_FOR_TARGET="$CXXFLAGS -march=haswell -mtune=skylake-avx512 -fno-semantic-interposition "
+export FFLAGS_FOR_TARGET="$FFLAGS -march=haswell -mtune=skylake-avx512 -fno-semantic-interposition "
 
 export CPATH=/usr/include
 export LIBRARY_PATH=%{_libdir}
@@ -336,7 +336,7 @@ export LIBRARY_PATH=%{_libdir}
     --with-glibc-version=2.19 \
     --with-system-libunwind \
     --with-gnu-ld \
-    --with-tune=haswell \
+    --with-tune=skylake-avx512 \
     --with-arch=haswell \
     --disable-bootstrap \
     --enable-cet \
@@ -355,9 +355,9 @@ unset CFLAGS
 unset CXXFLAGS
 export CFLAGS="-march=ivybridge -g -O3 -fstack-protector -Wl,-z -Wl,now -Wl,-z -Wl,relro  -Wl,-z,max-page-size=0x1000"
 export CXXFLAGS="-march=ivybridge -g -O3  -Wl,-z,max-page-size=0x1000"
-export CFLAGS_FOR_TARGET="$CFLAGS -march=skylake-avx512 -mtune=skylake -fno-semantic-interposition "
-export CXXFLAGS_FOR_TARGET="$CXXFLAGS -march=skylake-avx512 -mtune=skylake -fno-semantic-interposition "
-export FFLAGS_FOR_TARGET="$FFLAGS -march=skylake-avx512 -mtune=skylake -fno-semantic-interposition "
+export CFLAGS_FOR_TARGET="$CFLAGS -march=skylake-avx512 -mtune=skylake-avx512 -fno-semantic-interposition "
+export CXXFLAGS_FOR_TARGET="$CXXFLAGS -march=skylake-avx512 -mtune=skylake-avx512 -fno-semantic-interposition "
+export FFLAGS_FOR_TARGET="$FFLAGS -march=skylake-avx512 -mtune=skylake-avx512 -fno-semantic-interposition "
 
 export CPATH=/usr/include
 export LIBRARY_PATH=%{_libdir}
