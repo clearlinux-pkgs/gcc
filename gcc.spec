@@ -565,6 +565,7 @@ cat *.lang > gcc.lang
 #/usr/lib64/libvtv*
 /usr/lib64/libcc1*
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/include-fixed/
+%exclude  /usr/lib64/gcc/x86_64-generic-linux/11/include-fixed/bits/statx.h
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/install-tools/
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/libcaf_*
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/include/
