@@ -31,7 +31,6 @@ Patch2   : openmp-vectorize-v2.patch
 Patch3   : fortran-vector-v2.patch
 Patch5   : optimize.patch
 Patch6   : ipa-cp.patch
-Patch8	 : optimize-at-least-some.patch
 Patch9   : gomp-relax.patch
 Patch11  : memcpy-avx2.patch
 Patch12	 : avx512-when-we-ask-for-it.patch
@@ -213,7 +212,6 @@ GNU cc and gcc C compilers.
 %patch3 -p1
 %patch5 -p1
 %patch6 -p1
-%patch8 -p1
 %patch9 -p1
 #%patch11 -p1
 
