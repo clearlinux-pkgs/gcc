@@ -10,3 +10,14 @@
  	  /* One vinserti128 for combining two SSE vectors for AVX256.  */
  	  if (GET_MODE_BITSIZE (mode) == 256)
  	    cost += ix86_vec_cost (mode, ix86_cost->addss);
+--- gcc-11.1.0/gcc/config/i386/i386.c~	2021-07-14 13:57:34.000000000 +0000
++++ gcc-11.1.0/gcc/config/i386/i386.c	2021-07-14 15:14:52.180452960 +0000
+@@ -21862,7 +21862,7 @@
+ 
+ 	  /* One vinserti128 for combining two SSE vectors for AVX256.  */
+ 	  if (GET_MODE_BITSIZE (mode) == 256)
+-	    cost += ix86_vec_cost (mode, ix86_cost->addss);
++	    cost += ix86_vec_cost (mode, ix86_cost->addss) + 4;
+ 	  /* One vinserti64x4 and two vinserti128 for combining SSE
+ 	     and AVX256 vectors to AVX512.  */
+ 	  else if (GET_MODE_BITSIZE (mode) == 512)
