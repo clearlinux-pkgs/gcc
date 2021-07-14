@@ -1,0 +1,12 @@
+--- gcc-11.1.0/gcc/config/i386/i386.c~	2021-04-27 10:00:13.000000000 +0000
++++ gcc-11.1.0/gcc/config/i386/i386.c	2021-07-14 13:57:34.109517535 +0000
+@@ -21857,6 +21857,9 @@
+ 	{
+ 	  /* N element inserts into SSE vectors.  */
+ 	  int cost = TYPE_VECTOR_SUBPARTS (vectype) * ix86_cost->sse_op;
++	  if (TYPE_VECTOR_SUBPARTS (vectype) == 2)
++	    cost += 6;
++
+ 	  /* One vinserti128 for combining two SSE vectors for AVX256.  */
+ 	  if (GET_MODE_BITSIZE (mode) == 256)
+ 	    cost += ix86_vec_cost (mode, ix86_cost->addss);
