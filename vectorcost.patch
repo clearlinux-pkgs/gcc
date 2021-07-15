@@ -18,7 +18,7 @@
  	  /* One vinserti128 for combining two SSE vectors for AVX256.  */
  	  if (GET_MODE_BITSIZE (mode) == 256)
 -	    cost += ix86_vec_cost (mode, ix86_cost->addss);
-+	    cost += ix86_vec_cost (mode, ix86_cost->addss) + 4;
++	    cost += ix86_vec_cost (mode, ix86_cost->addss) + 6;
  	  /* One vinserti64x4 and two vinserti128 for combining SSE
  	     and AVX256 vectors to AVX512.  */
  	  else if (GET_MODE_BITSIZE (mode) == 512)
@@ -29,7 +29,7 @@
  	     and AVX256 vectors to AVX512.  */
  	  else if (GET_MODE_BITSIZE (mode) == 512)
 -	    cost += 3 * ix86_vec_cost (mode, ix86_cost->addss);
-+	    cost += 3 * ix86_vec_cost (mode, ix86_cost->addss) + 4;
++	    cost += 3 * ix86_vec_cost (mode, ix86_cost->addss) + 6;
  	  return cost;
  	}
  
