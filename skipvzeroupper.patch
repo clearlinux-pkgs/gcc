@@ -1,8 +1,25 @@
-From 9f8c8a68fbc83f0c13ff5374db22f76c62fb2912 Mon Sep 17 00:00:00 2001
+From bc37ee3cb1d8b4a2e8bd6bd74e43b6b474ee5f43 Mon Sep 17 00:00:00 2001
 From: "H.J. Lu" <hjl.tools@gmail.com>
 Date: Wed, 14 Jul 2021 17:03:15 -0700
-Subject: [PATCH] x86: Don't set AVX_U128_DIRTY if all sources are known zero
+Subject: [PATCH] x86: Don't set AVX_U128_DIRTY when all bits are zero
 
+In a single SET, all bits of the source YMM/ZMM register are zero when
+
+1. The source is contant zero.
+2. The source YMM/ZMM operand are defined from contant zero.
+
+and we don't set AVX_U128_DIRTY.
+
+gcc/
+
+	PR target/101456
+	* config/i386/i386.c (ix86_avx_u128_mode_needed): Don't set
+	AVX_U128_DIRTY when all bits are zero.
+
+gcc/testsuite/
+
+	PR target/101456
+	* gcc.target/i386/pr101456-1.c: New test.
 ---
  gcc/config/i386/i386.c                     | 47 ++++++++++++++++++++++
  gcc/testsuite/gcc.target/i386/pr101456-1.c | 28 +++++++++++++
@@ -10,10 +27,10 @@ Subject: [PATCH] x86: Don't set AVX_U128_DIRTY if all sources are known zero
  create mode 100644 gcc/testsuite/gcc.target/i386/pr101456-1.c
 
 diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
-index cff26909292..3a41e3c80ba 100644
+index c0559d50021..74b8c5a0d25 100644
 --- a/gcc/config/i386/i386.c
 +++ b/gcc/config/i386/i386.c
-@@ -14129,6 +14129,53 @@ ix86_avx_u128_mode_needed (rtx_insn *insn)
+@@ -14144,6 +14144,53 @@ ix86_avx_u128_mode_needed (rtx_insn *insn)
        return AVX_U128_CLEAN;
      }
  
@@ -24,9 +41,9 @@ index cff26909292..3a41e3c80ba 100644
 +      rtx src = SET_SRC (set);
 +      if (ix86_check_avx_upper_register (dest))
 +	{
-+	  /* Check for the constant zero source operand.  */
++	  /* It is not dirty if the source is known zero.  */
 +	  if (standard_sse_constant_p (src, GET_MODE (dest)) == 1)
-+	    return AVX_U128_CLEAN;
++	    return AVX_U128_ANY;
 +	  else
 +	    return AVX_U128_DIRTY;
 +	}
@@ -59,8 +76,8 @@ index cff26909292..3a41e3c80ba 100644
 +		  }
 +	      }
 +
-+	  /* It is clean only if all sources are known zero.  */
-+	  return AVX_U128_CLEAN;
++	  /* It is not dirty only if all sources are known zero.  */
++	  return AVX_U128_ANY;
 +	}
 +    }
 +
