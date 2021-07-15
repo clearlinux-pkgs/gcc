@@ -40,6 +40,7 @@ Patch16  : 0001-Always-use-z-now-when-linking-with-pie.patch
 Patch19  : tune-inline.patch
 Patch20  : vectorcost.patch
 Patch21  : skipvzeroupper.patch
+Patch22  : 0001-Add-TARGET_CLEAR_BY_PIECES.patch
 
 # cves: 1xx
 
@@ -224,6 +225,7 @@ GNU cc and gcc C compilers.
 %patch19 -p1
 %patch20 -p1
 %patch21 -p1
+%patch22 -p1
 
 
 %build
