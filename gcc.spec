@@ -41,6 +41,7 @@ Patch19  : tune-inline.patch
 Patch20  : vectorcost.patch
 Patch21  : v2-0001-x86-Don-t-set-AVX_U128_DIRTY-when-all-bits-are-ze.patch
 Patch22  : 0001-Add-TARGET_CLEAR_BY_PIECES.patch
+Patch23  : 0001-x86-Use-XMM31-for-scratch-SSE-register.patch
 
 # cves: 1xx
 
@@ -226,7 +227,7 @@ GNU cc and gcc C compilers.
 %patch20 -p1
 %patch21 -p1
 %patch22 -p1
-
+%patch23 -p1 
 
 %build
 
