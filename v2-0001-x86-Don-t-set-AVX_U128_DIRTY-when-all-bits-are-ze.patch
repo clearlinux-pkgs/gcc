@@ -1,0 +1,192 @@
+From 51c3bbe3d18f0cbf76dc37ccc4669e8c13714338 Mon Sep 17 00:00:00 2001
+From: "H.J. Lu" <hjl.tools@gmail.com>
+Date: Wed, 14 Jul 2021 17:03:15 -0700
+Subject: [PATCH v2] x86: Don't set AVX_U128_DIRTY when all bits are zero
+
+In a single SET, all bits of the source YMM/ZMM register are zero when
+
+1. The source is contant zero.
+2. The source YMM/ZMM operand are defined from contant zero.
+
+and we don't set AVX_U128_DIRTY.
+
+gcc/
+
+	PR target/101456
+	* config/i386/i386.c (ix86_avx_u128_mode_needed): Don't set
+	AVX_U128_DIRTY when all bits are zero.
+
+gcc/testsuite/
+
+	PR target/101456
+	* gcc.target/i386/pr101456-1.c: New test.
+---
+ gcc/config/i386/i386.c                     | 63 ++++++++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pr101456-1.c | 33 ++++++++++++
+ gcc/testsuite/gcc.target/i386/pr101456-2.c | 33 ++++++++++++
+ 3 files changed, 129 insertions(+)
+ create mode 100644 gcc/testsuite/gcc.target/i386/pr101456-1.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pr101456-2.c
+
+diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
+index 9d74b7a191b..8df099351f3 100644
+--- a/gcc/config/i386/i386.c
++++ b/gcc/config/i386/i386.c
+@@ -14093,6 +14093,8 @@ ix86_check_avx_upper_register (const_rtx exp)
+ 	  && GET_MODE_BITSIZE (GET_MODE (exp)) > 128);
+ }
+ 
++static void ix86_check_avx_upper_stores (rtx, const_rtx, void *);
++
+ /* Return needed mode for entity in optimize_mode_switching pass.  */
+ 
+ static int
+@@ -14129,6 +14131,67 @@ ix86_avx_u128_mode_needed (rtx_insn *insn)
+       return AVX_U128_CLEAN;
+     }
+ 
++  rtx set = single_set (insn);
++  if (set)
++    {
++      rtx dest = SET_DEST (set);
++      rtx src = SET_SRC (set);
++      if (ix86_check_avx_upper_register (dest))
++	{
++	  /* It is not dirty if the source is known zero.  */
++	  if (standard_sse_constant_p (src, GET_MODE (dest)) == 1)
++	    return AVX_U128_ANY;
++	  else
++	    return AVX_U128_DIRTY;
++	}
++      else if (ix86_check_avx_upper_register (src))
++	{
++	  /* Check for the source operand with all DEFs from constant
++	     zero.  */
++	  df_ref def = DF_REG_DEF_CHAIN (REGNO (src));
++	  if (!def)
++	    return AVX_U128_DIRTY;
++
++	  for (; def; def = DF_REF_NEXT_REG (def))
++	    if (DF_REF_REG_DEF_P (def)
++		&& !DF_REF_IS_ARTIFICIAL (def))
++	      {
++		rtx_insn *def_insn = DF_REF_INSN (def);
++
++		if (CALL_P (def_insn))
++		  {
++		    bool avx_upper_reg_found = false;
++		    note_stores (def_insn, ix86_check_avx_upper_stores,
++				 &avx_upper_reg_found);
++
++		    /* It is dirty if call is dirty.  */
++		    if (avx_upper_reg_found)
++		      return AVX_U128_DIRTY;
++
++		    continue;
++		  }
++
++		set = single_set (def_insn);
++		if (!set)
++		  return AVX_U128_DIRTY;
++
++		dest = SET_DEST (set);
++		if (ix86_check_avx_upper_register (dest))
++		  {
++		    src = SET_SRC (set);
++		    /* It is dirty if the source operand isn't constant
++		       zero.  */
++		    if (standard_sse_constant_p (src, GET_MODE (dest))
++			!= 1)
++		      return AVX_U128_DIRTY;
++		  }
++	      }
++
++	  /* It is not dirty only if all sources are known zero.  */
++	  return AVX_U128_ANY;
++	}
++    }
++
+   /* Require DIRTY mode if a 256bit or 512bit AVX register is referenced.
+      Hardware changes state only when a 256bit register is written to,
+      but we need to prevent the compiler from moving optimal insertion
+diff --git a/gcc/testsuite/gcc.target/i386/pr101456-1.c b/gcc/testsuite/gcc.target/i386/pr101456-1.c
+new file mode 100644
+index 00000000000..803fc6e0207
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr101456-1.c
+@@ -0,0 +1,33 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -march=skylake" } */
++
++#include <x86intrin.h>
++
++extern __m256 x1;
++extern __m256d x2;
++extern __m256i x3;
++
++extern void bar (void);
++
++void
++foo1 (void)
++{
++  x1 = _mm256_setzero_ps ();
++  bar ();
++}
++
++void
++foo2 (void)
++{
++  x2 = _mm256_setzero_pd ();
++  bar ();
++}
++
++void
++foo3 (void)
++{
++  x3 = _mm256_setzero_si256 ();
++  bar ();
++}
++
++/* { dg-final { scan-assembler-not "vzeroupper" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr101456-2.c b/gcc/testsuite/gcc.target/i386/pr101456-2.c
+new file mode 100644
+index 00000000000..71318368645
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr101456-2.c
+@@ -0,0 +1,33 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -march=skylake" } */
++
++#include <x86intrin.h>
++
++extern __m256 x1;
++extern __m256d x2;
++extern __m256i x3;
++
++extern __m256 bar (void);
++
++void
++foo1 (void)
++{
++  x1 = _mm256_setzero_ps ();
++  bar ();
++}
++
++void
++foo2 (void)
++{
++  x2 = _mm256_setzero_pd ();
++  bar ();
++}
++
++void
++foo3 (void)
++{
++  x3 = _mm256_setzero_si256 ();
++  bar ();
++}
++
++/* { dg-final { scan-assembler-times "vzeroupper" 3 } } */
+-- 
+2.31.1
+
