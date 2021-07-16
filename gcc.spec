@@ -39,7 +39,7 @@ Patch15  : 0001-Ignore-Werror-if-GCC_IGNORE_WERROR-environment-varia.patch
 Patch16  : 0001-Always-use-z-now-when-linking-with-pie.patch
 Patch19  : tune-inline.patch
 Patch20  : vectorcost.patch
-Patch21  : skipvzeroupper.patch
+Patch21  : v2-0001-x86-Don-t-set-AVX_U128_DIRTY-when-all-bits-are-ze.patch
 Patch22  : 0001-Add-TARGET_CLEAR_BY_PIECES.patch
 
 # cves: 1xx
