@@ -68,6 +68,7 @@ BuildRequires : glibc-libc32
 BuildRequires : glibc-dev32
 BuildRequires : docbook-xml docbook-utils doxygen
 BuildRequires : util-linux
+BuildRequires : zstd-dev
 
 
 Requires: gcc-libubsan = %{version}-%{release}
