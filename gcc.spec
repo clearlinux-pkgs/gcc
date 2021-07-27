@@ -14,7 +14,7 @@
 
 Name     : gcc
 Version  : 11.1.0
-Release  : 1262
+Release  : 1263
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://gcc.gnu.org/pub/gcc/releases/gcc-11.1.0/gcc-11.1.0.tar.xz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.16.1.tar.bz2
@@ -68,6 +68,7 @@ BuildRequires : glibc-libc32
 BuildRequires : glibc-dev32
 BuildRequires : docbook-xml docbook-utils doxygen
 BuildRequires : util-linux
+BuildRequires : zstd-dev
 
 
 Requires: gcc-libubsan = %{version}-%{release}
