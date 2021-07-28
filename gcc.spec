@@ -4,7 +4,7 @@
 %define libstdcxx_full 6.0.26
 %define isl_version 0.16.1
 %define gccver 11
-%define gccpath gcc-11.1.0
+%define gccpath gcc-11.2.0
 # Highest optimisation ABI we target
 %define mtune skylake-avx512
 
@@ -13,10 +13,10 @@
 %define march westmere
 
 Name     : gcc
-Version  : 11.1.0
+Version  : 11.2.0
 Release  : 1278
 URL      : http://www.gnu.org/software/gcc/
-Source0  : https://gcc.gnu.org/pub/gcc/releases/gcc-11.1.0/gcc-11.1.0.tar.xz
+Source0  : https://gcc.gnu.org/pub/gcc/releases/gcc-11.2.0/gcc-11.2.0.tar.xz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.16.1.tar.bz2
 Source2  : DATESTAMP
 Source3  : REVISION
