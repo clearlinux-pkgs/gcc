@@ -42,6 +42,9 @@ Patch20  : vectorcost.patch
 Patch21  : v2-0001-x86-Don-t-set-AVX_U128_DIRTY-when-all-bits-are-ze.patch
 Patch22  : 0001-Add-TARGET_CLEAR_BY_PIECES.patch
 Patch23  : 0001-x86-Use-XMM31-for-scratch-SSE-register.patch
+Patch24  : 0008-by_pieces-Pass-MAX_PIECES-to-op_by_pieces_d.patch
+Patch25  : 0009-x86-Update-STORE_MAX_PIECES.patch
+Patch26  : 0010-x86-Avoid-stack-realignment-when-copying-data-with-S.patch
 
 # cves: 1xx
 
@@ -228,6 +231,9 @@ GNU cc and gcc C compilers.
 %patch21 -p1
 %patch22 -p1
 %patch23 -p1 
+#%patch24 -p1
+%patch25 -p1
+%patch26 -p1
 
 %build
 
