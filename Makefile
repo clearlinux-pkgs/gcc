@@ -13,6 +13,7 @@ update:
 	git -C $(GCCGIT) rev-parse --verify --quiet refs/tags/$(GCCTAG) > /dev/null
 	git -C $(GCCGIT) rev-parse --verify --quiet $(GCCBRANCH) > /dev/null
 	git -C $(GCCGIT) diff $(GCCTAG)..$(GCCBRANCH) -- \* ':!*/DATESTAMP' > new.patch~
+	git -C $(GCCGIT) diff $(GCCBRANCH)..hj3/users/hjl/pieces/gcc-11  -- \* ':!*/DATESTAMP' > gcc-hj-latest.patch
 	git show HEAD:gcc-stable-branch.patch | sed -n '/^diff --git/,$$p' > current.patch~
 	! diff current.patch~ new.patch~ > /dev/null
 	git -C $(GCCGIT) shortlog $(GCCTAG)..$(GCCBRANCH) > gcc-stable-branch.patch

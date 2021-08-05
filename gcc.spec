@@ -39,12 +39,9 @@ Patch15  : 0001-Ignore-Werror-if-GCC_IGNORE_WERROR-environment-varia.patch
 Patch16  : 0001-Always-use-z-now-when-linking-with-pie.patch
 Patch19  : tune-inline.patch
 Patch20  : vectorcost.patch
-Patch21  : v2-0001-x86-Don-t-set-AVX_U128_DIRTY-when-all-bits-are-ze.patch
-Patch22  : 0001-Add-TARGET_CLEAR_BY_PIECES.patch
-Patch23  : 0001-x86-Use-XMM31-for-scratch-SSE-register.patch
-Patch24  : 0008-by_pieces-Pass-MAX_PIECES-to-op_by_pieces_d.patch
-Patch25  : 0009-x86-Update-STORE_MAX_PIECES.patch
-Patch26  : 0010-x86-Avoid-stack-realignment-when-copying-data-with-S.patch
+
+Patch30  : gcc-hj-latest.patch
+
 
 # cves: 1xx
 
@@ -218,7 +215,6 @@ GNU cc and gcc C compilers.
 %patch5 -p1
 %patch6 -p1
 %patch9 -p1
-%patch11 -p1
 
 #%patch12 -p1
 
@@ -228,12 +224,9 @@ GNU cc and gcc C compilers.
 %patch16 -p1
 %patch19 -p1
 %patch20 -p1
-%patch21 -p1
-%patch22 -p1
-%patch23 -p1 
-#%patch24 -p1
-%patch25 -p1
-%patch26 -p1
+
+%patch30 -p1
+
 
 %build
 
