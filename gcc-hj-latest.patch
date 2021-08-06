@@ -256,28 +256,6 @@ index 307a20fbadb..d7904cd8b65 100644
  extern rtx expand_builtin_saveregs (void);
  extern tree std_build_builtin_va_list (void);
  extern tree std_fn_abi_va_list (tree);
-diff --git a/gcc/c-family/c-common.c b/gcc/c-family/c-common.c
-index a2809e79158..d227686a030 100644
---- a/gcc/c-family/c-common.c
-+++ b/gcc/c-family/c-common.c
-@@ -6759,13 +6759,10 @@ complete_flexible_array_elts (tree init)
- void 
- c_common_mark_addressable_vec (tree t)
- {   
--  while (handled_component_p (t) || TREE_CODE (t) == C_MAYBE_CONST_EXPR)
--    {
--      if (TREE_CODE (t) == C_MAYBE_CONST_EXPR)
--	t = C_MAYBE_CONST_EXPR_EXPR (t);
--      else
--	t = TREE_OPERAND (t, 0);
--    }
-+  if (TREE_CODE (t) == C_MAYBE_CONST_EXPR)
-+    t = C_MAYBE_CONST_EXPR_EXPR (t);
-+  while (handled_component_p (t))
-+    t = TREE_OPERAND (t, 0);
-   if (!VAR_P (t)
-       && TREE_CODE (t) != PARM_DECL
-       && TREE_CODE (t) != COMPOUND_LITERAL_EXPR)
 diff --git a/gcc/calls.c b/gcc/calls.c
 index 870b9ac7776..7f66052c212 100644
 --- a/gcc/calls.c
@@ -2074,23 +2052,6 @@ index 00000000000..bf9d8543c1b
 +{
 +  return record_increment ();
 +}
-diff --git a/gcc/testsuite/gcc.dg/torture/pr101512.c b/gcc/testsuite/gcc.dg/torture/pr101512.c
-deleted file mode 100644
-index a25da2aa0b5..00000000000
---- a/gcc/testsuite/gcc.dg/torture/pr101512.c
-+++ /dev/null
-@@ -1,11 +0,0 @@
--/* { dg-do compile } */
--/* { dg-additional-options "-w -Wno-psabi" } */
--
--int n();
--typedef unsigned long V __attribute__ ((vector_size (64)));
--V
--foo (int i, V v)
--{
--  i = ((V)(V){n()})[n()];
--  return v + i;
--}
 diff --git a/gcc/testsuite/gcc.target/i386/avx-vzeroupper-14.c b/gcc/testsuite/gcc.target/i386/avx-vzeroupper-14.c
 index a31b4a2a63a..9590f25da22 100644
 --- a/gcc/testsuite/gcc.target/i386/avx-vzeroupper-14.c
@@ -4244,20 +4205,28 @@ index 00000000000..554a0f1702c
 +}
 +
 +/* { dg-final { scan-assembler-times "vzeroupper" 3 } } */
-diff --git a/gcc/testsuite/gcc.dg/vect/pr101505.c b/gcc/testsuite/gcc.target/i386/pr101742a.c
-similarity index 76%
-rename from gcc/testsuite/gcc.dg/vect/pr101505.c
-rename to gcc/testsuite/gcc.target/i386/pr101742a.c
-index e2b8945a5cc..67ea40587dd 100644
---- a/gcc/testsuite/gcc.dg/vect/pr101505.c
+diff --git a/gcc/testsuite/gcc.target/i386/pr101742a.c b/gcc/testsuite/gcc.target/i386/pr101742a.c
+new file mode 100644
+index 00000000000..67ea40587dd
+--- /dev/null
 +++ b/gcc/testsuite/gcc.target/i386/pr101742a.c
-@@ -1,5 +1,5 @@
- /* { dg-do compile } */
--/* { dg-additional-options "-O1" } */
+@@ -0,0 +1,16 @@
++/* { dg-do compile } */
 +/* { dg-additional-options "-O3 -mtune=nano-x2" } */
- 
- int n2;
- 
++
++int n2;
++
++__attribute__ ((simd)) char
++w7 (void)
++{
++  short int xb = n2;
++  int qp;
++
++  for (qp = 0; qp < 2; ++qp)
++    xb = xb < 1;
++
++  return xb;
++}
 diff --git a/gcc/testsuite/gcc.target/i386/pr101742b.c b/gcc/testsuite/gcc.target/i386/pr101742b.c
 new file mode 100644
 index 00000000000..ba19064077b
@@ -5007,38 +4976,6 @@ index 3348545d18b..fb6b69c5b83 100644
  	      g = gimple_build_assign (lhs, new_rhs);
  	      gsi_replace (gsi, g, false);
  	      return;
-diff --git a/gcc/tree-vect-patterns.c b/gcc/tree-vect-patterns.c
-index 18398da584a..803de3fc287 100644
---- a/gcc/tree-vect-patterns.c
-+++ b/gcc/tree-vect-patterns.c
-@@ -5198,13 +5198,6 @@ vect_determine_precisions (vec_info *vinfo)
-       for (unsigned int i = 0; i < nbbs; i++)
- 	{
- 	  basic_block bb = bbs[i];
--	  for (auto gsi = gsi_start_phis (bb);
--	       !gsi_end_p (gsi); gsi_next (&gsi))
--	    {
--	      stmt_vec_info stmt_info = vinfo->lookup_stmt (gsi.phi ());
--	      if (stmt_info)
--		vect_determine_mask_precision (vinfo, stmt_info);
--	    }
- 	  for (auto si = gsi_start_bb (bb); !gsi_end_p (si); gsi_next (&si))
- 	    if (!is_gimple_debug (gsi_stmt (si)))
- 	      vect_determine_mask_precision
-@@ -5218,13 +5211,6 @@ vect_determine_precisions (vec_info *vinfo)
- 	    if (!is_gimple_debug (gsi_stmt (si)))
- 	      vect_determine_stmt_precisions
- 		(vinfo, vinfo->lookup_stmt (gsi_stmt (si)));
--	  for (auto gsi = gsi_start_phis (bb);
--	       !gsi_end_p (gsi); gsi_next (&gsi))
--	    {
--	      stmt_vec_info stmt_info = vinfo->lookup_stmt (gsi.phi ());
--	      if (stmt_info)
--		vect_determine_stmt_precisions (vinfo, stmt_info);
--	    }
- 	}
-     }
-   else
 diff --git a/libffi/configure.host b/libffi/configure.host
 index 786b32c5bb0..7248acb7458 100644
 --- a/libffi/configure.host
@@ -5071,36 +5008,3 @@ index 786b32c5bb0..7248acb7458 100644
  	else
  	  TARGET=X86_64;
  	fi
-diff --git a/libsanitizer/ChangeLog b/libsanitizer/ChangeLog
-index 7f7da8887fb..7c8cbeb0f06 100644
---- a/libsanitizer/ChangeLog
-+++ b/libsanitizer/ChangeLog
-@@ -1,10 +1,3 @@
--2021-08-05  Martin Liska  <mliska@suse.cz>
--
--	PR sanitizer/101749
--	* sanitizer_common/sanitizer_posix_libcdep.cpp: Prevent
--	generation of dependency on _cxa_guard for static
--	initialization.
--
- 2021-07-28  Release Manager
- 
- 	* GCC 11.2.0 released.
-diff --git a/libsanitizer/sanitizer_common/sanitizer_posix_libcdep.cpp b/libsanitizer/sanitizer_common/sanitizer_posix_libcdep.cpp
-index a65b16f5290..7ff48c35851 100644
---- a/libsanitizer/sanitizer_common/sanitizer_posix_libcdep.cpp
-+++ b/libsanitizer/sanitizer_common/sanitizer_posix_libcdep.cpp
-@@ -166,10 +166,9 @@ bool SupportsColoredOutput(fd_t fd) {
- #if !SANITIZER_GO
- // TODO(glider): different tools may require different altstack size.
- static uptr GetAltStackSize() {
--  // Note: since GLIBC_2.31, SIGSTKSZ may be a function call, so this may be
--  // more costly that you think. However GetAltStackSize is only call 2-3 times
--  // per thread so don't cache the evaluation.
--  return SIGSTKSZ * 4;
-+  // SIGSTKSZ is not enough.
-+  static const uptr kAltStackSize = SIGSTKSZ * 4;
-+  return kAltStackSize;
- }
- 
- void SetAlternateSignalStack() {
