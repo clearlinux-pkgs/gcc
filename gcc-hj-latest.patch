@@ -1,3 +1,43 @@
+Arjan van de Ven (1):
+      Merge remote-tracking branch 'origin/releases/gcc-11' into HEAD
+
+H.J. Lu (29):
+      op_by_pieces_d::run: Change a while loop to a do-while loop
+      Generate offset adjusted operation for op_by_pieces operations
+      Don't use nullptr return from simplify_gen_subreg
+      Update alignment_for_piecewise_move
+      Elide expand_constructor if move by pieces is preferred
+      x86: Remove MAX_BITSIZE_MODE_ANY_INT
+      Add a target calls hook: TARGET_PUSH_ARGUMENT
+      x86: Convert CONST_WIDE_INT/CONST_VECTOR to broadcast
+      x86: Add vec_duplicate<mode> expander
+      Don't use vec_duplicate on vector in CTOR expansion
+      libffi/x86: Always check __x86_64__ for x86 hosts
+      x86: Don't issue vzeroupper if callee returns AVX register
+      x86: Don't return hard register when LRA is in progress
+      x86: Don't set AVX_U128_DIRTY when zeroing YMM/ZMM register
+      Add QI vector mode support to by-pieces for memset
+      x86: Add TARGET_GEN_MEMSET_SCRATCH_RTX
+      x86: Avoid stack realignment when copying data
+      x86: Update piecewise move and store
+      x86: Add AVX2 tests for PR middle-end/90773
+      x86: Add tests for piecewise move and store
+      x86: Also pass -mno-avx to pr72839.c
+      x86: Also pass -mno-avx to cold-attribute-1.c
+      x86: Also pass -mno-avx to sw-1.c for ia32
+      x86: Update gcc.target/i386/incoming-11.c
+      x86: Also pass -mno-sse to vect8-ret.c
+      x86: Use XMM31 for scratch SSE register
+      by_pieces: Pass MAX_PIECES to op_by_pieces_d
+      x86: Update STORE_MAX_PIECES
+      x86: Avoid stack realignment when copying data with SSE register
+
+Jakub Jelinek (1):
+      i386: Punt on broadcasts from TImode integers [PR101286]
+
+Richard Biener (1):
+      middle-end/100951 - make sure to generate VECTOR_CST in lowering
+
 diff --git a/gcc/builtins.c b/gcc/builtins.c
 index 73c12e3bb8c..edaec4e21de 100644
 --- a/gcc/builtins.c
@@ -639,10 +679,10 @@ index 7782cf1163f..bb79b7815fb 100644
  /* In i386-c.c  */
  extern void ix86_target_macros (void);
 diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
-index 5a7bc8c44a8..d5a0bb65bcf 100644
+index 527d493ecae..1af1f6b8931 100644
 --- a/gcc/config/i386/i386.c
 +++ b/gcc/config/i386/i386.c
-@@ -4191,6 +4191,18 @@ ix86_return_in_memory (const_tree type, const_tree fntype ATTRIBUTE_UNUSED)
+@@ -4195,6 +4195,18 @@ ix86_return_in_memory (const_tree type, const_tree fntype ATTRIBUTE_UNUSED)
      }
  }
  
@@ -661,7 +701,7 @@ index 5a7bc8c44a8..d5a0bb65bcf 100644
  
  /* Create the va_list data type.  */
  
-@@ -7941,8 +7953,17 @@ ix86_finalize_stack_frame_flags (void)
+@@ -7945,8 +7957,17 @@ ix86_finalize_stack_frame_flags (void)
       assumed stack realignment might be needed or -fno-omit-frame-pointer
       is used, but in the end nothing that needed the stack alignment had
       been spilled nor stack access, clear frame_pointer_needed and say we
@@ -681,7 +721,7 @@ index 5a7bc8c44a8..d5a0bb65bcf 100644
        && frame_pointer_needed
        && crtl->is_leaf
        && crtl->sp_is_unchanging
-@@ -10405,7 +10426,13 @@ ix86_legitimate_constant_p (machine_mode mode, rtx x)
+@@ -10409,7 +10430,13 @@ ix86_legitimate_constant_p (machine_mode mode, rtx x)
  	  /* FALLTHRU */
  	case E_OImode:
  	case E_XImode:
@@ -696,7 +736,7 @@ index 5a7bc8c44a8..d5a0bb65bcf 100644
  	    return false;
  	default:
  	  break;
-@@ -14081,6 +14108,18 @@ ix86_check_avx_upper_register (const_rtx exp)
+@@ -14085,6 +14112,18 @@ ix86_check_avx_upper_register (const_rtx exp)
  	  && GET_MODE_BITSIZE (GET_MODE (exp)) > 128);
  }
  
@@ -715,7 +755,7 @@ index 5a7bc8c44a8..d5a0bb65bcf 100644
  /* Return needed mode for entity in optimize_mode_switching pass.  */
  
  static int
-@@ -14105,6 +14144,14 @@ ix86_avx_u128_mode_needed (rtx_insn *insn)
+@@ -14109,6 +14148,14 @@ ix86_avx_u128_mode_needed (rtx_insn *insn)
  	    }
  	}
  
@@ -730,7 +770,7 @@ index 5a7bc8c44a8..d5a0bb65bcf 100644
        /* If the function is known to preserve some SSE registers,
  	 RA and previous passes can legitimately rely on that for
  	 modes wider than 256 bits.  It's only safe to issue a
-@@ -14117,6 +14164,94 @@ ix86_avx_u128_mode_needed (rtx_insn *insn)
+@@ -14121,6 +14168,94 @@ ix86_avx_u128_mode_needed (rtx_insn *insn)
        return AVX_U128_CLEAN;
      }
  
@@ -825,7 +865,7 @@ index 5a7bc8c44a8..d5a0bb65bcf 100644
    /* Require DIRTY mode if a 256bit or 512bit AVX register is referenced.
       Hardware changes state only when a 256bit register is written to,
       but we need to prevent the compiler from moving optimal insertion
-@@ -14205,18 +14340,6 @@ ix86_mode_needed (int entity, rtx_insn *insn)
+@@ -14209,18 +14344,6 @@ ix86_mode_needed (int entity, rtx_insn *insn)
    return 0;
  }
  
@@ -844,7 +884,7 @@ index 5a7bc8c44a8..d5a0bb65bcf 100644
  /* Calculate mode of upper 128bit AVX registers after the insn.  */
  
  static int
-@@ -22988,6 +23111,32 @@ ix86_optab_supported_p (int op, machine_mode mode1, machine_mode,
+@@ -22992,6 +23115,32 @@ ix86_optab_supported_p (int op, machine_mode mode1, machine_mode,
      }
  }
  
@@ -877,7 +917,7 @@ index 5a7bc8c44a8..d5a0bb65bcf 100644
  /* Address space support.
  
     This is not "far pointers" in the 16-bit sense, but an easy way
-@@ -23518,6 +23667,9 @@ ix86_run_selftests (void)
+@@ -23522,6 +23671,9 @@ ix86_run_selftests (void)
  #undef TARGET_ADDRESS_COST
  #define TARGET_ADDRESS_COST ix86_address_cost
  
@@ -887,7 +927,7 @@ index 5a7bc8c44a8..d5a0bb65bcf 100644
  #undef TARGET_FLAGS_REGNUM
  #define TARGET_FLAGS_REGNUM FLAGS_REG
  #undef TARGET_FIXED_CONDITION_CODE_REGS
-@@ -23567,6 +23719,8 @@ ix86_run_selftests (void)
+@@ -23571,6 +23723,8 @@ ix86_run_selftests (void)
  #define TARGET_C_EXCESS_PRECISION ix86_get_excess_precision
  #undef TARGET_PROMOTE_PROTOTYPES
  #define TARGET_PROMOTE_PROTOTYPES hook_bool_const_tree_true
@@ -896,7 +936,7 @@ index 5a7bc8c44a8..d5a0bb65bcf 100644
  #undef TARGET_SETUP_INCOMING_VARARGS
  #define TARGET_SETUP_INCOMING_VARARGS ix86_setup_incoming_varargs
  #undef TARGET_MUST_PASS_IN_STACK
-@@ -23886,6 +24040,9 @@ static bool ix86_libc_has_fast_function (int fcode ATTRIBUTE_UNUSED)
+@@ -23890,6 +24044,9 @@ static bool ix86_libc_has_fast_function (int fcode ATTRIBUTE_UNUSED)
  #undef TARGET_LIBC_HAS_FAST_FUNCTION
  #define TARGET_LIBC_HAS_FAST_FUNCTION ix86_libc_has_fast_function
  
@@ -907,10 +947,10 @@ index 5a7bc8c44a8..d5a0bb65bcf 100644
  #undef TARGET_RUN_TARGET_SELFTESTS
  #define TARGET_RUN_TARGET_SELFTESTS selftest::ix86_run_selftests
 diff --git a/gcc/config/i386/i386.h b/gcc/config/i386/i386.h
-index 5583ec6881a..77476930f15 100644
+index 73e118900f7..5b7280d8d8d 100644
 --- a/gcc/config/i386/i386.h
 +++ b/gcc/config/i386/i386.h
-@@ -1689,13 +1689,8 @@ enum reg_class
+@@ -1691,13 +1691,8 @@ enum reg_class
     || TARGET_64BIT_MS_ABI \
     || (TARGET_MACHO && crtl->profile))
  
@@ -925,7 +965,7 @@ index 5583ec6881a..77476930f15 100644
  #define PUSH_ARGS_REVERSED 1
  
  /* Offset of first parameter from the argument pointer register value.  */
-@@ -1980,24 +1975,45 @@ typedef struct ix86_args {
+@@ -1982,24 +1977,45 @@ typedef struct ix86_args {
  /* Define this as 1 if `char' should by default be signed; else as 0.  */
  #define DEFAULT_SIGNED_CHAR 1
  
@@ -990,10 +1030,10 @@ index 5583ec6881a..77476930f15 100644
  /* If a memory-to-memory move would take MOVE_RATIO or more simple
     move-instruction pairs, we will do a cpymem or libcall instead.
 diff --git a/gcc/config/i386/sse.md b/gcc/config/i386/sse.md
-index 3f81abc7804..749323384a6 100644
+index e495725ff7c..8084c98c9f5 100644
 --- a/gcc/config/i386/sse.md
 +++ b/gcc/config/i386/sse.md
-@@ -24319,3 +24319,34 @@
+@@ -24323,3 +24323,34 @@
    "TARGET_WIDEKL"
    "aes<aeswideklvariant>\t{%0}"
    [(set_attr "type" "other")])
