@@ -1,7 +1,4 @@
-Arjan van de Ven (1):
-      Merge remote-tracking branch 'origin/releases/gcc-11' into HEAD
-
-H.J. Lu (29):
+H.J. Lu (31):
       op_by_pieces_d::run: Change a while loop to a do-while loop
       Generate offset adjusted operation for op_by_pieces operations
       Don't use nullptr return from simplify_gen_subreg
@@ -31,12 +28,26 @@ H.J. Lu (29):
       by_pieces: Pass MAX_PIECES to op_by_pieces_d
       x86: Update STORE_MAX_PIECES
       x86: Avoid stack realignment when copying data with SSE register
+      x86: Broadcast from integer to a pseudo vector register
+      x86: Add non-destructive source to @xorsign<mode>3_1
 
-Jakub Jelinek (1):
+Jakub Jelinek (3):
       i386: Punt on broadcasts from TImode integers [PR101286]
+      i386: Fix up @xorsign<mode>3_1 [PR102224]
+      i386: Fix up xorsign for AVX [PR89984]
 
 Richard Biener (1):
       middle-end/100951 - make sure to generate VECTOR_CST in lowering
+
+Uros Bizjak (1):
+      [i386] Introduce scalar version of avx512f_vmscalef.
+
+liuhongt (5):
+      Optimize __builtin_shuffle when it's used to zero the upper bits of the dest. [PR target/94680]
+      Extend ldexp{s,d}f3 to vscalefs{s,d} when TARGET_AVX512F and TARGET_SSE_MATH.
+      Fix ICE.
+      Fix typo in testcase.
+      Remove pass_cpb which is related to enable avx512 embedded broadcast from constant pool.
 
 diff --git a/gcc/builtins.c b/gcc/builtins.c
 index 73c12e3bb8c..edaec4e21de 100644
@@ -368,7 +379,7 @@ index ae90610ad80..a60d9a79b0b 100644
  
  #ifndef CUMULATIVE_ARGS
 diff --git a/gcc/config/i386/i386-expand.c b/gcc/config/i386/i386-expand.c
-index 16765718cc3..60dfba8ff42 100644
+index 16765718cc3..ab61fb621a8 100644
 --- a/gcc/config/i386/i386-expand.c
 +++ b/gcc/config/i386/i386-expand.c
 @@ -190,6 +190,82 @@ ix86_expand_clear (rtx dest)
@@ -495,12 +506,14 @@ index 16765718cc3..60dfba8ff42 100644
  	    }
  	}
      }
-@@ -368,6 +453,62 @@ ix86_expand_move (machine_mode mode, rtx operands[])
+@@ -368,6 +453,70 @@ ix86_expand_move (machine_mode mode, rtx operands[])
    emit_insn (gen_rtx_SET (op0, op1));
  }
  
++/* OP is a memref of CONST_VECTOR, return scalar constant mem
++   if CONST_VECTOR is a vec_duplicate, else return NULL.  */
 +static rtx
-+ix86_broadcast_from_integer_constant (machine_mode mode, rtx op)
++ix86_broadcast_from_constant (machine_mode mode, rtx op)
 +{
 +  int nunits = GET_MODE_NUNITS (mode);
 +  if (nunits < 2)
@@ -508,7 +521,8 @@ index 16765718cc3..60dfba8ff42 100644
 +
 +  /* Don't use integer vector broadcast if we can't move from GPR to SSE
 +     register directly.  */
-+  if (!TARGET_INTER_UNIT_MOVES_TO_VEC)
++  if (!TARGET_INTER_UNIT_MOVES_TO_VEC
++      && INTEGRAL_MODE_P (mode))
 +    return nullptr;
 +
 +  /* Convert CONST_VECTOR to a non-standard SSE constant integer
@@ -516,12 +530,17 @@ index 16765718cc3..60dfba8ff42 100644
 +  if (!(TARGET_AVX2
 +	|| (TARGET_AVX
 +	    && (GET_MODE_INNER (mode) == SImode
-+		|| GET_MODE_INNER (mode) == DImode)))
++		|| GET_MODE_INNER (mode) == DImode))
++	|| FLOAT_MODE_P (mode))
 +      || standard_sse_constant_p (op, mode))
 +    return nullptr;
 +
-+  /* Don't broadcast from a 64-bit integer constant in 32-bit mode.  */
-+  if (GET_MODE_INNER (mode) == DImode && !TARGET_64BIT)
++  /* Don't broadcast from a 64-bit integer constant in 32-bit mode.
++     We can still put 64-bit integer constant in memory when
++     avx512 embed broadcast is available.  */
++  if (GET_MODE_INNER (mode) == DImode && !TARGET_64BIT
++      && (!TARGET_AVX512F
++	  || (GET_MODE_SIZE (mode) < 64 && !TARGET_AVX512VL)))
 +    return nullptr;
 +
 +  if (GET_MODE_INNER (mode) == TImode)
@@ -558,7 +577,7 @@ index 16765718cc3..60dfba8ff42 100644
  void
  ix86_expand_vector_move (machine_mode mode, rtx operands[])
  {
-@@ -407,7 +548,36 @@ ix86_expand_vector_move (machine_mode mode, rtx operands[])
+@@ -407,7 +556,39 @@ ix86_expand_vector_move (machine_mode mode, rtx operands[])
  	  op1 = simplify_gen_subreg (mode, r, imode, SUBREG_BYTE (op1));
  	}
        else
@@ -576,17 +595,20 @@ index 16765718cc3..60dfba8ff42 100644
 +
 +  if (can_create_pseudo_p ()
 +      && GET_MODE_SIZE (mode) >= 16
-+      && GET_MODE_CLASS (mode) == MODE_VECTOR_INT
++      && VECTOR_MODE_P (mode)
 +      && (MEM_P (op1)
 +	  && SYMBOL_REF_P (XEXP (op1, 0))
 +	  && CONSTANT_POOL_ADDRESS_P (XEXP (op1, 0))))
 +    {
-+      rtx first = ix86_broadcast_from_integer_constant (mode, op1);
++      rtx first = ix86_broadcast_from_constant (mode, op1);
 +      if (first != nullptr)
 +	{
 +	  /* Broadcast to XMM/YMM/ZMM register from an integer
-+	     constant.  */
-+	  op1 = ix86_gen_scratch_sse_rtx (mode);
++	     constant or scalar mem.  */
++	  op1 = gen_reg_rtx (mode);
++	  if (FLOAT_MODE_P (mode)
++	      || (!TARGET_64BIT && GET_MODE_INNER (mode) == DImode))
++	    first = force_const_mem (GET_MODE_INNER (mode), first);
 +	  bool ok = ix86_expand_vector_init_duplicate (false, mode,
 +						       op1, first);
 +	  gcc_assert (ok);
@@ -596,7 +618,7 @@ index 16765718cc3..60dfba8ff42 100644
      }
  
    /* We need to check memory alignment for SSE mode since attribute
-@@ -423,7 +593,11 @@ ix86_expand_vector_move (machine_mode mode, rtx operands[])
+@@ -423,7 +604,11 @@ ix86_expand_vector_move (machine_mode mode, rtx operands[])
  	 arguments in memory.  */
        if (!register_operand (op0, mode)
  	  && !register_operand (op1, mode))
@@ -609,7 +631,7 @@ index 16765718cc3..60dfba8ff42 100644
  
        tmp[0] = op0; tmp[1] = op1;
        ix86_expand_vector_move_misalign (mode, tmp);
-@@ -435,7 +609,9 @@ ix86_expand_vector_move (machine_mode mode, rtx operands[])
+@@ -435,7 +620,9 @@ ix86_expand_vector_move (machine_mode mode, rtx operands[])
        && !register_operand (op0, mode)
        && !register_operand (op1, mode))
      {
@@ -620,7 +642,55 @@ index 16765718cc3..60dfba8ff42 100644
        return;
      }
  
-@@ -13598,7 +13774,7 @@ static bool expand_vec_perm_1 (struct expand_vec_perm_d *d);
+@@ -2023,7 +2210,7 @@ void
+ ix86_expand_xorsign (rtx operands[])
+ {
+   machine_mode mode, vmode;
+-  rtx dest, op0, op1, mask;
++  rtx dest, op0, op1, mask, x, temp;
+ 
+   dest = operands[0];
+   op0 = operands[1];
+@@ -2038,32 +2225,17 @@ ix86_expand_xorsign (rtx operands[])
+   else
+     gcc_unreachable ();
+ 
++  temp = gen_reg_rtx (vmode);
+   mask = ix86_build_signbit_mask (vmode, 0, 0);
+ 
+-  emit_insn (gen_xorsign3_1 (mode, dest, op0, op1, mask));
+-}
++  op1 = lowpart_subreg (vmode, op1, mode);
++  x = gen_rtx_AND (vmode, op1, mask);
++  emit_insn (gen_rtx_SET (temp, x));
+ 
+-/* Deconstruct an xorsign operation into bit masks.  */
+-
+-void
+-ix86_split_xorsign (rtx operands[])
+-{
+-  machine_mode mode, vmode;
+-  rtx dest, op0, mask, x;
+-
+-  dest = operands[0];
+-  op0 = operands[1];
+-  mask = operands[3];
+-
+-  mode = GET_MODE (dest);
+-  vmode = GET_MODE (mask);
++  op0 = lowpart_subreg (vmode, op0, mode);
++  x = gen_rtx_XOR (vmode, temp, op0);
+ 
+   dest = lowpart_subreg (vmode, dest, mode);
+-  x = gen_rtx_AND (vmode, dest, mask);
+-  emit_insn (gen_rtx_SET (dest, x));
+-
+-  op0 = lowpart_subreg (vmode, op0, mode);
+-  x = gen_rtx_XOR (vmode, dest, op0);
+   emit_insn (gen_rtx_SET (dest, x));
+ }
+ 
+@@ -13598,7 +13770,7 @@ static bool expand_vec_perm_1 (struct expand_vec_perm_d *d);
  /* A subroutine of ix86_expand_vector_init.  Store into TARGET a vector
     with all elements equal to VAR.  Return true if successful.  */
  
@@ -629,6 +699,202 @@ index 16765718cc3..60dfba8ff42 100644
  ix86_expand_vector_init_duplicate (bool mmx_ok, machine_mode mode,
  				   rtx target, rtx val)
  {
+diff --git a/gcc/config/i386/i386-features.c b/gcc/config/i386/i386-features.c
+index 77783a154b6..c0d1c66a3c7 100644
+--- a/gcc/config/i386/i386-features.c
++++ b/gcc/config/i386/i386-features.c
+@@ -2174,81 +2174,6 @@ make_pass_insert_endbr_and_patchable_area (gcc::context *ctxt)
+   return new pass_insert_endbr_and_patchable_area (ctxt);
+ }
+ 
+-/* Replace all one-value const vector that are referenced by SYMBOL_REFs in x
+-   with embedded broadcast. i.e.transform
+-
+-     vpaddq .LC0(%rip), %zmm0, %zmm0
+-     ret
+-  .LC0:
+-    .quad 3
+-    .quad 3
+-    .quad 3
+-    .quad 3
+-    .quad 3
+-    .quad 3
+-    .quad 3
+-    .quad 3
+-
+-    to
+-
+-     vpaddq .LC0(%rip){1to8}, %zmm0, %zmm0
+-     ret
+-  .LC0:
+-    .quad 3  */
+-static void
+-replace_constant_pool_with_broadcast (rtx_insn *insn)
+-{
+-  subrtx_ptr_iterator::array_type array;
+-  FOR_EACH_SUBRTX_PTR (iter, array, &PATTERN (insn), ALL)
+-    {
+-      rtx *loc = *iter;
+-      rtx x = *loc;
+-      rtx broadcast_mem, vec_dup, constant, first;
+-      machine_mode mode;
+-
+-      /* Constant pool.  */
+-      if (!MEM_P (x)
+-	  || !SYMBOL_REF_P (XEXP (x, 0))
+-	  || !CONSTANT_POOL_ADDRESS_P (XEXP (x, 0)))
+-	continue;
+-
+-      /* Const vector.  */
+-      mode = GET_MODE (x);
+-      if (!VECTOR_MODE_P (mode))
+-	return;
+-      constant = get_pool_constant (XEXP (x, 0));
+-      if (GET_CODE (constant) != CONST_VECTOR)
+-	return;
+-
+-      /* There could be some rtx like
+-	 (mem/u/c:V16QI (symbol_ref/u:DI ("*.LC1")))
+-	 but with "*.LC1" refer to V2DI constant vector.  */
+-      if (GET_MODE (constant) != mode)
+-	{
+-	  constant = simplify_subreg (mode, constant, GET_MODE (constant), 0);
+-	  if (constant == NULL_RTX || GET_CODE (constant) != CONST_VECTOR)
+-	    return;
+-	}
+-      first = XVECEXP (constant, 0, 0);
+-
+-      for (int i = 1; i < GET_MODE_NUNITS (mode); ++i)
+-	{
+-	  rtx tmp = XVECEXP (constant, 0, i);
+-	  /* Vector duplicate value.  */
+-	  if (!rtx_equal_p (tmp, first))
+-	    return;
+-	}
+-
+-      /* Replace with embedded broadcast.  */
+-      broadcast_mem = force_const_mem (GET_MODE_INNER (mode), first);
+-      vec_dup = gen_rtx_VEC_DUPLICATE (mode, broadcast_mem);
+-      validate_change (insn, loc, vec_dup, 0);
+-
+-      /* At most 1 memory_operand in an insn.  */
+-      return;
+-    }
+-}
+-
+ /* At entry of the nearest common dominator for basic blocks with
+    conversions, generate a single
+ 	vxorps %xmmN, %xmmN, %xmmN
+@@ -2287,10 +2212,6 @@ remove_partial_avx_dependency (void)
+ 	  if (!NONDEBUG_INSN_P (insn))
+ 	    continue;
+ 
+-	  /* Handle AVX512 embedded broadcast here to save compile time.  */
+-	  if (TARGET_AVX512F)
+-	    replace_constant_pool_with_broadcast (insn);
+-
+ 	  set = single_set (insn);
+ 	  if (!set)
+ 	    continue;
+@@ -2422,16 +2343,6 @@ remove_partial_avx_dependency (void)
+   return 0;
+ }
+ 
+-static bool
+-remove_partial_avx_dependency_gate ()
+-{
+-  return (TARGET_AVX
+-	  && TARGET_SSE_PARTIAL_REG_DEPENDENCY
+-	  && TARGET_SSE_MATH
+-	  && optimize
+-	  && optimize_function_for_speed_p (cfun));
+-}
+-
+ namespace {
+ 
+ const pass_data pass_data_remove_partial_avx_dependency =
+@@ -2457,7 +2368,11 @@ public:
+   /* opt_pass methods: */
+   virtual bool gate (function *)
+     {
+-      return remove_partial_avx_dependency_gate ();
++      return (TARGET_AVX
++	      && TARGET_SSE_PARTIAL_REG_DEPENDENCY
++	      && TARGET_SSE_MATH
++	      && optimize
++	      && optimize_function_for_speed_p (cfun));
+     }
+ 
+   virtual unsigned int execute (function *)
+@@ -2474,68 +2389,6 @@ make_pass_remove_partial_avx_dependency (gcc::context *ctxt)
+   return new pass_remove_partial_avx_dependency (ctxt);
+ }
+ 
+-/* For const vector having one duplicated value, there's no need to put
+-   whole vector in the constant pool when target supports embedded broadcast. */
+-static unsigned int
+-constant_pool_broadcast (void)
+-{
+-  timevar_push (TV_MACH_DEP);
+-  rtx_insn *insn;
+-
+-  for (insn = get_insns (); insn; insn = NEXT_INSN (insn))
+-    {
+-      if (INSN_P (insn))
+-	replace_constant_pool_with_broadcast (insn);
+-    }
+-  timevar_pop (TV_MACH_DEP);
+-  return 0;
+-}
+-
+-namespace {
+-
+-const pass_data pass_data_constant_pool_broadcast =
+-{
+-  RTL_PASS, /* type */
+-  "cpb", /* name */
+-  OPTGROUP_NONE, /* optinfo_flags */
+-  TV_MACH_DEP, /* tv_id */
+-  0, /* properties_required */
+-  0, /* properties_provided */
+-  0, /* properties_destroyed */
+-  0, /* todo_flags_start */
+-  TODO_df_finish, /* todo_flags_finish */
+-};
+-
+-class pass_constant_pool_broadcast : public rtl_opt_pass
+-{
+-public:
+-  pass_constant_pool_broadcast (gcc::context *ctxt)
+-    : rtl_opt_pass (pass_data_constant_pool_broadcast, ctxt)
+-  {}
+-
+-  /* opt_pass methods: */
+-  virtual bool gate (function *)
+-    {
+-      /* Return false if rpad pass gate is true.
+-	 replace_constant_pool_with_broadcast is called
+-	 from both this pass and rpad pass.  */
+-      return (TARGET_AVX512F && !remove_partial_avx_dependency_gate ());
+-    }
+-
+-  virtual unsigned int execute (function *)
+-    {
+-      return constant_pool_broadcast ();
+-    }
+-}; // class pass_cpb
+-
+-} // anon namespace
+-
+-rtl_opt_pass *
+-make_pass_constant_pool_broadcast (gcc::context *ctxt)
+-{
+-  return new pass_constant_pool_broadcast (ctxt);
+-}
+-
+ /* This compares the priority of target features in function DECL1
+    and DECL2.  It returns positive value if DECL1 is higher priority,
+    negative value if DECL2 is higher priority and 0 if they are the
 diff --git a/gcc/config/i386/i386-modes.def b/gcc/config/i386/i386-modes.def
 index dbddfd8e48f..4e7014be034 100644
 --- a/gcc/config/i386/i386-modes.def
@@ -656,8 +922,17 @@ index dbddfd8e48f..4e7014be034 100644
 -
  /* The symbol Pmode stands for one of the above machine modes (usually SImode).
     The tm.h file specifies which one.  It is not a distinct mode.  */
+diff --git a/gcc/config/i386/i386-passes.def b/gcc/config/i386/i386-passes.def
+index 44df00e94ac..29baf8acd0b 100644
+--- a/gcc/config/i386/i386-passes.def
++++ b/gcc/config/i386/i386-passes.def
+@@ -33,4 +33,3 @@ along with GCC; see the file COPYING3.  If not see
+   INSERT_PASS_BEFORE (pass_shorten_branches, 1, pass_insert_endbr_and_patchable_area);
+ 
+   INSERT_PASS_AFTER (pass_combine, 1, pass_remove_partial_avx_dependency);
+-  INSERT_PASS_AFTER (pass_combine, 1, pass_constant_pool_broadcast);
 diff --git a/gcc/config/i386/i386-protos.h b/gcc/config/i386/i386-protos.h
-index 7782cf1163f..bb79b7815fb 100644
+index 7782cf1163f..88c9ad7726a 100644
 --- a/gcc/config/i386/i386-protos.h
 +++ b/gcc/config/i386/i386-protos.h
 @@ -50,6 +50,8 @@ extern void ix86_reset_previous_fndecl (void);
@@ -669,7 +944,15 @@ index 7782cf1163f..bb79b7815fb 100644
  extern unsigned int ix86_regmode_natural_size (machine_mode);
  #ifdef RTX_CODE
  extern int standard_80387_constant_p (rtx);
-@@ -257,6 +259,8 @@ extern void ix86_expand_mul_widen_hilo (rtx, rtx, rtx, bool, bool);
+@@ -135,7 +137,6 @@ extern void ix86_expand_copysign (rtx []);
+ extern void ix86_split_copysign_const (rtx []);
+ extern void ix86_split_copysign_var (rtx []);
+ extern void ix86_expand_xorsign (rtx []);
+-extern void ix86_split_xorsign (rtx []);
+ extern bool ix86_unary_operator_ok (enum rtx_code, machine_mode, rtx[]);
+ extern bool ix86_match_ccmode (rtx, machine_mode);
+ extern void ix86_expand_branch (enum rtx_code, rtx, rtx, rtx);
+@@ -257,6 +258,8 @@ extern void ix86_expand_mul_widen_hilo (rtx, rtx, rtx, bool, bool);
  extern void ix86_expand_sse2_mulv4si3 (rtx, rtx, rtx);
  extern void ix86_expand_sse2_mulvxdi3 (rtx, rtx, rtx);
  extern void ix86_expand_sse2_abs (rtx, rtx);
@@ -678,6 +961,11 @@ index 7782cf1163f..bb79b7815fb 100644
  
  /* In i386-c.c  */
  extern void ix86_target_macros (void);
+@@ -392,4 +395,3 @@ extern rtl_opt_pass *make_pass_insert_endbr_and_patchable_area
+   (gcc::context *);
+ extern rtl_opt_pass *make_pass_remove_partial_avx_dependency
+   (gcc::context *);
+-extern rtl_opt_pass *make_pass_constant_pool_broadcast (gcc::context *);
 diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
 index 527d493ecae..1af1f6b8931 100644
 --- a/gcc/config/i386/i386.c
@@ -1029,11 +1317,221 @@ index 73e118900f7..5b7280d8d8d 100644
  
  /* If a memory-to-memory move would take MOVE_RATIO or more simple
     move-instruction pairs, we will do a cpymem or libcall instead.
+diff --git a/gcc/config/i386/i386.md b/gcc/config/i386/i386.md
+index 97325e38676..72c449140a7 100644
+--- a/gcc/config/i386/i386.md
++++ b/gcc/config/i386/i386.md
+@@ -122,6 +122,9 @@
+   UNSPEC_RSQRT
+   UNSPEC_PSADBW
+ 
++  ;; For AVX512F support
++  UNSPEC_SCALEF
++
+   ;; Generic math support
+   UNSPEC_COPYSIGN
+   UNSPEC_XORSIGN
+@@ -10532,19 +10535,6 @@
+     ix86_expand_xorsign (operands);
+   DONE;
+ })
+-
+-(define_insn_and_split "@xorsign<mode>3_1"
+-  [(set (match_operand:MODEF 0 "register_operand" "=&Yv")
+-	(unspec:MODEF
+-	  [(match_operand:MODEF 1 "register_operand" "Yv")
+-	   (match_operand:MODEF 2 "register_operand" "0")
+-	   (match_operand:<ssevecmode> 3 "nonimmediate_operand" "Yvm")]
+-	  UNSPEC_XORSIGN))]
+-  "SSE_FLOAT_MODE_P (<MODE>mode) && TARGET_SSE_MATH"
+-  "#"
+-  "&& reload_completed"
+-  [(const_int 0)]
+-  "ix86_split_xorsign (operands); DONE;")
+ 
+ ;; One complement instructions
+ 
+@@ -17313,6 +17303,17 @@
+   DONE;
+ })
+ 
++(define_insn "avx512f_scalef<mode>2"
++  [(set (match_operand:MODEF 0 "register_operand" "=v")
++	(unspec:MODEF
++	  [(match_operand:MODEF 1 "register_operand" "v")
++	   (match_operand:MODEF 2 "nonimmediate_operand" "vm")]
++	  UNSPEC_SCALEF))]
++  "TARGET_AVX512F"
++  "vscalef<ssemodesuffix>\t{%2, %1, %0|%0, %1, %2}"
++  [(set_attr "prefix" "evex")
++   (set_attr "mode"  "<MODE>")])
++
+ (define_expand "ldexpxf3"
+   [(match_operand:XF 0 "register_operand")
+    (match_operand:XF 1 "register_operand")
+@@ -17333,17 +17334,30 @@
+   [(use (match_operand:MODEF 0 "register_operand"))
+    (use (match_operand:MODEF 1 "general_operand"))
+    (use (match_operand:SI 2 "register_operand"))]
+-  "TARGET_USE_FANCY_MATH_387
+-   && (!(SSE_FLOAT_MODE_P (<MODE>mode) && TARGET_SSE_MATH)
+-       || TARGET_MIX_SSE_I387)
++  "((TARGET_USE_FANCY_MATH_387
++     && (!(SSE_FLOAT_MODE_P (<MODE>mode) && TARGET_SSE_MATH)
++	 || TARGET_MIX_SSE_I387))
++    || (TARGET_AVX512F && TARGET_SSE_MATH))
+    && flag_unsafe_math_optimizations"
+ {
+-  rtx op0 = gen_reg_rtx (XFmode);
+-  rtx op1 = gen_reg_rtx (XFmode);
++  /* Prefer avx512f version.  */
++  if (TARGET_AVX512F && TARGET_SSE_MATH)
++   {
++     rtx op2 = gen_reg_rtx (<MODE>mode);
++     operands[1] = force_reg (<MODE>mode, operands[1]);
+ 
+-  emit_insn (gen_extend<mode>xf2 (op1, operands[1]));
+-  emit_insn (gen_ldexpxf3 (op0, op1, operands[2]));
+-  emit_insn (gen_truncxf<mode>2 (operands[0], op0));
++     emit_insn (gen_floatsi<mode>2 (op2, operands[2]));
++     emit_insn (gen_avx512f_scalef<mode>2 (operands[0], operands[1], op2));
++   }
++  else
++    {
++      rtx op0 = gen_reg_rtx (XFmode);
++      rtx op1 = gen_reg_rtx (XFmode);
++
++      emit_insn (gen_extend<mode>xf2 (op1, operands[1]));
++      emit_insn (gen_ldexpxf3 (op0, op1, operands[2]));
++      emit_insn (gen_truncxf<mode>2 (operands[0], op0));
++  }
+   DONE;
+ })
+ 
+diff --git a/gcc/config/i386/predicates.md b/gcc/config/i386/predicates.md
+index b1df8548af6..201aacd65e6 100644
+--- a/gcc/config/i386/predicates.md
++++ b/gcc/config/i386/predicates.md
+@@ -1524,6 +1524,38 @@
+   (and (match_code "mem")
+        (match_test "MEM_ALIGN (op) < GET_MODE_BITSIZE (mode)")))
+ 
++;; Return true if OP is a parallel for an mov{d,q,dqa,ps,pd} vec_select,
++;; where one of the two operands of the vec_concat is const0_operand.
++(define_predicate "movq_parallel"
++  (match_code "parallel")
++{
++  unsigned nelt = XVECLEN (op, 0);
++  unsigned nelt2 = nelt >> 1;
++  unsigned i;
++
++  if (nelt < 2)
++    return false;
++
++  /* Validate that all of the elements are constants,
++     lower halves of permute are lower halves of the first operand,
++     upper halves of permute come from any of the second operand.  */
++  for (i = 0; i < nelt; ++i)
++    {
++      rtx er = XVECEXP (op, 0, i);
++      unsigned HOST_WIDE_INT ei;
++
++      if (!CONST_INT_P (er))
++	return 0;
++      ei = INTVAL (er);
++      if (i < nelt2 && ei != i)
++	return 0;
++      if (i >= nelt2 && (ei < nelt || ei >= nelt << 1))
++	return 0;
++    }
++
++  return 1;
++})
++
+ ;; Return true if OP is a vzeroall operation, known to be a PARALLEL.
+ (define_predicate "vzeroall_operation"
+   (match_code "parallel")
 diff --git a/gcc/config/i386/sse.md b/gcc/config/i386/sse.md
-index e495725ff7c..8084c98c9f5 100644
+index e495725ff7c..ec3dfbc1e3e 100644
 --- a/gcc/config/i386/sse.md
 +++ b/gcc/config/i386/sse.md
-@@ -24323,3 +24323,34 @@
+@@ -95,7 +95,6 @@
+   UNSPEC_RCP14
+   UNSPEC_RSQRT14
+   UNSPEC_FIXUPIMM
+-  UNSPEC_SCALEF
+   UNSPEC_VTERNLOG
+   UNSPEC_GETEXP
+   UNSPEC_GETMANT
+@@ -812,19 +811,22 @@
+ 
+ ;; Mapping of vector modes to a vector mode of double size
+ (define_mode_attr ssedoublevecmode
+-  [(V32QI "V64QI") (V16HI "V32HI") (V8SI "V16SI") (V4DI "V8DI")
++  [(V64QI "V128QI") (V32HI "V64HI") (V16SI "V32SI") (V8DI "V16DI")
++   (V32QI "V64QI") (V16HI "V32HI") (V8SI "V16SI") (V4DI "V8DI")
+    (V16QI "V32QI") (V8HI "V16HI") (V4SI "V8SI") (V2DI "V4DI")
++   (V16SF "V32SF") (V8DF "V16DF")
+    (V8SF "V16SF") (V4DF "V8DF")
+    (V4SF "V8SF") (V2DF "V4DF")])
+ 
+ ;; Mapping of vector modes to a vector mode of half size
++;; instead of V1DI/V1DF, DI/DF are used for V2DI/V2DF although they are scalar.
+ (define_mode_attr ssehalfvecmode
+   [(V64QI "V32QI") (V32HI "V16HI") (V16SI "V8SI") (V8DI "V4DI") (V4TI "V2TI")
+    (V32QI "V16QI") (V16HI  "V8HI") (V8SI  "V4SI") (V4DI "V2DI")
+-   (V16QI  "V8QI") (V8HI   "V4HI") (V4SI  "V2SI")
++   (V16QI  "V8QI") (V8HI   "V4HI") (V4SI  "V2SI") (V2DI "DI")
+    (V16SF "V8SF") (V8DF "V4DF")
+    (V8SF  "V4SF") (V4DF "V2DF")
+-   (V4SF  "V2SF")])
++   (V4SF  "V2SF") (V2DF "DF")])
+ 
+ (define_mode_attr ssehalfvecmodelower
+   [(V64QI "v32qi") (V32HI "v16hi") (V16SI "v8si") (V8DI "v4di") (V4TI "v2ti")
+@@ -15964,11 +15966,11 @@
+    (set_attr "prefix" "orig,maybe_evex,orig,orig,maybe_evex")
+    (set_attr "mode" "TI,TI,V4SF,V2SF,V2SF")])
+ 
+-(define_insn "*vec_concatv4si_0"
+-  [(set (match_operand:V4SI 0 "register_operand"       "=v,x")
+-	(vec_concat:V4SI
+-	  (match_operand:V2SI 1 "nonimmediate_operand" "vm,?!*y")
+-	  (match_operand:V2SI 2 "const0_operand"       " C,C")))]
++(define_insn "*vec_concat<mode>_0"
++  [(set (match_operand:VI124_128 0 "register_operand"       "=v,x")
++	(vec_concat:VI124_128
++	  (match_operand:<ssehalfvecmode> 1 "nonimmediate_operand" "vm,?!*y")
++	  (match_operand:<ssehalfvecmode> 2 "const0_operand"       " C,C")))]
+   "TARGET_SSE2"
+   "@
+    %vmovq\t{%1, %0|%0, %1}
+@@ -22154,6 +22156,24 @@
+    (set_attr "prefix" "maybe_evex")
+    (set_attr "mode" "<sseinsnmode>")])
+ 
++(define_insn_and_split "*vec_concat<mode>_0_1"
++  [(set (match_operand:V 0 "register_operand")
++	(vec_select:V
++	  (vec_concat:<ssedoublevecmode>
++	    (match_operand:V 1 "nonimmediate_operand")
++	    (match_operand:V 2 "const0_operand"))
++	  (match_parallel 3 "movq_parallel"
++	    [(match_operand 4 "const_int_operand")])))]
++  "ix86_pre_reload_split ()"
++  "#"
++  "&& 1"
++  [(set (match_dup 0)
++	(vec_concat:V (match_dup 1) (match_dup 5)))]
++{
++  operands[1] = gen_lowpart (<ssehalfvecmode>mode, operands[1]);
++  operands[5] = CONST0_RTX (<ssehalfvecmode>mode);
++})
++
+ (define_insn "vcvtph2ps<mask_name>"
+   [(set (match_operand:V4SF 0 "register_operand" "=v")
+ 	(vec_select:V4SF
+@@ -24323,3 +24343,34 @@
    "TARGET_WIDEKL"
    "aes<aeswideklvariant>\t{%0}"
    [(set_attr "type" "other")])
@@ -2092,6 +2590,184 @@ index 00000000000..bf9d8543c1b
 +{
 +  return record_increment ();
 +}
+diff --git a/gcc/testsuite/gcc.dg/pr89984.c b/gcc/testsuite/gcc.dg/pr89984.c
+new file mode 100644
+index 00000000000..471fe92bc86
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/pr89984.c
+@@ -0,0 +1,20 @@
++/* PR target/89984 */
++/* { dg-do run } */
++/* { dg-options "-O2" } */
++
++__attribute__((noipa)) float
++foo (float x, float y)
++{
++  return x * __builtin_copysignf (1.0f, y) + y;
++}
++
++int
++main ()
++{
++  if (foo (1.25f, 7.25f) != 1.25f + 7.25f
++      || foo (1.75f, -3.25f) != -1.75f + -3.25f
++      || foo (-2.25f, 7.5f) != -2.25f + 7.5f
++      || foo (-3.0f, -4.0f) != 3.0f + -4.0f)
++    __builtin_abort ();
++  return 0;
++}
+diff --git a/gcc/testsuite/gcc.target/i386/avx-pr102224.c b/gcc/testsuite/gcc.target/i386/avx-pr102224.c
+index be6b88c05db..7cb8b4cdecb 100644
+--- a/gcc/testsuite/gcc.target/i386/avx-pr102224.c
++++ b/gcc/testsuite/gcc.target/i386/avx-pr102224.c
+@@ -1,4 +1,4 @@
+-/* PR tree-optimization/51581 */
++/* PR target/102224 */
+ /* { dg-do run } */
+ /* { dg-options "-O2 -mavx" } */
+ /* { dg-require-effective-target avx } */
+diff --git a/gcc/testsuite/gcc.target/i386/avx-pr89984.c b/gcc/testsuite/gcc.target/i386/avx-pr89984.c
+new file mode 100644
+index 00000000000..3409adef5b6
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/avx-pr89984.c
+@@ -0,0 +1,23 @@
++/* PR target/89984 */
++/* { dg-do run } */
++/* { dg-options "-O2 -mavx" } */
++/* { dg-require-effective-target avx } */
++
++#ifndef CHECK_H
++#define CHECK_H "avx-check.h"
++#endif
++#ifndef TEST
++#define TEST avx_test
++#endif
++
++#define main main1
++#include "../../gcc.dg/pr89984.c"
++#undef main
++
++#include CHECK_H
++
++static void
++TEST (void)
++{
++  main1 ();
++}
+diff --git a/gcc/testsuite/gcc.target/i386/avx-pr94680.c b/gcc/testsuite/gcc.target/i386/avx-pr94680.c
+new file mode 100644
+index 00000000000..cb5041b6af3
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/avx-pr94680.c
+@@ -0,0 +1,107 @@
++/* { dg-do compile } */
++/* { dg-options "-mavx -mno-avx512f -O2" } */
++/* { dg-final { scan-assembler-times {(?n)vmov[a-z0-9]*[ \t]*%xmm[0-9]} 12 } } */
++/* { dg-final { scan-assembler-not "pxor" } } */
++
++typedef float v8sf __attribute__((vector_size(32)));
++typedef double v4df __attribute__ ((vector_size (32)));
++typedef long long v4di __attribute__((vector_size(32)));
++typedef int v8si __attribute__((vector_size(32)));
++typedef short v16hi __attribute__ ((vector_size (32)));
++typedef char v32qi __attribute__ ((vector_size (32)));
++
++v4df
++foo_v4df (v4df x)
++{
++  return __builtin_shuffle (x, (v4df) { 0, 0, 0, 0 }, (v4di) { 0, 1, 4, 5 });
++}
++
++v4df
++foo_v4df_l (v4df x)
++{
++  return __builtin_shuffle ((v4df) { 0, 0, 0, 0 }, x, (v4di) { 4, 5, 1, 2 });
++}
++
++v4di
++foo_v4di (v4di x)
++{
++  return __builtin_shuffle (x, (v4di) { 0, 0, 0, 0 }, (v4di) { 0, 1, 4, 7 });
++}
++
++v4di
++foo_v4di_l (v4di x)
++{
++  return __builtin_shuffle ((v4di) { 0, 0, 0, 0 }, x, (v4di) { 4, 5, 3, 1 });
++}
++
++v8sf
++foo_v8sf (v8sf x)
++{
++  return __builtin_shuffle ((v8sf) { 0, 0, 0, 0, 0, 0, 0, 0 }, x,
++			    (v8si) { 8, 9, 10, 11, 0, 1, 2, 3 });
++}
++
++v8sf
++foo_v8sf_l (v8sf x)
++{
++  return __builtin_shuffle (x, (v8sf) { 0, 0, 0, 0, 0, 0, 0, 0 },
++			    (v8si) { 0, 1, 2, 3, 8, 9, 10, 11 });
++}
++
++v8si
++foo_v8si (v8si x)
++{
++  return __builtin_shuffle (x, (v8si) { 0, 0, 0, 0, 0, 0, 0, 0 },
++			    (v8si) { 0, 1, 2, 3, 13, 12, 11, 15 });
++}
++
++v8si
++foo_v8si_l (v8si x)
++{
++  return __builtin_shuffle ((v8si) { 0, 0, 0, 0, 0, 0, 0, 0 }, x,
++			    (v8si) { 8, 9, 10, 11, 7, 6, 5, 4 });
++}
++
++v16hi
++foo_v16hi (v16hi x)
++{
++  return __builtin_shuffle (x, (v16hi)  { 0, 0, 0, 0, 0, 0, 0, 0,
++					  0, 0, 0, 0, 0, 0, 0, 0 },
++			       (v16hi) { 0, 1, 2, 3, 4, 5, 6, 7,
++					 24, 17, 26, 19, 28, 21, 30, 23 });
++}
++
++v16hi
++foo_v16hi_l (v16hi x)
++{
++  return __builtin_shuffle ((v16hi)  { 0, 0, 0, 0, 0, 0, 0, 0,
++				       0, 0, 0, 0, 0, 0, 0, 0 }, x,
++			    (v16hi) { 16, 17, 18, 19, 20, 21, 22, 23,
++				      15, 0, 13, 2, 11, 4, 9, 6 });
++}
++
++v32qi
++foo_v32qi (v32qi x)
++{
++  return __builtin_shuffle (x, (v32qi) { 0, 0, 0, 0, 0, 0, 0, 0,
++					 0, 0, 0, 0, 0, 0, 0, 0,
++					 0, 0, 0, 0, 0, 0, 0, 0,
++					 0, 0, 0, 0, 0, 0, 0, 0 },
++			       (v32qi) { 0, 1, 2, 3, 4, 5, 6, 7,
++					 8, 9, 10, 11, 12, 13, 14, 15,
++					 32, 49, 34, 58, 36, 53, 38, 39,
++					 40, 60, 42, 43, 63, 45, 46, 47 });
++}
++
++v32qi
++foo_v32qi_l (v32qi x)
++{
++  return __builtin_shuffle ((v32qi) { 0, 0, 0, 0, 0, 0, 0, 0,
++				      0, 0, 0, 0, 0, 0, 0, 0,
++				      0, 0, 0, 0, 0, 0, 0, 0,
++				      0, 0, 0, 0, 0, 0, 0, 0 }, x,
++			     (v32qi) { 32, 33, 34, 35, 36, 37, 38, 39,
++				       40, 41, 42, 43, 44, 45, 46, 47,
++				       31, 0, 29, 2, 27, 4, 25, 6,
++				       23, 8, 21, 10, 19, 12, 17, 14 });
++}
 diff --git a/gcc/testsuite/gcc.target/i386/avx-vzeroupper-14.c b/gcc/testsuite/gcc.target/i386/avx-vzeroupper-14.c
 index a31b4a2a63a..9590f25da22 100644
 --- a/gcc/testsuite/gcc.target/i386/avx-vzeroupper-14.c
@@ -2188,6 +2864,156 @@ index ffbe95980ca..477f9ca1282 100644
  
  typedef int v16si  __attribute__ ((vector_size (64)));
  typedef long long v8di  __attribute__ ((vector_size (64)));
+diff --git a/gcc/testsuite/gcc.target/i386/avx512f-pr94680.c b/gcc/testsuite/gcc.target/i386/avx512f-pr94680.c
+new file mode 100644
+index 00000000000..c27431aae72
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/avx512f-pr94680.c
+@@ -0,0 +1,144 @@
++/* { dg-do compile } */
++/* { dg-options "-mavx512bw -mavx512vbmi -O2" } */
++/* { dg-final { scan-assembler-times {(?n)vmov[a-z0-9]*[ \t]*%ymm[0-9]} 12} } */
++/* { dg-final { scan-assembler-not "pxor" } } */
++
++
++typedef float v16sf __attribute__((vector_size(64)));
++typedef double v8df __attribute__ ((vector_size (64)));
++typedef long long v8di __attribute__((vector_size(64)));
++typedef int v16si __attribute__((vector_size(64)));
++typedef short v32hi __attribute__ ((vector_size (64)));
++typedef char v64qi __attribute__ ((vector_size (64)));
++
++v8df
++foo_v8df (v8df x)
++{
++  return __builtin_shuffle (x, (v8df) { 0, 0, 0, 0, 0, 0, 0, 0 },
++			    (v8di) { 0, 1, 2, 3, 15, 14, 10, 11 });
++}
++
++v8df
++foo_v8df_l (v8df x)
++{
++  return __builtin_shuffle ((v8df) { 0, 0, 0, 0, 0, 0, 0, 0 }, x,
++			    (v8di) { 8, 9, 10, 11, 0, 1, 2, 3 });
++}
++
++v8di
++foo_v8di (v8di x)
++{
++  return __builtin_shuffle (x, (v8di) { 0, 0, 0, 0, 0, 0, 0, 0 },
++			    (v8di) { 0, 1, 2, 3, 8, 9, 10, 11 });
++}
++
++v8di
++foo_v8di_l (v8di x)
++{
++  return __builtin_shuffle ((v8di) { 0, 0, 0, 0, 0, 0, 0, 0 }, x,
++			    (v8di) { 8, 9, 10, 11, 7, 6, 5, 4 });
++}
++
++v16sf
++foo_v16sf (v16sf x)
++{
++  return __builtin_shuffle (x, (v16sf)  { 0, 0, 0, 0, 0, 0, 0, 0,
++					   0, 0, 0, 0, 0, 0, 0, 0 },
++			       (v16si) { 0, 1, 2, 3, 4, 5, 6, 7,
++					 16, 17, 18, 19, 20, 21, 22, 23 });
++}
++
++v16sf
++foo_v16sf_l (v16sf x)
++{
++  return __builtin_shuffle ((v16sf)  { 0, 0, 0, 0, 0, 0, 0, 0,
++				       0, 0, 0, 0, 0, 0, 0, 0 }, x,
++			    (v16si) { 16, 17, 18, 19, 20, 21, 22, 23,
++				      0, 15, 2, 13, 4, 11, 6, 9 });
++}
++
++v16si
++foo_v16si (v16si x)
++{
++    return __builtin_shuffle (x, (v16si)  { 0, 0, 0, 0, 0, 0, 0, 0,
++					   0, 0, 0, 0, 0, 0, 0, 0 },
++			       (v16si) { 0, 1, 2, 3, 4, 5, 6, 7,
++					 31, 30, 29, 28, 20, 21, 22, 23 });
++}
++
++v16si
++foo_v16si_l (v16si x)
++{
++    return __builtin_shuffle ((v16si)  { 0, 0, 0, 0, 0, 0, 0, 0,
++					 0, 0, 0, 0, 0, 0, 0, 0 }, x,
++			      (v16si) { 16, 17, 18, 19, 20, 21, 22, 23,
++					15, 0, 13, 2, 11, 4, 9, 6 });
++}
++
++v32hi
++foo_v32hi (v32hi x)
++{
++  return __builtin_shuffle (x, (v32hi) { 0, 0, 0, 0, 0, 0, 0, 0,
++					 0, 0, 0, 0, 0, 0, 0, 0,
++					 0, 0, 0, 0, 0, 0, 0, 0,
++					 0, 0, 0, 0, 0, 0, 0, 0 },
++			       (v32hi) { 0, 1, 2, 3, 4, 5, 6, 7,
++					 8, 9, 10, 11, 12, 13, 14, 15,
++					 63, 33, 61, 35, 59, 37, 57, 39,
++					 55, 41, 53, 43, 51, 45, 49, 47 });
++}
++
++v32hi
++foo_v32hi_l (v32hi x)
++{
++  return __builtin_shuffle ((v32hi) { 0, 0, 0, 0, 0, 0, 0, 0,
++				       0, 0, 0, 0, 0, 0, 0, 0,
++				       0, 0, 0, 0, 0, 0, 0, 0,
++				       0, 0, 0, 0, 0, 0, 0, 0 }, x,
++			       (v32hi) { 32, 33, 34, 35, 36, 37, 38, 39,
++					 40, 41, 42, 43, 44, 45, 46, 47,
++					 31, 0, 29, 2, 27, 4, 25, 6,
++					 23, 8, 21, 10, 19, 12, 17, 14 });
++}
++
++v64qi
++foo_v64qi (v64qi x)
++{
++  return __builtin_shuffle (x, (v64qi) { 0, 0, 0, 0, 0, 0, 0, 0,
++					 0, 0, 0, 0, 0, 0, 0, 0,
++					 0, 0, 0, 0, 0, 0, 0, 0,
++					 0, 0, 0, 0, 0, 0, 0, 0,
++					 0, 0, 0, 0, 0, 0, 0, 0,
++					 0, 0, 0, 0, 0, 0, 0, 0,
++					 0, 0, 0, 0, 0, 0, 0, 0,
++					 0, 0, 0, 0, 0, 0, 0, 0 },
++			       (v64qi) {0, 1, 2, 3, 4, 5, 6, 7,
++					  8, 9, 10, 11, 12, 13, 14, 15,
++					  16, 17, 18, 19, 20, 21, 22, 23,
++					  24, 25, 26, 27, 28, 29, 30, 31,
++					  64, 127, 66, 125, 68, 123, 70, 121,
++					  72, 119, 74, 117, 76, 115, 78, 113,
++					  80, 111, 82, 109, 84, 107, 86, 105,
++					  88, 103, 90, 101, 92, 99, 94, 97 });
++}
++
++v64qi
++foo_v64qi_l (v64qi x)
++{
++  return __builtin_shuffle ((v64qi) { 0, 0, 0, 0, 0, 0, 0, 0,
++				      0, 0, 0, 0, 0, 0, 0, 0,
++				      0, 0, 0, 0, 0, 0, 0, 0,
++				      0, 0, 0, 0, 0, 0, 0, 0,
++				      0, 0, 0, 0, 0, 0, 0, 0,
++				      0, 0, 0, 0, 0, 0, 0, 0,
++				      0, 0, 0, 0, 0, 0, 0, 0,
++				      0, 0, 0, 0, 0, 0, 0, 0 }, x,
++			    (v64qi) { 64, 65, 66, 67, 68, 69, 70, 71,
++				      72, 73, 74, 75, 76, 77, 78, 79,
++				      80, 81, 82, 83, 84, 85, 86, 87,
++				      88, 89, 90, 91, 92, 93, 94, 95,
++				      0, 63, 2, 61, 4, 59, 6, 57,
++				      8, 55, 10, 53, 12, 51, 14, 49,
++				      16, 47, 18, 45, 20, 43, 22, 41,
++				      24, 39, 26, 37, 28, 35, 30, 33 });
++}
 diff --git a/gcc/testsuite/gcc.target/i386/avx512f_cond_move.c b/gcc/testsuite/gcc.target/i386/avx512f_cond_move.c
 index 99a89f51202..ca49a585232 100644
 --- a/gcc/testsuite/gcc.target/i386/avx512f_cond_move.c
@@ -2309,6 +3135,19 @@ index 00000000000..f23f4492dac
 +  offset(0);
 +  __builtin_eh_return ((long) offset, 0);
 +}
+diff --git a/gcc/testsuite/gcc.target/i386/fuse-caller-save-xmm.c b/gcc/testsuite/gcc.target/i386/fuse-caller-save-xmm.c
+index 4deff93c1e8..b0d3dc38a0c 100644
+--- a/gcc/testsuite/gcc.target/i386/fuse-caller-save-xmm.c
++++ b/gcc/testsuite/gcc.target/i386/fuse-caller-save-xmm.c
+@@ -6,7 +6,7 @@ typedef double v2df __attribute__((vector_size (16)));
+ static v2df __attribute__((noinline))
+ bar (v2df a)
+ {
+-  return a + (v2df){ 3.0, 3.0 };
++  return a + (v2df){ 3.0, 4.0 };
+ }
+ 
+ v2df __attribute__((noinline))
 diff --git a/gcc/testsuite/gcc.target/i386/incoming-11.c b/gcc/testsuite/gcc.target/i386/incoming-11.c
 index a830c96f7d1..4b822684b88 100644
 --- a/gcc/testsuite/gcc.target/i386/incoming-11.c
@@ -3667,10 +4506,10 @@ index 00000000000..98b6dfb16f3
 +/* { dg-final { scan-assembler-times "vmovdqu\[\\t \]%ymm\[0-9\]+, " 8 } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pr100865-10b.c b/gcc/testsuite/gcc.target/i386/pr100865-10b.c
 new file mode 100644
-index 00000000000..77ace86ffe8
+index 00000000000..e5616d8d258
 --- /dev/null
 +++ b/gcc/testsuite/gcc.target/i386/pr100865-10b.c
-@@ -0,0 +1,8 @@
+@@ -0,0 +1,7 @@
 +/* { dg-do compile { target int128 } } */
 +/* { dg-options "-O3 -march=skylake-avx512" } */
 +
@@ -3678,7 +4517,6 @@ index 00000000000..77ace86ffe8
 +
 +/* { dg-final { scan-assembler-times "vpbroadcastb\[\\t \]+%(?:r|e)\[^\n\]*, %ymm\[0-9\]+" 1 } } */
 +/* { dg-final { scan-assembler-times "vmovdqu8\[\\t \]%ymm\[0-9\]+, " 8 } } */
-+/* { dg-final { scan-assembler-not "vzeroupper" } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pr100865-11a.c b/gcc/testsuite/gcc.target/i386/pr100865-11a.c
 new file mode 100644
 index 00000000000..04ce1662f3c
@@ -3855,10 +4693,10 @@ index 00000000000..365487337ae
 +/* { dg-final { scan-assembler-not "vmovdqa" } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pr100865-4b.c b/gcc/testsuite/gcc.target/i386/pr100865-4b.c
 new file mode 100644
-index 00000000000..80e9fdb12ea
+index 00000000000..6d9cb91b8e9
 --- /dev/null
 +++ b/gcc/testsuite/gcc.target/i386/pr100865-4b.c
-@@ -0,0 +1,11 @@
+@@ -0,0 +1,10 @@
 +/* { dg-do compile } */
 +/* { dg-options "-O2 -march=skylake-avx512" } */
 +
@@ -3866,8 +4704,7 @@ index 00000000000..80e9fdb12ea
 +
 +/* { dg-final { scan-assembler-times "vpbroadcastb\[\\t \]+%(?:r|e)\[^\n\]*, %ymm\[0-9\]+" 1 } } */
 +/* { dg-final { scan-assembler-times "vmovdqu8\[\\t \]%ymm\[0-9\]+, " 2 } } */
-+/* { dg-final { scan-assembler-times "vzeroupper" 1 { target ia32 } } } */
-+/* { dg-final { scan-assembler-not "vzeroupper" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler-times "vzeroupper" 1 } } */
 +/* { dg-final { scan-assembler-not "vpbroadcastb\[\\t \]+%xmm\[0-9\]+, %ymm\[0-9\]+" } } */
 +/* { dg-final { scan-assembler-not "vmovdqa" } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pr100865-5a.c b/gcc/testsuite/gcc.target/i386/pr100865-5a.c
@@ -3931,20 +4768,18 @@ index 00000000000..3fde549a10d
 +/* { dg-final { scan-assembler-not "vmovdqa" } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pr100865-6b.c b/gcc/testsuite/gcc.target/i386/pr100865-6b.c
 new file mode 100644
-index 00000000000..35f2e961d25
+index 00000000000..9588249cb02
 --- /dev/null
 +++ b/gcc/testsuite/gcc.target/i386/pr100865-6b.c
-@@ -0,0 +1,12 @@
+@@ -0,0 +1,10 @@
 +/* { dg-do compile } */
 +/* { dg-options "-O3 -march=skylake-avx512" } */
 +
 +#include "pr100865-6a.c"
 +
 +/* { dg-final { scan-assembler-times "vpbroadcastd\[\\t \]+%(?:r|e)\[^\n\]*, %ymm\[0-9\]+" 1 } } */
-+/* { dg-final { scan-assembler-times "vmovdqu\[\\t \]%ymm\[0-9\]+, " 8 { target ia32 } } } */
-+/* { dg-final { scan-assembler-times "vmovdqu32\[\\t \]%ymm\[0-9\]+, " 8 { target { ! ia32 } } } } */
-+/* { dg-final { scan-assembler-times "vzeroupper" 1 { target ia32 } } } */
-+/* { dg-final { scan-assembler-not "vzeroupper" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler-times "vmovdqu\[\\t \]%ymm\[0-9\]+, " 8 } } */
++/* { dg-final { scan-assembler-times "vzeroupper" 1 } } */
 +/* { dg-final { scan-assembler-not "vpbroadcastd\[\\t \]+%xmm\[0-9\]+, %ymm\[0-9\]+" } } */
 +/* { dg-final { scan-assembler-not "vmovdqa" } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pr100865-6c.c b/gcc/testsuite/gcc.target/i386/pr100865-6c.c
@@ -3994,10 +4829,10 @@ index 00000000000..f6f2be91120
 +/* { dg-final { scan-assembler-not "vmovdqa" { target { ! ia32 } } } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pr100865-7b.c b/gcc/testsuite/gcc.target/i386/pr100865-7b.c
 new file mode 100644
-index 00000000000..ad267c43891
+index 00000000000..3b20c680521
 --- /dev/null
 +++ b/gcc/testsuite/gcc.target/i386/pr100865-7b.c
-@@ -0,0 +1,12 @@
+@@ -0,0 +1,10 @@
 +/* { dg-do compile } */
 +/* { dg-options "-O3 -march=skylake-avx512" } */
 +
@@ -4005,10 +4840,8 @@ index 00000000000..ad267c43891
 +
 +/* { dg-final { scan-assembler-times "vpbroadcastq\[\\t \]+%r\[^\n\]*, %ymm\[0-9\]+" 1 { target { ! ia32 } } } } */
 +/* { dg-final { scan-assembler-times "vpbroadcastq\[\\t \]+\[^\n\]*, %ymm\[0-9\]+" 1 { target ia32 } } } */
-+/* { dg-final { scan-assembler-times "vmovdqu\[\\t \]%ymm\[0-9\]+, " 16 { target ia32 } } } */
-+/* { dg-final { scan-assembler-times "vmovdqu64\[\\t \]%ymm\[0-9\]+, " 16 { target { ! ia32 } } } } */
-+/* { dg-final { scan-assembler-times "vzeroupper" 1 { target ia32 } } } */
-+/* { dg-final { scan-assembler-not "vzeroupper" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler-times "vmovdqu\[\\t \]%ymm\[0-9\]+, " 16 } } */
++/* { dg-final { scan-assembler-times "vzeroupper" 1 } } */
 +/* { dg-final { scan-assembler-not "vmovdqa" } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pr100865-7c.c b/gcc/testsuite/gcc.target/i386/pr100865-7c.c
 new file mode 100644
@@ -4277,6 +5110,42 @@ index 00000000000..ba19064077b
 +/* { dg-additional-options "-O3 -mtune=nano-x2 -mtune-ctrl=sse_unaligned_store_optimal" } */
 +
 +#include "pr101742a.c"
+diff --git a/gcc/testsuite/gcc.target/i386/pr101930.c b/gcc/testsuite/gcc.target/i386/pr101930.c
+new file mode 100644
+index 00000000000..7207dd18377
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr101930.c
+@@ -0,0 +1,9 @@
++/* { dg-do compile } */
++/* { dg-options "-mavx512f -O2 -mfpmath=sse -ffast-math" } */
++double a;
++double
++__attribute__((noipa))
++foo (int b)
++{
++  return __builtin_ldexp (a, b);
++}
+diff --git a/gcc/testsuite/gcc.target/i386/pr102021.c b/gcc/testsuite/gcc.target/i386/pr102021.c
+new file mode 100644
+index 00000000000..6db3f57dc76
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr102021.c
+@@ -0,0 +1,15 @@
++/* { dg-do compile } */
++/* { dg-options "-O3 -march=skylake-avx512" } */
++
++#include<immintrin.h>
++
++__m256i
++foo ()
++{
++  return _mm256_set1_epi16 (12);
++}
++
++/* { dg-final { scan-assembler-times "vpbroadcastq\[\\t \]+%r\[^\n\]*, %ymm\[0-9\]+" 1 { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler-times "vpbroadcastq\[\\t \]+\[^\n\]*, %ymm\[0-9\]+" 1 { target ia32 } } } */
++/* { dg-final { scan-assembler-not "vmovdqa" } } */
++/* { dg-final { scan-assembler-not "vzeroupper" } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pr72839.c b/gcc/testsuite/gcc.target/i386/pr72839.c
 index ea724f70377..6888d9d0a55 100644
 --- a/gcc/testsuite/gcc.target/i386/pr72839.c
@@ -4344,6 +5213,36 @@ index 9932bdc5375..b9da0e706b1 100644
 -/* { dg-final { scan-assembler-times "vzeroupper" 1 } } */
 +/* { dg-final { scan-assembler-times "vzeroupper" 1 { target ia32 } } } */
 +/* { dg-final { scan-assembler-not "vzeroupper" { target { ! ia32 } } } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr89984-1.c b/gcc/testsuite/gcc.target/i386/pr89984-1.c
+new file mode 100644
+index 00000000000..d77691c0da0
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr89984-1.c
+@@ -0,0 +1,8 @@
++/* { dg-do compile { target { ! ia32 } } } */
++/* { dg-options "-O2 -mno-avx -msse2" } */
++
++float
++check_f_pos (float x, float y)
++{
++  return x * __builtin_copysignf (1.0f, y);
++}
+diff --git a/gcc/testsuite/gcc.target/i386/pr89984-2.c b/gcc/testsuite/gcc.target/i386/pr89984-2.c
+new file mode 100644
+index 00000000000..ff6a8e50573
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr89984-2.c
+@@ -0,0 +1,10 @@
++/* { dg-do compile { target { ! ia32 } } } */
++/* { dg-options "-O2 -mavx" } */
++
++float
++check_f_pos (float x, float y)
++{
++  return x * __builtin_copysignf (1.0f, y);
++}
++
++/* { dg-final { scan-assembler-not "vmovaps" } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pr90773-1.c b/gcc/testsuite/gcc.target/i386/pr90773-1.c
 new file mode 100644
 index 00000000000..4fd5a40d99d
@@ -4883,6 +5782,172 @@ index 00000000000..ab5ea451f30
 +
 +/* { dg-final { scan-assembler-times "movl\[\\t \]+.+, \\(%\[\^,\]+\\)" 1 } } */
 +/* { dg-final { scan-assembler-times "movw\[\\t \]+.+, 4\\(%\[\^,\]+\\)" 1 } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr98309-1.c b/gcc/testsuite/gcc.target/i386/pr98309-1.c
+new file mode 100644
+index 00000000000..3a7afb58971
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr98309-1.c
+@@ -0,0 +1,18 @@
++/* { dg-do compile } */
++/* { dg-options "-mavx512f -O2 -mfpmath=sse -ffast-math" } */
++/* { dg-final { scan-assembler-times "vcvtsi2s\[sd\]" "2" } } */
++/* { dg-final { scan-assembler-times "vscalefs\[sd\]" "2" } } */
++
++double
++__attribute__((noipa))
++foo (double a, int b)
++{
++  return __builtin_ldexp (a, b);
++}
++
++float
++__attribute__((noipa))
++foo2 (float a, int b)
++{
++  return __builtin_ldexpf (a, b);
++}
+diff --git a/gcc/testsuite/gcc.target/i386/pr98309-2.c b/gcc/testsuite/gcc.target/i386/pr98309-2.c
+new file mode 100644
+index 00000000000..ecfb9168b7d
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr98309-2.c
+@@ -0,0 +1,39 @@
++/* { dg-do run } */
++/* { dg-options "-mavx512f -O2 -mfpmath=sse -ffast-math" } */
++/* { dg-require-effective-target avx512f } */
++
++#define AVX512F
++#ifndef CHECK
++#define CHECK "avx512f-helper.h"
++#endif
++
++#include CHECK
++
++#include "pr98309-1.c"
++
++double
++__attribute__((noipa, target("fpmath=387")))
++foo_i387 (double a, int b)
++{
++  return __builtin_ldexp (a, b);
++}
++
++float
++__attribute__((noipa, target("fpmath=387")))
++foo2_i387 (float a, int b)
++{
++  return __builtin_ldexpf (a, b);
++}
++
++static void
++test_512 (void)
++{
++  float fa = 14.5;
++  double da = 44.5;
++  int fb = 12;
++  int db = 8;
++  if (foo_i387 (da, db) != foo (da, db))
++    abort ();
++  if (foo2_i387 (fa, fb) != foo2 (fa, fb))
++    abort ();
++}
+diff --git a/gcc/testsuite/gcc.target/i386/sse2-pr94680.c b/gcc/testsuite/gcc.target/i386/sse2-pr94680.c
+new file mode 100644
+index 00000000000..7e0ff9f6bc7
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/sse2-pr94680.c
+@@ -0,0 +1,91 @@
++/* { dg-do compile } */
++/* { dg-options "-msse2 -mno-sse4.1 -O2" } */
++/* { dg-final { scan-assembler-times {(?n)(?:mov|psrldq).*%xmm[0-9]} 12 } } */
++/* { dg-final { scan-assembler-not "pxor" } } */
++
++typedef float v4sf __attribute__((vector_size(16)));
++typedef double v2df __attribute__ ((vector_size (16)));
++typedef long long v2di __attribute__((vector_size(16)));
++typedef int v4si __attribute__((vector_size(16)));
++typedef short v8hi __attribute__ ((vector_size (16)));
++typedef char v16qi __attribute__ ((vector_size (16)));
++
++v2df
++foo_v2df (v2df x)
++{
++  return __builtin_shuffle (x, (v2df) { 0, 0 }, (v2di) {0, 2});
++}
++
++v2df
++foo_v2df_l (v2df x)
++{
++  return __builtin_shuffle ((v2df) { 0, 0 }, x, (v2di) {3, 1});
++}
++
++v2di
++foo_v2di (v2di x)
++{
++  return __builtin_shuffle (x, (v2di) { 0, 0 }, (v2di) {0, 3});
++}
++
++v2di
++foo_v2di_l (v2di x)
++{
++  return __builtin_shuffle ((v2di) { 0, 0 }, x, (v2di) {3, 0});
++}
++
++v4sf
++foo_v4sf (v4sf x)
++{
++  return __builtin_shuffle (x, (v4sf) { 0, 0, 0, 0 }, (v4si) {0, 1, 4, 5});
++}
++
++v4sf
++foo_v4sf_l (v4sf x)
++{
++  return __builtin_shuffle ((v4sf) { 0, 0, 0, 0 }, x, (v4si) {4, 5, 3, 1});
++}
++
++v4si
++foo_v4si (v4si x)
++{
++  return __builtin_shuffle (x, (v4si) { 0, 0, 0, 0 }, (v4si) {0, 1, 6, 7});
++}
++
++v4si
++foo_v4si_l (v4si x)
++{
++  return __builtin_shuffle ((v4si) { 0, 0, 0, 0 }, x, (v4si) {4, 5, 1, 2});
++}
++
++v8hi
++foo_v8hi (v8hi x)
++{
++  return __builtin_shuffle (x, (v8hi) { 0, 0, 0, 0, 0, 0, 0, 0 },
++			       (v8hi) { 0, 1, 2, 3, 8, 12, 10, 13 });
++}
++
++v8hi
++foo_v8hi_l (v8hi x)
++{
++  return __builtin_shuffle ((v8hi) { 0, 0, 0, 0, 0, 0, 0, 0 }, x,
++			    (v8hi) { 8, 9, 10, 11, 7, 6, 5, 4 });
++}
++
++v16qi
++foo_v16qi (v16qi x)
++{
++  return __builtin_shuffle (x, (v16qi) { 0, 0, 0, 0, 0, 0, 0, 0,
++					 0, 0, 0, 0, 0, 0, 0, 0 },
++			       (v16qi) {0, 1, 2, 3, 4, 5, 6, 7,
++					16, 24, 18, 26, 20, 28, 22, 30 });
++}
++
++v16qi
++foo_v16qi_l (v16qi x)
++{
++  return __builtin_shuffle ((v16qi) { 0, 0, 0, 0, 0, 0, 0, 0,
++				       0, 0, 0, 0, 0, 0, 0, 0 }, x,
++			    (v16qi) { 16, 17, 18, 19, 20, 21, 22, 23,
++				      15, 0, 13, 2, 11, 4, 9, 6 });
++}
 diff --git a/gcc/testsuite/gcc.target/i386/sw-1.c b/gcc/testsuite/gcc.target/i386/sw-1.c
 index aec095eda62..a9c89fca4ec 100644
 --- a/gcc/testsuite/gcc.target/i386/sw-1.c
@@ -4905,6 +5970,16 @@ index 2b2b81ecf7a..6ace07e6e0c 100644
  
  #include <mmintrin.h>
  
+diff --git a/gcc/testsuite/gcc.target/i386/xorsign-avx.c b/gcc/testsuite/gcc.target/i386/xorsign-avx.c
+new file mode 100644
+index 00000000000..f2e2054b6fb
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/xorsign-avx.c
+@@ -0,0 +1,4 @@
++/* { dg-do run { target avx_runtime } } */
++/* { dg-options "-O2 -mavx -mfpmath=sse -ftree-vectorize" } */
++
++#include "xorsign.c"
 diff --git a/gcc/tree-vect-generic.c b/gcc/tree-vect-generic.c
 index 3348545d18b..fb6b69c5b83 100644
 --- a/gcc/tree-vect-generic.c
