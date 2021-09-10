@@ -42,12 +42,13 @@ Richard Biener (1):
 Uros Bizjak (1):
       [i386] Introduce scalar version of avx512f_vmscalef.
 
-liuhongt (5):
+liuhongt (6):
       Optimize __builtin_shuffle when it's used to zero the upper bits of the dest. [PR target/94680]
       Extend ldexp{s,d}f3 to vscalefs{s,d} when TARGET_AVX512F and TARGET_SSE_MATH.
       Fix ICE.
       Fix typo in testcase.
       Remove pass_cpb which is related to enable avx512 embedded broadcast from constant pool.
+      Remove copysign post_reload splitter for scalar modes.
 
 diff --git a/gcc/builtins.c b/gcc/builtins.c
 index 73c12e3bb8c..edaec4e21de 100644
@@ -379,7 +380,7 @@ index ae90610ad80..a60d9a79b0b 100644
  
  #ifndef CUMULATIVE_ARGS
 diff --git a/gcc/config/i386/i386-expand.c b/gcc/config/i386/i386-expand.c
-index 16765718cc3..ab61fb621a8 100644
+index 16765718cc3..46d18bd9a9e 100644
 --- a/gcc/config/i386/i386-expand.c
 +++ b/gcc/config/i386/i386-expand.c
 @@ -190,6 +190,82 @@ ix86_expand_clear (rtx dest)
@@ -642,7 +643,184 @@ index 16765718cc3..ab61fb621a8 100644
        return;
      }
  
-@@ -2023,7 +2210,7 @@ void
+@@ -1868,13 +2055,9 @@ void
+ ix86_expand_copysign (rtx operands[])
+ {
+   machine_mode mode, vmode;
+-  rtx dest, op0, op1, mask;
++  rtx dest, op0, op1, mask, op2, op3;
+ 
+-  dest = operands[0];
+-  op0 = operands[1];
+-  op1 = operands[2];
+-
+-  mode = GET_MODE (dest);
++  mode = GET_MODE (operands[0]);
+ 
+   if (mode == SFmode)
+     vmode = V4SFmode;
+@@ -1885,136 +2068,40 @@ ix86_expand_copysign (rtx operands[])
+   else
+     gcc_unreachable ();
+ 
+-  mask = ix86_build_signbit_mask (vmode, 0, 0);
+-
+-  if (CONST_DOUBLE_P (op0))
+-    {
+-      if (real_isneg (CONST_DOUBLE_REAL_VALUE (op0)))
+-	op0 = simplify_unary_operation (ABS, mode, op0, mode);
+-
+-      if (mode == SFmode || mode == DFmode)
+-	{
+-	  if (op0 == CONST0_RTX (mode))
+-	    op0 = CONST0_RTX (vmode);
+-	  else
+-	    {
+-	      rtx v = ix86_build_const_vector (vmode, false, op0);
+-
+-	      op0 = force_reg (vmode, v);
+-	    }
+-	}
+-      else if (op0 != CONST0_RTX (mode))
+-	op0 = force_reg (mode, op0);
+-
+-      emit_insn (gen_copysign3_const (mode, dest, op0, op1, mask));
+-    }
+-  else
+-    {
+-      rtx nmask = ix86_build_signbit_mask (vmode, 0, 1);
+-
+-      emit_insn (gen_copysign3_var
+-		 (mode, dest, NULL_RTX, op0, op1, nmask, mask));
+-    }
+-}
+-
+-/* Deconstruct a copysign operation into bit masks.  Operand 0 is known to
+-   be a constant, and so has already been expanded into a vector constant.  */
+-
+-void
+-ix86_split_copysign_const (rtx operands[])
+-{
+-  machine_mode mode, vmode;
+-  rtx dest, op0, mask, x;
+-
+-  dest = operands[0];
+-  op0 = operands[1];
+-  mask = operands[3];
+-
+-  mode = GET_MODE (dest);
+-  vmode = GET_MODE (mask);
+-
+-  dest = lowpart_subreg (vmode, dest, mode);
+-  x = gen_rtx_AND (vmode, dest, mask);
+-  emit_insn (gen_rtx_SET (dest, x));
+-
+-  if (op0 != CONST0_RTX (vmode))
++  if (rtx_equal_p (operands[1], operands[2]))
+     {
+-      x = gen_rtx_IOR (vmode, dest, op0);
+-      emit_insn (gen_rtx_SET (dest, x));
+-    }
+-}
+-
+-/* Deconstruct a copysign operation into bit masks.  Operand 0 is variable,
+-   so we have to do two masks.  */
+-
+-void
+-ix86_split_copysign_var (rtx operands[])
+-{
+-  machine_mode mode, vmode;
+-  rtx dest, scratch, op0, op1, mask, nmask, x;
+-
+-  dest = operands[0];
+-  scratch = operands[1];
+-  op0 = operands[2];
+-  op1 = operands[3];
+-  nmask = operands[4];
+-  mask = operands[5];
+-
+-  mode = GET_MODE (dest);
+-  vmode = GET_MODE (mask);
+-
+-  if (rtx_equal_p (op0, op1))
+-    {
+-      /* Shouldn't happen often (it's useless, obviously), but when it does
+-	 we'd generate incorrect code if we continue below.  */
+-      emit_move_insn (dest, op0);
++      emit_move_insn (operands[0], operands[1]);
+       return;
+     }
+ 
+-  if (REG_P (mask) && REGNO (dest) == REGNO (mask))	/* alternative 0 */
+-    {
+-      gcc_assert (REGNO (op1) == REGNO (scratch));
+-
+-      x = gen_rtx_AND (vmode, scratch, mask);
+-      emit_insn (gen_rtx_SET (scratch, x));
++  dest = lowpart_subreg (vmode, operands[0], mode);
++  op1 = lowpart_subreg (vmode, operands[2], mode);
++  mask = ix86_build_signbit_mask (vmode, 0, 0);
+ 
+-      dest = mask;
+-      op0 = lowpart_subreg (vmode, op0, mode);
+-      x = gen_rtx_NOT (vmode, dest);
+-      x = gen_rtx_AND (vmode, x, op0);
+-      emit_insn (gen_rtx_SET (dest, x));
+-    }
+-  else
++  if (CONST_DOUBLE_P (operands[1]))
+     {
+-      if (REGNO (op1) == REGNO (scratch))		/* alternative 1,3 */
+-	{
+-	  x = gen_rtx_AND (vmode, scratch, mask);
+-	}
+-      else						/* alternative 2,4 */
++      op0 = simplify_unary_operation (ABS, mode, operands[1], mode);
++      /* Optimize for 0, simplify b = copy_signf (0.0f, a) to b = mask & a.  */
++      if (op0 == CONST0_RTX (mode))
+ 	{
+-          gcc_assert (REGNO (mask) == REGNO (scratch));
+-          op1 = lowpart_subreg (vmode, op1, mode);
+-	  x = gen_rtx_AND (vmode, scratch, op1);
++	  emit_move_insn (dest, gen_rtx_AND (vmode, mask, op1));
++	  return;
+ 	}
+-      emit_insn (gen_rtx_SET (scratch, x));
+ 
+-      if (REGNO (op0) == REGNO (dest))			/* alternative 1,2 */
+-	{
+-	  dest = lowpart_subreg (vmode, op0, mode);
+-	  x = gen_rtx_AND (vmode, dest, nmask);
+-	}
+-      else						/* alternative 3,4 */
+-	{
+-          gcc_assert (REGNO (nmask) == REGNO (dest));
+-	  dest = nmask;
+-	  op0 = lowpart_subreg (vmode, op0, mode);
+-	  x = gen_rtx_AND (vmode, dest, op0);
+-	}
+-      emit_insn (gen_rtx_SET (dest, x));
++      if (GET_MODE_SIZE (mode) < 16)
++	op0 = ix86_build_const_vector (vmode, false, op0);
++      op0 = force_reg (vmode, op0);
+     }
+-
+-  x = gen_rtx_IOR (vmode, dest, scratch);
+-  emit_insn (gen_rtx_SET (dest, x));
++  else
++    op0 = lowpart_subreg (vmode, operands[1], mode);
++
++  op2 = gen_reg_rtx (vmode);
++  op3 = gen_reg_rtx (vmode);
++  emit_move_insn (op2, gen_rtx_AND (vmode,
++				    gen_rtx_NOT (vmode, mask),
++				    op0));
++  emit_move_insn (op3, gen_rtx_AND (vmode, mask, op1));
++  emit_move_insn (dest, gen_rtx_IOR (vmode, op2, op3));
+ }
+ 
+ /* Expand an xorsign operation.  */
+@@ -2023,7 +2110,7 @@ void
  ix86_expand_xorsign (rtx operands[])
  {
    machine_mode mode, vmode;
@@ -651,7 +829,7 @@ index 16765718cc3..ab61fb621a8 100644
  
    dest = operands[0];
    op0 = operands[1];
-@@ -2038,32 +2225,17 @@ ix86_expand_xorsign (rtx operands[])
+@@ -2038,32 +2125,17 @@ ix86_expand_xorsign (rtx operands[])
    else
      gcc_unreachable ();
  
@@ -660,12 +838,12 @@ index 16765718cc3..ab61fb621a8 100644
  
 -  emit_insn (gen_xorsign3_1 (mode, dest, op0, op1, mask));
 -}
+-
+-/* Deconstruct an xorsign operation into bit masks.  */
 +  op1 = lowpart_subreg (vmode, op1, mode);
 +  x = gen_rtx_AND (vmode, op1, mask);
 +  emit_insn (gen_rtx_SET (temp, x));
  
--/* Deconstruct an xorsign operation into bit masks.  */
--
 -void
 -ix86_split_xorsign (rtx operands[])
 -{
@@ -690,7 +868,7 @@ index 16765718cc3..ab61fb621a8 100644
    emit_insn (gen_rtx_SET (dest, x));
  }
  
-@@ -13598,7 +13770,7 @@ static bool expand_vec_perm_1 (struct expand_vec_perm_d *d);
+@@ -13598,7 +13670,7 @@ static bool expand_vec_perm_1 (struct expand_vec_perm_d *d);
  /* A subroutine of ix86_expand_vector_init.  Store into TARGET a vector
     with all elements equal to VAR.  Return true if successful.  */
  
@@ -932,7 +1110,7 @@ index 44df00e94ac..29baf8acd0b 100644
    INSERT_PASS_AFTER (pass_combine, 1, pass_remove_partial_avx_dependency);
 -  INSERT_PASS_AFTER (pass_combine, 1, pass_constant_pool_broadcast);
 diff --git a/gcc/config/i386/i386-protos.h b/gcc/config/i386/i386-protos.h
-index 7782cf1163f..88c9ad7726a 100644
+index 7782cf1163f..928746073a9 100644
 --- a/gcc/config/i386/i386-protos.h
 +++ b/gcc/config/i386/i386-protos.h
 @@ -50,6 +50,8 @@ extern void ix86_reset_previous_fndecl (void);
@@ -944,15 +1122,18 @@ index 7782cf1163f..88c9ad7726a 100644
  extern unsigned int ix86_regmode_natural_size (machine_mode);
  #ifdef RTX_CODE
  extern int standard_80387_constant_p (rtx);
-@@ -135,7 +137,6 @@ extern void ix86_expand_copysign (rtx []);
- extern void ix86_split_copysign_const (rtx []);
- extern void ix86_split_copysign_var (rtx []);
+@@ -132,10 +134,7 @@ extern void ix86_expand_fp_absneg_operator (enum rtx_code, machine_mode,
+ extern void ix86_split_fp_absneg_operator (enum rtx_code, machine_mode,
+ 					   rtx[]);
+ extern void ix86_expand_copysign (rtx []);
+-extern void ix86_split_copysign_const (rtx []);
+-extern void ix86_split_copysign_var (rtx []);
  extern void ix86_expand_xorsign (rtx []);
 -extern void ix86_split_xorsign (rtx []);
  extern bool ix86_unary_operator_ok (enum rtx_code, machine_mode, rtx[]);
  extern bool ix86_match_ccmode (rtx, machine_mode);
  extern void ix86_expand_branch (enum rtx_code, rtx, rtx, rtx);
-@@ -257,6 +258,8 @@ extern void ix86_expand_mul_widen_hilo (rtx, rtx, rtx, bool, bool);
+@@ -257,6 +256,8 @@ extern void ix86_expand_mul_widen_hilo (rtx, rtx, rtx, bool, bool);
  extern void ix86_expand_sse2_mulv4si3 (rtx, rtx, rtx);
  extern void ix86_expand_sse2_mulvxdi3 (rtx, rtx, rtx);
  extern void ix86_expand_sse2_abs (rtx, rtx);
@@ -961,7 +1142,7 @@ index 7782cf1163f..88c9ad7726a 100644
  
  /* In i386-c.c  */
  extern void ix86_target_macros (void);
-@@ -392,4 +395,3 @@ extern rtl_opt_pass *make_pass_insert_endbr_and_patchable_area
+@@ -392,4 +393,3 @@ extern rtl_opt_pass *make_pass_insert_endbr_and_patchable_area
    (gcc::context *);
  extern rtl_opt_pass *make_pass_remove_partial_avx_dependency
    (gcc::context *);
@@ -1318,7 +1499,7 @@ index 73e118900f7..5b7280d8d8d 100644
  /* If a memory-to-memory move would take MOVE_RATIO or more simple
     move-instruction pairs, we will do a cpymem or libcall instead.
 diff --git a/gcc/config/i386/i386.md b/gcc/config/i386/i386.md
-index 97325e38676..72c449140a7 100644
+index 97325e38676..b5cd8b78bfb 100644
 --- a/gcc/config/i386/i386.md
 +++ b/gcc/config/i386/i386.md
 @@ -122,6 +122,9 @@
@@ -1331,7 +1512,58 @@ index 97325e38676..72c449140a7 100644
    ;; Generic math support
    UNSPEC_COPYSIGN
    UNSPEC_XORSIGN
-@@ -10532,19 +10535,6 @@
+@@ -10476,50 +10479,6 @@
+    || (TARGET_SSE && (<MODE>mode == TFmode))"
+   "ix86_expand_copysign (operands); DONE;")
+ 
+-(define_insn_and_split "@copysign<mode>3_const"
+-  [(set (match_operand:SSEMODEF 0 "register_operand" "=Yv")
+-	(unspec:SSEMODEF
+-	  [(match_operand:<ssevecmodef> 1 "nonimm_or_0_operand" "YvmC")
+-	   (match_operand:SSEMODEF 2 "register_operand" "0")
+-	   (match_operand:<ssevecmodef> 3 "nonimmediate_operand" "Yvm")]
+-	  UNSPEC_COPYSIGN))]
+-  "(SSE_FLOAT_MODE_P (<MODE>mode) && TARGET_SSE_MATH)
+-   || (TARGET_SSE && (<MODE>mode == TFmode))"
+-  "#"
+-  "&& reload_completed"
+-  [(const_int 0)]
+-  "ix86_split_copysign_const (operands); DONE;")
+-
+-(define_insn "@copysign<mode>3_var"
+-  [(set (match_operand:SSEMODEF 0 "register_operand" "=Yv,Yv,Yv,Yv,Yv")
+-	(unspec:SSEMODEF
+-	  [(match_operand:SSEMODEF 2 "register_operand"	"Yv,0,0,Yv,Yv")
+-	   (match_operand:SSEMODEF 3 "register_operand"	"1,1,Yv,1,Yv")
+-	   (match_operand:<ssevecmodef> 4
+-	     "nonimmediate_operand" "X,Yvm,Yvm,0,0")
+-	   (match_operand:<ssevecmodef> 5
+-	     "nonimmediate_operand" "0,Yvm,1,Yvm,1")]
+-	  UNSPEC_COPYSIGN))
+-   (clobber (match_scratch:<ssevecmodef> 1 "=Yv,Yv,Yv,Yv,Yv"))]
+-  "(SSE_FLOAT_MODE_P (<MODE>mode) && TARGET_SSE_MATH)
+-   || (TARGET_SSE && (<MODE>mode == TFmode))"
+-  "#")
+-
+-(define_split
+-  [(set (match_operand:SSEMODEF 0 "register_operand")
+-	(unspec:SSEMODEF
+-	  [(match_operand:SSEMODEF 2 "register_operand")
+-	   (match_operand:SSEMODEF 3 "register_operand")
+-	   (match_operand:<ssevecmodef> 4)
+-	   (match_operand:<ssevecmodef> 5)]
+-	  UNSPEC_COPYSIGN))
+-   (clobber (match_scratch:<ssevecmodef> 1))]
+-  "((SSE_FLOAT_MODE_P (<MODE>mode) && TARGET_SSE_MATH)
+-    || (TARGET_SSE && (<MODE>mode == TFmode)))
+-   && reload_completed"
+-  [(const_int 0)]
+-  "ix86_split_copysign_var (operands); DONE;")
+-
+ (define_expand "xorsign<mode>3"
+   [(match_operand:MODEF 0 "register_operand")
+    (match_operand:MODEF 1 "register_operand")
+@@ -10532,19 +10491,6 @@
      ix86_expand_xorsign (operands);
    DONE;
  })
@@ -1351,7 +1583,7 @@ index 97325e38676..72c449140a7 100644
  
  ;; One complement instructions
  
-@@ -17313,6 +17303,17 @@
+@@ -17313,6 +17259,17 @@
    DONE;
  })
  
@@ -1369,7 +1601,7 @@ index 97325e38676..72c449140a7 100644
  (define_expand "ldexpxf3"
    [(match_operand:XF 0 "register_operand")
     (match_operand:XF 1 "register_operand")
-@@ -17333,17 +17334,30 @@
+@@ -17333,17 +17290,30 @@
    [(use (match_operand:MODEF 0 "register_operand"))
     (use (match_operand:MODEF 1 "general_operand"))
     (use (match_operand:SI 2 "register_operand"))]
@@ -2830,6 +3062,21 @@ index 00000000000..81917bfbc71
 +{
 +  return (V){(__int128) 1 << 64 | 1, (__int128) 1 << 64 | 1};
 +}
+diff --git a/gcc/testsuite/gcc.target/i386/avx512dq-abs-copysign-1.c b/gcc/testsuite/gcc.target/i386/avx512dq-abs-copysign-1.c
+index cb542d09058..0107df7741a 100644
+--- a/gcc/testsuite/gcc.target/i386/avx512dq-abs-copysign-1.c
++++ b/gcc/testsuite/gcc.target/i386/avx512dq-abs-copysign-1.c
+@@ -64,8 +64,8 @@ f6 (double x)
+ }
+ 
+ /* { dg-final { scan-assembler "vandps\[^\n\r\]*xmm16" } } */
+-/* { dg-final { scan-assembler "vorps\[^\n\r\]*xmm16" } } */
++/* { dg-final { scan-assembler "vpternlogd\[^\n\r\]*xmm16" } } */
+ /* { dg-final { scan-assembler "vxorps\[^\n\r\]*xmm16" } } */
+ /* { dg-final { scan-assembler "vandpd\[^\n\r\]*xmm18" } } */
+-/* { dg-final { scan-assembler "vorpd\[^\n\r\]*xmm18" } } */
++/* { dg-final { scan-assembler "vpternlogq\[^\n\r\]*xmm18" } } */
+ /* { dg-final { scan-assembler "vxorpd\[^\n\r\]*xmm18" } } */
 diff --git a/gcc/testsuite/gcc.target/i386/avx512f-broadcast-pr87767-1.c b/gcc/testsuite/gcc.target/i386/avx512f-broadcast-pr87767-1.c
 index 0563e696316..a2664d87f29 100644
 --- a/gcc/testsuite/gcc.target/i386/avx512f-broadcast-pr87767-1.c
@@ -3027,6 +3274,21 @@ index 99a89f51202..ca49a585232 100644
  
  unsigned int x[128];
  int y[128];
+diff --git a/gcc/testsuite/gcc.target/i386/avx512vl-abs-copysign-1.c b/gcc/testsuite/gcc.target/i386/avx512vl-abs-copysign-1.c
+index b375c5fad80..b27335b9d99 100644
+--- a/gcc/testsuite/gcc.target/i386/avx512vl-abs-copysign-1.c
++++ b/gcc/testsuite/gcc.target/i386/avx512vl-abs-copysign-1.c
+@@ -64,8 +64,8 @@ f6 (double x)
+ }
+ 
+ /* { dg-final { scan-assembler "vpandd\[^\n\r\]*xmm16" } } */
+-/* { dg-final { scan-assembler "vpord\[^\n\r\]*xmm16" } } */
++/* { dg-final { scan-assembler "vpternlogd\[^\n\r\]*xmm16" } } */
+ /* { dg-final { scan-assembler "vpxord\[^\n\r\]*xmm16" } } */
+ /* { dg-final { scan-assembler "vpandq\[^\n\r\]*xmm18" } } */
+-/* { dg-final { scan-assembler "vporq\[^\n\r\]*xmm18" } } */
++/* { dg-final { scan-assembler "vpternlogq\[^\n\r\]*xmm18" } } */
+ /* { dg-final { scan-assembler "vpxorq\[^\n\r\]*xmm18" } } */
 diff --git a/gcc/testsuite/gcc.target/i386/avx512vl-broadcast-pr87767-1.c b/gcc/testsuite/gcc.target/i386/avx512vl-broadcast-pr87767-1.c
 index c06369d93fd..f8eb99f0b5f 100644
 --- a/gcc/testsuite/gcc.target/i386/avx512vl-broadcast-pr87767-1.c
