@@ -1,0 +1,71 @@
+From 13b52d46979b74c96460f0aed32ce44ab347c63a Mon Sep 17 00:00:00 2001
+From: "H.J. Lu" <hjl.tools@gmail.com>
+Date: Wed, 4 Aug 2021 06:15:04 -0700
+Subject: [PATCH 10/10] x86: Avoid stack realignment when copying data with SSE
+ register
+
+To avoid stack realignment, call ix86_gen_scratch_sse_rtx to get a
+scratch SSE register to copy data with with SSE register from one
+memory location to another.
+
+gcc/
+
+	PR target/101772
+	* config/i386/i386-expand.c (ix86_expand_vector_move): Call
+	ix86_gen_scratch_sse_rtx to get a scratch SSE register to copy
+	data with SSE register from one memory location to another.
+
+gcc/testsuite/
+
+	PR target/101772
+	* gcc.target/i386/eh_return-2.c: New test.
+
+(cherry picked from commit 09dba016db937e61be21ef1e9581065a9ed2847d)
+---
+ gcc/config/i386/i386-expand.c               |  6 +++++-
+ gcc/testsuite/gcc.target/i386/eh_return-2.c | 16 ++++++++++++++++
+ 2 files changed, 21 insertions(+), 1 deletion(-)
+ create mode 100644 gcc/testsuite/gcc.target/i386/eh_return-2.c
+
+diff --git a/gcc/config/i386/i386-expand.c b/gcc/config/i386/i386-expand.c
+index 0f7cb20caa0..60dfba8ff42 100644
+--- a/gcc/config/i386/i386-expand.c
++++ b/gcc/config/i386/i386-expand.c
+@@ -593,7 +593,11 @@ ix86_expand_vector_move (machine_mode mode, rtx operands[])
+ 	 arguments in memory.  */
+       if (!register_operand (op0, mode)
+ 	  && !register_operand (op1, mode))
+-	op1 = force_reg (mode, op1);
++	{
++	  rtx scratch = ix86_gen_scratch_sse_rtx (mode);
++	  emit_move_insn (scratch, op1);
++	  op1 = scratch;
++	}
+ 
+       tmp[0] = op0; tmp[1] = op1;
+       ix86_expand_vector_move_misalign (mode, tmp);
+diff --git a/gcc/testsuite/gcc.target/i386/eh_return-2.c b/gcc/testsuite/gcc.target/i386/eh_return-2.c
+new file mode 100644
+index 00000000000..f23f4492dac
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/eh_return-2.c
+@@ -0,0 +1,16 @@
++/* PR target/101772  */
++/* { dg-do compile } */
++/* { dg-additional-options "-O0 -march=x86-64 -mstackrealign" } */
++
++struct _Unwind_Context _Unwind_Resume_or_Rethrow_this_context;
++
++void offset (int);
++
++struct _Unwind_Context {
++  void *reg[7];
++} _Unwind_Resume_or_Rethrow() {
++  struct _Unwind_Context cur_contextcur_context =
++      _Unwind_Resume_or_Rethrow_this_context;
++  offset(0);
++  __builtin_eh_return ((long) offset, 0);
++}
+-- 
+2.32.0
+

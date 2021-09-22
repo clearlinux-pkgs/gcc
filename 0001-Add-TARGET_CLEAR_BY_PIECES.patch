@@ -1,0 +1,141 @@
+From e45326a4d5c2ea5d60077ac61458c13e5535b76d Mon Sep 17 00:00:00 2001
+From: "H.J. Lu" <hjl.tools@gmail.com>
+Date: Thu, 15 Jul 2021 09:09:15 -0700
+Subject: [PATCH] Add TARGET_CLEAR_BY_PIECES
+
+---
+ gcc/config/i386/i386.c |  3 +++
+ gcc/doc/tm.texi        |  5 +++++
+ gcc/doc/tm.texi.in     |  2 ++
+ gcc/expr.c             | 12 ++----------
+ gcc/target.def         |  7 +++++++
+ gcc/targhooks.c        |  8 ++++++++
+ gcc/targhooks.h        |  2 ++
+ 7 files changed, 29 insertions(+), 10 deletions(-)
+
+diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
+index c0559d50021..d0f53e98acd 100644
+--- a/gcc/config/i386/i386.c
++++ b/gcc/config/i386/i386.c
+@@ -23729,6 +23729,9 @@ ix86_run_selftests (void)
+ #undef TARGET_OVERLAP_OP_BY_PIECES_P
+ #define TARGET_OVERLAP_OP_BY_PIECES_P hook_bool_void_true
+ 
++#undef TARGET_CLEAR_BY_PIECES
++#define TARGET_CLEAR_BY_PIECES builtin_memset_read_str
++
+ #undef TARGET_FLAGS_REGNUM
+ #define TARGET_FLAGS_REGNUM FLAGS_REG
+ #undef TARGET_FIXED_CONDITION_CODE_REGS
+diff --git a/gcc/doc/tm.texi b/gcc/doc/tm.texi
+index c1995270720..ad0158c003e 100644
+--- a/gcc/doc/tm.texi
++++ b/gcc/doc/tm.texi
+@@ -6872,6 +6872,11 @@ in the smallest integer mode for the last piece operation of a memory
+ region can be generated to avoid doing more than one smaller operations.
+ @end deftypefn
+ 
++@deftypefn {Target Hook} rtx TARGET_CLEAR_BY_PIECES (void *@var{}, void *@var{}, @var{HOST_WIDE_INT}, @var{scalar_int_mode})
++This target hook should return an rtx that is used to clear memory.
++The default returns @code{const0_rtx}.
++@end deftypefn
++
+ @deftypefn {Target Hook} int TARGET_COMPARE_BY_PIECES_BRANCH_RATIO (machine_mode @var{mode})
+ When expanding a block comparison in MODE, gcc can try to reduce the
+ number of branches at the expense of more memory operations.  This hook
+diff --git a/gcc/doc/tm.texi.in b/gcc/doc/tm.texi.in
+index a6bbf4f2667..b229d49c0d4 100644
+--- a/gcc/doc/tm.texi.in
++++ b/gcc/doc/tm.texi.in
+@@ -4517,6 +4517,8 @@ If you don't define this, a reasonable default is used.
+ 
+ @hook TARGET_OVERLAP_OP_BY_PIECES_P
+ 
++@hook TARGET_CLEAR_BY_PIECES
++
+ @hook TARGET_COMPARE_BY_PIECES_BRANCH_RATIO
+ 
+ @defmac MOVE_MAX_PIECES
+diff --git a/gcc/expr.c b/gcc/expr.c
+index 6a4368113c4..68effd3114b 100644
+--- a/gcc/expr.c
++++ b/gcc/expr.c
+@@ -1513,15 +1513,6 @@ store_by_pieces (rtx to, unsigned HOST_WIDE_INT len,
+     return to;
+ }
+ 
+-/* Callback routine for clear_by_pieces.
+-   Return const0_rtx unconditionally.  */
+-
+-static rtx
+-clear_by_pieces_1 (void *, void *, HOST_WIDE_INT, scalar_int_mode)
+-{
+-  return const0_rtx;
+-}
+-
+ /* Generate several move instructions to clear LEN bytes of block TO.  (A MEM
+    rtx with BLKmode).  ALIGN is maximum alignment we can assume.  */
+ 
+@@ -1531,7 +1522,8 @@ clear_by_pieces (rtx to, unsigned HOST_WIDE_INT len, unsigned int align)
+   if (len == 0)
+     return;
+ 
+-  store_by_pieces_d data (to, clear_by_pieces_1, NULL, len, align);
++  char c = 0;
++  store_by_pieces_d data (to, targetm.clear_by_pieces, &c, len, align);
+   data.run ();
+ }
+ 
+diff --git a/gcc/target.def b/gcc/target.def
+index cc4aa3a4212..019e2fa595d 100644
+--- a/gcc/target.def
++++ b/gcc/target.def
+@@ -3692,6 +3692,13 @@ region can be generated to avoid doing more than one smaller operations.",
+  bool, (void),
+  hook_bool_void_false)
+ 
++DEFHOOK
++(clear_by_pieces,
++ "This target hook should return an rtx that is used to clear memory.\n\
++The default returns @code{const0_rtx}.",
++ rtx, (void *, void *, HOST_WIDE_INT, scalar_int_mode),
++ default_clear_by_pieces)
++
+ DEFHOOK
+ (compare_by_pieces_branch_ratio,
+  "When expanding a block comparison in MODE, gcc can try to reduce the\n\
+diff --git a/gcc/targhooks.c b/gcc/targhooks.c
+index 44a1facedcf..ca2f21941e2 100644
+--- a/gcc/targhooks.c
++++ b/gcc/targhooks.c
+@@ -1921,6 +1921,14 @@ default_use_by_pieces_infrastructure_p (unsigned HOST_WIDE_INT size,
+   return by_pieces_ninsns (size, alignment, max_size + 1, op) < ratio;
+ }
+ 
++/* This hook returns an rtx that is used to clear memory.  */
++
++rtx
++default_clear_by_pieces (void *, void *, HOST_WIDE_INT, scalar_int_mode)
++{
++  return const0_rtx;
++}
++
+ /* This hook controls code generation for expanding a memcmp operation by
+    pieces.  Return 1 for the normal pattern of compare/jump after each pair
+    of loads, or a higher number to reduce the number of branches.  */
+diff --git a/gcc/targhooks.h b/gcc/targhooks.h
+index f70a307d26c..fe0e85e9f1f 100644
+--- a/gcc/targhooks.h
++++ b/gcc/targhooks.h
+@@ -229,6 +229,8 @@ extern bool default_use_by_pieces_infrastructure_p (unsigned HOST_WIDE_INT,
+ 						    unsigned int,
+ 						    enum by_pieces_operation,
+ 						    bool);
++extern rtx default_clear_by_pieces (void *, void *, HOST_WIDE_INT,
++				    scalar_int_mode);
+ extern int default_compare_by_pieces_branch_ratio (machine_mode);
+ 
+ extern void default_print_patchable_function_entry_1 (FILE *,
+-- 
+2.31.1
+

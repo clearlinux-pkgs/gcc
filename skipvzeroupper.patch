@@ -1,0 +1,123 @@
+From bc37ee3cb1d8b4a2e8bd6bd74e43b6b474ee5f43 Mon Sep 17 00:00:00 2001
+From: "H.J. Lu" <hjl.tools@gmail.com>
+Date: Wed, 14 Jul 2021 17:03:15 -0700
+Subject: [PATCH] x86: Don't set AVX_U128_DIRTY when all bits are zero
+
+In a single SET, all bits of the source YMM/ZMM register are zero when
+
+1. The source is contant zero.
+2. The source YMM/ZMM operand are defined from contant zero.
+
+and we don't set AVX_U128_DIRTY.
+
+gcc/
+
+	PR target/101456
+	* config/i386/i386.c (ix86_avx_u128_mode_needed): Don't set
+	AVX_U128_DIRTY when all bits are zero.
+
+gcc/testsuite/
+
+	PR target/101456
+	* gcc.target/i386/pr101456-1.c: New test.
+---
+ gcc/config/i386/i386.c                     | 47 ++++++++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pr101456-1.c | 28 +++++++++++++
+ 2 files changed, 75 insertions(+)
+ create mode 100644 gcc/testsuite/gcc.target/i386/pr101456-1.c
+
+diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
+index c0559d50021..74b8c5a0d25 100644
+--- a/gcc/config/i386/i386.c
++++ b/gcc/config/i386/i386.c
+@@ -14144,6 +14144,53 @@ ix86_avx_u128_mode_needed (rtx_insn *insn)
+       return AVX_U128_CLEAN;
+     }
+ 
++  rtx set = single_set (insn);
++  if (set)
++    {
++      rtx dest = SET_DEST (set);
++      rtx src = SET_SRC (set);
++      if (ix86_check_avx_upper_register (dest))
++	{
++	  /* It is not dirty if the source is known zero.  */
++	  if (standard_sse_constant_p (src, GET_MODE (dest)) == 1)
++	    return AVX_U128_ANY;
++	  else
++	    return AVX_U128_DIRTY;
++	}
++      else if (ix86_check_avx_upper_register (src))
++	{
++	  /* Check for the source operand with all DEFs from constant
++	     zero.  */
++	  df_ref def = DF_REG_DEF_CHAIN (REGNO (src));
++	  if (!def)
++	    return AVX_U128_DIRTY;
++
++	  for (; def; def = DF_REF_NEXT_REG (def))
++	    if (DF_REF_REG_DEF_P (def)
++		&& !DF_REF_IS_ARTIFICIAL (def))
++	      {
++		rtx_insn *def_insn = DF_REF_INSN (def);
++		set = single_set (def_insn);
++		if (!set)
++		  return AVX_U128_DIRTY;
++
++		dest = SET_DEST (set);
++		if (ix86_check_avx_upper_register (dest))
++		  {
++		    src = SET_SRC (set);
++		    /* It is dirty if the source operand isn't constant
++		       zero.  */
++		    if (standard_sse_constant_p (src, GET_MODE (dest))
++			!= 1)
++		      return AVX_U128_DIRTY;
++		  }
++	      }
++
++	  /* It is not dirty only if all sources are known zero.  */
++	  return AVX_U128_ANY;
++	}
++    }
++
+   /* Require DIRTY mode if a 256bit or 512bit AVX register is referenced.
+      Hardware changes state only when a 256bit register is written to,
+      but we need to prevent the compiler from moving optimal insertion
+diff --git a/gcc/testsuite/gcc.target/i386/pr101456-1.c b/gcc/testsuite/gcc.target/i386/pr101456-1.c
+new file mode 100644
+index 00000000000..6a0f6ccd756
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr101456-1.c
+@@ -0,0 +1,28 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -march=skylake" } */
++
++#include <x86intrin.h>
++
++extern __m256 x1;
++extern __m256d x2;
++extern __m256i x3;
++
++void
++foo1 (void)
++{
++  x1 = _mm256_setzero_ps ();
++}
++
++void
++foo2 (void)
++{
++  x2 = _mm256_setzero_pd ();
++}
++
++void
++foo3 (void)
++{
++  x3 = _mm256_setzero_si256 ();
++}
++
++/* { dg-final { scan-assembler-not "vzeroupper" } } */
+-- 
+2.31.1
+

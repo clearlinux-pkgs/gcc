@@ -1,0 +1,145 @@
+From e84aa26d1d058265bd51633d37f6db154bb0e369 Mon Sep 17 00:00:00 2001
+From: "H.J. Lu" <hjl.tools@gmail.com>
+Date: Fri, 16 Jul 2021 10:29:46 -0700
+Subject: [PATCH] x86: Use XMM31 for scratch SSE register
+
+In 64-bit mode, for vector size > 16 bytes, use XMM31 for scratch SSE
+register to avoid vzeroupper if possible.
+
+gcc/
+
+	* config/i386/i386.c (ix86_gen_scratch_sse_rtx): In 64-bit mode,
+	for vector size > 16 bytes, try XMM31 to avoid vzeroupper.
+
+gcc/testsuite/
+
+	* gcc.target/i386/pieces-memset-21.c: Updated.  Check for
+	vzeroupper.
+	* gcc.target/i386/pr100865-4b.c: Likewise.
+	* gcc.target/i386/pr100865-6b.c: Likewise.
+	* gcc.target/i386/pr100865-7b.c: Likewise.
+	* gcc.target/i386/pr100865-10b.c: Likewise.
+---
+ gcc/config/i386/i386.c                        | 20 ++++++++++++++++---
+ .../gcc.target/i386/pieces-memset-21.c        |  7 +++++--
+ gcc/testsuite/gcc.target/i386/pr100865-10b.c  |  5 ++++-
+ gcc/testsuite/gcc.target/i386/pr100865-4b.c   |  5 ++++-
+ gcc/testsuite/gcc.target/i386/pr100865-6b.c   |  5 ++++-
+ gcc/testsuite/gcc.target/i386/pr100865-7b.c   |  5 ++++-
+ 6 files changed, 38 insertions(+), 9 deletions(-)
+
+diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
+index 10d8c03809f..0939825c436 100644
+--- a/gcc/config/i386/i386.c
++++ b/gcc/config/i386/i386.c
+@@ -23186,9 +23186,23 @@ rtx
+ ix86_gen_scratch_sse_rtx (machine_mode mode)
+ {
+   if (TARGET_SSE)
+-    return gen_rtx_REG (mode, (TARGET_64BIT
+-			       ? LAST_REX_SSE_REG
+-			       : LAST_SSE_REG));
++    {
++      unsigned int regno;
++      if (TARGET_64BIT)
++	{
++	  /* In 64-bit mode, for vector size > 16 bytes, try XMM31 to
++	     avoid vzeroupper.  */
++	  if (GET_MODE_SIZE (mode) > 16
++	      && ix86_hard_regno_mode_ok (LAST_EXT_REX_SSE_REG,
++					  mode))
++	    regno = LAST_EXT_REX_SSE_REG;
++	  else
++	    regno = LAST_REX_SSE_REG;
++	}
++      else
++	regno = LAST_SSE_REG;
++      return gen_rtx_REG (mode, regno);
++    }
+   else
+     return gen_reg_rtx (mode);
+ }
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-21.c b/gcc/testsuite/gcc.target/i386/pieces-memset-21.c
+index 4f001c6d06c..0da29e565f0 100644
+--- a/gcc/testsuite/gcc.target/i386/pieces-memset-21.c
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-21.c
+@@ -1,5 +1,5 @@
+ /* { dg-do compile } */
+-/* { dg-options "-O2 -mavx512f -mtune=generic" } */
++/* { dg-options "-O2 -mavx512vl -mavx512f -mtune=generic" } */
+ 
+ extern char *dst;
+ 
+@@ -9,8 +9,11 @@ foo (void)
+   __builtin_memset (dst, 0, 66);
+ }
+ 
+-/* { dg-final { scan-assembler-times "vpxor\[ \\t\]+\[^\n\]*%xmm" 1 } } */
++/* { dg-final { scan-assembler-times "vpxor\[ \\t\]+\[^\n\]*%xmm" 1 { target ia32 } } } */
++/* { dg-final { scan-assembler-times "vpxord\[ \\t\]+\[^\n\]*%xmm" 1 { target { ! ia32 } } } } */
+ /* { dg-final { scan-assembler-times "vmovdqu64\[ \\t\]+\[^\n\]*%zmm" 1 } } */
++/* { dg-final { scan-assembler-times "vzeroupper" 1 { target ia32 } } } */
++/* { dg-final { scan-assembler-not "vzeroupper" { target { ! ia32 } } } } */
+ /* No need to dynamically realign the stack here.  */
+ /* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
+ /* Nor use a frame pointer.  */
+diff --git a/gcc/testsuite/gcc.target/i386/pr100865-10b.c b/gcc/testsuite/gcc.target/i386/pr100865-10b.c
+index 5f5abe27bed..57bdd53c94e 100644
+--- a/gcc/testsuite/gcc.target/i386/pr100865-10b.c
++++ b/gcc/testsuite/gcc.target/i386/pr100865-10b.c
+@@ -4,4 +4,7 @@
+ #include "pr100865-10a.c"
+ 
+ /* { dg-final { scan-assembler-times "vpbroadcastb\[\\t \]+%(?:r|e)\[^\n\]*, %ymm\[0-9\]+" 1 } } */
+-/* { dg-final { scan-assembler-times "vmovdqu\[\\t \]%ymm\[0-9\]+, " 8 } } */
++/* { dg-final { scan-assembler-times "vmovdqu\[\\t \]%ymm\[0-9\]+, " 8 { target ia32 } } } */
++/* { dg-final { scan-assembler-times "vmovdqu64\[\\t \]%ymm\[0-9\]+, " 8 { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler-times "vzeroupper" 1 { target ia32 } } } */
++/* { dg-final { scan-assembler-not "vzeroupper" { target { ! ia32 } } } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr100865-4b.c b/gcc/testsuite/gcc.target/i386/pr100865-4b.c
+index cbcae2d97b5..2fd9d1e1b45 100644
+--- a/gcc/testsuite/gcc.target/i386/pr100865-4b.c
++++ b/gcc/testsuite/gcc.target/i386/pr100865-4b.c
+@@ -4,6 +4,9 @@
+ #include "pr100865-4a.c"
+ 
+ /* { dg-final { scan-assembler-times "vpbroadcastb\[\\t \]+%(?:r|e)\[^\n\]*, %ymm\[0-9\]+" 1 } } */
+-/* { dg-final { scan-assembler-times "vmovdqu\[\\t \]%ymm\[0-9\]+, " 2 } } */
++/* { dg-final { scan-assembler-times "vmovdqu\[\\t \]%ymm\[0-9\]+, " 2 { target ia32 } } } */
++/* { dg-final { scan-assembler-times "vmovdqu64\[\\t \]%ymm\[0-9\]+, " 2 { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler-times "vzeroupper" 1 { target ia32 } } } */
++/* { dg-final { scan-assembler-not "vzeroupper" { target { ! ia32 } } } } */
+ /* { dg-final { scan-assembler-not "vpbroadcastb\[\\t \]+%xmm\[0-9\]+, %ymm\[0-9\]+" } } */
+ /* { dg-final { scan-assembler-not "vmovdqa" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr100865-6b.c b/gcc/testsuite/gcc.target/i386/pr100865-6b.c
+index 44e74c64e55..35f2e961d25 100644
+--- a/gcc/testsuite/gcc.target/i386/pr100865-6b.c
++++ b/gcc/testsuite/gcc.target/i386/pr100865-6b.c
+@@ -4,6 +4,9 @@
+ #include "pr100865-6a.c"
+ 
+ /* { dg-final { scan-assembler-times "vpbroadcastd\[\\t \]+%(?:r|e)\[^\n\]*, %ymm\[0-9\]+" 1 } } */
+-/* { dg-final { scan-assembler-times "vmovdqu\[\\t \]%ymm\[0-9\]+, " 8 } } */
++/* { dg-final { scan-assembler-times "vmovdqu\[\\t \]%ymm\[0-9\]+, " 8 { target ia32 } } } */
++/* { dg-final { scan-assembler-times "vmovdqu32\[\\t \]%ymm\[0-9\]+, " 8 { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler-times "vzeroupper" 1 { target ia32 } } } */
++/* { dg-final { scan-assembler-not "vzeroupper" { target { ! ia32 } } } } */
+ /* { dg-final { scan-assembler-not "vpbroadcastd\[\\t \]+%xmm\[0-9\]+, %ymm\[0-9\]+" } } */
+ /* { dg-final { scan-assembler-not "vmovdqa" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr100865-7b.c b/gcc/testsuite/gcc.target/i386/pr100865-7b.c
+index 0a68820aa32..ad267c43891 100644
+--- a/gcc/testsuite/gcc.target/i386/pr100865-7b.c
++++ b/gcc/testsuite/gcc.target/i386/pr100865-7b.c
+@@ -5,5 +5,8 @@
+ 
+ /* { dg-final { scan-assembler-times "vpbroadcastq\[\\t \]+%r\[^\n\]*, %ymm\[0-9\]+" 1 { target { ! ia32 } } } } */
+ /* { dg-final { scan-assembler-times "vpbroadcastq\[\\t \]+\[^\n\]*, %ymm\[0-9\]+" 1 { target ia32 } } } */
+-/* { dg-final { scan-assembler-times "vmovdqu\[\\t \]%ymm\[0-9\]+, " 16 } } */
++/* { dg-final { scan-assembler-times "vmovdqu\[\\t \]%ymm\[0-9\]+, " 16 { target ia32 } } } */
++/* { dg-final { scan-assembler-times "vmovdqu64\[\\t \]%ymm\[0-9\]+, " 16 { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler-times "vzeroupper" 1 { target ia32 } } } */
++/* { dg-final { scan-assembler-not "vzeroupper" { target { ! ia32 } } } } */
+ /* { dg-final { scan-assembler-not "vmovdqa" } } */
+-- 
+2.31.1
+

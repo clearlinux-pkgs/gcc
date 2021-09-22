@@ -1,0 +1,96 @@
+From c4236408d8d567880b562df88da99e8b9fa3d3b9 Mon Sep 17 00:00:00 2001
+From: "H.J. Lu" <hjl.tools@gmail.com>
+Date: Tue, 3 Aug 2021 06:17:22 -0700
+Subject: [PATCH 08/10] by_pieces: Pass MAX_PIECES to op_by_pieces_d
+
+Pass MAX_PIECES to op_by_pieces_d::op_by_pieces_d for move, store and
+compare.
+
+	PR target/101742
+	* expr.c (op_by_pieces_d::op_by_pieces_d): Add a max_pieces
+	argument to set m_max_size.
+	(move_by_pieces_d): Pass MOVE_MAX_PIECES to op_by_pieces_d.
+	(store_by_pieces_d): Pass STORE_MAX_PIECES to op_by_pieces_d.
+	(compare_by_pieces_d): Pass COMPARE_MAX_PIECES to op_by_pieces_d.
+
+(cherry picked from commit f2e5d2717d9e249edc5e0d45e49e4f9ef81fc694)
+---
+ gcc/expr.c | 26 ++++++++++++++------------
+ 1 file changed, 14 insertions(+), 12 deletions(-)
+
+diff --git a/gcc/expr.c b/gcc/expr.c
+index 8de0b51dec0..fa76dff26b4 100644
+--- a/gcc/expr.c
++++ b/gcc/expr.c
+@@ -1110,8 +1110,8 @@ class op_by_pieces_d
+   }
+ 
+  public:
+-  op_by_pieces_d (rtx, bool, rtx, bool, by_pieces_constfn, void *,
+-		  unsigned HOST_WIDE_INT, unsigned int, bool,
++  op_by_pieces_d (unsigned int, rtx, bool, rtx, bool, by_pieces_constfn,
++		  void *, unsigned HOST_WIDE_INT, unsigned int, bool,
+ 		  bool = false);
+   void run ();
+ };
+@@ -1120,10 +1120,12 @@ class op_by_pieces_d
+    objects named TO and FROM, which are identified as loads or stores
+    by TO_LOAD and FROM_LOAD.  If FROM is a load, the optional FROM_CFN
+    and its associated FROM_CFN_DATA can be used to replace loads with
+-   constant values.  LEN describes the length of the operation.  */
++   constant values.  MAX_PIECES describes the maximum number of bytes
++   at a time which can be moved efficiently.  LEN describes the length
++   of the operation.  */
+ 
+-op_by_pieces_d::op_by_pieces_d (rtx to, bool to_load,
+-				rtx from, bool from_load,
++op_by_pieces_d::op_by_pieces_d (unsigned int max_pieces, rtx to,
++				bool to_load, rtx from, bool from_load,
+ 				by_pieces_constfn from_cfn,
+ 				void *from_cfn_data,
+ 				unsigned HOST_WIDE_INT len,
+@@ -1131,7 +1133,7 @@ op_by_pieces_d::op_by_pieces_d (rtx to, bool to_load,
+ 				bool qi_vector_mode)
+   : m_to (to, to_load, NULL, NULL),
+     m_from (from, from_load, from_cfn, from_cfn_data),
+-    m_len (len), m_max_size (MOVE_MAX_PIECES + 1),
++    m_len (len), m_max_size (max_pieces + 1),
+     m_push (push), m_qi_vector_mode (qi_vector_mode)
+ {
+   int toi = m_to.get_addr_inc ();
+@@ -1324,8 +1326,8 @@ class move_by_pieces_d : public op_by_pieces_d
+  public:
+   move_by_pieces_d (rtx to, rtx from, unsigned HOST_WIDE_INT len,
+ 		    unsigned int align)
+-    : op_by_pieces_d (to, false, from, true, NULL, NULL, len, align,
+-		      PUSHG_P (to))
++    : op_by_pieces_d (MOVE_MAX_PIECES, to, false, from, true, NULL,
++		      NULL, len, align, PUSHG_P (to))
+   {
+   }
+   rtx finish_retmode (memop_ret);
+@@ -1421,8 +1423,8 @@ class store_by_pieces_d : public op_by_pieces_d
+   store_by_pieces_d (rtx to, by_pieces_constfn cfn, void *cfn_data,
+ 		     unsigned HOST_WIDE_INT len, unsigned int align,
+ 		     bool qi_vector_mode)
+-    : op_by_pieces_d (to, false, NULL_RTX, true, cfn, cfn_data, len,
+-		      align, false, qi_vector_mode)
++    : op_by_pieces_d (STORE_MAX_PIECES, to, false, NULL_RTX, true, cfn,
++		      cfn_data, len, align, false, qi_vector_mode)
+   {
+   }
+   rtx finish_retmode (memop_ret);
+@@ -1618,8 +1620,8 @@ class compare_by_pieces_d : public op_by_pieces_d
+   compare_by_pieces_d (rtx op0, rtx op1, by_pieces_constfn op1_cfn,
+ 		       void *op1_cfn_data, HOST_WIDE_INT len, int align,
+ 		       rtx_code_label *fail_label)
+-    : op_by_pieces_d (op0, true, op1, true, op1_cfn, op1_cfn_data, len,
+-		      align, false)
++    : op_by_pieces_d (COMPARE_MAX_PIECES, op0, true, op1, true, op1_cfn,
++		      op1_cfn_data, len, align, false)
+   {
+     m_fail_label = fail_label;
+   }
+-- 
+2.32.0
+
