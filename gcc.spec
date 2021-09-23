@@ -55,6 +55,7 @@ BuildRequires : libunwind-dev
 BuildRequires : mpc-dev
 BuildRequires : mpfr-dev
 BuildRequires : pkgconfig(zlib)
+BuildRequires : zstd-dev
 BuildRequires : sed
 BuildRequires : texinfo
 BuildRequires : dejagnu
