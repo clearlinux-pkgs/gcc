@@ -1151,7 +1151,7 @@ index 7782cf1163f..928746073a9 100644
    (gcc::context *);
 -extern rtl_opt_pass *make_pass_constant_pool_broadcast (gcc::context *);
 diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
-index 527d493ecae..1af1f6b8931 100644
+index f991e07f232..a7953b9371f 100644
 --- a/gcc/config/i386/i386.c
 +++ b/gcc/config/i386/i386.c
 @@ -4195,6 +4195,18 @@ ix86_return_in_memory (const_tree type, const_tree fntype ATTRIBUTE_UNUSED)
@@ -1173,7 +1173,7 @@ index 527d493ecae..1af1f6b8931 100644
  
  /* Create the va_list data type.  */
  
-@@ -7945,8 +7957,17 @@ ix86_finalize_stack_frame_flags (void)
+@@ -7946,8 +7958,17 @@ ix86_finalize_stack_frame_flags (void)
       assumed stack realignment might be needed or -fno-omit-frame-pointer
       is used, but in the end nothing that needed the stack alignment had
       been spilled nor stack access, clear frame_pointer_needed and say we
@@ -1193,7 +1193,7 @@ index 527d493ecae..1af1f6b8931 100644
        && frame_pointer_needed
        && crtl->is_leaf
        && crtl->sp_is_unchanging
-@@ -10409,7 +10430,13 @@ ix86_legitimate_constant_p (machine_mode mode, rtx x)
+@@ -10410,7 +10431,13 @@ ix86_legitimate_constant_p (machine_mode mode, rtx x)
  	  /* FALLTHRU */
  	case E_OImode:
  	case E_XImode:
@@ -1208,7 +1208,7 @@ index 527d493ecae..1af1f6b8931 100644
  	    return false;
  	default:
  	  break;
-@@ -14085,6 +14112,18 @@ ix86_check_avx_upper_register (const_rtx exp)
+@@ -14086,6 +14113,18 @@ ix86_check_avx_upper_register (const_rtx exp)
  	  && GET_MODE_BITSIZE (GET_MODE (exp)) > 128);
  }
  
@@ -1227,7 +1227,7 @@ index 527d493ecae..1af1f6b8931 100644
  /* Return needed mode for entity in optimize_mode_switching pass.  */
  
  static int
-@@ -14109,6 +14148,14 @@ ix86_avx_u128_mode_needed (rtx_insn *insn)
+@@ -14110,6 +14149,14 @@ ix86_avx_u128_mode_needed (rtx_insn *insn)
  	    }
  	}
  
@@ -1242,7 +1242,7 @@ index 527d493ecae..1af1f6b8931 100644
        /* If the function is known to preserve some SSE registers,
  	 RA and previous passes can legitimately rely on that for
  	 modes wider than 256 bits.  It's only safe to issue a
-@@ -14121,6 +14168,94 @@ ix86_avx_u128_mode_needed (rtx_insn *insn)
+@@ -14122,6 +14169,94 @@ ix86_avx_u128_mode_needed (rtx_insn *insn)
        return AVX_U128_CLEAN;
      }
  
@@ -1337,7 +1337,7 @@ index 527d493ecae..1af1f6b8931 100644
    /* Require DIRTY mode if a 256bit or 512bit AVX register is referenced.
       Hardware changes state only when a 256bit register is written to,
       but we need to prevent the compiler from moving optimal insertion
-@@ -14209,18 +14344,6 @@ ix86_mode_needed (int entity, rtx_insn *insn)
+@@ -14210,18 +14345,6 @@ ix86_mode_needed (int entity, rtx_insn *insn)
    return 0;
  }
  
@@ -1356,7 +1356,7 @@ index 527d493ecae..1af1f6b8931 100644
  /* Calculate mode of upper 128bit AVX registers after the insn.  */
  
  static int
-@@ -22992,6 +23115,32 @@ ix86_optab_supported_p (int op, machine_mode mode1, machine_mode,
+@@ -22993,6 +23116,32 @@ ix86_optab_supported_p (int op, machine_mode mode1, machine_mode,
      }
  }
  
@@ -1389,7 +1389,7 @@ index 527d493ecae..1af1f6b8931 100644
  /* Address space support.
  
     This is not "far pointers" in the 16-bit sense, but an easy way
-@@ -23522,6 +23671,9 @@ ix86_run_selftests (void)
+@@ -23523,6 +23672,9 @@ ix86_run_selftests (void)
  #undef TARGET_ADDRESS_COST
  #define TARGET_ADDRESS_COST ix86_address_cost
  
@@ -1399,7 +1399,7 @@ index 527d493ecae..1af1f6b8931 100644
  #undef TARGET_FLAGS_REGNUM
  #define TARGET_FLAGS_REGNUM FLAGS_REG
  #undef TARGET_FIXED_CONDITION_CODE_REGS
-@@ -23571,6 +23723,8 @@ ix86_run_selftests (void)
+@@ -23572,6 +23724,8 @@ ix86_run_selftests (void)
  #define TARGET_C_EXCESS_PRECISION ix86_get_excess_precision
  #undef TARGET_PROMOTE_PROTOTYPES
  #define TARGET_PROMOTE_PROTOTYPES hook_bool_const_tree_true
@@ -1408,7 +1408,7 @@ index 527d493ecae..1af1f6b8931 100644
  #undef TARGET_SETUP_INCOMING_VARARGS
  #define TARGET_SETUP_INCOMING_VARARGS ix86_setup_incoming_varargs
  #undef TARGET_MUST_PASS_IN_STACK
-@@ -23890,6 +24044,9 @@ static bool ix86_libc_has_fast_function (int fcode ATTRIBUTE_UNUSED)
+@@ -23891,6 +24045,9 @@ static bool ix86_libc_has_fast_function (int fcode ATTRIBUTE_UNUSED)
  #undef TARGET_LIBC_HAS_FAST_FUNCTION
  #define TARGET_LIBC_HAS_FAST_FUNCTION ix86_libc_has_fast_function
  
