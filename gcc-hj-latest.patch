@@ -1,7 +1,4 @@
-Arjan van de Ven (1):
-      Merge remote-tracking branch 'origin/releases/gcc-11' into HEAD
-
-H.J. Lu (31):
+H.J. Lu (35):
       op_by_pieces_d::run: Change a while loop to a do-while loop
       Generate offset adjusted operation for op_by_pieces operations
       Don't use nullptr return from simplify_gen_subreg
@@ -33,6 +30,10 @@ H.J. Lu (31):
       x86: Avoid stack realignment when copying data with SSE register
       x86: Broadcast from integer to a pseudo vector register
       x86: Add non-destructive source to @xorsign<mode>3_1
+      x86: Update -mtune=tremont
+      x86: Update memcpy/memset inline strategies for -mtune=tremont
+      x86: Properly handle USE_VECTOR_FP_CONVERTS/USE_VECTOR_CONVERTS
+      x86: Add TARGET_SSE_PARTIAL_REG_[FP_]CONVERTS_DEPENDENCY
 
 Jakub Jelinek (3):
       i386: Punt on broadcasts from TImode integers [PR101286]
@@ -45,13 +46,19 @@ Richard Biener (1):
 Uros Bizjak (1):
       [i386] Introduce scalar version of avx512f_vmscalef.
 
-liuhongt (6):
+Vladimir N. Makarov (1):
+      [PR102627] Use at least natural mode during splitting hard reg live range
+
+liuhongt (9):
       Optimize __builtin_shuffle when it's used to zero the upper bits of the dest. [PR target/94680]
       Extend ldexp{s,d}f3 to vscalefs{s,d} when TARGET_AVX512F and TARGET_SSE_MATH.
       Fix ICE.
       Fix typo in testcase.
       Remove pass_cpb which is related to enable avx512 embedded broadcast from constant pool.
+      Optimize (a & b) | (c & ~b) to vpternlog instruction.
+      Enable avx512 embedde broadcast for vpternlog.
       Remove copysign post_reload splitter for scalar modes.
+      Fix ICE in pass_rpad.
 
 diff --git a/gcc/builtins.c b/gcc/builtins.c
 index 73c12e3bb8c..edaec4e21de 100644
@@ -342,6 +349,19 @@ index 870b9ac7776..7f66052c212 100644
  	argblock = push_block (gen_int_mode (args_size.constant, Pmode), 0, 0);
      }
  
+diff --git a/gcc/common/config/i386/i386-common.c b/gcc/common/config/i386/i386-common.c
+index 38dbb9d9263..ef382ec9a22 100644
+--- a/gcc/common/config/i386/i386-common.c
++++ b/gcc/common/config/i386/i386-common.c
+@@ -1916,7 +1916,7 @@ const pta processor_alias_table[] =
+     M_CPU_TYPE (INTEL_GOLDMONT), P_PROC_SSE4_2},
+   {"goldmont-plus", PROCESSOR_GOLDMONT_PLUS, CPU_GLM, PTA_GOLDMONT_PLUS,
+     M_CPU_TYPE (INTEL_GOLDMONT_PLUS), P_PROC_SSE4_2},
+-  {"tremont", PROCESSOR_TREMONT, CPU_GLM, PTA_TREMONT,
++  {"tremont", PROCESSOR_TREMONT, CPU_HASWELL, PTA_TREMONT,
+     M_CPU_TYPE (INTEL_TREMONT), P_PROC_SSE4_2},
+   {"knl", PROCESSOR_KNL, CPU_SLM, PTA_KNL,
+     M_CPU_TYPE (INTEL_KNL), P_PROC_AVX512F},
 diff --git a/gcc/config/bpf/bpf.h b/gcc/config/bpf/bpf.h
 index 4c5b19e262b..80195cea5b2 100644
 --- a/gcc/config/bpf/bpf.h
@@ -881,10 +901,10 @@ index 16765718cc3..46d18bd9a9e 100644
  				   rtx target, rtx val)
  {
 diff --git a/gcc/config/i386/i386-features.c b/gcc/config/i386/i386-features.c
-index 77783a154b6..c0d1c66a3c7 100644
+index 77783a154b6..47736f74a00 100644
 --- a/gcc/config/i386/i386-features.c
 +++ b/gcc/config/i386/i386-features.c
-@@ -2174,81 +2174,6 @@ make_pass_insert_endbr_and_patchable_area (gcc::context *ctxt)
+@@ -2174,83 +2174,8 @@ make_pass_insert_endbr_and_patchable_area (gcc::context *ctxt)
    return new pass_insert_endbr_and_patchable_area (ctxt);
  }
  
@@ -964,8 +984,11 @@ index 77783a154b6..c0d1c66a3c7 100644
 -}
 -
  /* At entry of the nearest common dominator for basic blocks with
-    conversions, generate a single
+-   conversions, generate a single
++   conversions/rcp/sqrt/rsqrt/round, generate a single
  	vxorps %xmmN, %xmmN, %xmmN
+    for all
+ 	vcvtss2sd  op, %xmmN, %xmmX
 @@ -2287,10 +2212,6 @@ remove_partial_avx_dependency (void)
  	  if (!NONDEBUG_INSN_P (insn))
  	    continue;
@@ -977,7 +1000,64 @@ index 77783a154b6..c0d1c66a3c7 100644
  	  set = single_set (insn);
  	  if (!set)
  	    continue;
-@@ -2422,16 +2343,6 @@ remove_partial_avx_dependency (void)
+@@ -2299,15 +2220,51 @@ remove_partial_avx_dependency (void)
+ 	      != AVX_PARTIAL_XMM_UPDATE_TRUE)
+ 	    continue;
+ 
+-	  if (!v4sf_const0)
+-	    v4sf_const0 = gen_reg_rtx (V4SFmode);
+-
+ 	  /* Convert PARTIAL_XMM_UPDATE_TRUE insns, DF -> SF, SF -> DF,
+-	     SI -> SF, SI -> DF, DI -> SF, DI -> DF, to vec_dup and
+-	     vec_merge with subreg.  */
++	     SI -> SF, SI -> DF, DI -> SF, DI -> DF, sqrt, rsqrt, rcp,
++	     round, to vec_dup and vec_merge with subreg.  */
+ 	  rtx src = SET_SRC (set);
+ 	  rtx dest = SET_DEST (set);
+ 	  machine_mode dest_mode = GET_MODE (dest);
++	  bool convert_p = false;
++	  switch (GET_CODE (src))
++	    {
++	    case FLOAT:
++	    case FLOAT_EXTEND:
++	    case FLOAT_TRUNCATE:
++	    case UNSIGNED_FLOAT:
++	      convert_p = true;
++	      break;
++	    default:
++	      break;
++	    }
++
++	  /* Only hanlde conversion here.  */
++	  machine_mode src_mode
++	    = convert_p ? GET_MODE (XEXP (src, 0)) : VOIDmode;
++	  switch (src_mode)
++	    {
++	    case E_SFmode:
++	    case E_DFmode:
++	      if (TARGET_USE_VECTOR_FP_CONVERTS
++		  || !TARGET_SSE_PARTIAL_REG_FP_CONVERTS_DEPENDENCY)
++		continue;
++	      break;
++	    case E_SImode:
++	    case E_DImode:
++	      if (TARGET_USE_VECTOR_CONVERTS
++		  || !TARGET_SSE_PARTIAL_REG_CONVERTS_DEPENDENCY)
++		continue;
++	      break;
++	    case E_VOIDmode:
++	      gcc_assert (!convert_p);
++	      break;
++	    default:
++	      gcc_unreachable ();
++	    }
++
++	  if (!v4sf_const0)
++	    v4sf_const0 = gen_reg_rtx (V4SFmode);
+ 
+ 	  rtx zero;
+ 	  machine_mode dest_vecmode;
+@@ -2422,16 +2379,6 @@ remove_partial_avx_dependency (void)
    return 0;
  }
  
@@ -994,7 +1074,7 @@ index 77783a154b6..c0d1c66a3c7 100644
  namespace {
  
  const pass_data pass_data_remove_partial_avx_dependency =
-@@ -2457,7 +2368,11 @@ public:
+@@ -2457,7 +2404,11 @@ public:
    /* opt_pass methods: */
    virtual bool gate (function *)
      {
@@ -1007,7 +1087,7 @@ index 77783a154b6..c0d1c66a3c7 100644
      }
  
    virtual unsigned int execute (function *)
-@@ -2474,68 +2389,6 @@ make_pass_remove_partial_avx_dependency (gcc::context *ctxt)
+@@ -2474,68 +2425,6 @@ make_pass_remove_partial_avx_dependency (gcc::context *ctxt)
    return new pass_remove_partial_avx_dependency (ctxt);
  }
  
@@ -1103,6 +1183,19 @@ index dbddfd8e48f..4e7014be034 100644
 -
  /* The symbol Pmode stands for one of the above machine modes (usually SImode).
     The tm.h file specifies which one.  It is not a distinct mode.  */
+diff --git a/gcc/config/i386/i386-options.c b/gcc/config/i386/i386-options.c
+index 19632b5fd6b..4b77d62926f 100644
+--- a/gcc/config/i386/i386-options.c
++++ b/gcc/config/i386/i386-options.c
+@@ -719,7 +719,7 @@ static const struct processor_costs *processor_cost_table[] =
+   &slm_cost,
+   &slm_cost,
+   &slm_cost,
+-  &slm_cost,
++  &tremont_cost,
+   &slm_cost,
+   &slm_cost,
+   &skylake_cost,
 diff --git a/gcc/config/i386/i386-passes.def b/gcc/config/i386/i386-passes.def
 index 44df00e94ac..29baf8acd0b 100644
 --- a/gcc/config/i386/i386-passes.def
@@ -1151,7 +1244,7 @@ index 7782cf1163f..928746073a9 100644
    (gcc::context *);
 -extern rtl_opt_pass *make_pass_constant_pool_broadcast (gcc::context *);
 diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
-index fa80daba523..4f2200d8952 100644
+index fa80daba523..89fe5d07477 100644
 --- a/gcc/config/i386/i386.c
 +++ b/gcc/config/i386/i386.c
 @@ -4195,6 +4195,18 @@ ix86_return_in_memory (const_tree type, const_tree fntype ATTRIBUTE_UNUSED)
@@ -1356,7 +1449,27 @@ index fa80daba523..4f2200d8952 100644
  /* Calculate mode of upper 128bit AVX registers after the insn.  */
  
  static int
-@@ -22988,6 +23111,32 @@ ix86_optab_supported_p (int op, machine_mode mode1, machine_mode,
+@@ -16729,6 +16852,7 @@ ix86_sched_init_global (FILE *, int, int)
+     case PROCESSOR_NEHALEM:
+     case PROCESSOR_SANDYBRIDGE:
+     case PROCESSOR_HASWELL:
++    case PROCESSOR_TREMONT:
+     case PROCESSOR_GENERIC:
+       /* Do not perform multipass scheduling for pre-reload schedule
+          to save compile time.  */
+@@ -20222,6 +20346,11 @@ ix86_rtx_costs (rtx x, machine_mode mode, int outer_code_i, int opno,
+     case UNSPEC:
+       if (XINT (x, 1) == UNSPEC_TP)
+ 	*total = 0;
++      else if (XINT(x, 1) == UNSPEC_VTERNLOG)
++	{
++	  *total = cost->sse_op;
++	  return true;
++	}
+       return false;
+ 
+     case VEC_SELECT:
+@@ -22988,6 +23117,32 @@ ix86_optab_supported_p (int op, machine_mode mode1, machine_mode,
      }
  }
  
@@ -1389,7 +1502,7 @@ index fa80daba523..4f2200d8952 100644
  /* Address space support.
  
     This is not "far pointers" in the 16-bit sense, but an easy way
-@@ -23518,6 +23667,9 @@ ix86_run_selftests (void)
+@@ -23518,6 +23673,9 @@ ix86_run_selftests (void)
  #undef TARGET_ADDRESS_COST
  #define TARGET_ADDRESS_COST ix86_address_cost
  
@@ -1399,7 +1512,7 @@ index fa80daba523..4f2200d8952 100644
  #undef TARGET_FLAGS_REGNUM
  #define TARGET_FLAGS_REGNUM FLAGS_REG
  #undef TARGET_FIXED_CONDITION_CODE_REGS
-@@ -23567,6 +23719,8 @@ ix86_run_selftests (void)
+@@ -23567,6 +23725,8 @@ ix86_run_selftests (void)
  #define TARGET_C_EXCESS_PRECISION ix86_get_excess_precision
  #undef TARGET_PROMOTE_PROTOTYPES
  #define TARGET_PROMOTE_PROTOTYPES hook_bool_const_tree_true
@@ -1408,7 +1521,7 @@ index fa80daba523..4f2200d8952 100644
  #undef TARGET_SETUP_INCOMING_VARARGS
  #define TARGET_SETUP_INCOMING_VARARGS ix86_setup_incoming_varargs
  #undef TARGET_MUST_PASS_IN_STACK
-@@ -23886,6 +24040,9 @@ static bool ix86_libc_has_fast_function (int fcode ATTRIBUTE_UNUSED)
+@@ -23886,6 +24046,9 @@ static bool ix86_libc_has_fast_function (int fcode ATTRIBUTE_UNUSED)
  #undef TARGET_LIBC_HAS_FAST_FUNCTION
  #define TARGET_LIBC_HAS_FAST_FUNCTION ix86_libc_has_fast_function
  
@@ -1419,10 +1532,21 @@ index fa80daba523..4f2200d8952 100644
  #undef TARGET_RUN_TARGET_SELFTESTS
  #define TARGET_RUN_TARGET_SELFTESTS selftest::ix86_run_selftests
 diff --git a/gcc/config/i386/i386.h b/gcc/config/i386/i386.h
-index 73e118900f7..5b7280d8d8d 100644
+index 73e118900f7..499ddc7bfdd 100644
 --- a/gcc/config/i386/i386.h
 +++ b/gcc/config/i386/i386.h
-@@ -1691,13 +1691,8 @@ enum reg_class
+@@ -553,6 +553,10 @@ extern unsigned char ix86_tune_features[X86_TUNE_LAST];
+ 	ix86_tune_features[X86_TUNE_PARTIAL_REG_DEPENDENCY]
+ #define TARGET_SSE_PARTIAL_REG_DEPENDENCY \
+ 	ix86_tune_features[X86_TUNE_SSE_PARTIAL_REG_DEPENDENCY]
++#define TARGET_SSE_PARTIAL_REG_FP_CONVERTS_DEPENDENCY \
++	ix86_tune_features[X86_TUNE_SSE_PARTIAL_REG_FP_CONVERTS_DEPENDENCY]
++#define TARGET_SSE_PARTIAL_REG_CONVERTS_DEPENDENCY \
++	ix86_tune_features[X86_TUNE_SSE_PARTIAL_REG_CONVERTS_DEPENDENCY]
+ #define TARGET_SSE_UNALIGNED_LOAD_OPTIMAL \
+ 	ix86_tune_features[X86_TUNE_SSE_UNALIGNED_LOAD_OPTIMAL]
+ #define TARGET_SSE_UNALIGNED_STORE_OPTIMAL \
+@@ -1691,13 +1695,8 @@ enum reg_class
     || TARGET_64BIT_MS_ABI \
     || (TARGET_MACHO && crtl->profile))
  
@@ -1437,7 +1561,16 @@ index 73e118900f7..5b7280d8d8d 100644
  #define PUSH_ARGS_REVERSED 1
  
  /* Offset of first parameter from the argument pointer register value.  */
-@@ -1982,24 +1977,45 @@ typedef struct ix86_args {
+@@ -1935,6 +1934,8 @@ typedef struct ix86_args {
+ 
+ #define LEGITIMATE_PIC_OPERAND_P(X) legitimate_pic_operand_p (X)
+ 
++#define STRIP_UNARY(X) (UNARY_P (X) ? XEXP (X, 0) : X)
++
+ #define SYMBOLIC_CONST(X)	\
+   (GET_CODE (X) == SYMBOL_REF						\
+    || GET_CODE (X) == LABEL_REF						\
+@@ -1982,24 +1983,45 @@ typedef struct ix86_args {
  /* Define this as 1 if `char' should by default be signed; else as 0.  */
  #define DEFAULT_SIGNED_CHAR 1
  
@@ -1502,7 +1635,7 @@ index 73e118900f7..5b7280d8d8d 100644
  /* If a memory-to-memory move would take MOVE_RATIO or more simple
     move-instruction pairs, we will do a cpymem or libcall instead.
 diff --git a/gcc/config/i386/i386.md b/gcc/config/i386/i386.md
-index 97325e38676..b5cd8b78bfb 100644
+index 97325e38676..b3ae2188c09 100644
 --- a/gcc/config/i386/i386.md
 +++ b/gcc/config/i386/i386.md
 @@ -122,6 +122,9 @@
@@ -1515,7 +1648,37 @@ index 97325e38676..b5cd8b78bfb 100644
    ;; Generic math support
    UNSPEC_COPYSIGN
    UNSPEC_XORSIGN
-@@ -10476,50 +10479,6 @@
+@@ -4378,7 +4381,8 @@
+         (float_extend:DF
+           (match_operand:SF 1 "nonimmediate_operand")))]
+   "!TARGET_AVX
+-   && TARGET_SSE_PARTIAL_REG_DEPENDENCY && epilogue_completed
++   && TARGET_SSE_PARTIAL_REG_FP_CONVERTS_DEPENDENCY
++   && epilogue_completed
+    && optimize_function_for_speed_p (cfun)
+    && (!REG_P (operands[1])
+        || (!TARGET_AVX && REGNO (operands[0]) != REGNO (operands[1])))
+@@ -4540,7 +4544,8 @@
+         (float_truncate:SF
+ 	  (match_operand:DF 1 "nonimmediate_operand")))]
+   "!TARGET_AVX
+-   && TARGET_SSE_PARTIAL_REG_DEPENDENCY && epilogue_completed
++   && TARGET_SSE_PARTIAL_REG_FP_CONVERTS_DEPENDENCY
++   && epilogue_completed
+    && optimize_function_for_speed_p (cfun)
+    && (!REG_P (operands[1])
+        || (!TARGET_AVX && REGNO (operands[0]) != REGNO (operands[1])))
+@@ -5053,7 +5058,8 @@
+   [(set (match_operand:MODEF 0 "sse_reg_operand")
+ 	(float:MODEF (match_operand:SWI48 1 "nonimmediate_operand")))]
+   "!TARGET_AVX
+-   && TARGET_SSE_PARTIAL_REG_DEPENDENCY && epilogue_completed
++   && TARGET_SSE_PARTIAL_REG_CONVERTS_DEPENDENCY
++   && epilogue_completed
+    && optimize_function_for_speed_p (cfun)
+    && (!EXT_REX_SSE_REG_P (operands[0])
+        || TARGET_AVX512VL)"
+@@ -10476,50 +10482,6 @@
     || (TARGET_SSE && (<MODE>mode == TFmode))"
    "ix86_expand_copysign (operands); DONE;")
  
@@ -1566,7 +1729,7 @@ index 97325e38676..b5cd8b78bfb 100644
  (define_expand "xorsign<mode>3"
    [(match_operand:MODEF 0 "register_operand")
     (match_operand:MODEF 1 "register_operand")
-@@ -10532,19 +10491,6 @@
+@@ -10532,19 +10494,6 @@
      ix86_expand_xorsign (operands);
    DONE;
  })
@@ -1586,7 +1749,7 @@ index 97325e38676..b5cd8b78bfb 100644
  
  ;; One complement instructions
  
-@@ -17313,6 +17259,17 @@
+@@ -17313,6 +17262,17 @@
    DONE;
  })
  
@@ -1604,7 +1767,7 @@ index 97325e38676..b5cd8b78bfb 100644
  (define_expand "ldexpxf3"
    [(match_operand:XF 0 "register_operand")
     (match_operand:XF 1 "register_operand")
-@@ -17333,17 +17290,30 @@
+@@ -17333,17 +17293,30 @@
    [(use (match_operand:MODEF 0 "register_operand"))
     (use (match_operand:MODEF 1 "general_operand"))
     (use (match_operand:SI 2 "register_operand"))]
@@ -1644,10 +1807,24 @@ index 97325e38676..b5cd8b78bfb 100644
  })
  
 diff --git a/gcc/config/i386/predicates.md b/gcc/config/i386/predicates.md
-index b1df8548af6..201aacd65e6 100644
+index b1df8548af6..d7e335d4b63 100644
 --- a/gcc/config/i386/predicates.md
 +++ b/gcc/config/i386/predicates.md
-@@ -1524,6 +1524,38 @@
+@@ -1036,6 +1036,13 @@
+ 	    (ior (match_test "op == const1_rtx")
+ 		 (match_test "op == constm1_rtx")))))
+ 
++;; True for registers, or (not: registers).  Used to optimize 3-operand
++;; bitwise operation.
++(define_predicate "reg_or_notreg_operand"
++  (ior (match_operand 0 "register_operand")
++       (and (match_code "not")
++	    (match_test "register_operand (XEXP (op, 0), mode)"))))
++
+ ;; True if OP is acceptable as operand of DImode shift expander.
+ (define_predicate "shiftdi_operand"
+   (if_then_else (match_test "TARGET_64BIT")
+@@ -1524,6 +1531,38 @@
    (and (match_code "mem")
         (match_test "MEM_ALIGN (op) < GET_MODE_BITSIZE (mode)")))
  
@@ -1687,7 +1864,7 @@ index b1df8548af6..201aacd65e6 100644
  (define_predicate "vzeroall_operation"
    (match_code "parallel")
 diff --git a/gcc/config/i386/sse.md b/gcc/config/i386/sse.md
-index e495725ff7c..ec3dfbc1e3e 100644
+index e495725ff7c..ebfe0b80068 100644
 --- a/gcc/config/i386/sse.md
 +++ b/gcc/config/i386/sse.md
 @@ -95,7 +95,6 @@
@@ -1724,7 +1901,273 @@ index e495725ff7c..ec3dfbc1e3e 100644
  
  (define_mode_attr ssehalfvecmodelower
    [(V64QI "v32qi") (V32HI "v16hi") (V16SI "v8si") (V8DI "v4di") (V4TI "v2ti")
-@@ -15964,11 +15966,11 @@
+@@ -891,7 +893,9 @@
+ ;; Mapping of vector modes to VPTERNLOG suffix
+ (define_mode_attr ternlogsuffix
+   [(V8DI "q") (V4DI "q") (V2DI "q")
++   (V8DF "q") (V4DF "q") (V2DF "q")
+    (V16SI "d") (V8SI "d") (V4SI "d")
++   (V16SF "d") (V8SF "d") (V4SF "d")
+    (V32HI "d") (V16HI "d") (V8HI "d")
+    (V64QI "d") (V32QI "d") (V16QI "d")])
+ 
+@@ -9752,7 +9756,7 @@
+ 	(unspec:VI48_AVX512VL
+ 	  [(match_operand:VI48_AVX512VL 1 "register_operand" "0")
+ 	   (match_operand:VI48_AVX512VL 2 "register_operand" "v")
+-	   (match_operand:VI48_AVX512VL 3 "nonimmediate_operand" "vm")
++	   (match_operand:VI48_AVX512VL 3 "bcst_vector_operand" "vmBr")
+ 	   (match_operand:SI 4 "const_0_to_255_operand")]
+ 	  UNSPEC_VTERNLOG))]
+   "TARGET_AVX512F"
+@@ -9761,13 +9765,245 @@
+    (set_attr "prefix" "evex")
+    (set_attr "mode" "<sseinsnmode>")])
+ 
++(define_insn "*<avx512>_vternlog<mode>_all"
++  [(set (match_operand:V 0 "register_operand" "=v")
++	(unspec:V
++	  [(match_operand:V 1 "register_operand" "0")
++	   (match_operand:V 2 "register_operand" "v")
++	   (match_operand:V 3 "bcst_vector_operand" "vmBr")
++	   (match_operand:SI 4 "const_0_to_255_operand")]
++	  UNSPEC_VTERNLOG))]
++  "TARGET_AVX512F"
++  "vpternlog<ternlogsuffix>\t{%4, %3, %2, %0|%0, %2, %3, %4}"
++  [(set_attr "type" "sselog")
++   (set_attr "prefix" "evex")
++   (set_attr "mode" "<sseinsnmode>")])
++
++;; There must be lots of other combinations like
++;;
++;; (any_logic:V
++;;   (any_logic:V op1 op2)
++;;   (any_logic:V op1 op3))
++;;
++;; (any_logic:V
++;;   (any_logic:V
++;;     (any_logic:V op1, op2)
++;;     op3)
++;;   op1)
++;;
++;; and so on.
++
++(define_code_iterator any_logic1 [and ior xor])
++(define_code_iterator any_logic2 [and ior xor])
++(define_code_attr logic_op [(and "&") (ior "|") (xor "^")])
++
++(define_insn_and_split "*<avx512>_vpternlog<mode>_1"
++  [(set (match_operand:V 0 "register_operand")
++	(any_logic:V
++	  (any_logic1:V
++	    (match_operand:V 1 "reg_or_notreg_operand")
++	    (match_operand:V 2 "reg_or_notreg_operand"))
++	  (any_logic2:V
++	    (match_operand:V 3 "reg_or_notreg_operand")
++	    (match_operand:V 4 "reg_or_notreg_operand"))))]
++  "(<MODE_SIZE> == 64 || TARGET_AVX512VL)
++   && ix86_pre_reload_split ()
++   && (rtx_equal_p (STRIP_UNARY (operands[1]),
++		    STRIP_UNARY (operands[4]))
++       || rtx_equal_p (STRIP_UNARY (operands[2]),
++		       STRIP_UNARY (operands[4]))
++       || rtx_equal_p (STRIP_UNARY (operands[1]),
++		       STRIP_UNARY (operands[3]))
++       || rtx_equal_p (STRIP_UNARY (operands[2]),
++		       STRIP_UNARY (operands[3])))"
++  "#"
++  "&& 1"
++  [(set (match_dup 0)
++	(unspec:V
++	  [(match_dup 6)
++	   (match_dup 2)
++	   (match_dup 1)
++	   (match_dup 5)]
++	  UNSPEC_VTERNLOG))]
++{
++  /* VPTERNLOGD reg6, reg2, reg1, imm8.  */
++  int reg6 = 0xF0;
++  int reg2 = 0xCC;
++  int reg1 = 0xAA;
++  int reg3 = 0;
++  int reg4 = 0;
++  int reg_mask, tmp1, tmp2;
++  if (rtx_equal_p (STRIP_UNARY (operands[1]),
++		   STRIP_UNARY (operands[4])))
++    {
++      reg4 = reg1;
++      reg3 = reg6;
++      operands[6] = operands[3];
++    }
++  else if (rtx_equal_p (STRIP_UNARY (operands[2]),
++		       STRIP_UNARY (operands[4])))
++    {
++      reg4 = reg2;
++      reg3 = reg6;
++      operands[6] = operands[3];
++    }
++  else if (rtx_equal_p (STRIP_UNARY (operands[1]),
++			STRIP_UNARY (operands[3])))
++    {
++      reg4 = reg6;
++      reg3 = reg1;
++      operands[6] = operands[4];
++    }
++  else
++    {
++      reg4 = reg6;
++      reg3 = reg2;
++      operands[6] = operands[4];
++    }
++
++  reg1 = UNARY_P (operands[1]) ? ~reg1 : reg1;
++  reg2 = UNARY_P (operands[2]) ? ~reg2 : reg2;
++  reg3 = UNARY_P (operands[3]) ? ~reg3 : reg3;
++  reg4 = UNARY_P (operands[4]) ? ~reg4 : reg4;
++
++  tmp1 = reg1 <any_logic1:logic_op> reg2;
++  tmp2 = reg3 <any_logic2:logic_op> reg4;
++  reg_mask = tmp1  <any_logic:logic_op> tmp2;
++  reg_mask &= 0xFF;
++
++  operands[1] = STRIP_UNARY (operands[1]);
++  operands[2] = STRIP_UNARY (operands[2]);
++  operands[6] = STRIP_UNARY (operands[6]);
++  operands[5] = GEN_INT (reg_mask);
++})
++
++(define_insn_and_split "*<avx512>_vpternlog<mode>_2"
++  [(set (match_operand:V 0 "register_operand")
++	(any_logic:V
++	  (any_logic1:V
++	    (any_logic2:V
++	      (match_operand:V 1 "reg_or_notreg_operand")
++	      (match_operand:V 2 "reg_or_notreg_operand"))
++	    (match_operand:V 3 "reg_or_notreg_operand"))
++	  (match_operand:V 4 "reg_or_notreg_operand")))]
++  "(<MODE_SIZE> == 64 || TARGET_AVX512VL)
++   && ix86_pre_reload_split ()
++   && (rtx_equal_p (STRIP_UNARY (operands[1]),
++		    STRIP_UNARY (operands[4]))
++       || rtx_equal_p (STRIP_UNARY (operands[2]),
++		       STRIP_UNARY (operands[4]))
++       || rtx_equal_p (STRIP_UNARY (operands[1]),
++		       STRIP_UNARY (operands[3]))
++       || rtx_equal_p (STRIP_UNARY (operands[2]),
++		       STRIP_UNARY (operands[3])))"
++  "#"
++  "&& 1"
++  [(set (match_dup 0)
++	(unspec:V
++	  [(match_dup 6)
++	   (match_dup 2)
++	   (match_dup 1)
++	   (match_dup 5)]
++	  UNSPEC_VTERNLOG))]
++{
++  /* VPTERNLOGD reg6, reg2, reg1, imm8.  */
++  int reg6 = 0xF0;
++  int reg2 = 0xCC;
++  int reg1 = 0xAA;
++  int reg3 = 0;
++  int reg4 = 0;
++  int reg_mask, tmp1, tmp2;
++  if (rtx_equal_p (STRIP_UNARY (operands[1]),
++		   STRIP_UNARY (operands[4])))
++    {
++      reg4 = reg1;
++      reg3 = reg6;
++      operands[6] = operands[3];
++    }
++  else if (rtx_equal_p (STRIP_UNARY (operands[2]),
++		       STRIP_UNARY (operands[4])))
++    {
++      reg4 = reg2;
++      reg3 = reg6;
++      operands[6] = operands[3];
++    }
++  else if (rtx_equal_p (STRIP_UNARY (operands[1]),
++			STRIP_UNARY (operands[3])))
++    {
++      reg4 = reg6;
++      reg3 = reg1;
++      operands[6] = operands[4];
++    }
++  else
++    {
++      reg4 = reg6;
++      reg3 = reg2;
++      operands[6] = operands[4];
++    }
++
++  reg1 = UNARY_P (operands[1]) ? ~reg1 : reg1;
++  reg2 = UNARY_P (operands[2]) ? ~reg2 : reg2;
++  reg3 = UNARY_P (operands[3]) ? ~reg3 : reg3;
++  reg4 = UNARY_P (operands[4]) ? ~reg4 : reg4;
++
++  tmp1 = reg1 <any_logic2:logic_op> reg2;
++  tmp2 = tmp1 <any_logic1:logic_op> reg3;
++  reg_mask = tmp2 <any_logic:logic_op> reg4;
++  reg_mask &= 0xFF;
++
++  operands[1] = STRIP_UNARY (operands[1]);
++  operands[2] = STRIP_UNARY (operands[2]);
++  operands[6] = STRIP_UNARY (operands[6]);
++  operands[5] = GEN_INT (reg_mask);
++})
++
++(define_insn_and_split "*<avx512>_vpternlog<mode>_3"
++  [(set (match_operand:V 0 "register_operand")
++	(any_logic:V
++	  (any_logic1:V
++	    (match_operand:V 1 "reg_or_notreg_operand")
++	    (match_operand:V 2 "reg_or_notreg_operand"))
++	  (match_operand:V 3 "reg_or_notreg_operand")))]
++  "(<MODE_SIZE> == 64 || TARGET_AVX512VL)
++   && ix86_pre_reload_split ()"
++  "#"
++  "&& 1"
++  [(set (match_dup 0)
++	(unspec:V
++	  [(match_dup 3)
++	   (match_dup 2)
++	   (match_dup 1)
++	   (match_dup 4)]
++	  UNSPEC_VTERNLOG))]
++{
++  /* VPTERNLOGD reg3, reg2, reg1, imm8.  */
++  int reg3 = 0xF0;
++  int reg2 = 0xCC;
++  int reg1 = 0xAA;
++  int reg_mask, tmp1;
++
++  reg1 = UNARY_P (operands[1]) ? ~reg1 : reg1;
++  reg2 = UNARY_P (operands[2]) ? ~reg2 : reg2;
++  reg3 = UNARY_P (operands[3]) ? ~reg3 : reg3;
++
++  tmp1 = reg1 <any_logic1:logic_op> reg2;
++  reg_mask = tmp1 <any_logic:logic_op> reg3;
++  reg_mask &= 0xFF;
++
++  operands[1] = STRIP_UNARY (operands[1]);
++  operands[2] = STRIP_UNARY (operands[2]);
++  operands[3] = STRIP_UNARY (operands[3]);
++  operands[4] = GEN_INT (reg_mask);
++})
++
++
+ (define_insn "<avx512>_vternlog<mode>_mask"
+   [(set (match_operand:VI48_AVX512VL 0 "register_operand" "=v")
+ 	(vec_merge:VI48_AVX512VL
+ 	  (unspec:VI48_AVX512VL
+ 	    [(match_operand:VI48_AVX512VL 1 "register_operand" "0")
+ 	     (match_operand:VI48_AVX512VL 2 "register_operand" "v")
+-	     (match_operand:VI48_AVX512VL 3 "nonimmediate_operand" "vm")
++	     (match_operand:VI48_AVX512VL 3 "bcst_vector_operand" "vmBr")
+ 	     (match_operand:SI 4 "const_0_to_255_operand")]
+ 	    UNSPEC_VTERNLOG)
+ 	  (match_dup 1)
+@@ -15964,11 +16200,11 @@
     (set_attr "prefix" "orig,maybe_evex,orig,orig,maybe_evex")
     (set_attr "mode" "TI,TI,V4SF,V2SF,V2SF")])
  
@@ -1741,7 +2184,7 @@ index e495725ff7c..ec3dfbc1e3e 100644
    "TARGET_SSE2"
    "@
     %vmovq\t{%1, %0|%0, %1}
-@@ -22154,6 +22156,24 @@
+@@ -22154,6 +22390,24 @@
     (set_attr "prefix" "maybe_evex")
     (set_attr "mode" "<sseinsnmode>")])
  
@@ -1766,7 +2209,7 @@ index e495725ff7c..ec3dfbc1e3e 100644
  (define_insn "vcvtph2ps<mask_name>"
    [(set (match_operand:V4SF 0 "register_operand" "=v")
  	(vec_select:V4SF
-@@ -24323,3 +24343,34 @@
+@@ -24323,3 +24577,34 @@
    "TARGET_WIDEKL"
    "aes<aeswideklvariant>\t{%0}"
    [(set_attr "type" "other")])
@@ -1801,6 +2244,335 @@ index e495725ff7c..ec3dfbc1e3e 100644
 +    gcc_unreachable ();
 +  DONE;
 +})
+diff --git a/gcc/config/i386/x86-tune-costs.h b/gcc/config/i386/x86-tune-costs.h
+index ffe810f2bcb..93644be9cb3 100644
+--- a/gcc/config/i386/x86-tune-costs.h
++++ b/gcc/config/i386/x86-tune-costs.h
+@@ -2734,6 +2734,130 @@ struct processor_costs slm_cost = {
+   "16",					/* Func alignment.  */
+ };
+ 
++static stringop_algs tremont_memcpy[2] = {
++  {libcall,
++   {{256, rep_prefix_1_byte, true},
++    {256, loop, false},
++    {-1, libcall, false}}},
++  {libcall,
++   {{256, rep_prefix_1_byte, true},
++    {256, loop, false},
++    {-1, libcall, false}}}};
++static stringop_algs tremont_memset[2] = {
++  {libcall,
++   {{256, rep_prefix_1_byte, true},
++    {256, loop, false},
++    {-1, libcall, false}}},
++  {libcall,
++   {{256, rep_prefix_1_byte, true},
++    {256, loop, false},
++    {-1, libcall, false}}}};
++static const
++struct processor_costs tremont_cost = {
++  {
++  /* Start of register allocator costs.  integer->integer move cost is 2. */
++  6,				     /* cost for loading QImode using movzbl */
++  {6, 6, 6},				/* cost of loading integer registers
++					   in QImode, HImode and SImode.
++					   Relative to reg-reg move (2).  */
++  {6, 6, 6},				/* cost of storing integer registers */
++  4,					/* cost of reg,reg fld/fst */
++  {6, 6, 12},				/* cost of loading fp registers
++					   in SFmode, DFmode and XFmode */
++  {6, 6, 12},				/* cost of storing fp registers
++					   in SFmode, DFmode and XFmode */
++  2,					/* cost of moving MMX register */
++  {6, 6},				/* cost of loading MMX registers
++					   in SImode and DImode */
++  {6, 6},				/* cost of storing MMX registers
++					   in SImode and DImode */
++  2, 3, 4,				/* cost of moving XMM,YMM,ZMM register */
++  {6, 6, 6, 10, 15},			/* cost of loading SSE registers
++					   in 32,64,128,256 and 512-bit */
++  {6, 6, 6, 10, 15},			/* cost of storing SSE registers
++					   in 32,64,128,256 and 512-bit */
++  6, 6,				/* SSE->integer and integer->SSE moves */
++  6, 6,				/* mask->integer and integer->mask moves */
++  {6, 6, 6},				/* cost of loading mask register
++					   in QImode, HImode, SImode.  */
++  {6, 6, 6},			/* cost if storing mask register
++					   in QImode, HImode, SImode.  */
++  2,					/* cost of moving mask register.  */
++  /* End of register allocator costs.  */
++  },
++
++  COSTS_N_INSNS (1),			/* cost of an add instruction */
++  /* Setting cost to 2 makes our current implementation of synth_mult result in
++     use of unnecessary temporary registers causing regression on several
++     SPECfp benchmarks.  */
++  COSTS_N_INSNS (1) + 1,		/* cost of a lea instruction */
++  COSTS_N_INSNS (1),			/* variable shift costs */
++  COSTS_N_INSNS (1),			/* constant shift costs */
++  {COSTS_N_INSNS (3),			/* cost of starting multiply for QI */
++   COSTS_N_INSNS (4),			/*				 HI */
++   COSTS_N_INSNS (3),			/*				 SI */
++   COSTS_N_INSNS (4),			/*				 DI */
++   COSTS_N_INSNS (4)},			/*			      other */
++  0,					/* cost of multiply per each bit set */
++  {COSTS_N_INSNS (16),			/* cost of a divide/mod for QI */
++   COSTS_N_INSNS (22),			/*			    HI */
++   COSTS_N_INSNS (30),			/*			    SI */
++   COSTS_N_INSNS (74),			/*			    DI */
++   COSTS_N_INSNS (74)},			/*			    other */
++  COSTS_N_INSNS (1),			/* cost of movsx */
++  COSTS_N_INSNS (1),			/* cost of movzx */
++  8,					/* "large" insn */
++  17,					/* MOVE_RATIO */
++  17,					/* CLEAR_RATIO */
++  {6, 6, 6},				/* cost of loading integer registers
++					   in QImode, HImode and SImode.
++					   Relative to reg-reg move (2).  */
++  {6, 6, 6},				/* cost of storing integer registers */
++  {6, 6, 6, 10, 15},			/* cost of loading SSE register
++					   in 32bit, 64bit, 128bit, 256bit and 512bit */
++  {6, 6, 6, 10, 15},			/* cost of storing SSE register
++					   in 32bit, 64bit, 128bit, 256bit and 512bit */
++  {6, 6, 6, 10, 15},			/* cost of unaligned loads.  */
++  {6, 6, 6, 10, 15},			/* cost of unaligned storess.  */
++  2, 3, 4,				/* cost of moving XMM,YMM,ZMM register */
++  6,					/* cost of moving SSE register to integer.  */
++  18, 6,				/* Gather load static, per_elt.  */
++  18, 6,				/* Gather store static, per_elt.  */
++  32,					/* size of l1 cache.  */
++  512,					/* size of l2 cache.  */
++  64,					/* size of prefetch block */
++  6,					/* number of parallel prefetches */
++  /* Benchmarks shows large regressions on K8 sixtrack benchmark when this
++     value is increased to perhaps more appropriate value of 5.  */
++  3,					/* Branch cost */
++  COSTS_N_INSNS (3),			/* cost of FADD and FSUB insns.  */
++  COSTS_N_INSNS (5),			/* cost of FMUL instruction.  */
++  COSTS_N_INSNS (17),			/* cost of FDIV instruction.  */
++  COSTS_N_INSNS (1),			/* cost of FABS instruction.  */
++  COSTS_N_INSNS (1),			/* cost of FCHS instruction.  */
++  COSTS_N_INSNS (14),			/* cost of FSQRT instruction.  */
++
++  COSTS_N_INSNS (1),			/* cost of cheap SSE instruction.  */
++  COSTS_N_INSNS (3),			/* cost of ADDSS/SD SUBSS/SD insns.  */
++  COSTS_N_INSNS (4),			/* cost of MULSS instruction.  */
++  COSTS_N_INSNS (5),			/* cost of MULSD instruction.  */
++  COSTS_N_INSNS (5),			/* cost of FMA SS instruction.  */
++  COSTS_N_INSNS (5),			/* cost of FMA SD instruction.  */
++  COSTS_N_INSNS (13),			/* cost of DIVSS instruction.  */
++  COSTS_N_INSNS (17),			/* cost of DIVSD instruction.  */
++  COSTS_N_INSNS (14),			/* cost of SQRTSS instruction.  */
++  COSTS_N_INSNS (18),			/* cost of SQRTSD instruction.  */
++  1, 4, 3, 3,				/* reassoc int, fp, vec_int, vec_fp.  */
++  tremont_memcpy,
++  tremont_memset,
++  COSTS_N_INSNS (4),			/* cond_taken_branch_cost.  */
++  COSTS_N_INSNS (2),			/* cond_not_taken_branch_cost.  */
++  "16:11:8",				/* Loop alignment.  */
++  "16:11:8",				/* Jump alignment.  */
++  "0:0:8",				/* Label alignment.  */
++  "16",					/* Func alignment.  */
++};
++
+ static stringop_algs intel_memcpy[2] = {
+   {libcall, {{11, loop, false}, {-1, rep_prefix_4_byte, false}}},
+   {libcall, {{32, loop, false}, {64, rep_prefix_4_byte, false},
+diff --git a/gcc/config/i386/x86-tune-sched.c b/gcc/config/i386/x86-tune-sched.c
+index 2bcc64b865a..278035eec0b 100644
+--- a/gcc/config/i386/x86-tune-sched.c
++++ b/gcc/config/i386/x86-tune-sched.c
+@@ -71,6 +71,7 @@ ix86_issue_rate (void)
+     case PROCESSOR_NEHALEM:
+     case PROCESSOR_SANDYBRIDGE:
+     case PROCESSOR_HASWELL:
++    case PROCESSOR_TREMONT:
+     case PROCESSOR_GENERIC:
+       return 4;
+ 
+@@ -430,6 +431,7 @@ ix86_adjust_cost (rtx_insn *insn, int dep_type, rtx_insn *dep_insn, int cost,
+     case PROCESSOR_NEHALEM:
+     case PROCESSOR_SANDYBRIDGE:
+     case PROCESSOR_HASWELL:
++    case PROCESSOR_TREMONT:
+     case PROCESSOR_GENERIC:
+       /* Stack engine allows to execute push&pop instructions in parall.  */
+       if ((insn_type == TYPE_PUSH || insn_type == TYPE_POP)
+diff --git a/gcc/config/i386/x86-tune.def b/gcc/config/i386/x86-tune.def
+index eb057a67750..b5166fb1316 100644
+--- a/gcc/config/i386/x86-tune.def
++++ b/gcc/config/i386/x86-tune.def
+@@ -62,6 +62,21 @@ DEF_TUNE (X86_TUNE_PARTIAL_REG_DEPENDENCY, "partial_reg_dependency",
+    that can be partly masked by careful scheduling of moves.  */
+ DEF_TUNE (X86_TUNE_SSE_PARTIAL_REG_DEPENDENCY, "sse_partial_reg_dependency",
+           m_PPRO | m_P4_NOCONA | m_CORE_ALL | m_BONNELL | m_AMDFAM10
++	  | m_BDVER | m_ZNVER | m_TREMONT | m_GENERIC)
++
++/* X86_TUNE_SSE_PARTIAL_REG_FP_CONVERTS_DEPENDENCY: This knob avoids
++   partial write to the destination in scalar SSE conversion from FP
++   to FP.  */
++DEF_TUNE (X86_TUNE_SSE_PARTIAL_REG_FP_CONVERTS_DEPENDENCY,
++	  "sse_partial_reg_fp_converts_dependency",
++	  m_PPRO | m_P4_NOCONA | m_CORE_ALL | m_BONNELL | m_AMDFAM10
++	  | m_BDVER | m_ZNVER | m_GENERIC)
++
++/* X86_TUNE_SSE_PARTIAL_REG_CONVERTS_DEPENDENCY: This knob avoids partial
++   write to the destination in scalar SSE conversion from integer to FP.  */
++DEF_TUNE (X86_TUNE_SSE_PARTIAL_REG_CONVERTS_DEPENDENCY,
++	  "sse_partial_reg_converts_dependency",
++	  m_PPRO | m_P4_NOCONA | m_CORE_ALL | m_BONNELL | m_AMDFAM10
+ 	  | m_BDVER | m_ZNVER | m_GENERIC)
+ 
+ /* X86_TUNE_SSE_SPLIT_REGS: Set for machines where the type and dependencies
+@@ -136,7 +151,7 @@ DEF_TUNE (X86_TUNE_FUSE_ALU_AND_BRANCH, "fuse_alu_and_branch",
+ 
+ DEF_TUNE (X86_TUNE_ACCUMULATE_OUTGOING_ARGS, "accumulate_outgoing_args",
+ 	  m_PPRO | m_P4_NOCONA | m_BONNELL | m_SILVERMONT | m_KNL | m_KNM | m_INTEL
+-	  | m_GOLDMONT | m_GOLDMONT_PLUS | m_TREMONT | m_ATHLON_K8)
++	  | m_GOLDMONT | m_GOLDMONT_PLUS | m_ATHLON_K8)
+ 
+ /* X86_TUNE_PROLOGUE_USING_MOVE: Do not use push/pop in prologues that are
+    considered on critical path.  */
+@@ -150,14 +165,15 @@ DEF_TUNE (X86_TUNE_EPILOGUE_USING_MOVE, "epilogue_using_move",
+ 
+ /* X86_TUNE_USE_LEAVE: Use "leave" instruction in epilogues where it fits.  */
+ DEF_TUNE (X86_TUNE_USE_LEAVE, "use_leave",
+-	  m_386 | m_CORE_ALL | m_K6_GEODE | m_AMD_MULTIPLE | m_GENERIC)
++	  m_386 | m_CORE_ALL | m_K6_GEODE | m_AMD_MULTIPLE | m_TREMONT
++	  | m_GENERIC)
+ 
+ /* X86_TUNE_PUSH_MEMORY: Enable generation of "push mem" instructions.
+    Some chips, like 486 and Pentium works faster with separate load
+    and push instructions.  */
+ DEF_TUNE (X86_TUNE_PUSH_MEMORY, "push_memory",
+           m_386 | m_P4_NOCONA | m_CORE_ALL | m_K6_GEODE | m_AMD_MULTIPLE
+-          | m_GENERIC)
++          | m_TREMONT | m_GENERIC)
+ 
+ /* X86_TUNE_SINGLE_PUSH: Enable if single push insn is preferred
+    over esp subtraction.  */
+@@ -198,8 +214,7 @@ DEF_TUNE (X86_TUNE_PAD_RETURNS, "pad_returns",
+    than 4 branch instructions in the 16 byte window.  */
+ DEF_TUNE (X86_TUNE_FOUR_JUMP_LIMIT, "four_jump_limit",
+           m_PPRO | m_P4_NOCONA | m_BONNELL | m_SILVERMONT | m_KNL | m_KNM
+-	  | m_GOLDMONT | m_GOLDMONT_PLUS | m_TREMONT | m_INTEL | m_ATHLON_K8
+-	  | m_AMDFAM10)
++	  | m_GOLDMONT | m_GOLDMONT_PLUS | m_INTEL | m_ATHLON_K8 | m_AMDFAM10)
+ 
+ /*****************************************************************************/
+ /* Integer instruction selection tuning                                      */
+@@ -240,11 +255,11 @@ DEF_TUNE (X86_TUNE_INTEGER_DFMODE_MOVES, "integer_dfmode_moves",
+ /* X86_TUNE_OPT_AGU: Optimize for Address Generation Unit. This flag
+    will impact LEA instruction selection. */
+ DEF_TUNE (X86_TUNE_OPT_AGU, "opt_agu", m_BONNELL | m_SILVERMONT | m_KNL
+-	 | m_KNM | m_GOLDMONT | m_GOLDMONT_PLUS | m_TREMONT | m_INTEL)
++	 | m_KNM | m_GOLDMONT | m_GOLDMONT_PLUS | m_INTEL)
+ 
+ /* X86_TUNE_AVOID_LEA_FOR_ADDR: Avoid lea for address computation.  */
+ DEF_TUNE (X86_TUNE_AVOID_LEA_FOR_ADDR, "avoid_lea_for_addr",
+-	  m_BONNELL | m_SILVERMONT | m_GOLDMONT | m_GOLDMONT_PLUS | m_TREMONT
++	  m_BONNELL | m_SILVERMONT | m_GOLDMONT | m_GOLDMONT_PLUS
+ 	  | m_KNL | m_KNM)
+ 
+ /* X86_TUNE_SLOW_IMUL_IMM32_MEM: Imul of 32-bit constant and memory is
+@@ -263,7 +278,7 @@ DEF_TUNE (X86_TUNE_SLOW_IMUL_IMM8, "slow_imul_imm8",
+    a conditional move.  */
+ DEF_TUNE (X86_TUNE_AVOID_MEM_OPND_FOR_CMOVE, "avoid_mem_opnd_for_cmove",
+ 	  m_BONNELL | m_SILVERMONT | m_GOLDMONT | m_GOLDMONT_PLUS | m_KNL
+-	  | m_KNM | m_TREMONT | m_INTEL)
++	  | m_KNM | m_INTEL)
+ 
+ /* X86_TUNE_SINGLE_STRINGOP: Enable use of single string operations, such
+    as MOVS and STOS (without a REP prefix) to move/set sequences of bytes.  */
+@@ -273,7 +288,7 @@ DEF_TUNE (X86_TUNE_SINGLE_STRINGOP, "single_stringop", m_386 | m_P4_NOCONA)
+    move/set sequences of bytes with known size.  */
+ DEF_TUNE (X86_TUNE_PREFER_KNOWN_REP_MOVSB_STOSB,
+ 	  "prefer_known_rep_movsb_stosb",
+-	  m_SKYLAKE | m_ALDERLAKE | m_CORE_AVX512)
++	  m_SKYLAKE | m_ALDERLAKE | m_TREMONT | m_CORE_AVX512)
+ 
+ /* X86_TUNE_MISALIGNED_MOVE_STRING_PRO_EPILOGUES: Enable generation of
+    compact prologues and epilogues by issuing a misaligned moves.  This
+@@ -282,7 +297,8 @@ DEF_TUNE (X86_TUNE_PREFER_KNOWN_REP_MOVSB_STOSB,
+    FIXME: This may actualy be a win on more targets than listed here.  */
+ DEF_TUNE (X86_TUNE_MISALIGNED_MOVE_STRING_PRO_EPILOGUES,
+ 	  "misaligned_move_string_pro_epilogues",
+-	  m_386 | m_486 | m_CORE_ALL | m_AMD_MULTIPLE | m_GENERIC)
++	  m_386 | m_486 | m_CORE_ALL | m_AMD_MULTIPLE | m_TREMONT
++	  | m_GENERIC)
+ 
+ /* X86_TUNE_USE_SAHF: Controls use of SAHF.  */
+ DEF_TUNE (X86_TUNE_USE_SAHF, "use_sahf",
+@@ -294,7 +310,7 @@ DEF_TUNE (X86_TUNE_USE_SAHF, "use_sahf",
+ /* X86_TUNE_USE_CLTD: Controls use of CLTD and CTQO instructions.  */
+ DEF_TUNE (X86_TUNE_USE_CLTD, "use_cltd",
+ 	  ~(m_PENT | m_LAKEMONT | m_BONNELL | m_SILVERMONT | m_KNL | m_KNM | m_INTEL
+-	    | m_K6 | m_GOLDMONT | m_GOLDMONT_PLUS | m_TREMONT))
++	    | m_K6 | m_GOLDMONT | m_GOLDMONT_PLUS))
+ 
+ /* X86_TUNE_USE_BT: Enable use of BT (bit test) instructions.  */
+ DEF_TUNE (X86_TUNE_USE_BT, "use_bt",
+@@ -305,7 +321,7 @@ DEF_TUNE (X86_TUNE_USE_BT, "use_bt",
+ /* X86_TUNE_AVOID_FALSE_DEP_FOR_BMI: Avoid false dependency
+    for bit-manipulation instructions.  */
+ DEF_TUNE (X86_TUNE_AVOID_FALSE_DEP_FOR_BMI, "avoid_false_dep_for_bmi",
+-	  m_SANDYBRIDGE | m_CORE_AVX2 | m_GENERIC)
++	  m_SANDYBRIDGE | m_CORE_AVX2 | m_TREMONT | m_GENERIC)
+ 
+ /* X86_TUNE_ADJUST_UNROLL: This enables adjusting the unroll factor based
+    on hardware capabilities. Bdver3 hardware has a loop buffer which makes
+@@ -321,14 +337,14 @@ DEF_TUNE (X86_TUNE_ONE_IF_CONV_INSN, "one_if_conv_insn",
+ 
+ /* X86_TUNE_AVOID_MFENCE: Use lock prefixed instructions instead of mfence.  */
+ DEF_TUNE (X86_TUNE_AVOID_MFENCE, "avoid_mfence",
+-	 m_CORE_ALL | m_BDVER | m_ZNVER | m_GENERIC)
++	 m_CORE_ALL | m_BDVER | m_ZNVER | m_TREMONT | m_GENERIC)
+ 
+ /* X86_TUNE_EXPAND_ABS: This enables a new abs pattern by
+    generating instructions for abs (x) = (((signed) x >> (W-1) ^ x) -
+    (signed) x >> (W-1)) instead of cmove or SSE max/abs instructions.  */
+ DEF_TUNE (X86_TUNE_EXPAND_ABS, "expand_abs",
+ 	  m_CORE_ALL | m_SILVERMONT | m_KNL | m_KNM | m_GOLDMONT
+-	  | m_GOLDMONT_PLUS | m_TREMONT )
++	  | m_GOLDMONT_PLUS)
+ 
+ /*****************************************************************************/
+ /* 387 instruction selection tuning                                          */
+@@ -386,13 +402,13 @@ DEF_TUNE (X86_TUNE_SSE_PACKED_SINGLE_INSN_OPTIMAL, "sse_packed_single_insn_optim
+ 
+ /* X86_TUNE_SSE_TYPELESS_STORES: Always movaps/movups for 128bit stores.   */
+ DEF_TUNE (X86_TUNE_SSE_TYPELESS_STORES, "sse_typeless_stores",
+-	  m_AMD_MULTIPLE | m_CORE_ALL | m_GENERIC)
++	  m_AMD_MULTIPLE | m_CORE_ALL | m_TREMONT | m_GENERIC)
+ 
+ /* X86_TUNE_SSE_LOAD0_BY_PXOR: Always use pxor to load0 as opposed to
+    xorps/xorpd and other variants.  */
+ DEF_TUNE (X86_TUNE_SSE_LOAD0_BY_PXOR, "sse_load0_by_pxor",
+ 	  m_PPRO | m_P4_NOCONA | m_CORE_ALL | m_BDVER | m_BTVER | m_ZNVER
+-	  | m_GENERIC)
++	  | m_TREMONT | m_GENERIC)
+ 
+ /* X86_TUNE_INTER_UNIT_MOVES_TO_VEC: Enable moves in from integer
+    to SSE registers.  If disabled, the moves will be done by storing
+@@ -419,7 +435,7 @@ DEF_TUNE (X86_TUNE_INTER_UNIT_CONVERSIONS, "inter_unit_conversions",
+    fp converts to destination register.  */
+ DEF_TUNE (X86_TUNE_SPLIT_MEM_OPND_FOR_FP_CONVERTS, "split_mem_opnd_for_fp_converts",
+ 	  m_SILVERMONT | m_KNL | m_KNM | m_GOLDMONT | m_GOLDMONT_PLUS
+-	  | m_TREMONT | m_INTEL)
++	  | m_INTEL)
+ 
+ /* X86_TUNE_USE_VECTOR_FP_CONVERTS: Prefer vector packed SSE conversion
+    from FP to FP.  This form of instructions avoids partial write to the
+@@ -434,7 +450,7 @@ DEF_TUNE (X86_TUNE_USE_VECTOR_CONVERTS, "use_vector_converts", m_AMDFAM10)
+ /* X86_TUNE_SLOW_SHUFB: Indicates tunings with slow pshufb instruction.  */
+ DEF_TUNE (X86_TUNE_SLOW_PSHUFB, "slow_pshufb",
+ 	  m_BONNELL | m_SILVERMONT | m_KNL | m_KNM | m_GOLDMONT
+-	  | m_GOLDMONT_PLUS | m_TREMONT | m_INTEL)
++	  | m_GOLDMONT_PLUS | m_INTEL)
+ 
+ /* X86_TUNE_AVOID_4BYTE_PREFIXES: Avoid instructions requiring 4+ bytes of prefixes.  */
+ DEF_TUNE (X86_TUNE_AVOID_4BYTE_PREFIXES, "avoid_4byte_prefixes",
 diff --git a/gcc/config/m32c/m32c.c b/gcc/config/m32c/m32c.c
 index b1cb3591da6..d22bdd79c71 100644
 --- a/gcc/config/m32c/m32c.c
@@ -2603,6 +3375,25 @@ index add9a742e41..71781c790a1 100644
  extern bool hook_bool_uint_uintp_false (unsigned int, unsigned int *);
  
  extern int hook_int_uint_mode_1 (unsigned int, machine_mode);
+diff --git a/gcc/lra-constraints.c b/gcc/lra-constraints.c
+index 5c2a2d7ce9c..aaacc4eabed 100644
+--- a/gcc/lra-constraints.c
++++ b/gcc/lra-constraints.c
+@@ -5805,11 +5805,12 @@ split_reg (bool before_p, int original_regno, rtx_insn *insn,
+ 	 part of a multi-word register.  In that case, just use the reg_rtx
+ 	 mode.  Do the same also if the biggest mode was larger than a register
+ 	 or we can not compare the modes.  Otherwise, limit the size to that of
+-	 the biggest access in the function.  */
++	 the biggest access in the function or to the natural mode at least.  */
+       if (mode == VOIDmode
+ 	  || !ordered_p (GET_MODE_PRECISION (mode),
+ 			 GET_MODE_PRECISION (reg_rtx_mode))
+-	  || paradoxical_subreg_p (mode, reg_rtx_mode))
++	  || paradoxical_subreg_p (mode, reg_rtx_mode)
++	  || maybe_gt (GET_MODE_PRECISION (reg_rtx_mode), GET_MODE_PRECISION (mode)))
+ 	{
+ 	  original_reg = regno_reg_rtx[hard_regno];
+ 	  mode = reg_rtx_mode;
 diff --git a/gcc/rtl.h b/gcc/rtl.h
 index 398d745aff5..fa9574ef70d 100644
 --- a/gcc/rtl.h
@@ -2851,6 +3642,72 @@ index 00000000000..471fe92bc86
 +    __builtin_abort ();
 +  return 0;
 +}
+diff --git a/gcc/testsuite/gcc.target/i386/avx-covert-1.c b/gcc/testsuite/gcc.target/i386/avx-covert-1.c
+new file mode 100644
+index 00000000000..b6c794ecbb8
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/avx-covert-1.c
+@@ -0,0 +1,19 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -march=skylake -mfpmath=sse -mtune-ctrl=^sse_partial_reg_fp_converts_dependency,^sse_partial_reg_converts_dependency" } */
++
++extern float f;
++extern double d;
++extern int i;
++
++void
++foo (void)
++{
++  d = f;
++  f = i;
++}
++
++/* { dg-final { scan-assembler "vcvtss2sd" } } */
++/* { dg-final { scan-assembler "vcvtsi2ssl" } } */
++/* { dg-final { scan-assembler-not "vcvtps2pd" } } */
++/* { dg-final { scan-assembler-not "vcvtdq2ps" } } */
++/* { dg-final { scan-assembler-not "vxorps" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/avx-fp-covert-1.c b/gcc/testsuite/gcc.target/i386/avx-fp-covert-1.c
+new file mode 100644
+index 00000000000..c40c48b1b2d
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/avx-fp-covert-1.c
+@@ -0,0 +1,15 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -march=skylake -mfpmath=sse -mtune-ctrl=^sse_partial_reg_fp_converts_dependency" } */
++
++extern float f;
++extern double d;
++
++void
++foo (void)
++{
++  d = f;
++}
++
++/* { dg-final { scan-assembler "vcvtss2sd" } } */
++/* { dg-final { scan-assembler-not "vcvtps2pd" } } */
++/* { dg-final { scan-assembler-not "vxorps" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/avx-int-covert-1.c b/gcc/testsuite/gcc.target/i386/avx-int-covert-1.c
+new file mode 100644
+index 00000000000..01bb64e66cc
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/avx-int-covert-1.c
+@@ -0,0 +1,14 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -march=skylake -mfpmath=sse -mtune-ctrl=^sse_partial_reg_converts_dependency" } */
++
++extern float f;
++extern int i;
++
++void
++foo (void)
++{
++  f = i;
++}
++
++/* { dg-final { scan-assembler "vcvtsi2ssl" } } */
++/* { dg-final { scan-assembler-not "vxorps" } } */
 diff --git a/gcc/testsuite/gcc.target/i386/avx-pr102224.c b/gcc/testsuite/gcc.target/i386/avx-pr102224.c
 index be6b88c05db..7cb8b4cdecb 100644
 --- a/gcc/testsuite/gcc.target/i386/avx-pr102224.c
@@ -3065,6 +3922,28 @@ index 00000000000..81917bfbc71
 +{
 +  return (V){(__int128) 1 << 64 | 1, (__int128) 1 << 64 | 1};
 +}
+diff --git a/gcc/testsuite/gcc.target/i386/avx512bw-shiftqihi-constant-1.c b/gcc/testsuite/gcc.target/i386/avx512bw-shiftqihi-constant-1.c
+index 78bf5d33689..fbc3de08119 100644
+--- a/gcc/testsuite/gcc.target/i386/avx512bw-shiftqihi-constant-1.c
++++ b/gcc/testsuite/gcc.target/i386/avx512bw-shiftqihi-constant-1.c
+@@ -1,7 +1,8 @@
+ /* PR target/95524 */
+ /* { dg-do compile } */
+ /* { dg-options "-O2 -mavx512bw" } */
+-/* { dg-final { scan-assembler-times "vpand\[^\n\]*%zmm" 3 } }  */
++/* { dg-final { scan-assembler-times "vpand\[^\n\]*%zmm" 2 } }  */
++/* { dg-final { scan-assembler-times "vpternlogd\[^\n\]*%zmm" 1 } }  */
+ typedef char v64qi  __attribute__ ((vector_size (64)));
+ typedef unsigned char v64uqi  __attribute__ ((vector_size (64)));
+ 
+@@ -11,7 +12,6 @@ foo_ashiftrt_512 (v64qi a)
+   return a >> 2;
+ }
+ /* { dg-final { scan-assembler-times "vpsraw\[^\n\]*%zmm" 1 } } */
+-/* { dg-final { scan-assembler-times "vpxor\[^\n\]*%zmm" 1 } } */
+ /* { dg-final { scan-assembler-times "vpsubb\[^\n\]*%zmm" 1 } } */
+ 
+ __attribute__((noipa)) v64qi
 diff --git a/gcc/testsuite/gcc.target/i386/avx512dq-abs-copysign-1.c b/gcc/testsuite/gcc.target/i386/avx512dq-abs-copysign-1.c
 index cb542d09058..0107df7741a 100644
 --- a/gcc/testsuite/gcc.target/i386/avx512dq-abs-copysign-1.c
@@ -5375,6 +6254,79 @@ index 00000000000..ba19064077b
 +/* { dg-additional-options "-O3 -mtune=nano-x2 -mtune-ctrl=sse_unaligned_store_optimal" } */
 +
 +#include "pr101742a.c"
+diff --git a/gcc/testsuite/gcc.target/i386/pr101900-1.c b/gcc/testsuite/gcc.target/i386/pr101900-1.c
+new file mode 100644
+index 00000000000..0a45f8e340a
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr101900-1.c
+@@ -0,0 +1,18 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -march=skylake -mfpmath=sse -mtune-ctrl=use_vector_fp_converts" } */
++
++extern float f;
++extern double d;
++extern int i;
++
++void
++foo (void)
++{
++  d = f;
++  f = i;
++}
++
++/* { dg-final { scan-assembler "vcvtps2pd" } } */
++/* { dg-final { scan-assembler "vcvtsi2ssl" } } */
++/* { dg-final { scan-assembler-not "vcvtss2sd" } } */
++/* { dg-final { scan-assembler-times "vxorps\[^\n\r\]*xmm\[0-9\]" 1 } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr101900-2.c b/gcc/testsuite/gcc.target/i386/pr101900-2.c
+new file mode 100644
+index 00000000000..c8b2d1da5ae
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr101900-2.c
+@@ -0,0 +1,18 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -march=skylake -mfpmath=sse -mtune-ctrl=use_vector_converts" } */
++
++extern float f;
++extern double d;
++extern int i;
++
++void
++foo (void)
++{
++  d = f;
++  f = i;
++}
++
++/* { dg-final { scan-assembler "vcvtss2sd" } } */
++/* { dg-final { scan-assembler "vcvtdq2ps" } } */
++/* { dg-final { scan-assembler-not "vcvtsi2ssl" } } */
++/* { dg-final { scan-assembler-times "vxorps\[^\n\r\]*xmm\[0-9\]" 1 } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr101900-3.c b/gcc/testsuite/gcc.target/i386/pr101900-3.c
+new file mode 100644
+index 00000000000..6ee565b5bd4
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr101900-3.c
+@@ -0,0 +1,19 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -march=skylake -mfpmath=sse -mtune-ctrl=use_vector_fp_converts,use_vector_converts" } */
++
++extern float f;
++extern double d;
++extern int i;
++
++void
++foo (void)
++{
++  d = f;
++  f = i;
++}
++
++/* { dg-final { scan-assembler "vcvtps2pd" } } */
++/* { dg-final { scan-assembler "vcvtdq2ps" } } */
++/* { dg-final { scan-assembler-not "vcvtss2sd" } } */
++/* { dg-final { scan-assembler-not "vcvtsi2ssl" } } */
++/* { dg-final { scan-assembler-not "vxorps" } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pr101930.c b/gcc/testsuite/gcc.target/i386/pr101930.c
 new file mode 100644
 index 00000000000..7207dd18377
@@ -5389,6 +6341,208 @@ index 00000000000..7207dd18377
 +foo (int b)
 +{
 +  return __builtin_ldexp (a, b);
++}
+diff --git a/gcc/testsuite/gcc.target/i386/pr101989-1.c b/gcc/testsuite/gcc.target/i386/pr101989-1.c
+new file mode 100644
+index 00000000000..594093ecdde
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr101989-1.c
+@@ -0,0 +1,51 @@
++/* { dg-do compile } */
++/* { dg-options "-O2" } */
++/* { dg-final { scan-assembler-times "vpternlog" 6 } } */
++/* { dg-final { scan-assembler-not "vpxor" } } */
++/* { dg-final { scan-assembler-not "vpor" } } */
++/* { dg-final { scan-assembler-not "vpand" } } */
++
++#include<immintrin.h>
++__m256d
++__attribute__((noipa, target("avx512vl")))
++copysign2_pd(__m256d from, __m256d to) {
++  __m256i a = _mm256_castpd_si256(from);
++  __m256d avx_signbit = _mm256_castsi256_pd(_mm256_slli_epi64(_mm256_cmpeq_epi64(a, a), 63));
++  /* (avx_signbit & from) | (~avx_signbit & to)  */
++  return _mm256_or_pd(_mm256_and_pd(avx_signbit, from), _mm256_andnot_pd(avx_signbit, to));
++}
++
++__m256i
++__attribute__((noipa, target("avx512vl")))
++foo (__m256i src1, __m256i src2, __m256i src3)
++{
++  return (src2 & ~src1) | (src3 & src1);
++}
++
++__m256i
++__attribute__ ((noipa, target("avx512vl")))
++foo1 (__m256i src1, __m256i src2, __m256i src3)
++{
++  return (src2 & src1) | (src3 & ~src1);
++}
++
++__m256i
++__attribute__ ((noipa, target("avx512vl")))
++foo2 (__m256i src1, __m256i src2, __m256i src3)
++{
++  return (src2 & src1) | (~src3 & src1);
++}
++
++__m256i
++__attribute__ ((noipa, target("avx512vl")))
++foo3 (__m256i src1, __m256i src2, __m256i src3)
++{
++  return (~src2 & src1) | (src3 & src1);
++}
++
++__m256i
++__attribute__ ((noipa, target("avx512vl")))
++foo4 (__m256i src1, __m256i src2, __m256i src3)
++{
++  return src3 & src2 ^ src1;
++}
+diff --git a/gcc/testsuite/gcc.target/i386/pr101989-2.c b/gcc/testsuite/gcc.target/i386/pr101989-2.c
+new file mode 100644
+index 00000000000..9d9759a8e1d
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr101989-2.c
+@@ -0,0 +1,102 @@
++/* { dg-do run } */
++/* { dg-options "-O2 -mavx2 -mno-avx512f" } */
++/* { dg-require-effective-target avx512vl } */
++
++#define AVX512VL
++
++#include "avx512f-helper.h"
++
++#include "pr101989-1.c"
++__m256d
++avx2_copysign2_pd (__m256d from, __m256d to) {
++  __m256i a = _mm256_castpd_si256(from);
++  __m256d avx_signbit = _mm256_castsi256_pd(_mm256_slli_epi64(_mm256_cmpeq_epi64(a, a), 63));
++  /* (avx_signbit & from) | (~avx_signbit & to)  */
++  return _mm256_or_pd(_mm256_and_pd(avx_signbit, from), _mm256_andnot_pd(avx_signbit, to));
++}
++
++__m256i
++avx2_foo (__m256i src1, __m256i src2, __m256i src3)
++{
++  return (src2 & ~src1) | (src3 & src1);
++}
++
++__m256i
++avx2_foo1 (__m256i src1, __m256i src2, __m256i src3)
++{
++  return (src2 & src1) | (src3 & ~src1);
++}
++
++__m256i
++avx2_foo2 (__m256i src1, __m256i src2, __m256i src3)
++{
++  return (src2 & src1) | (~src3 & src1);
++}
++
++__m256i
++avx2_foo3 (__m256i src1, __m256i src2, __m256i src3)
++{
++  return (~src2 & src1) | (src3 & src1);
++}
++
++__m256i
++avx2_foo4 (__m256i src1, __m256i src2, __m256i src3)
++{
++  return src3 & src2 ^ src1;
++}
++
++
++void
++test_256 (void)
++{
++  union256i_q q1, q2, q3, res2, exp2;
++  union256d d1, d2, res1, exp1;
++  int i, sign = 1;
++
++  for (i = 0; i < 4; i++)
++    {
++      d1.a[i] = 12.34 * (i + 2000) * sign;
++      d2.a[i] = 56.78 * (i - 30) * sign;
++      q1.a[i] = 12 * (i + 2000) * sign;
++      q2.a[i] = 56 * (i - 30) * sign;
++      q3.a[i] = 90 * (i + 40) * sign;
++      res1.a[i] = DEFAULT_VALUE;
++      exp1.a[i] = DEFAULT_VALUE;
++      res2.a[i] = exp2.a[i] = -1;
++      sign = -sign;
++    }
++
++  exp1.x = avx2_copysign2_pd (d1.x, d2.x);
++  res1.x = copysign2_pd (d1.x, d2.x);
++  if (UNION_CHECK (256, d) (res1, exp1.a))
++    abort ();
++
++  exp2.x = avx2_foo1 (q1.x, q2.x, q3.x);
++  res2.x = foo1 (q1.x, q2.x, q3.x);
++  if (UNION_CHECK (256, i_q) (res2, exp2.a))
++    abort ();
++
++  exp2.x = avx2_foo2 (q1.x, q2.x, q3.x);
++  res2.x = foo2 (q1.x, q2.x, q3.x);
++  if (UNION_CHECK (256, i_q) (res2, exp2.a))
++    abort ();
++
++  exp2.x = avx2_foo3 (q1.x, q2.x, q3.x);
++  res2.x = foo3 (q1.x, q2.x, q3.x);
++  if (UNION_CHECK (256, i_q) (res2, exp2.a))
++    abort ();
++
++  exp2.x = avx2_foo4 (q1.x, q2.x, q3.x);
++  res2.x = foo4 (q1.x, q2.x, q3.x);
++  if (UNION_CHECK (256, i_q) (res2, exp2.a))
++    abort ();
++
++  exp2.x = avx2_foo (q1.x, q2.x, q3.x);
++  res2.x = foo (q1.x, q2.x, q3.x);
++  if (UNION_CHECK (256, i_q) (res2, exp2.a))
++    abort ();
++}
++
++static void
++test_128 ()
++{}
+diff --git a/gcc/testsuite/gcc.target/i386/pr101989-broadcast-1.c b/gcc/testsuite/gcc.target/i386/pr101989-broadcast-1.c
+new file mode 100644
+index 00000000000..d03d192915f
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr101989-broadcast-1.c
+@@ -0,0 +1,31 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mavx512vl" } */
++/* { dg-final { scan-assembler-times "vpternlog" 4 } } */
++/* { dg-final { scan-assembler-times "\\\{1to4\\\}" 4 } } */
++#include<immintrin.h>
++extern long long C;
++__m256d
++copysign2_pd(__m256d from, __m256d to) {
++  __m256i a = _mm256_castpd_si256(from);
++  __m256d avx_signbit = _mm256_castsi256_pd(_mm256_slli_epi64(_mm256_cmpeq_epi64(a, a), 63));
++  /* (avx_signbit & from) | (~avx_signbit & to)  */
++  return _mm256_or_pd(_mm256_and_pd(avx_signbit, from), _mm256_andnot_pd(avx_signbit, to));
++}
++
++__m256i
++mask_pternlog (__m256i A, __m256i B, __mmask8 U)
++{
++  return _mm256_mask_ternarylogic_epi64 (A, U, B, _mm256_set1_epi64x (C) ,202);
++}
++
++__m256i
++maskz_pternlog (__m256i A, __m256i B, __mmask8 U)
++{
++  return _mm256_maskz_ternarylogic_epi64 (U, A, B, _mm256_set1_epi64x (C) ,202);
++}
++
++__m256i
++none_pternlog (__m256i A, __m256i B)
++{
++  return _mm256_ternarylogic_epi64 (A, B, _mm256_set1_epi64x (C) ,202);
 +}
 diff --git a/gcc/testsuite/gcc.target/i386/pr102021.c b/gcc/testsuite/gcc.target/i386/pr102021.c
 new file mode 100644
@@ -5411,6 +6565,53 @@ index 00000000000..6db3f57dc76
 +/* { dg-final { scan-assembler-times "vpbroadcastq\[\\t \]+\[^\n\]*, %ymm\[0-9\]+" 1 { target ia32 } } } */
 +/* { dg-final { scan-assembler-not "vmovdqa" } } */
 +/* { dg-final { scan-assembler-not "vzeroupper" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr102627.c b/gcc/testsuite/gcc.target/i386/pr102627.c
+new file mode 100644
+index 00000000000..8ab9acaf002
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr102627.c
+@@ -0,0 +1,41 @@
++/* PR rtl-optimization/102627 */
++/* { dg-do run } */
++/* { dg-options "-O1" } */
++
++int a, f, l, m, q, c, d, g;
++long b, e;
++struct g {
++  signed h;
++  signed i;
++  unsigned j;
++  unsigned k;
++};
++unsigned n;
++char o;
++int *p = &m;
++long r(int s) { return s && b ?: b; }
++long __attribute__((noipa)) v() {
++  l = 0 || r(n & o);
++  return q;
++}
++void w(int, unsigned, struct g x) {
++  c ?: a;
++  for (; d < 2; d++)
++    *p = x.k;
++}
++struct g __attribute__((noipa)) y() {
++  struct g h = {3, 908, 1, 20};
++  for (; g; g++)
++    ;
++  return h;
++}
++int main() {
++  long t;
++  struct g u = y();
++  t = e << f;
++  w(0, t, u);
++  v(0, 4, 4, 4);
++  if (m != 20)
++    __builtin_abort ();
++  return 0;
++}
 diff --git a/gcc/testsuite/gcc.target/i386/pr72839.c b/gcc/testsuite/gcc.target/i386/pr72839.c
 index ea724f70377..6888d9d0a55 100644
 --- a/gcc/testsuite/gcc.target/i386/pr72839.c
@@ -6116,6 +7317,72 @@ index 00000000000..ecfb9168b7d
 +  if (foo2_i387 (fa, fb) != foo2 (fa, fb))
 +    abort ();
 +}
+diff --git a/gcc/testsuite/gcc.target/i386/sse-covert-1.c b/gcc/testsuite/gcc.target/i386/sse-covert-1.c
+new file mode 100644
+index 00000000000..c30af694505
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/sse-covert-1.c
+@@ -0,0 +1,19 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -march=x86-64 -mfpmath=sse -mtune-ctrl=^sse_partial_reg_fp_converts_dependency,^sse_partial_reg_converts_dependency" } */
++
++extern float f;
++extern double d;
++extern int i;
++
++void
++foo (void)
++{
++  d = f;
++  f = i;
++}
++
++/* { dg-final { scan-assembler "cvtss2sd" } } */
++/* { dg-final { scan-assembler "cvtsi2ssl" } } */
++/* { dg-final { scan-assembler-not "cvtps2pd" } } */
++/* { dg-final { scan-assembler-not "cvtdq2ps" } } */
++/* { dg-final { scan-assembler-not "pxor" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/sse-fp-covert-1.c b/gcc/testsuite/gcc.target/i386/sse-fp-covert-1.c
+new file mode 100644
+index 00000000000..b6567e60e3e
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/sse-fp-covert-1.c
+@@ -0,0 +1,15 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -march=x86-64 -mfpmath=sse -mtune-ctrl=^sse_partial_reg_fp_converts_dependency" } */
++
++extern float f;
++extern double d;
++
++void
++foo (void)
++{
++  d = f;
++}
++
++/* { dg-final { scan-assembler "cvtss2sd" } } */
++/* { dg-final { scan-assembler-not "cvtps2pd" } } */
++/* { dg-final { scan-assembler-not "pxor" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/sse-int-covert-1.c b/gcc/testsuite/gcc.target/i386/sse-int-covert-1.c
+new file mode 100644
+index 00000000000..107f7241def
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/sse-int-covert-1.c
+@@ -0,0 +1,14 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -march=x86-64 -mfpmath=sse -mtune-ctrl=^sse_partial_reg_converts_dependency" } */
++
++extern float f;
++extern int i;
++
++void
++foo (void)
++{
++  f = i;
++}
++
++/* { dg-final { scan-assembler "cvtsi2ssl" } } */
++/* { dg-final { scan-assembler-not "pxor" } } */
 diff --git a/gcc/testsuite/gcc.target/i386/sse2-pr94680.c b/gcc/testsuite/gcc.target/i386/sse2-pr94680.c
 new file mode 100644
 index 00000000000..7e0ff9f6bc7
