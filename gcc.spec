@@ -308,7 +308,7 @@ export FFLAGS_FOR_TARGET="$FFLAGS -march=haswell -mtune=skylake-avx512 -fno-sema
 export CPATH=/usr/include
 export LIBRARY_PATH=%{_libdir}
 ../%{gccpath}/configure \
-    --prefix=%{_prefix} \
+    --prefix=/usr \
     --with-pkgversion='Clear Linux OS for Intel Architecture'\
     --libdir=/usr/lib64 \
     --enable-libstdcxx-pch\
@@ -323,28 +323,29 @@ export LIBRARY_PATH=%{_libdir}
     --enable-ld=default\
     --enable-clocale=gnu\
     --disable-multiarch\
-    --disable-multilib\
+    --enable-multilib\
     --enable-lto\
+    --disable-werror \
     --enable-linker-build-id \
     --build=%{gcc_target}\
     --target=%{gcc_target}\
-    --enable-languages="c,c++,fortran" \
+    --enable-languages="c,c++,fortran,go" \
+    --enable-bootstrap \
     --with-ppl=yes \
     --with-isl \
-    --includedir=%{_includedir} \
-    --exec-prefix=%{_prefix} \
+    --includedir=/usr/include \
+    --exec-prefix=/usr \
     --with-glibc-version=2.19 \
-    --with-system-libunwind \
+    --disable-libunwind-exceptions \
     --with-gnu-ld \
     --with-tune=skylake-avx512 \
-    --with-arch=haswell \
-    --disable-bootstrap \
+    --with-arch=x86-64-v3 \
     --enable-cet \
     --disable-libmpx \
     --with-gcc-major-version-only \
     --enable-default-pie
 
-make %{?_smp_mflags}
+make %{?_smp_mflags} profiledbootstrap
 
 popd
 
@@ -363,7 +364,7 @@ export CPATH=/usr/include
 export LIBRARY_PATH=%{_libdir}
 
 ../%{gccpath}/configure \
-    --prefix=%{_prefix} \
+    --prefix=/usr \
     --with-pkgversion='Clear Linux OS for Intel Architecture'\
     --libdir=/usr/lib64 \
     --enable-libstdcxx-pch\
@@ -378,28 +379,29 @@ export LIBRARY_PATH=%{_libdir}
     --enable-ld=default\
     --enable-clocale=gnu\
     --disable-multiarch\
-    --disable-multilib\
+    --enable-multilib\
     --enable-lto\
+    --disable-werror \
     --enable-linker-build-id \
     --build=%{gcc_target}\
     --target=%{gcc_target}\
-    --enable-languages="c,c++,fortran" \
+    --enable-languages="c,c++,fortran,go" \
+    --enable-bootstrap \
     --with-ppl=yes \
     --with-isl \
-    --includedir=%{_includedir} \
-    --exec-prefix=%{_prefix} \
+    --includedir=/usr/include \
+    --exec-prefix=/usr \
     --with-glibc-version=2.19 \
-    --with-system-libunwind \
+    --disable-libunwind-exceptions \
     --with-gnu-ld \
     --with-tune=skylake-avx512 \
-    --with-arch=skylake-avx512 \
-    --disable-bootstrap \
+    --with-arch=x86-64-v4 \
     --enable-cet \
     --disable-libmpx \
     --with-gcc-major-version-only \
     --enable-default-pie
 
-make %{?_smp_mflags}
+make %{?_smp_mflags} profiledbootstrap
 
 popd
 
@@ -447,7 +449,7 @@ export CPATH=/usr/include
 export LIBRARY_PATH=/usr/lib64
 
 pushd ../gcc-build-avx512
-%make_install
+%make_install_v4
 popd
 rm -rf %{buildroot}/usr/share
 rm -rf %{buildroot}/usr/bin
@@ -456,11 +458,9 @@ rm -rf %{buildroot}/usr/lib64/*.a
 rm -rf %{buildroot}/usr/lib64/*.o
 rm -rf %{buildroot}/usr/lib64/*.so
 rm -rf %{buildroot}/usr/lib64/*.spec
-mkdir -p %{buildroot}/usr/lib64/haswell/avx512_1
-mv %{buildroot}/usr/lib64/*so*  %{buildroot}/usr/lib64/haswell/avx512_1
 
 pushd ../gcc-build-avx2
-%make_install
+%make_install_v3
 popd
 rm -rf %{buildroot}/usr/share
 rm -rf %{buildroot}/usr/bin
@@ -469,12 +469,13 @@ rm -rf %{buildroot}/usr/lib64/*.a
 rm -rf %{buildroot}/usr/lib64/*.o
 rm -rf %{buildroot}/usr/lib64/*.so
 rm -rf %{buildroot}/usr/lib64/*.spec
-mkdir -p %{buildroot}/usr/lib64/haswell
-mv %{buildroot}/usr/lib64/*so*  %{buildroot}/usr/lib64/haswell/
 
 pushd ../gcc-build
 %make_install
 cd -
+
+/usr/bin/elf-move.py avx2 %{buildroot}-v3 %{buildroot}/usr/share/clear/optimized-elf/ %{buildroot}/usr/share/clear/filemap/filemap-%{name}
+/usr/bin/elf-move.py avx512 %{buildroot}-v4 %{buildroot}/usr/share/clear/optimized-elf/ %{buildroot}/usr/share/clear/filemap/filemap-%{name}
 
 cd %{buildroot}/usr/bin
 if [ -e %{gcc_target}-g77 ]; then
@@ -546,6 +547,8 @@ popd
 cat *.lang > gcc.lang
 
 %files
+/usr/share/clear/optimized-elf/
+/usr/share/clear/filemap/
 /usr/bin/%{gcc_target}-gcc-ar
 /usr/bin/%{gcc_target}-gcc-ranlib
 /usr/bin/%{gcc_target}-gcc-nm
@@ -706,11 +709,7 @@ cat *.lang > gcc.lang
 %files -n libgcc1
 /usr/lib64/libgcc_s.so.1
 
-#avx2
-%exclude /usr/lib64/haswell/libgcc_s.so.1
 
-#avx512
-# %exclude /usr/lib64/haswell/avx512_1/libgcc_s.so.1
 
 %files libs-math
 /usr/lib64/libssp.so*
@@ -721,22 +720,7 @@ cat *.lang > gcc.lang
 /usr/lib64/libgfortran*.so.*
 
 #avx2
-/usr/lib64/haswell/libgomp.so.1
-/usr/lib64/haswell/libgomp.so.1.0.0
-%exclude /usr/lib64/haswell/libitm.so.1
-%exclude /usr/lib64/haswell/libitm.so.1.0.0
-/usr/lib64/haswell/libquadmath.so.0
-/usr/lib64/haswell/libquadmath.so.0.0.0
-/usr/lib64/haswell/libgfortran.so.5
-/usr/lib64/haswell/libgfortran.so.5.0.0
-
 #avx512
-%exclude /usr/lib64/haswell/avx512_1/libgomp.so.1
-%exclude /usr/lib64/haswell/avx512_1/libgomp.so.1.0.0
-/usr/lib64/haswell/avx512_1/libquadmath.so.0
-/usr/lib64/haswell/avx512_1/libquadmath.so.0.0.0
-/usr/lib64/haswell/avx512_1/libgfortran.so.5
-/usr/lib64/haswell/avx512_1/libgfortran.so.5.0.0
 
 %files libgcc32
 /usr/lib32/libasan.so.6
@@ -772,12 +756,8 @@ cat *.lang > gcc.lang
 /usr/lib64/libstdc++.so.*
 
 #avx2
-%exclude /usr/lib64/haswell/libstdc++.so.6
-%exclude /usr/lib64/haswell/libstdc++.so.6.0.*
 
 #avx512
-%exclude /usr/lib64/haswell/avx512_1/libstdc++.so.6
-%exclude /usr/lib64/haswell/avx512_1/libstdc++.so.6.0.*
 
 %files libstdc++32
 /usr/lib32/libstdc++.so.*
@@ -820,5 +800,3 @@ cat *.lang > gcc.lang
 /usr/lib64/libsanit*
 
 #avx2
-%exclude /usr/lib64/haswell/*
-%exclude /usr/lib64/haswell/avx512_1/*
