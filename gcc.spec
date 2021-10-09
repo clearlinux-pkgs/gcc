@@ -115,6 +115,7 @@ GNU cc and gcc C compilers dev files
 License:        GPL-3.0-with-GCC-exception and GPL-3.0
 Summary:        GNU cc and gcc C compilers
 Group:          devel
+Requires:	gcc-libgcc32
 
 %description dev32
 GNU cc and gcc C compilers dev files
