@@ -396,7 +396,7 @@ export LIBRARY_PATH=%{_libdir}
     --disable-libunwind-exceptions \
     --with-gnu-ld \
     --with-tune=skylake-avx512 \
-    --with-arch=x86-64-v4 \
+    --with-arch=x86-64-v3 \
     --enable-cet \
     --disable-libmpx \
     --with-gcc-major-version-only \
