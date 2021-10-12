@@ -501,16 +501,20 @@ cd -
 mkdir -p %{buildroot}/usr/libexec/gccgo/bin
 mv %{buildroot}/usr/bin/go %{buildroot}/usr/libexec/gccgo/bin
 mv %{buildroot}/usr/bin/gofmt %{buildroot}/usr/libexec/gccgo/bin
+mv %{buildroot}-v3/usr/bin/go %{buildroot}-v3/usr/libexec/gccgo/bin
+mv %{buildroot}-v3/usr/bin/gofmt %{buildroot}-v3/usr/libexec/gccgo/bin
+mv %{buildroot}-v4/usr/bin/go %{buildroot}-v4/usr/libexec/gccgo/bin
+mv %{buildroot}-v4/usr/bin/gofmt %{buildroot}-v4/usr/libexec/gccgo/bin
 
 find %{buildroot}/usr/ -name libiberty.a | xargs rm -f
 find %{buildroot}/usr/ -name libiberty.h | xargs rm -f
-chmod 0755 %{buildroot}/usr/lib64/libgcc_s.so.1
-chmod 0755 %{buildroot}/usr/lib32/libgcc_s.so.1
+chmod 0755 %{buildroot}*/usr/lib64/libgcc_s.so.1
+chmod 0755 %{buildroot}*/usr/lib32/libgcc_s.so.1
 
-chmod a+x %{buildroot}/usr/bin
-chmod a+x %{buildroot}/usr/lib64
-find %{buildroot}/usr/lib64 %{buildroot}/usr/lib*/gcc -name '*.so*' -print0 | xargs -r0 chmod 755
-find %{buildroot}/usr/lib64 %{buildroot}/usr/lib*/gcc -name '*.o' -print0 | xargs -r0 chmod 644
+chmod a+x %{buildroot}*/usr/bin
+chmod a+x %{buildroot}*/usr/lib64
+find %{buildroot}*/usr/lib64 %{buildroot}/usr/lib*/gcc -name '*.so*' -print0 | xargs -r0 chmod 755
+find %{buildroot}*/usr/lib64 %{buildroot}/usr/lib*/gcc -name '*.o' -print0 | xargs -r0 chmod 644
 
 
 # This is only for gdb
