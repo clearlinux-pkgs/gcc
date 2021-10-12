@@ -475,6 +475,11 @@ pushd ../gcc-build
 %make_install
 cd -
 
+mv %{buildroot}-v3/usr/bin/go %{buildroot}-v3/usr/libexec/gccgo/bin
+mv %{buildroot}-v3/usr/bin/gofmt %{buildroot}-v3/usr/libexec/gccgo/bin
+mv %{buildroot}-v4/usr/bin/go %{buildroot}-v4/usr/libexec/gccgo/bin
+mv %{buildroot}-v4/usr/bin/gofmt %{buildroot}-v4/usr/libexec/gccgo/bin
+
 /usr/bin/elf-move.py avx2 %{buildroot}-v3 %{buildroot}/usr/share/clear/optimized-elf/ %{buildroot}/usr/share/clear/filemap/filemap-%{name}
 /usr/bin/elf-move.py avx512 %{buildroot}-v4 %{buildroot}/usr/share/clear/optimized-elf/ %{buildroot}/usr/share/clear/filemap/filemap-%{name}
 
@@ -501,10 +506,6 @@ cd -
 mkdir -p %{buildroot}/usr/libexec/gccgo/bin
 mv %{buildroot}/usr/bin/go %{buildroot}/usr/libexec/gccgo/bin
 mv %{buildroot}/usr/bin/gofmt %{buildroot}/usr/libexec/gccgo/bin
-mv %{buildroot}-v3/usr/bin/go %{buildroot}-v3/usr/libexec/gccgo/bin
-mv %{buildroot}-v3/usr/bin/gofmt %{buildroot}-v3/usr/libexec/gccgo/bin
-mv %{buildroot}-v4/usr/bin/go %{buildroot}-v4/usr/libexec/gccgo/bin
-mv %{buildroot}-v4/usr/bin/gofmt %{buildroot}-v4/usr/libexec/gccgo/bin
 
 find %{buildroot}/usr/ -name libiberty.a | xargs rm -f
 find %{buildroot}/usr/ -name libiberty.h | xargs rm -f
