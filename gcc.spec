@@ -480,6 +480,9 @@ mv %{buildroot}-v3/usr/bin/gofmt %{buildroot}-v3/usr/libexec/gccgo/bin
 mv %{buildroot}-v4/usr/bin/go %{buildroot}-v4/usr/libexec/gccgo/bin
 mv %{buildroot}-v4/usr/bin/gofmt %{buildroot}-v4/usr/libexec/gccgo/bin
 
+/usr/bin/elf-move.py avx2 %{buildroot}-v3 %{buildroot}/usr/share/clear/optimized-elf/ %{buildroot}/usr/share/clear/filemap/filemap-%{name} --skip --path /usr/lib64/gcc/x86_64-generic-linux/11/plugin/include/configargs.h
+/usr/bin/elf-move.py avx512 %{buildroot}-v4 %{buildroot}/usr/share/clear/optimized-elf/ %{buildroot}/usr/share/clear/filemap/filemap-%{name} --skip --path /usr/lib64/gcc/x86_64-generic-linux/11/plugin/include/configargs.h
+
 /usr/bin/elf-move.py avx2 %{buildroot}-v3 %{buildroot}/usr/share/clear/optimized-elf/ %{buildroot}/usr/share/clear/filemap/filemap-%{name}
 /usr/bin/elf-move.py avx512 %{buildroot}-v4 %{buildroot}/usr/share/clear/optimized-elf/ %{buildroot}/usr/share/clear/filemap/filemap-%{name}
 
