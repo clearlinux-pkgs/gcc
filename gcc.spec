@@ -519,8 +519,8 @@ chmod 0755 %{buildroot}*/usr/lib32/libgcc_s.so.1
 
 chmod a+x %{buildroot}*/usr/bin
 chmod a+x %{buildroot}*/usr/lib64
-find %{buildroot}*/usr/lib64 %{buildroot}/usr/lib*/gcc -name '*.so*' -print0 | xargs -r0 chmod 755
-find %{buildroot}*/usr/lib64 %{buildroot}/usr/lib*/gcc -name '*.o' -print0 | xargs -r0 chmod 644
+find %{buildroot}*/usr/lib64 %{buildroot}/usr/lib*/gcc -name '*.so*' -print0 | xargs -r0 chmod -f 755
+find %{buildroot}*/usr/lib64 %{buildroot}/usr/lib*/gcc -name '*.o' -print0 | xargs -r0 chmod -f 644
 
 
 # This is only for gdb
