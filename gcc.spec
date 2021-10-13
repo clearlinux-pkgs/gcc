@@ -475,8 +475,10 @@ pushd ../gcc-build
 %make_install
 cd -
 
+mkdir -p %{buildroot}-v3/usr/libexec/gccgo/bin
 mv %{buildroot}-v3/usr/bin/go %{buildroot}-v3/usr/libexec/gccgo/bin
 mv %{buildroot}-v3/usr/bin/gofmt %{buildroot}-v3/usr/libexec/gccgo/bin
+mkdir -p %{buildroot}-v4/usr/libexec/gccgo/bin
 mv %{buildroot}-v4/usr/bin/go %{buildroot}-v4/usr/libexec/gccgo/bin
 mv %{buildroot}-v4/usr/bin/gofmt %{buildroot}-v4/usr/libexec/gccgo/bin
 
