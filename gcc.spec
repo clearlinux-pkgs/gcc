@@ -482,11 +482,6 @@ mkdir -p %{buildroot}-v4/usr/libexec/gccgo/bin
 rm -f %{buildroot}-v4/usr/bin/go 
 rm -f %{buildroot}-v4/usr/bin/gofmt
 
-/usr/bin/elf-move.py avx2 %{buildroot}-v3 %{buildroot}/usr/share/clear/optimized-elf/ %{buildroot}/usr/share/clear/filemap/filemap-%{name} --skip --path /usr/lib64/gcc/x86_64-generic-linux/11/plugin/include/configargs.h
-/usr/bin/elf-move.py avx512 %{buildroot}-v4 %{buildroot}/usr/share/clear/optimized-elf/ %{buildroot}/usr/share/clear/filemap/filemap-%{name} --skip --path /usr/lib64/gcc/x86_64-generic-linux/11/plugin/include/configargs.h
-
-/usr/bin/elf-move.py avx2 %{buildroot}-v3 %{buildroot}/usr/share/clear/optimized-elf/ %{buildroot}/usr/share/clear/filemap/filemap-%{name}
-/usr/bin/elf-move.py avx512 %{buildroot}-v4 %{buildroot}/usr/share/clear/optimized-elf/ %{buildroot}/usr/share/clear/filemap/filemap-%{name}
 
 cd %{buildroot}/usr/bin
 if [ -e %{gcc_target}-g77 ]; then
@@ -556,6 +551,12 @@ popd
 %find_lang gcc tmp.lang
 %find_lang libstdc++ cxx.lang
 cat *.lang > gcc.lang
+
+/usr/bin/elf-move.py avx2 %{buildroot}-v3 %{buildroot}/usr/share/clear/optimized-elf/ %{buildroot}/usr/share/clear/filemap/filemap-%{name} --skip --path /usr/lib64/gcc/x86_64-generic-linux/11/plugin/include/configargs.h
+/usr/bin/elf-move.py avx512 %{buildroot}-v4 %{buildroot}/usr/share/clear/optimized-elf/ %{buildroot}/usr/share/clear/filemap/filemap-%{name} --skip --path /usr/lib64/gcc/x86_64-generic-linux/11/plugin/include/configargs.h
+
+/usr/bin/elf-move.py avx2 %{buildroot}-v3 %{buildroot}/usr/share/clear/optimized-elf/ %{buildroot}/usr/share/clear/filemap/filemap-%{name}
+/usr/bin/elf-move.py avx512 %{buildroot}-v4 %{buildroot}/usr/share/clear/optimized-elf/ %{buildroot}/usr/share/clear/filemap/filemap-%{name}
 
 %files
 /usr/share/clear/optimized-elf/
