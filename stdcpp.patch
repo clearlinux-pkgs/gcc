@@ -1,0 +1,148 @@
+From: Jonathan Wakely <jwakely@redhat.com>
+Date: Thu, 22 Jul 2021 17:49:57 +0000 (+0100)
+Subject: libstdc++: Fix non-default constructors for hash containers [PR101583]
+X-Git-Url: https://gcc.gnu.org/git/?p=gcc.git;a=commitdiff_plain;h=8ed6cfbbee74ec9e03f2558b9c36f61dd7d4dcfd;hp=b362d7947b37059fdb6de62145fa5146258dd58f
+
+libstdc++: Fix non-default constructors for hash containers [PR101583]
+
+When I added the new mixin to _Hashtable, I forgot to explicitly
+construct it in each non-default constructor. That means you can't
+use any constructors unless all three of the hash function, equality
+function, and allocator are all default constructible.
+
+libstdc++-v3/ChangeLog:
+
+	PR libstdc++/101583
+	* include/bits/hashtable.h (_Hashtable): Replace mixin with
+	_Enable_default_ctor. Construct it explicitly in all
+	non-forwarding, non-defaulted constructors.
+	* testsuite/23_containers/unordered_map/cons/default.cc: Check
+	non-default constructors can be used.
+	* testsuite/23_containers/unordered_set/cons/default.cc:
+	Likewise.
+---
+
+diff --git a/libstdc++-v3/include/bits/hashtable.h b/libstdc++-v3/include/bits/hashtable.h
+index adb59213f2d..92516b81ae5 100644
+--- a/libstdc++-v3/include/bits/hashtable.h
++++ b/libstdc++-v3/include/bits/hashtable.h
+@@ -54,11 +54,10 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+   // from any other potentially-overlapping subobjects of the hashtable.
+   template<typename _Equal, typename _Hash, typename _Allocator>
+     using _Hashtable_enable_default_ctor
+-      = _Enable_special_members<__and_<is_default_constructible<_Equal>,
++      = _Enable_default_constructor<__and_<is_default_constructible<_Equal>,
+ 				       is_default_constructible<_Hash>,
+ 				       is_default_constructible<_Allocator>>{},
+-				true, true, true, true, true,
+-				__detail::_Hash_node_base>;
++				    __detail::_Hash_node_base>;
+ 
+   /**
+    *  Primary class template _Hashtable.
+@@ -228,6 +227,8 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+ 					      _Equal, _Hash,
+ 					      _RangeHash, _Unused,
+ 					      _RehashPolicy, _Traits>;
++      using __enable_default_ctor
++	= _Hashtable_enable_default_ctor<_Equal, _Hash, _Alloc>;
+ 
+     public:
+       typedef _Key						key_type;
+@@ -484,7 +485,8 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       _Hashtable(const _Hash& __h, const _Equal& __eq,
+ 		 const allocator_type& __a)
+       : __hashtable_base(__h, __eq),
+-	__hashtable_alloc(__node_alloc_type(__a))
++	__hashtable_alloc(__node_alloc_type(__a)),
++	__enable_default_ctor(_Enable_default_constructor_tag{})
+       { }
+ 
+       template<bool _No_realloc = true>
+@@ -551,7 +553,8 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+ 
+       explicit
+       _Hashtable(const allocator_type& __a)
+-      : __hashtable_alloc(__node_alloc_type(__a))
++      : __hashtable_alloc(__node_alloc_type(__a)),
++	__enable_default_ctor(_Enable_default_constructor_tag{})
+       { }
+ 
+       template<typename _InputIterator>
+@@ -1435,6 +1438,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       __rehash_base(__ht),
+       __hashtable_alloc(
+ 	__node_alloc_traits::_S_select_on_copy(__ht._M_node_allocator())),
++      __enable_default_ctor(__ht),
+       _M_buckets(nullptr),
+       _M_bucket_count(__ht._M_bucket_count),
+       _M_element_count(__ht._M_element_count),
+@@ -1457,6 +1461,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       __map_base(__ht),
+       __rehash_base(__ht),
+       __hashtable_alloc(std::move(__a)),
++      __enable_default_ctor(__ht),
+       _M_buckets(__ht._M_buckets),
+       _M_bucket_count(__ht._M_bucket_count),
+       _M_before_begin(__ht._M_before_begin._M_nxt),
+@@ -1487,6 +1492,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       __map_base(__ht),
+       __rehash_base(__ht),
+       __hashtable_alloc(__node_alloc_type(__a)),
++      __enable_default_ctor(__ht),
+       _M_buckets(),
+       _M_bucket_count(__ht._M_bucket_count),
+       _M_element_count(__ht._M_element_count),
+@@ -1508,6 +1514,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       __map_base(__ht),
+       __rehash_base(__ht),
+       __hashtable_alloc(std::move(__a)),
++      __enable_default_ctor(__ht),
+       _M_buckets(nullptr),
+       _M_bucket_count(__ht._M_bucket_count),
+       _M_element_count(__ht._M_element_count),
+diff --git a/libstdc++-v3/testsuite/23_containers/unordered_map/cons/default.cc b/libstdc++-v3/testsuite/23_containers/unordered_map/cons/default.cc
+index e4f836fde3e..d64d078a7da 100644
+--- a/libstdc++-v3/testsuite/23_containers/unordered_map/cons/default.cc
++++ b/libstdc++-v3/testsuite/23_containers/unordered_map/cons/default.cc
+@@ -31,3 +31,18 @@ static_assert( ! std::is_default_constructible<Map2>{}, "PR libstdc++/100863" );
+ struct Equal : std::equal_to<int> { Equal(int) { } };
+ using Map3 = std::unordered_map<int, int, std::hash<int>, Equal>;
+ static_assert( ! std::is_default_constructible<Map3>{}, "PR libstdc++/100863" );
++
++// PR libstdc++/101583
++// verify non-default ctors can still be used
++using Map4 = std::unordered_map<int, int, Hash, Equal,
++			        NoDefaultConsAlloc<std::pair<const int, int>>>;
++Hash h(1);
++Equal eq(1);
++Map4::allocator_type a(1);
++Map4 m{1, h, eq, a};
++Map4 m2{m.begin(), m.end(), m.size(), h, eq, a};
++Map4 m3{{{1,1}, {2,2}, {3,3}}, 3, h, eq, a};
++Map4 m4{m};
++Map4 m5{m, a};
++Map4 m6{std::move(m)};
++Map4 m7{std::move(m6), a};
+diff --git a/libstdc++-v3/testsuite/23_containers/unordered_set/cons/default.cc b/libstdc++-v3/testsuite/23_containers/unordered_set/cons/default.cc
+index 42fbf3d7997..41281d3d774 100644
+--- a/libstdc++-v3/testsuite/23_containers/unordered_set/cons/default.cc
++++ b/libstdc++-v3/testsuite/23_containers/unordered_set/cons/default.cc
+@@ -31,3 +31,17 @@ static_assert( ! std::is_default_constructible<Set2>{}, "PR libstdc++/100863" );
+ struct Equal : std::equal_to<int> { Equal(int) { } };
+ using Set3 = std::unordered_set<int, std::hash<int>, Equal>;
+ static_assert( ! std::is_default_constructible<Set3>{}, "PR libstdc++/100863" );
++
++// PR libstdc++/101583
++// verify non-default ctors can still be used
++using Set4 = std::unordered_set<int, Hash, Equal, NoDefaultConsAlloc<int>>;
++Hash h(1);
++Equal eq(1);
++Set4::allocator_type a(1);
++Set4 s{1, h, eq, a};
++Set4 s2{s.begin(), s.end(), s.size(), h, eq, a};
++Set4 s3{{1, 2, 3}, 3, h, eq, a};
++Set4 s4{s};
++Set4 s5{s, a};
++Set4 s6{std::move(s)};
++Set4 s7{std::move(s6), a};
