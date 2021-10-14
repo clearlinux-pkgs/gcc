@@ -3378,25 +3378,6 @@ index add9a742e41..71781c790a1 100644
  extern bool hook_bool_uint_uintp_false (unsigned int, unsigned int *);
  
  extern int hook_int_uint_mode_1 (unsigned int, machine_mode);
-diff --git a/gcc/lra-constraints.c b/gcc/lra-constraints.c
-index 5c2a2d7ce9c..aaacc4eabed 100644
---- a/gcc/lra-constraints.c
-+++ b/gcc/lra-constraints.c
-@@ -5805,11 +5805,12 @@ split_reg (bool before_p, int original_regno, rtx_insn *insn,
- 	 part of a multi-word register.  In that case, just use the reg_rtx
- 	 mode.  Do the same also if the biggest mode was larger than a register
- 	 or we can not compare the modes.  Otherwise, limit the size to that of
--	 the biggest access in the function.  */
-+	 the biggest access in the function or to the natural mode at least.  */
-       if (mode == VOIDmode
- 	  || !ordered_p (GET_MODE_PRECISION (mode),
- 			 GET_MODE_PRECISION (reg_rtx_mode))
--	  || paradoxical_subreg_p (mode, reg_rtx_mode))
-+	  || paradoxical_subreg_p (mode, reg_rtx_mode)
-+	  || maybe_gt (GET_MODE_PRECISION (reg_rtx_mode), GET_MODE_PRECISION (mode)))
- 	{
- 	  original_reg = regno_reg_rtx[hard_regno];
- 	  mode = reg_rtx_mode;
 diff --git a/gcc/rtl.h b/gcc/rtl.h
 index 398d745aff5..fa9574ef70d 100644
 --- a/gcc/rtl.h
@@ -6568,53 +6549,6 @@ index 00000000000..6db3f57dc76
 +/* { dg-final { scan-assembler-times "vpbroadcastq\[\\t \]+\[^\n\]*, %ymm\[0-9\]+" 1 { target ia32 } } } */
 +/* { dg-final { scan-assembler-not "vmovdqa" } } */
 +/* { dg-final { scan-assembler-not "vzeroupper" } } */
-diff --git a/gcc/testsuite/gcc.target/i386/pr102627.c b/gcc/testsuite/gcc.target/i386/pr102627.c
-new file mode 100644
-index 00000000000..8ab9acaf002
---- /dev/null
-+++ b/gcc/testsuite/gcc.target/i386/pr102627.c
-@@ -0,0 +1,41 @@
-+/* PR rtl-optimization/102627 */
-+/* { dg-do run } */
-+/* { dg-options "-O1" } */
-+
-+int a, f, l, m, q, c, d, g;
-+long b, e;
-+struct g {
-+  signed h;
-+  signed i;
-+  unsigned j;
-+  unsigned k;
-+};
-+unsigned n;
-+char o;
-+int *p = &m;
-+long r(int s) { return s && b ?: b; }
-+long __attribute__((noipa)) v() {
-+  l = 0 || r(n & o);
-+  return q;
-+}
-+void w(int, unsigned, struct g x) {
-+  c ?: a;
-+  for (; d < 2; d++)
-+    *p = x.k;
-+}
-+struct g __attribute__((noipa)) y() {
-+  struct g h = {3, 908, 1, 20};
-+  for (; g; g++)
-+    ;
-+  return h;
-+}
-+int main() {
-+  long t;
-+  struct g u = y();
-+  t = e << f;
-+  w(0, t, u);
-+  v(0, 4, 4, 4);
-+  if (m != 20)
-+    __builtin_abort ();
-+  return 0;
-+}
 diff --git a/gcc/testsuite/gcc.target/i386/pr72839.c b/gcc/testsuite/gcc.target/i386/pr72839.c
 index ea724f70377..6888d9d0a55 100644
 --- a/gcc/testsuite/gcc.target/i386/pr72839.c
