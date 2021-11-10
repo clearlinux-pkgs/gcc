@@ -49,7 +49,7 @@ Richard Biener (1):
 Uros Bizjak (1):
       [i386] Introduce scalar version of avx512f_vmscalef.
 
-liuhongt (9):
+liuhongt (10):
       Optimize __builtin_shuffle when it's used to zero the upper bits of the dest. [PR target/94680]
       Extend ldexp{s,d}f3 to vscalefs{s,d} when TARGET_AVX512F and TARGET_SSE_MATH.
       Fix ICE.
@@ -59,6 +59,7 @@ liuhongt (9):
       Enable avx512 embedde broadcast for vpternlog.
       Remove copysign post_reload splitter for scalar modes.
       Fix ICE in pass_rpad.
+      Improve integer bit test on __atomic_fetch_[or|and]_* returns
 
 diff --git a/gcc/builtins.c b/gcc/builtins.c
 index fb90c5d4a7c..2dddfc75293 100644
@@ -3375,6 +3376,127 @@ index add9a742e41..71781c790a1 100644
  extern bool hook_bool_uint_uintp_false (unsigned int, unsigned int *);
  
  extern int hook_int_uint_mode_1 (unsigned int, machine_mode);
+diff --git a/gcc/match.pd b/gcc/match.pd
+index 4fbba3922e5..e78bef8ce30 100644
+--- a/gcc/match.pd
++++ b/gcc/match.pd
+@@ -98,6 +98,39 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
+ (define_operator_list COND_TERNARY
+   IFN_COND_FMA IFN_COND_FMS IFN_COND_FNMA IFN_COND_FNMS)
+ 
++/* __atomic_fetch_or_*, __atomic_fetch_xor_*, __atomic_xor_fetch_*  */
++(define_operator_list ATOMIC_FETCH_OR_XOR_N
++  BUILT_IN_ATOMIC_FETCH_OR_1 BUILT_IN_ATOMIC_FETCH_OR_2
++  BUILT_IN_ATOMIC_FETCH_OR_4 BUILT_IN_ATOMIC_FETCH_OR_8
++  BUILT_IN_ATOMIC_FETCH_OR_16
++  BUILT_IN_ATOMIC_FETCH_XOR_1 BUILT_IN_ATOMIC_FETCH_XOR_2
++  BUILT_IN_ATOMIC_FETCH_XOR_4 BUILT_IN_ATOMIC_FETCH_XOR_8
++  BUILT_IN_ATOMIC_FETCH_XOR_16
++  BUILT_IN_ATOMIC_XOR_FETCH_1 BUILT_IN_ATOMIC_XOR_FETCH_2
++  BUILT_IN_ATOMIC_XOR_FETCH_4 BUILT_IN_ATOMIC_XOR_FETCH_8
++  BUILT_IN_ATOMIC_XOR_FETCH_16)
++/* __sync_fetch_and_or_*, __sync_fetch_and_xor_*, __sync_xor_and_fetch_*  */
++(define_operator_list SYNC_FETCH_OR_XOR_N
++  BUILT_IN_SYNC_FETCH_AND_OR_1 BUILT_IN_SYNC_FETCH_AND_OR_2
++  BUILT_IN_SYNC_FETCH_AND_OR_4 BUILT_IN_SYNC_FETCH_AND_OR_8
++  BUILT_IN_SYNC_FETCH_AND_OR_16
++  BUILT_IN_SYNC_FETCH_AND_XOR_1 BUILT_IN_SYNC_FETCH_AND_XOR_2
++  BUILT_IN_SYNC_FETCH_AND_XOR_4 BUILT_IN_SYNC_FETCH_AND_XOR_8
++  BUILT_IN_SYNC_FETCH_AND_XOR_16
++  BUILT_IN_SYNC_XOR_AND_FETCH_1 BUILT_IN_SYNC_XOR_AND_FETCH_2
++  BUILT_IN_SYNC_XOR_AND_FETCH_4 BUILT_IN_SYNC_XOR_AND_FETCH_8
++  BUILT_IN_SYNC_XOR_AND_FETCH_16)
++/* __atomic_fetch_and_*.  */
++(define_operator_list ATOMIC_FETCH_AND_N
++  BUILT_IN_ATOMIC_FETCH_AND_1 BUILT_IN_ATOMIC_FETCH_AND_2
++  BUILT_IN_ATOMIC_FETCH_AND_4 BUILT_IN_ATOMIC_FETCH_AND_8
++  BUILT_IN_ATOMIC_FETCH_AND_16)
++/* __sync_fetch_and_and_*.  */
++(define_operator_list SYNC_FETCH_AND_AND_N
++  BUILT_IN_SYNC_FETCH_AND_AND_1 BUILT_IN_SYNC_FETCH_AND_AND_2
++  BUILT_IN_SYNC_FETCH_AND_AND_4 BUILT_IN_SYNC_FETCH_AND_AND_8
++  BUILT_IN_SYNC_FETCH_AND_AND_16)
++
+ /* With nop_convert? combine convert? and view_convert? in one pattern
+    plus conditionalize on tree_nop_conversion_p conversions.  */
+ (match (nop_convert @0)
+@@ -3662,6 +3695,76 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
+   (vec_cond @0 (op! @3 @1) (op! @3 @2))))
+ #endif
+ 
++#if GIMPLE
++(match (nop_atomic_bit_test_and_p @0 @1 @4)
++ (bit_and (nop_convert?@4 (ATOMIC_FETCH_OR_XOR_N @2 INTEGER_CST@0 @3))
++	   INTEGER_CST@1)
++ (with {
++	 int ibit = tree_log2 (@0);
++	 int ibit2 = tree_log2 (@1);
++       }
++  (if (ibit == ibit2
++      && ibit >= 0))))
++
++(match (nop_atomic_bit_test_and_p @0 @1 @3)
++ (bit_and (nop_convert?@3 (SYNC_FETCH_OR_XOR_N @2 INTEGER_CST@0))
++	  INTEGER_CST@1)
++ (with {
++	 int ibit = tree_log2 (@0);
++	 int ibit2 = tree_log2 (@1);
++       }
++  (if (ibit == ibit2
++      && ibit >= 0))))
++
++(match (nop_atomic_bit_test_and_p @0 @0 @4)
++ (bit_and:c
++  (nop_convert?@4
++   (ATOMIC_FETCH_OR_XOR_N @2 (nop_convert? (lshift@0 integer_onep@5 @6)) @3))
++  @0))
++
++(match (nop_atomic_bit_test_and_p @0 @0 @4)
++ (bit_and:c
++  (nop_convert?@4
++   (SYNC_FETCH_OR_XOR_N @2 (nop_convert? (lshift@0 integer_onep@3 @5))))
++  @0))
++
++(match (nop_atomic_bit_test_and_p @0 @1 @3)
++ (bit_and@4 (nop_convert?@3 (ATOMIC_FETCH_AND_N @2 INTEGER_CST@0 @5))
++	    INTEGER_CST@1)
++ (with {
++	 int ibit = wi::exact_log2 (wi::zext (wi::bit_not (wi::to_wide (@0)),
++					      TYPE_PRECISION(type)));
++	 int ibit2 = tree_log2 (@1);
++       }
++  (if (ibit == ibit2
++      && ibit >= 0))))
++
++(match (nop_atomic_bit_test_and_p @0 @1 @3)
++ (bit_and@4
++  (nop_convert?@3 (SYNC_FETCH_AND_AND_N @2 INTEGER_CST@0))
++  INTEGER_CST@1)
++ (with {
++	 int ibit = wi::exact_log2 (wi::zext (wi::bit_not (wi::to_wide (@0)),
++					      TYPE_PRECISION(type)));
++	 int ibit2 = tree_log2 (@1);
++       }
++  (if (ibit == ibit2
++      && ibit >= 0))))
++
++(match (nop_atomic_bit_test_and_p @0 @0 @3)
++ (bit_and:c
++  (nop_convert?@3
++   (ATOMIC_FETCH_AND_N @2 (nop_convert? (bit_not (lshift@0 integer_onep@6 @7))) @5))
++   @0))
++
++(match (nop_atomic_bit_test_and_p @0 @0 @3)
++ (bit_and:c
++  (nop_convert?@3
++   (SYNC_FETCH_AND_AND_N @2 (nop_convert? (bit_not (lshift@0 integer_onep@6 @7)))))
++   @0))
++
++#endif
++
+ /* (v ? w : 0) ? a : b is just (v & w) ? a : b
+    Currently disabled after pass lvec because ARM understands
+    VEC_COND_EXPR<v==w,-1,0> but not a plain v==w fed to BIT_IOR_EXPR.  */
 diff --git a/gcc/rtl.h b/gcc/rtl.h
 index 398d745aff5..fa9574ef70d 100644
 --- a/gcc/rtl.h
@@ -3597,6 +3719,300 @@ index 00000000000..bf9d8543c1b
 +{
 +  return record_increment ();
 +}
+diff --git a/gcc/testsuite/g++.target/i386/pr102566-1.C b/gcc/testsuite/g++.target/i386/pr102566-1.C
+new file mode 100644
+index 00000000000..94a66d717cc
+--- /dev/null
++++ b/gcc/testsuite/g++.target/i386/pr102566-1.C
+@@ -0,0 +1,31 @@
++/* { dg-do compile { target c++11 } } */
++/* { dg-options "-O2" } */
++
++#include <atomic>
++
++bool
++tbit0 (std::atomic<int> &i)
++{
++#define BIT (1 << 0)
++  return i.fetch_or(BIT, std::memory_order_relaxed) & BIT;
++#undef BIT 
++}
++
++bool
++tbit30 (std::atomic<int> &i)
++{
++#define BIT (1 << 30)
++  return i.fetch_or(BIT, std::memory_order_relaxed) & BIT;
++#undef BIT 
++}
++
++bool
++tbit31 (std::atomic<int> &i)
++{
++#define BIT (1 << 31)
++  return i.fetch_or(BIT, std::memory_order_relaxed) & BIT;
++#undef BIT 
++}
++
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*btsl" 3 } } */
++/* { dg-final { scan-assembler-not "cmpxchg" } } */
+diff --git a/gcc/testsuite/g++.target/i386/pr102566-2.C b/gcc/testsuite/g++.target/i386/pr102566-2.C
+new file mode 100644
+index 00000000000..4f2aea961c2
+--- /dev/null
++++ b/gcc/testsuite/g++.target/i386/pr102566-2.C
+@@ -0,0 +1,31 @@
++/* { dg-do compile { target c++11 } } */
++/* { dg-options "-O2" } */
++
++#include <atomic>
++
++bool
++tbit0 (std::atomic<unsigned int> &i)
++{
++#define BIT (1 << 0)
++  return i.fetch_or(BIT, std::memory_order_relaxed) & BIT;
++#undef BIT 
++}
++
++bool
++tbit30 (std::atomic<unsigned int> &i)
++{
++#define BIT (1 << 30)
++  return i.fetch_or(BIT, std::memory_order_relaxed) & BIT;
++#undef BIT 
++}
++
++bool
++tbit31 (std::atomic<unsigned int> &i)
++{
++#define BIT (1 << 31)
++  return i.fetch_or(BIT, std::memory_order_relaxed) & BIT;
++#undef BIT 
++}
++
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*btsl" 3 } } */
++/* { dg-final { scan-assembler-not "cmpxchg" } } */
+diff --git a/gcc/testsuite/g++.target/i386/pr102566-3.C b/gcc/testsuite/g++.target/i386/pr102566-3.C
+new file mode 100644
+index 00000000000..e88921dd155
+--- /dev/null
++++ b/gcc/testsuite/g++.target/i386/pr102566-3.C
+@@ -0,0 +1,31 @@
++/* { dg-do compile { target c++11 } } */
++/* { dg-options "-O2" } */
++
++#include <atomic>
++
++bool
++tbit0 (std::atomic<unsigned int> &i)
++{
++#define BIT (1 << 0)
++  return !(i.fetch_or(BIT, std::memory_order_relaxed) & BIT);
++#undef BIT 
++}
++
++bool
++tbit30 (std::atomic<unsigned int> &i)
++{
++#define BIT (1 << 30)
++  return !(i.fetch_or(BIT, std::memory_order_relaxed) & BIT);
++#undef BIT 
++}
++
++bool
++tbit31 (std::atomic<unsigned int> &i)
++{
++#define BIT (1 << 31)
++  return !(i.fetch_or(BIT, std::memory_order_relaxed) & BIT);
++#undef BIT 
++}
++
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*btsl" 3 } } */
++/* { dg-final { scan-assembler-not "cmpxchg" } } */
+diff --git a/gcc/testsuite/g++.target/i386/pr102566-4.C b/gcc/testsuite/g++.target/i386/pr102566-4.C
+new file mode 100644
+index 00000000000..44d1362ac2e
+--- /dev/null
++++ b/gcc/testsuite/g++.target/i386/pr102566-4.C
+@@ -0,0 +1,29 @@
++/* { dg-do compile { target c++11 } } */
++/* { dg-options "-O2" } */
++
++#include <atomic>
++
++typedef int __attribute__ ((mode (__word__))) int_type;
++
++#define BIT (1 << 0)
++
++bool
++tbit0 (std::atomic<int_type> &i)
++{
++  return i.fetch_or(BIT, std::memory_order_relaxed) & ~1;
++}
++
++bool
++tbit30 (std::atomic<int_type> &i)
++{
++  return i.fetch_or(BIT, std::memory_order_relaxed) & ~2;
++}
++
++bool
++tbit31 (std::atomic<int_type> &i)
++{
++  return i.fetch_or(BIT, std::memory_order_relaxed) & ~4;
++}
++
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*cmpxchg" 3 } } */
++/* { dg-final { scan-assembler-not "bts" } } */
+diff --git a/gcc/testsuite/g++.target/i386/pr102566-5a.C b/gcc/testsuite/g++.target/i386/pr102566-5a.C
+new file mode 100644
+index 00000000000..f9595bee2ab
+--- /dev/null
++++ b/gcc/testsuite/g++.target/i386/pr102566-5a.C
+@@ -0,0 +1,31 @@
++/* { dg-do compile { target c++11 } } */
++/* { dg-options "-O2" } */
++
++#include <atomic>
++
++bool
++tbit0 (std::atomic<unsigned int> &i)
++{
++#define BIT (1 << 0)
++  return i.fetch_and(~BIT, std::memory_order_relaxed) & BIT;
++#undef BIT 
++}
++
++bool
++tbit30 (std::atomic<unsigned int> &i)
++{
++#define BIT (1 << 30)
++  return i.fetch_and(~BIT, std::memory_order_relaxed) & BIT;
++#undef BIT 
++}
++
++bool
++tbit31 (std::atomic<unsigned int> &i)
++{
++#define BIT (1 << 31)
++  return i.fetch_and(~BIT, std::memory_order_relaxed) & BIT;
++#undef BIT 
++}
++
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*btrl" 3 } } */
++/* { dg-final { scan-assembler-not "cmpxchg" } } */
+diff --git a/gcc/testsuite/g++.target/i386/pr102566-5b.C b/gcc/testsuite/g++.target/i386/pr102566-5b.C
+new file mode 100644
+index 00000000000..d917b27a918
+--- /dev/null
++++ b/gcc/testsuite/g++.target/i386/pr102566-5b.C
+@@ -0,0 +1,31 @@
++/* { dg-do compile { target { c++11 && { ! ia32 } } } } */
++/* { dg-options "-O2" } */
++
++#include <atomic>
++
++bool
++tbit0 (std::atomic<unsigned long long> &i)
++{
++#define BIT (1ll << 0)
++  return i.fetch_and(~BIT, std::memory_order_relaxed) & BIT;
++#undef BIT 
++}
++
++bool
++tbit30 (std::atomic<unsigned long long> &i)
++{
++#define BIT (1ll << 30)
++  return i.fetch_and(~BIT, std::memory_order_relaxed) & BIT;
++#undef BIT 
++}
++
++bool
++tbit31 (std::atomic<unsigned long long> &i)
++{
++#define BIT (1ll << 63)
++  return i.fetch_and(~BIT, std::memory_order_relaxed) & BIT;
++#undef BIT 
++}
++
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*btrq" 3 } } */
++/* { dg-final { scan-assembler-not "cmpxchg" } } */
+diff --git a/gcc/testsuite/g++.target/i386/pr102566-6a.C b/gcc/testsuite/g++.target/i386/pr102566-6a.C
+new file mode 100644
+index 00000000000..01d495eda23
+--- /dev/null
++++ b/gcc/testsuite/g++.target/i386/pr102566-6a.C
+@@ -0,0 +1,31 @@
++/* { dg-do compile { target c++11 } } */
++/* { dg-options "-O2" } */
++
++#include <atomic>
++
++bool
++tbit0 (std::atomic<unsigned int> &i)
++{
++#define BIT (1 << 0)
++  return !(i.fetch_and(~BIT, std::memory_order_relaxed) & BIT);
++#undef BIT 
++}
++
++bool
++tbit30 (std::atomic<unsigned int> &i)
++{
++#define BIT (1 << 30)
++  return !(i.fetch_and(~BIT, std::memory_order_relaxed) & BIT);
++#undef BIT 
++}
++
++bool
++tbit31 (std::atomic<unsigned int> &i)
++{
++#define BIT (1 << 31)
++  return !(i.fetch_and(~BIT, std::memory_order_relaxed) & BIT);
++#undef BIT 
++}
++
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*btrl" 3 } } */
++/* { dg-final { scan-assembler-not "cmpxchg" } } */
+diff --git a/gcc/testsuite/g++.target/i386/pr102566-6b.C b/gcc/testsuite/g++.target/i386/pr102566-6b.C
+new file mode 100644
+index 00000000000..adc11fcbf2d
+--- /dev/null
++++ b/gcc/testsuite/g++.target/i386/pr102566-6b.C
+@@ -0,0 +1,31 @@
++/* { dg-do compile { target { c++11 && { ! ia32 } } } } */
++/* { dg-options "-O2" } */
++
++#include <atomic>
++
++bool
++tbit0 (std::atomic<unsigned long long> &i)
++{
++#define BIT (1ll << 0)
++  return !(i.fetch_and(~BIT, std::memory_order_relaxed) & BIT);
++#undef BIT 
++}
++
++bool
++tbit30 (std::atomic<unsigned long long> &i)
++{
++#define BIT (1ll << 30)
++  return !(i.fetch_and(~BIT, std::memory_order_relaxed) & BIT);
++#undef BIT 
++}
++
++bool
++tbit31 (std::atomic<unsigned long long> &i)
++{
++#define BIT (1ll << 63)
++  return !(i.fetch_and(~BIT, std::memory_order_relaxed) & BIT);
++#undef BIT 
++}
++
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*btrq" 3 } } */
++/* { dg-final { scan-assembler-not "cmpxchg" } } */
 diff --git a/gcc/testsuite/gcc.dg/pr89984.c b/gcc/testsuite/gcc.dg/pr89984.c
 new file mode 100644
 index 00000000000..471fe92bc86
@@ -6546,6 +6962,914 @@ index 00000000000..6db3f57dc76
 +/* { dg-final { scan-assembler-times "vpbroadcastq\[\\t \]+\[^\n\]*, %ymm\[0-9\]+" 1 { target ia32 } } } */
 +/* { dg-final { scan-assembler-not "vmovdqa" } } */
 +/* { dg-final { scan-assembler-not "vzeroupper" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr102566-10a.c b/gcc/testsuite/gcc.target/i386/pr102566-10a.c
+new file mode 100644
+index 00000000000..1c1f86a9659
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr102566-10a.c
+@@ -0,0 +1,15 @@
++/* { dg-do compile } */
++/* { dg-options "-O2" } */
++
++#include <stdatomic.h>
++#include <stdbool.h>
++
++bool
++foo (_Atomic int *v, int bit)
++{
++  int mask = 1 << bit;
++  return atomic_fetch_and_explicit (v, ~mask, memory_order_relaxed) & mask;
++}
++
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*btrl" 1 } } */
++/* { dg-final { scan-assembler-not "cmpxchg" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr102566-10b.c b/gcc/testsuite/gcc.target/i386/pr102566-10b.c
+new file mode 100644
+index 00000000000..0bf39824ea6
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr102566-10b.c
+@@ -0,0 +1,15 @@
++/* { dg-do compile { target { ! ia32 } } } */
++/* { dg-options "-O2" } */
++
++#include <stdatomic.h>
++#include <stdbool.h>
++
++bool
++foo (_Atomic long long int *v, int bit)
++{
++  long long int mask = 1ll << bit;
++  return atomic_fetch_and_explicit (v, ~mask, memory_order_relaxed) & mask;
++}
++
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*btrq" 1 } } */
++/* { dg-final { scan-assembler-not "cmpxchg" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr102566-11.c b/gcc/testsuite/gcc.target/i386/pr102566-11.c
+new file mode 100644
+index 00000000000..2c8f8c4e59a
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr102566-11.c
+@@ -0,0 +1,28 @@
++/* { dg-do compile } */
++/* { dg-options "-O2" } */
++
++#include <stdatomic.h>
++#include <stdbool.h>
++
++#define MASK 0x1234
++
++bool
++foo1 (_Atomic int *v)
++{
++  return atomic_fetch_or_explicit (v, MASK, memory_order_relaxed) & MASK;
++}
++
++bool
++foo2 (_Atomic unsigned int *v, int mask)
++{
++  return atomic_fetch_or_explicit (v, mask, memory_order_relaxed) & mask;
++}
++
++bool
++foo3 (_Atomic unsigned int *v, int mask)
++{
++  return !(atomic_fetch_or_explicit (v, mask, memory_order_relaxed) & mask);
++}
++
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*cmpxchg" 3 } } */
++/* { dg-final { scan-assembler-not "bts" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr102566-12.c b/gcc/testsuite/gcc.target/i386/pr102566-12.c
+new file mode 100644
+index 00000000000..4603a77612c
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr102566-12.c
+@@ -0,0 +1,28 @@
++/* { dg-do compile } */
++/* { dg-options "-O2" } */
++
++#include <stdatomic.h>
++#include <stdbool.h>
++
++#define MASK 0x1234
++
++bool
++foo1 (_Atomic long *v)
++{
++  return atomic_fetch_and_explicit (v, ~MASK, memory_order_relaxed) & MASK;
++}
++
++bool
++foo2 (_Atomic long *v, long mask)
++{
++  return atomic_fetch_and_explicit (v, ~mask, memory_order_relaxed) & mask;
++}
++
++bool
++foo3 (_Atomic long *v, long mask)
++{
++  return !(atomic_fetch_and_explicit (v, ~mask, memory_order_relaxed) & mask);
++}
++
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*cmpxchg" 3 } } */
++/* { dg-final { scan-assembler-not "btr" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr102566-13.c b/gcc/testsuite/gcc.target/i386/pr102566-13.c
+new file mode 100644
+index 00000000000..2657a2f62ae
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr102566-13.c
+@@ -0,0 +1,66 @@
++/* { dg-do compile } */
++/* { dg-options "-O2" } */
++#include <stdatomic.h>
++#include <stdbool.h>
++
++#define FOO(TYPE,MASK)							\
++  __attribute__((noinline,noclone)) TYPE				\
++  atomic_fetch_or_##TYPE##_##MASK (_Atomic TYPE* a)			\
++  {									\
++    TYPE mask = 1 << MASK;						\
++    return __atomic_fetch_or (a, mask, __ATOMIC_RELAXED) & mask;	\
++  }									\
++  __attribute__((noinline,noclone)) TYPE				\
++  atomic_fetch_xor_##TYPE##_##MASK (_Atomic TYPE* a)			\
++  {									\
++    TYPE mask = 1 << MASK;						\
++    return __atomic_fetch_xor (a, mask, __ATOMIC_RELAXED) & mask;	\
++  }									\
++  __attribute__((noinline,noclone)) TYPE				\
++  atomic_xor_fetch_##TYPE##_##MASK (_Atomic TYPE* a)			\
++  {									\
++    TYPE mask = 1 << MASK;						\
++    return __atomic_xor_fetch (a, mask, __ATOMIC_RELAXED) & mask;	\
++  }									\
++  __attribute__((noinline,noclone)) TYPE				\
++  atomic_fetch_and_##TYPE##_##MASK (_Atomic TYPE* a)			\
++  {									\
++    TYPE mask = 1 << MASK;						\
++    return __atomic_fetch_and (a, ~mask, __ATOMIC_RELAXED) & mask;	\
++  }									\
++  __attribute__((noinline,noclone)) TYPE				\
++  sync_fetch_and_or_##TYPE##_##MASK (_Atomic TYPE* a)			\
++  {									\
++    TYPE mask = 1 << MASK;						\
++    return __sync_fetch_and_or (a, mask) & mask;			\
++  }									\
++  __attribute__((noinline,noclone)) TYPE				\
++  sync_fetch_and_xor_##TYPE##_##MASK (_Atomic TYPE* a)			\
++  {									\
++    TYPE mask = 1 << MASK;						\
++    return __sync_fetch_and_xor (a, mask) & mask;			\
++  }									\
++  __attribute__((noinline,noclone)) TYPE				\
++  sync_xor_and_fetch_##TYPE##_##MASK (_Atomic TYPE* a)			\
++  {									\
++    TYPE mask = 1 << MASK;						\
++    return __sync_xor_and_fetch (a, mask) & mask;			\
++  }									\
++  __attribute__((noinline,noclone)) TYPE				\
++  sync_fetch_and_and_##TYPE##_##MASK (_Atomic TYPE* a)			\
++  {									\
++    TYPE mask = 1 << MASK;						\
++    return __sync_fetch_and_and (a, ~mask) & mask;			\
++  }									\
++
++FOO(short, 0);
++FOO(short, 7);
++FOO(short, 15);
++FOO(int, 0);
++FOO(int, 15);
++FOO(int, 31);
++
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*bts" 12 } } */
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*btc" 24 } } */
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*btr" 12 } } */
++/* { dg-final { scan-assembler-not "cmpxchg" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr102566-14.c b/gcc/testsuite/gcc.target/i386/pr102566-14.c
+new file mode 100644
+index 00000000000..24681c1da18
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr102566-14.c
+@@ -0,0 +1,65 @@
++/* { dg-do compile { target { ! ia32 } } } */
++/* { dg-options "-O2" } */
++#include <stdatomic.h>
++#include <stdbool.h>
++typedef long long int64;
++
++#define FOO(TYPE,MASK)							\
++  __attribute__((noinline,noclone)) TYPE				\
++  atomic_fetch_or_##TYPE##_##MASK (_Atomic TYPE* a)			\
++  {									\
++    TYPE mask = 1ll << MASK;						\
++    return __atomic_fetch_or (a, mask, __ATOMIC_RELAXED) & mask;	\
++  }									\
++  __attribute__((noinline,noclone)) TYPE				\
++  atomic_fetch_xor_##TYPE##_##MASK (_Atomic TYPE* a)			\
++  {									\
++    TYPE mask = 1ll << MASK;						\
++    return __atomic_fetch_xor (a, mask, __ATOMIC_RELAXED) & mask;	\
++  }									\
++  __attribute__((noinline,noclone)) TYPE				\
++  atomic_xor_fetch_##TYPE##_##MASK (_Atomic TYPE* a)			\
++  {									\
++    TYPE mask = 1ll << MASK;						\
++    return __atomic_xor_fetch (a, mask, __ATOMIC_RELAXED) & mask;	\
++  }									\
++  __attribute__((noinline,noclone)) TYPE				\
++  atomic_fetch_and_##TYPE##_##MASK (_Atomic TYPE* a)			\
++  {									\
++    TYPE mask = 1ll << MASK;						\
++    return __atomic_fetch_and (a, ~mask, __ATOMIC_RELAXED) & mask;	\
++  }									\
++  __attribute__((noinline,noclone)) TYPE				\
++  sync_fetch_and_or_##TYPE##_##MASK (_Atomic TYPE* a)			\
++  {									\
++    TYPE mask = 1ll << MASK;						\
++    return __sync_fetch_and_or (a, mask) & mask;			\
++  }									\
++  __attribute__((noinline,noclone)) TYPE				\
++  sync_fetch_and_xor_##TYPE##_##MASK (_Atomic TYPE* a)			\
++  {									\
++    TYPE mask = 1ll << MASK;						\
++    return __sync_fetch_and_xor (a, mask) & mask;			\
++  }									\
++  __attribute__((noinline,noclone)) TYPE				\
++  sync_xor_and_fetch_##TYPE##_##MASK (_Atomic TYPE* a)			\
++  {									\
++    TYPE mask = 1ll << MASK;						\
++    return __sync_xor_and_fetch (a, mask) & mask;			\
++  }									\
++  __attribute__((noinline,noclone)) TYPE				\
++  sync_fetch_and_and_##TYPE##_##MASK (_Atomic TYPE* a)			\
++  {									\
++    TYPE mask = 1ll << MASK;						\
++    return __sync_fetch_and_and (a, ~mask) & mask;			\
++  }									\
++
++
++FOO(int64, 0);
++FOO(int64, 32);
++FOO(int64, 63);
++
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*bts" 6 } } */
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*btc" 12 } } */
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*btr" 6 } } */
++/* { dg-final { scan-assembler-not "cmpxchg" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr102566-1a.c b/gcc/testsuite/gcc.target/i386/pr102566-1a.c
+new file mode 100644
+index 00000000000..a915de354e5
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr102566-1a.c
+@@ -0,0 +1,188 @@
++/* { dg-do compile } */
++/* { dg-options "-O2" } */
++
++void bar (void);
++
++__attribute__((noinline, noclone)) int
++f1 (int *a, int bit)
++{
++  int mask = 1 << bit;
++  return (__sync_fetch_and_or (a, mask) & mask) != 0;
++}
++
++__attribute__((noinline, noclone)) int
++f2 (int *a, int bit)
++{
++  int mask = 1 << bit;
++  int t1 = __atomic_fetch_or (a, mask, __ATOMIC_RELAXED);
++  int t2 = t1 & mask;
++  return t2 != 0;
++}
++
++__attribute__((noinline, noclone)) long int
++f3 (long int *a, int bit)
++{
++  long int mask = 1l << bit;
++  return (__atomic_fetch_or (a, mask, __ATOMIC_SEQ_CST) & mask) == 0;
++}
++
++__attribute__((noinline, noclone)) int
++f4 (int *a)
++{
++  int mask = 1 << 7;
++  return (__sync_fetch_and_or (a, mask) & mask) != 0;
++}
++
++__attribute__((noinline, noclone)) int
++f5 (int *a)
++{
++  int mask = 1 << 13;
++  return (__atomic_fetch_or (a, mask, __ATOMIC_RELAXED) & mask) != 0;
++}
++
++__attribute__((noinline, noclone)) int
++f6 (int *a)
++{
++  int mask = 1 << 0;
++  return (__atomic_fetch_or (a, mask, __ATOMIC_SEQ_CST) & mask) != 0;
++}
++
++__attribute__((noinline, noclone)) void
++f7 (int *a, int bit)
++{
++  int mask = 1 << bit;
++  if ((__sync_fetch_and_xor (a, mask) & mask) != 0)
++    bar ();
++}
++
++__attribute__((noinline, noclone)) void
++f8 (int *a, int bit)
++{
++  int mask = 1 << bit;
++  if ((__atomic_fetch_xor (a, mask, __ATOMIC_RELAXED) & mask) == 0)
++    bar ();
++}
++
++__attribute__((noinline, noclone)) int
++f9 (int *a, int bit)
++{
++  int mask = 1 << bit;
++  return (__atomic_fetch_xor (a, mask, __ATOMIC_SEQ_CST) & mask) != 0;
++}
++
++__attribute__((noinline, noclone)) int
++f10 (int *a)
++{
++  int mask = 1 << 7;
++  return (__sync_fetch_and_xor (a, mask) & mask) != 0;
++}
++
++__attribute__((noinline, noclone)) int
++f11 (int *a)
++{
++  int mask = 1 << 13;
++  return (__atomic_fetch_xor (a, mask, __ATOMIC_RELAXED) & mask) != 0;
++}
++
++__attribute__((noinline, noclone)) int
++f12 (int *a)
++{
++  int mask = 1 << 0;
++  return (__atomic_fetch_xor (a, mask, __ATOMIC_SEQ_CST) & mask) != 0;
++}
++
++__attribute__((noinline, noclone)) int
++f13 (int *a, int bit)
++{
++  int mask = 1 << bit;
++  return (__sync_fetch_and_and (a, ~mask) & mask) != 0;
++}
++
++__attribute__((noinline, noclone)) int
++f14 (int *a, int bit)
++{
++  int mask = 1 << bit;
++  return (__atomic_fetch_and (a, ~mask, __ATOMIC_RELAXED) & mask) != 0;
++}
++
++__attribute__((noinline, noclone)) int
++f15 (int *a, int bit)
++{
++  int mask = 1 << bit;
++  return (__atomic_fetch_and (a, ~mask, __ATOMIC_SEQ_CST) & mask) != 0;
++}
++
++__attribute__((noinline, noclone)) int
++f16 (int *a)
++{
++  int mask = 1 << 7;
++  return (__sync_fetch_and_and (a, ~mask) & mask) != 0;
++}
++
++__attribute__((noinline, noclone)) int
++f17 (int *a)
++{
++  int mask = 1 << 13;
++  return (__atomic_fetch_and (a, ~mask, __ATOMIC_RELAXED) & mask) != 0;
++}
++
++__attribute__((noinline, noclone)) int
++f18 (int *a)
++{
++  int mask = 1 << 0;
++  return (__atomic_fetch_and (a, ~mask, __ATOMIC_SEQ_CST) & mask) != 0;
++}
++
++__attribute__((noinline, noclone)) long int
++f19 (long int *a, int bit)
++{
++  long int mask = 1l << bit;
++  return (__atomic_xor_fetch (a, mask, __ATOMIC_SEQ_CST) & mask) != 0;
++}
++
++__attribute__((noinline, noclone)) long int
++f20 (long int *a)
++{
++  long int mask = 1l << 7;
++  return (__atomic_xor_fetch (a, mask, __ATOMIC_SEQ_CST) & mask) == 0;
++}
++
++__attribute__((noinline, noclone)) int
++f21 (int *a, int bit)
++{
++  int mask = 1 << bit;
++  return (__sync_fetch_and_or (a, mask) & mask);
++}
++
++__attribute__((noinline, noclone)) long int
++f22 (long int *a)
++{
++  long int mask = 1l << 7;
++  return (__atomic_xor_fetch (a, mask, __ATOMIC_SEQ_CST) & mask);
++}
++
++__attribute__((noinline, noclone)) long int
++f23 (long int *a)
++{
++  long int mask = 1l << 7;
++  return (__atomic_fetch_xor (a, mask, __ATOMIC_SEQ_CST) & mask);
++}
++
++__attribute__((noinline, noclone)) short int
++f24 (short int *a)
++{
++  short int mask = 1 << 7;
++  return (__sync_fetch_and_or (a, mask) & mask) != 0;
++}
++
++__attribute__((noinline, noclone)) short int
++f25 (short int *a)
++{
++  short int mask = 1 << 7;
++  return (__atomic_fetch_or (a, mask, __ATOMIC_SEQ_CST) & mask) != 0;
++}
++
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*bts" 9 } } */
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*btc" 10 } } */
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*btr" 6 } } */
++/* { dg-final { scan-assembler-not "cmpxchg" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr102566-1b.c b/gcc/testsuite/gcc.target/i386/pr102566-1b.c
+new file mode 100644
+index 00000000000..c4dab8135c7
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr102566-1b.c
+@@ -0,0 +1,107 @@
++/* { dg-do run } */
++/* { dg-options "-O2 -g" } */
++
++int cnt;
++
++__attribute__((noinline, noclone)) void
++bar (void)
++{
++  cnt++;
++}
++
++#include "pr102566-1a.c"
++
++int a;
++long int b;
++unsigned long int c;
++unsigned short int d;
++
++int
++main ()
++{
++  __atomic_store_n (&a, 15, __ATOMIC_RELAXED);
++  if (f1 (&a, 2) != 1 || __atomic_load_n (&a, __ATOMIC_RELAXED) != 15
++      || f1 (&a, 4) != 0 || __atomic_load_n (&a, __ATOMIC_RELAXED) != 31)
++    __builtin_abort ();
++  if (f2 (&a, 1) != 1 || __atomic_load_n (&a, __ATOMIC_RELAXED) != 31
++      || f2 (&a, 5) != 0 || __atomic_load_n (&a, __ATOMIC_RELAXED) != 63)
++    __builtin_abort ();
++  __atomic_store_n (&b, 24, __ATOMIC_RELAXED);
++  if (f3 (&b, 2) != 1 || __atomic_load_n (&b, __ATOMIC_RELAXED) != 28
++      || f3 (&b, 3) != 0 || __atomic_load_n (&b, __ATOMIC_RELAXED) != 28)
++    __builtin_abort ();
++  __atomic_store_n (&a, 0, __ATOMIC_RELAXED);
++  if (f4 (&a) != 0 || __atomic_load_n (&a, __ATOMIC_RELAXED) != 128
++      || f4 (&a) != 1 || __atomic_load_n (&a, __ATOMIC_RELAXED) != 128)
++    __builtin_abort ();
++  if (f5 (&a) != 0 || __atomic_load_n (&a, __ATOMIC_RELAXED) != 8320
++      || f5 (&a) != 1 || __atomic_load_n (&a, __ATOMIC_RELAXED) != 8320)
++    __builtin_abort ();
++  if (f6 (&a) != 0 || __atomic_load_n (&a, __ATOMIC_RELAXED) != 8321
++      || f6 (&a) != 1 || __atomic_load_n (&a, __ATOMIC_RELAXED) != 8321)
++    __builtin_abort ();
++  if (cnt != 0
++      || (f7 (&a, 7), cnt) != 1 || __atomic_load_n (&a, __ATOMIC_RELAXED) != 8193
++      || (f7 (&a, 7), cnt) != 1 || __atomic_load_n (&a, __ATOMIC_RELAXED) != 8321)
++    __builtin_abort ();
++  if ((f8 (&a, 7), cnt) != 1 || __atomic_load_n (&a, __ATOMIC_RELAXED) != 8193
++      || (f8 (&a, 7), cnt) != 2 || __atomic_load_n (&a, __ATOMIC_RELAXED) != 8321)
++    __builtin_abort ();
++  if (f9 (&a, 13) != 1 || __atomic_load_n (&a, __ATOMIC_RELAXED) != 129
++      || f9 (&a, 13) != 0 || __atomic_load_n (&a, __ATOMIC_RELAXED) != 8321)
++    __builtin_abort ();
++  if (f10 (&a) != 1 || __atomic_load_n (&a, __ATOMIC_RELAXED) != 8193
++      || f10 (&a) != 0 || __atomic_load_n (&a, __ATOMIC_RELAXED) != 8321)
++    __builtin_abort ();
++  if (f11 (&a) != 1 || __atomic_load_n (&a, __ATOMIC_RELAXED) != 129
++      || f11 (&a) != 0 || __atomic_load_n (&a, __ATOMIC_RELAXED) != 8321)
++    __builtin_abort ();
++  if (f12 (&a) != 1 || __atomic_load_n (&a, __ATOMIC_RELAXED) != 8320
++      || f12 (&a) != 0 || __atomic_load_n (&a, __ATOMIC_RELAXED) != 8321)
++    __builtin_abort ();
++  if (f13 (&a, 7) != 1 || __atomic_load_n (&a, __ATOMIC_RELAXED) != 8193
++      || f13 (&a, 7) != 0 || __atomic_load_n (&a, __ATOMIC_RELAXED) != 8193)
++    __builtin_abort ();
++  if (f14 (&a, 13) != 1 || __atomic_load_n (&a, __ATOMIC_RELAXED) != 1
++      || f14 (&a, 13) != 0 || __atomic_load_n (&a, __ATOMIC_RELAXED) != 1)
++    __builtin_abort ();
++  if (f15 (&a, 0) != 1 || __atomic_load_n (&a, __ATOMIC_RELAXED) != 0
++      || f15 (&a, 0) != 0 || __atomic_load_n (&a, __ATOMIC_RELAXED) != 0)
++    __builtin_abort ();
++  __atomic_store_n (&a, 8321, __ATOMIC_RELAXED);
++  if (f16 (&a) != 1 || __atomic_load_n (&a, __ATOMIC_RELAXED) != 8193
++      || f16 (&a) != 0 || __atomic_load_n (&a, __ATOMIC_RELAXED) != 8193)
++    __builtin_abort ();
++  if (f17 (&a) != 1 || __atomic_load_n (&a, __ATOMIC_RELAXED) != 1
++      || f17 (&a) != 0 || __atomic_load_n (&a, __ATOMIC_RELAXED) != 1)
++    __builtin_abort ();
++  if (f18 (&a) != 1 || __atomic_load_n (&a, __ATOMIC_RELAXED) != 0
++      || f18 (&a) != 0 || __atomic_load_n (&a, __ATOMIC_RELAXED) != 0)
++    __builtin_abort ();
++  if (f19 (&c, 7) != 1 || __atomic_load_n (&c, __ATOMIC_RELAXED) != 128
++      || f19 (&c, 7) != 0 || __atomic_load_n (&c, __ATOMIC_RELAXED) != 0)
++    __builtin_abort ();
++  if (f20 (&c) != 0 || __atomic_load_n (&c, __ATOMIC_RELAXED) != 128
++      || f20 (&c) != 1 || __atomic_load_n (&c, __ATOMIC_RELAXED) != 0)
++    __builtin_abort ();
++  __atomic_store_n (&a, 128, __ATOMIC_RELAXED);
++  if (f21 (&a, 4) != 0 || __atomic_load_n (&a, __ATOMIC_RELAXED) != 144
++      || f21 (&a, 4) != 16 || __atomic_load_n (&a, __ATOMIC_RELAXED) != 144)
++    __builtin_abort ();
++  __atomic_store_n (&c, 1, __ATOMIC_RELAXED);
++  if (f22 (&c) != 128 || __atomic_load_n (&c, __ATOMIC_RELAXED) != 129
++      || f22 (&c) != 0 || __atomic_load_n (&c, __ATOMIC_RELAXED) != 1)
++    __builtin_abort ();
++  if (f23 (&c) != 0 || __atomic_load_n (&c, __ATOMIC_RELAXED) != 129
++      || f23 (&c) != 128 || __atomic_load_n (&c, __ATOMIC_RELAXED) != 1)
++    __builtin_abort ();
++  if (f24 (&d) != 0 || __atomic_load_n (&d, __ATOMIC_RELAXED) != 128
++      || f24 (&d) != 1 || __atomic_load_n (&d, __ATOMIC_RELAXED) != 128)
++    __builtin_abort ();
++  __atomic_store_n (&d, 1, __ATOMIC_RELAXED);
++  if (f25 (&d) != 0 || __atomic_load_n (&d, __ATOMIC_RELAXED) != 129
++      || f25 (&d) != 1 || __atomic_load_n (&d, __ATOMIC_RELAXED) != 129
++      || cnt != 2)
++    __builtin_abort ();
++  return 0;
++}
+diff --git a/gcc/testsuite/gcc.target/i386/pr102566-2.c b/gcc/testsuite/gcc.target/i386/pr102566-2.c
+new file mode 100644
+index 00000000000..00a7c349f2a
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr102566-2.c
+@@ -0,0 +1,32 @@
++/* { dg-do compile } */
++/* { dg-options "-O2" } */
++
++#include <stdatomic.h>
++#include <stdbool.h>
++
++bool
++foo0 (_Atomic int *v)
++{
++#define BIT (1 << 0)
++  return atomic_fetch_or_explicit (v, BIT, memory_order_relaxed) & BIT;
++#undef BIT
++}
++
++bool
++foo30 (_Atomic int *v)
++{
++#define BIT (1 << 30)
++  return atomic_fetch_or_explicit (v, BIT, memory_order_relaxed) & BIT;
++#undef BIT
++}
++
++bool
++foo31 (_Atomic int *v)
++{
++#define BIT (1 << 31)
++  return atomic_fetch_or_explicit (v, BIT, memory_order_relaxed) & BIT;
++#undef BIT
++}
++
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*btsl" 3 } } */
++/* { dg-final { scan-assembler-not "cmpxchg" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr102566-3a.c b/gcc/testsuite/gcc.target/i386/pr102566-3a.c
+new file mode 100644
+index 00000000000..8bf1cd6e1bd
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr102566-3a.c
+@@ -0,0 +1,15 @@
++/* { dg-do compile } */
++/* { dg-options "-O2" } */
++
++#include <stdatomic.h>
++#include <stdbool.h>
++
++bool
++foo (_Atomic int *v, int bit)
++{
++  int mask = 1 << bit;
++  return atomic_fetch_or_explicit (v, mask, memory_order_relaxed) & mask;
++}
++
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*btsl" 1 } } */
++/* { dg-final { scan-assembler-not "cmpxchg" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr102566-3b.c b/gcc/testsuite/gcc.target/i386/pr102566-3b.c
+new file mode 100644
+index 00000000000..d155ed367a1
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr102566-3b.c
+@@ -0,0 +1,15 @@
++/* { dg-do compile { target { ! ia32 } } } */
++/* { dg-options "-O2" } */
++
++#include <stdatomic.h>
++#include <stdbool.h>
++
++bool
++foo (_Atomic long long int *v, int bit)
++{
++  long long int mask = 1ll << bit;
++  return atomic_fetch_or_explicit (v, mask, memory_order_relaxed) & mask;
++}
++
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*btsq" 1 } } */
++/* { dg-final { scan-assembler-not "cmpxchg" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr102566-4.c b/gcc/testsuite/gcc.target/i386/pr102566-4.c
+new file mode 100644
+index 00000000000..2668ccf827c
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr102566-4.c
+@@ -0,0 +1,15 @@
++/* { dg-do compile } */
++/* { dg-options "-O2" } */
++
++#include <stdatomic.h>
++#include <stdbool.h>
++
++bool
++foo (_Atomic int *v, int bit)
++{
++  unsigned int mask = 1 << bit;
++  return atomic_fetch_or_explicit (v, mask, memory_order_relaxed) & mask;
++}
++
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*btsl" 1 } } */
++/* { dg-final { scan-assembler-not "cmpxchg" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr102566-5.c b/gcc/testsuite/gcc.target/i386/pr102566-5.c
+new file mode 100644
+index 00000000000..8bf1cd6e1bd
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr102566-5.c
+@@ -0,0 +1,15 @@
++/* { dg-do compile } */
++/* { dg-options "-O2" } */
++
++#include <stdatomic.h>
++#include <stdbool.h>
++
++bool
++foo (_Atomic int *v, int bit)
++{
++  int mask = 1 << bit;
++  return atomic_fetch_or_explicit (v, mask, memory_order_relaxed) & mask;
++}
++
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*btsl" 1 } } */
++/* { dg-final { scan-assembler-not "cmpxchg" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr102566-6.c b/gcc/testsuite/gcc.target/i386/pr102566-6.c
+new file mode 100644
+index 00000000000..3dfe55ac683
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr102566-6.c
+@@ -0,0 +1,32 @@
++/* { dg-do compile } */
++/* { dg-options "-O2" } */
++
++#include <stdatomic.h>
++#include <stdbool.h>
++
++bool
++foo0 (_Atomic int *v)
++{
++#define BIT (1 << 0)
++  return !(atomic_fetch_or_explicit (v, BIT, memory_order_relaxed) & BIT);
++#undef BIT
++}
++
++bool
++foo30 (_Atomic int *v)
++{
++#define BIT (1 << 30)
++  return !(atomic_fetch_or_explicit (v, BIT, memory_order_relaxed) & BIT);
++#undef BIT
++}
++
++bool
++foo31 (_Atomic int *v)
++{
++#define BIT (1 << 31)
++  return !(atomic_fetch_or_explicit (v, BIT, memory_order_relaxed) & BIT);
++#undef BIT
++}
++
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*btsl" 3 } } */
++/* { dg-final { scan-assembler-not "cmpxchg" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr102566-7.c b/gcc/testsuite/gcc.target/i386/pr102566-7.c
+new file mode 100644
+index 00000000000..6bc0ae0f320
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr102566-7.c
+@@ -0,0 +1,30 @@
++/* { dg-do compile } */
++/* { dg-options "-O2" } */
++
++#include <stdatomic.h>
++#include <stdbool.h>
++
++typedef int __attribute__ ((mode (__word__))) int_type;
++
++#define BIT (1 << 0)
++
++bool
++foo0 (_Atomic int_type *v)
++{
++  return atomic_fetch_or_explicit (v, BIT, memory_order_relaxed) & ~1;
++}
++
++bool
++foo1 (_Atomic int_type *v)
++{
++  return atomic_fetch_or_explicit (v, BIT, memory_order_relaxed) & ~2;
++}
++
++bool
++foo2 (_Atomic int_type *v)
++{
++  return atomic_fetch_or_explicit (v, BIT, memory_order_relaxed) & ~3;
++}
++
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*cmpxchg" 3 } } */
++/* { dg-final { scan-assembler-not "bts" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr102566-8a.c b/gcc/testsuite/gcc.target/i386/pr102566-8a.c
+new file mode 100644
+index 00000000000..168e3db78c9
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr102566-8a.c
+@@ -0,0 +1,32 @@
++/* { dg-do compile } */
++/* { dg-options "-O2" } */
++
++#include <stdatomic.h>
++#include <stdbool.h>
++
++bool
++foo0 (_Atomic int *v)
++{
++#define BIT (1 << 0)
++  return atomic_fetch_and_explicit (v, ~BIT, memory_order_relaxed) & BIT;
++#undef BIT
++}
++
++bool
++foo30 (_Atomic int *v)
++{
++#define BIT (1 << 30)
++  return atomic_fetch_and_explicit (v, ~BIT, memory_order_relaxed) & BIT;
++#undef BIT
++}
++
++bool
++foo31 (_Atomic int *v)
++{
++#define BIT (1 << 31)
++  return atomic_fetch_and_explicit (v, ~BIT, memory_order_relaxed) & BIT;
++#undef BIT
++}
++
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*btrl" 3 } } */
++/* { dg-final { scan-assembler-not "cmpxchg" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr102566-8b.c b/gcc/testsuite/gcc.target/i386/pr102566-8b.c
+new file mode 100644
+index 00000000000..392da3098e0
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr102566-8b.c
+@@ -0,0 +1,32 @@
++/* { dg-do compile { target { ! ia32 } } } */
++/* { dg-options "-O2" } */
++
++#include <stdatomic.h>
++#include <stdbool.h>
++
++bool
++foo0 (_Atomic long long *v)
++{
++#define BIT (1ll << 0)
++  return atomic_fetch_and_explicit (v, ~BIT, memory_order_relaxed) & BIT;
++#undef BIT
++}
++
++bool
++foo30 (_Atomic long long *v)
++{
++#define BIT (1ll << 62)
++  return atomic_fetch_and_explicit (v, ~BIT, memory_order_relaxed) & BIT;
++#undef BIT
++}
++
++bool
++foo31 (_Atomic long long *v)
++{
++#define BIT (1ll << 63)
++  return atomic_fetch_and_explicit (v, ~BIT, memory_order_relaxed) & BIT;
++#undef BIT
++}
++
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*btrq" 3 } } */
++/* { dg-final { scan-assembler-not "cmpxchg" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr102566-9a.c b/gcc/testsuite/gcc.target/i386/pr102566-9a.c
+new file mode 100644
+index 00000000000..3fa2a3ef043
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr102566-9a.c
+@@ -0,0 +1,32 @@
++/* { dg-do compile } */
++/* { dg-options "-O2" } */
++
++#include <stdatomic.h>
++#include <stdbool.h>
++
++bool
++foo0 (_Atomic int *v)
++{
++#define BIT (1 << 0)
++  return !(atomic_fetch_and_explicit (v, ~BIT, memory_order_relaxed) & BIT);
++#undef BIT
++}
++
++bool
++foo30 (_Atomic int *v)
++{
++#define BIT (1 << 30)
++  return !(atomic_fetch_and_explicit (v, ~BIT, memory_order_relaxed) & BIT);
++#undef BIT
++}
++
++bool
++foo31 (_Atomic int *v)
++{
++#define BIT (1 << 31)
++  return !(atomic_fetch_and_explicit (v, ~BIT, memory_order_relaxed) & BIT);
++#undef BIT
++}
++
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*btrl" 3 } } */
++/* { dg-final { scan-assembler-not "cmpxchg" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr102566-9b.c b/gcc/testsuite/gcc.target/i386/pr102566-9b.c
+new file mode 100644
+index 00000000000..38ddbdc630f
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr102566-9b.c
+@@ -0,0 +1,32 @@
++/* { dg-do compile { target { ! ia32 } } } */
++/* { dg-options "-O2" } */
++
++#include <stdatomic.h>
++#include <stdbool.h>
++
++bool
++foo0 (_Atomic long long *v)
++{
++#define BIT (1ll << 0)
++  return !(atomic_fetch_and_explicit (v, ~BIT, memory_order_relaxed) & BIT);
++#undef BIT
++}
++
++bool
++foo30 (_Atomic long long *v)
++{
++#define BIT (1ll << 62)
++  return !(atomic_fetch_and_explicit (v, ~BIT, memory_order_relaxed) & BIT);
++#undef BIT
++}
++
++bool
++foo31 (_Atomic long long *v)
++{
++#define BIT (1ll << 63)
++  return !(atomic_fetch_and_explicit (v, ~BIT, memory_order_relaxed) & BIT);
++#undef BIT
++}
++
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*btrq" 3 } } */
++/* { dg-final { scan-assembler-not "cmpxchg" } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pr72839.c b/gcc/testsuite/gcc.target/i386/pr72839.c
 index ea724f70377..6888d9d0a55 100644
 --- a/gcc/testsuite/gcc.target/i386/pr72839.c
@@ -7446,6 +8770,521 @@ index 00000000000..f2e2054b6fb
 +/* { dg-options "-O2 -mavx -mfpmath=sse -ftree-vectorize" } */
 +
 +#include "xorsign.c"
+diff --git a/gcc/tree-ssa-ccp.c b/gcc/tree-ssa-ccp.c
+index aad8526eb21..e01d1361ffa 100644
+--- a/gcc/tree-ssa-ccp.c
++++ b/gcc/tree-ssa-ccp.c
+@@ -2862,6 +2862,90 @@ optimize_unreachable (gimple_stmt_iterator i)
+   return ret;
+ }
+ 
++/* Convert
++   _1 = __atomic_fetch_or_* (ptr_6, 1, _3);
++   _7 = ~_1;
++   _5 = (_Bool) _7;
++   to
++   _1 = __atomic_fetch_or_* (ptr_6, 1, _3);
++   _8 = _1 & 1;
++   _5 = _8 == 0;
++   and convert
++   _1 = __atomic_fetch_and_* (ptr_6, ~1, _3);
++   _7 = ~_1;
++   _4 = (_Bool) _7;
++   to
++   _1 = __atomic_fetch_and_* (ptr_6, ~1, _3);
++   _8 = _1 & 1;
++   _4 = (_Bool) _8;
++
++   USE_STMT is the gimplt statement which uses the return value of
++   __atomic_fetch_or_*.  LHS is the return value of __atomic_fetch_or_*.
++   MASK is the mask passed to __atomic_fetch_or_*.
++ */
++
++static gimple *
++convert_atomic_bit_not (enum internal_fn fn, gimple *use_stmt,
++			tree lhs, tree mask)
++{
++  tree and_mask;
++  if (fn == IFN_ATOMIC_BIT_TEST_AND_RESET)
++    {
++      /* MASK must be ~1.  */
++      if (!operand_equal_p (build_int_cst (TREE_TYPE (lhs),
++					   ~HOST_WIDE_INT_1), mask, 0))
++	return nullptr;
++      and_mask = build_int_cst (TREE_TYPE (lhs), 1);
++    }
++  else
++    {
++      /* MASK must be 1.  */
++      if (!operand_equal_p (build_int_cst (TREE_TYPE (lhs), 1), mask, 0))
++	return nullptr;
++      and_mask = mask;
++    }
++
++  tree use_lhs = gimple_assign_lhs (use_stmt);
++
++  use_operand_p use_p;
++  gimple *use_not_stmt;
++
++  if (!single_imm_use (use_lhs, &use_p, &use_not_stmt)
++      || !is_gimple_assign (use_not_stmt))
++    return nullptr;
++
++  if (!CONVERT_EXPR_CODE_P (gimple_assign_rhs_code (use_not_stmt)))
++    return nullptr;
++
++  tree use_not_lhs = gimple_assign_lhs (use_not_stmt);
++  if (TREE_CODE (TREE_TYPE (use_not_lhs)) != BOOLEAN_TYPE)
++    return nullptr;
++
++  gimple_stmt_iterator gsi;
++  gsi = gsi_for_stmt (use_stmt);
++  gsi_remove (&gsi, true);
++  tree var = make_ssa_name (TREE_TYPE (lhs));
++  use_stmt = gimple_build_assign (var, BIT_AND_EXPR, lhs, and_mask);
++  gsi = gsi_for_stmt (use_not_stmt);
++  gsi_insert_before (&gsi, use_stmt, GSI_NEW_STMT);
++  lhs = gimple_assign_lhs (use_not_stmt);
++  gimple *g = gimple_build_assign (lhs, EQ_EXPR, var,
++				   build_zero_cst (TREE_TYPE (mask)));
++  gsi_insert_after (&gsi, g, GSI_NEW_STMT);
++  gsi = gsi_for_stmt (use_not_stmt);
++  gsi_remove (&gsi, true);
++  return use_stmt;
++}
++
++/* match.pd function to match atomic_bit_test_and pattern which
++   has nop_convert:
++     _1 = __atomic_fetch_or_4 (&v, 1, 0);
++     _2 = (int) _1;
++     _5 = _2 & 1;
++ */
++extern bool gimple_nop_atomic_bit_test_and_p (tree, tree *,
++					      tree (*) (tree));
++
+ /* Optimize
+      mask_2 = 1 << cnt_1;
+      _4 = __atomic_fetch_or_* (ptr_6, mask_2, _3);
+@@ -2888,7 +2972,7 @@ optimize_atomic_bit_test_and (gimple_stmt_iterator *gsip,
+   tree lhs = gimple_call_lhs (call);
+   use_operand_p use_p;
+   gimple *use_stmt;
+-  tree mask, bit;
++  tree mask;
+   optab optab;
+ 
+   if (!flag_inline_atomics
+@@ -2898,10 +2982,271 @@ optimize_atomic_bit_test_and (gimple_stmt_iterator *gsip,
+       || SSA_NAME_OCCURS_IN_ABNORMAL_PHI (lhs)
+       || !single_imm_use (lhs, &use_p, &use_stmt)
+       || !is_gimple_assign (use_stmt)
+-      || gimple_assign_rhs_code (use_stmt) != BIT_AND_EXPR
+       || !gimple_vdef (call))
+     return;
+ 
++  tree bit = nullptr;
++
++  mask = gimple_call_arg (call, 1);
++  tree_code rhs_code = gimple_assign_rhs_code (use_stmt);
++  if (rhs_code != BIT_AND_EXPR)
++    {
++      if (rhs_code != NOP_EXPR && rhs_code != BIT_NOT_EXPR)
++	return;
++
++      tree use_lhs = gimple_assign_lhs (use_stmt);
++      if (TREE_CODE (use_lhs) == SSA_NAME
++	  && SSA_NAME_OCCURS_IN_ABNORMAL_PHI (use_lhs))
++	return;
++
++      tree use_rhs = gimple_assign_rhs1 (use_stmt);
++      if (lhs != use_rhs)
++	return;
++
++      gimple *g;
++      gimple_stmt_iterator gsi;
++      tree var;
++      int ibit = -1;
++
++      if (rhs_code == BIT_NOT_EXPR)
++	{
++	  g = convert_atomic_bit_not (fn, use_stmt, lhs, mask);
++	  if (!g)
++	    return;
++	  use_stmt = g;
++	  ibit = 0;
++	}
++      else if (TREE_CODE (TREE_TYPE (use_lhs)) == BOOLEAN_TYPE)
++	{
++	  tree and_mask;
++	  if (fn == IFN_ATOMIC_BIT_TEST_AND_RESET)
++	    {
++	      /* MASK must be ~1.  */
++	      if (!operand_equal_p (build_int_cst (TREE_TYPE (lhs),
++						   ~HOST_WIDE_INT_1),
++				    mask, 0))
++		return;
++
++	      /* Convert
++		 _1 = __atomic_fetch_and_* (ptr_6, ~1, _3);
++		 _4 = (_Bool) _1;
++		 to
++		 _1 = __atomic_fetch_and_* (ptr_6, ~1, _3);
++		 _5 = _1 & 1;
++		 _4 = (_Bool) _5;
++	       */
++	      and_mask = build_int_cst (TREE_TYPE (lhs), 1);
++	    }
++	  else
++	    {
++	      and_mask = build_int_cst (TREE_TYPE (lhs), 1);
++	      if (!operand_equal_p (and_mask, mask, 0))
++		return;
++
++	      /* Convert
++		 _1 = __atomic_fetch_or_* (ptr_6, 1, _3);
++		 _4 = (_Bool) _1;
++		 to
++		 _1 = __atomic_fetch_or_* (ptr_6, 1, _3);
++		 _5 = _1 & 1;
++		 _4 = (_Bool) _5;
++	       */
++	    }
++	  var = make_ssa_name (TREE_TYPE (use_rhs));
++	  replace_uses_by (use_rhs, var);
++	  g = gimple_build_assign (var, BIT_AND_EXPR, use_rhs,
++				   and_mask);
++	  gsi = gsi_for_stmt (use_stmt);
++	  gsi_insert_before (&gsi, g, GSI_NEW_STMT);
++	  use_stmt = g;
++	  ibit = 0;
++	}
++      else if (TYPE_PRECISION (TREE_TYPE (use_lhs))
++	       == TYPE_PRECISION (TREE_TYPE (use_rhs)))
++	{
++	  gimple *use_nop_stmt;
++	  if (!single_imm_use (use_lhs, &use_p, &use_nop_stmt)
++	      || !is_gimple_assign (use_nop_stmt))
++	    return;
++	  rhs_code = gimple_assign_rhs_code (use_nop_stmt);
++	  if (rhs_code != BIT_AND_EXPR)
++	    {
++	      tree use_nop_lhs = gimple_assign_lhs (use_nop_stmt);
++	      if (TREE_CODE (use_nop_lhs) == SSA_NAME
++		  && SSA_NAME_OCCURS_IN_ABNORMAL_PHI (use_nop_lhs))
++		return;
++	      if (rhs_code == BIT_NOT_EXPR)
++		{
++		  g = convert_atomic_bit_not (fn, use_nop_stmt, lhs,
++					      mask);
++		  if (!g)
++		    return;
++		  /* Convert
++		     _1 = __atomic_fetch_or_4 (ptr_6, 1, _3);
++		     _2 = (int) _1;
++		     _7 = ~_2;
++		     _5 = (_Bool) _7;
++		     to
++		     _1 = __atomic_fetch_or_4 (ptr_6, ~1, _3);
++		     _8 = _1 & 1;
++		     _5 = _8 == 0;
++		     and convert
++		     _1 = __atomic_fetch_and_4 (ptr_6, ~1, _3);
++		     _2 = (int) _1;
++		     _7 = ~_2;
++		     _5 = (_Bool) _7;
++		     to
++		     _1 = __atomic_fetch_and_4 (ptr_6, 1, _3);
++		     _8 = _1 & 1;
++		     _5 = _8 == 0;
++		   */
++		  gsi = gsi_for_stmt (use_stmt);
++		  gsi_remove (&gsi, true);
++		  use_stmt = g;
++		  ibit = 0;
++		}
++	      else
++		{
++		  if (TREE_CODE (TREE_TYPE (use_nop_lhs)) != BOOLEAN_TYPE)
++		    return;
++		  if (rhs_code != GE_EXPR && rhs_code != LT_EXPR)
++		    return;
++		  tree cmp_rhs1 = gimple_assign_rhs1 (use_nop_stmt);
++		  if (use_lhs != cmp_rhs1)
++		    return;
++		  tree cmp_rhs2 = gimple_assign_rhs2 (use_nop_stmt);
++		  if (!integer_zerop (cmp_rhs2))
++		    return;
++
++		  tree and_mask;
++
++		  unsigned HOST_WIDE_INT bytes
++		    = tree_to_uhwi (TYPE_SIZE_UNIT (TREE_TYPE (use_rhs)));
++		  ibit = bytes * BITS_PER_UNIT - 1;
++		  unsigned HOST_WIDE_INT highest
++		    = HOST_WIDE_INT_1U << ibit;
++
++		  if (fn == IFN_ATOMIC_BIT_TEST_AND_RESET)
++		    {
++		      /* Get the signed maximum of the USE_RHS type.  */
++		      and_mask = build_int_cst (TREE_TYPE (use_rhs),
++						highest - 1);
++		      if (!operand_equal_p (and_mask, mask, 0))
++			return;
++
++		      /* Convert
++			 _1 = __atomic_fetch_and_4 (ptr_6, 0x7fffffff, _3);
++			 _5 = (signed int) _1;
++			 _4 = _5 < 0 or _5 >= 0;
++			 to
++			 _1 = __atomic_fetch_and_4 (ptr_6, 0x7fffffff, _3);
++			 _6 = _1 & 0x80000000;
++			 _4 = _6 != 0 or _6 == 0;
++		       */
++		      and_mask = build_int_cst (TREE_TYPE (use_rhs),
++						highest);
++		    }
++		  else
++		    {
++		      /* Get the signed minimum of the USE_RHS type.  */
++		      and_mask = build_int_cst (TREE_TYPE (use_rhs),
++						highest);
++		      if (!operand_equal_p (and_mask, mask, 0))
++			return;
++
++		      /* Convert
++			 _1 = __atomic_fetch_or_4 (ptr_6, 0x80000000, _3);
++			 _5 = (signed int) _1;
++			 _4 = _5 < 0 or _5 >= 0;
++			 to
++			 _1 = __atomic_fetch_or_4 (ptr_6, 0x80000000, _3);
++			 _6 = _1 & 0x80000000;
++			 _4 = _6 != 0 or _6 == 0;
++		       */
++		    }
++		  var = make_ssa_name (TREE_TYPE (use_rhs));
++		  gsi = gsi_for_stmt (use_stmt);
++		  gsi_remove (&gsi, true);
++		  g = gimple_build_assign (var, BIT_AND_EXPR, use_rhs,
++					   and_mask);
++		  gsi = gsi_for_stmt (use_nop_stmt);
++		  gsi_insert_before (&gsi, g, GSI_NEW_STMT);
++		  use_stmt = g;
++		  g = gimple_build_assign (use_nop_lhs,
++					   (rhs_code == GE_EXPR
++					    ? EQ_EXPR : NE_EXPR),
++					   var,
++					   build_zero_cst (TREE_TYPE (use_rhs)));
++		  gsi_insert_after (&gsi, g, GSI_NEW_STMT);
++		  gsi = gsi_for_stmt (use_nop_stmt);
++		  gsi_remove (&gsi, true);
++		}
++	    }
++	  else
++	    {
++	      tree and_expr = gimple_assign_lhs (use_nop_stmt);
++	      tree match_op[3];
++	      gimple *g;
++	      if (!gimple_nop_atomic_bit_test_and_p (and_expr,
++						     &match_op[0], NULL)
++		  || SSA_NAME_OCCURS_IN_ABNORMAL_PHI (match_op[2])
++		  || !single_imm_use (match_op[2], &use_p, &g)
++		  || !is_gimple_assign (g))
++		return;
++	      mask = match_op[1];
++	      if (TREE_CODE (mask) == INTEGER_CST)
++		{
++		  ibit = tree_log2 (mask);
++		  gcc_assert (ibit >= 0);
++		}
++	      else
++		{
++		  g = SSA_NAME_DEF_STMT (mask);
++		  gcc_assert (is_gimple_assign (g));
++		  bit = gimple_assign_rhs2 (g);
++		}
++	      /* Convert
++		 _1 = __atomic_fetch_or_4 (ptr_6, mask, _3);
++		 _2 = (int) _1;
++		 _5 = _2 & mask;
++		 to
++		 _1 = __atomic_fetch_or_4 (ptr_6, mask, _3);
++		 _6 = _1 & mask;
++		 _5 = (int) _6;
++		 and convert
++		 _1 = ~mask_7;
++		 _2 = (unsigned int) _1;
++		 _3 = __atomic_fetch_and_4 (ptr_6, _2, 0);
++		 _4 = (int) _3;
++		 _5 = _4 & mask_7;
++		 to
++		 _1 = __atomic_fetch_and_* (ptr_6, ~mask_7, _3);
++		 _12 = _3 & mask_7;
++		 _5 = (int) _12;
++	       */
++	      replace_uses_by (use_lhs, lhs);
++	      tree use_nop_lhs = gimple_assign_lhs (use_nop_stmt);
++	      var = make_ssa_name (TREE_TYPE (use_nop_lhs));
++	      gimple_assign_set_lhs (use_nop_stmt, var);
++	      gsi = gsi_for_stmt (use_stmt);
++	      gsi_remove (&gsi, true);
++	      release_defs (use_stmt);
++	      gsi_remove (gsip, true);
++	      g = gimple_build_assign (use_nop_lhs, NOP_EXPR, var);
++	      gsi = gsi_for_stmt (use_nop_stmt);
++	      gsi_insert_after (&gsi, g, GSI_NEW_STMT);
++	      use_stmt = use_nop_stmt;
++	    }
++	}
++
++      if (!bit)
++	{
++	  if (ibit < 0)
++	    gcc_unreachable ();
++	  bit = build_int_cst (TREE_TYPE (lhs), ibit);
++	}
++    }
++
+   switch (fn)
+     {
+     case IFN_ATOMIC_BIT_TEST_AND_SET:
+@@ -2920,51 +3265,76 @@ optimize_atomic_bit_test_and (gimple_stmt_iterator *gsip,
+   if (optab_handler (optab, TYPE_MODE (TREE_TYPE (lhs))) == CODE_FOR_nothing)
+     return;
+ 
+-  mask = gimple_call_arg (call, 1);
+   tree use_lhs = gimple_assign_lhs (use_stmt);
+   if (!use_lhs)
+     return;
+ 
+-  if (TREE_CODE (mask) == INTEGER_CST)
+-    {
+-      if (fn == IFN_ATOMIC_BIT_TEST_AND_RESET)
+-	mask = const_unop (BIT_NOT_EXPR, TREE_TYPE (mask), mask);
+-      mask = fold_convert (TREE_TYPE (lhs), mask);
+-      int ibit = tree_log2 (mask);
+-      if (ibit < 0)
+-	return;
+-      bit = build_int_cst (TREE_TYPE (lhs), ibit);
+-    }
+-  else if (TREE_CODE (mask) == SSA_NAME)
++  if (!bit)
+     {
+-      gimple *g = SSA_NAME_DEF_STMT (mask);
+-      if (fn == IFN_ATOMIC_BIT_TEST_AND_RESET)
++      if (TREE_CODE (mask) == INTEGER_CST)
+ 	{
+-	  if (!is_gimple_assign (g)
+-	      || gimple_assign_rhs_code (g) != BIT_NOT_EXPR)
++	  if (fn == IFN_ATOMIC_BIT_TEST_AND_RESET)
++	    mask = const_unop (BIT_NOT_EXPR, TREE_TYPE (mask), mask);
++	  mask = fold_convert (TREE_TYPE (lhs), mask);
++	  int ibit = tree_log2 (mask);
++	  if (ibit < 0)
+ 	    return;
+-	  mask = gimple_assign_rhs1 (g);
+-	  if (TREE_CODE (mask) != SSA_NAME)
++	  bit = build_int_cst (TREE_TYPE (lhs), ibit);
++	}
++      else if (TREE_CODE (mask) == SSA_NAME)
++	{
++	  gimple *g = SSA_NAME_DEF_STMT (mask);
++	  if (fn == IFN_ATOMIC_BIT_TEST_AND_RESET)
++	    {
++	      if (!is_gimple_assign (g)
++		  || gimple_assign_rhs_code (g) != BIT_NOT_EXPR)
++		return;
++	      mask = gimple_assign_rhs1 (g);
++	      if (TREE_CODE (mask) != SSA_NAME)
++		return;
++	      g = SSA_NAME_DEF_STMT (mask);
++	    }
++	  if (!is_gimple_assign (g))
+ 	    return;
+-	  g = SSA_NAME_DEF_STMT (mask);
++	  rhs_code = gimple_assign_rhs_code (g);
++	  if (rhs_code != LSHIFT_EXPR)
++	    {
++	      if (rhs_code != NOP_EXPR)
++		return;
++
++	      /* Handle
++		 _1 = 1 << bit_4(D);
++		 mask_5 = (unsigned int) _1;
++		 _2 = __atomic_fetch_or_4 (v_7(D), mask_5, 0);
++		 _3 = _2 & mask_5;
++		 */
++	      tree nop_lhs = gimple_assign_lhs (g);
++	      tree nop_rhs = gimple_assign_rhs1 (g);
++	      if (TYPE_PRECISION (TREE_TYPE (nop_lhs))
++		  != TYPE_PRECISION (TREE_TYPE (nop_rhs)))
++		return;
++	      g = SSA_NAME_DEF_STMT (nop_rhs);
++	      if (!is_gimple_assign (g)
++		  || gimple_assign_rhs_code (g) != LSHIFT_EXPR)
++		return;
++	    }
++	  if (!integer_onep (gimple_assign_rhs1 (g)))
++	    return;
++	  bit = gimple_assign_rhs2 (g);
+ 	}
+-      if (!is_gimple_assign (g)
+-	  || gimple_assign_rhs_code (g) != LSHIFT_EXPR
+-	  || !integer_onep (gimple_assign_rhs1 (g)))
++      else
+ 	return;
+-      bit = gimple_assign_rhs2 (g);
+-    }
+-  else
+-    return;
+ 
+-  if (gimple_assign_rhs1 (use_stmt) == lhs)
+-    {
+-      if (!operand_equal_p (gimple_assign_rhs2 (use_stmt), mask, 0))
++      if (gimple_assign_rhs1 (use_stmt) == lhs)
++	{
++	  if (!operand_equal_p (gimple_assign_rhs2 (use_stmt), mask, 0))
++	    return;
++	}
++      else if (gimple_assign_rhs2 (use_stmt) != lhs
++	       || !operand_equal_p (gimple_assign_rhs1 (use_stmt),
++				    mask, 0))
+ 	return;
+     }
+-  else if (gimple_assign_rhs2 (use_stmt) != lhs
+-	   || !operand_equal_p (gimple_assign_rhs1 (use_stmt), mask, 0))
+-    return;
+ 
+   bool use_bool = true;
+   bool has_debug_uses = false;
+@@ -3053,18 +3423,20 @@ optimize_atomic_bit_test_and (gimple_stmt_iterator *gsip,
+ 	 of the specified bit after the atomic operation (makes only sense
+ 	 for xor, otherwise the bit content is compile time known),
+ 	 we need to invert the bit.  */
+-      g = gimple_build_assign (make_ssa_name (TREE_TYPE (lhs)),
+-			       BIT_XOR_EXPR, new_lhs,
+-			       use_bool ? build_int_cst (TREE_TYPE (lhs), 1)
+-					: mask);
+-      new_lhs = gimple_assign_lhs (g);
++      tree mask_convert = mask;
++      gimple_seq stmts = NULL;
++      if (!use_bool)
++	mask_convert = gimple_convert (&stmts, TREE_TYPE (lhs), mask);
++      new_lhs = gimple_build (&stmts, BIT_XOR_EXPR, TREE_TYPE (lhs), new_lhs,
++			      use_bool ? build_int_cst (TREE_TYPE (lhs), 1)
++				       : mask_convert);
+       if (throws)
+ 	{
+-	  gsi_insert_on_edge_immediate (e, g);
+-	  gsi = gsi_for_stmt (g);
++	  gsi_insert_seq_on_edge_immediate (e, stmts);
++	  gsi = gsi_for_stmt (gimple_seq_last (stmts));
+ 	}
+       else
+-	gsi_insert_after (&gsi, g, GSI_NEW_STMT);
++	gsi_insert_seq_after (&gsi, stmts, GSI_NEW_STMT);
+     }
+   if (use_bool && has_debug_uses)
+     {
 diff --git a/gcc/tree-vect-generic.c b/gcc/tree-vect-generic.c
 index 3348545d18b..fb6b69c5b83 100644
 --- a/gcc/tree-vect-generic.c
