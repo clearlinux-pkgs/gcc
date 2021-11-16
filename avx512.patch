@@ -1,0 +1,191 @@
+From d1c2af5d3fe2cf97c01ecf4745f3357d5ea65144 Mon Sep 17 00:00:00 2001
+From: "H.J. Lu" <hjl.tools@gmail.com>
+Date: Mon, 15 Nov 2021 18:52:56 -0800
+Subject: [PATCH] x86: Add TARGET_AVX512_[MOVE|STORE]_BY_PIECES
+
+1. Add TARGET_AVX512_MOVE_BY_PIECES to perform move by-pieces operation
+with AVX512 instructions.
+2. Add TARGET_AVX512_STORE_BY_PIECES to perform store by-pieces operations
+with AVX512 instructions.
+
+They are enabled for Intel Sapphire Rapids processor.
+
+gcc/
+
+	PR target/103269
+	* config/i386/i386.h (TARGET_AVX512_MOVE_BY_PIECES): New.
+	(TARGET_AVX512_STORE_BY_PIECES): Likewise.
+	(MOVE_MAX): Use 64 for TARGET_AVX512_MOVE_BY_PIECES.
+	(STORE_MAX_PIECES): Use 64 for TARGET_AVX512_STORE_BY_PIECES.
+	* config/i386/x86-tune.def (X86_TUNE_AVX512_MOVE_BY_PIECES): New.
+	(X86_TUNE_AVX512_STORE_BY_PIECES): Likewise.
+
+gcc/testsuite/
+
+	PR target/103269
+	* gcc.target/i386/pieces-memcpy-17.c: New test.
+	* gcc.target/i386/pieces-memcpy-18.c: Likewise.
+	* gcc.target/i386/pieces-memset-45.c: Likewise.
+	* gcc.target/i386/pieces-memset-46.c: Likewise.
+---
+ gcc/config/i386/i386.h                          | 11 +++++++++--
+ gcc/config/i386/x86-tune.def                    | 10 ++++++++++
+ .../gcc.target/i386/pieces-memcpy-17.c          | 16 ++++++++++++++++
+ .../gcc.target/i386/pieces-memcpy-18.c          | 16 ++++++++++++++++
+ .../gcc.target/i386/pieces-memset-45.c          | 17 +++++++++++++++++
+ .../gcc.target/i386/pieces-memset-46.c          | 16 ++++++++++++++++
+ 6 files changed, 84 insertions(+), 2 deletions(-)
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memcpy-17.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memcpy-18.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memset-45.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pieces-memset-46.c
+
+diff --git a/gcc/config/i386/i386.h b/gcc/config/i386/i386.h
+index e35c79c192c..e5d1977d93a 100644
+--- a/gcc/config/i386/i386.h
++++ b/gcc/config/i386/i386.h
+@@ -412,6 +412,10 @@ extern unsigned char ix86_tune_features[X86_TUNE_LAST];
+ 	ix86_tune_features[X86_TUNE_AVX256_MOVE_BY_PIECES]
+ #define TARGET_AVX256_STORE_BY_PIECES \
+ 	ix86_tune_features[X86_TUNE_AVX256_STORE_BY_PIECES]
++#define TARGET_AVX512_MOVE_BY_PIECES \
++	ix86_tune_features[X86_TUNE_AVX512_MOVE_BY_PIECES]
++#define TARGET_AVX512_STORE_BY_PIECES \
++	ix86_tune_features[X86_TUNE_AVX512_STORE_BY_PIECES]
+ #define TARGET_AVX256_SPLIT_REGS \
+ 	ix86_tune_features[X86_TUNE_AVX256_SPLIT_REGS]
+ #define TARGET_GENERAL_REGS_SSE_SPILL \
+@@ -1804,7 +1808,9 @@ typedef struct ix86_args {
+    MOVE_MAX_PIECES defaults to MOVE_MAX.  */
+ 
+ #define MOVE_MAX \
+-  ((TARGET_AVX512F && !TARGET_PREFER_AVX256) \
++  ((TARGET_AVX512F && (TARGET_AVX512_MOVE_BY_PIECES \
++		       || TARGET_AVX512_STORE_BY_PIECES \
++		       || !TARGET_PREFER_AVX256)) \
+    ? 64 \
+    : ((TARGET_AVX \
+        && !TARGET_PREFER_AVX128 \
+@@ -1822,7 +1828,8 @@ typedef struct ix86_args {
+    store_by_pieces of 16/32/64 bytes.  */
+ #define STORE_MAX_PIECES \
+   (TARGET_INTER_UNIT_MOVES_TO_VEC \
+-   ? ((TARGET_AVX512F && !TARGET_PREFER_AVX256) \
++   ? ((TARGET_AVX512F && (TARGET_AVX512_STORE_BY_PIECES \
++			  || !TARGET_PREFER_AVX256)) \
+       ? 64 \
+       : ((TARGET_AVX \
+ 	  && !TARGET_PREFER_AVX128 \
+diff --git a/gcc/config/i386/x86-tune.def b/gcc/config/i386/x86-tune.def
+index 4ae0b569841..26981f657af 100644
+--- a/gcc/config/i386/x86-tune.def
++++ b/gcc/config/i386/x86-tune.def
+@@ -512,6 +512,16 @@ DEF_TUNE (X86_TUNE_AVX256_MOVE_BY_PIECES, "avx256_move_by_pieces",
+ DEF_TUNE (X86_TUNE_AVX256_STORE_BY_PIECES, "avx256_store_by_pieces",
+ 	  m_CORE_AVX512)
+ 
++/* X86_TUNE_AVX512_MOVE_BY_PIECES: Optimize move_by_pieces with 512-bit
++   AVX instructions.  */
++DEF_TUNE (X86_TUNE_AVX512_MOVE_BY_PIECES, "avx512_move_by_pieces",
++	  m_SAPPHIRERAPIDS)
++
++/* X86_TUNE_AVX512_STORE_BY_PIECES: Optimize store_by_pieces with 512-bit
++   AVX instructions.  */
++DEF_TUNE (X86_TUNE_AVX512_STORE_BY_PIECES, "avx512_store_by_pieces",
++	  m_SAPPHIRERAPIDS)
++
+ /*****************************************************************************/
+ /*****************************************************************************/
+ /* Historical relics: tuning flags that helps a specific old CPU designs     */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memcpy-17.c b/gcc/testsuite/gcc.target/i386/pieces-memcpy-17.c
+new file mode 100644
+index 00000000000..b15a0db9ff0
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memcpy-17.c
+@@ -0,0 +1,16 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -march=sapphirerapids" } */
++
++extern char *dst, *src;
++
++void
++foo (void)
++{
++  __builtin_memcpy (dst, src, 66);
++}
++
++/* { dg-final { scan-assembler-times "vmovdqu64\[ \\t\]+\[^\n\]*%zmm" 2 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memcpy-18.c b/gcc/testsuite/gcc.target/i386/pieces-memcpy-18.c
+new file mode 100644
+index 00000000000..494112bc0c8
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memcpy-18.c
+@@ -0,0 +1,16 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -march=x86-64 -mprefer-vector-width=256 -mavx512f -mtune-ctrl=avx512_move_by_pieces" } */
++
++extern char *dst, *src;
++
++void
++foo (void)
++{
++  __builtin_memcpy (dst, src, 66);
++}
++
++/* { dg-final { scan-assembler-times "vmovdqu64\[ \\t\]+\[^\n\]*%zmm" 2 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-45.c b/gcc/testsuite/gcc.target/i386/pieces-memset-45.c
+new file mode 100644
+index 00000000000..ab7894aa2e6
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-45.c
+@@ -0,0 +1,17 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -march=sapphirerapids" } */
++
++extern char *dst;
++
++void
++foo (void)
++{
++  __builtin_memset (dst, 3, 66);
++}
++
++/* { dg-final { scan-assembler-times "vmovdqu8\[ \\t\]+\[^\n\]*%zmm" 1 } } */
++/* { dg-final { scan-assembler-times "vmovw\[ \\t\]+\[^\n\]*%xmm" 1 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-46.c b/gcc/testsuite/gcc.target/i386/pieces-memset-46.c
+new file mode 100644
+index 00000000000..70c80e5064b
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-46.c
+@@ -0,0 +1,16 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -march=x86-64 -mprefer-vector-width=256 -mavx512f -mtune-ctrl=avx512_store_by_pieces" } */
++
++extern char *dst;
++
++void
++foo (void)
++{
++  __builtin_memset (dst, 3, 66);
++}
++
++/* { dg-final { scan-assembler-times "vmovdqu64\[ \\t\]+\[^\n\]*%zmm" 1 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+-- 
+2.33.1
+
