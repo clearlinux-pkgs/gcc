@@ -1,7 +1,4 @@
-Arjan van de Ven (1):
-      Merge remote-tracking branch 'origin/releases/gcc-11' into HEAD
-
-H.J. Lu (35):
+H.J. Lu (38):
       op_by_pieces_d::run: Change a while loop to a do-while loop
       Generate offset adjusted operation for op_by_pieces operations
       Don't use nullptr return from simplify_gen_subreg
@@ -37,11 +34,18 @@ H.J. Lu (35):
       x86: Update memcpy/memset inline strategies for -mtune=tremont
       x86: Properly handle USE_VECTOR_FP_CONVERTS/USE_VECTOR_CONVERTS
       x86: Add TARGET_SSE_PARTIAL_REG_[FP_]CONVERTS_DEPENDENCY
+      x86: Add gcc.target/i386/pr103205-2.c
+      Check optab before transforming atomic bit test and operations
+      Add a missing return when transforming atomic bit test and operations
 
-Jakub Jelinek (3):
+Hongyu Wang (1):
+      PR target/103069: Relax cmpxchg loop for x86 target
+
+Jakub Jelinek (4):
       i386: Punt on broadcasts from TImode integers [PR101286]
       i386: Fix up @xorsign<mode>3_1 [PR102224]
       i386: Fix up xorsign for AVX [PR89984]
+      i386: Fix up x86 atomic_bit_test* expanders for !TARGET_HIMODE_MATH [PR103205]
 
 Richard Biener (1):
       middle-end/100951 - make sure to generate VECTOR_CST in lowering
@@ -404,7 +408,7 @@ index ae90610ad80..a60d9a79b0b 100644
  
  #ifndef CUMULATIVE_ARGS
 diff --git a/gcc/config/i386/i386-expand.c b/gcc/config/i386/i386-expand.c
-index 16765718cc3..46d18bd9a9e 100644
+index 16765718cc3..dd9f63b077b 100644
 --- a/gcc/config/i386/i386-expand.c
 +++ b/gcc/config/i386/i386-expand.c
 @@ -190,6 +190,82 @@ ix86_expand_clear (rtx dest)
@@ -690,7 +694,8 @@ index 16765718cc3..46d18bd9a9e 100644
 -  mask = ix86_build_signbit_mask (vmode, 0, 0);
 -
 -  if (CONST_DOUBLE_P (op0))
--    {
++  if (rtx_equal_p (operands[1], operands[2]))
+     {
 -      if (real_isneg (CONST_DOUBLE_REAL_VALUE (op0)))
 -	op0 = simplify_unary_operation (ABS, mode, op0, mode);
 -
@@ -740,8 +745,7 @@ index 16765718cc3..46d18bd9a9e 100644
 -  emit_insn (gen_rtx_SET (dest, x));
 -
 -  if (op0 != CONST0_RTX (vmode))
-+  if (rtx_equal_p (operands[1], operands[2]))
-     {
+-    {
 -      x = gen_rtx_IOR (vmode, dest, op0);
 -      emit_insn (gen_rtx_SET (dest, x));
 -    }
@@ -901,6 +905,87 @@ index 16765718cc3..46d18bd9a9e 100644
  ix86_expand_vector_init_duplicate (bool mmx_ok, machine_mode mode,
  				   rtx target, rtx val)
  {
+@@ -21082,4 +21154,80 @@ ix86_expand_divmod_libfunc (rtx libfunc, machine_mode mode,
+   *rem_p = rem;
+ }
+ 
++void ix86_expand_atomic_fetch_op_loop (rtx target, rtx mem, rtx val,
++				       enum rtx_code code, bool after,
++				       bool doubleword)
++{
++  rtx old_reg, new_reg, old_mem, success, oldval, new_mem;
++  rtx_code_label *loop_label, *pause_label;
++  machine_mode mode = GET_MODE (target);
++
++  old_reg = gen_reg_rtx (mode);
++  new_reg = old_reg;
++  loop_label = gen_label_rtx ();
++  pause_label = gen_label_rtx ();
++  old_mem = copy_to_reg (mem);
++  emit_label (loop_label);
++  emit_move_insn (old_reg, old_mem);
++
++  /* return value for atomic_fetch_op.  */
++  if (!after)
++    emit_move_insn (target, old_reg);
++
++  if (code == NOT)
++    {
++      new_reg = expand_simple_binop (mode, AND, new_reg, val, NULL_RTX,
++				     true, OPTAB_LIB_WIDEN);
++      new_reg = expand_simple_unop (mode, code, new_reg, NULL_RTX, true);
++    }
++  else
++    new_reg = expand_simple_binop (mode, code, new_reg, val, NULL_RTX,
++				   true, OPTAB_LIB_WIDEN);
++
++  /* return value for atomic_op_fetch.  */
++  if (after)
++    emit_move_insn (target, new_reg);
++
++  /* Load memory again inside loop.  */
++  new_mem = copy_to_reg (mem);
++  /* Compare mem value with expected value.  */
++
++  if (doubleword)
++    {
++      machine_mode half_mode = (mode == DImode)? SImode : DImode;
++      rtx low_new_mem = gen_lowpart (half_mode, new_mem);
++      rtx low_old_mem = gen_lowpart (half_mode, old_mem);
++      rtx high_new_mem = gen_highpart (half_mode, new_mem);
++      rtx high_old_mem = gen_highpart (half_mode, old_mem);
++      emit_cmp_and_jump_insns (low_new_mem, low_old_mem, NE, NULL_RTX,
++			       half_mode, 1, pause_label,
++			       profile_probability::guessed_never ());
++      emit_cmp_and_jump_insns (high_new_mem, high_old_mem, NE, NULL_RTX,
++			       half_mode, 1, pause_label,
++			       profile_probability::guessed_never ());
++    }
++  else
++    emit_cmp_and_jump_insns (new_mem, old_mem, NE, NULL_RTX,
++			     GET_MODE (old_mem), 1, pause_label,
++			     profile_probability::guessed_never ());
++
++  success = NULL_RTX;
++  oldval = old_mem;
++  expand_atomic_compare_and_swap (&success, &oldval, mem, old_reg,
++				  new_reg, false, MEMMODEL_SYNC_SEQ_CST,
++				  MEMMODEL_RELAXED);
++  if (oldval != old_mem)
++    emit_move_insn (old_mem, oldval);
++
++  emit_cmp_and_jump_insns (success, const0_rtx, EQ, const0_rtx,
++			   GET_MODE (success), 1, loop_label,
++			   profile_probability::guessed_never ());
++
++  /* If mem is not expected, pause and loop back.  */
++  emit_label (pause_label);
++  emit_insn (gen_pause ());
++  emit_jump_insn (gen_jump (loop_label));
++  emit_barrier ();
++}
++
+ #include "gt-i386-expand.h"
 diff --git a/gcc/config/i386/i386-features.c b/gcc/config/i386/i386-features.c
 index 77783a154b6..47736f74a00 100644
 --- a/gcc/config/i386/i386-features.c
@@ -1185,10 +1270,20 @@ index dbddfd8e48f..4e7014be034 100644
  /* The symbol Pmode stands for one of the above machine modes (usually SImode).
     The tm.h file specifies which one.  It is not a distinct mode.  */
 diff --git a/gcc/config/i386/i386-options.c b/gcc/config/i386/i386-options.c
-index 19632b5fd6b..4b77d62926f 100644
+index 19632b5fd6b..cd21a4e1964 100644
 --- a/gcc/config/i386/i386-options.c
 +++ b/gcc/config/i386/i386-options.c
-@@ -719,7 +719,7 @@ static const struct processor_costs *processor_cost_table[] =
+@@ -392,7 +392,8 @@ ix86_target_string (HOST_WIDE_INT isa, HOST_WIDE_INT isa2,
+     { "-mstv",				MASK_STV },
+     { "-mavx256-split-unaligned-load",	MASK_AVX256_SPLIT_UNALIGNED_LOAD },
+     { "-mavx256-split-unaligned-store",	MASK_AVX256_SPLIT_UNALIGNED_STORE },
+-    { "-mcall-ms2sysv-xlogues",		MASK_CALL_MS2SYSV_XLOGUES }
++    { "-mcall-ms2sysv-xlogues",		MASK_CALL_MS2SYSV_XLOGUES },
++    { "-mrelax-cmpxchg-loop",		MASK_RELAX_CMPXCHG_LOOP }
+   };
+ 
+   /* Additional flag options.  */
+@@ -719,7 +720,7 @@ static const struct processor_costs *processor_cost_table[] =
    &slm_cost,
    &slm_cost,
    &slm_cost,
@@ -1197,6 +1292,17 @@ index 19632b5fd6b..4b77d62926f 100644
    &slm_cost,
    &slm_cost,
    &skylake_cost,
+@@ -1086,6 +1087,10 @@ ix86_valid_target_attribute_inner_p (tree fndecl, tree args, char *p_strings[],
+     IX86_ATTR_IX86_YES ("general-regs-only",
+ 			OPT_mgeneral_regs_only,
+ 			OPTION_MASK_GENERAL_REGS_ONLY),
++
++    IX86_ATTR_YES ("relax-cmpxchg-loop",
++		   OPT_mrelax_cmpxchg_loop,
++		   MASK_RELAX_CMPXCHG_LOOP),
+   };
+ 
+   location_t loc
 diff --git a/gcc/config/i386/i386-passes.def b/gcc/config/i386/i386-passes.def
 index 44df00e94ac..29baf8acd0b 100644
 --- a/gcc/config/i386/i386-passes.def
@@ -1207,7 +1313,7 @@ index 44df00e94ac..29baf8acd0b 100644
    INSERT_PASS_AFTER (pass_combine, 1, pass_remove_partial_avx_dependency);
 -  INSERT_PASS_AFTER (pass_combine, 1, pass_constant_pool_broadcast);
 diff --git a/gcc/config/i386/i386-protos.h b/gcc/config/i386/i386-protos.h
-index 7782cf1163f..928746073a9 100644
+index 7782cf1163f..71df5be5a26 100644
 --- a/gcc/config/i386/i386-protos.h
 +++ b/gcc/config/i386/i386-protos.h
 @@ -50,6 +50,8 @@ extern void ix86_reset_previous_fndecl (void);
@@ -1230,7 +1336,16 @@ index 7782cf1163f..928746073a9 100644
  extern bool ix86_unary_operator_ok (enum rtx_code, machine_mode, rtx[]);
  extern bool ix86_match_ccmode (rtx, machine_mode);
  extern void ix86_expand_branch (enum rtx_code, rtx, rtx, rtx);
-@@ -257,6 +256,8 @@ extern void ix86_expand_mul_widen_hilo (rtx, rtx, rtx, bool, bool);
+@@ -216,6 +215,8 @@ extern rtx ix86_split_stack_guard (void);
+ extern void ix86_move_vector_high_sse_to_mmx (rtx);
+ extern void ix86_split_mmx_pack (rtx[], enum rtx_code);
+ extern void ix86_split_mmx_punpck (rtx[], bool);
++extern void ix86_expand_atomic_fetch_op_loop (rtx, rtx, rtx, enum rtx_code,
++					      bool, bool);
+ 
+ #ifdef TREE_CODE
+ extern void init_cumulative_args (CUMULATIVE_ARGS *, tree, rtx, tree, int);
+@@ -257,6 +258,8 @@ extern void ix86_expand_mul_widen_hilo (rtx, rtx, rtx, bool, bool);
  extern void ix86_expand_sse2_mulv4si3 (rtx, rtx, rtx);
  extern void ix86_expand_sse2_mulvxdi3 (rtx, rtx, rtx);
  extern void ix86_expand_sse2_abs (rtx, rtx);
@@ -1239,7 +1354,7 @@ index 7782cf1163f..928746073a9 100644
  
  /* In i386-c.c  */
  extern void ix86_target_macros (void);
-@@ -392,4 +393,3 @@ extern rtl_opt_pass *make_pass_insert_endbr_and_patchable_area
+@@ -392,4 +395,3 @@ extern rtl_opt_pass *make_pass_insert_endbr_and_patchable_area
    (gcc::context *);
  extern rtl_opt_pass *make_pass_remove_partial_avx_dependency
    (gcc::context *);
@@ -1807,6 +1922,21 @@ index 97325e38676..b3ae2188c09 100644
    DONE;
  })
  
+diff --git a/gcc/config/i386/i386.opt b/gcc/config/i386/i386.opt
+index 7b8547bb1c3..c93b977e60a 100644
+--- a/gcc/config/i386/i386.opt
++++ b/gcc/config/i386/i386.opt
+@@ -404,6 +404,10 @@ momit-leaf-frame-pointer
+ Target Mask(OMIT_LEAF_FRAME_POINTER) Save
+ Omit the frame pointer in leaf functions.
+ 
++mrelax-cmpxchg-loop
++Target Mask(RELAX_CMPXCHG_LOOP) Save
++Relax cmpxchg loop for atomic_fetch_{or,xor,and,nand} by adding load and cmp before cmpxchg, execute pause and loop back to load and compare if load value is not expected.
++
+ mpc32
+ Target RejectNegative
+ Set 80387 floating-point precision to 32-bit.
 diff --git a/gcc/config/i386/predicates.md b/gcc/config/i386/predicates.md
 index b1df8548af6..d7e335d4b63 100644
 --- a/gcc/config/i386/predicates.md
@@ -2245,6 +2375,161 @@ index e495725ff7c..ebfe0b80068 100644
 +    gcc_unreachable ();
 +  DONE;
 +})
+diff --git a/gcc/config/i386/sync.md b/gcc/config/i386/sync.md
+index 05a835256bb..cc4fe727bd9 100644
+--- a/gcc/config/i386/sync.md
++++ b/gcc/config/i386/sync.md
+@@ -525,6 +525,123 @@
+ 	      (set (reg:CCZ FLAGS_REG)
+ 		   (unspec_volatile:CCZ [(const_int 0)] UNSPECV_CMPXCHG))])])
+ 
++(define_expand "atomic_fetch_<logic><mode>"
++  [(match_operand:SWI124 0 "register_operand")
++   (any_logic:SWI124
++    (match_operand:SWI124 1 "memory_operand")
++    (match_operand:SWI124 2 "register_operand"))
++   (match_operand:SI 3 "const_int_operand")]
++  "TARGET_CMPXCHG && TARGET_RELAX_CMPXCHG_LOOP"
++{
++  ix86_expand_atomic_fetch_op_loop (operands[0], operands[1],
++				    operands[2], <CODE>, false,
++				    false);
++  DONE;
++})
++
++(define_expand "atomic_<logic>_fetch<mode>"
++  [(match_operand:SWI124 0 "register_operand")
++   (any_logic:SWI124
++    (match_operand:SWI124 1 "memory_operand")
++    (match_operand:SWI124 2 "register_operand"))
++   (match_operand:SI 3 "const_int_operand")]
++  "TARGET_CMPXCHG && TARGET_RELAX_CMPXCHG_LOOP"
++{
++  ix86_expand_atomic_fetch_op_loop (operands[0], operands[1],
++				    operands[2], <CODE>, true,
++				    false);
++  DONE;
++})
++
++(define_expand "atomic_fetch_nand<mode>"
++  [(match_operand:SWI124 0 "register_operand")
++   (match_operand:SWI124 1 "memory_operand")
++   (match_operand:SWI124 2 "register_operand")
++   (match_operand:SI 3 "const_int_operand")]
++  "TARGET_CMPXCHG && TARGET_RELAX_CMPXCHG_LOOP"
++{
++  ix86_expand_atomic_fetch_op_loop (operands[0], operands[1],
++				    operands[2], NOT, false,
++				    false);
++  DONE;
++})
++
++(define_expand "atomic_nand_fetch<mode>"
++  [(match_operand:SWI124 0 "register_operand")
++   (match_operand:SWI124 1 "memory_operand")
++   (match_operand:SWI124 2 "register_operand")
++   (match_operand:SI 3 "const_int_operand")]
++  "TARGET_CMPXCHG && TARGET_RELAX_CMPXCHG_LOOP"
++{
++  ix86_expand_atomic_fetch_op_loop (operands[0], operands[1],
++				    operands[2], NOT, true,
++				    false);
++  DONE;
++})
++
++(define_expand "atomic_fetch_<logic><mode>"
++  [(match_operand:CASMODE 0 "register_operand")
++   (any_logic:CASMODE
++    (match_operand:CASMODE 1 "memory_operand")
++    (match_operand:CASMODE 2 "register_operand"))
++   (match_operand:SI 3 "const_int_operand")]
++  "TARGET_CMPXCHG && TARGET_RELAX_CMPXCHG_LOOP"
++{
++  bool doubleword = (<MODE>mode == DImode && !TARGET_64BIT)
++		    || (<MODE>mode == TImode);
++  ix86_expand_atomic_fetch_op_loop (operands[0], operands[1],
++				    operands[2], <CODE>, false,
++				    doubleword);
++  DONE;
++})
++
++(define_expand "atomic_<logic>_fetch<mode>"
++  [(match_operand:CASMODE 0 "register_operand")
++   (any_logic:CASMODE
++    (match_operand:CASMODE 1 "memory_operand")
++    (match_operand:CASMODE 2 "register_operand"))
++   (match_operand:SI 3 "const_int_operand")]
++  "TARGET_CMPXCHG && TARGET_RELAX_CMPXCHG_LOOP"
++{
++  bool doubleword = (<MODE>mode == DImode && !TARGET_64BIT)
++		    || (<MODE>mode == TImode);
++  ix86_expand_atomic_fetch_op_loop (operands[0], operands[1],
++				    operands[2], <CODE>, true,
++				    doubleword);
++  DONE;
++})
++
++(define_expand "atomic_fetch_nand<mode>"
++  [(match_operand:CASMODE 0 "register_operand")
++   (match_operand:CASMODE 1 "memory_operand")
++   (match_operand:CASMODE 2 "register_operand")
++   (match_operand:SI 3 "const_int_operand")]
++  "TARGET_CMPXCHG && TARGET_RELAX_CMPXCHG_LOOP"
++{
++  bool doubleword = (<MODE>mode == DImode && !TARGET_64BIT)
++		    || (<MODE>mode == TImode);
++  ix86_expand_atomic_fetch_op_loop (operands[0], operands[1],
++				    operands[2], NOT, false,
++				    doubleword);
++  DONE;
++})
++
++(define_expand "atomic_nand_fetch<mode>"
++  [(match_operand:CASMODE 0 "register_operand")
++   (match_operand:CASMODE 1 "memory_operand")
++   (match_operand:CASMODE 2 "register_operand")
++   (match_operand:SI 3 "const_int_operand")]
++  "TARGET_CMPXCHG && TARGET_RELAX_CMPXCHG_LOOP"
++{
++  bool doubleword = (<MODE>mode == DImode && !TARGET_64BIT)
++		    || (<MODE>mode == TImode);
++  ix86_expand_atomic_fetch_op_loop (operands[0], operands[1],
++				    operands[2], NOT, true,
++				    doubleword);
++  DONE;
++})
++
++
+ ;; For operand 2 nonmemory_operand predicate is used instead of
+ ;; register_operand to allow combiner to better optimize atomic
+ ;; additions of constants.
+@@ -726,7 +843,7 @@
+   rtx result = convert_modes (<MODE>mode, QImode, tem, 1);
+   if (operands[4] == const0_rtx)
+     result = expand_simple_binop (<MODE>mode, ASHIFT, result,
+-				  operands[2], operands[0], 0, OPTAB_DIRECT);
++				  operands[2], operands[0], 0, OPTAB_WIDEN);
+   if (result != operands[0])
+     emit_move_insn (operands[0], result);
+   DONE;
+@@ -763,7 +880,7 @@
+   rtx result = convert_modes (<MODE>mode, QImode, tem, 1);
+   if (operands[4] == const0_rtx)
+     result = expand_simple_binop (<MODE>mode, ASHIFT, result,
+-				  operands[2], operands[0], 0, OPTAB_DIRECT);
++				  operands[2], operands[0], 0, OPTAB_WIDEN);
+   if (result != operands[0])
+     emit_move_insn (operands[0], result);
+   DONE;
+@@ -801,7 +918,7 @@
+   rtx result = convert_modes (<MODE>mode, QImode, tem, 1);
+   if (operands[4] == const0_rtx)
+     result = expand_simple_binop (<MODE>mode, ASHIFT, result,
+-				  operands[2], operands[0], 0, OPTAB_DIRECT);
++				  operands[2], operands[0], 0, OPTAB_WIDEN);
+   if (result != operands[0])
+     emit_move_insn (operands[0], result);
+   DONE;
 diff --git a/gcc/config/i386/x86-tune-costs.h b/gcc/config/i386/x86-tune-costs.h
 index ffe810f2bcb..93644be9cb3 100644
 --- a/gcc/config/i386/x86-tune-costs.h
@@ -2653,6 +2938,33 @@ index 91216593e75..ba79a8e48ed 100644
  #endif
  #endif
  
+diff --git a/gcc/doc/invoke.texi b/gcc/doc/invoke.texi
+index 95a2949cd22..8e400b68429 100644
+--- a/gcc/doc/invoke.texi
++++ b/gcc/doc/invoke.texi
+@@ -1407,7 +1407,7 @@ See RS/6000 and PowerPC Options.
+ -mstack-protector-guard-reg=@var{reg} @gol
+ -mstack-protector-guard-offset=@var{offset} @gol
+ -mstack-protector-guard-symbol=@var{symbol} @gol
+--mgeneral-regs-only  -mcall-ms2sysv-xlogues @gol
++-mgeneral-regs-only  -mcall-ms2sysv-xlogues -mrelax-cmpxchg-loop @gol
+ -mindirect-branch=@var{choice}  -mfunction-return=@var{choice} @gol
+ -mindirect-branch-register -mneeded}
+ 
+@@ -31678,6 +31678,13 @@ Generate code that uses only the general-purpose registers.  This
+ prevents the compiler from using floating-point, vector, mask and bound
+ registers.
+ 
++@item -mrelax-cmpxchg-loop
++@opindex mrelax-cmpxchg-loop
++Relax cmpxchg loop by emitting an early load and compare before cmpxchg,
++execute pause if load value is not expected. This reduces excessive
++cachline bouncing when and works for all atomic logic fetch builtins
++that generates compare and swap loop.
++
+ @item -mindirect-branch=@var{choice}
+ @opindex mindirect-branch
+ Convert indirect call and jump with @var{choice}.  The default is
 diff --git a/gcc/doc/tm.texi b/gcc/doc/tm.texi
 index b370bc76b25..cd5ee8b6402 100644
 --- a/gcc/doc/tm.texi
@@ -4013,6 +4325,107 @@ index 00000000000..adc11fcbf2d
 +
 +/* { dg-final { scan-assembler-times "lock;?\[ \t\]*btrq" 3 } } */
 +/* { dg-final { scan-assembler-not "cmpxchg" } } */
+diff --git a/gcc/testsuite/gcc.dg/pr103184-1.c b/gcc/testsuite/gcc.dg/pr103184-1.c
+new file mode 100644
+index 00000000000..e567f95f63f
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/pr103184-1.c
+@@ -0,0 +1,43 @@
++/* { dg-do compile } */
++/* { dg-options "-O2" } */
++
++extern char foo;
++extern unsigned char bar;
++
++int
++foo1 (void)
++{
++  return __sync_fetch_and_and (&foo, ~1) & 1;
++}
++
++int
++foo2 (void)
++{
++  return __sync_fetch_and_or (&foo, 1) & 1;
++}
++
++int
++foo3 (void)
++{
++  return __sync_fetch_and_xor (&foo, 1) & 1;
++}
++
++unsigned short
++bar1 (void)
++{
++  return __sync_fetch_and_and (&bar, ~1) & 1;
++}
++
++unsigned short
++bar2 (void)
++{
++  return __sync_fetch_and_or (&bar, 1) & 1;
++}
++
++unsigned short
++bar3 (void)
++{
++  return __sync_fetch_and_xor (&bar, 1) & 1;
++}
++
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*cmpxchgb" 6 { target { x86_64-*-* i?86-*-* } } } } */
+diff --git a/gcc/testsuite/gcc.dg/pr103184-2.c b/gcc/testsuite/gcc.dg/pr103184-2.c
+new file mode 100644
+index 00000000000..499761fdbfd
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/pr103184-2.c
+@@ -0,0 +1,12 @@
++/* { dg-do compile } */
++/* { dg-options "-O2" } */
++
++#include <stdatomic.h>
++
++int
++tbit0 (_Atomic int* a, int n)
++{
++#define BIT (0x1 << n)
++  return atomic_fetch_or (a, BIT) & BIT;
++#undef BIT
++}
+diff --git a/gcc/testsuite/gcc.dg/pr103268-1.c b/gcc/testsuite/gcc.dg/pr103268-1.c
+new file mode 100644
+index 00000000000..6d583d55d6d
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/pr103268-1.c
+@@ -0,0 +1,10 @@
++/* { dg-do compile } */
++/* { dg-options "-O2" } */
++
++extern int si;
++long
++test_types (void)
++{
++  unsigned int u2 = __atomic_fetch_xor (&si, 0, 5);
++  return u2;
++}
+diff --git a/gcc/testsuite/gcc.dg/pr103268-2.c b/gcc/testsuite/gcc.dg/pr103268-2.c
+new file mode 100644
+index 00000000000..12283bb43d9
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/pr103268-2.c
+@@ -0,0 +1,12 @@
++/* { dg-do compile } */
++/* { dg-options "-O2" } */
++ 
++extern long pscc_a_2_3;
++extern int pscc_a_1_4;
++
++void
++pscc (void)
++{
++  pscc_a_1_4 = __sync_fetch_and_and (&pscc_a_2_3, 1);
++}
++
 diff --git a/gcc/testsuite/gcc.dg/pr89984.c b/gcc/testsuite/gcc.dg/pr89984.c
 new file mode 100644
 index 00000000000..471fe92bc86
@@ -7870,6 +8283,192 @@ index 00000000000..38ddbdc630f
 +
 +/* { dg-final { scan-assembler-times "lock;?\[ \t\]*btrq" 3 } } */
 +/* { dg-final { scan-assembler-not "cmpxchg" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr103069-1.c b/gcc/testsuite/gcc.target/i386/pr103069-1.c
+new file mode 100644
+index 00000000000..f819af4409c
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr103069-1.c
+@@ -0,0 +1,35 @@
++/* PR target/103068 */
++/* { dg-do compile } */
++/* { dg-additional-options "-O2 -march=x86-64 -mtune=generic -mrelax-cmpxchg-loop" } */ 
++/* { dg-final { scan-assembler-times "rep;?\[ \\t\]+nop" 32 } } */
++
++#include <stdint.h>
++
++#define FUNC_ATOMIC(TYPE, OP) \
++__attribute__ ((noinline, noclone))	\
++TYPE f_##TYPE##_##OP##_fetch (TYPE *a, TYPE b)	\
++{ \
++  return __atomic_##OP##_fetch (a, b, __ATOMIC_RELAXED);  \
++} \
++__attribute__ ((noinline, noclone))	\
++TYPE f_##TYPE##_fetch_##OP (TYPE *a, TYPE b)	\
++{ \
++  return __atomic_fetch_##OP (a, b, __ATOMIC_RELAXED);  \
++}
++
++FUNC_ATOMIC (int64_t, and)
++FUNC_ATOMIC (int64_t, nand)
++FUNC_ATOMIC (int64_t, or)
++FUNC_ATOMIC (int64_t, xor)
++FUNC_ATOMIC (int, and)
++FUNC_ATOMIC (int, nand)
++FUNC_ATOMIC (int, or)
++FUNC_ATOMIC (int, xor)
++FUNC_ATOMIC (short, and)
++FUNC_ATOMIC (short, nand)
++FUNC_ATOMIC (short, or)
++FUNC_ATOMIC (short, xor)
++FUNC_ATOMIC (char, and)
++FUNC_ATOMIC (char, nand)
++FUNC_ATOMIC (char, or)
++FUNC_ATOMIC (char, xor)
+diff --git a/gcc/testsuite/gcc.target/i386/pr103069-2.c b/gcc/testsuite/gcc.target/i386/pr103069-2.c
+new file mode 100644
+index 00000000000..8ac824cc8e8
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr103069-2.c
+@@ -0,0 +1,70 @@
++/* PR target/103068 */
++/* { dg-do compile } */
++/* { dg-additional-options "-O2 -march=x86-64 -mtune=generic" } */ 
++
++#include <stdlib.h>
++#include "pr103069-1.c"
++
++#define FUNC_ATOMIC_RELAX(TYPE, OP) \
++__attribute__ ((noinline, noclone, target ("relax-cmpxchg-loop")))	\
++TYPE relax_##TYPE##_##OP##_fetch (TYPE *a, TYPE b)	\
++{ \
++  return __atomic_##OP##_fetch (a, b, __ATOMIC_RELAXED);  \
++} \
++__attribute__ ((noinline, noclone, target ("relax-cmpxchg-loop")))	\
++TYPE relax_##TYPE##_fetch_##OP (TYPE *a, TYPE b)	\
++{ \
++  return __atomic_fetch_##OP (a, b, __ATOMIC_RELAXED);  \
++}
++
++FUNC_ATOMIC_RELAX (int64_t, and)
++FUNC_ATOMIC_RELAX (int64_t, nand)
++FUNC_ATOMIC_RELAX (int64_t, or)
++FUNC_ATOMIC_RELAX (int64_t, xor)
++FUNC_ATOMIC_RELAX (int, and)
++FUNC_ATOMIC_RELAX (int, nand)
++FUNC_ATOMIC_RELAX (int, or)
++FUNC_ATOMIC_RELAX (int, xor)
++FUNC_ATOMIC_RELAX (short, and)
++FUNC_ATOMIC_RELAX (short, nand)
++FUNC_ATOMIC_RELAX (short, or)
++FUNC_ATOMIC_RELAX (short, xor)
++FUNC_ATOMIC_RELAX (char, and)
++FUNC_ATOMIC_RELAX (char, nand)
++FUNC_ATOMIC_RELAX (char, or)
++FUNC_ATOMIC_RELAX (char, xor)
++
++#define TEST_ATOMIC_FETCH_LOGIC(TYPE, OP) \
++{ \
++  TYPE a = 11, b = 101, res, exp; \
++  res = relax_##TYPE##_##OP##_fetch (&a, b); \
++  exp = f_##TYPE##_##OP##_fetch (&a, b);  \
++  if (res != exp) \
++    abort (); \
++  a = 21, b = 92; \
++  res = relax_##TYPE##_fetch_##OP (&a, b); \
++  exp = f_##TYPE##_fetch_##OP (&a, b);  \
++  if (res != exp) \
++    abort (); \
++}
++
++int main (void)
++{
++  TEST_ATOMIC_FETCH_LOGIC (int64_t, and)
++  TEST_ATOMIC_FETCH_LOGIC (int64_t, nand)
++  TEST_ATOMIC_FETCH_LOGIC (int64_t, or)
++  TEST_ATOMIC_FETCH_LOGIC (int64_t, xor)
++  TEST_ATOMIC_FETCH_LOGIC (int, and)
++  TEST_ATOMIC_FETCH_LOGIC (int, nand)
++  TEST_ATOMIC_FETCH_LOGIC (int, or)
++  TEST_ATOMIC_FETCH_LOGIC (int, xor)
++  TEST_ATOMIC_FETCH_LOGIC (short, and)
++  TEST_ATOMIC_FETCH_LOGIC (short, nand)
++  TEST_ATOMIC_FETCH_LOGIC (short, or)
++  TEST_ATOMIC_FETCH_LOGIC (short, xor)
++  TEST_ATOMIC_FETCH_LOGIC (char, and)
++  TEST_ATOMIC_FETCH_LOGIC (char, nand)
++  TEST_ATOMIC_FETCH_LOGIC (char, or)
++  TEST_ATOMIC_FETCH_LOGIC (char, xor)
++  return 0;
++}
+diff --git a/gcc/testsuite/gcc.target/i386/pr103205-2.c b/gcc/testsuite/gcc.target/i386/pr103205-2.c
+new file mode 100644
+index 00000000000..705081e51d5
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr103205-2.c
+@@ -0,0 +1,46 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mtune-ctrl=^himode_math" } */
++
++extern short foo;
++extern unsigned short bar;
++
++int
++foo1 (void)
++{
++  return __sync_fetch_and_and (&foo, ~1) & 1;
++}
++
++int
++foo2 (void)
++{
++  return __sync_fetch_and_or (&foo, 1) & 1;
++}
++
++int
++foo3 (void)
++{
++  return __sync_fetch_and_xor (&foo, 1) & 1;
++}
++
++unsigned short
++bar1 (void)
++{
++  return __sync_fetch_and_and (&bar, ~1) & 1;
++}
++
++unsigned short
++bar2 (void)
++{
++  return __sync_fetch_and_or (&bar, 1) & 1;
++}
++
++unsigned short
++bar3 (void)
++{
++  return __sync_fetch_and_xor (&bar, 1) & 1;
++}
++
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*btrw" 2 } } */
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*btsw" 2 } } */
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*btcw" 2 } } */
++/* { dg-final { scan-assembler-not "cmpxchgw" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr103205.c b/gcc/testsuite/gcc.target/i386/pr103205.c
+new file mode 100644
+index 00000000000..eaeea82fee2
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr103205.c
+@@ -0,0 +1,11 @@
++/* PR target/103205 */
++/* { dg-do compile } */
++/* { dg-options "-O2 -mtune-ctrl=^himode_math" } */
++
++unsigned short a;
++
++unsigned short
++foo (void)
++{
++  return __sync_fetch_and_and (&a, ~1) & 1;
++}
 diff --git a/gcc/testsuite/gcc.target/i386/pr72839.c b/gcc/testsuite/gcc.target/i386/pr72839.c
 index ea724f70377..6888d9d0a55 100644
 --- a/gcc/testsuite/gcc.target/i386/pr72839.c
@@ -8771,7 +9370,7 @@ index 00000000000..f2e2054b6fb
 +
 +#include "xorsign.c"
 diff --git a/gcc/tree-ssa-ccp.c b/gcc/tree-ssa-ccp.c
-index aad8526eb21..e01d1361ffa 100644
+index aad8526eb21..d86d04441f8 100644
 --- a/gcc/tree-ssa-ccp.c
 +++ b/gcc/tree-ssa-ccp.c
 @@ -2862,6 +2862,90 @@ optimize_unreachable (gimple_stmt_iterator i)
@@ -8874,7 +9473,7 @@ index aad8526eb21..e01d1361ffa 100644
    optab optab;
  
    if (!flag_inline_atomics
-@@ -2898,10 +2982,271 @@ optimize_atomic_bit_test_and (gimple_stmt_iterator *gsip,
+@@ -2898,7 +2982,6 @@ optimize_atomic_bit_test_and (gimple_stmt_iterator *gsip,
        || SSA_NAME_OCCURS_IN_ABNORMAL_PHI (lhs)
        || !single_imm_use (lhs, &use_p, &use_stmt)
        || !is_gimple_assign (use_stmt)
@@ -8882,14 +9481,36 @@ index aad8526eb21..e01d1361ffa 100644
        || !gimple_vdef (call))
      return;
  
+@@ -2917,54 +3000,347 @@ optimize_atomic_bit_test_and (gimple_stmt_iterator *gsip,
+       return;
+     }
+ 
+-  if (optab_handler (optab, TYPE_MODE (TREE_TYPE (lhs))) == CODE_FOR_nothing)
+-    return;
 +  tree bit = nullptr;
-+
-+  mask = gimple_call_arg (call, 1);
+ 
+   mask = gimple_call_arg (call, 1);
+-  tree use_lhs = gimple_assign_lhs (use_stmt);
+-  if (!use_lhs)
+-    return;
+-
+-  if (TREE_CODE (mask) == INTEGER_CST)
 +  tree_code rhs_code = gimple_assign_rhs_code (use_stmt);
 +  if (rhs_code != BIT_AND_EXPR)
-+    {
+     {
+-      if (fn == IFN_ATOMIC_BIT_TEST_AND_RESET)
+-	mask = const_unop (BIT_NOT_EXPR, TREE_TYPE (mask), mask);
+-      mask = fold_convert (TREE_TYPE (lhs), mask);
+-      int ibit = tree_log2 (mask);
+-      if (ibit < 0)
 +      if (rhs_code != NOP_EXPR && rhs_code != BIT_NOT_EXPR)
-+	return;
+ 	return;
+-      bit = build_int_cst (TREE_TYPE (lhs), ibit);
+-    }
+-  else if (TREE_CODE (mask) == SSA_NAME)
+-    {
+-      gimple *g = SSA_NAME_DEF_STMT (mask);
+-      if (fn == IFN_ATOMIC_BIT_TEST_AND_RESET)
 +
 +      tree use_lhs = gimple_assign_lhs (use_stmt);
 +      if (TREE_CODE (use_lhs) == SSA_NAME
@@ -8900,16 +9521,24 @@ index aad8526eb21..e01d1361ffa 100644
 +      if (lhs != use_rhs)
 +	return;
 +
++      if (optab_handler (optab, TYPE_MODE (TREE_TYPE (lhs)))
++	  == CODE_FOR_nothing)
++	return;
++
 +      gimple *g;
 +      gimple_stmt_iterator gsi;
 +      tree var;
 +      int ibit = -1;
 +
 +      if (rhs_code == BIT_NOT_EXPR)
-+	{
+ 	{
+-	  if (!is_gimple_assign (g)
+-	      || gimple_assign_rhs_code (g) != BIT_NOT_EXPR)
 +	  g = convert_atomic_bit_not (fn, use_stmt, lhs, mask);
 +	  if (!g)
-+	    return;
+ 	    return;
+-	  mask = gimple_assign_rhs1 (g);
+-	  if (TREE_CODE (mask) != SSA_NAME)
 +	  use_stmt = g;
 +	  ibit = 0;
 +	}
@@ -8964,7 +9593,8 @@ index aad8526eb21..e01d1361ffa 100644
 +	  gimple *use_nop_stmt;
 +	  if (!single_imm_use (use_lhs, &use_p, &use_nop_stmt)
 +	      || !is_gimple_assign (use_nop_stmt))
-+	    return;
+ 	    return;
+-	  g = SSA_NAME_DEF_STMT (mask);
 +	  rhs_code = gimple_assign_rhs_code (use_nop_stmt);
 +	  if (rhs_code != BIT_AND_EXPR)
 +	    {
@@ -9134,7 +9764,13 @@ index aad8526eb21..e01d1361ffa 100644
 +	      gsi_insert_after (&gsi, g, GSI_NEW_STMT);
 +	      use_stmt = use_nop_stmt;
 +	    }
-+	}
+ 	}
+-      if (!is_gimple_assign (g)
+-	  || gimple_assign_rhs_code (g) != LSHIFT_EXPR
+-	  || !integer_onep (gimple_assign_rhs1 (g)))
++      else
+ 	return;
+-      bit = gimple_assign_rhs2 (g);
 +
 +      if (!bit)
 +	{
@@ -9142,47 +9778,28 @@ index aad8526eb21..e01d1361ffa 100644
 +	    gcc_unreachable ();
 +	  bit = build_int_cst (TREE_TYPE (lhs), ibit);
 +	}
-+    }
+     }
+-  else
++  else if (optab_handler (optab, TYPE_MODE (TREE_TYPE (lhs)))
++	   == CODE_FOR_nothing)
++    return;
 +
-   switch (fn)
-     {
-     case IFN_ATOMIC_BIT_TEST_AND_SET:
-@@ -2920,51 +3265,76 @@ optimize_atomic_bit_test_and (gimple_stmt_iterator *gsip,
-   if (optab_handler (optab, TYPE_MODE (TREE_TYPE (lhs))) == CODE_FOR_nothing)
++  tree use_lhs = gimple_assign_lhs (use_stmt);
++  if (!use_lhs)
      return;
  
--  mask = gimple_call_arg (call, 1);
-   tree use_lhs = gimple_assign_lhs (use_stmt);
-   if (!use_lhs)
-     return;
- 
--  if (TREE_CODE (mask) == INTEGER_CST)
--    {
--      if (fn == IFN_ATOMIC_BIT_TEST_AND_RESET)
--	mask = const_unop (BIT_NOT_EXPR, TREE_TYPE (mask), mask);
--      mask = fold_convert (TREE_TYPE (lhs), mask);
--      int ibit = tree_log2 (mask);
--      if (ibit < 0)
--	return;
--      bit = build_int_cst (TREE_TYPE (lhs), ibit);
--    }
--  else if (TREE_CODE (mask) == SSA_NAME)
+-  if (gimple_assign_rhs1 (use_stmt) == lhs)
 +  if (!bit)
      {
--      gimple *g = SSA_NAME_DEF_STMT (mask);
--      if (fn == IFN_ATOMIC_BIT_TEST_AND_RESET)
+-      if (!operand_equal_p (gimple_assign_rhs2 (use_stmt), mask, 0))
 +      if (TREE_CODE (mask) == INTEGER_CST)
- 	{
--	  if (!is_gimple_assign (g)
--	      || gimple_assign_rhs_code (g) != BIT_NOT_EXPR)
++	{
 +	  if (fn == IFN_ATOMIC_BIT_TEST_AND_RESET)
 +	    mask = const_unop (BIT_NOT_EXPR, TREE_TYPE (mask), mask);
 +	  mask = fold_convert (TREE_TYPE (lhs), mask);
 +	  int ibit = tree_log2 (mask);
 +	  if (ibit < 0)
- 	    return;
--	  mask = gimple_assign_rhs1 (g);
--	  if (TREE_CODE (mask) != SSA_NAME)
++	    return;
 +	  bit = build_int_cst (TREE_TYPE (lhs), ibit);
 +	}
 +      else if (TREE_CODE (mask) == SSA_NAME)
@@ -9199,8 +9816,7 @@ index aad8526eb21..e01d1361ffa 100644
 +	      g = SSA_NAME_DEF_STMT (mask);
 +	    }
 +	  if (!is_gimple_assign (g))
- 	    return;
--	  g = SSA_NAME_DEF_STMT (mask);
++	    return;
 +	  rhs_code = gimple_assign_rhs_code (g);
 +	  if (rhs_code != LSHIFT_EXPR)
 +	    {
@@ -9226,20 +9842,10 @@ index aad8526eb21..e01d1361ffa 100644
 +	  if (!integer_onep (gimple_assign_rhs1 (g)))
 +	    return;
 +	  bit = gimple_assign_rhs2 (g);
- 	}
--      if (!is_gimple_assign (g)
--	  || gimple_assign_rhs_code (g) != LSHIFT_EXPR
--	  || !integer_onep (gimple_assign_rhs1 (g)))
++	}
 +      else
- 	return;
--      bit = gimple_assign_rhs2 (g);
--    }
--  else
--    return;
- 
--  if (gimple_assign_rhs1 (use_stmt) == lhs)
--    {
--      if (!operand_equal_p (gimple_assign_rhs2 (use_stmt), mask, 0))
++	return;
++
 +      if (gimple_assign_rhs1 (use_stmt) == lhs)
 +	{
 +	  if (!operand_equal_p (gimple_assign_rhs2 (use_stmt), mask, 0))
@@ -9256,7 +9862,7 @@ index aad8526eb21..e01d1361ffa 100644
  
    bool use_bool = true;
    bool has_debug_uses = false;
-@@ -3053,18 +3423,20 @@ optimize_atomic_bit_test_and (gimple_stmt_iterator *gsip,
+@@ -3053,18 +3429,20 @@ optimize_atomic_bit_test_and (gimple_stmt_iterator *gsip,
  	 of the specified bit after the atomic operation (makes only sense
  	 for xor, otherwise the bit content is compile time known),
  	 we need to invert the bit.  */
