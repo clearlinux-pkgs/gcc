@@ -1,3 +1,6 @@
+Arjan van de Ven (1):
+      Merge remote-tracking branch 'origin/releases/gcc-11' into HEAD
+
 H.J. Lu (38):
       op_by_pieces_d::run: Change a while loop to a do-while loop
       Generate offset adjusted operation for op_by_pieces operations
