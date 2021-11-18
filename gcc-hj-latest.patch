@@ -41,8 +41,9 @@ H.J. Lu (38):
       Check optab before transforming atomic bit test and operations
       Add a missing return when transforming atomic bit test and operations
 
-Hongyu Wang (1):
+Hongyu Wang (2):
       PR target/103069: Relax cmpxchg loop for x86 target
+      i386: Fix wrong codegen for -mrelax-cmpxchg-loop
 
 Jakub Jelinek (4):
       i386: Punt on broadcasts from TImode integers [PR101286]
@@ -411,7 +412,7 @@ index ae90610ad80..a60d9a79b0b 100644
  
  #ifndef CUMULATIVE_ARGS
 diff --git a/gcc/config/i386/i386-expand.c b/gcc/config/i386/i386-expand.c
-index 16765718cc3..dd9f63b077b 100644
+index 16765718cc3..7a2775242ff 100644
 --- a/gcc/config/i386/i386-expand.c
 +++ b/gcc/config/i386/i386-expand.c
 @@ -190,6 +190,82 @@ ix86_expand_clear (rtx dest)
@@ -679,12 +680,12 @@ index 16765718cc3..dd9f63b077b 100644
  {
    machine_mode mode, vmode;
 -  rtx dest, op0, op1, mask;
-+  rtx dest, op0, op1, mask, op2, op3;
- 
+-
 -  dest = operands[0];
 -  op0 = operands[1];
 -  op1 = operands[2];
--
++  rtx dest, op0, op1, mask, op2, op3;
+ 
 -  mode = GET_MODE (dest);
 +  mode = GET_MODE (operands[0]);
  
@@ -697,8 +698,7 @@ index 16765718cc3..dd9f63b077b 100644
 -  mask = ix86_build_signbit_mask (vmode, 0, 0);
 -
 -  if (CONST_DOUBLE_P (op0))
-+  if (rtx_equal_p (operands[1], operands[2]))
-     {
+-    {
 -      if (real_isneg (CONST_DOUBLE_REAL_VALUE (op0)))
 -	op0 = simplify_unary_operation (ABS, mode, op0, mode);
 -
@@ -719,7 +719,8 @@ index 16765718cc3..dd9f63b077b 100644
 -      emit_insn (gen_copysign3_const (mode, dest, op0, op1, mask));
 -    }
 -  else
--    {
++  if (rtx_equal_p (operands[1], operands[2]))
+     {
 -      rtx nmask = ix86_build_signbit_mask (vmode, 0, 1);
 -
 -      emit_insn (gen_copysign3_var
@@ -871,10 +872,7 @@ index 16765718cc3..dd9f63b077b 100644
 -}
 -
 -/* Deconstruct an xorsign operation into bit masks.  */
-+  op1 = lowpart_subreg (vmode, op1, mode);
-+  x = gen_rtx_AND (vmode, op1, mask);
-+  emit_insn (gen_rtx_SET (temp, x));
- 
+-
 -void
 -ix86_split_xorsign (rtx operands[])
 -{
@@ -884,7 +882,10 @@ index 16765718cc3..dd9f63b077b 100644
 -  dest = operands[0];
 -  op0 = operands[1];
 -  mask = operands[3];
--
++  op1 = lowpart_subreg (vmode, op1, mode);
++  x = gen_rtx_AND (vmode, op1, mask);
++  emit_insn (gen_rtx_SET (temp, x));
+ 
 -  mode = GET_MODE (dest);
 -  vmode = GET_MODE (mask);
 +  op0 = lowpart_subreg (vmode, op0, mode);
@@ -908,7 +909,7 @@ index 16765718cc3..dd9f63b077b 100644
  ix86_expand_vector_init_duplicate (bool mmx_ok, machine_mode mode,
  				   rtx target, rtx val)
  {
-@@ -21082,4 +21154,80 @@ ix86_expand_divmod_libfunc (rtx libfunc, machine_mode mode,
+@@ -21082,4 +21154,85 @@ ix86_expand_divmod_libfunc (rtx libfunc, machine_mode mode,
    *rem_p = rem;
  }
  
@@ -917,13 +918,14 @@ index 16765718cc3..dd9f63b077b 100644
 +				       bool doubleword)
 +{
 +  rtx old_reg, new_reg, old_mem, success, oldval, new_mem;
-+  rtx_code_label *loop_label, *pause_label;
++  rtx_code_label *loop_label, *pause_label, *done_label;
 +  machine_mode mode = GET_MODE (target);
 +
 +  old_reg = gen_reg_rtx (mode);
 +  new_reg = old_reg;
 +  loop_label = gen_label_rtx ();
 +  pause_label = gen_label_rtx ();
++  done_label = gen_label_rtx ();
 +  old_mem = copy_to_reg (mem);
 +  emit_label (loop_label);
 +  emit_move_insn (old_reg, old_mem);
@@ -981,11 +983,15 @@ index 16765718cc3..dd9f63b077b 100644
 +			   GET_MODE (success), 1, loop_label,
 +			   profile_probability::guessed_never ());
 +
++  emit_jump_insn (gen_jump (done_label));
++  emit_barrier ();
++
 +  /* If mem is not expected, pause and loop back.  */
 +  emit_label (pause_label);
 +  emit_insn (gen_pause ());
 +  emit_jump_insn (gen_jump (loop_label));
 +  emit_barrier ();
++  emit_label (done_label);
 +}
 +
  #include "gt-i386-expand.h"
@@ -8329,12 +8335,12 @@ index 00000000000..f819af4409c
 +FUNC_ATOMIC (char, xor)
 diff --git a/gcc/testsuite/gcc.target/i386/pr103069-2.c b/gcc/testsuite/gcc.target/i386/pr103069-2.c
 new file mode 100644
-index 00000000000..8ac824cc8e8
+index 00000000000..b3f2235fd55
 --- /dev/null
 +++ b/gcc/testsuite/gcc.target/i386/pr103069-2.c
-@@ -0,0 +1,70 @@
-+/* PR target/103068 */
-+/* { dg-do compile } */
+@@ -0,0 +1,71 @@
++/* PR target/103069 */
++/* { dg-do run } */
 +/* { dg-additional-options "-O2 -march=x86-64 -mtune=generic" } */ 
 +
 +#include <stdlib.h>
@@ -8372,13 +8378,14 @@ index 00000000000..8ac824cc8e8
 +#define TEST_ATOMIC_FETCH_LOGIC(TYPE, OP) \
 +{ \
 +  TYPE a = 11, b = 101, res, exp; \
++  TYPE c = 11, d = 101;	\
 +  res = relax_##TYPE##_##OP##_fetch (&a, b); \
-+  exp = f_##TYPE##_##OP##_fetch (&a, b);  \
++  exp = f_##TYPE##_##OP##_fetch (&c, d);  \
 +  if (res != exp) \
 +    abort (); \
-+  a = 21, b = 92; \
++  a = c = 21, b = d = 92; \
 +  res = relax_##TYPE##_fetch_##OP (&a, b); \
-+  exp = f_##TYPE##_fetch_##OP (&a, b);  \
++  exp = f_##TYPE##_fetch_##OP (&c, d);  \
 +  if (res != exp) \
 +    abort (); \
 +}
