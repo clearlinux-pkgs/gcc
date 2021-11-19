@@ -1,7 +1,4 @@
-Arjan van de Ven (1):
-      Merge remote-tracking branch 'origin/releases/gcc-11' into HEAD
-
-H.J. Lu (38):
+H.J. Lu (41):
       op_by_pieces_d::run: Change a while loop to a do-while loop
       Generate offset adjusted operation for op_by_pieces operations
       Don't use nullptr return from simplify_gen_subreg
@@ -40,6 +37,9 @@ H.J. Lu (38):
       x86: Add gcc.target/i386/pr103205-2.c
       Check optab before transforming atomic bit test and operations
       Add a missing return when transforming atomic bit test and operations
+      x86: Remove "%!" before ret
+      x86: Add -mharden-sls=[none|all|return|indirect-branch]
+      x86: Add -mindirect-branch-cs-prefix
 
 Hongyu Wang (2):
       PR target/103069: Relax cmpxchg loop for x86 target
@@ -1312,6 +1312,22 @@ index 19632b5fd6b..cd21a4e1964 100644
    };
  
    location_t loc
+diff --git a/gcc/config/i386/i386-opts.h b/gcc/config/i386/i386-opts.h
+index de6e7e01661..e159019e904 100644
+--- a/gcc/config/i386/i386-opts.h
++++ b/gcc/config/i386/i386-opts.h
+@@ -125,4 +125,11 @@ enum instrument_return {
+   instrument_return_nop5
+ };
+ 
++enum harden_sls {
++  harden_sls_none = 0,
++  harden_sls_return = 1 << 0,
++  harden_sls_indirect_branch = 1 << 1,
++  harden_sls_all = harden_sls_return | harden_sls_indirect_branch
++};
++
+ #endif
 diff --git a/gcc/config/i386/i386-passes.def b/gcc/config/i386/i386-passes.def
 index 44df00e94ac..29baf8acd0b 100644
 --- a/gcc/config/i386/i386-passes.def
@@ -1369,7 +1385,7 @@ index 7782cf1163f..71df5be5a26 100644
    (gcc::context *);
 -extern rtl_opt_pass *make_pass_constant_pool_broadcast (gcc::context *);
 diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
-index 42c47d2b12b..bb8475355ac 100644
+index 42c47d2b12b..be25a2e027c 100644
 --- a/gcc/config/i386/i386.c
 +++ b/gcc/config/i386/i386.c
 @@ -4195,6 +4195,18 @@ ix86_return_in_memory (const_tree type, const_tree fntype ATTRIBUTE_UNUSED)
@@ -1391,7 +1407,25 @@ index 42c47d2b12b..bb8475355ac 100644
  
  /* Create the va_list data type.  */
  
-@@ -7946,8 +7958,17 @@ ix86_finalize_stack_frame_flags (void)
+@@ -5798,6 +5810,8 @@ output_indirect_thunk (unsigned int regno)
+     }
+ 
+   fputs ("\tret\n", asm_out_file);
++  if ((ix86_harden_sls & harden_sls_return))
++    fputs ("\tint3\n", asm_out_file);
+ }
+ 
+ /* Output a funtion with a call and return thunk for indirect branch.
+@@ -6000,7 +6014,7 @@ ix86_code_end (void)
+       xops[0] = gen_rtx_REG (Pmode, regno);
+       xops[1] = gen_rtx_MEM (Pmode, stack_pointer_rtx);
+       output_asm_insn ("mov%z0\t{%1, %0|%0, %1}", xops);
+-      output_asm_insn ("%!ret", NULL);
++      fputs ("\tret\n", asm_out_file);
+       final_end_function ();
+       init_insn_lengths ();
+       free_after_compilation (cfun);
+@@ -7946,8 +7960,17 @@ ix86_finalize_stack_frame_flags (void)
       assumed stack realignment might be needed or -fno-omit-frame-pointer
       is used, but in the end nothing that needed the stack alignment had
       been spilled nor stack access, clear frame_pointer_needed and say we
@@ -1411,7 +1445,7 @@ index 42c47d2b12b..bb8475355ac 100644
        && frame_pointer_needed
        && crtl->is_leaf
        && crtl->sp_is_unchanging
-@@ -10410,7 +10431,13 @@ ix86_legitimate_constant_p (machine_mode mode, rtx x)
+@@ -10410,7 +10433,13 @@ ix86_legitimate_constant_p (machine_mode mode, rtx x)
  	  /* FALLTHRU */
  	case E_OImode:
  	case E_XImode:
@@ -1426,7 +1460,7 @@ index 42c47d2b12b..bb8475355ac 100644
  	    return false;
  	default:
  	  break;
-@@ -14084,6 +14111,18 @@ ix86_check_avx_upper_register (const_rtx exp)
+@@ -14084,6 +14113,18 @@ ix86_check_avx_upper_register (const_rtx exp)
  	  && GET_MODE_BITSIZE (GET_MODE (exp)) > 128);
  }
  
@@ -1445,7 +1479,7 @@ index 42c47d2b12b..bb8475355ac 100644
  /* Return needed mode for entity in optimize_mode_switching pass.  */
  
  static int
-@@ -14108,6 +14147,14 @@ ix86_avx_u128_mode_needed (rtx_insn *insn)
+@@ -14108,6 +14149,14 @@ ix86_avx_u128_mode_needed (rtx_insn *insn)
  	    }
  	}
  
@@ -1460,7 +1494,7 @@ index 42c47d2b12b..bb8475355ac 100644
        /* If the function is known to preserve some SSE registers,
  	 RA and previous passes can legitimately rely on that for
  	 modes wider than 256 bits.  It's only safe to issue a
-@@ -14120,6 +14167,94 @@ ix86_avx_u128_mode_needed (rtx_insn *insn)
+@@ -14120,6 +14169,94 @@ ix86_avx_u128_mode_needed (rtx_insn *insn)
        return AVX_U128_CLEAN;
      }
  
@@ -1555,7 +1589,7 @@ index 42c47d2b12b..bb8475355ac 100644
    /* Require DIRTY mode if a 256bit or 512bit AVX register is referenced.
       Hardware changes state only when a 256bit register is written to,
       but we need to prevent the compiler from moving optimal insertion
-@@ -14208,18 +14343,6 @@ ix86_mode_needed (int entity, rtx_insn *insn)
+@@ -14208,18 +14345,6 @@ ix86_mode_needed (int entity, rtx_insn *insn)
    return 0;
  }
  
@@ -1574,7 +1608,72 @@ index 42c47d2b12b..bb8475355ac 100644
  /* Calculate mode of upper 128bit AVX registers after the insn.  */
  
  static int
-@@ -16732,6 +16855,7 @@ ix86_sched_init_global (FILE *, int, int)
+@@ -15700,9 +15825,14 @@ ix86_output_jmp_thunk_or_indirect (const char *thunk_name, const int regno)
+ {
+   if (thunk_name != NULL)
+     {
++      if (REX_INT_REGNO_P (regno)
++	  && ix86_indirect_branch_cs_prefix)
++	fprintf (asm_out_file, "\tcs\n");
+       fprintf (asm_out_file, "\tjmp\t");
+       assemble_name (asm_out_file, thunk_name);
+       putc ('\n', asm_out_file);
++      if ((ix86_harden_sls & harden_sls_indirect_branch))
++	fputs ("\tint3\n", asm_out_file);
+     }
+   else
+     output_indirect_thunk (regno);
+@@ -15751,6 +15881,9 @@ ix86_output_indirect_branch_via_reg (rtx call_op, bool sibcall_p)
+     {
+       if (thunk_name != NULL)
+ 	{
++	  if (REX_INT_REGNO_P (regno)
++	      && ix86_indirect_branch_cs_prefix)
++	    fprintf (asm_out_file, "\tcs\n");
+ 	  fprintf (asm_out_file, "\tcall\t");
+ 	  assemble_name (asm_out_file, thunk_name);
+ 	  putc ('\n', asm_out_file);
+@@ -15925,10 +16058,10 @@ ix86_output_indirect_jmp (rtx call_op)
+ 	gcc_unreachable ();
+ 
+       ix86_output_indirect_branch (call_op, "%0", true);
+-      return "";
+     }
+   else
+-    return "%!jmp\t%A0";
++    output_asm_insn ("%!jmp\t%A0", &call_op);
++  return (ix86_harden_sls & harden_sls_indirect_branch) ? "int3" : "";
+ }
+ 
+ /* Output return instrumentation for current function if needed.  */
+@@ -15996,10 +16129,8 @@ ix86_output_function_return (bool long_p)
+       return "";
+     }
+ 
+-  if (!long_p)
+-    return "%!ret";
+-
+-  return "rep%; ret";
++  output_asm_insn (long_p ? "rep%; ret" : "ret", nullptr);
++  return (ix86_harden_sls & harden_sls_return) ? "int3" : "";
+ }
+ 
+ /* Output indirect function return.  RET_OP is the function return
+@@ -16094,7 +16225,12 @@ ix86_output_call_insn (rtx_insn *insn, rtx call_op)
+       if (output_indirect_p && !direct_p)
+ 	ix86_output_indirect_branch (call_op, xasm, true);
+       else
+-	output_asm_insn (xasm, &call_op);
++	{
++	  output_asm_insn (xasm, &call_op);
++	  if (!direct_p
++	      && (ix86_harden_sls & harden_sls_indirect_branch))
++	    return "int3";
++	}
+       return "";
+     }
+ 
+@@ -16732,6 +16868,7 @@ ix86_sched_init_global (FILE *, int, int)
      case PROCESSOR_NEHALEM:
      case PROCESSOR_SANDYBRIDGE:
      case PROCESSOR_HASWELL:
@@ -1582,7 +1681,7 @@ index 42c47d2b12b..bb8475355ac 100644
      case PROCESSOR_GENERIC:
        /* Do not perform multipass scheduling for pre-reload schedule
           to save compile time.  */
-@@ -20225,6 +20349,11 @@ ix86_rtx_costs (rtx x, machine_mode mode, int outer_code_i, int opno,
+@@ -20225,6 +20362,11 @@ ix86_rtx_costs (rtx x, machine_mode mode, int outer_code_i, int opno,
      case UNSPEC:
        if (XINT (x, 1) == UNSPEC_TP)
  	*total = 0;
@@ -1594,7 +1693,7 @@ index 42c47d2b12b..bb8475355ac 100644
        return false;
  
      case VEC_SELECT:
-@@ -22991,6 +23120,32 @@ ix86_optab_supported_p (int op, machine_mode mode1, machine_mode,
+@@ -22991,6 +23133,32 @@ ix86_optab_supported_p (int op, machine_mode mode1, machine_mode,
      }
  }
  
@@ -1627,7 +1726,7 @@ index 42c47d2b12b..bb8475355ac 100644
  /* Address space support.
  
     This is not "far pointers" in the 16-bit sense, but an easy way
-@@ -23521,6 +23676,9 @@ ix86_run_selftests (void)
+@@ -23521,6 +23689,9 @@ ix86_run_selftests (void)
  #undef TARGET_ADDRESS_COST
  #define TARGET_ADDRESS_COST ix86_address_cost
  
@@ -1637,7 +1736,7 @@ index 42c47d2b12b..bb8475355ac 100644
  #undef TARGET_FLAGS_REGNUM
  #define TARGET_FLAGS_REGNUM FLAGS_REG
  #undef TARGET_FIXED_CONDITION_CODE_REGS
-@@ -23570,6 +23728,8 @@ ix86_run_selftests (void)
+@@ -23570,6 +23741,8 @@ ix86_run_selftests (void)
  #define TARGET_C_EXCESS_PRECISION ix86_get_excess_precision
  #undef TARGET_PROMOTE_PROTOTYPES
  #define TARGET_PROMOTE_PROTOTYPES hook_bool_const_tree_true
@@ -1646,7 +1745,7 @@ index 42c47d2b12b..bb8475355ac 100644
  #undef TARGET_SETUP_INCOMING_VARARGS
  #define TARGET_SETUP_INCOMING_VARARGS ix86_setup_incoming_varargs
  #undef TARGET_MUST_PASS_IN_STACK
-@@ -23889,6 +24049,9 @@ static bool ix86_libc_has_fast_function (int fcode ATTRIBUTE_UNUSED)
+@@ -23889,6 +24062,9 @@ static bool ix86_libc_has_fast_function (int fcode ATTRIBUTE_UNUSED)
  #undef TARGET_LIBC_HAS_FAST_FUNCTION
  #define TARGET_LIBC_HAS_FAST_FUNCTION ix86_libc_has_fast_function
  
@@ -1760,7 +1859,7 @@ index 73e118900f7..499ddc7bfdd 100644
  /* If a memory-to-memory move would take MOVE_RATIO or more simple
     move-instruction pairs, we will do a cpymem or libcall instead.
 diff --git a/gcc/config/i386/i386.md b/gcc/config/i386/i386.md
-index 97325e38676..b3ae2188c09 100644
+index 97325e38676..46321e4d735 100644
 --- a/gcc/config/i386/i386.md
 +++ b/gcc/config/i386/i386.md
 @@ -122,6 +122,9 @@
@@ -1874,6 +1973,15 @@ index 97325e38676..b3ae2188c09 100644
  
  ;; One complement instructions
  
+@@ -13912,7 +13861,7 @@
+   [(simple_return)
+    (use (match_operand:SI 0 "const_int_operand"))]
+   "reload_completed"
+-  "%!ret\t%0"
++  "ret\t%0"
+   "&& cfun->machine->function_return_type != indirect_branch_keep"
+   [(const_int 0)]
+   "ix86_split_simple_return_pop_internal (operands[0]); DONE;"
 @@ -17313,6 +17262,17 @@
    DONE;
  })
@@ -1932,7 +2040,7 @@ index 97325e38676..b3ae2188c09 100644
  })
  
 diff --git a/gcc/config/i386/i386.opt b/gcc/config/i386/i386.opt
-index 7b8547bb1c3..c93b977e60a 100644
+index 7b8547bb1c3..3df0307fe6b 100644
 --- a/gcc/config/i386/i386.opt
 +++ b/gcc/config/i386/i386.opt
 @@ -404,6 +404,10 @@ momit-leaf-frame-pointer
@@ -1946,6 +2054,44 @@ index 7b8547bb1c3..c93b977e60a 100644
  mpc32
  Target RejectNegative
  Set 80387 floating-point precision to 32-bit.
+@@ -1072,6 +1076,10 @@ Enum(indirect_branch) String(thunk-inline) Value(indirect_branch_thunk_inline)
+ EnumValue
+ Enum(indirect_branch) String(thunk-extern) Value(indirect_branch_thunk_extern)
+ 
++mindirect-branch-cs-prefix
++Target Var(ix86_indirect_branch_cs_prefix) Init(0)
++Add CS prefix to call and jmp to indirect thunk with branch target in r8-r15 registers.
++
+ mindirect-branch-register
+ Target Var(ix86_indirect_branch_register) Init(0)
+ Force indirect call and jump via register.
+@@ -1113,6 +1121,26 @@ mrecord-return
+ Target Var(ix86_flag_record_return) Init(0)
+ Generate a __return_loc section pointing to all return instrumentation code.
+ 
++mharden-sls=
++Target RejectNegative Joined Enum(harden_sls) Var(ix86_harden_sls) Init(harden_sls_none)
++Generate code to mitigate against straight line speculation.
++
++Enum
++Name(harden_sls) Type(enum harden_sls)
++Known choices for mitigation against straight line speculation with -mharden-sls=:
++
++EnumValue
++Enum(harden_sls) String(none) Value(harden_sls_none)
++
++EnumValue
++Enum(harden_sls) String(return) Value(harden_sls_return)
++
++EnumValue
++Enum(harden_sls) String(indirect-branch) Value(harden_sls_indirect_branch)
++
++EnumValue
++Enum(harden_sls) String(all) Value(harden_sls_all)
++
+ mavx512bf16
+ Target Mask(ISA2_AVX512BF16) Var(ix86_isa_flags2) Save
+ Support MMX, SSE, SSE2, SSE3, SSSE3, SSE4.1, SSE4.2, AVX, AVX2, AVX512F and
 diff --git a/gcc/config/i386/predicates.md b/gcc/config/i386/predicates.md
 index b1df8548af6..d7e335d4b63 100644
 --- a/gcc/config/i386/predicates.md
@@ -2948,19 +3094,23 @@ index 91216593e75..ba79a8e48ed 100644
  #endif
  
 diff --git a/gcc/doc/invoke.texi b/gcc/doc/invoke.texi
-index 95a2949cd22..8e400b68429 100644
+index 95a2949cd22..fe1368bd048 100644
 --- a/gcc/doc/invoke.texi
 +++ b/gcc/doc/invoke.texi
-@@ -1407,7 +1407,7 @@ See RS/6000 and PowerPC Options.
+@@ -1407,9 +1407,10 @@ See RS/6000 and PowerPC Options.
  -mstack-protector-guard-reg=@var{reg} @gol
  -mstack-protector-guard-offset=@var{offset} @gol
  -mstack-protector-guard-symbol=@var{symbol} @gol
 --mgeneral-regs-only  -mcall-ms2sysv-xlogues @gol
 +-mgeneral-regs-only  -mcall-ms2sysv-xlogues -mrelax-cmpxchg-loop @gol
  -mindirect-branch=@var{choice}  -mfunction-return=@var{choice} @gol
- -mindirect-branch-register -mneeded}
+--mindirect-branch-register -mneeded}
++-mindirect-branch-register -mharden-sls=@var{choice} @gol
++-mindirect-branch-cs-prefix -mneeded}
  
-@@ -31678,6 +31678,13 @@ Generate code that uses only the general-purpose registers.  This
+ @emph{x86 Windows Options}
+ @gccoptlist{-mconsole  -mcygwin  -mno-cygwin  -mdll @gol
+@@ -31678,6 +31679,13 @@ Generate code that uses only the general-purpose registers.  This
  prevents the compiler from using floating-point, vector, mask and bound
  registers.
  
@@ -2974,6 +3124,28 @@ index 95a2949cd22..8e400b68429 100644
  @item -mindirect-branch=@var{choice}
  @opindex mindirect-branch
  Convert indirect call and jump with @var{choice}.  The default is
+@@ -31723,6 +31731,21 @@ not be reachable in the large code model.
+ @opindex mindirect-branch-register
+ Force indirect call and jump via register.
+ 
++@item -mharden-sls=@var{choice}
++@opindex mharden-sls
++Generate code to mitigate against straight line speculation (SLS) with
++@var{choice}.  The default is @samp{none} which disables all SLS
++hardening.  @samp{return} enables SLS hardening for function return.
++@samp{indirect-branch} enables SLS hardening for indirect branch.
++@samp{all} enables all SLS hardening.
++
++@item -mindirect-branch-cs-prefix
++@opindex mindirect-branch-cs-prefix
++Add CS prefix to call and jmp to indirect thunk with branch target in
++r8-r15 registers so that the call and jmp instruction length is 6 bytes
++to allow them to be replaced with @samp{lfence; call *%r8-r15} or
++@samp{lfence; jmp *%r8-r15} at run-time.
++
+ @end table
+ 
+ These @samp{-m} switches are supported in addition to the above
 diff --git a/gcc/doc/tm.texi b/gcc/doc/tm.texi
 index b370bc76b25..cd5ee8b6402 100644
 --- a/gcc/doc/tm.texi
@@ -5111,6 +5283,111 @@ index 4deff93c1e8..b0d3dc38a0c 100644
  }
  
  v2df __attribute__((noinline))
+diff --git a/gcc/testsuite/gcc.target/i386/harden-sls-1.c b/gcc/testsuite/gcc.target/i386/harden-sls-1.c
+new file mode 100644
+index 00000000000..6f70dc94a23
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/harden-sls-1.c
+@@ -0,0 +1,14 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mindirect-branch=thunk-extern -mharden-sls=all" } */
++/* { dg-additional-options "-fno-pic" { target { ! *-*-darwin* } } } */
++
++extern void foo (void);
++
++void
++bar (void)
++{
++  foo ();
++}
++
++/* { dg-final { scan-assembler "jmp\[ \t\]+_?foo" } } */
++/* { dg-final { scan-assembler-not {int3} } } */
+diff --git a/gcc/testsuite/gcc.target/i386/harden-sls-2.c b/gcc/testsuite/gcc.target/i386/harden-sls-2.c
+new file mode 100644
+index 00000000000..a7c59078d03
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/harden-sls-2.c
+@@ -0,0 +1,14 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mindirect-branch=thunk-extern -mharden-sls=all" } */
++/* { dg-additional-options "-fno-pic" { target { ! *-*-darwin* } } } */
++
++extern void (*fptr) (void);
++
++void
++foo (void)
++{
++  fptr ();
++}
++
++/* { dg-final { scan-assembler "jmp\[ \t\]+_?__x86_indirect_thunk_(r|e)ax" } } */
++/* { dg-final { scan-assembler-times "int3" 1 } } */
+diff --git a/gcc/testsuite/gcc.target/i386/harden-sls-3.c b/gcc/testsuite/gcc.target/i386/harden-sls-3.c
+new file mode 100644
+index 00000000000..1a6056b6d7b
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/harden-sls-3.c
+@@ -0,0 +1,14 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mindirect-branch=thunk -mharden-sls=all" } */
++/* { dg-additional-options "-fno-pic" { target { ! *-*-darwin* } } } */
++
++extern void (*fptr) (void);
++
++void
++foo (void)
++{
++  fptr ();
++}
++
++/* { dg-final { scan-assembler "jmp\[ \t\]+_?__x86_indirect_thunk_(r|e)ax" } } */
++/* { dg-final { scan-assembler-times "int3" 2 } } */
+diff --git a/gcc/testsuite/gcc.target/i386/harden-sls-4.c b/gcc/testsuite/gcc.target/i386/harden-sls-4.c
+new file mode 100644
+index 00000000000..f70dd1379d3
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/harden-sls-4.c
+@@ -0,0 +1,16 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mindirect-branch=keep -mharden-sls=all" } */
++/* { dg-additional-options "-fno-pic" { target { ! *-*-darwin* } } } */
++
++extern void (*fptr) (void);
++
++void
++foo (void)
++{
++  fptr ();
++}
++
++/* { dg-final { scan-assembler "jmp\[ \t\]+\\*_?fptr" { target { ! x32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]+fptr\\(%rip\\), %eax" { target x32 } } } */
++/* { dg-final { scan-assembler "jmp\[ \t\]+\\*%rax" { target x32 } } } */
++/* { dg-final { scan-assembler-times "int3" 1 } } */
+diff --git a/gcc/testsuite/gcc.target/i386/harden-sls-5.c b/gcc/testsuite/gcc.target/i386/harden-sls-5.c
+new file mode 100644
+index 00000000000..613c44c6f82
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/harden-sls-5.c
+@@ -0,0 +1,17 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mno-indirect-branch-register -mfunction-return=keep -mindirect-branch=thunk-extern -mharden-sls=return" } */
++/* { dg-additional-options "-fno-pic" { target { ! *-*-darwin* } } } */
++
++typedef void (*dispatch_t)(long offset);
++
++dispatch_t dispatch;
++
++int
++male_indirect_jump (long offset)
++{
++  dispatch(offset);
++  return 0;
++}
++
++/* { dg-final { scan-assembler-times "ret" 1 } } */
++/* { dg-final { scan-assembler-times "int3" 1 } } */
 diff --git a/gcc/testsuite/gcc.target/i386/incoming-11.c b/gcc/testsuite/gcc.target/i386/incoming-11.c
 index a830c96f7d1..4b822684b88 100644
 --- a/gcc/testsuite/gcc.target/i386/incoming-11.c
@@ -5121,6 +5398,47 @@ index a830c96f7d1..4b822684b88 100644
  
 -/* { dg-final { scan-assembler "andl\[\\t \]*\\$-16,\[\\t \]*%esp" } } */
 +/* { dg-final { scan-assembler-not "andl\[\\t \]*\\$-16,\[\\t \]*%esp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/indirect-thunk-cs-prefix-1.c b/gcc/testsuite/gcc.target/i386/indirect-thunk-cs-prefix-1.c
+new file mode 100644
+index 00000000000..db2f3416823
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/indirect-thunk-cs-prefix-1.c
+@@ -0,0 +1,14 @@
++/* { dg-do compile { target { ! ia32 } } } */
++/* { dg-options "-O2 -ffixed-rax -ffixed-rbx -ffixed-rcx -ffixed-rdx -ffixed-rdi -ffixed-rsi -mindirect-branch-cs-prefix -mindirect-branch=thunk-extern" } */
++/* { dg-additional-options "-fno-pic" { target { ! *-*-darwin* } } } */
++
++extern void (*fptr) (void);
++
++void
++foo (void)
++{
++  fptr ();
++}
++
++/* { dg-final { scan-assembler-times "jmp\[ \t\]+_?__x86_indirect_thunk_r\[0-9\]+" 1 } } */
++/* { dg-final { scan-assembler-times "\tcs" 1 } } */
+diff --git a/gcc/testsuite/gcc.target/i386/indirect-thunk-cs-prefix-2.c b/gcc/testsuite/gcc.target/i386/indirect-thunk-cs-prefix-2.c
+new file mode 100644
+index 00000000000..adfc39a49d4
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/indirect-thunk-cs-prefix-2.c
+@@ -0,0 +1,15 @@
++/* { dg-do compile { target { ! ia32 } } } */
++/* { dg-options "-O2 -ffixed-rax -ffixed-rbx -ffixed-rcx -ffixed-rdx -ffixed-rdi -ffixed-rsi -mindirect-branch-cs-prefix -mindirect-branch=thunk-extern" } */
++/* { dg-additional-options "-fno-pic" { target { ! *-*-darwin* } } } */
++
++extern void (*bar) (void);
++
++int
++foo (void)
++{
++  bar ();
++  return 0;
++}
++
++/* { dg-final { scan-assembler-times "call\[ \t\]+_?__x86_indirect_thunk_r\[0-9\]+" 1 } } */
++/* { dg-final { scan-assembler-times "\tcs" 1 } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pieces-memcpy-10.c b/gcc/testsuite/gcc.target/i386/pieces-memcpy-10.c
 new file mode 100644
 index 00000000000..5faee21f9b9
