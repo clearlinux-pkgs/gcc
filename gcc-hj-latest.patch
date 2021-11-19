@@ -1,3 +1,6 @@
+Arjan van de Ven (1):
+      Merge remote-tracking branch 'origin/releases/gcc-11' into HEAD
+
 H.J. Lu (41):
       op_by_pieces_d::run: Change a while loop to a do-while loop
       Generate offset adjusted operation for op_by_pieces operations
@@ -3094,7 +3097,7 @@ index 91216593e75..ba79a8e48ed 100644
  #endif
  
 diff --git a/gcc/doc/invoke.texi b/gcc/doc/invoke.texi
-index 95a2949cd22..fe1368bd048 100644
+index 5a4b3c6c234..0cc770c9a3f 100644
 --- a/gcc/doc/invoke.texi
 +++ b/gcc/doc/invoke.texi
 @@ -1407,9 +1407,10 @@ See RS/6000 and PowerPC Options.
@@ -3110,7 +3113,7 @@ index 95a2949cd22..fe1368bd048 100644
  
  @emph{x86 Windows Options}
  @gccoptlist{-mconsole  -mcygwin  -mno-cygwin  -mdll @gol
-@@ -31678,6 +31679,13 @@ Generate code that uses only the general-purpose registers.  This
+@@ -31679,6 +31680,13 @@ Generate code that uses only the general-purpose registers.  This
  prevents the compiler from using floating-point, vector, mask and bound
  registers.
  
@@ -3124,7 +3127,7 @@ index 95a2949cd22..fe1368bd048 100644
  @item -mindirect-branch=@var{choice}
  @opindex mindirect-branch
  Convert indirect call and jump with @var{choice}.  The default is
-@@ -31723,6 +31731,21 @@ not be reachable in the large code model.
+@@ -31724,6 +31732,21 @@ not be reachable in the large code model.
  @opindex mindirect-branch-register
  Force indirect call and jump via register.
  
