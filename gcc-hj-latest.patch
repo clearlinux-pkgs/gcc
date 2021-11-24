@@ -60,7 +60,7 @@ Richard Biener (1):
 Uros Bizjak (1):
       [i386] Introduce scalar version of avx512f_vmscalef.
 
-liuhongt (10):
+liuhongt (11):
       Optimize __builtin_shuffle when it's used to zero the upper bits of the dest. [PR target/94680]
       Extend ldexp{s,d}f3 to vscalefs{s,d} when TARGET_AVX512F and TARGET_SSE_MATH.
       Fix ICE.
@@ -71,6 +71,7 @@ liuhongt (10):
       Remove copysign post_reload splitter for scalar modes.
       Fix ICE in pass_rpad.
       Improve integer bit test on __atomic_fetch_[or|and]_* returns
+      Enhance optimize_atomic_bit_test_and to handle truncation.
 
 diff --git a/gcc/builtins.c b/gcc/builtins.c
 index fb90c5d4a7c..2dddfc75293 100644
@@ -3873,7 +3874,7 @@ index add9a742e41..71781c790a1 100644
  
  extern int hook_int_uint_mode_1 (unsigned int, machine_mode);
 diff --git a/gcc/match.pd b/gcc/match.pd
-index 4fbba3922e5..e78bef8ce30 100644
+index 4fbba3922e5..2a7a4a7ad6d 100644
 --- a/gcc/match.pd
 +++ b/gcc/match.pd
 @@ -98,6 +98,39 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
@@ -3916,45 +3917,49 @@ index 4fbba3922e5..e78bef8ce30 100644
  /* With nop_convert? combine convert? and view_convert? in one pattern
     plus conditionalize on tree_nop_conversion_p conversions.  */
  (match (nop_convert @0)
-@@ -3662,6 +3695,76 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
+@@ -3662,6 +3695,84 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
    (vec_cond @0 (op! @3 @1) (op! @3 @2))))
  #endif
  
 +#if GIMPLE
 +(match (nop_atomic_bit_test_and_p @0 @1 @4)
-+ (bit_and (nop_convert?@4 (ATOMIC_FETCH_OR_XOR_N @2 INTEGER_CST@0 @3))
++ (bit_and (convert?@4 (ATOMIC_FETCH_OR_XOR_N @2 INTEGER_CST@0 @3))
 +	   INTEGER_CST@1)
 + (with {
 +	 int ibit = tree_log2 (@0);
 +	 int ibit2 = tree_log2 (@1);
 +       }
 +  (if (ibit == ibit2
-+      && ibit >= 0))))
++      && ibit >= 0
++      && TYPE_PRECISION (type) <= TYPE_PRECISION (TREE_TYPE (@2))))))
 +
 +(match (nop_atomic_bit_test_and_p @0 @1 @3)
-+ (bit_and (nop_convert?@3 (SYNC_FETCH_OR_XOR_N @2 INTEGER_CST@0))
++ (bit_and (convert?@3 (SYNC_FETCH_OR_XOR_N @2 INTEGER_CST@0))
 +	  INTEGER_CST@1)
 + (with {
 +	 int ibit = tree_log2 (@0);
 +	 int ibit2 = tree_log2 (@1);
 +       }
 +  (if (ibit == ibit2
-+      && ibit >= 0))))
++      && ibit >= 0
++      && TYPE_PRECISION (type) <= TYPE_PRECISION (TREE_TYPE (@2))))))
 +
 +(match (nop_atomic_bit_test_and_p @0 @0 @4)
 + (bit_and:c
-+  (nop_convert?@4
++  (convert1?@4
 +   (ATOMIC_FETCH_OR_XOR_N @2 (nop_convert? (lshift@0 integer_onep@5 @6)) @3))
-+  @0))
++  (convert2? @0))
++ (if (TYPE_PRECISION (type) <= TYPE_PRECISION (TREE_TYPE (@2)))))
 +
 +(match (nop_atomic_bit_test_and_p @0 @0 @4)
 + (bit_and:c
-+  (nop_convert?@4
++  (convert1?@4
 +   (SYNC_FETCH_OR_XOR_N @2 (nop_convert? (lshift@0 integer_onep@3 @5))))
-+  @0))
++  (convert2? @0))
++ (if (TYPE_PRECISION (type) <= TYPE_PRECISION (TREE_TYPE (@2)))))
 +
 +(match (nop_atomic_bit_test_and_p @0 @1 @3)
-+ (bit_and@4 (nop_convert?@3 (ATOMIC_FETCH_AND_N @2 INTEGER_CST@0 @5))
++ (bit_and@4 (convert?@3 (ATOMIC_FETCH_AND_N @2 INTEGER_CST@0 @5))
 +	    INTEGER_CST@1)
 + (with {
 +	 int ibit = wi::exact_log2 (wi::zext (wi::bit_not (wi::to_wide (@0)),
@@ -3962,11 +3967,12 @@ index 4fbba3922e5..e78bef8ce30 100644
 +	 int ibit2 = tree_log2 (@1);
 +       }
 +  (if (ibit == ibit2
-+      && ibit >= 0))))
++      && ibit >= 0
++      && TYPE_PRECISION (type) <= TYPE_PRECISION (TREE_TYPE (@2))))))
 +
 +(match (nop_atomic_bit_test_and_p @0 @1 @3)
 + (bit_and@4
-+  (nop_convert?@3 (SYNC_FETCH_AND_AND_N @2 INTEGER_CST@0))
++  (convert?@3 (SYNC_FETCH_AND_AND_N @2 INTEGER_CST@0))
 +  INTEGER_CST@1)
 + (with {
 +	 int ibit = wi::exact_log2 (wi::zext (wi::bit_not (wi::to_wide (@0)),
@@ -3974,19 +3980,22 @@ index 4fbba3922e5..e78bef8ce30 100644
 +	 int ibit2 = tree_log2 (@1);
 +       }
 +  (if (ibit == ibit2
-+      && ibit >= 0))))
++      && ibit >= 0
++      && TYPE_PRECISION (type) <= TYPE_PRECISION (TREE_TYPE (@2))))))
 +
-+(match (nop_atomic_bit_test_and_p @0 @0 @3)
++(match (nop_atomic_bit_test_and_p @4 @0 @3)
 + (bit_and:c
-+  (nop_convert?@3
-+   (ATOMIC_FETCH_AND_N @2 (nop_convert? (bit_not (lshift@0 integer_onep@6 @7))) @5))
-+   @0))
++  (convert1?@3
++   (ATOMIC_FETCH_AND_N @2 (nop_convert?@4 (bit_not (lshift@0 integer_onep@6 @7))) @5))
++  (convert2? @0))
++ (if (TYPE_PRECISION (type) <= TYPE_PRECISION (TREE_TYPE (@2)))))
 +
-+(match (nop_atomic_bit_test_and_p @0 @0 @3)
++(match (nop_atomic_bit_test_and_p @4 @0 @3)
 + (bit_and:c
-+  (nop_convert?@3
-+   (SYNC_FETCH_AND_AND_N @2 (nop_convert? (bit_not (lshift@0 integer_onep@6 @7)))))
-+   @0))
++  (convert1?@3
++   (SYNC_FETCH_AND_AND_N @2 (nop_convert?@4 (bit_not (lshift@0 integer_onep@6 @7)))))
++  (convert2? @0))
++  (if (TYPE_PRECISION (type) <= TYPE_PRECISION (TREE_TYPE (@2)))))
 +
 +#endif
 +
@@ -8731,6 +8740,302 @@ index 00000000000..b3f2235fd55
 +  TEST_ATOMIC_FETCH_LOGIC (char, xor)
 +  return 0;
 +}
+diff --git a/gcc/testsuite/gcc.target/i386/pr103194-2.c b/gcc/testsuite/gcc.target/i386/pr103194-2.c
+new file mode 100644
+index 00000000000..1a991fe0199
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr103194-2.c
+@@ -0,0 +1,64 @@
++/* { dg-do compile } */
++/* { dg-options "-O2" } */
++#include <stdatomic.h>
++#include <stdbool.h>
++
++#define FOO(RTYPE,TYPE,MASK)						\
++  __attribute__((noinline,noclone)) RTYPE				\
++  atomic_fetch_or_##TYPE##_##MASK (_Atomic TYPE* a)			\
++  {									\
++    TYPE mask = 1 << MASK;						\
++    return __atomic_fetch_or (a, mask, __ATOMIC_RELAXED) & mask;	\
++  }									\
++  __attribute__((noinline,noclone)) RTYPE				\
++  atomic_fetch_xor_##TYPE##_##MASK (_Atomic TYPE* a)			\
++  {									\
++    TYPE mask = 1 << MASK;						\
++    return __atomic_fetch_xor (a, mask, __ATOMIC_RELAXED) & mask;	\
++  }									\
++  __attribute__((noinline,noclone)) RTYPE				\
++  atomic_xor_fetch_##TYPE##_##MASK (_Atomic TYPE* a)			\
++  {									\
++    TYPE mask = 1 << MASK;						\
++    return __atomic_xor_fetch (a, mask, __ATOMIC_RELAXED) & mask;	\
++  }									\
++  __attribute__((noinline,noclone)) RTYPE				\
++  atomic_fetch_and_##TYPE##_##MASK (_Atomic TYPE* a)			\
++  {									\
++    TYPE mask = 1 << MASK;						\
++    return __atomic_fetch_and (a, ~mask, __ATOMIC_RELAXED) & mask;	\
++  }									\
++  __attribute__((noinline,noclone)) RTYPE				\
++  sync_fetch_and_or_##TYPE##_##MASK (_Atomic TYPE* a)			\
++  {									\
++    TYPE mask = 1 << MASK;						\
++    return __sync_fetch_and_or (a, mask) & mask;			\
++  }									\
++  __attribute__((noinline,noclone)) RTYPE				\
++  sync_fetch_and_xor_##TYPE##_##MASK (_Atomic TYPE* a)			\
++  {									\
++    TYPE mask = 1 << MASK;						\
++    return __sync_fetch_and_xor (a, mask) & mask;			\
++  }									\
++  __attribute__((noinline,noclone)) RTYPE				\
++  sync_xor_and_fetch_##TYPE##_##MASK (_Atomic TYPE* a)			\
++  {									\
++    TYPE mask = 1 << MASK;						\
++    return __sync_xor_and_fetch (a, mask) & mask;			\
++  }									\
++  __attribute__((noinline,noclone)) RTYPE				\
++  sync_fetch_and_and_##TYPE##_##MASK (_Atomic TYPE* a)			\
++  {									\
++    TYPE mask = 1 << MASK;						\
++    return __sync_fetch_and_and (a, ~mask) & mask;			\
++  }									\
++
++FOO(char, short, 0);
++FOO(char, short, 7);
++FOO(short, int, 0);
++FOO(short, int, 15);
++
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*bts" 8 } } */
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*btc" 16 } } */
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*btr" 8 } } */
++/* { dg-final { scan-assembler-not "cmpxchg" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr103194-3.c b/gcc/testsuite/gcc.target/i386/pr103194-3.c
+new file mode 100644
+index 00000000000..4907598bbd1
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr103194-3.c
+@@ -0,0 +1,64 @@
++/* { dg-do compile { target { ! ia32 } } } */
++/* { dg-options "-O2" } */
++#include <stdatomic.h>
++#include <stdbool.h>
++typedef long long int64;
++
++#define FOO(RTYPE, TYPE,MASK)						\
++  __attribute__((noinline,noclone)) RTYPE				\
++  atomic_fetch_or_##TYPE##_##MASK (_Atomic TYPE* a)			\
++  {									\
++    TYPE mask = 1ll << MASK;						\
++    return __atomic_fetch_or (a, mask, __ATOMIC_RELAXED) & mask;	\
++  }									\
++  __attribute__((noinline,noclone)) RTYPE				\
++  atomic_fetch_xor_##TYPE##_##MASK (_Atomic TYPE* a)			\
++  {									\
++    TYPE mask = 1ll << MASK;						\
++    return __atomic_fetch_xor (a, mask, __ATOMIC_RELAXED) & mask;	\
++  }									\
++  __attribute__((noinline,noclone)) RTYPE				\
++  atomic_xor_fetch_##TYPE##_##MASK (_Atomic TYPE* a)			\
++  {									\
++    TYPE mask = 1ll << MASK;						\
++    return __atomic_xor_fetch (a, mask, __ATOMIC_RELAXED) & mask;	\
++  }									\
++  __attribute__((noinline,noclone)) RTYPE				\
++  atomic_fetch_and_##TYPE##_##MASK (_Atomic TYPE* a)			\
++  {									\
++    TYPE mask = 1ll << MASK;						\
++    return __atomic_fetch_and (a, ~mask, __ATOMIC_RELAXED) & mask;	\
++  }									\
++  __attribute__((noinline,noclone)) RTYPE				\
++  sync_fetch_and_or_##TYPE##_##MASK (_Atomic TYPE* a)			\
++  {									\
++    TYPE mask = 1ll << MASK;						\
++    return __sync_fetch_and_or (a, mask) & mask;			\
++  }									\
++  __attribute__((noinline,noclone)) RTYPE				\
++  sync_fetch_and_xor_##TYPE##_##MASK (_Atomic TYPE* a)			\
++  {									\
++    TYPE mask = 1ll << MASK;						\
++    return __sync_fetch_and_xor (a, mask) & mask;			\
++  }									\
++  __attribute__((noinline,noclone)) RTYPE				\
++  sync_xor_and_fetch_##TYPE##_##MASK (_Atomic TYPE* a)			\
++  {									\
++    TYPE mask = 1ll << MASK;						\
++    return __sync_xor_and_fetch (a, mask) & mask;			\
++  }									\
++  __attribute__((noinline,noclone)) RTYPE				\
++  sync_fetch_and_and_##TYPE##_##MASK (_Atomic TYPE* a)			\
++  {									\
++    TYPE mask = 1ll << MASK;						\
++    return __sync_fetch_and_and (a, ~mask) & mask;			\
++  }									\
++
++
++FOO(int, int64, 1);
++FOO(int, int64, 31);
++
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*bts" 4 } } */
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*btc" 8 } } */
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*btr" 4 } } */
++/* { dg-final { scan-assembler-not "cmpxchg" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr103194-4.c b/gcc/testsuite/gcc.target/i386/pr103194-4.c
+new file mode 100644
+index 00000000000..8573016c5d4
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr103194-4.c
+@@ -0,0 +1,61 @@
++/* { dg-do compile } */
++/* { dg-options "-O2" } */
++#include <stdatomic.h>
++#include <stdbool.h>
++
++#define FOO(RTYPE,TYPE)							\
++  __attribute__((noinline,noclone)) RTYPE				\
++  atomic_fetch_or_##TYPE##_##MASK (_Atomic TYPE* a, TYPE MASK)		\
++  {									\
++    TYPE mask = 1 << MASK;						\
++    return __atomic_fetch_or (a, mask, __ATOMIC_RELAXED) & mask;	\
++  }									\
++  __attribute__((noinline,noclone)) RTYPE				\
++  atomic_fetch_xor_##TYPE##_##MASK (_Atomic TYPE* a, TYPE MASK)		\
++  {									\
++    TYPE mask = 1 << MASK;						\
++    return __atomic_fetch_xor (a, mask, __ATOMIC_RELAXED) & mask;	\
++  }									\
++  __attribute__((noinline,noclone)) RTYPE				\
++  atomic_xor_fetch_##TYPE##_##MASK (_Atomic TYPE* a, TYPE MASK)		\
++  {									\
++    TYPE mask = 1 << MASK;						\
++    return __atomic_xor_fetch (a, mask, __ATOMIC_RELAXED) & mask;	\
++  }									\
++  __attribute__((noinline,noclone)) RTYPE				\
++  atomic_fetch_and_##TYPE##_##MASK (_Atomic TYPE* a, TYPE MASK)		\
++  {									\
++    TYPE mask = 1 << MASK;						\
++    return __atomic_fetch_and (a, ~mask, __ATOMIC_RELAXED) & mask;	\
++  }									\
++  __attribute__((noinline,noclone)) RTYPE				\
++  sync_fetch_and_or_##TYPE##_##MASK (_Atomic TYPE* a, TYPE MASK)	\
++  {									\
++    TYPE mask = 1 << MASK;						\
++    return __sync_fetch_and_or (a, mask) & mask;			\
++  }									\
++  __attribute__((noinline,noclone)) RTYPE				\
++  sync_fetch_and_xor_##TYPE##_##MASK (_Atomic TYPE* a, TYPE MASK)	\
++  {									\
++    TYPE mask = 1 << MASK;						\
++    return __sync_fetch_and_xor (a, mask) & mask;			\
++  }									\
++  __attribute__((noinline,noclone)) RTYPE				\
++  sync_xor_and_fetch_##TYPE##_##MASK (_Atomic TYPE* a, TYPE MASK)	\
++  {									\
++    TYPE mask = 1 << MASK;						\
++    return __sync_xor_and_fetch (a, mask) & mask;			\
++  }									\
++  __attribute__((noinline,noclone)) RTYPE				\
++  sync_fetch_and_and_##TYPE##_##MASK (_Atomic TYPE* a, TYPE MASK)	\
++  {									\
++    TYPE mask = 1 << MASK;						\
++    return __sync_fetch_and_and (a, ~mask) & mask;			\
++  }									\
++
++FOO(short, int);
++
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*bts" 2 } } */
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*btc" 4 } } */
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*btr" 2 } } */
++/* { dg-final { scan-assembler-not "cmpxchg" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr103194-5.c b/gcc/testsuite/gcc.target/i386/pr103194-5.c
+new file mode 100644
+index 00000000000..dfaddf0aa6e
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr103194-5.c
+@@ -0,0 +1,61 @@
++/* { dg-do compile { target { ! ia32 } } } */
++/* { dg-options "-O2" } */
++#include <stdatomic.h>
++#include <stdbool.h>
++
++#define FOO(RTYPE,TYPE)							\
++  __attribute__((noinline,noclone)) RTYPE				\
++  atomic_fetch_or_##TYPE##_##MASK (_Atomic TYPE* a, TYPE MASK)		\
++  {									\
++    TYPE mask = 1ll << MASK;						\
++    return __atomic_fetch_or (a, mask, __ATOMIC_RELAXED) & mask;	\
++  }									\
++  __attribute__((noinline,noclone)) RTYPE				\
++  atomic_fetch_xor_##TYPE##_##MASK (_Atomic TYPE* a, TYPE MASK)		\
++  {									\
++    TYPE mask = 1ll << MASK;						\
++    return __atomic_fetch_xor (a, mask, __ATOMIC_RELAXED) & mask;	\
++  }									\
++  __attribute__((noinline,noclone)) RTYPE				\
++  atomic_xor_fetch_##TYPE##_##MASK (_Atomic TYPE* a, TYPE MASK)		\
++  {									\
++    TYPE mask = 1ll << MASK;						\
++    return __atomic_xor_fetch (a, mask, __ATOMIC_RELAXED) & mask;	\
++  }									\
++  __attribute__((noinline,noclone)) RTYPE				\
++  atomic_fetch_and_##TYPE##_##MASK (_Atomic TYPE* a, TYPE MASK)		\
++  {									\
++    TYPE mask = 1ll << MASK;						\
++    return __atomic_fetch_and (a, ~mask, __ATOMIC_RELAXED) & mask;	\
++  }									\
++  __attribute__((noinline,noclone)) RTYPE				\
++  sync_fetch_and_or_##TYPE##_##MASK (_Atomic TYPE* a, TYPE MASK)	\
++  {									\
++    TYPE mask = 1ll << MASK;						\
++    return __sync_fetch_and_or (a, mask) & mask;			\
++  }									\
++  __attribute__((noinline,noclone)) RTYPE				\
++  sync_fetch_and_xor_##TYPE##_##MASK (_Atomic TYPE* a, TYPE MASK)	\
++  {									\
++    TYPE mask = 1ll << MASK;						\
++    return __sync_fetch_and_xor (a, mask) & mask;			\
++  }									\
++  __attribute__((noinline,noclone)) RTYPE				\
++  sync_xor_and_fetch_##TYPE##_##MASK (_Atomic TYPE* a, TYPE MASK)	\
++  {									\
++    TYPE mask = 1ll << MASK;						\
++    return __sync_xor_and_fetch (a, mask) & mask;			\
++  }									\
++  __attribute__((noinline,noclone)) RTYPE				\
++  sync_fetch_and_and_##TYPE##_##MASK (_Atomic TYPE* a, TYPE MASK)	\
++  {									\
++    TYPE mask = 1ll << MASK;						\
++    return __sync_fetch_and_and (a, ~mask) & mask;			\
++  }									\
++
++FOO(int, long);
++
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*bts" 2 } } */
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*btc" 4 } } */
++/* { dg-final { scan-assembler-times "lock;?\[ \t\]*btr" 2 } } */
++/* { dg-final { scan-assembler-not "cmpxchg" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr103194.c b/gcc/testsuite/gcc.target/i386/pr103194.c
+new file mode 100644
+index 00000000000..a6d84332e4d
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr103194.c
+@@ -0,0 +1,16 @@
++/* { dg-do compile } */
++/* { dg-options "-O2" } */
++long pscc_a_2_3;
++int pscc_a_1_4;
++void pscc()
++{
++  pscc_a_1_4 = __sync_fetch_and_and(&pscc_a_2_3, 1);
++}
++
++static int si;
++long
++test_types (long n)
++{
++  unsigned int u2 = __atomic_fetch_xor (&si, 0, 5);
++  return u2;
++}
 diff --git a/gcc/testsuite/gcc.target/i386/pr103205-2.c b/gcc/testsuite/gcc.target/i386/pr103205-2.c
 new file mode 100644
 index 00000000000..705081e51d5
@@ -9701,10 +10006,10 @@ index 00000000000..f2e2054b6fb
 +
 +#include "xorsign.c"
 diff --git a/gcc/tree-ssa-ccp.c b/gcc/tree-ssa-ccp.c
-index aad8526eb21..d86d04441f8 100644
+index aad8526eb21..d03a8d54b46 100644
 --- a/gcc/tree-ssa-ccp.c
 +++ b/gcc/tree-ssa-ccp.c
-@@ -2862,6 +2862,90 @@ optimize_unreachable (gimple_stmt_iterator i)
+@@ -2862,6 +2862,91 @@ optimize_unreachable (gimple_stmt_iterator i)
    return ret;
  }
  
@@ -9791,11 +10096,12 @@ index aad8526eb21..d86d04441f8 100644
 + */
 +extern bool gimple_nop_atomic_bit_test_and_p (tree, tree *,
 +					      tree (*) (tree));
++extern bool gimple_nop_convert (tree, tree*, tree (*) (tree));
 +
  /* Optimize
       mask_2 = 1 << cnt_1;
       _4 = __atomic_fetch_or_* (ptr_6, mask_2, _3);
-@@ -2888,7 +2972,7 @@ optimize_atomic_bit_test_and (gimple_stmt_iterator *gsip,
+@@ -2888,7 +2973,7 @@ optimize_atomic_bit_test_and (gimple_stmt_iterator *gsip,
    tree lhs = gimple_call_lhs (call);
    use_operand_p use_p;
    gimple *use_stmt;
@@ -9804,7 +10110,7 @@ index aad8526eb21..d86d04441f8 100644
    optab optab;
  
    if (!flag_inline_atomics
-@@ -2898,7 +2982,6 @@ optimize_atomic_bit_test_and (gimple_stmt_iterator *gsip,
+@@ -2898,7 +2983,6 @@ optimize_atomic_bit_test_and (gimple_stmt_iterator *gsip,
        || SSA_NAME_OCCURS_IN_ABNORMAL_PHI (lhs)
        || !single_imm_use (lhs, &use_p, &use_stmt)
        || !is_gimple_assign (use_stmt)
@@ -9812,7 +10118,7 @@ index aad8526eb21..d86d04441f8 100644
        || !gimple_vdef (call))
      return;
  
-@@ -2917,54 +3000,347 @@ optimize_atomic_bit_test_and (gimple_stmt_iterator *gsip,
+@@ -2917,54 +3001,349 @@ optimize_atomic_bit_test_and (gimple_stmt_iterator *gsip,
        return;
      }
  
@@ -9919,17 +10225,17 @@ index aad8526eb21..d86d04441f8 100644
 +	  ibit = 0;
 +	}
 +      else if (TYPE_PRECISION (TREE_TYPE (use_lhs))
-+	       == TYPE_PRECISION (TREE_TYPE (use_rhs)))
++	       <= TYPE_PRECISION (TREE_TYPE (use_rhs)))
 +	{
 +	  gimple *use_nop_stmt;
 +	  if (!single_imm_use (use_lhs, &use_p, &use_nop_stmt)
 +	      || !is_gimple_assign (use_nop_stmt))
  	    return;
 -	  g = SSA_NAME_DEF_STMT (mask);
++	  tree use_nop_lhs = gimple_assign_lhs (use_nop_stmt);
 +	  rhs_code = gimple_assign_rhs_code (use_nop_stmt);
 +	  if (rhs_code != BIT_AND_EXPR)
 +	    {
-+	      tree use_nop_lhs = gimple_assign_lhs (use_nop_stmt);
 +	      if (TREE_CODE (use_nop_lhs) == SSA_NAME
 +		  && SSA_NAME_OCCURS_IN_ABNORMAL_PHI (use_nop_lhs))
 +		return;
@@ -10042,24 +10348,23 @@ index aad8526eb21..d86d04441f8 100644
 +	    }
 +	  else
 +	    {
-+	      tree and_expr = gimple_assign_lhs (use_nop_stmt);
 +	      tree match_op[3];
 +	      gimple *g;
-+	      if (!gimple_nop_atomic_bit_test_and_p (and_expr,
++	      if (!gimple_nop_atomic_bit_test_and_p (use_nop_lhs,
 +						     &match_op[0], NULL)
 +		  || SSA_NAME_OCCURS_IN_ABNORMAL_PHI (match_op[2])
 +		  || !single_imm_use (match_op[2], &use_p, &g)
 +		  || !is_gimple_assign (g))
 +		return;
-+	      mask = match_op[1];
-+	      if (TREE_CODE (mask) == INTEGER_CST)
++	      mask = match_op[0];
++	      if (TREE_CODE (match_op[1]) == INTEGER_CST)
 +		{
-+		  ibit = tree_log2 (mask);
++		  ibit = tree_log2 (match_op[1]);
 +		  gcc_assert (ibit >= 0);
 +		}
 +	      else
 +		{
-+		  g = SSA_NAME_DEF_STMT (mask);
++		  g = SSA_NAME_DEF_STMT (match_op[1]);
 +		  gcc_assert (is_gimple_assign (g));
 +		  bit = gimple_assign_rhs2 (g);
 +		}
@@ -10081,19 +10386,30 @@ index aad8526eb21..d86d04441f8 100644
 +		 _1 = __atomic_fetch_and_* (ptr_6, ~mask_7, _3);
 +		 _12 = _3 & mask_7;
 +		 _5 = (int) _12;
-+	       */
-+	      replace_uses_by (use_lhs, lhs);
-+	      tree use_nop_lhs = gimple_assign_lhs (use_nop_stmt);
-+	      var = make_ssa_name (TREE_TYPE (use_nop_lhs));
-+	      gimple_assign_set_lhs (use_nop_stmt, var);
++
++		 and Convert
++		 _1 = __atomic_fetch_and_4 (ptr_6, ~mask, _3);
++		 _2 = (short int) _1;
++		 _5 = _2 & mask;
++		 to
++		 _1 = __atomic_fetch_and_4 (ptr_6, ~mask, _3);
++		 _8 = _1 & mask;
++		 _5 = (short int) _8;
++	      */
++	      gimple_seq stmts = NULL;
++	      match_op[1] = gimple_convert (&stmts,
++					    TREE_TYPE (use_rhs),
++					    match_op[1]);
++	      var = gimple_build (&stmts, BIT_AND_EXPR,
++				  TREE_TYPE (use_rhs), use_rhs, match_op[1]);
 +	      gsi = gsi_for_stmt (use_stmt);
 +	      gsi_remove (&gsi, true);
 +	      release_defs (use_stmt);
-+	      gsi_remove (gsip, true);
-+	      g = gimple_build_assign (use_nop_lhs, NOP_EXPR, var);
++	      use_stmt = gimple_seq_last_stmt (stmts);
 +	      gsi = gsi_for_stmt (use_nop_stmt);
-+	      gsi_insert_after (&gsi, g, GSI_NEW_STMT);
-+	      use_stmt = use_nop_stmt;
++	      gsi_insert_seq_before (&gsi, stmts, GSI_SAME_STMT);
++	      gimple_assign_set_rhs_with_ops (&gsi, CONVERT_EXPR, var);
++	      update_stmt (use_nop_stmt);
 +	    }
  	}
 -      if (!is_gimple_assign (g)
@@ -10113,13 +10429,13 @@ index aad8526eb21..d86d04441f8 100644
 -  else
 +  else if (optab_handler (optab, TYPE_MODE (TREE_TYPE (lhs)))
 +	   == CODE_FOR_nothing)
-+    return;
-+
-+  tree use_lhs = gimple_assign_lhs (use_stmt);
-+  if (!use_lhs)
      return;
  
 -  if (gimple_assign_rhs1 (use_stmt) == lhs)
++  tree use_lhs = gimple_assign_lhs (use_stmt);
++  if (!use_lhs)
++    return;
++
 +  if (!bit)
      {
 -      if (!operand_equal_p (gimple_assign_rhs2 (use_stmt), mask, 0))
@@ -10136,55 +10452,47 @@ index aad8526eb21..d86d04441f8 100644
 +      else if (TREE_CODE (mask) == SSA_NAME)
 +	{
 +	  gimple *g = SSA_NAME_DEF_STMT (mask);
-+	  if (fn == IFN_ATOMIC_BIT_TEST_AND_RESET)
++	  tree match_op;
++	  if (gimple_nop_convert (mask, &match_op, NULL))
 +	    {
-+	      if (!is_gimple_assign (g)
-+		  || gimple_assign_rhs_code (g) != BIT_NOT_EXPR)
-+		return;
-+	      mask = gimple_assign_rhs1 (g);
++	      mask = match_op;
 +	      if (TREE_CODE (mask) != SSA_NAME)
 +		return;
 +	      g = SSA_NAME_DEF_STMT (mask);
 +	    }
 +	  if (!is_gimple_assign (g))
 +	    return;
-+	  rhs_code = gimple_assign_rhs_code (g);
-+	  if (rhs_code != LSHIFT_EXPR)
-+	    {
-+	      if (rhs_code != NOP_EXPR)
-+		return;
 +
-+	      /* Handle
-+		 _1 = 1 << bit_4(D);
-+		 mask_5 = (unsigned int) _1;
-+		 _2 = __atomic_fetch_or_4 (v_7(D), mask_5, 0);
-+		 _3 = _2 & mask_5;
-+		 */
-+	      tree nop_lhs = gimple_assign_lhs (g);
-+	      tree nop_rhs = gimple_assign_rhs1 (g);
-+	      if (TYPE_PRECISION (TREE_TYPE (nop_lhs))
-+		  != TYPE_PRECISION (TREE_TYPE (nop_rhs)))
++	  if (fn == IFN_ATOMIC_BIT_TEST_AND_RESET)
++	    {
++	      if (gimple_assign_rhs_code (g) != BIT_NOT_EXPR)
 +		return;
-+	      g = SSA_NAME_DEF_STMT (nop_rhs);
-+	      if (!is_gimple_assign (g)
-+		  || gimple_assign_rhs_code (g) != LSHIFT_EXPR)
++	      mask = gimple_assign_rhs1 (g);
++	      if (TREE_CODE (mask) != SSA_NAME)
 +		return;
++	      g = SSA_NAME_DEF_STMT (mask);
 +	    }
-+	  if (!integer_onep (gimple_assign_rhs1 (g)))
++
++	  rhs_code = gimple_assign_rhs_code (g);
++	  if (rhs_code != LSHIFT_EXPR
++	      || !integer_onep (gimple_assign_rhs1 (g)))
 +	    return;
 +	  bit = gimple_assign_rhs2 (g);
 +	}
 +      else
 +	return;
 +
++      tree cmp_mask;
 +      if (gimple_assign_rhs1 (use_stmt) == lhs)
-+	{
-+	  if (!operand_equal_p (gimple_assign_rhs2 (use_stmt), mask, 0))
-+	    return;
-+	}
-+      else if (gimple_assign_rhs2 (use_stmt) != lhs
-+	       || !operand_equal_p (gimple_assign_rhs1 (use_stmt),
-+				    mask, 0))
++	cmp_mask = gimple_assign_rhs2 (use_stmt);
++      else
++	cmp_mask = gimple_assign_rhs1 (use_stmt);
++
++      tree match_op;
++      if (gimple_nop_convert (cmp_mask, &match_op, NULL))
++	cmp_mask = match_op;
++
++      if (!operand_equal_p (cmp_mask, mask, 0))
  	return;
      }
 -  else if (gimple_assign_rhs2 (use_stmt) != lhs
@@ -10193,7 +10501,7 @@ index aad8526eb21..d86d04441f8 100644
  
    bool use_bool = true;
    bool has_debug_uses = false;
-@@ -3053,18 +3429,20 @@ optimize_atomic_bit_test_and (gimple_stmt_iterator *gsip,
+@@ -3053,18 +3432,20 @@ optimize_atomic_bit_test_and (gimple_stmt_iterator *gsip,
  	 of the specified bit after the atomic operation (makes only sense
  	 for xor, otherwise the bit content is compile time known),
  	 we need to invert the bit.  */
