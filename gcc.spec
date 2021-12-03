@@ -230,7 +230,6 @@ GNU cc and gcc C compilers.
 
 %patch30 -p1
 
-%patch31 -p1
 
 
 %build

@@ -1,10 +1,7 @@
-Arjan van de Ven (1):
-      Merge remote-tracking branch 'origin/releases/gcc-11' into HEAD
-
 Cui,Lili (1):
       x86: Update -mtune=alderlake
 
-H.J. Lu (44):
+H.J. Lu (46):
       op_by_pieces_d::run: Change a while loop to a do-while loop
       Generate offset adjusted operation for op_by_pieces operations
       Don't use nullptr return from simplify_gen_subreg
@@ -49,16 +46,17 @@ H.J. Lu (44):
       pr103194-5.c: Replace long with int64_t
       x86: Add testcases for PR target/80566
       x86: Add TARGET_AVX256_[MOVE|STORE]_BY_PIECES
+      Add TARGET_IFUNC_REF_LOCAL_OK
+      x86: Add -mmove-max=bits and -mstore-max=bits
 
 Hongyu Wang (2):
       PR target/103069: Relax cmpxchg loop for x86 target
       i386: Fix wrong codegen for -mrelax-cmpxchg-loop
 
-Jakub Jelinek (4):
+Jakub Jelinek (3):
       i386: Punt on broadcasts from TImode integers [PR101286]
       i386: Fix up @xorsign<mode>3_1 [PR102224]
       i386: Fix up xorsign for AVX [PR89984]
-      i386: Fix up x86 atomic_bit_test* expanders for !TARGET_HIMODE_MATH [PR103205]
 
 Richard Biener (1):
       middle-end/100951 - make sure to generate VECTOR_CST in lowering
@@ -423,7 +421,7 @@ index ae90610ad80..a60d9a79b0b 100644
  
  #ifndef CUMULATIVE_ARGS
 diff --git a/gcc/config/i386/i386-expand.c b/gcc/config/i386/i386-expand.c
-index 16765718cc3..7a2775242ff 100644
+index 16765718cc3..5eebb41e543 100644
 --- a/gcc/config/i386/i386-expand.c
 +++ b/gcc/config/i386/i386-expand.c
 @@ -190,6 +190,82 @@ ix86_expand_clear (rtx dest)
@@ -911,7 +909,24 @@ index 16765718cc3..7a2775242ff 100644
    emit_insn (gen_rtx_SET (dest, x));
  }
  
-@@ -13598,7 +13670,7 @@ static bool expand_vec_perm_1 (struct expand_vec_perm_d *d);
+@@ -8074,7 +8146,7 @@ ix86_expand_call (rtx retval, rtx fnaddr, rtx callarg1,
+ 	 it an indirect call.  */
+       if (flag_pic
+ 	  && GET_CODE (addr) == SYMBOL_REF
+-	  && !SYMBOL_REF_LOCAL_P (addr))
++	  && ix86_call_use_plt_p (addr))
+ 	{
+ 	  if (flag_plt
+ 	      && (SYMBOL_REF_DECL (addr) == NULL_TREE
+@@ -11139,6 +11211,7 @@ ix86_expand_builtin (tree exp, rtx target, rtx subtarget,
+       char *opts = ix86_target_string (bisa, bisa2, 0, 0, NULL, NULL,
+ 				       (enum fpmath_unit) 0,
+ 				       (enum prefer_vector_width) 0,
++				       PVW_NONE, PVW_NONE,
+ 				       false, add_abi_p);
+       if (!opts)
+ 	error ("%qE needs unknown isa option", fndecl);
+@@ -13598,7 +13671,7 @@ static bool expand_vec_perm_1 (struct expand_vec_perm_d *d);
  /* A subroutine of ix86_expand_vector_init.  Store into TARGET a vector
     with all elements equal to VAR.  Return true if successful.  */
  
@@ -920,7 +935,7 @@ index 16765718cc3..7a2775242ff 100644
  ix86_expand_vector_init_duplicate (bool mmx_ok, machine_mode mode,
  				   rtx target, rtx val)
  {
-@@ -21082,4 +21154,85 @@ ix86_expand_divmod_libfunc (rtx libfunc, machine_mode mode,
+@@ -21082,4 +21155,85 @@ ix86_expand_divmod_libfunc (rtx libfunc, machine_mode mode,
    *rem_p = rem;
  }
  
@@ -1290,7 +1305,7 @@ index dbddfd8e48f..4e7014be034 100644
  /* The symbol Pmode stands for one of the above machine modes (usually SImode).
     The tm.h file specifies which one.  It is not a distinct mode.  */
 diff --git a/gcc/config/i386/i386-options.c b/gcc/config/i386/i386-options.c
-index 19632b5fd6b..9487e1c5742 100644
+index 19632b5fd6b..8f030546365 100644
 --- a/gcc/config/i386/i386-options.c
 +++ b/gcc/config/i386/i386-options.c
 @@ -131,7 +131,7 @@ along with GCC; see the file COPYING3.  If not see
@@ -1302,7 +1317,16 @@ index 19632b5fd6b..9487e1c5742 100644
  #define m_CORE_ALL (m_CORE2 | m_NEHALEM  | m_SANDYBRIDGE | m_CORE_AVX2)
  #define m_GOLDMONT (HOST_WIDE_INT_1U<<PROCESSOR_GOLDMONT)
  #define m_GOLDMONT_PLUS (HOST_WIDE_INT_1U<<PROCESSOR_GOLDMONT_PLUS)
-@@ -392,7 +392,8 @@ ix86_target_string (HOST_WIDE_INT isa, HOST_WIDE_INT isa2,
+@@ -359,6 +359,8 @@ ix86_target_string (HOST_WIDE_INT isa, HOST_WIDE_INT isa2,
+ 		    const char *arch, const char *tune,
+ 		    enum fpmath_unit fpmath,
+ 		    enum prefer_vector_width pvw,
++		    enum prefer_vector_width move_max,
++		    enum prefer_vector_width store_max,
+ 		    bool add_nl_p, bool add_abi_p)
+ {
+   /* Flag options.  */
+@@ -392,7 +394,8 @@ ix86_target_string (HOST_WIDE_INT isa, HOST_WIDE_INT isa2,
      { "-mstv",				MASK_STV },
      { "-mavx256-split-unaligned-load",	MASK_AVX256_SPLIT_UNALIGNED_LOAD },
      { "-mavx256-split-unaligned-store",	MASK_AVX256_SPLIT_UNALIGNED_STORE },
@@ -1312,7 +1336,50 @@ index 19632b5fd6b..9487e1c5742 100644
    };
  
    /* Additional flag options.  */
-@@ -719,7 +720,7 @@ static const struct processor_costs *processor_cost_table[] =
+@@ -536,10 +539,10 @@ ix86_target_string (HOST_WIDE_INT isa, HOST_WIDE_INT isa2,
+ 	}
+     }
+ 
+-  /* Add -mprefer-vector-width= option.  */
+-  if (pvw)
++  auto add_vector_width = [&opts, &num] (prefer_vector_width pvw,
++					 const char *cmd)
+     {
+-      opts[num][0] = "-mprefer-vector-width=";
++      opts[num][0] = cmd;
+       switch ((int) pvw)
+ 	{
+ 	case PVW_AVX128:
+@@ -557,7 +560,19 @@ ix86_target_string (HOST_WIDE_INT isa, HOST_WIDE_INT isa2,
+ 	default:
+ 	  gcc_unreachable ();
+ 	}
+-    }
++    };
++
++  /* Add -mprefer-vector-width= option.  */
++  if (pvw)
++    add_vector_width (pvw, "-mprefer-vector-width=");
++
++  /* Add -mmove-max= option.  */
++  if (move_max)
++    add_vector_width (move_max, "-mmove-max=");
++
++  /* Add -mstore-max= option.  */
++  if (store_max)
++    add_vector_width (store_max, "-mstore-max=");
+ 
+   /* Any options?  */
+   if (num == 0)
+@@ -624,6 +639,7 @@ ix86_debug_options (void)
+ 				   target_flags, ix86_target_flags,
+ 				   ix86_arch_string, ix86_tune_string,
+ 				   ix86_fpmath, prefer_vector_width_type,
++				   ix86_move_max, ix86_store_max,
+ 				   true, true);
+ 
+   if (opts)
+@@ -719,7 +735,7 @@ static const struct processor_costs *processor_cost_table[] =
    &slm_cost,
    &slm_cost,
    &slm_cost,
@@ -1321,7 +1388,7 @@ index 19632b5fd6b..9487e1c5742 100644
    &slm_cost,
    &slm_cost,
    &skylake_cost,
-@@ -731,7 +732,7 @@ static const struct processor_costs *processor_cost_table[] =
+@@ -731,7 +747,7 @@ static const struct processor_costs *processor_cost_table[] =
    &icelake_cost,
    &skylake_cost,
    &icelake_cost,
@@ -1330,7 +1397,18 @@ index 19632b5fd6b..9487e1c5742 100644
    &icelake_cost,
    &intel_cost,
    &geode_cost,
-@@ -1086,6 +1087,10 @@ ix86_valid_target_attribute_inner_p (tree fndecl, tree args, char *p_strings[],
+@@ -886,7 +902,9 @@ ix86_function_specific_print (FILE *file, int indent,
+     = ix86_target_string (ptr->x_ix86_isa_flags, ptr->x_ix86_isa_flags2,
+ 			  ptr->x_target_flags, ptr->x_ix86_target_flags,
+ 			  NULL, NULL, ptr->x_ix86_fpmath,
+-			  ptr->x_prefer_vector_width_type, false, true);
++			  ptr->x_prefer_vector_width_type,
++			  ptr->x_ix86_move_max, ptr->x_ix86_store_max,
++			  false, true);
+ 
+   gcc_assert (ptr->arch < PROCESSOR_max);
+   fprintf (file, "%*sarch = %d (%s)\n",
+@@ -1086,6 +1104,10 @@ ix86_valid_target_attribute_inner_p (tree fndecl, tree args, char *p_strings[],
      IX86_ATTR_IX86_YES ("general-regs-only",
  			OPT_mgeneral_regs_only,
  			OPTION_MASK_GENERAL_REGS_ONLY),
@@ -1341,6 +1419,92 @@ index 19632b5fd6b..9487e1c5742 100644
    };
  
    location_t loc
+@@ -1307,6 +1329,10 @@ ix86_valid_target_attribute_tree (tree fndecl, tree args,
+   const char *orig_tune_string = opts->x_ix86_tune_string;
+   enum fpmath_unit orig_fpmath_set = opts_set->x_ix86_fpmath;
+   enum prefer_vector_width orig_pvw_set = opts_set->x_prefer_vector_width_type;
++  enum prefer_vector_width orig_ix86_move_max_set
++    = opts_set->x_ix86_move_max;
++  enum prefer_vector_width orig_ix86_store_max_set
++    = opts_set->x_ix86_store_max;
+   int orig_tune_defaulted = ix86_tune_defaulted;
+   int orig_arch_specified = ix86_arch_specified;
+   char *option_strings[IX86_FUNCTION_SPECIFIC_MAX] = { NULL, NULL };
+@@ -1382,6 +1408,8 @@ ix86_valid_target_attribute_tree (tree fndecl, tree args,
+       opts->x_ix86_tune_string = orig_tune_string;
+       opts_set->x_ix86_fpmath = orig_fpmath_set;
+       opts_set->x_prefer_vector_width_type = orig_pvw_set;
++      opts_set->x_ix86_move_max = orig_ix86_move_max_set;
++      opts_set->x_ix86_store_max = orig_ix86_store_max_set;
+       opts->x_ix86_excess_precision = orig_ix86_excess_precision;
+       opts->x_ix86_unsafe_math_optimizations
+ 	= orig_ix86_unsafe_math_optimizations;
+@@ -2882,6 +2910,48 @@ ix86_option_override_internal (bool main_args_p,
+       && (opts_set->x_prefer_vector_width_type == PVW_NONE))
+     opts->x_prefer_vector_width_type = PVW_AVX256;
+ 
++  if (opts_set->x_ix86_move_max == PVW_NONE)
++    {
++      /* Set the maximum number of bits can be moved from memory to
++	 memory efficiently.  */
++      if (ix86_tune_features[X86_TUNE_AVX512_MOVE_BY_PIECES])
++	opts->x_ix86_move_max = PVW_AVX512;
++      else if (ix86_tune_features[X86_TUNE_AVX256_MOVE_BY_PIECES])
++	opts->x_ix86_move_max = PVW_AVX256;
++      else
++	{
++	  opts->x_ix86_move_max = opts->x_prefer_vector_width_type;
++	  if (opts_set->x_ix86_move_max == PVW_NONE)
++	    {
++	      if (TARGET_AVX512F_P (opts->x_ix86_isa_flags))
++		opts->x_ix86_move_max = PVW_AVX512;
++	      else
++		opts->x_ix86_move_max = PVW_AVX128;
++	    }
++	}
++    }
++
++  if (opts_set->x_ix86_store_max == PVW_NONE)
++    {
++      /* Set the maximum number of bits can be stored to memory
++	 efficiently.  */
++      if (ix86_tune_features[X86_TUNE_AVX512_STORE_BY_PIECES])
++	opts->x_ix86_store_max = PVW_AVX512;
++      else if (ix86_tune_features[X86_TUNE_AVX256_STORE_BY_PIECES])
++	opts->x_ix86_store_max = PVW_AVX256;
++      else
++	{
++	  opts->x_ix86_store_max = opts->x_prefer_vector_width_type;
++	  if (opts_set->x_ix86_store_max == PVW_NONE)
++	    {
++	      if (TARGET_AVX512F_P (opts->x_ix86_isa_flags))
++		opts->x_ix86_store_max = PVW_AVX512;
++	      else
++		opts->x_ix86_store_max = PVW_AVX128;
++	    }
++	}
++    }
++
+   if (opts->x_ix86_recip_name)
+     {
+       char *p = ASTRDUP (opts->x_ix86_recip_name);
+diff --git a/gcc/config/i386/i386-options.h b/gcc/config/i386/i386-options.h
+index cdaca2644f4..e218e24d15b 100644
+--- a/gcc/config/i386/i386-options.h
++++ b/gcc/config/i386/i386-options.h
+@@ -26,8 +26,10 @@ char *ix86_target_string (HOST_WIDE_INT isa, HOST_WIDE_INT isa2,
+ 			  int flags, int flags2,
+ 			  const char *arch, const char *tune,
+ 			  enum fpmath_unit fpmath,
+-			  enum prefer_vector_width pvw, bool add_nl_p,
+-			  bool add_abi_p);
++			  enum prefer_vector_width pvw,
++			  enum prefer_vector_width move_max,
++			  enum prefer_vector_width store_max,
++			  bool add_nl_p, bool add_abi_p);
+ 
+ extern enum attr_cpu ix86_schedule;
+ 
 diff --git a/gcc/config/i386/i386-opts.h b/gcc/config/i386/i386-opts.h
 index de6e7e01661..e159019e904 100644
 --- a/gcc/config/i386/i386-opts.h
@@ -1367,7 +1531,7 @@ index 44df00e94ac..29baf8acd0b 100644
    INSERT_PASS_AFTER (pass_combine, 1, pass_remove_partial_avx_dependency);
 -  INSERT_PASS_AFTER (pass_combine, 1, pass_constant_pool_broadcast);
 diff --git a/gcc/config/i386/i386-protos.h b/gcc/config/i386/i386-protos.h
-index 941e91636d8..621d87ae924 100644
+index 941e91636d8..7946613244a 100644
 --- a/gcc/config/i386/i386-protos.h
 +++ b/gcc/config/i386/i386-protos.h
 @@ -50,6 +50,8 @@ extern void ix86_reset_previous_fndecl (void);
@@ -1390,7 +1554,15 @@ index 941e91636d8..621d87ae924 100644
  extern bool ix86_unary_operator_ok (enum rtx_code, machine_mode, rtx[]);
  extern bool ix86_match_ccmode (rtx, machine_mode);
  extern void ix86_expand_branch (enum rtx_code, rtx, rtx, rtx);
-@@ -216,6 +215,8 @@ extern rtx ix86_split_stack_guard (void);
+@@ -152,6 +151,7 @@ extern void ix86_expand_sse_movcc (rtx, rtx, rtx, rtx);
+ extern void ix86_expand_sse_unpack (rtx, rtx, bool, bool);
+ extern bool ix86_expand_int_addcc (rtx[]);
+ extern rtx_insn *ix86_expand_call (rtx, rtx, rtx, rtx, rtx, bool);
++extern bool ix86_call_use_plt_p (rtx);
+ extern void ix86_split_call_vzeroupper (rtx, rtx);
+ extern void x86_initialize_trampoline (rtx, rtx, rtx);
+ extern rtx ix86_zero_extend_to_Pmode (rtx);
+@@ -216,6 +216,8 @@ extern rtx ix86_split_stack_guard (void);
  extern void ix86_move_vector_high_sse_to_mmx (rtx);
  extern void ix86_split_mmx_pack (rtx[], enum rtx_code);
  extern void ix86_split_mmx_punpck (rtx[], bool);
@@ -1399,7 +1571,7 @@ index 941e91636d8..621d87ae924 100644
  
  #ifdef TREE_CODE
  extern void init_cumulative_args (CUMULATIVE_ARGS *, tree, rtx, tree, int);
-@@ -258,6 +259,8 @@ extern void ix86_expand_mul_widen_hilo (rtx, rtx, rtx, bool, bool);
+@@ -258,6 +260,8 @@ extern void ix86_expand_mul_widen_hilo (rtx, rtx, rtx, bool, bool);
  extern void ix86_expand_sse2_mulv4si3 (rtx, rtx, rtx);
  extern void ix86_expand_sse2_mulvxdi3 (rtx, rtx, rtx);
  extern void ix86_expand_sse2_abs (rtx, rtx);
@@ -1408,13 +1580,13 @@ index 941e91636d8..621d87ae924 100644
  
  /* In i386-c.c  */
  extern void ix86_target_macros (void);
-@@ -393,4 +396,3 @@ extern rtl_opt_pass *make_pass_insert_endbr_and_patchable_area
+@@ -393,4 +397,3 @@ extern rtl_opt_pass *make_pass_insert_endbr_and_patchable_area
    (gcc::context *);
  extern rtl_opt_pass *make_pass_remove_partial_avx_dependency
    (gcc::context *);
 -extern rtl_opt_pass *make_pass_constant_pool_broadcast (gcc::context *);
 diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
-index 8e8c8beb366..aa9478fdb46 100644
+index 8e8c8beb366..30e0868b42f 100644
 --- a/gcc/config/i386/i386.c
 +++ b/gcc/config/i386/i386.c
 @@ -4195,6 +4195,18 @@ ix86_return_in_memory (const_tree type, const_tree fntype ATTRIBUTE_UNUSED)
@@ -1489,6 +1661,15 @@ index 8e8c8beb366..aa9478fdb46 100644
  	    return false;
  	default:
  	  break;
+@@ -11990,7 +12019,7 @@ output_pic_addr_const (FILE *file, rtx x, int code)
+ 	  assemble_name (file, name);
+ 	}
+       if (!TARGET_MACHO && !(TARGET_64BIT && TARGET_PECOFF)
+-	  && code == 'P' && ! SYMBOL_REF_LOCAL_P (x))
++	  && code == 'P' && ix86_call_use_plt_p (x))
+ 	fputs ("@PLT", file);
+       break;
+ 
 @@ -14114,6 +14143,18 @@ ix86_check_avx_upper_register (const_rtx exp)
  	  && GET_MODE_BITSIZE (GET_MODE (exp)) > 128);
  }
@@ -1637,7 +1818,34 @@ index 8e8c8beb366..aa9478fdb46 100644
  /* Calculate mode of upper 128bit AVX registers after the insn.  */
  
  static int
-@@ -15730,9 +15855,14 @@ ix86_output_jmp_thunk_or_indirect (const char *thunk_name, const int regno)
+@@ -15698,6 +15823,26 @@ ix86_zero_extend_to_Pmode (rtx exp)
+   return force_reg (Pmode, convert_to_mode (Pmode, exp, 1));
+ }
+ 
++/* Return true if the function is called via PLT.   */
++
++bool
++ix86_call_use_plt_p (rtx call_op)
++{
++  if (SYMBOL_REF_LOCAL_P (call_op))
++    {
++      if (SYMBOL_REF_DECL (call_op))
++	{
++	  /* NB: All ifunc functions must be called via PLT.  */
++	  cgraph_node *node
++	    = cgraph_node::get (SYMBOL_REF_DECL (call_op));
++	  if (node && node->ifunc_resolver)
++	    return true;
++	}
++      return false;
++    }
++  return true;
++}
++
+ /* Return true if the function being called was marked with attribute
+    "noplt" or using -fno-plt and we are compiling for non-PIC.  We need
+    to handle the non-PIC case in the backend because there is no easy
+@@ -15730,9 +15875,14 @@ ix86_output_jmp_thunk_or_indirect (const char *thunk_name, const int regno)
  {
    if (thunk_name != NULL)
      {
@@ -1652,7 +1860,7 @@ index 8e8c8beb366..aa9478fdb46 100644
      }
    else
      output_indirect_thunk (regno);
-@@ -15781,6 +15911,9 @@ ix86_output_indirect_branch_via_reg (rtx call_op, bool sibcall_p)
+@@ -15781,6 +15931,9 @@ ix86_output_indirect_branch_via_reg (rtx call_op, bool sibcall_p)
      {
        if (thunk_name != NULL)
  	{
@@ -1662,7 +1870,7 @@ index 8e8c8beb366..aa9478fdb46 100644
  	  fprintf (asm_out_file, "\tcall\t");
  	  assemble_name (asm_out_file, thunk_name);
  	  putc ('\n', asm_out_file);
-@@ -15955,10 +16088,10 @@ ix86_output_indirect_jmp (rtx call_op)
+@@ -15955,10 +16108,10 @@ ix86_output_indirect_jmp (rtx call_op)
  	gcc_unreachable ();
  
        ix86_output_indirect_branch (call_op, "%0", true);
@@ -1675,7 +1883,7 @@ index 8e8c8beb366..aa9478fdb46 100644
  }
  
  /* Output return instrumentation for current function if needed.  */
-@@ -16026,10 +16159,8 @@ ix86_output_function_return (bool long_p)
+@@ -16026,10 +16179,8 @@ ix86_output_function_return (bool long_p)
        return "";
      }
  
@@ -1688,7 +1896,7 @@ index 8e8c8beb366..aa9478fdb46 100644
  }
  
  /* Output indirect function return.  RET_OP is the function return
-@@ -16124,7 +16255,12 @@ ix86_output_call_insn (rtx_insn *insn, rtx call_op)
+@@ -16124,7 +16275,12 @@ ix86_output_call_insn (rtx_insn *insn, rtx call_op)
        if (output_indirect_p && !direct_p)
  	ix86_output_indirect_branch (call_op, xasm, true);
        else
@@ -1702,7 +1910,7 @@ index 8e8c8beb366..aa9478fdb46 100644
        return "";
      }
  
-@@ -16764,6 +16900,8 @@ ix86_sched_init_global (FILE *, int, int)
+@@ -16764,6 +16920,8 @@ ix86_sched_init_global (FILE *, int, int)
      case PROCESSOR_NEHALEM:
      case PROCESSOR_SANDYBRIDGE:
      case PROCESSOR_HASWELL:
@@ -1711,7 +1919,7 @@ index 8e8c8beb366..aa9478fdb46 100644
      case PROCESSOR_GENERIC:
        /* Do not perform multipass scheduling for pre-reload schedule
           to save compile time.  */
-@@ -20257,6 +20395,11 @@ ix86_rtx_costs (rtx x, machine_mode mode, int outer_code_i, int opno,
+@@ -20257,6 +20415,11 @@ ix86_rtx_costs (rtx x, machine_mode mode, int outer_code_i, int opno,
      case UNSPEC:
        if (XINT (x, 1) == UNSPEC_TP)
  	*total = 0;
@@ -1723,7 +1931,7 @@ index 8e8c8beb366..aa9478fdb46 100644
        return false;
  
      case VEC_SELECT:
-@@ -23023,6 +23166,32 @@ ix86_optab_supported_p (int op, machine_mode mode1, machine_mode,
+@@ -23023,6 +23186,32 @@ ix86_optab_supported_p (int op, machine_mode mode1, machine_mode,
      }
  }
  
@@ -1756,7 +1964,7 @@ index 8e8c8beb366..aa9478fdb46 100644
  /* Address space support.
  
     This is not "far pointers" in the 16-bit sense, but an easy way
-@@ -23553,6 +23722,9 @@ ix86_run_selftests (void)
+@@ -23553,6 +23742,9 @@ ix86_run_selftests (void)
  #undef TARGET_ADDRESS_COST
  #define TARGET_ADDRESS_COST ix86_address_cost
  
@@ -1766,7 +1974,7 @@ index 8e8c8beb366..aa9478fdb46 100644
  #undef TARGET_FLAGS_REGNUM
  #define TARGET_FLAGS_REGNUM FLAGS_REG
  #undef TARGET_FIXED_CONDITION_CODE_REGS
-@@ -23602,6 +23774,8 @@ ix86_run_selftests (void)
+@@ -23602,6 +23794,8 @@ ix86_run_selftests (void)
  #define TARGET_C_EXCESS_PRECISION ix86_get_excess_precision
  #undef TARGET_PROMOTE_PROTOTYPES
  #define TARGET_PROMOTE_PROTOTYPES hook_bool_const_tree_true
@@ -1775,7 +1983,17 @@ index 8e8c8beb366..aa9478fdb46 100644
  #undef TARGET_SETUP_INCOMING_VARARGS
  #define TARGET_SETUP_INCOMING_VARARGS ix86_setup_incoming_varargs
  #undef TARGET_MUST_PASS_IN_STACK
-@@ -23921,6 +24095,9 @@ static bool ix86_libc_has_fast_function (int fcode ATTRIBUTE_UNUSED)
+@@ -23906,6 +24100,9 @@ ix86_run_selftests (void)
+ #define TARGET_GET_MULTILIB_ABI_NAME \
+   ix86_get_multilib_abi_name
+ 
++#undef TARGET_IFUNC_REF_LOCAL_OK
++#define TARGET_IFUNC_REF_LOCAL_OK hook_bool_void_true
++
+ static bool ix86_libc_has_fast_function (int fcode ATTRIBUTE_UNUSED)
+ {
+ #ifdef OPTION_GLIBC
+@@ -23921,6 +24118,9 @@ static bool ix86_libc_has_fast_function (int fcode ATTRIBUTE_UNUSED)
  #undef TARGET_LIBC_HAS_FAST_FUNCTION
  #define TARGET_LIBC_HAS_FAST_FUNCTION ix86_libc_has_fast_function
  
@@ -1786,7 +2004,7 @@ index 8e8c8beb366..aa9478fdb46 100644
  #undef TARGET_RUN_TARGET_SELFTESTS
  #define TARGET_RUN_TARGET_SELFTESTS selftest::ix86_run_selftests
 diff --git a/gcc/config/i386/i386.h b/gcc/config/i386/i386.h
-index 6fc1bf350d5..e0ebc24c050 100644
+index 6fc1bf350d5..8a1542d8eaa 100644
 --- a/gcc/config/i386/i386.h
 +++ b/gcc/config/i386/i386.h
 @@ -554,6 +554,10 @@ extern unsigned char ix86_tune_features[X86_TUNE_LAST];
@@ -1800,18 +2018,7 @@ index 6fc1bf350d5..e0ebc24c050 100644
  #define TARGET_SSE_UNALIGNED_LOAD_OPTIMAL \
  	ix86_tune_features[X86_TUNE_SSE_UNALIGNED_LOAD_OPTIMAL]
  #define TARGET_SSE_UNALIGNED_STORE_OPTIMAL \
-@@ -623,6 +627,10 @@ extern unsigned char ix86_tune_features[X86_TUNE_LAST];
- 	ix86_tune_features[X86_TUNE_AVOID_LEA_FOR_ADDR]
- #define TARGET_SOFTWARE_PREFETCHING_BENEFICIAL \
- 	ix86_tune_features[X86_TUNE_SOFTWARE_PREFETCHING_BENEFICIAL]
-+#define TARGET_AVX256_MOVE_BY_PIECES \
-+	ix86_tune_features[X86_TUNE_AVX256_MOVE_BY_PIECES]
-+#define TARGET_AVX256_STORE_BY_PIECES \
-+	ix86_tune_features[X86_TUNE_AVX256_STORE_BY_PIECES]
- #define TARGET_AVX256_SPLIT_REGS \
- 	ix86_tune_features[X86_TUNE_AVX256_SPLIT_REGS]
- #define TARGET_GENERAL_REGS_SSE_SPILL \
-@@ -1692,13 +1700,8 @@ enum reg_class
+@@ -1692,13 +1696,8 @@ enum reg_class
     || TARGET_64BIT_MS_ABI \
     || (TARGET_MACHO && crtl->profile))
  
@@ -1826,7 +2033,7 @@ index 6fc1bf350d5..e0ebc24c050 100644
  #define PUSH_ARGS_REVERSED 1
  
  /* Offset of first parameter from the argument pointer register value.  */
-@@ -1936,6 +1939,8 @@ typedef struct ix86_args {
+@@ -1936,6 +1935,8 @@ typedef struct ix86_args {
  
  #define LEGITIMATE_PIC_OPERAND_P(X) legitimate_pic_operand_p (X)
  
@@ -1835,7 +2042,7 @@ index 6fc1bf350d5..e0ebc24c050 100644
  #define SYMBOLIC_CONST(X)	\
    (GET_CODE (X) == SYMBOL_REF						\
     || GET_CODE (X) == LABEL_REF						\
-@@ -1983,24 +1988,45 @@ typedef struct ix86_args {
+@@ -1983,24 +1984,45 @@ typedef struct ix86_args {
  /* Define this as 1 if `char' should by default be signed; else as 0.  */
  #define DEFAULT_SIGNED_CHAR 1
  
@@ -1868,12 +2075,13 @@ index 6fc1bf350d5..e0ebc24c050 100644
 +   MOVE_MAX_PIECES defaults to MOVE_MAX.  */
 +
 +#define MOVE_MAX \
-+  ((TARGET_AVX512F && !TARGET_PREFER_AVX256) \
++  ((TARGET_AVX512F \
++    && (ix86_move_max == PVW_AVX512 \
++	|| ix86_store_max == PVW_AVX512)) \
 +   ? 64 \
 +   : ((TARGET_AVX \
-+       && !TARGET_PREFER_AVX128 \
-+       && (TARGET_AVX256_MOVE_BY_PIECES \
-+	   || TARGET_AVX256_STORE_BY_PIECES)) \
++       && (ix86_move_max >= PVW_AVX256 \
++	   || ix86_store_max >= PVW_AVX256)) \
 +      ? 32 \
 +      : ((TARGET_SSE2 \
 +	  && TARGET_SSE_UNALIGNED_LOAD_OPTIMAL \
@@ -1886,11 +2094,10 @@ index 6fc1bf350d5..e0ebc24c050 100644
 +   store_by_pieces of 16/32/64 bytes.  */
 +#define STORE_MAX_PIECES \
 +  (TARGET_INTER_UNIT_MOVES_TO_VEC \
-+   ? ((TARGET_AVX512F && !TARGET_PREFER_AVX256) \
++   ? ((TARGET_AVX512F && ix86_store_max == PVW_AVX512) \
 +      ? 64 \
 +      : ((TARGET_AVX \
-+	  && !TARGET_PREFER_AVX128 \
-+	  && TARGET_AVX256_STORE_BY_PIECES) \
++	  && ix86_store_max >= PVW_AVX256) \
 +	  ? 32 \
 +	  : ((TARGET_SSE2 \
 +	      && TARGET_SSE_UNALIGNED_STORE_OPTIMAL) \
@@ -2081,7 +2288,7 @@ index db9dbf384ad..a3cc4f359d6 100644
  })
  
 diff --git a/gcc/config/i386/i386.opt b/gcc/config/i386/i386.opt
-index 7b8547bb1c3..3df0307fe6b 100644
+index 7b8547bb1c3..91b21676864 100644
 --- a/gcc/config/i386/i386.opt
 +++ b/gcc/config/i386/i386.opt
 @@ -404,6 +404,10 @@ momit-leaf-frame-pointer
@@ -2095,7 +2302,22 @@ index 7b8547bb1c3..3df0307fe6b 100644
  mpc32
  Target RejectNegative
  Set 80387 floating-point precision to 32-bit.
-@@ -1072,6 +1076,10 @@ Enum(indirect_branch) String(thunk-inline) Value(indirect_branch_thunk_inline)
+@@ -620,6 +624,14 @@ Enum(prefer_vector_width) String(256) Value(PVW_AVX256)
+ EnumValue
+ Enum(prefer_vector_width) String(512) Value(PVW_AVX512)
+ 
++mmove-max=
++Target RejectNegative Joined Var(ix86_move_max) Enum(prefer_vector_width) Init(PVW_NONE) Save
++Maximum number of bits that can be moved from memory to memory efficiently.
++
++mstore-max=
++Target RejectNegative Joined Var(ix86_store_max) Enum(prefer_vector_width) Init(PVW_NONE) Save
++Maximum number of bits that can be stored to memory efficiently.
++
+ ;; ISA support
+ 
+ m32
+@@ -1072,6 +1084,10 @@ Enum(indirect_branch) String(thunk-inline) Value(indirect_branch_thunk_inline)
  EnumValue
  Enum(indirect_branch) String(thunk-extern) Value(indirect_branch_thunk_extern)
  
@@ -2106,7 +2328,7 @@ index 7b8547bb1c3..3df0307fe6b 100644
  mindirect-branch-register
  Target Var(ix86_indirect_branch_register) Init(0)
  Force indirect call and jump via register.
-@@ -1113,6 +1121,26 @@ mrecord-return
+@@ -1113,6 +1129,26 @@ mrecord-return
  Target Var(ix86_flag_record_return) Init(0)
  Generate a __return_loc section pointing to all return instrumentation code.
  
@@ -2984,7 +3206,7 @@ index 2bcc64b865a..74e534e9bf0 100644
        /* Stack engine allows to execute push&pop instructions in parall.  */
        if ((insn_type == TYPE_PUSH || insn_type == TYPE_POP)
 diff --git a/gcc/config/i386/x86-tune.def b/gcc/config/i386/x86-tune.def
-index eb057a67750..572ab1ac909 100644
+index eb057a67750..7e9a61d64ba 100644
 --- a/gcc/config/i386/x86-tune.def
 +++ b/gcc/config/i386/x86-tune.def
 @@ -42,7 +42,7 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
@@ -3271,7 +3493,7 @@ index eb057a67750..572ab1ac909 100644
  
  /* X86_TUNE_AVOID_128FMA_CHAINS: Avoid creating loops with tight 128bit or
     smaller FMA chain.  */
-@@ -479,6 +497,17 @@ DEF_TUNE (X86_TUNE_AVX128_OPTIMAL, "avx128_optimal", m_BDVER | m_BTVER2
+@@ -479,6 +497,27 @@ DEF_TUNE (X86_TUNE_AVX128_OPTIMAL, "avx128_optimal", m_BDVER | m_BTVER2
     instructions in the auto-vectorizer.  */
  DEF_TUNE (X86_TUNE_AVX256_OPTIMAL, "avx256_optimal", m_CORE_AVX512)
  
@@ -3284,6 +3506,16 @@ index eb057a67750..572ab1ac909 100644
 +   AVX instructions.  */
 +DEF_TUNE (X86_TUNE_AVX256_STORE_BY_PIECES, "avx256_store_by_pieces",
 +	  m_CORE_AVX512)
++
++/* X86_TUNE_AVX512_MOVE_BY_PIECES: Optimize move_by_pieces with 512-bit
++   AVX instructions.  */
++DEF_TUNE (X86_TUNE_AVX512_MOVE_BY_PIECES, "avx512_move_by_pieces",
++	  m_SAPPHIRERAPIDS)
++
++/* X86_TUNE_AVX512_STORE_BY_PIECES: Optimize store_by_pieces with 512-bit
++   AVX instructions.  */
++DEF_TUNE (X86_TUNE_AVX512_STORE_BY_PIECES, "avx512_store_by_pieces",
++	  m_SAPPHIRERAPIDS)
 +
 +/*****************************************************************************/
  /*****************************************************************************/
@@ -3369,10 +3601,18 @@ index 91216593e75..ba79a8e48ed 100644
  #endif
  
 diff --git a/gcc/doc/invoke.texi b/gcc/doc/invoke.texi
-index 5a4b3c6c234..0cc770c9a3f 100644
+index 5a4b3c6c234..a9cbede7406 100644
 --- a/gcc/doc/invoke.texi
 +++ b/gcc/doc/invoke.texi
-@@ -1407,9 +1407,10 @@ See RS/6000 and PowerPC Options.
+@@ -1375,6 +1375,7 @@ See RS/6000 and PowerPC Options.
+ -mcld  -mcx16  -msahf  -mmovbe  -mcrc32 -mmwait @gol
+ -mrecip  -mrecip=@var{opt} @gol
+ -mvzeroupper  -mprefer-avx128  -mprefer-vector-width=@var{opt} @gol
++-mmove-max=@var{bits} -mstore-max=@var{bits} @gol
+ -mmmx  -msse  -msse2  -msse3  -mssse3  -msse4.1  -msse4.2  -msse4  -mavx @gol
+ -mavx2  -mavx512f  -mavx512pf  -mavx512er  -mavx512cd  -mavx512vl @gol
+ -mavx512bw  -mavx512dq  -mavx512ifma  -mavx512vbmi  -msha  -maes @gol
+@@ -1407,9 +1408,10 @@ See RS/6000 and PowerPC Options.
  -mstack-protector-guard-reg=@var{reg} @gol
  -mstack-protector-guard-offset=@var{offset} @gol
  -mstack-protector-guard-symbol=@var{symbol} @gol
@@ -3385,7 +3625,26 @@ index 5a4b3c6c234..0cc770c9a3f 100644
  
  @emph{x86 Windows Options}
  @gccoptlist{-mconsole  -mcygwin  -mno-cygwin  -mdll @gol
-@@ -31679,6 +31680,13 @@ Generate code that uses only the general-purpose registers.  This
+@@ -31157,6 +31159,18 @@ This option instructs GCC to use 128-bit AVX instructions instead of
+ This option instructs GCC to use @var{opt}-bit vector width in instructions
+ instead of default on the selected platform.
+ 
++@item -mmove-max=@var{bits}
++@opindex mmove-max
++This option instructs GCC to set the maximum number of bits can be
++moved from memory to memory efficiently to @var{bits}.  The valid
++@var{bits} are 128, 256 and 512.
++
++@item -mstore-max=@var{bits}
++@opindex mstore-max
++This option instructs GCC to set the maximum number of bits can be
++stored to memory efficiently to @var{bits}.  The valid @var{bits} are
++128, 256 and 512.
++
+ @table @samp
+ @item none
+ No extra limitations applied to GCC other than defined by the selected platform.
+@@ -31679,6 +31693,13 @@ Generate code that uses only the general-purpose registers.  This
  prevents the compiler from using floating-point, vector, mask and bound
  registers.
  
@@ -3399,7 +3658,7 @@ index 5a4b3c6c234..0cc770c9a3f 100644
  @item -mindirect-branch=@var{choice}
  @opindex mindirect-branch
  Convert indirect call and jump with @var{choice}.  The default is
-@@ -31724,6 +31732,21 @@ not be reachable in the large code model.
+@@ -31724,6 +31745,21 @@ not be reachable in the large code model.
  @opindex mindirect-branch-register
  Force indirect call and jump via register.
  
@@ -3422,7 +3681,7 @@ index 5a4b3c6c234..0cc770c9a3f 100644
  
  These @samp{-m} switches are supported in addition to the above
 diff --git a/gcc/doc/tm.texi b/gcc/doc/tm.texi
-index b370bc76b25..cd5ee8b6402 100644
+index b370bc76b25..1432aa4c080 100644
 --- a/gcc/doc/tm.texi
 +++ b/gcc/doc/tm.texi
 @@ -3807,14 +3807,17 @@ cases of mismatch, it also makes for better code on certain machines.
@@ -3479,8 +3738,20 @@ index b370bc76b25..cd5ee8b6402 100644
  @deftypefn {Target Hook} unsigned TARGET_LOOP_UNROLL_ADJUST (unsigned @var{nunroll}, class loop *@var{loop})
  This target hook returns a new value for the number of times @var{loop}
  should be unrolled. The parameter @var{nunroll} is the number of times
+@@ -12159,6 +12176,11 @@ The support includes the assembler, linker and dynamic linker.
+ The default value of this hook is based on target's libc.
+ @end deftypefn
+ 
++@deftypefn {Target Hook} bool TARGET_IFUNC_REF_LOCAL_OK (void)
++Return true if it is OK to reference indirect function resolvers
++locally.  The default is to return false.
++@end deftypefn
++
+ @deftypefn {Target Hook} {unsigned int} TARGET_ATOMIC_ALIGN_FOR_MODE (machine_mode @var{mode})
+ If defined, this function returns an appropriate alignment in bits for an atomic object of machine_mode @var{mode}.  If 0 is returned then the default alignment for the specified mode is used. 
+ @end deftypefn
 diff --git a/gcc/doc/tm.texi.in b/gcc/doc/tm.texi.in
-index 2974dae2701..e60af7c3ec6 100644
+index 2974dae2701..1ebc966f487 100644
 --- a/gcc/doc/tm.texi.in
 +++ b/gcc/doc/tm.texi.in
 @@ -3100,14 +3100,7 @@ control passing certain arguments in registers.
@@ -3517,6 +3788,15 @@ index 2974dae2701..e60af7c3ec6 100644
  @hook TARGET_LOOP_UNROLL_ADJUST
  
  @defmac POWI_MAX_MULTS
+@@ -8145,6 +8142,8 @@ and the associated definitions of those functions.
+ 
+ @hook TARGET_HAS_IFUNC_P
+ 
++@hook TARGET_IFUNC_REF_LOCAL_OK
++
+ @hook TARGET_ATOMIC_ALIGN_FOR_MODE
+ 
+ @hook TARGET_ATOMIC_ASSIGN_EXPAND_FENV
 diff --git a/gcc/expr.c b/gcc/expr.c
 index 14a25c25450..fa76dff26b4 100644
 --- a/gcc/expr.c
@@ -4318,7 +4598,7 @@ index 67a49e65fd8..f4663b04c2e 100644
  	      poly_uint64 rounded_1 = PUSH_ROUNDING (poly_int64 (1));
  	      alignment = MIN (known_alignment (rounded_1), alignment);
 diff --git a/gcc/target.def b/gcc/target.def
-index 0ebfb58fa6f..795fbd5e2fd 100644
+index 0ebfb58fa6f..ba947812bd4 100644
 --- a/gcc/target.def
 +++ b/gcc/target.def
 @@ -2692,6 +2692,15 @@ DEFHOOK
@@ -4337,7 +4617,22 @@ index 0ebfb58fa6f..795fbd5e2fd 100644
  /* Return a new value for loop unroll size.  */
  DEFHOOK
  (loop_unroll_adjust,
-@@ -3642,6 +3651,15 @@ move would be greater than that of a library call.",
+@@ -2956,6 +2965,14 @@ The default value of this hook is based on target's libc.",
+  bool, (void),
+  default_has_ifunc_p)
+ 
++/* True if it is OK to reference indirect function resolvers locally.  */
++DEFHOOK
++(ifunc_ref_local_ok,
++ "Return true if it is OK to reference indirect function resolvers\n\
++locally.  The default is to return false.",
++ bool, (void),
++ hook_bool_void_false)
++
+ /* True if it is OK to do sibling call optimization for the specified
+    call expression EXP.  DECL will be the called function, or NULL if
+    this is an indirect call.  */
+@@ -3642,6 +3659,15 @@ move would be greater than that of a library call.",
          enum by_pieces_operation op, bool speed_p),
   default_use_by_pieces_infrastructure_p)
  
@@ -4353,7 +4648,7 @@ index 0ebfb58fa6f..795fbd5e2fd 100644
  DEFHOOK
  (compare_by_pieces_branch_ratio,
   "When expanding a block comparison in MODE, gcc can try to reduce the\n\
-@@ -4708,6 +4726,20 @@ Most ports do not need to implement anything for this hook.",
+@@ -4708,6 +4734,20 @@ Most ports do not need to implement anything for this hook.",
   void, (void),
   hook_void_void)
  
@@ -5919,6 +6214,116 @@ index 00000000000..728eba5ea3d
 +/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
 +/* Nor use a frame pointer.  */
 +/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memcpy-17.c b/gcc/testsuite/gcc.target/i386/pieces-memcpy-17.c
+new file mode 100644
+index 00000000000..28ab7a6d41c
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memcpy-17.c
+@@ -0,0 +1,16 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -march=x86-64 -mprefer-vector-width=256 -mavx512f -mmove-max=512" } */
++
++extern char *dst, *src;
++
++void
++foo (void)
++{
++  __builtin_memcpy (dst, src, 66);
++}
++
++/* { dg-final { scan-assembler-times "vmovdqu64\[ \\t\]+\[^\n\]*%zmm" 2 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memcpy-18.c b/gcc/testsuite/gcc.target/i386/pieces-memcpy-18.c
+new file mode 100644
+index 00000000000..b15a0db9ff0
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memcpy-18.c
+@@ -0,0 +1,16 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -march=sapphirerapids" } */
++
++extern char *dst, *src;
++
++void
++foo (void)
++{
++  __builtin_memcpy (dst, src, 66);
++}
++
++/* { dg-final { scan-assembler-times "vmovdqu64\[ \\t\]+\[^\n\]*%zmm" 2 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memcpy-19.c b/gcc/testsuite/gcc.target/i386/pieces-memcpy-19.c
+new file mode 100644
+index 00000000000..a5b5b617578
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memcpy-19.c
+@@ -0,0 +1,16 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -march=sapphirerapids -mmove-max=128 -mstore-max=128" } */
++
++extern char *dst, *src;
++
++void
++foo (void)
++{
++  __builtin_memcpy (dst, src, 66);
++}
++
++/* { dg-final { scan-assembler-times "vmovdqu\[ \\t\]+\[^\n\]*%xmm" 8 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memcpy-20.c b/gcc/testsuite/gcc.target/i386/pieces-memcpy-20.c
+new file mode 100644
+index 00000000000..1feff48c5b2
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memcpy-20.c
+@@ -0,0 +1,16 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -march=sapphirerapids -mmove-max=256 -mstore-max=256" } */
++
++extern char *dst, *src;
++
++void
++foo (void)
++{
++  __builtin_memcpy (dst, src, 66);
++}
++
++/* { dg-final { scan-assembler-times "vmovdqu(?:64|)\[ \\t\]+\[^\n\]*%ymm" 4 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memcpy-21.c b/gcc/testsuite/gcc.target/i386/pieces-memcpy-21.c
+new file mode 100644
+index 00000000000..ef439f20f74
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memcpy-21.c
+@@ -0,0 +1,16 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mtune=sapphirerapids -march=x86-64 -mavx2" } */
++
++extern char *dst, *src;
++
++void
++foo (void)
++{
++  __builtin_memcpy (dst, src, 66);
++}
++
++/* { dg-final { scan-assembler-times "vmovdqu(?:64|)\[ \\t\]+\[^\n\]*%ymm" 4 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pieces-memcpy-7.c b/gcc/testsuite/gcc.target/i386/pieces-memcpy-7.c
 new file mode 100644
 index 00000000000..3d248d447ea
@@ -6856,6 +7261,119 @@ index 00000000000..5986f8e8b23
 +/* { dg-final { scan-assembler-times "vpxor\[ \\t\]+\[^\n\]*%xmm" 1 } } */
 +/* { dg-final { scan-assembler-times "vmovdqu\[ \\t\]+\[^\n\]*%ymm" 1 } } */
 +/* { dg-final { scan-assembler-times "vmovdqu\[ \\t\]+\[^\n\]*%xmm" 1 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-45.c b/gcc/testsuite/gcc.target/i386/pieces-memset-45.c
+new file mode 100644
+index 00000000000..70c80e5064b
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-45.c
+@@ -0,0 +1,16 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -march=x86-64 -mprefer-vector-width=256 -mavx512f -mtune-ctrl=avx512_store_by_pieces" } */
++
++extern char *dst;
++
++void
++foo (void)
++{
++  __builtin_memset (dst, 3, 66);
++}
++
++/* { dg-final { scan-assembler-times "vmovdqu64\[ \\t\]+\[^\n\]*%zmm" 1 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-46.c b/gcc/testsuite/gcc.target/i386/pieces-memset-46.c
+new file mode 100644
+index 00000000000..ab7894aa2e6
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-46.c
+@@ -0,0 +1,17 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -march=sapphirerapids" } */
++
++extern char *dst;
++
++void
++foo (void)
++{
++  __builtin_memset (dst, 3, 66);
++}
++
++/* { dg-final { scan-assembler-times "vmovdqu8\[ \\t\]+\[^\n\]*%zmm" 1 } } */
++/* { dg-final { scan-assembler-times "vmovw\[ \\t\]+\[^\n\]*%xmm" 1 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-47.c b/gcc/testsuite/gcc.target/i386/pieces-memset-47.c
+new file mode 100644
+index 00000000000..8f2c254ad03
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-47.c
+@@ -0,0 +1,17 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -march=sapphirerapids -mstore-max=128" } */
++
++extern char *dst;
++
++void
++foo (void)
++{
++  __builtin_memset (dst, 3, 66);
++}
++
++/* { dg-final { scan-assembler-times "vmovdqu(?:8|)\[ \\t\]+\[^\n\]*%xmm" 4 } } */
++/* { dg-final { scan-assembler-times "vmovw\[ \\t\]+\[^\n\]*%xmm" 1 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-48.c b/gcc/testsuite/gcc.target/i386/pieces-memset-48.c
+new file mode 100644
+index 00000000000..9a7da962183
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-48.c
+@@ -0,0 +1,17 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -march=sapphirerapids -mstore-max=256" } */
++
++extern char *dst;
++
++void
++foo (void)
++{
++  __builtin_memset (dst, 3, 66);
++}
++
++/* { dg-final { scan-assembler-times "vmovdqu(?:8|)\[ \\t\]+\[^\n\]*%ymm" 2 } } */
++/* { dg-final { scan-assembler-times "vmovw\[ \\t\]+\[^\n\]*%xmm" 1 } } */
++/* No need to dynamically realign the stack here.  */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* Nor use a frame pointer.  */
++/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-49.c b/gcc/testsuite/gcc.target/i386/pieces-memset-49.c
+new file mode 100644
+index 00000000000..ad43f89a9bd
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pieces-memset-49.c
+@@ -0,0 +1,16 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mtune=sapphirerapids -march=x86-64 -mavx2" } */
++
++extern char *dst;
++
++void
++foo (void)
++{
++  __builtin_memset (dst, 3, 66);
++}
++
++/* { dg-final { scan-assembler-times "vmovdqu(?:8|)\[ \\t\]+\[^\n\]*%ymm" 2 } } */
 +/* No need to dynamically realign the stack here.  */
 +/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
 +/* Nor use a frame pointer.  */
@@ -9468,6 +9986,70 @@ index 9932bdc5375..b9da0e706b1 100644
 -/* { dg-final { scan-assembler-times "vzeroupper" 1 } } */
 +/* { dg-final { scan-assembler-times "vzeroupper" 1 { target ia32 } } } */
 +/* { dg-final { scan-assembler-not "vzeroupper" { target { ! ia32 } } } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr83782-1.c b/gcc/testsuite/gcc.target/i386/pr83782-1.c
+new file mode 100644
+index 00000000000..f4c7370142a
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr83782-1.c
+@@ -0,0 +1,26 @@
++/* { dg-do compile } */
++/* { dg-require-ifunc "" } */
++/* { dg-options "-O2 -fpic" } */
++
++static void
++my_foo (void)
++{
++}
++
++static void (*resolve_foo (void)) (void)
++{
++  return my_foo;
++}
++
++extern void foo (void) __attribute__((ifunc("resolve_foo"), visibility("hidden")));
++
++void *
++bar(void)
++{
++  return foo;
++}
++
++/* { dg-final { scan-assembler {leal[ \t]foo@GOTOFF\(%[^,]*\),[ \t]%eax} { target ia32 } } } */
++/* { dg-final { scan-assembler {leaq[ \t]foo\(%rip\),[ \t]%rax} { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler-not "foo@GOT\\\(" { target ia32 } } } */
++/* { dg-final { scan-assembler-not "foo@GOTPCREL\\\(" { target { ! ia32 } } } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr83782-2.c b/gcc/testsuite/gcc.target/i386/pr83782-2.c
+new file mode 100644
+index 00000000000..6c6528fff46
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr83782-2.c
+@@ -0,0 +1,26 @@
++/* { dg-do compile } */
++/* { dg-require-ifunc "" } */
++/* { dg-options "-O2 -fpic" } */
++
++static void
++my_foo (void)
++{
++}
++
++static void (*resolve_foo (void)) (void)
++{
++  return my_foo;
++}
++
++static void foo (void) __attribute__((ifunc("resolve_foo")));
++
++void *
++bar(void)
++{
++  return foo;
++}
++
++/* { dg-final { scan-assembler {leal[ \t]foo@GOTOFF\(%[^,]*\),[ \t]%eax} { target ia32 } } } */
++/* { dg-final { scan-assembler {leaq[ \t]foo\(%rip\),[ \t]%rax} { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler-not "foo@GOT\\\(" { target ia32 } } } */
++/* { dg-final { scan-assembler-not "foo@GOTPCREL\\\(" { target { ! ia32 } } } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pr89984-1.c b/gcc/testsuite/gcc.target/i386/pr89984-1.c
 new file mode 100644
 index 00000000000..d77691c0da0
@@ -10937,6 +11519,20 @@ index 3348545d18b..fb6b69c5b83 100644
  	      g = gimple_build_assign (lhs, new_rhs);
  	      gsi_replace (gsi, g, false);
  	      return;
+diff --git a/gcc/varasm.c b/gcc/varasm.c
+index a7ef9b8d9fe..153e6c68772 100644
+--- a/gcc/varasm.c
++++ b/gcc/varasm.c
+@@ -7451,7 +7451,8 @@ default_binds_local_p_3 (const_tree exp, bool shlib, bool weak_dominate,
+      FIXME: We can resolve the weakref case more curefuly by looking at the
+      weakref alias.  */
+   if (lookup_attribute ("weakref", DECL_ATTRIBUTES (exp))
+-      || (TREE_CODE (exp) == FUNCTION_DECL
++      || (!targetm.ifunc_ref_local_ok ()
++	  && TREE_CODE (exp) == FUNCTION_DECL
+ 	  && cgraph_node::get (exp)
+ 	  && cgraph_node::get (exp)->ifunc_resolver))
+     return false;
 diff --git a/libffi/configure.host b/libffi/configure.host
 index 786b32c5bb0..7248acb7458 100644
 --- a/libffi/configure.host
