@@ -42,6 +42,8 @@ Patch20  : vectorcost.patch
 
 Patch30  : gcc-hj-latest.patch
 
+Patch31  : avx512move.patch
+
 # cves: 1xx
 
 
@@ -227,6 +229,8 @@ GNU cc and gcc C compilers.
 %patch20 -p1
 
 %patch30 -p1
+
+%patch31 -p1
 
 
 %build
