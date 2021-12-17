@@ -340,10 +340,10 @@ index 307a20fbadb..d7904cd8b65 100644
  extern tree std_build_builtin_va_list (void);
  extern tree std_fn_abi_va_list (tree);
 diff --git a/gcc/calls.c b/gcc/calls.c
-index 870b9ac7776..7f66052c212 100644
+index 7d908c6a62b..32ba27e755f 100644
 --- a/gcc/calls.c
 +++ b/gcc/calls.c
-@@ -3727,7 +3727,7 @@ expand_call (tree exp, rtx target, int ignore)
+@@ -3731,7 +3731,7 @@ expand_call (tree exp, rtx target, int ignore)
       So the entire argument block must then be preallocated (i.e., we
       ignore PUSH_ROUNDING in that case).  */
  
@@ -352,7 +352,7 @@ index 870b9ac7776..7f66052c212 100644
  
    /* Size of the stack reserved for parameter registers.  */
    int reg_parm_stack_space = 0;
-@@ -3835,7 +3835,7 @@ expand_call (tree exp, rtx target, int ignore)
+@@ -3839,7 +3839,7 @@ expand_call (tree exp, rtx target, int ignore)
  #endif
  
    if (! OUTGOING_REG_PARM_STACK_SPACE ((!fndecl ? fntype : TREE_TYPE (fndecl)))
@@ -361,7 +361,7 @@ index 870b9ac7776..7f66052c212 100644
      must_preallocate = 1;
  
    /* Set up a place to return a structure.  */
-@@ -5476,7 +5476,7 @@ emit_library_call_value_1 (int retval, rtx orgfun, rtx value,
+@@ -5480,7 +5480,7 @@ emit_library_call_value_1 (int retval, rtx orgfun, rtx value,
      }
    else
      {
