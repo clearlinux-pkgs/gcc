@@ -14,7 +14,7 @@
 
 Name     : gcc
 Version  : 11.2.0
-Release  : 1429
+Release  : 1430
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://gcc.gnu.org/pub/gcc/releases/gcc-11.2.0/gcc-11.2.0.tar.xz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.16.1.tar.bz2
