@@ -2416,7 +2416,7 @@ index b1df8548af6..d7e335d4b63 100644
  (define_predicate "vzeroall_operation"
    (match_code "parallel")
 diff --git a/gcc/config/i386/sse.md b/gcc/config/i386/sse.md
-index e495725ff7c..ebfe0b80068 100644
+index 25678c8145d..d1f16b8ac03 100644
 --- a/gcc/config/i386/sse.md
 +++ b/gcc/config/i386/sse.md
 @@ -95,7 +95,6 @@
@@ -2427,7 +2427,7 @@ index e495725ff7c..ebfe0b80068 100644
    UNSPEC_VTERNLOG
    UNSPEC_GETEXP
    UNSPEC_GETMANT
-@@ -812,19 +811,22 @@
+@@ -810,19 +809,22 @@
  
  ;; Mapping of vector modes to a vector mode of double size
  (define_mode_attr ssedoublevecmode
@@ -2453,7 +2453,7 @@ index e495725ff7c..ebfe0b80068 100644
  
  (define_mode_attr ssehalfvecmodelower
    [(V64QI "v32qi") (V32HI "v16hi") (V16SI "v8si") (V8DI "v4di") (V4TI "v2ti")
-@@ -891,7 +893,9 @@
+@@ -889,7 +891,9 @@
  ;; Mapping of vector modes to VPTERNLOG suffix
  (define_mode_attr ternlogsuffix
    [(V8DI "q") (V4DI "q") (V2DI "q")
@@ -2719,7 +2719,7 @@ index e495725ff7c..ebfe0b80068 100644
  	     (match_operand:SI 4 "const_0_to_255_operand")]
  	    UNSPEC_VTERNLOG)
  	  (match_dup 1)
-@@ -15964,11 +16200,11 @@
+@@ -15924,11 +16160,11 @@
     (set_attr "prefix" "orig,maybe_evex,orig,orig,maybe_evex")
     (set_attr "mode" "TI,TI,V4SF,V2SF,V2SF")])
  
@@ -2736,7 +2736,7 @@ index e495725ff7c..ebfe0b80068 100644
    "TARGET_SSE2"
    "@
     %vmovq\t{%1, %0|%0, %1}
-@@ -22154,6 +22390,24 @@
+@@ -22114,6 +22350,24 @@
     (set_attr "prefix" "maybe_evex")
     (set_attr "mode" "<sseinsnmode>")])
  
@@ -2761,7 +2761,7 @@ index e495725ff7c..ebfe0b80068 100644
  (define_insn "vcvtph2ps<mask_name>"
    [(set (match_operand:V4SF 0 "register_operand" "=v")
  	(vec_select:V4SF
-@@ -24323,3 +24577,34 @@
+@@ -24283,3 +24537,34 @@
    "TARGET_WIDEKL"
    "aes<aeswideklvariant>\t{%0}"
    [(set_attr "type" "other")])
