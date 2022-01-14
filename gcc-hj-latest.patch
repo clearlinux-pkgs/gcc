@@ -60,11 +60,12 @@ Hongyu Wang (2):
       PR target/103069: Relax cmpxchg loop for x86 target
       i386: Fix wrong codegen for -mrelax-cmpxchg-loop
 
-Jakub Jelinek (4):
+Jakub Jelinek (5):
       i386: Punt on broadcasts from TImode integers [PR101286]
       i386: Fix up @xorsign<mode>3_1 [PR102224]
       i386: Fix up xorsign for AVX [PR89984]
       i386, fab: Optimize __atomic_{add,sub,and,or,xor}_fetch (x, y, z) {==,!=,<,<=,>,>=} 0 [PR98737]
+      forwprop: Canonicalize atomic fetch_op op x to op_fetch or vice versa [PR98737]
 
 Richard Biener (1):
       middle-end/100951 - make sure to generate VECTOR_CST in lowering
@@ -5624,6 +5625,289 @@ index 00000000000..471fe92bc86
 +    __builtin_abort ();
 +  return 0;
 +}
+diff --git a/gcc/testsuite/gcc.dg/tree-ssa/pr98737-1.c b/gcc/testsuite/gcc.dg/tree-ssa/pr98737-1.c
+new file mode 100644
+index 00000000000..e313a7fa79d
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/tree-ssa/pr98737-1.c
+@@ -0,0 +1,148 @@
++/* PR target/98737 */
++/* { dg-do compile { target i?86-*-* x86_64-*-* powerpc*-*-* aarch64*-*-* } } */
++/* { dg-options "-O2 -fdump-tree-optimized -fcompare-debug" } */
++/* { dg-additional-options "-march=i686" { target ia32 } } */
++/* { dg-final { scan-tree-dump-not "__atomic_fetch_" "optimized" } } */
++/* { dg-final { scan-tree-dump-not "__sync_fetch_and_" "optimized" } } */
++
++typedef signed char schar;
++typedef unsigned long ulong;
++typedef unsigned int uint;
++typedef unsigned short ushort;
++typedef unsigned char uchar;
++long vlong;
++int vint;
++short vshort;
++schar vschar;
++ulong vulong;
++uint vuint;
++ushort vushort;
++uchar vuchar;
++#define A(n, t, ut, f, o, ...) \
++t fn##n (t x)					\
++{						\
++  ut z = f (&v##t, x, ##__VA_ARGS__);		\
++  t w = (t) z;					\
++  return w o x;					\
++}
++#define B(n, f, o, ...) \
++  A(n##0, long, ulong, f, o, ##__VA_ARGS__)	\
++  A(n##1, int, uint, f, o, ##__VA_ARGS__)	\
++  A(n##2, short, ushort, f, o, ##__VA_ARGS__)	\
++  A(n##3, schar, uchar, f, o, ##__VA_ARGS__)	\
++  A(n##4, ulong, ulong, f, o, ##__VA_ARGS__)	\
++  A(n##5, uint, uint, f, o, ##__VA_ARGS__)	\
++  A(n##6, ushort, ushort, f, o, ##__VA_ARGS__)	\
++  A(n##7, uchar, uchar, f, o, ##__VA_ARGS__)
++
++B(00, __atomic_fetch_add, +, __ATOMIC_RELAXED)
++B(01, __atomic_fetch_sub, -, __ATOMIC_RELAXED)
++B(02, __atomic_fetch_and, &, __ATOMIC_RELAXED)
++B(03, __atomic_fetch_xor, ^, __ATOMIC_RELAXED)
++B(04, __atomic_fetch_or, |, __ATOMIC_RELAXED)
++B(05, __sync_fetch_and_add, +)
++B(06, __sync_fetch_and_sub, -)
++B(07, __sync_fetch_and_and, &)
++B(08, __sync_fetch_and_xor, ^)
++B(09, __sync_fetch_and_or, |)
++
++#undef A
++#define A(n, t, ut, f, o, ...) \
++t fn##n (void)					\
++{						\
++  ut z = f (&v##t, 42, ##__VA_ARGS__);		\
++  t w = (t) z;					\
++  return w o 42;				\
++}
++
++B(10, __atomic_fetch_add, +, __ATOMIC_RELAXED)
++B(11, __atomic_fetch_sub, -, __ATOMIC_RELAXED)
++B(12, __atomic_fetch_and, &, __ATOMIC_RELAXED)
++B(13, __atomic_fetch_xor, ^, __ATOMIC_RELAXED)
++B(14, __atomic_fetch_or, |, __ATOMIC_RELAXED)
++B(15, __sync_fetch_and_add, +)
++B(16, __sync_fetch_and_sub, -)
++B(17, __sync_fetch_and_and, &)
++B(18, __sync_fetch_and_xor, ^)
++B(19, __sync_fetch_and_or, |)
++
++#undef A
++#define A(n, t, ut, f, o, ...) \
++t fn##n (t x)					\
++{						\
++  ut z = f (&v##t, x, ##__VA_ARGS__);		\
++  t w = (t) z;					\
++  t v = w o x;					\
++  return v == 0;				\
++}
++
++B(20, __atomic_fetch_add, +, __ATOMIC_RELAXED)
++B(21, __atomic_fetch_sub, -, __ATOMIC_RELAXED)
++B(22, __atomic_fetch_and, &, __ATOMIC_RELAXED)
++B(23, __atomic_fetch_xor, ^, __ATOMIC_RELAXED)
++B(24, __atomic_fetch_or, |, __ATOMIC_RELAXED)
++B(25, __sync_fetch_and_add, +)
++B(26, __sync_fetch_and_sub, -)
++B(27, __sync_fetch_and_and, &)
++B(28, __sync_fetch_and_xor, ^)
++B(29, __sync_fetch_and_or, |)
++
++#undef A
++#define A(n, t, ut, f, o, ...) \
++t fn##n (void)					\
++{						\
++  ut z = f (&v##t, 42, ##__VA_ARGS__);		\
++  t w = (t) z;					\
++  t v = w o 42;					\
++  return v != 0;				\
++}
++
++B(30, __atomic_fetch_add, +, __ATOMIC_RELAXED)
++B(31, __atomic_fetch_sub, -, __ATOMIC_RELAXED)
++B(32, __atomic_fetch_and, &, __ATOMIC_RELAXED)
++B(33, __atomic_fetch_xor, ^, __ATOMIC_RELAXED)
++B(34, __atomic_fetch_or, |, __ATOMIC_RELAXED)
++B(35, __sync_fetch_and_add, +)
++B(36, __sync_fetch_and_sub, -)
++B(37, __sync_fetch_and_and, &)
++B(38, __sync_fetch_and_xor, ^)
++B(39, __sync_fetch_and_or, |)
++
++#undef A
++#define A(n, t, ut, f, o, ...) \
++t fn##n (t x)					\
++{						\
++  return (t) (((t) f (&v##t, x, ##__VA_ARGS__))	\
++	      o x) != 0;			\
++}
++
++B(40, __atomic_fetch_add, +, __ATOMIC_RELAXED)
++B(41, __atomic_fetch_sub, -, __ATOMIC_RELAXED)
++B(42, __atomic_fetch_and, &, __ATOMIC_RELAXED)
++B(43, __atomic_fetch_xor, ^, __ATOMIC_RELAXED)
++B(44, __atomic_fetch_or, |, __ATOMIC_RELAXED)
++B(45, __sync_fetch_and_add, +)
++B(46, __sync_fetch_and_sub, -)
++B(47, __sync_fetch_and_and, &)
++B(48, __sync_fetch_and_xor, ^)
++B(49, __sync_fetch_and_or, |)
++
++#undef A
++#define A(n, t, ut, f, o, ...) \
++t fn##n (void)					\
++{						\
++  return (t) (((t) f (&v##t, 42, ##__VA_ARGS__))\
++	      o 42) == 0;			\
++}
++
++B(50, __atomic_fetch_add, +, __ATOMIC_RELAXED)
++B(51, __atomic_fetch_sub, -, __ATOMIC_RELAXED)
++B(52, __atomic_fetch_and, &, __ATOMIC_RELAXED)
++B(53, __atomic_fetch_xor, ^, __ATOMIC_RELAXED)
++/* (whatever | 42) == 0 is 0, so we can't test this.  */
++/* B(54, __atomic_fetch_or, |, __ATOMIC_RELAXED) */
++B(55, __sync_fetch_and_add, +)
++B(56, __sync_fetch_and_sub, -)
++B(57, __sync_fetch_and_and, &)
++B(58, __sync_fetch_and_xor, ^)
++/* B(59, __sync_fetch_and_or, |) */
+diff --git a/gcc/testsuite/gcc.dg/tree-ssa/pr98737-2.c b/gcc/testsuite/gcc.dg/tree-ssa/pr98737-2.c
+new file mode 100644
+index 00000000000..09149bcd4fe
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/tree-ssa/pr98737-2.c
+@@ -0,0 +1,123 @@
++/* PR target/98737 */
++/* { dg-do compile { target i?86-*-* x86_64-*-* powerpc*-*-* aarch64*-*-* } } */
++/* { dg-options "-O2 -fdump-tree-optimized -fcompare-debug" } */
++/* { dg-additional-options "-march=i686" { target ia32 } } */
++/* { dg-final { scan-tree-dump-not "__atomic_\[^f]" "optimized" } } */
++/* { dg-final { scan-tree-dump-not "__sync_\[^f]" "optimized" } } */
++
++typedef signed char schar;
++typedef unsigned long ulong;
++typedef unsigned int uint;
++typedef unsigned short ushort;
++typedef unsigned char uchar;
++long vlong;
++int vint;
++short vshort;
++schar vschar;
++ulong vulong;
++uint vuint;
++ushort vushort;
++uchar vuchar;
++#define A(n, t, ut, f, o, ...) \
++t fn##n (t x)					\
++{						\
++  ut z = f (&v##t, x, ##__VA_ARGS__);		\
++  t w = (t) z;					\
++  return w o x;					\
++}
++#define B(n, f, o, ...) \
++  A(n##0, long, ulong, f, o, ##__VA_ARGS__)	\
++  A(n##1, int, uint, f, o, ##__VA_ARGS__)	\
++  A(n##2, short, ushort, f, o, ##__VA_ARGS__)	\
++  A(n##3, schar, uchar, f, o, ##__VA_ARGS__)	\
++  A(n##4, ulong, ulong, f, o, ##__VA_ARGS__)	\
++  A(n##5, uint, uint, f, o, ##__VA_ARGS__)	\
++  A(n##6, ushort, ushort, f, o, ##__VA_ARGS__)	\
++  A(n##7, uchar, uchar, f, o, ##__VA_ARGS__)
++
++B(00, __atomic_add_fetch, -, __ATOMIC_RELAXED)
++B(01, __atomic_sub_fetch, +, __ATOMIC_RELAXED)
++B(03, __atomic_xor_fetch, ^, __ATOMIC_RELAXED)
++B(05, __sync_add_and_fetch, -)
++B(06, __sync_sub_and_fetch, +)
++B(08, __sync_xor_and_fetch, ^)
++
++#undef A
++#define A(n, t, ut, f, o, ...) \
++t fn##n (void)					\
++{						\
++  ut z = f (&v##t, 42, ##__VA_ARGS__);		\
++  t w = (t) z;					\
++  return w o 42;				\
++}
++
++B(10, __atomic_add_fetch, -, __ATOMIC_RELAXED)
++B(11, __atomic_sub_fetch, +, __ATOMIC_RELAXED)
++B(13, __atomic_xor_fetch, ^, __ATOMIC_RELAXED)
++B(15, __sync_add_and_fetch, -)
++B(16, __sync_sub_and_fetch, +)
++B(18, __sync_xor_and_fetch, ^)
++
++#undef A
++#define A(n, t, ut, f, o, ...) \
++t fn##n (t x)					\
++{						\
++  ut z = f (&v##t, x, ##__VA_ARGS__);		\
++  t w = (t) z;					\
++  t v = w o x;					\
++  return v == 0;				\
++}
++
++B(20, __atomic_add_fetch, -, __ATOMIC_RELAXED)
++B(21, __atomic_sub_fetch, +, __ATOMIC_RELAXED)
++B(23, __atomic_xor_fetch, ^, __ATOMIC_RELAXED)
++B(25, __sync_add_and_fetch, -)
++B(26, __sync_sub_and_fetch, +)
++B(28, __sync_xor_and_fetch, ^)
++
++#undef A
++#define A(n, t, ut, f, o, ...) \
++t fn##n (void)					\
++{						\
++  ut z = f (&v##t, 42, ##__VA_ARGS__);		\
++  t w = (t) z;					\
++  t v = w o 42;					\
++  return v != 0;				\
++}
++
++B(30, __atomic_add_fetch, -, __ATOMIC_RELAXED)
++B(31, __atomic_sub_fetch, +, __ATOMIC_RELAXED)
++B(33, __atomic_xor_fetch, ^, __ATOMIC_RELAXED)
++B(35, __sync_add_and_fetch, -)
++B(36, __sync_sub_and_fetch, +)
++B(38, __sync_xor_and_fetch, ^)
++
++#undef A
++#define A(n, t, ut, f, o, ...) \
++t fn##n (t x)					\
++{						\
++  return (t) (((t) f (&v##t, x, ##__VA_ARGS__))	\
++	      o x) != 0;			\
++}
++
++B(40, __atomic_add_fetch, -, __ATOMIC_RELAXED)
++B(41, __atomic_sub_fetch, +, __ATOMIC_RELAXED)
++B(43, __atomic_xor_fetch, ^, __ATOMIC_RELAXED)
++B(45, __sync_add_and_fetch, -)
++B(46, __sync_sub_and_fetch, +)
++B(48, __sync_xor_and_fetch, ^)
++
++#undef A
++#define A(n, t, ut, f, o, ...) \
++t fn##n (void)					\
++{						\
++  return (t) (((t) f (&v##t, 42, ##__VA_ARGS__))\
++	      o 42) == 0;			\
++}
++
++B(50, __atomic_add_fetch, -, __ATOMIC_RELAXED)
++B(51, __atomic_sub_fetch, +, __ATOMIC_RELAXED)
++B(53, __atomic_xor_fetch, ^, __ATOMIC_RELAXED)
++B(55, __sync_add_and_fetch, -)
++B(56, __sync_sub_and_fetch, +)
++B(58, __sync_xor_and_fetch, ^)
 diff --git a/gcc/testsuite/gcc.target/i386/avx-covert-1.c b/gcc/testsuite/gcc.target/i386/avx-covert-1.c
 new file mode 100644
 index 00000000000..b6c794ecbb8
@@ -13755,6 +14039,342 @@ index aad8526eb21..93fbb34bb94 100644
  		case BUILT_IN_MEMCPY:
  		  if (gimple_call_builtin_p (stmt, BUILT_IN_NORMAL)
  		      && TREE_CODE (gimple_call_arg (stmt, 0)) == ADDR_EXPR
+diff --git a/gcc/tree-ssa-forwprop.c b/gcc/tree-ssa-forwprop.c
+index 0706fd862de..26b26e5ea92 100644
+--- a/gcc/tree-ssa-forwprop.c
++++ b/gcc/tree-ssa-forwprop.c
+@@ -1240,12 +1240,19 @@ constant_pointer_difference (tree p1, tree p2)
+    memset (p + 4, ' ', 3);
+    into
+    memcpy (p, "abcd   ", 7);
+-   call if the latter can be stored by pieces during expansion.  */
++   call if the latter can be stored by pieces during expansion.
++
++   Also canonicalize __atomic_fetch_op (p, x, y) op x
++   to __atomic_op_fetch (p, x, y) or
++   __atomic_op_fetch (p, x, y) iop x
++   to __atomic_fetch_op (p, x, y) when possible (also __sync).  */
+ 
+ static bool
+ simplify_builtin_call (gimple_stmt_iterator *gsi_p, tree callee2)
+ {
+   gimple *stmt1, *stmt2 = gsi_stmt (*gsi_p);
++  enum built_in_function other_atomic = END_BUILTINS;
++  enum tree_code atomic_op = ERROR_MARK;
+   tree vuse = gimple_vuse (stmt2);
+   if (vuse == NULL)
+     return false;
+@@ -1447,6 +1454,310 @@ simplify_builtin_call (gimple_stmt_iterator *gsi_p, tree callee2)
+ 	    }
+ 	}
+       break;
++
++ #define CASE_ATOMIC(NAME, OTHER, OP) \
++    case BUILT_IN_##NAME##_1:						\
++    case BUILT_IN_##NAME##_2:						\
++    case BUILT_IN_##NAME##_4:						\
++    case BUILT_IN_##NAME##_8:						\
++    case BUILT_IN_##NAME##_16:						\
++      atomic_op = OP;							\
++      other_atomic							\
++	= (enum built_in_function) (BUILT_IN_##OTHER##_1		\
++				    + (DECL_FUNCTION_CODE (callee2)	\
++				       - BUILT_IN_##NAME##_1));		\
++      goto handle_atomic_fetch_op;
++
++    CASE_ATOMIC (ATOMIC_FETCH_ADD, ATOMIC_ADD_FETCH, PLUS_EXPR)
++    CASE_ATOMIC (ATOMIC_FETCH_SUB, ATOMIC_SUB_FETCH, MINUS_EXPR)
++    CASE_ATOMIC (ATOMIC_FETCH_AND, ATOMIC_AND_FETCH, BIT_AND_EXPR)
++    CASE_ATOMIC (ATOMIC_FETCH_XOR, ATOMIC_XOR_FETCH, BIT_XOR_EXPR)
++    CASE_ATOMIC (ATOMIC_FETCH_OR, ATOMIC_OR_FETCH, BIT_IOR_EXPR)
++
++    CASE_ATOMIC (SYNC_FETCH_AND_ADD, SYNC_ADD_AND_FETCH, PLUS_EXPR)
++    CASE_ATOMIC (SYNC_FETCH_AND_SUB, SYNC_SUB_AND_FETCH, MINUS_EXPR)
++    CASE_ATOMIC (SYNC_FETCH_AND_AND, SYNC_AND_AND_FETCH, BIT_AND_EXPR)
++    CASE_ATOMIC (SYNC_FETCH_AND_XOR, SYNC_XOR_AND_FETCH, BIT_XOR_EXPR)
++    CASE_ATOMIC (SYNC_FETCH_AND_OR, SYNC_OR_AND_FETCH, BIT_IOR_EXPR)
++
++    CASE_ATOMIC (ATOMIC_ADD_FETCH, ATOMIC_FETCH_ADD, MINUS_EXPR)
++    CASE_ATOMIC (ATOMIC_SUB_FETCH, ATOMIC_FETCH_SUB, PLUS_EXPR)
++    CASE_ATOMIC (ATOMIC_XOR_FETCH, ATOMIC_FETCH_XOR, BIT_XOR_EXPR)
++
++    CASE_ATOMIC (SYNC_ADD_AND_FETCH, SYNC_FETCH_AND_ADD, MINUS_EXPR)
++    CASE_ATOMIC (SYNC_SUB_AND_FETCH, SYNC_FETCH_AND_SUB, PLUS_EXPR)
++    CASE_ATOMIC (SYNC_XOR_AND_FETCH, SYNC_FETCH_AND_XOR, BIT_XOR_EXPR)
++
++#undef CASE_ATOMIC
++
++    handle_atomic_fetch_op:
++      if (gimple_call_num_args (stmt2) >= 2 && gimple_call_lhs (stmt2))
++	{
++	  tree lhs2 = gimple_call_lhs (stmt2), lhsc = lhs2;
++	  tree arg = gimple_call_arg (stmt2, 1);
++	  gimple *use_stmt, *cast_stmt = NULL;
++	  use_operand_p use_p;
++	  tree ndecl = builtin_decl_explicit (other_atomic);
++
++	  if (ndecl == NULL_TREE || !single_imm_use (lhs2, &use_p, &use_stmt))
++	    break;
++
++	  if (gimple_assign_cast_p (use_stmt))
++	    {
++	      cast_stmt = use_stmt;
++	      lhsc = gimple_assign_lhs (cast_stmt);
++	      if (lhsc == NULL_TREE
++		  || !INTEGRAL_TYPE_P (TREE_TYPE (lhsc))
++		  || (TYPE_PRECISION (TREE_TYPE (lhsc))
++		      != TYPE_PRECISION (TREE_TYPE (lhs2)))
++		  || !single_imm_use (lhsc, &use_p, &use_stmt))
++		{
++		  use_stmt = cast_stmt;
++		  cast_stmt = NULL;
++		  lhsc = lhs2;
++		}
++	    }
++
++	  bool ok = false;
++	  tree oarg = NULL_TREE;
++	  enum tree_code ccode = ERROR_MARK;
++	  tree crhs1 = NULL_TREE, crhs2 = NULL_TREE;
++	  if (is_gimple_assign (use_stmt)
++	      && gimple_assign_rhs_code (use_stmt) == atomic_op)
++	    {
++	      if (gimple_assign_rhs1 (use_stmt) == lhsc)
++		oarg = gimple_assign_rhs2 (use_stmt);
++	      else if (atomic_op != MINUS_EXPR)
++		oarg = gimple_assign_rhs1 (use_stmt);
++	    }
++	  else if (atomic_op == MINUS_EXPR
++		   && is_gimple_assign (use_stmt)
++		   && gimple_assign_rhs_code (use_stmt) == PLUS_EXPR
++		   && TREE_CODE (arg) == INTEGER_CST
++		   && (TREE_CODE (gimple_assign_rhs2 (use_stmt))
++		       == INTEGER_CST))
++	    {
++	      tree a = fold_convert (TREE_TYPE (lhs2), arg);
++	      tree o = fold_convert (TREE_TYPE (lhs2),
++				     gimple_assign_rhs2 (use_stmt));
++	      if (wi::to_wide (a) == wi::neg (wi::to_wide (o)))
++		ok = true;
++	    }
++	  else if (atomic_op == BIT_AND_EXPR || atomic_op == BIT_IOR_EXPR)
++	    ;
++	  else if (gimple_code (use_stmt) == GIMPLE_COND)
++	    {
++	      ccode = gimple_cond_code (use_stmt);
++	      crhs1 = gimple_cond_lhs (use_stmt);
++	      crhs2 = gimple_cond_rhs (use_stmt);
++	    }
++	  else if (is_gimple_assign (use_stmt))
++	    {
++	      if (gimple_assign_rhs_class (use_stmt) == GIMPLE_BINARY_RHS)
++		{
++		  ccode = gimple_assign_rhs_code (use_stmt);
++		  crhs1 = gimple_assign_rhs1 (use_stmt);
++		  crhs2 = gimple_assign_rhs2 (use_stmt);
++		}
++	      else if (gimple_assign_rhs_code (use_stmt) == COND_EXPR)
++		{
++		  tree cond = gimple_assign_rhs1 (use_stmt);
++		  if (COMPARISON_CLASS_P (cond))
++		    {
++		      ccode = TREE_CODE (cond);
++		      crhs1 = TREE_OPERAND (cond, 0);
++		      crhs2 = TREE_OPERAND (cond, 1);
++		    }
++		}
++	    }
++	  if (ccode == EQ_EXPR || ccode == NE_EXPR)
++	    {
++	      /* Deal with x - y == 0 or x ^ y == 0
++		 being optimized into x == y and x + cst == 0
++		 into x == -cst.  */
++	      tree o = NULL_TREE;
++	      if (crhs1 == lhsc)
++		o = crhs2;
++	      else if (crhs2 == lhsc)
++		o = crhs1;
++	      if (o && atomic_op != PLUS_EXPR)
++		oarg = o;
++	      else if (o
++		       && TREE_CODE (o) == INTEGER_CST
++		       && TREE_CODE (arg) == INTEGER_CST)
++		{
++		  tree a = fold_convert (TREE_TYPE (lhs2), arg);
++		  o = fold_convert (TREE_TYPE (lhs2), o);
++		  if (wi::to_wide (a) == wi::neg (wi::to_wide (o)))
++		    ok = true;
++		}
++	    }
++	  if (oarg && !ok)
++	    {
++	      if (operand_equal_p (arg, oarg, 0))
++		ok = true;
++	      else if (TREE_CODE (arg) == SSA_NAME
++		       && TREE_CODE (oarg) == SSA_NAME)
++		{
++		  tree oarg2 = oarg;
++		  if (gimple_assign_cast_p (SSA_NAME_DEF_STMT (oarg)))
++		    {
++		      gimple *g = SSA_NAME_DEF_STMT (oarg);
++		      oarg2 = gimple_assign_rhs1 (g);
++		      if (TREE_CODE (oarg2) != SSA_NAME
++			  || !INTEGRAL_TYPE_P (TREE_TYPE (oarg2))
++			  || (TYPE_PRECISION (TREE_TYPE (oarg2))
++			      != TYPE_PRECISION (TREE_TYPE (oarg))))
++			oarg2 = oarg;
++		    }
++		  if (gimple_assign_cast_p (SSA_NAME_DEF_STMT (arg)))
++		    {
++		      gimple *g = SSA_NAME_DEF_STMT (arg);
++		      tree rhs1 = gimple_assign_rhs1 (g);
++		      /* Handle e.g.
++			 x.0_1 = (long unsigned int) x_4(D);
++			 _2 = __atomic_fetch_add_8 (&vlong, x.0_1, 0);
++			 _3 = (long int) _2;
++			 _7 = x_4(D) + _3;  */
++		      if (rhs1 == oarg || rhs1 == oarg2)
++			ok = true;
++		      /* Handle e.g.
++			 x.18_1 = (short unsigned int) x_5(D);
++			 _2 = (int) x.18_1;
++			 _3 = __atomic_fetch_xor_2 (&vshort, _2, 0);
++			 _4 = (short int) _3;
++			 _8 = x_5(D) ^ _4;
++			 This happens only for char/short.  */
++		      else if (TREE_CODE (rhs1) == SSA_NAME
++			       && INTEGRAL_TYPE_P (TREE_TYPE (rhs1))
++			       && (TYPE_PRECISION (TREE_TYPE (rhs1))
++				   == TYPE_PRECISION (TREE_TYPE (lhs2))))
++			{
++			  g = SSA_NAME_DEF_STMT (rhs1);
++			  if (gimple_assign_cast_p (g)
++			      && (gimple_assign_rhs1 (g) == oarg
++				  || gimple_assign_rhs1 (g) == oarg2))
++			    ok = true;
++			}
++		    }
++		  if (!ok && arg == oarg2)
++		    /* Handle e.g.
++		       _1 = __sync_fetch_and_add_4 (&v, x_5(D));
++		       _2 = (int) _1;
++		       x.0_3 = (int) x_5(D);
++		       _7 = _2 + x.0_3;  */
++		    ok = true;
++		}
++	    }
++
++	  if (ok)
++	    {
++	      tree new_lhs = make_ssa_name (TREE_TYPE (lhs2));
++	      gimple_call_set_lhs (stmt2, new_lhs);
++	      gimple_call_set_fndecl (stmt2, ndecl);
++	      gimple_stmt_iterator gsi = gsi_for_stmt (use_stmt);
++	      if (ccode == ERROR_MARK)
++		gimple_assign_set_rhs_with_ops (&gsi, cast_stmt
++						? NOP_EXPR : SSA_NAME,
++						new_lhs);
++	      else
++		{
++		  crhs1 = new_lhs;
++		  crhs2 = build_zero_cst (TREE_TYPE (lhs2));
++		  if (gimple_code (use_stmt) == GIMPLE_COND)
++		    {
++		      gcond *cond_stmt = as_a <gcond *> (use_stmt);
++		      gimple_cond_set_lhs (cond_stmt, crhs1);
++		      gimple_cond_set_rhs (cond_stmt, crhs2);
++		    }
++		  else if (gimple_assign_rhs_class (use_stmt)
++			   == GIMPLE_BINARY_RHS)
++		    {
++		      gimple_assign_set_rhs1 (use_stmt, crhs1);
++		      gimple_assign_set_rhs2 (use_stmt, crhs2);
++		    }
++		  else
++		    {
++		      gcc_checking_assert (gimple_assign_rhs_code (use_stmt)
++					   == COND_EXPR);
++		      tree cond = build2 (ccode, boolean_type_node,
++					  crhs1, crhs2);
++		      gimple_assign_set_rhs1 (use_stmt, cond);
++		    }
++		}
++	      update_stmt (use_stmt);
++	      if (atomic_op != BIT_AND_EXPR
++		  && atomic_op != BIT_IOR_EXPR
++		  && !stmt_ends_bb_p (stmt2))
++		{
++		  /* For the benefit of debug stmts, emit stmt(s) to set
++		     lhs2 to the value it had from the new builtin.
++		     E.g. if it was previously:
++		     lhs2 = __atomic_fetch_add_8 (ptr, arg, 0);
++		     emit:
++		     new_lhs = __atomic_add_fetch_8 (ptr, arg, 0);
++		     lhs2 = new_lhs - arg;
++		     We also keep cast_stmt if any in the IL for
++		     the same reasons.
++		     These stmts will be DCEd later and proper debug info
++		     will be emitted.
++		     This is only possible for reversible operations
++		     (+/-/^) and without -fnon-call-exceptions.  */
++		  gsi = gsi_for_stmt (stmt2);
++		  tree type = TREE_TYPE (lhs2);
++		  if (TREE_CODE (arg) == INTEGER_CST)
++		    arg = fold_convert (type, arg);
++		  else if (!useless_type_conversion_p (type, TREE_TYPE (arg)))
++		    {
++		      tree narg = make_ssa_name (type);
++		      gimple *g = gimple_build_assign (narg, NOP_EXPR, arg);
++		      gsi_insert_after (&gsi, g, GSI_NEW_STMT);
++		      arg = narg;
++		    }
++		  enum tree_code rcode;
++		  switch (atomic_op)
++		    {
++		    case PLUS_EXPR: rcode = MINUS_EXPR; break;
++		    case MINUS_EXPR: rcode = PLUS_EXPR; break;
++		    case BIT_XOR_EXPR: rcode = atomic_op; break;
++		    default: gcc_unreachable ();
++		    }
++		  gimple *g = gimple_build_assign (lhs2, rcode, new_lhs, arg);
++		  gsi_insert_after (&gsi, g, GSI_NEW_STMT);
++		  update_stmt (stmt2);
++		}
++	      else
++		{
++		  /* For e.g.
++		     lhs2 = __atomic_fetch_or_8 (ptr, arg, 0);
++		     after we change it to
++		     new_lhs = __atomic_or_fetch_8 (ptr, arg, 0);
++		     there is no way to find out the lhs2 value (i.e.
++		     what the atomic memory contained before the operation),
++		     values of some bits are lost.  We have checked earlier
++		     that we don't have any non-debug users except for what
++		     we are already changing, so we need to reset the
++		     debug stmts and remove the cast_stmt if any.  */
++		  imm_use_iterator iter;
++		  FOR_EACH_IMM_USE_STMT (use_stmt, iter, lhs2)
++		    if (use_stmt != cast_stmt)
++		      {
++			gcc_assert (is_gimple_debug (use_stmt));
++			gimple_debug_bind_reset_value (use_stmt);
++			update_stmt (use_stmt);
++		      }
++		  if (cast_stmt)
++		    {
++		      gsi = gsi_for_stmt (cast_stmt);
++		      gsi_remove (&gsi, true);
++		    }
++		  update_stmt (stmt2);
++		  release_ssa_name (lhs2);
++		}
++	    }
++	}
++      break;
++
+     default:
+       break;
+     }
 diff --git a/gcc/tree-vect-generic.c b/gcc/tree-vect-generic.c
 index 3348545d18b..fb6b69c5b83 100644
 --- a/gcc/tree-vect-generic.c
