@@ -4,7 +4,7 @@ Arjan van de Ven (1):
 Cui,Lili (1):
       x86: Update -mtune=alderlake
 
-H.J. Lu (46):
+H.J. Lu (50):
       op_by_pieces_d::run: Change a while loop to a do-while loop
       Generate offset adjusted operation for op_by_pieces operations
       Don't use nullptr return from simplify_gen_subreg
@@ -51,15 +51,20 @@ H.J. Lu (46):
       x86: Add TARGET_AVX256_[MOVE|STORE]_BY_PIECES
       Add TARGET_IFUNC_REF_LOCAL_OK
       x86: Add -mmove-max=bits and -mstore-max=bits
+      x86: Rename -harden-sls=indirect-branch to -harden-sls=indirect-jmp
+      x86: Generate INT3 for __builtin_eh_return
+      Adjust "x86: Add -mmove-max=bits and -mstore-max=bits"
+      x86: Scan leal in PR target/83782 tests for x32
 
 Hongyu Wang (2):
       PR target/103069: Relax cmpxchg loop for x86 target
       i386: Fix wrong codegen for -mrelax-cmpxchg-loop
 
-Jakub Jelinek (3):
+Jakub Jelinek (4):
       i386: Punt on broadcasts from TImode integers [PR101286]
       i386: Fix up @xorsign<mode>3_1 [PR102224]
       i386: Fix up xorsign for AVX [PR89984]
+      i386, fab: Optimize __atomic_{add,sub,and,or,xor}_fetch (x, y, z) {==,!=,<,<=,>,>=} 0 [PR98737]
 
 Richard Biener (1):
       middle-end/100951 - make sure to generate VECTOR_CST in lowering
@@ -82,7 +87,7 @@ liuhongt (12):
       Fix typo in r12-5486.
 
 diff --git a/gcc/builtins.c b/gcc/builtins.c
-index fb90c5d4a7c..2dddfc75293 100644
+index fb90c5d4a7c..92a5af5101c 100644
 --- a/gcc/builtins.c
 +++ b/gcc/builtins.c
 @@ -128,7 +128,6 @@ static rtx expand_builtin_va_copy (tree);
@@ -239,13 +244,15 @@ index fb90c5d4a7c..2dddfc75293 100644
    const char *c = (const char *) data;
 -  char *p = XALLOCAVEC (char, GET_MODE_SIZE (mode));
 +  unsigned int size = GET_MODE_SIZE (mode);
-+
+ 
+-  memset (p, *c, GET_MODE_SIZE (mode));
 +  rtx target = gen_memset_value_from_prev ((by_pieces_prev *) prev,
 +					   mode);
 +  if (target != nullptr)
 +    return target;
 +  rtx src = gen_int_mode (*c, QImode);
-+
+ 
+-  return c_readstr (p, mode);
 +  if (VECTOR_MODE_P (mode))
 +    {
 +      gcc_assert (GET_MODE_INNER (mode) == QImode);
@@ -262,11 +269,9 @@ index fb90c5d4a7c..2dddfc75293 100644
 +    }
 +
 +  char *p = XALLOCAVEC (char, size);
- 
--  memset (p, *c, GET_MODE_SIZE (mode));
++
 +  memset (p, *c, size);
- 
--  return c_readstr (p, mode);
++
 +  /* Vector modes should be handled above.  */
 +  return c_readstr (p, as_a <scalar_int_mode> (mode));
  }
@@ -322,8 +327,102 @@ index fb90c5d4a7c..2dddfc75293 100644
  
    target = convert_to_mode (mode, (rtx) data, 1);
    target = expand_mult (mode, target, coeff, NULL_RTX, 1);
+@@ -8990,6 +9121,93 @@ expand_ifn_atomic_bit_test_and (gcall *call)
+     emit_move_insn (target, result);
+ }
+ 
++/* Expand IFN_ATOMIC_*_FETCH_CMP_0 internal function.  */
++
++void
++expand_ifn_atomic_op_fetch_cmp_0 (gcall *call)
++{
++  tree cmp = gimple_call_arg (call, 0);
++  tree ptr = gimple_call_arg (call, 1);
++  tree arg = gimple_call_arg (call, 2);
++  tree lhs = gimple_call_lhs (call);
++  enum memmodel model = MEMMODEL_SYNC_SEQ_CST;
++  machine_mode mode = TYPE_MODE (TREE_TYPE (cmp));
++  optab optab;
++  rtx_code code;
++  class expand_operand ops[5];
++
++  gcc_assert (flag_inline_atomics);
++
++  if (gimple_call_num_args (call) == 4)
++    model = get_memmodel (gimple_call_arg (call, 3));
++
++  rtx mem = get_builtin_sync_mem (ptr, mode);
++  rtx op = expand_expr_force_mode (arg, mode);
++
++  switch (gimple_call_internal_fn (call))
++    {
++    case IFN_ATOMIC_ADD_FETCH_CMP_0:
++      code = PLUS;
++      optab = atomic_add_fetch_cmp_0_optab;
++      break;
++    case IFN_ATOMIC_SUB_FETCH_CMP_0:
++      code = MINUS;
++      optab = atomic_sub_fetch_cmp_0_optab;
++      break;
++    case IFN_ATOMIC_AND_FETCH_CMP_0:
++      code = AND;
++      optab = atomic_and_fetch_cmp_0_optab;
++      break;
++    case IFN_ATOMIC_OR_FETCH_CMP_0:
++      code = IOR;
++      optab = atomic_or_fetch_cmp_0_optab;
++      break;
++    case IFN_ATOMIC_XOR_FETCH_CMP_0:
++      code = XOR;
++      optab = atomic_xor_fetch_cmp_0_optab;
++      break;
++    default:
++      gcc_unreachable ();
++    }
++
++  enum rtx_code comp = UNKNOWN;
++  switch (tree_to_uhwi (cmp))
++    {
++    case ATOMIC_OP_FETCH_CMP_0_EQ: comp = EQ; break;
++    case ATOMIC_OP_FETCH_CMP_0_NE: comp = NE; break;
++    case ATOMIC_OP_FETCH_CMP_0_GT: comp = GT; break;
++    case ATOMIC_OP_FETCH_CMP_0_GE: comp = GE; break;
++    case ATOMIC_OP_FETCH_CMP_0_LT: comp = LT; break;
++    case ATOMIC_OP_FETCH_CMP_0_LE: comp = LE; break;
++    default: gcc_unreachable ();
++    }
++
++  rtx target;
++  if (lhs == NULL_TREE)
++    target = gen_reg_rtx (TYPE_MODE (boolean_type_node));
++  else
++    target = expand_expr (lhs, NULL_RTX, VOIDmode, EXPAND_WRITE);
++  enum insn_code icode = direct_optab_handler (optab, mode);
++  gcc_assert (icode != CODE_FOR_nothing);
++  create_output_operand (&ops[0], target, TYPE_MODE (boolean_type_node));
++  create_fixed_operand (&ops[1], mem);
++  create_convert_operand_to (&ops[2], op, mode, true);
++  create_integer_operand (&ops[3], model);
++  create_integer_operand (&ops[4], comp);
++  if (maybe_expand_insn (icode, 5, ops))
++    return;
++
++  rtx result = expand_atomic_fetch_op (gen_reg_rtx (mode), mem, op,
++				       code, model, true);
++  if (lhs)
++    {
++      result = emit_store_flag_force (target, comp, result, const0_rtx, mode,
++				      0, 1);
++      if (result != target)
++	emit_move_insn (target, result);
++    }
++}
++
+ /* Expand an atomic clear operation.
+ 	void _atomic_clear (BOOL *obj, enum memmodel)
+    EXP is the call expression.  */
 diff --git a/gcc/builtins.h b/gcc/builtins.h
-index 307a20fbadb..d7904cd8b65 100644
+index 307a20fbadb..a395d53ec99 100644
 --- a/gcc/builtins.h
 +++ b/gcc/builtins.h
 @@ -110,8 +110,10 @@ extern void expand_builtin_update_setjmp_buf (rtx);
@@ -339,6 +438,14 @@ index 307a20fbadb..d7904cd8b65 100644
  extern rtx expand_builtin_saveregs (void);
  extern tree std_build_builtin_va_list (void);
  extern tree std_fn_abi_va_list (tree);
+@@ -120,6 +122,7 @@ extern void std_expand_builtin_va_start (tree, rtx);
+ extern void expand_builtin_trap (void);
+ extern void expand_ifn_atomic_bit_test_and (gcall *);
+ extern void expand_ifn_atomic_compare_exchange (gcall *);
++extern void expand_ifn_atomic_op_fetch_cmp_0 (gcall *);
+ extern rtx expand_builtin (tree, rtx, rtx, machine_mode, int);
+ extern enum built_in_function builtin_mathfn_code (const_tree);
+ extern tree fold_builtin_expect (location_t, tree, tree, tree, tree);
 diff --git a/gcc/calls.c b/gcc/calls.c
 index 7d908c6a62b..32ba27e755f 100644
 --- a/gcc/calls.c
@@ -1509,7 +1616,7 @@ index cdaca2644f4..e218e24d15b 100644
  extern enum attr_cpu ix86_schedule;
  
 diff --git a/gcc/config/i386/i386-opts.h b/gcc/config/i386/i386-opts.h
-index de6e7e01661..e159019e904 100644
+index de6e7e01661..ab1f658dab9 100644
 --- a/gcc/config/i386/i386-opts.h
 +++ b/gcc/config/i386/i386-opts.h
 @@ -125,4 +125,11 @@ enum instrument_return {
@@ -1519,8 +1626,8 @@ index de6e7e01661..e159019e904 100644
 +enum harden_sls {
 +  harden_sls_none = 0,
 +  harden_sls_return = 1 << 0,
-+  harden_sls_indirect_branch = 1 << 1,
-+  harden_sls_all = harden_sls_return | harden_sls_indirect_branch
++  harden_sls_indirect_jmp = 1 << 1,
++  harden_sls_all = harden_sls_return | harden_sls_indirect_jmp
 +};
 +
  #endif
@@ -1589,7 +1696,7 @@ index 941e91636d8..7946613244a 100644
    (gcc::context *);
 -extern rtl_opt_pass *make_pass_constant_pool_broadcast (gcc::context *);
 diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
-index 8e8c8beb366..30e0868b42f 100644
+index 8e8c8beb366..3625613d189 100644
 --- a/gcc/config/i386/i386.c
 +++ b/gcc/config/i386/i386.c
 @@ -4195,6 +4195,18 @@ ix86_return_in_memory (const_tree type, const_tree fntype ATTRIBUTE_UNUSED)
@@ -1858,7 +1965,7 @@ index 8e8c8beb366..30e0868b42f 100644
        fprintf (asm_out_file, "\tjmp\t");
        assemble_name (asm_out_file, thunk_name);
        putc ('\n', asm_out_file);
-+      if ((ix86_harden_sls & harden_sls_indirect_branch))
++      if ((ix86_harden_sls & harden_sls_indirect_jmp))
 +	fputs ("\tint3\n", asm_out_file);
      }
    else
@@ -1882,7 +1989,7 @@ index 8e8c8beb366..30e0868b42f 100644
    else
 -    return "%!jmp\t%A0";
 +    output_asm_insn ("%!jmp\t%A0", &call_op);
-+  return (ix86_harden_sls & harden_sls_indirect_branch) ? "int3" : "";
++  return (ix86_harden_sls & harden_sls_indirect_jmp) ? "int3" : "";
  }
  
  /* Output return instrumentation for current function if needed.  */
@@ -1899,7 +2006,25 @@ index 8e8c8beb366..30e0868b42f 100644
  }
  
  /* Output indirect function return.  RET_OP is the function return
-@@ -16124,7 +16275,12 @@ ix86_output_call_insn (rtx_insn *insn, rtx call_op)
+@@ -16064,11 +16215,14 @@ ix86_output_indirect_function_return (rtx ret_op)
+ 	}
+       else
+ 	output_indirect_thunk (regno);
+-
+-      return "";
+     }
+   else
+-    return "%!jmp\t%A0";
++    {
++      output_asm_insn ("%!jmp\t%A0", &ret_op);
++      if (ix86_harden_sls & harden_sls_indirect_jmp)
++	fputs ("\tint3\n", asm_out_file);
++    }
++  return "";
+ }
+ 
+ /* Output the assembly for a call instruction.  */
+@@ -16124,7 +16278,12 @@ ix86_output_call_insn (rtx_insn *insn, rtx call_op)
        if (output_indirect_p && !direct_p)
  	ix86_output_indirect_branch (call_op, xasm, true);
        else
@@ -1907,13 +2032,13 @@ index 8e8c8beb366..30e0868b42f 100644
 +	{
 +	  output_asm_insn (xasm, &call_op);
 +	  if (!direct_p
-+	      && (ix86_harden_sls & harden_sls_indirect_branch))
++	      && (ix86_harden_sls & harden_sls_indirect_jmp))
 +	    return "int3";
 +	}
        return "";
      }
  
-@@ -16764,6 +16920,8 @@ ix86_sched_init_global (FILE *, int, int)
+@@ -16764,6 +16923,8 @@ ix86_sched_init_global (FILE *, int, int)
      case PROCESSOR_NEHALEM:
      case PROCESSOR_SANDYBRIDGE:
      case PROCESSOR_HASWELL:
@@ -1922,7 +2047,7 @@ index 8e8c8beb366..30e0868b42f 100644
      case PROCESSOR_GENERIC:
        /* Do not perform multipass scheduling for pre-reload schedule
           to save compile time.  */
-@@ -20257,6 +20415,11 @@ ix86_rtx_costs (rtx x, machine_mode mode, int outer_code_i, int opno,
+@@ -20257,6 +20418,11 @@ ix86_rtx_costs (rtx x, machine_mode mode, int outer_code_i, int opno,
      case UNSPEC:
        if (XINT (x, 1) == UNSPEC_TP)
  	*total = 0;
@@ -1934,7 +2059,7 @@ index 8e8c8beb366..30e0868b42f 100644
        return false;
  
      case VEC_SELECT:
-@@ -23023,6 +23186,32 @@ ix86_optab_supported_p (int op, machine_mode mode1, machine_mode,
+@@ -23023,6 +23189,32 @@ ix86_optab_supported_p (int op, machine_mode mode1, machine_mode,
      }
  }
  
@@ -1967,7 +2092,7 @@ index 8e8c8beb366..30e0868b42f 100644
  /* Address space support.
  
     This is not "far pointers" in the 16-bit sense, but an easy way
-@@ -23553,6 +23742,9 @@ ix86_run_selftests (void)
+@@ -23553,6 +23745,9 @@ ix86_run_selftests (void)
  #undef TARGET_ADDRESS_COST
  #define TARGET_ADDRESS_COST ix86_address_cost
  
@@ -1977,7 +2102,7 @@ index 8e8c8beb366..30e0868b42f 100644
  #undef TARGET_FLAGS_REGNUM
  #define TARGET_FLAGS_REGNUM FLAGS_REG
  #undef TARGET_FIXED_CONDITION_CODE_REGS
-@@ -23602,6 +23794,8 @@ ix86_run_selftests (void)
+@@ -23602,6 +23797,8 @@ ix86_run_selftests (void)
  #define TARGET_C_EXCESS_PRECISION ix86_get_excess_precision
  #undef TARGET_PROMOTE_PROTOTYPES
  #define TARGET_PROMOTE_PROTOTYPES hook_bool_const_tree_true
@@ -1986,7 +2111,7 @@ index 8e8c8beb366..30e0868b42f 100644
  #undef TARGET_SETUP_INCOMING_VARARGS
  #define TARGET_SETUP_INCOMING_VARARGS ix86_setup_incoming_varargs
  #undef TARGET_MUST_PASS_IN_STACK
-@@ -23906,6 +24100,9 @@ ix86_run_selftests (void)
+@@ -23906,6 +24103,9 @@ ix86_run_selftests (void)
  #define TARGET_GET_MULTILIB_ABI_NAME \
    ix86_get_multilib_abi_name
  
@@ -1996,7 +2121,7 @@ index 8e8c8beb366..30e0868b42f 100644
  static bool ix86_libc_has_fast_function (int fcode ATTRIBUTE_UNUSED)
  {
  #ifdef OPTION_GLIBC
-@@ -23921,6 +24118,9 @@ static bool ix86_libc_has_fast_function (int fcode ATTRIBUTE_UNUSED)
+@@ -23921,6 +24121,9 @@ static bool ix86_libc_has_fast_function (int fcode ATTRIBUTE_UNUSED)
  #undef TARGET_LIBC_HAS_FAST_FUNCTION
  #define TARGET_LIBC_HAS_FAST_FUNCTION ix86_libc_has_fast_function
  
@@ -2291,7 +2416,7 @@ index db9dbf384ad..a3cc4f359d6 100644
  })
  
 diff --git a/gcc/config/i386/i386.opt b/gcc/config/i386/i386.opt
-index 7b8547bb1c3..91b21676864 100644
+index 7b8547bb1c3..4f517d35e07 100644
 --- a/gcc/config/i386/i386.opt
 +++ b/gcc/config/i386/i386.opt
 @@ -404,6 +404,10 @@ momit-leaf-frame-pointer
@@ -2350,7 +2475,7 @@ index 7b8547bb1c3..91b21676864 100644
 +Enum(harden_sls) String(return) Value(harden_sls_return)
 +
 +EnumValue
-+Enum(harden_sls) String(indirect-branch) Value(harden_sls_indirect_branch)
++Enum(harden_sls) String(indirect-jmp) Value(harden_sls_indirect_jmp)
 +
 +EnumValue
 +Enum(harden_sls) String(all) Value(harden_sls_all)
@@ -2797,7 +2922,7 @@ index 25678c8145d..d1f16b8ac03 100644
 +  DONE;
 +})
 diff --git a/gcc/config/i386/sync.md b/gcc/config/i386/sync.md
-index 9716a0b2f2c..cc4fe727bd9 100644
+index 9716a0b2f2c..9c177d424ed 100644
 --- a/gcc/config/i386/sync.md
 +++ b/gcc/config/i386/sync.md
 @@ -525,6 +525,123 @@
@@ -2924,6 +3049,114 @@ index 9716a0b2f2c..cc4fe727bd9 100644
  ;; For operand 2 nonmemory_operand predicate is used instead of
  ;; register_operand to allow combiner to better optimize atomic
  ;; additions of constants.
+@@ -821,3 +938,107 @@
+ 	(const_int 0))]
+   ""
+   "lock{%;} %K2btr{<imodesuffix>}\t{%1, %0|%0, %1}")
++
++(define_expand "atomic_<plusminus_mnemonic>_fetch_cmp_0<mode>"
++  [(match_operand:QI 0 "register_operand")
++   (plusminus:SWI (match_operand:SWI 1 "memory_operand")
++		  (match_operand:SWI 2 "nonmemory_operand"))
++   (match_operand:SI 3 "const_int_operand") ;; model
++   (match_operand:SI 4 "const_int_operand")]
++  ""
++{
++  if (INTVAL (operands[4]) == GT || INTVAL (operands[4]) == LE)
++    FAIL;
++  emit_insn (gen_atomic_<plusminus_mnemonic>_fetch_cmp_0<mode>_1 (operands[1],
++								  operands[2],
++								  operands[3]));
++  ix86_expand_setcc (operands[0], (enum rtx_code) INTVAL (operands[4]),
++		     gen_rtx_REG (CCGOCmode, FLAGS_REG), const0_rtx);
++  DONE;
++})
++
++(define_insn "atomic_add_fetch_cmp_0<mode>_1"
++  [(set (reg:CCGOC FLAGS_REG)
++	(compare:CCGOC
++	  (plus:SWI
++	    (unspec_volatile:SWI
++	      [(match_operand:SWI 0 "memory_operand" "+m")
++	       (match_operand:SI 2 "const_int_operand")]		;; model
++	      UNSPECV_XCHG)
++	    (match_operand:SWI 1 "nonmemory_operand" "<r><i>"))
++	  (const_int 0)))
++   (set (match_dup 0)
++	(plus:SWI (match_dup 0) (match_dup 1)))]
++  ""
++{
++  if (incdec_operand (operands[1], <MODE>mode))
++    {
++      if (operands[1] == const1_rtx)
++	return "lock{%;} %K2inc{<imodesuffix>}\t%0";
++      else
++	return "lock{%;} %K2dec{<imodesuffix>}\t%0";
++    }
++
++  if (x86_maybe_negate_const_int (&operands[1], <MODE>mode))
++    return "lock{%;} %K2sub{<imodesuffix>}\t{%1, %0|%0, %1}";
++
++  return "lock{%;} %K2add{<imodesuffix>}\t{%1, %0|%0, %1}";
++})
++
++(define_insn "atomic_sub_fetch_cmp_0<mode>_1"
++  [(set (reg:CCGOC FLAGS_REG)
++	(compare:CCGOC
++	  (minus:SWI
++	    (unspec_volatile:SWI
++	      [(match_operand:SWI 0 "memory_operand" "+m")
++	       (match_operand:SI 2 "const_int_operand")]		;; model
++	      UNSPECV_XCHG)
++	    (match_operand:SWI 1 "nonmemory_operand" "<r><i>"))
++	  (const_int 0)))
++   (set (match_dup 0)
++	(minus:SWI (match_dup 0) (match_dup 1)))]
++  ""
++{
++  if (incdec_operand (operands[1], <MODE>mode))
++    {
++      if (operands[1] != const1_rtx)
++	return "lock{%;} %K2inc{<imodesuffix>}\t%0";
++      else
++	return "lock{%;} %K2dec{<imodesuffix>}\t%0";
++    }
++
++  if (x86_maybe_negate_const_int (&operands[1], <MODE>mode))
++    return "lock{%;} %K2add{<imodesuffix>}\t{%1, %0|%0, %1}";
++
++  return "lock{%;} %K2sub{<imodesuffix>}\t{%1, %0|%0, %1}";
++})
++
++(define_expand "atomic_<logic>_fetch_cmp_0<mode>"
++  [(match_operand:QI 0 "register_operand")
++   (any_logic:SWI (match_operand:SWI 1 "memory_operand")
++		  (match_operand:SWI 2 "nonmemory_operand"))
++   (match_operand:SI 3 "const_int_operand") ;; model
++   (match_operand:SI 4 "const_int_operand")]
++  ""
++{
++  emit_insn (gen_atomic_<logic>_fetch_cmp_0<mode>_1 (operands[1], operands[2],
++						     operands[3]));
++  ix86_expand_setcc (operands[0], (enum rtx_code) INTVAL (operands[4]),
++		     gen_rtx_REG (CCNOmode, FLAGS_REG), const0_rtx);
++  DONE;
++})
++
++(define_insn "atomic_<logic>_fetch_cmp_0<mode>_1"
++  [(set (reg:CCNO FLAGS_REG)
++	(compare:CCNO
++	  (any_logic:SWI
++	    (unspec_volatile:SWI
++	      [(match_operand:SWI 0 "memory_operand" "+m")
++	       (match_operand:SI 2 "const_int_operand")]		;; model
++	      UNSPECV_XCHG)
++	    (match_operand:SWI 1 "nonmemory_operand" "<r><i>"))
++	  (const_int 0)))
++   (set (match_dup 0)
++	(any_logic:SWI (match_dup 0) (match_dup 1)))]
++  ""
++  "lock{%;} %K2<logic>{<imodesuffix>}\t{%1, %0|%0, %1}")
 diff --git a/gcc/config/i386/x86-tune-costs.h b/gcc/config/i386/x86-tune-costs.h
 index ffe810f2bcb..dd5563d2e64 100644
 --- a/gcc/config/i386/x86-tune-costs.h
@@ -3604,7 +3837,7 @@ index 91216593e75..ba79a8e48ed 100644
  #endif
  
 diff --git a/gcc/doc/invoke.texi b/gcc/doc/invoke.texi
-index 5a4b3c6c234..a9cbede7406 100644
+index 5a4b3c6c234..dbdf3d91022 100644
 --- a/gcc/doc/invoke.texi
 +++ b/gcc/doc/invoke.texi
 @@ -1375,6 +1375,7 @@ See RS/6000 and PowerPC Options.
@@ -3669,8 +3902,8 @@ index 5a4b3c6c234..a9cbede7406 100644
 +@opindex mharden-sls
 +Generate code to mitigate against straight line speculation (SLS) with
 +@var{choice}.  The default is @samp{none} which disables all SLS
-+hardening.  @samp{return} enables SLS hardening for function return.
-+@samp{indirect-branch} enables SLS hardening for indirect branch.
++hardening.  @samp{return} enables SLS hardening for function returns.
++@samp{indirect-jmp} enables SLS hardening for indirect jumps.
 +@samp{all} enables all SLS hardening.
 +
 +@item -mindirect-branch-cs-prefix
@@ -3683,6 +3916,41 @@ index 5a4b3c6c234..a9cbede7406 100644
  @end table
  
  These @samp{-m} switches are supported in addition to the above
+diff --git a/gcc/doc/md.texi b/gcc/doc/md.texi
+index d166a0debed..a525ea9cb73 100644
+--- a/gcc/doc/md.texi
++++ b/gcc/doc/md.texi
+@@ -7801,6 +7801,30 @@ If these patterns are not defined, attempts will be made to use
+ counterparts.  If none of these are available a compare-and-swap
+ loop will be used.
+ 
++@cindex @code{atomic_add_fetch_cmp_0@var{mode}} instruction pattern
++@cindex @code{atomic_sub_fetch_cmp_0@var{mode}} instruction pattern
++@cindex @code{atomic_and_fetch_cmp_0@var{mode}} instruction pattern
++@cindex @code{atomic_or_fetch_cmp_0@var{mode}} instruction pattern
++@cindex @code{atomic_xor_fetch_cmp_0@var{mode}} instruction pattern
++@item @samp{atomic_add_fetch_cmp_0@var{mode}}
++@itemx @samp{atomic_sub_fetch_cmp_0@var{mode}}
++@itemx @samp{atomic_and_fetch_cmp_0@var{mode}}
++@itemx @samp{atomic_or_fetch_cmp_0@var{mode}}
++@itemx @samp{atomic_xor_fetch_cmp_0@var{mode}}
++These patterns emit code for an atomic operation on memory with memory
++model semantics if the fetch result is used only in a comparison against
++zero.
++Operand 0 is an output operand which contains a boolean result of comparison
++of the value after the operation against zero.  Operand 1 is the memory on
++which the atomic operation is performed.  Operand 2 is the second operand
++to the binary operator.  Operand 3 is the memory model to be used by the
++operation.  Operand 4 is an integer holding the comparison code, one of
++@code{EQ}, @code{NE}, @code{LT}, @code{GT}, @code{LE} or @code{GE}.
++
++If these patterns are not defined, attempts will be made to use separate
++atomic operation and fetch pattern followed by comparison of the result
++against zero.
++
+ @cindex @code{mem_thread_fence} instruction pattern
+ @item @samp{mem_thread_fence}
+ This pattern emits code required to implement a thread fence with
 diff --git a/gcc/doc/tm.texi b/gcc/doc/tm.texi
 index b370bc76b25..1432aa4c080 100644
 --- a/gcc/doc/tm.texi
@@ -4427,6 +4695,91 @@ index add9a742e41..71781c790a1 100644
  extern bool hook_bool_uint_uintp_false (unsigned int, unsigned int *);
  
  extern int hook_int_uint_mode_1 (unsigned int, machine_mode);
+diff --git a/gcc/internal-fn.c b/gcc/internal-fn.c
+index d209a52f823..c158cda4fb9 100644
+--- a/gcc/internal-fn.c
++++ b/gcc/internal-fn.c
+@@ -3091,6 +3091,46 @@ expand_ATOMIC_COMPARE_EXCHANGE (internal_fn, gcall *call)
+   expand_ifn_atomic_compare_exchange (call);
+ }
+ 
++/* Expand atomic add fetch and cmp with 0.  */
++
++static void
++expand_ATOMIC_ADD_FETCH_CMP_0 (internal_fn, gcall *call)
++{
++  expand_ifn_atomic_op_fetch_cmp_0 (call);
++}
++
++/* Expand atomic sub fetch and cmp with 0.  */
++
++static void
++expand_ATOMIC_SUB_FETCH_CMP_0 (internal_fn, gcall *call)
++{
++  expand_ifn_atomic_op_fetch_cmp_0 (call);
++}
++
++/* Expand atomic and fetch and cmp with 0.  */
++
++static void
++expand_ATOMIC_AND_FETCH_CMP_0 (internal_fn, gcall *call)
++{
++  expand_ifn_atomic_op_fetch_cmp_0 (call);
++}
++
++/* Expand atomic or fetch and cmp with 0.  */
++
++static void
++expand_ATOMIC_OR_FETCH_CMP_0 (internal_fn, gcall *call)
++{
++  expand_ifn_atomic_op_fetch_cmp_0 (call);
++}
++
++/* Expand atomic xor fetch and cmp with 0.  */
++
++static void
++expand_ATOMIC_XOR_FETCH_CMP_0 (internal_fn, gcall *call)
++{
++  expand_ifn_atomic_op_fetch_cmp_0 (call);
++}
++
+ /* Expand LAUNDER to assignment, lhs = arg0.  */
+ 
+ static void
+diff --git a/gcc/internal-fn.def b/gcc/internal-fn.def
+index daeace7a34e..e68f6557441 100644
+--- a/gcc/internal-fn.def
++++ b/gcc/internal-fn.def
+@@ -386,6 +386,11 @@ DEF_INTERNAL_FN (ATOMIC_BIT_TEST_AND_SET, ECF_LEAF, NULL)
+ DEF_INTERNAL_FN (ATOMIC_BIT_TEST_AND_COMPLEMENT, ECF_LEAF, NULL)
+ DEF_INTERNAL_FN (ATOMIC_BIT_TEST_AND_RESET, ECF_LEAF, NULL)
+ DEF_INTERNAL_FN (ATOMIC_COMPARE_EXCHANGE, ECF_LEAF, NULL)
++DEF_INTERNAL_FN (ATOMIC_ADD_FETCH_CMP_0, ECF_LEAF, NULL)
++DEF_INTERNAL_FN (ATOMIC_SUB_FETCH_CMP_0, ECF_LEAF, NULL)
++DEF_INTERNAL_FN (ATOMIC_AND_FETCH_CMP_0, ECF_LEAF, NULL)
++DEF_INTERNAL_FN (ATOMIC_OR_FETCH_CMP_0, ECF_LEAF, NULL)
++DEF_INTERNAL_FN (ATOMIC_XOR_FETCH_CMP_0, ECF_LEAF, NULL)
+ 
+ /* To implement [[fallthrough]].  */
+ DEF_INTERNAL_FN (FALLTHROUGH, ECF_LEAF | ECF_NOTHROW, NULL)
+diff --git a/gcc/internal-fn.h b/gcc/internal-fn.h
+index c6599ce4894..e80707a0697 100644
+--- a/gcc/internal-fn.h
++++ b/gcc/internal-fn.h
+@@ -232,4 +232,13 @@ extern void expand_PHI (internal_fn, gcall *);
+ 
+ extern bool vectorized_internal_fn_supported_p (internal_fn, tree);
+ 
++enum {
++  ATOMIC_OP_FETCH_CMP_0_EQ = 0,
++  ATOMIC_OP_FETCH_CMP_0_NE = 1,
++  ATOMIC_OP_FETCH_CMP_0_LT = 2,
++  ATOMIC_OP_FETCH_CMP_0_LE = 3,
++  ATOMIC_OP_FETCH_CMP_0_GT = 4,
++  ATOMIC_OP_FETCH_CMP_0_GE = 5
++};
++
+ #endif
 diff --git a/gcc/match.pd b/gcc/match.pd
 index 4fbba3922e5..70668ed92aa 100644
 --- a/gcc/match.pd
@@ -4556,6 +4909,22 @@ index 4fbba3922e5..70668ed92aa 100644
  /* (v ? w : 0) ? a : b is just (v & w) ? a : b
     Currently disabled after pass lvec because ARM understands
     VEC_COND_EXPR<v==w,-1,0> but not a plain v==w fed to BIT_IOR_EXPR.  */
+diff --git a/gcc/optabs.def b/gcc/optabs.def
+index b192a9d070b..318a2ffed37 100644
+--- a/gcc/optabs.def
++++ b/gcc/optabs.def
+@@ -441,6 +441,11 @@ OPTAB_D (atomic_sub_fetch_optab, "atomic_sub_fetch$I$a")
+ OPTAB_D (atomic_sub_optab, "atomic_sub$I$a")
+ OPTAB_D (atomic_xor_fetch_optab, "atomic_xor_fetch$I$a")
+ OPTAB_D (atomic_xor_optab, "atomic_xor$I$a")
++OPTAB_D (atomic_add_fetch_cmp_0_optab, "atomic_add_fetch_cmp_0$I$a")
++OPTAB_D (atomic_sub_fetch_cmp_0_optab, "atomic_sub_fetch_cmp_0$I$a")
++OPTAB_D (atomic_and_fetch_cmp_0_optab, "atomic_and_fetch_cmp_0$I$a")
++OPTAB_D (atomic_or_fetch_cmp_0_optab, "atomic_or_fetch_cmp_0$I$a")
++OPTAB_D (atomic_xor_fetch_cmp_0_optab, "atomic_xor_fetch_cmp_0$I$a")
+ 
+ OPTAB_D (get_thread_pointer_optab, "get_thread_pointer$I$a")
+ OPTAB_D (set_thread_pointer_optab, "set_thread_pointer$I$a")
 diff --git a/gcc/rtl.h b/gcc/rtl.h
 index efdaad20993..d3165e311c3 100644
 --- a/gcc/rtl.h
@@ -6010,6 +6379,30 @@ index 00000000000..613c44c6f82
 +
 +/* { dg-final { scan-assembler-times "ret" 1 } } */
 +/* { dg-final { scan-assembler-times "int3" 1 } } */
+diff --git a/gcc/testsuite/gcc.target/i386/harden-sls-6.c b/gcc/testsuite/gcc.target/i386/harden-sls-6.c
+new file mode 100644
+index 00000000000..9068eb64008
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/harden-sls-6.c
+@@ -0,0 +1,18 @@
++/* { dg-do compile { target { ! ia32 } } } */
++/* { dg-options "-O2 -fcf-protection -mharden-sls=indirect-jmp" } */
++
++struct _Unwind_Context _Unwind_Resume_or_Rethrow_this_context;
++
++void offset (int);
++
++struct _Unwind_Context {
++  void *reg[7];
++} _Unwind_Resume_or_Rethrow() {
++  struct _Unwind_Context cur_contextcur_context =
++      _Unwind_Resume_or_Rethrow_this_context;
++  offset(0);
++  __builtin_eh_return ((long) offset, 0);
++}
++
++/* { dg-final { scan-assembler "jmp\[ \t\]+\\*%rcx" } } */
++/* { dg-final { scan-assembler-times "int3" 1 } } */
 diff --git a/gcc/testsuite/gcc.target/i386/incoming-11.c b/gcc/testsuite/gcc.target/i386/incoming-11.c
 index a830c96f7d1..4b822684b88 100644
 --- a/gcc/testsuite/gcc.target/i386/incoming-11.c
@@ -7292,10 +7685,10 @@ index 00000000000..70c80e5064b
 +/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-46.c b/gcc/testsuite/gcc.target/i386/pieces-memset-46.c
 new file mode 100644
-index 00000000000..ab7894aa2e6
+index 00000000000..3d54052ff28
 --- /dev/null
 +++ b/gcc/testsuite/gcc.target/i386/pieces-memset-46.c
-@@ -0,0 +1,17 @@
+@@ -0,0 +1,18 @@
 +/* { dg-do compile } */
 +/* { dg-options "-O2 -march=sapphirerapids" } */
 +
@@ -7308,17 +7701,18 @@ index 00000000000..ab7894aa2e6
 +}
 +
 +/* { dg-final { scan-assembler-times "vmovdqu8\[ \\t\]+\[^\n\]*%zmm" 1 } } */
-+/* { dg-final { scan-assembler-times "vmovw\[ \\t\]+\[^\n\]*%xmm" 1 } } */
++/* Xfail this in GCC 11 since vmovw from AVX512FP16 isn't available.  */
++/* { dg-final { scan-assembler-times "vmovw\[ \\t\]+\[^\n\]*%xmm" 1 { xfail *-*-* } } } */
 +/* No need to dynamically realign the stack here.  */
 +/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
 +/* Nor use a frame pointer.  */
 +/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-47.c b/gcc/testsuite/gcc.target/i386/pieces-memset-47.c
 new file mode 100644
-index 00000000000..8f2c254ad03
+index 00000000000..24d7171e4d4
 --- /dev/null
 +++ b/gcc/testsuite/gcc.target/i386/pieces-memset-47.c
-@@ -0,0 +1,17 @@
+@@ -0,0 +1,18 @@
 +/* { dg-do compile } */
 +/* { dg-options "-O2 -march=sapphirerapids -mstore-max=128" } */
 +
@@ -7331,17 +7725,18 @@ index 00000000000..8f2c254ad03
 +}
 +
 +/* { dg-final { scan-assembler-times "vmovdqu(?:8|)\[ \\t\]+\[^\n\]*%xmm" 4 } } */
-+/* { dg-final { scan-assembler-times "vmovw\[ \\t\]+\[^\n\]*%xmm" 1 } } */
++/* Xfail this in GCC 11 since vmovw from AVX512FP16 isn't available.  */
++/* { dg-final { scan-assembler-times "vmovw\[ \\t\]+\[^\n\]*%xmm" 1 { xfail *-*-* } } } */
 +/* No need to dynamically realign the stack here.  */
 +/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
 +/* Nor use a frame pointer.  */
 +/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-48.c b/gcc/testsuite/gcc.target/i386/pieces-memset-48.c
 new file mode 100644
-index 00000000000..9a7da962183
+index 00000000000..680f1a1dee6
 --- /dev/null
 +++ b/gcc/testsuite/gcc.target/i386/pieces-memset-48.c
-@@ -0,0 +1,17 @@
+@@ -0,0 +1,18 @@
 +/* { dg-do compile } */
 +/* { dg-options "-O2 -march=sapphirerapids -mstore-max=256" } */
 +
@@ -7354,7 +7749,8 @@ index 00000000000..9a7da962183
 +}
 +
 +/* { dg-final { scan-assembler-times "vmovdqu(?:8|)\[ \\t\]+\[^\n\]*%ymm" 2 } } */
-+/* { dg-final { scan-assembler-times "vmovw\[ \\t\]+\[^\n\]*%xmm" 1 } } */
++/* Xfail this in GCC 11 since vmovw from AVX512FP16 isn't available.  */
++/* { dg-final { scan-assembler-times "vmovw\[ \\t\]+\[^\n\]*%xmm" 1 { xfail *-*-* } } } */
 +/* No need to dynamically realign the stack here.  */
 +/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
 +/* Nor use a frame pointer.  */
@@ -9991,7 +10387,7 @@ index 9932bdc5375..b9da0e706b1 100644
 +/* { dg-final { scan-assembler-not "vzeroupper" { target { ! ia32 } } } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pr83782-1.c b/gcc/testsuite/gcc.target/i386/pr83782-1.c
 new file mode 100644
-index 00000000000..f4c7370142a
+index 00000000000..ce97b12e65d
 --- /dev/null
 +++ b/gcc/testsuite/gcc.target/i386/pr83782-1.c
 @@ -0,0 +1,26 @@
@@ -10018,12 +10414,12 @@ index 00000000000..f4c7370142a
 +}
 +
 +/* { dg-final { scan-assembler {leal[ \t]foo@GOTOFF\(%[^,]*\),[ \t]%eax} { target ia32 } } } */
-+/* { dg-final { scan-assembler {leaq[ \t]foo\(%rip\),[ \t]%rax} { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler {lea(?:l|q)[ \t]foo\(%rip\),[ \t]%(?:e|r)ax} { target { ! ia32 } } } } */
 +/* { dg-final { scan-assembler-not "foo@GOT\\\(" { target ia32 } } } */
 +/* { dg-final { scan-assembler-not "foo@GOTPCREL\\\(" { target { ! ia32 } } } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pr83782-2.c b/gcc/testsuite/gcc.target/i386/pr83782-2.c
 new file mode 100644
-index 00000000000..6c6528fff46
+index 00000000000..e25d258bbda
 --- /dev/null
 +++ b/gcc/testsuite/gcc.target/i386/pr83782-2.c
 @@ -0,0 +1,26 @@
@@ -10050,7 +10446,7 @@ index 00000000000..6c6528fff46
 +}
 +
 +/* { dg-final { scan-assembler {leal[ \t]foo@GOTOFF\(%[^,]*\),[ \t]%eax} { target ia32 } } } */
-+/* { dg-final { scan-assembler {leaq[ \t]foo\(%rip\),[ \t]%rax} { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler {lea(?:l|q)[ \t]foo\(%rip\),[ \t]%(?:e|r)ax} { target { ! ia32 } } } } */
 +/* { dg-final { scan-assembler-not "foo@GOT\\\(" { target ia32 } } } */
 +/* { dg-final { scan-assembler-not "foo@GOTPCREL\\\(" { target { ! ia32 } } } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pr89984-1.c b/gcc/testsuite/gcc.target/i386/pr89984-1.c
@@ -10691,6 +11087,1593 @@ index 00000000000..ecfb9168b7d
 +  if (foo2_i387 (fa, fb) != foo2 (fa, fb))
 +    abort ();
 +}
+diff --git a/gcc/testsuite/gcc.target/i386/pr98737-1.c b/gcc/testsuite/gcc.target/i386/pr98737-1.c
+new file mode 100644
+index 00000000000..33c84da51bb
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr98737-1.c
+@@ -0,0 +1,207 @@
++/* PR target/98737 */
++/* { dg-do compile } */
++/* { dg-options "-O2 -masm=att" } */
++/* { dg-additional-options "-march=i686" { target ia32 } } */
++/* { dg-final { scan-assembler "lock\[^\n\r]\*subq\t" { target lp64 } } } */
++/* { dg-final { scan-assembler "lock\[^\n\r]\*subl\t" } } */
++/* { dg-final { scan-assembler "lock\[^\n\r]\*subw\t" } } */
++/* { dg-final { scan-assembler "lock\[^\n\r]\*subb\t" } } */
++/* { dg-final { scan-assembler-not "lock\[^\n\r]\*xadd" } } */
++/* { dg-final { scan-assembler-not "lock\[^\n\r]\*cmpxchg" } } */
++
++long a;
++int b;
++short c;
++char d;
++
++int
++f1 (long x)
++{
++  return __atomic_sub_fetch (&a, x, __ATOMIC_RELEASE) == 0;
++}
++
++int
++f2 (int x)
++{
++  return __atomic_sub_fetch (&b, x, __ATOMIC_RELEASE) == 0;
++}
++
++int
++f3 (short x)
++{
++  return __atomic_sub_fetch (&c, x, __ATOMIC_RELEASE) == 0;
++}
++
++int
++f4 (char x)
++{
++  return __atomic_sub_fetch (&d, x, __ATOMIC_RELEASE) == 0;
++}
++
++int
++f5 (long x)
++{
++  return __atomic_sub_fetch (&a, x, __ATOMIC_RELEASE) != 0;
++}
++
++int
++f6 (int x)
++{
++  return __atomic_sub_fetch (&b, x, __ATOMIC_RELEASE) != 0;
++}
++
++int
++f7 (short x)
++{
++  return __atomic_sub_fetch (&c, x, __ATOMIC_RELEASE) != 0;
++}
++
++int
++f8 (char x)
++{
++  return __atomic_sub_fetch (&d, x, __ATOMIC_RELEASE) != 0;
++}
++
++int
++f9 (long x)
++{
++  return __atomic_sub_fetch (&a, x, __ATOMIC_RELEASE) < 0;
++}
++
++int
++f10 (int x)
++{
++  return __atomic_sub_fetch (&b, x, __ATOMIC_RELEASE) < 0;
++}
++
++int
++f11 (short x)
++{
++  return __atomic_sub_fetch (&c, x, __ATOMIC_RELEASE) < 0;
++}
++
++int
++f12 (char x)
++{
++  return __atomic_sub_fetch (&d, x, __ATOMIC_RELEASE) < 0;
++}
++
++int
++f13 (long x)
++{
++  return __atomic_sub_fetch (&a, x, __ATOMIC_RELEASE) >= 0;
++}
++
++int
++f14 (int x)
++{
++  return __atomic_sub_fetch (&b, x, __ATOMIC_RELEASE) >= 0;
++}
++
++int
++f15 (short x)
++{
++  return __atomic_sub_fetch (&c, x, __ATOMIC_RELEASE) >= 0;
++}
++
++int
++f16 (char x)
++{
++  return __atomic_sub_fetch (&d, x, __ATOMIC_RELEASE) >= 0;
++}
++
++int
++f17 (long x)
++{
++  return __sync_sub_and_fetch (&a, x) == 0;
++}
++
++int
++f18 (int x)
++{
++  return __sync_sub_and_fetch (&b, x) == 0;
++}
++
++int
++f19 (short x)
++{
++  return __sync_sub_and_fetch (&c, x) == 0;
++}
++
++int
++f20 (char x)
++{
++  return __sync_sub_and_fetch (&d, x) == 0;
++}
++
++int
++f21 (long x)
++{
++  return __sync_sub_and_fetch (&a, x) != 0;
++}
++
++int
++f22 (int x)
++{
++  return __sync_sub_and_fetch (&b, x) != 0;
++}
++
++int
++f23 (short x)
++{
++  return __sync_sub_and_fetch (&c, x) != 0;
++}
++
++int
++f24 (char x)
++{
++  return __sync_sub_and_fetch (&d, x) != 0;
++}
++
++int
++f25 (long x)
++{
++  return __sync_sub_and_fetch (&a, x) < 0;
++}
++
++int
++f26 (int x)
++{
++  return __sync_sub_and_fetch (&b, x) < 0;
++}
++
++int
++f27 (short x)
++{
++  return __sync_sub_and_fetch (&c, x) < 0;
++}
++
++int
++f28 (char x)
++{
++  return __sync_sub_and_fetch (&d, x) < 0;
++}
++
++int
++f29 (long x)
++{
++  return __sync_sub_and_fetch (&a, x) >= 0;
++}
++
++int
++f30 (int x)
++{
++  return __sync_sub_and_fetch (&b, x) >= 0;
++}
++
++int
++f31 (short x)
++{
++  return __sync_sub_and_fetch (&c, x) >= 0;
++}
++
++int
++f32 (char x)
++{
++  return __sync_sub_and_fetch (&d, x) >= 0;
++}
+diff --git a/gcc/testsuite/gcc.target/i386/pr98737-2.c b/gcc/testsuite/gcc.target/i386/pr98737-2.c
+new file mode 100644
+index 00000000000..53b674e90f5
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr98737-2.c
+@@ -0,0 +1,111 @@
++/* PR target/98737 */
++/* { dg-do compile } */
++/* { dg-options "-O2 -masm=att" } */
++/* { dg-additional-options "-march=i686" { target ia32 } } */
++/* { dg-final { scan-assembler-not "lock\[^\n\r]\*subq\t" } } */
++/* { dg-final { scan-assembler-not "lock\[^\n\r]\*subl\t" } } */
++/* { dg-final { scan-assembler-not "lock\[^\n\r]\*subw\t" } } */
++/* { dg-final { scan-assembler-not "lock\[^\n\r]\*subb\t" } } */
++/* { dg-final { scan-assembler "lock\[^\n\r]\*xadd" } } */
++/* { dg-final { scan-assembler-not "lock\[^\n\r]\*cmpxchg" } } */
++
++long a;
++int b;
++short c;
++char d;
++
++int
++f1 (long x)
++{
++  return __atomic_sub_fetch (&a, x, __ATOMIC_RELEASE) <= 0;
++}
++
++int
++f2 (int x)
++{
++  return __atomic_sub_fetch (&b, x, __ATOMIC_RELEASE) <= 0;
++}
++
++int
++f3 (short x)
++{
++  return __atomic_sub_fetch (&c, x, __ATOMIC_RELEASE) <= 0;
++}
++
++int
++f4 (char x)
++{
++  return __atomic_sub_fetch (&d, x, __ATOMIC_RELEASE) <= 0;
++}
++
++int
++f5 (long x)
++{
++  return __atomic_sub_fetch (&a, x, __ATOMIC_RELEASE) > 0;
++}
++
++int
++f6 (int x)
++{
++  return __atomic_sub_fetch (&b, x, __ATOMIC_RELEASE) > 0;
++}
++
++int
++f7 (short x)
++{
++  return __atomic_sub_fetch (&c, x, __ATOMIC_RELEASE) > 0;
++}
++
++int
++f8 (char x)
++{
++  return __atomic_sub_fetch (&d, x, __ATOMIC_RELEASE) > 0;
++}
++
++int
++f9 (long x)
++{
++  return __sync_sub_and_fetch (&a, x) <= 0;
++}
++
++int
++f10 (int x)
++{
++  return __sync_sub_and_fetch (&b, x) <= 0;
++}
++
++int
++f11 (short x)
++{
++  return __sync_sub_and_fetch (&c, x) <= 0;
++}
++
++int
++f12 (char x)
++{
++  return __sync_sub_and_fetch (&d, x) <= 0;
++}
++
++int
++f13 (long x)
++{
++  return __sync_sub_and_fetch (&a, x) > 0;
++}
++
++int
++f14 (int x)
++{
++  return __sync_sub_and_fetch (&b, x) > 0;
++}
++
++int
++f15 (short x)
++{
++  return __sync_sub_and_fetch (&c, x) > 0;
++}
++
++int
++f16 (char x)
++{
++  return __sync_sub_and_fetch (&d, x) > 0;
++}
+diff --git a/gcc/testsuite/gcc.target/i386/pr98737-3.c b/gcc/testsuite/gcc.target/i386/pr98737-3.c
+new file mode 100644
+index 00000000000..0e7108ac5fb
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr98737-3.c
+@@ -0,0 +1,207 @@
++/* PR target/98737 */
++/* { dg-do compile } */
++/* { dg-options "-O2 -masm=att" } */
++/* { dg-additional-options "-march=i686" { target ia32 } } */
++/* { dg-final { scan-assembler "lock\[^\n\r]\*addq\t" { target lp64 } } } */
++/* { dg-final { scan-assembler "lock\[^\n\r]\*addl\t" } } */
++/* { dg-final { scan-assembler "lock\[^\n\r]\*addw\t" } } */
++/* { dg-final { scan-assembler "lock\[^\n\r]\*addb\t" } } */
++/* { dg-final { scan-assembler-not "lock\[^\n\r]\*xadd" } } */
++/* { dg-final { scan-assembler-not "lock\[^\n\r]\*cmpxchg" } } */
++
++long a;
++int b;
++short c;
++char d;
++
++int
++f1 (long x)
++{
++  return __atomic_add_fetch (&a, x, __ATOMIC_RELEASE) == 0;
++}
++
++int
++f2 (int x)
++{
++  return __atomic_add_fetch (&b, x, __ATOMIC_RELEASE) == 0;
++}
++
++int
++f3 (short x)
++{
++  return __atomic_add_fetch (&c, x, __ATOMIC_RELEASE) == 0;
++}
++
++int
++f4 (char x)
++{
++  return __atomic_add_fetch (&d, x, __ATOMIC_RELEASE) == 0;
++}
++
++int
++f5 (long x)
++{
++  return __atomic_add_fetch (&a, x, __ATOMIC_RELEASE) != 0;
++}
++
++int
++f6 (int x)
++{
++  return __atomic_add_fetch (&b, x, __ATOMIC_RELEASE) != 0;
++}
++
++int
++f7 (short x)
++{
++  return __atomic_add_fetch (&c, x, __ATOMIC_RELEASE) != 0;
++}
++
++int
++f8 (char x)
++{
++  return __atomic_add_fetch (&d, x, __ATOMIC_RELEASE) != 0;
++}
++
++int
++f9 (long x)
++{
++  return __atomic_add_fetch (&a, x, __ATOMIC_RELEASE) < 0;
++}
++
++int
++f10 (int x)
++{
++  return __atomic_add_fetch (&b, x, __ATOMIC_RELEASE) < 0;
++}
++
++int
++f11 (short x)
++{
++  return __atomic_add_fetch (&c, x, __ATOMIC_RELEASE) < 0;
++}
++
++int
++f12 (char x)
++{
++  return __atomic_add_fetch (&d, x, __ATOMIC_RELEASE) < 0;
++}
++
++int
++f13 (long x)
++{
++  return __atomic_add_fetch (&a, x, __ATOMIC_RELEASE) >= 0;
++}
++
++int
++f14 (int x)
++{
++  return __atomic_add_fetch (&b, x, __ATOMIC_RELEASE) >= 0;
++}
++
++int
++f15 (short x)
++{
++  return __atomic_add_fetch (&c, x, __ATOMIC_RELEASE) >= 0;
++}
++
++int
++f16 (char x)
++{
++  return __atomic_add_fetch (&d, x, __ATOMIC_RELEASE) >= 0;
++}
++
++int
++f17 (long x)
++{
++  return __sync_add_and_fetch (&a, x) == 0;
++}
++
++int
++f18 (int x)
++{
++  return __sync_add_and_fetch (&b, x) == 0;
++}
++
++int
++f19 (short x)
++{
++  return __sync_add_and_fetch (&c, x) == 0;
++}
++
++int
++f20 (char x)
++{
++  return __sync_add_and_fetch (&d, x) == 0;
++}
++
++int
++f21 (long x)
++{
++  return __sync_add_and_fetch (&a, x) != 0;
++}
++
++int
++f22 (int x)
++{
++  return __sync_add_and_fetch (&b, x) != 0;
++}
++
++int
++f23 (short x)
++{
++  return __sync_add_and_fetch (&c, x) != 0;
++}
++
++int
++f24 (char x)
++{
++  return __sync_add_and_fetch (&d, x) != 0;
++}
++
++int
++f25 (long x)
++{
++  return __sync_add_and_fetch (&a, x) < 0;
++}
++
++int
++f26 (int x)
++{
++  return __sync_add_and_fetch (&b, x) < 0;
++}
++
++int
++f27 (short x)
++{
++  return __sync_add_and_fetch (&c, x) < 0;
++}
++
++int
++f28 (char x)
++{
++  return __sync_add_and_fetch (&d, x) < 0;
++}
++
++int
++f29 (long x)
++{
++  return __sync_add_and_fetch (&a, x) >= 0;
++}
++
++int
++f30 (int x)
++{
++  return __sync_add_and_fetch (&b, x) >= 0;
++}
++
++int
++f31 (short x)
++{
++  return __sync_add_and_fetch (&c, x) >= 0;
++}
++
++int
++f32 (char x)
++{
++  return __sync_add_and_fetch (&d, x) >= 0;
++}
+diff --git a/gcc/testsuite/gcc.target/i386/pr98737-4.c b/gcc/testsuite/gcc.target/i386/pr98737-4.c
+new file mode 100644
+index 00000000000..8228d527d2b
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr98737-4.c
+@@ -0,0 +1,111 @@
++/* PR target/98737 */
++/* { dg-do compile } */
++/* { dg-options "-O2 -masm=att" } */
++/* { dg-additional-options "-march=i686" { target ia32 } } */
++/* { dg-final { scan-assembler-not "lock\[^\n\rx]\*addq\t" } } */
++/* { dg-final { scan-assembler-not "lock\[^\n\rx]\*addl\t" } } */
++/* { dg-final { scan-assembler-not "lock\[^\n\rx]\*addw\t" } } */
++/* { dg-final { scan-assembler-not "lock\[^\n\rx]\*addb\t" } } */
++/* { dg-final { scan-assembler "lock\[^\n\r]\*xadd" } } */
++/* { dg-final { scan-assembler-not "lock\[^\n\r]\*cmpxchg" } } */
++
++long a;
++int b;
++short c;
++char d;
++
++int
++f1 (long x)
++{
++  return __atomic_add_fetch (&a, x, __ATOMIC_RELEASE) <= 0;
++}
++
++int
++f2 (int x)
++{
++  return __atomic_add_fetch (&b, x, __ATOMIC_RELEASE) <= 0;
++}
++
++int
++f3 (short x)
++{
++  return __atomic_add_fetch (&c, x, __ATOMIC_RELEASE) <= 0;
++}
++
++int
++f4 (char x)
++{
++  return __atomic_add_fetch (&d, x, __ATOMIC_RELEASE) <= 0;
++}
++
++int
++f5 (long x)
++{
++  return __atomic_add_fetch (&a, x, __ATOMIC_RELEASE) > 0;
++}
++
++int
++f6 (int x)
++{
++  return __atomic_add_fetch (&b, x, __ATOMIC_RELEASE) > 0;
++}
++
++int
++f7 (short x)
++{
++  return __atomic_add_fetch (&c, x, __ATOMIC_RELEASE) > 0;
++}
++
++int
++f8 (char x)
++{
++  return __atomic_add_fetch (&d, x, __ATOMIC_RELEASE) > 0;
++}
++
++int
++f9 (long x)
++{
++  return __sync_add_and_fetch (&a, x) <= 0;
++}
++
++int
++f10 (int x)
++{
++  return __sync_add_and_fetch (&b, x) <= 0;
++}
++
++int
++f11 (short x)
++{
++  return __sync_add_and_fetch (&c, x) <= 0;
++}
++
++int
++f12 (char x)
++{
++  return __sync_add_and_fetch (&d, x) <= 0;
++}
++
++int
++f13 (long x)
++{
++  return __sync_add_and_fetch (&a, x) > 0;
++}
++
++int
++f14 (int x)
++{
++  return __sync_add_and_fetch (&b, x) > 0;
++}
++
++int
++f15 (short x)
++{
++  return __sync_add_and_fetch (&c, x) > 0;
++}
++
++int
++f16 (char x)
++{
++  return __sync_add_and_fetch (&d, x) > 0;
++}
+diff --git a/gcc/testsuite/gcc.target/i386/pr98737-5.c b/gcc/testsuite/gcc.target/i386/pr98737-5.c
+new file mode 100644
+index 00000000000..6d3e0638590
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr98737-5.c
+@@ -0,0 +1,303 @@
++/* PR target/98737 */
++/* { dg-do compile } */
++/* { dg-options "-O2 -masm=att" } */
++/* { dg-additional-options "-march=i686" { target ia32 } } */
++/* { dg-final { scan-assembler "lock\[^\n\r]\*andq\t" { target lp64 } } } */
++/* { dg-final { scan-assembler "lock\[^\n\r]\*andl\t" } } */
++/* { dg-final { scan-assembler "lock\[^\n\r]\*andw\t" } } */
++/* { dg-final { scan-assembler "lock\[^\n\r]\*andb\t" } } */
++/* { dg-final { scan-assembler-not "lock\[^\n\r]\*xadd" } } */
++/* { dg-final { scan-assembler-not "lock\[^\n\r]\*cmpxchg" } } */
++
++long a;
++int b;
++short c;
++char d;
++
++int
++f1 (long x)
++{
++  return __atomic_and_fetch (&a, x, __ATOMIC_RELEASE) == 0;
++}
++
++int
++f2 (int x)
++{
++  return __atomic_and_fetch (&b, x, __ATOMIC_RELEASE) == 0;
++}
++
++int
++f3 (short x)
++{
++  return __atomic_and_fetch (&c, x, __ATOMIC_RELEASE) == 0;
++}
++
++int
++f4 (char x)
++{
++  return __atomic_and_fetch (&d, x, __ATOMIC_RELEASE) == 0;
++}
++
++int
++f5 (long x)
++{
++  return __atomic_and_fetch (&a, x, __ATOMIC_RELEASE) != 0;
++}
++
++int
++f6 (int x)
++{
++  return __atomic_and_fetch (&b, x, __ATOMIC_RELEASE) != 0;
++}
++
++int
++f7 (short x)
++{
++  return __atomic_and_fetch (&c, x, __ATOMIC_RELEASE) != 0;
++}
++
++int
++f8 (char x)
++{
++  return __atomic_and_fetch (&d, x, __ATOMIC_RELEASE) != 0;
++}
++
++int
++f9 (long x)
++{
++  return __atomic_and_fetch (&a, x, __ATOMIC_RELEASE) < 0;
++}
++
++int
++f10 (int x)
++{
++  return __atomic_and_fetch (&b, x, __ATOMIC_RELEASE) < 0;
++}
++
++int
++f11 (short x)
++{
++  return __atomic_and_fetch (&c, x, __ATOMIC_RELEASE) < 0;
++}
++
++int
++f12 (char x)
++{
++  return __atomic_and_fetch (&d, x, __ATOMIC_RELEASE) < 0;
++}
++
++int
++f13 (long x)
++{
++  return __atomic_and_fetch (&a, x, __ATOMIC_RELEASE) >= 0;
++}
++
++int
++f14 (int x)
++{
++  return __atomic_and_fetch (&b, x, __ATOMIC_RELEASE) >= 0;
++}
++
++int
++f15 (short x)
++{
++  return __atomic_and_fetch (&c, x, __ATOMIC_RELEASE) >= 0;
++}
++
++int
++f16 (char x)
++{
++  return __atomic_and_fetch (&d, x, __ATOMIC_RELEASE) >= 0;
++}
++
++int
++f17 (long x)
++{
++  return __sync_and_and_fetch (&a, x) == 0;
++}
++
++int
++f18 (int x)
++{
++  return __sync_and_and_fetch (&b, x) == 0;
++}
++
++int
++f19 (short x)
++{
++  return __sync_and_and_fetch (&c, x) == 0;
++}
++
++int
++f20 (char x)
++{
++  return __sync_and_and_fetch (&d, x) == 0;
++}
++
++int
++f21 (long x)
++{
++  return __sync_and_and_fetch (&a, x) != 0;
++}
++
++int
++f22 (int x)
++{
++  return __sync_and_and_fetch (&b, x) != 0;
++}
++
++int
++f23 (short x)
++{
++  return __sync_and_and_fetch (&c, x) != 0;
++}
++
++int
++f24 (char x)
++{
++  return __sync_and_and_fetch (&d, x) != 0;
++}
++
++int
++f25 (long x)
++{
++  return __sync_and_and_fetch (&a, x) < 0;
++}
++
++int
++f26 (int x)
++{
++  return __sync_and_and_fetch (&b, x) < 0;
++}
++
++int
++f27 (short x)
++{
++  return __sync_and_and_fetch (&c, x) < 0;
++}
++
++int
++f28 (char x)
++{
++  return __sync_and_and_fetch (&d, x) < 0;
++}
++
++int
++f29 (long x)
++{
++  return __sync_and_and_fetch (&a, x) >= 0;
++}
++
++int
++f30 (int x)
++{
++  return __sync_and_and_fetch (&b, x) >= 0;
++}
++
++int
++f31 (short x)
++{
++  return __sync_and_and_fetch (&c, x) >= 0;
++}
++
++int
++f32 (char x)
++{
++  return __sync_and_and_fetch (&d, x) >= 0;
++}
++
++int
++f33 (long x)
++{
++  return __atomic_and_fetch (&a, x, __ATOMIC_RELEASE) <= 0;
++}
++
++int
++f34 (int x)
++{
++  return __atomic_and_fetch (&b, x, __ATOMIC_RELEASE) <= 0;
++}
++
++int
++f35 (short x)
++{
++  return __atomic_and_fetch (&c, x, __ATOMIC_RELEASE) <= 0;
++}
++
++int
++f36 (char x)
++{
++  return __atomic_and_fetch (&d, x, __ATOMIC_RELEASE) <= 0;
++}
++
++int
++f37 (long x)
++{
++  return __atomic_and_fetch (&a, x, __ATOMIC_RELEASE) > 0;
++}
++
++int
++f38 (int x)
++{
++  return __atomic_and_fetch (&b, x, __ATOMIC_RELEASE) > 0;
++}
++
++int
++f39 (short x)
++{
++  return __atomic_and_fetch (&c, x, __ATOMIC_RELEASE) > 0;
++}
++
++int
++f40 (char x)
++{
++  return __atomic_and_fetch (&d, x, __ATOMIC_RELEASE) > 0;
++}
++
++int
++f41 (long x)
++{
++  return __sync_and_and_fetch (&a, x) <= 0;
++}
++
++int
++f42 (int x)
++{
++  return __sync_and_and_fetch (&b, x) <= 0;
++}
++
++int
++f43 (short x)
++{
++  return __sync_and_and_fetch (&c, x) <= 0;
++}
++
++int
++f44 (char x)
++{
++  return __sync_and_and_fetch (&d, x) <= 0;
++}
++
++int
++f45 (long x)
++{
++  return __sync_and_and_fetch (&a, x) > 0;
++}
++
++int
++f46 (int x)
++{
++  return __sync_and_and_fetch (&b, x) > 0;
++}
++
++int
++f47 (short x)
++{
++  return __sync_and_and_fetch (&c, x) > 0;
++}
++
++int
++f48 (char x)
++{
++  return __sync_and_and_fetch (&d, x) > 0;
++}
+diff --git a/gcc/testsuite/gcc.target/i386/pr98737-6.c b/gcc/testsuite/gcc.target/i386/pr98737-6.c
+new file mode 100644
+index 00000000000..6cc1c3ae17f
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr98737-6.c
+@@ -0,0 +1,303 @@
++/* PR target/98737 */
++/* { dg-do compile } */
++/* { dg-options "-O2 -masm=att" } */
++/* { dg-additional-options "-march=i686" { target ia32 } } */
++/* { dg-final { scan-assembler "lock\[^\n\r]\*orq\t" { target lp64 } } } */
++/* { dg-final { scan-assembler "lock\[^\n\r]\*orl\t" } } */
++/* { dg-final { scan-assembler "lock\[^\n\r]\*orw\t" } } */
++/* { dg-final { scan-assembler "lock\[^\n\r]\*orb\t" } } */
++/* { dg-final { scan-assembler-not "lock\[^\n\r]\*xadd" } } */
++/* { dg-final { scan-assembler-not "lock\[^\n\r]\*cmpxchg" } } */
++
++long a;
++int b;
++short c;
++char d;
++
++int
++f1 (long x)
++{
++  return __atomic_or_fetch (&a, x, __ATOMIC_RELEASE) == 0;
++}
++
++int
++f2 (int x)
++{
++  return __atomic_or_fetch (&b, x, __ATOMIC_RELEASE) == 0;
++}
++
++int
++f3 (short x)
++{
++  return __atomic_or_fetch (&c, x, __ATOMIC_RELEASE) == 0;
++}
++
++int
++f4 (char x)
++{
++  return __atomic_or_fetch (&d, x, __ATOMIC_RELEASE) == 0;
++}
++
++int
++f5 (long x)
++{
++  return __atomic_or_fetch (&a, x, __ATOMIC_RELEASE) != 0;
++}
++
++int
++f6 (int x)
++{
++  return __atomic_or_fetch (&b, x, __ATOMIC_RELEASE) != 0;
++}
++
++int
++f7 (short x)
++{
++  return __atomic_or_fetch (&c, x, __ATOMIC_RELEASE) != 0;
++}
++
++int
++f8 (char x)
++{
++  return __atomic_or_fetch (&d, x, __ATOMIC_RELEASE) != 0;
++}
++
++int
++f9 (long x)
++{
++  return __atomic_or_fetch (&a, x, __ATOMIC_RELEASE) < 0;
++}
++
++int
++f10 (int x)
++{
++  return __atomic_or_fetch (&b, x, __ATOMIC_RELEASE) < 0;
++}
++
++int
++f11 (short x)
++{
++  return __atomic_or_fetch (&c, x, __ATOMIC_RELEASE) < 0;
++}
++
++int
++f12 (char x)
++{
++  return __atomic_or_fetch (&d, x, __ATOMIC_RELEASE) < 0;
++}
++
++int
++f13 (long x)
++{
++  return __atomic_or_fetch (&a, x, __ATOMIC_RELEASE) >= 0;
++}
++
++int
++f14 (int x)
++{
++  return __atomic_or_fetch (&b, x, __ATOMIC_RELEASE) >= 0;
++}
++
++int
++f15 (short x)
++{
++  return __atomic_or_fetch (&c, x, __ATOMIC_RELEASE) >= 0;
++}
++
++int
++f16 (char x)
++{
++  return __atomic_or_fetch (&d, x, __ATOMIC_RELEASE) >= 0;
++}
++
++int
++f17 (long x)
++{
++  return __sync_or_and_fetch (&a, x) == 0;
++}
++
++int
++f18 (int x)
++{
++  return __sync_or_and_fetch (&b, x) == 0;
++}
++
++int
++f19 (short x)
++{
++  return __sync_or_and_fetch (&c, x) == 0;
++}
++
++int
++f20 (char x)
++{
++  return __sync_or_and_fetch (&d, x) == 0;
++}
++
++int
++f21 (long x)
++{
++  return __sync_or_and_fetch (&a, x) != 0;
++}
++
++int
++f22 (int x)
++{
++  return __sync_or_and_fetch (&b, x) != 0;
++}
++
++int
++f23 (short x)
++{
++  return __sync_or_and_fetch (&c, x) != 0;
++}
++
++int
++f24 (char x)
++{
++  return __sync_or_and_fetch (&d, x) != 0;
++}
++
++int
++f25 (long x)
++{
++  return __sync_or_and_fetch (&a, x) < 0;
++}
++
++int
++f26 (int x)
++{
++  return __sync_or_and_fetch (&b, x) < 0;
++}
++
++int
++f27 (short x)
++{
++  return __sync_or_and_fetch (&c, x) < 0;
++}
++
++int
++f28 (char x)
++{
++  return __sync_or_and_fetch (&d, x) < 0;
++}
++
++int
++f29 (long x)
++{
++  return __sync_or_and_fetch (&a, x) >= 0;
++}
++
++int
++f30 (int x)
++{
++  return __sync_or_and_fetch (&b, x) >= 0;
++}
++
++int
++f31 (short x)
++{
++  return __sync_or_and_fetch (&c, x) >= 0;
++}
++
++int
++f32 (char x)
++{
++  return __sync_or_and_fetch (&d, x) >= 0;
++}
++
++int
++f33 (long x)
++{
++  return __atomic_or_fetch (&a, x, __ATOMIC_RELEASE) <= 0;
++}
++
++int
++f34 (int x)
++{
++  return __atomic_or_fetch (&b, x, __ATOMIC_RELEASE) <= 0;
++}
++
++int
++f35 (short x)
++{
++  return __atomic_or_fetch (&c, x, __ATOMIC_RELEASE) <= 0;
++}
++
++int
++f36 (char x)
++{
++  return __atomic_or_fetch (&d, x, __ATOMIC_RELEASE) <= 0;
++}
++
++int
++f37 (long x)
++{
++  return __atomic_or_fetch (&a, x, __ATOMIC_RELEASE) > 0;
++}
++
++int
++f38 (int x)
++{
++  return __atomic_or_fetch (&b, x, __ATOMIC_RELEASE) > 0;
++}
++
++int
++f39 (short x)
++{
++  return __atomic_or_fetch (&c, x, __ATOMIC_RELEASE) > 0;
++}
++
++int
++f40 (char x)
++{
++  return __atomic_or_fetch (&d, x, __ATOMIC_RELEASE) > 0;
++}
++
++int
++f41 (long x)
++{
++  return __sync_or_and_fetch (&a, x) <= 0;
++}
++
++int
++f42 (int x)
++{
++  return __sync_or_and_fetch (&b, x) <= 0;
++}
++
++int
++f43 (short x)
++{
++  return __sync_or_and_fetch (&c, x) <= 0;
++}
++
++int
++f44 (char x)
++{
++  return __sync_or_and_fetch (&d, x) <= 0;
++}
++
++int
++f45 (long x)
++{
++  return __sync_or_and_fetch (&a, x) > 0;
++}
++
++int
++f46 (int x)
++{
++  return __sync_or_and_fetch (&b, x) > 0;
++}
++
++int
++f47 (short x)
++{
++  return __sync_or_and_fetch (&c, x) > 0;
++}
++
++int
++f48 (char x)
++{
++  return __sync_or_and_fetch (&d, x) > 0;
++}
+diff --git a/gcc/testsuite/gcc.target/i386/pr98737-7.c b/gcc/testsuite/gcc.target/i386/pr98737-7.c
+new file mode 100644
+index 00000000000..2da23c44650
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr98737-7.c
+@@ -0,0 +1,303 @@
++/* PR target/98737 */
++/* { dg-do compile } */
++/* { dg-options "-O2 -masm=att" } */
++/* { dg-additional-options "-march=i686" { target ia32 } } */
++/* { dg-final { scan-assembler "lock\[^\n\r]\*xorq\t" { target lp64 } } } */
++/* { dg-final { scan-assembler "lock\[^\n\r]\*xorl\t" } } */
++/* { dg-final { scan-assembler "lock\[^\n\r]\*xorw\t" } } */
++/* { dg-final { scan-assembler "lock\[^\n\r]\*xorb\t" } } */
++/* { dg-final { scan-assembler-not "lock\[^\n\r]\*xadd" } } */
++/* { dg-final { scan-assembler-not "lock\[^\n\r]\*cmpxchg" } } */
++
++long a;
++int b;
++short c;
++char d;
++
++int
++f1 (long x)
++{
++  return __atomic_xor_fetch (&a, x, __ATOMIC_RELEASE) == 0;
++}
++
++int
++f2 (int x)
++{
++  return __atomic_xor_fetch (&b, x, __ATOMIC_RELEASE) == 0;
++}
++
++int
++f3 (short x)
++{
++  return __atomic_xor_fetch (&c, x, __ATOMIC_RELEASE) == 0;
++}
++
++int
++f4 (char x)
++{
++  return __atomic_xor_fetch (&d, x, __ATOMIC_RELEASE) == 0;
++}
++
++int
++f5 (long x)
++{
++  return __atomic_xor_fetch (&a, x, __ATOMIC_RELEASE) != 0;
++}
++
++int
++f6 (int x)
++{
++  return __atomic_xor_fetch (&b, x, __ATOMIC_RELEASE) != 0;
++}
++
++int
++f7 (short x)
++{
++  return __atomic_xor_fetch (&c, x, __ATOMIC_RELEASE) != 0;
++}
++
++int
++f8 (char x)
++{
++  return __atomic_xor_fetch (&d, x, __ATOMIC_RELEASE) != 0;
++}
++
++int
++f9 (long x)
++{
++  return __atomic_xor_fetch (&a, x, __ATOMIC_RELEASE) < 0;
++}
++
++int
++f10 (int x)
++{
++  return __atomic_xor_fetch (&b, x, __ATOMIC_RELEASE) < 0;
++}
++
++int
++f11 (short x)
++{
++  return __atomic_xor_fetch (&c, x, __ATOMIC_RELEASE) < 0;
++}
++
++int
++f12 (char x)
++{
++  return __atomic_xor_fetch (&d, x, __ATOMIC_RELEASE) < 0;
++}
++
++int
++f13 (long x)
++{
++  return __atomic_xor_fetch (&a, x, __ATOMIC_RELEASE) >= 0;
++}
++
++int
++f14 (int x)
++{
++  return __atomic_xor_fetch (&b, x, __ATOMIC_RELEASE) >= 0;
++}
++
++int
++f15 (short x)
++{
++  return __atomic_xor_fetch (&c, x, __ATOMIC_RELEASE) >= 0;
++}
++
++int
++f16 (char x)
++{
++  return __atomic_xor_fetch (&d, x, __ATOMIC_RELEASE) >= 0;
++}
++
++int
++f17 (long x)
++{
++  return __sync_xor_and_fetch (&a, x) == 0;
++}
++
++int
++f18 (int x)
++{
++  return __sync_xor_and_fetch (&b, x) == 0;
++}
++
++int
++f19 (short x)
++{
++  return __sync_xor_and_fetch (&c, x) == 0;
++}
++
++int
++f20 (char x)
++{
++  return __sync_xor_and_fetch (&d, x) == 0;
++}
++
++int
++f21 (long x)
++{
++  return __sync_xor_and_fetch (&a, x) != 0;
++}
++
++int
++f22 (int x)
++{
++  return __sync_xor_and_fetch (&b, x) != 0;
++}
++
++int
++f23 (short x)
++{
++  return __sync_xor_and_fetch (&c, x) != 0;
++}
++
++int
++f24 (char x)
++{
++  return __sync_xor_and_fetch (&d, x) != 0;
++}
++
++int
++f25 (long x)
++{
++  return __sync_xor_and_fetch (&a, x) < 0;
++}
++
++int
++f26 (int x)
++{
++  return __sync_xor_and_fetch (&b, x) < 0;
++}
++
++int
++f27 (short x)
++{
++  return __sync_xor_and_fetch (&c, x) < 0;
++}
++
++int
++f28 (char x)
++{
++  return __sync_xor_and_fetch (&d, x) < 0;
++}
++
++int
++f29 (long x)
++{
++  return __sync_xor_and_fetch (&a, x) >= 0;
++}
++
++int
++f30 (int x)
++{
++  return __sync_xor_and_fetch (&b, x) >= 0;
++}
++
++int
++f31 (short x)
++{
++  return __sync_xor_and_fetch (&c, x) >= 0;
++}
++
++int
++f32 (char x)
++{
++  return __sync_xor_and_fetch (&d, x) >= 0;
++}
++
++int
++f33 (long x)
++{
++  return __atomic_xor_fetch (&a, x, __ATOMIC_RELEASE) <= 0;
++}
++
++int
++f34 (int x)
++{
++  return __atomic_xor_fetch (&b, x, __ATOMIC_RELEASE) <= 0;
++}
++
++int
++f35 (short x)
++{
++  return __atomic_xor_fetch (&c, x, __ATOMIC_RELEASE) <= 0;
++}
++
++int
++f36 (char x)
++{
++  return __atomic_xor_fetch (&d, x, __ATOMIC_RELEASE) <= 0;
++}
++
++int
++f37 (long x)
++{
++  return __atomic_xor_fetch (&a, x, __ATOMIC_RELEASE) > 0;
++}
++
++int
++f38 (int x)
++{
++  return __atomic_xor_fetch (&b, x, __ATOMIC_RELEASE) > 0;
++}
++
++int
++f39 (short x)
++{
++  return __atomic_xor_fetch (&c, x, __ATOMIC_RELEASE) > 0;
++}
++
++int
++f40 (char x)
++{
++  return __atomic_xor_fetch (&d, x, __ATOMIC_RELEASE) > 0;
++}
++
++int
++f41 (long x)
++{
++  return __sync_xor_and_fetch (&a, x) <= 0;
++}
++
++int
++f42 (int x)
++{
++  return __sync_xor_and_fetch (&b, x) <= 0;
++}
++
++int
++f43 (short x)
++{
++  return __sync_xor_and_fetch (&c, x) <= 0;
++}
++
++int
++f44 (char x)
++{
++  return __sync_xor_and_fetch (&d, x) <= 0;
++}
++
++int
++f45 (long x)
++{
++  return __sync_xor_and_fetch (&a, x) > 0;
++}
++
++int
++f46 (int x)
++{
++  return __sync_xor_and_fetch (&b, x) > 0;
++}
++
++int
++f47 (short x)
++{
++  return __sync_xor_and_fetch (&c, x) > 0;
++}
++
++int
++f48 (char x)
++{
++  return __sync_xor_and_fetch (&d, x) > 0;
++}
 diff --git a/gcc/testsuite/gcc.target/i386/sse-covert-1.c b/gcc/testsuite/gcc.target/i386/sse-covert-1.c
 new file mode 100644
 index 00000000000..c30af694505
@@ -10887,10 +12870,18 @@ index 00000000000..f2e2054b6fb
 +
 +#include "xorsign.c"
 diff --git a/gcc/tree-ssa-ccp.c b/gcc/tree-ssa-ccp.c
-index aad8526eb21..d03a8d54b46 100644
+index aad8526eb21..93fbb34bb94 100644
 --- a/gcc/tree-ssa-ccp.c
 +++ b/gcc/tree-ssa-ccp.c
-@@ -2862,6 +2862,91 @@ optimize_unreachable (gimple_stmt_iterator i)
+@@ -151,6 +151,7 @@ along with GCC; see the file COPYING3.  If not see
+ #include "symbol-summary.h"
+ #include "ipa-utils.h"
+ #include "ipa-prop.h"
++#include "internal-fn.h"
+ 
+ /* Possible lattice values.  */
+ typedef enum
+@@ -2862,12 +2863,97 @@ optimize_unreachable (gimple_stmt_iterator i)
    return ret;
  }
  
@@ -10982,7 +12973,23 @@ index aad8526eb21..d03a8d54b46 100644
  /* Optimize
       mask_2 = 1 << cnt_1;
       _4 = __atomic_fetch_or_* (ptr_6, mask_2, _3);
-@@ -2888,7 +2973,7 @@ optimize_atomic_bit_test_and (gimple_stmt_iterator *gsip,
+      _5 = _4 & mask_2;
+    to
+-     _4 = ATOMIC_BIT_TEST_AND_SET (ptr_6, cnt_1, 0, _3);
++     _4 = .ATOMIC_BIT_TEST_AND_SET (ptr_6, cnt_1, 0, _3);
+      _5 = _4;
+    If _5 is only used in _5 != 0 or _5 == 0 comparisons, 1
+    is passed instead of 0, and the builtin just returns a zero
+@@ -2879,7 +2965,7 @@ optimize_unreachable (gimple_stmt_iterator i)
+    the second argument to the builtin needs to be one's complement
+    of the mask instead of mask.  */
+ 
+-static void
++static bool
+ optimize_atomic_bit_test_and (gimple_stmt_iterator *gsip,
+ 			      enum internal_fn fn, bool has_model_arg,
+ 			      bool after)
+@@ -2888,7 +2974,7 @@ optimize_atomic_bit_test_and (gimple_stmt_iterator *gsip,
    tree lhs = gimple_call_lhs (call);
    use_operand_p use_p;
    gimple *use_stmt;
@@ -10991,16 +12998,23 @@ index aad8526eb21..d03a8d54b46 100644
    optab optab;
  
    if (!flag_inline_atomics
-@@ -2898,7 +2983,6 @@ optimize_atomic_bit_test_and (gimple_stmt_iterator *gsip,
+@@ -2898,9 +2984,8 @@ optimize_atomic_bit_test_and (gimple_stmt_iterator *gsip,
        || SSA_NAME_OCCURS_IN_ABNORMAL_PHI (lhs)
        || !single_imm_use (lhs, &use_p, &use_stmt)
        || !is_gimple_assign (use_stmt)
 -      || gimple_assign_rhs_code (use_stmt) != BIT_AND_EXPR
        || !gimple_vdef (call))
-     return;
+-    return;
++    return false;
  
-@@ -2917,54 +3001,349 @@ optimize_atomic_bit_test_and (gimple_stmt_iterator *gsip,
-       return;
+   switch (fn)
+     {
+@@ -2914,57 +2999,352 @@ optimize_atomic_bit_test_and (gimple_stmt_iterator *gsip,
+       optab = atomic_bit_test_and_reset_optab;
+       break;
+     default:
+-      return;
++      return false;
      }
  
 -  if (optab_handler (optab, TYPE_MODE (TREE_TYPE (lhs))) == CODE_FOR_nothing)
@@ -11008,40 +13022,24 @@ index aad8526eb21..d03a8d54b46 100644
 +  tree bit = nullptr;
  
    mask = gimple_call_arg (call, 1);
--  tree use_lhs = gimple_assign_lhs (use_stmt);
--  if (!use_lhs)
--    return;
--
--  if (TREE_CODE (mask) == INTEGER_CST)
 +  tree_code rhs_code = gimple_assign_rhs_code (use_stmt);
 +  if (rhs_code != BIT_AND_EXPR)
-     {
--      if (fn == IFN_ATOMIC_BIT_TEST_AND_RESET)
--	mask = const_unop (BIT_NOT_EXPR, TREE_TYPE (mask), mask);
--      mask = fold_convert (TREE_TYPE (lhs), mask);
--      int ibit = tree_log2 (mask);
--      if (ibit < 0)
++    {
 +      if (rhs_code != NOP_EXPR && rhs_code != BIT_NOT_EXPR)
- 	return;
--      bit = build_int_cst (TREE_TYPE (lhs), ibit);
--    }
--  else if (TREE_CODE (mask) == SSA_NAME)
--    {
--      gimple *g = SSA_NAME_DEF_STMT (mask);
--      if (fn == IFN_ATOMIC_BIT_TEST_AND_RESET)
++	return false;
 +
 +      tree use_lhs = gimple_assign_lhs (use_stmt);
 +      if (TREE_CODE (use_lhs) == SSA_NAME
 +	  && SSA_NAME_OCCURS_IN_ABNORMAL_PHI (use_lhs))
-+	return;
++	return false;
 +
 +      tree use_rhs = gimple_assign_rhs1 (use_stmt);
 +      if (lhs != use_rhs)
-+	return;
++	return false;
 +
 +      if (optab_handler (optab, TYPE_MODE (TREE_TYPE (lhs)))
 +	  == CODE_FOR_nothing)
-+	return;
++	return false;
 +
 +      gimple *g;
 +      gimple_stmt_iterator gsi;
@@ -11049,14 +13047,10 @@ index aad8526eb21..d03a8d54b46 100644
 +      int ibit = -1;
 +
 +      if (rhs_code == BIT_NOT_EXPR)
- 	{
--	  if (!is_gimple_assign (g)
--	      || gimple_assign_rhs_code (g) != BIT_NOT_EXPR)
++	{
 +	  g = convert_atomic_bit_not (fn, use_stmt, lhs, mask);
 +	  if (!g)
- 	    return;
--	  mask = gimple_assign_rhs1 (g);
--	  if (TREE_CODE (mask) != SSA_NAME)
++	    return false;
 +	  use_stmt = g;
 +	  ibit = 0;
 +	}
@@ -11069,7 +13063,7 @@ index aad8526eb21..d03a8d54b46 100644
 +	      if (!operand_equal_p (build_int_cst (TREE_TYPE (lhs),
 +						   ~HOST_WIDE_INT_1),
 +				    mask, 0))
-+		return;
++		return false;
 +
 +	      /* Convert
 +		 _1 = __atomic_fetch_and_* (ptr_6, ~1, _3);
@@ -11085,7 +13079,7 @@ index aad8526eb21..d03a8d54b46 100644
 +	    {
 +	      and_mask = build_int_cst (TREE_TYPE (lhs), 1);
 +	      if (!operand_equal_p (and_mask, mask, 0))
-+		return;
++		return false;
 +
 +	      /* Convert
 +		 _1 = __atomic_fetch_or_* (ptr_6, 1, _3);
@@ -11111,21 +13105,20 @@ index aad8526eb21..d03a8d54b46 100644
 +	  gimple *use_nop_stmt;
 +	  if (!single_imm_use (use_lhs, &use_p, &use_nop_stmt)
 +	      || !is_gimple_assign (use_nop_stmt))
- 	    return;
--	  g = SSA_NAME_DEF_STMT (mask);
++	    return false;
 +	  tree use_nop_lhs = gimple_assign_lhs (use_nop_stmt);
 +	  rhs_code = gimple_assign_rhs_code (use_nop_stmt);
 +	  if (rhs_code != BIT_AND_EXPR)
 +	    {
 +	      if (TREE_CODE (use_nop_lhs) == SSA_NAME
 +		  && SSA_NAME_OCCURS_IN_ABNORMAL_PHI (use_nop_lhs))
-+		return;
++		return false;
 +	      if (rhs_code == BIT_NOT_EXPR)
 +		{
 +		  g = convert_atomic_bit_not (fn, use_nop_stmt, lhs,
 +					      mask);
 +		  if (!g)
-+		    return;
++		    return false;
 +		  /* Convert
 +		     _1 = __atomic_fetch_or_4 (ptr_6, 1, _3);
 +		     _2 = (int) _1;
@@ -11153,15 +13146,15 @@ index aad8526eb21..d03a8d54b46 100644
 +	      else
 +		{
 +		  if (TREE_CODE (TREE_TYPE (use_nop_lhs)) != BOOLEAN_TYPE)
-+		    return;
++		    return false;
 +		  if (rhs_code != GE_EXPR && rhs_code != LT_EXPR)
-+		    return;
++		    return false;
 +		  tree cmp_rhs1 = gimple_assign_rhs1 (use_nop_stmt);
 +		  if (use_lhs != cmp_rhs1)
-+		    return;
++		    return false;
 +		  tree cmp_rhs2 = gimple_assign_rhs2 (use_nop_stmt);
 +		  if (!integer_zerop (cmp_rhs2))
-+		    return;
++		    return false;
 +
 +		  tree and_mask;
 +
@@ -11177,7 +13170,7 @@ index aad8526eb21..d03a8d54b46 100644
 +		      and_mask = build_int_cst (TREE_TYPE (use_rhs),
 +						highest - 1);
 +		      if (!operand_equal_p (and_mask, mask, 0))
-+			return;
++			return false;
 +
 +		      /* Convert
 +			 _1 = __atomic_fetch_and_4 (ptr_6, 0x7fffffff, _3);
@@ -11197,7 +13190,7 @@ index aad8526eb21..d03a8d54b46 100644
 +		      and_mask = build_int_cst (TREE_TYPE (use_rhs),
 +						highest);
 +		      if (!operand_equal_p (and_mask, mask, 0))
-+			return;
++			return false;
 +
 +		      /* Convert
 +			 _1 = __atomic_fetch_or_4 (ptr_6, 0x80000000, _3);
@@ -11236,7 +13229,7 @@ index aad8526eb21..d03a8d54b46 100644
 +		  || SSA_NAME_OCCURS_IN_ABNORMAL_PHI (match_op[2])
 +		  || !single_imm_use (match_op[2], &use_p, &g)
 +		  || !is_gimple_assign (g))
-+		return;
++		return false;
 +	      mask = match_op[0];
 +	      if (TREE_CODE (match_op[1]) == INTEGER_CST)
 +		{
@@ -11292,13 +13285,9 @@ index aad8526eb21..d03a8d54b46 100644
 +	      gimple_assign_set_rhs_with_ops (&gsi, CONVERT_EXPR, var);
 +	      update_stmt (use_nop_stmt);
 +	    }
- 	}
--      if (!is_gimple_assign (g)
--	  || gimple_assign_rhs_code (g) != LSHIFT_EXPR
--	  || !integer_onep (gimple_assign_rhs1 (g)))
++	}
 +      else
- 	return;
--      bit = gimple_assign_rhs2 (g);
++	return false;
 +
 +      if (!bit)
 +	{
@@ -11306,30 +13295,56 @@ index aad8526eb21..d03a8d54b46 100644
 +	    gcc_unreachable ();
 +	  bit = build_int_cst (TREE_TYPE (lhs), ibit);
 +	}
-     }
--  else
++    }
 +  else if (optab_handler (optab, TYPE_MODE (TREE_TYPE (lhs)))
 +	   == CODE_FOR_nothing)
-     return;
- 
--  if (gimple_assign_rhs1 (use_stmt) == lhs)
-+  tree use_lhs = gimple_assign_lhs (use_stmt);
-+  if (!use_lhs)
-+    return;
++    return false;
 +
+   tree use_lhs = gimple_assign_lhs (use_stmt);
+   if (!use_lhs)
+-    return;
++    return false;
+ 
+-  if (TREE_CODE (mask) == INTEGER_CST)
 +  if (!bit)
      {
--      if (!operand_equal_p (gimple_assign_rhs2 (use_stmt), mask, 0))
+-      if (fn == IFN_ATOMIC_BIT_TEST_AND_RESET)
+-	mask = const_unop (BIT_NOT_EXPR, TREE_TYPE (mask), mask);
+-      mask = fold_convert (TREE_TYPE (lhs), mask);
+-      int ibit = tree_log2 (mask);
+-      if (ibit < 0)
+-	return;
+-      bit = build_int_cst (TREE_TYPE (lhs), ibit);
+-    }
+-  else if (TREE_CODE (mask) == SSA_NAME)
+-    {
+-      gimple *g = SSA_NAME_DEF_STMT (mask);
+-      if (fn == IFN_ATOMIC_BIT_TEST_AND_RESET)
 +      if (TREE_CODE (mask) == INTEGER_CST)
-+	{
+ 	{
+-	  if (!is_gimple_assign (g)
+-	      || gimple_assign_rhs_code (g) != BIT_NOT_EXPR)
+-	    return;
+-	  mask = gimple_assign_rhs1 (g);
+-	  if (TREE_CODE (mask) != SSA_NAME)
+-	    return;
+-	  g = SSA_NAME_DEF_STMT (mask);
 +	  if (fn == IFN_ATOMIC_BIT_TEST_AND_RESET)
 +	    mask = const_unop (BIT_NOT_EXPR, TREE_TYPE (mask), mask);
 +	  mask = fold_convert (TREE_TYPE (lhs), mask);
 +	  int ibit = tree_log2 (mask);
 +	  if (ibit < 0)
-+	    return;
++	    return false;
 +	  bit = build_int_cst (TREE_TYPE (lhs), ibit);
-+	}
+ 	}
+-      if (!is_gimple_assign (g)
+-	  || gimple_assign_rhs_code (g) != LSHIFT_EXPR
+-	  || !integer_onep (gimple_assign_rhs1 (g)))
+-	return;
+-      bit = gimple_assign_rhs2 (g);
+-    }
+-  else
+-    return;
 +      else if (TREE_CODE (mask) == SSA_NAME)
 +	{
 +	  gimple *g = SSA_NAME_DEF_STMT (mask);
@@ -11338,30 +13353,34 @@ index aad8526eb21..d03a8d54b46 100644
 +	    {
 +	      mask = match_op;
 +	      if (TREE_CODE (mask) != SSA_NAME)
-+		return;
++		return false;
 +	      g = SSA_NAME_DEF_STMT (mask);
 +	    }
 +	  if (!is_gimple_assign (g))
-+	    return;
-+
++	    return false;
+ 
+-  if (gimple_assign_rhs1 (use_stmt) == lhs)
+-    {
+-      if (!operand_equal_p (gimple_assign_rhs2 (use_stmt), mask, 0))
+-	return;
 +	  if (fn == IFN_ATOMIC_BIT_TEST_AND_RESET)
 +	    {
 +	      if (gimple_assign_rhs_code (g) != BIT_NOT_EXPR)
-+		return;
++		return false;
 +	      mask = gimple_assign_rhs1 (g);
 +	      if (TREE_CODE (mask) != SSA_NAME)
-+		return;
++		return false;
 +	      g = SSA_NAME_DEF_STMT (mask);
 +	    }
 +
 +	  rhs_code = gimple_assign_rhs_code (g);
 +	  if (rhs_code != LSHIFT_EXPR
 +	      || !integer_onep (gimple_assign_rhs1 (g)))
-+	    return;
++	    return false;
 +	  bit = gimple_assign_rhs2 (g);
 +	}
 +      else
-+	return;
++	return false;
 +
 +      tree cmp_mask;
 +      if (gimple_assign_rhs1 (use_stmt) == lhs)
@@ -11374,7 +13393,7 @@ index aad8526eb21..d03a8d54b46 100644
 +	cmp_mask = match_op;
 +
 +      if (!operand_equal_p (cmp_mask, mask, 0))
- 	return;
++	return false;
      }
 -  else if (gimple_assign_rhs2 (use_stmt) != lhs
 -	   || !operand_equal_p (gimple_assign_rhs1 (use_stmt), mask, 0))
@@ -11382,7 +13401,16 @@ index aad8526eb21..d03a8d54b46 100644
  
    bool use_bool = true;
    bool has_debug_uses = false;
-@@ -3053,18 +3432,20 @@ optimize_atomic_bit_test_and (gimple_stmt_iterator *gsip,
+@@ -2988,6 +3368,8 @@ optimize_atomic_bit_test_and (gimple_stmt_iterator *gsip,
+ 	  case COND_EXPR:
+ 	    op1 = gimple_assign_rhs1 (g);
+ 	    code = TREE_CODE (op1);
++	    if (TREE_CODE_CLASS (code) != tcc_comparison)
++	      break;
+ 	    op0 = TREE_OPERAND (op1, 0);
+ 	    op1 = TREE_OPERAND (op1, 1);
+ 	    break;
+@@ -3053,18 +3435,20 @@ optimize_atomic_bit_test_and (gimple_stmt_iterator *gsip,
  	 of the specified bit after the atomic operation (makes only sense
  	 for xor, otherwise the bit content is compile time known),
  	 we need to invert the bit.  */
@@ -11411,6 +13439,322 @@ index aad8526eb21..d03a8d54b46 100644
      }
    if (use_bool && has_debug_uses)
      {
+@@ -3105,6 +3489,196 @@ optimize_atomic_bit_test_and (gimple_stmt_iterator *gsip,
+   release_defs (use_stmt);
+   gsi_remove (gsip, true);
+   release_ssa_name (lhs);
++  return true;
++}
++
++/* Optimize
++     _4 = __atomic_add_fetch_* (ptr_6, arg_2, _3);
++     _5 = _4 == 0;
++   to
++     _4 = .ATOMIC_ADD_FETCH_CMP_0 (EQ_EXPR, ptr_6, arg_2, _3);
++     _5 = _4;
++   Similarly for __sync_add_and_fetch_* (without the ", _3" part
++   in there).  */
++
++static bool
++optimize_atomic_op_fetch_cmp_0 (gimple_stmt_iterator *gsip,
++				enum internal_fn fn, bool has_model_arg)
++{
++  gimple *call = gsi_stmt (*gsip);
++  tree lhs = gimple_call_lhs (call);
++  use_operand_p use_p;
++  gimple *use_stmt;
++
++  if (!flag_inline_atomics
++      || optimize_debug
++      || !gimple_call_builtin_p (call, BUILT_IN_NORMAL)
++      || !lhs
++      || SSA_NAME_OCCURS_IN_ABNORMAL_PHI (lhs)
++      || !single_imm_use (lhs, &use_p, &use_stmt)
++      || !gimple_vdef (call))
++    return false;
++
++  optab optab;
++  switch (fn)
++    {
++    case IFN_ATOMIC_ADD_FETCH_CMP_0:
++      optab = atomic_add_fetch_cmp_0_optab;
++      break;
++    case IFN_ATOMIC_SUB_FETCH_CMP_0:
++      optab = atomic_sub_fetch_cmp_0_optab;
++      break;
++    case IFN_ATOMIC_AND_FETCH_CMP_0:
++      optab = atomic_and_fetch_cmp_0_optab;
++      break;
++    case IFN_ATOMIC_OR_FETCH_CMP_0:
++      optab = atomic_or_fetch_cmp_0_optab;
++      break;
++    case IFN_ATOMIC_XOR_FETCH_CMP_0:
++      optab = atomic_xor_fetch_cmp_0_optab;
++      break;
++    default:
++      return false;
++    }
++
++  if (optab_handler (optab, TYPE_MODE (TREE_TYPE (lhs)))
++      == CODE_FOR_nothing)
++    return false;
++
++  tree use_lhs = lhs;
++  if (gimple_assign_cast_p (use_stmt))
++    {
++      use_lhs = gimple_assign_lhs (use_stmt);
++      if (!tree_nop_conversion_p (TREE_TYPE (use_lhs), TREE_TYPE (lhs))
++	  || (!INTEGRAL_TYPE_P (TREE_TYPE (use_lhs))
++	      && !POINTER_TYPE_P (TREE_TYPE (use_lhs)))
++	  || SSA_NAME_OCCURS_IN_ABNORMAL_PHI (use_lhs)
++	  || !single_imm_use (use_lhs, &use_p, &use_stmt))
++	return false;
++    }
++  enum tree_code code = ERROR_MARK;
++  tree op0 = NULL_TREE, op1 = NULL_TREE;
++  if (is_gimple_assign (use_stmt))
++    switch (gimple_assign_rhs_code (use_stmt))
++      {
++      case COND_EXPR:
++	op1 = gimple_assign_rhs1 (use_stmt);
++	code = TREE_CODE (op1);
++	if (TREE_CODE_CLASS (code) == tcc_comparison)
++	  {
++	    op0 = TREE_OPERAND (op1, 0);
++	    op1 = TREE_OPERAND (op1, 1);
++	  }
++	break;
++      default:
++	code = gimple_assign_rhs_code (use_stmt);
++	if (TREE_CODE_CLASS (code) == tcc_comparison)
++	  {
++	    op0 = gimple_assign_rhs1 (use_stmt);
++	    op1 = gimple_assign_rhs2 (use_stmt);
++	  }
++	break;
++      }
++  else if (gimple_code (use_stmt) == GIMPLE_COND)
++    {
++      code = gimple_cond_code (use_stmt);
++      op0 = gimple_cond_lhs (use_stmt);
++      op1 = gimple_cond_rhs (use_stmt);
++    }
++
++  switch (code)
++    {
++    case LT_EXPR:
++    case LE_EXPR:
++    case GT_EXPR:
++    case GE_EXPR:
++      if (!INTEGRAL_TYPE_P (TREE_TYPE (use_lhs))
++	  || TREE_CODE (TREE_TYPE (use_lhs)) == BOOLEAN_TYPE
++	  || TYPE_UNSIGNED (TREE_TYPE (use_lhs)))
++	return false;
++      /* FALLTHRU */
++    case EQ_EXPR:
++    case NE_EXPR:
++      if (op0 == use_lhs && integer_zerop (op1))
++	break;
++      return false;
++    default:
++      return false;
++    }
++
++  int encoded;
++  switch (code)
++    {
++    /* Use special encoding of the operation.  We want to also
++       encode the mode in the first argument and for neither EQ_EXPR
++       etc. nor EQ etc. we can rely it will fit into QImode.  */
++    case EQ_EXPR: encoded = ATOMIC_OP_FETCH_CMP_0_EQ; break;
++    case NE_EXPR: encoded = ATOMIC_OP_FETCH_CMP_0_NE; break;
++    case LT_EXPR: encoded = ATOMIC_OP_FETCH_CMP_0_LT; break;
++    case LE_EXPR: encoded = ATOMIC_OP_FETCH_CMP_0_LE; break;
++    case GT_EXPR: encoded = ATOMIC_OP_FETCH_CMP_0_GT; break;
++    case GE_EXPR: encoded = ATOMIC_OP_FETCH_CMP_0_GE; break;
++    default: gcc_unreachable ();
++    }
++
++  tree new_lhs = make_ssa_name (boolean_type_node);
++  gimple *g;
++  tree flag = build_int_cst (TREE_TYPE (lhs), encoded);
++  if (has_model_arg)
++    g = gimple_build_call_internal (fn, 4, flag,
++				    gimple_call_arg (call, 0),
++				    gimple_call_arg (call, 1),
++				    gimple_call_arg (call, 2));
++  else
++    g = gimple_build_call_internal (fn, 3, flag,
++				    gimple_call_arg (call, 0),
++				    gimple_call_arg (call, 1));
++  gimple_call_set_lhs (g, new_lhs);
++  gimple_set_location (g, gimple_location (call));
++  gimple_move_vops (g, call);
++  bool throws = stmt_can_throw_internal (cfun, call);
++  gimple_call_set_nothrow (as_a <gcall *> (g),
++			   gimple_call_nothrow_p (as_a <gcall *> (call)));
++  gimple_stmt_iterator gsi = *gsip;
++  gsi_insert_after (&gsi, g, GSI_SAME_STMT);
++  if (throws)
++    maybe_clean_or_replace_eh_stmt (call, g);
++  if (is_gimple_assign (use_stmt))
++    switch (gimple_assign_rhs_code (use_stmt))
++      {
++      case COND_EXPR:
++	gimple_assign_set_rhs1 (use_stmt, new_lhs);
++	break;
++      default:
++	gsi = gsi_for_stmt (use_stmt);
++	if (tree ulhs = gimple_assign_lhs (use_stmt))
++	  if (useless_type_conversion_p (TREE_TYPE (ulhs),
++					 boolean_type_node))
++	    {
++	      gimple_assign_set_rhs_with_ops (&gsi, SSA_NAME, new_lhs);
++	      break;
++	    }
++	gimple_assign_set_rhs_with_ops (&gsi, NOP_EXPR, new_lhs);
++	break;
++      }
++  else if (gimple_code (use_stmt) == GIMPLE_COND)
++    {
++      gcond *use_cond = as_a <gcond *> (use_stmt);
++      gimple_cond_set_code (use_cond, NE_EXPR);
++      gimple_cond_set_lhs (use_cond, new_lhs);
++      gimple_cond_set_rhs (use_cond, boolean_false_node);
++    }
++
++  update_stmt (use_stmt);
++  if (use_lhs != lhs)
++    {
++      gsi = gsi_for_stmt (SSA_NAME_DEF_STMT (use_lhs));
++      gsi_remove (&gsi, true);
++      release_ssa_name (use_lhs);
++    }
++  gsi_remove (gsip, true);
++  release_ssa_name (lhs);
++  return true;
+ }
+ 
+ /* Optimize
+@@ -3333,6 +3907,44 @@ pass_fold_builtins::execute (function *fun)
+ 		    cfg_changed = true;
+ 		  break;
+ 
++		case BUILT_IN_ATOMIC_ADD_FETCH_1:
++		case BUILT_IN_ATOMIC_ADD_FETCH_2:
++		case BUILT_IN_ATOMIC_ADD_FETCH_4:
++		case BUILT_IN_ATOMIC_ADD_FETCH_8:
++		case BUILT_IN_ATOMIC_ADD_FETCH_16:
++		  optimize_atomic_op_fetch_cmp_0 (&i,
++						  IFN_ATOMIC_ADD_FETCH_CMP_0,
++						  true);
++		  break;
++		case BUILT_IN_SYNC_ADD_AND_FETCH_1:
++		case BUILT_IN_SYNC_ADD_AND_FETCH_2:
++		case BUILT_IN_SYNC_ADD_AND_FETCH_4:
++		case BUILT_IN_SYNC_ADD_AND_FETCH_8:
++		case BUILT_IN_SYNC_ADD_AND_FETCH_16:
++		  optimize_atomic_op_fetch_cmp_0 (&i,
++						  IFN_ATOMIC_ADD_FETCH_CMP_0,
++						  false);
++		  break;
++
++		case BUILT_IN_ATOMIC_SUB_FETCH_1:
++		case BUILT_IN_ATOMIC_SUB_FETCH_2:
++		case BUILT_IN_ATOMIC_SUB_FETCH_4:
++		case BUILT_IN_ATOMIC_SUB_FETCH_8:
++		case BUILT_IN_ATOMIC_SUB_FETCH_16:
++		  optimize_atomic_op_fetch_cmp_0 (&i,
++						  IFN_ATOMIC_SUB_FETCH_CMP_0,
++						  true);
++		  break;
++		case BUILT_IN_SYNC_SUB_AND_FETCH_1:
++		case BUILT_IN_SYNC_SUB_AND_FETCH_2:
++		case BUILT_IN_SYNC_SUB_AND_FETCH_4:
++		case BUILT_IN_SYNC_SUB_AND_FETCH_8:
++		case BUILT_IN_SYNC_SUB_AND_FETCH_16:
++		  optimize_atomic_op_fetch_cmp_0 (&i,
++						  IFN_ATOMIC_SUB_FETCH_CMP_0,
++						  false);
++		  break;
++
+ 		case BUILT_IN_ATOMIC_FETCH_OR_1:
+ 		case BUILT_IN_ATOMIC_FETCH_OR_2:
+ 		case BUILT_IN_ATOMIC_FETCH_OR_4:
+@@ -3374,16 +3986,24 @@ pass_fold_builtins::execute (function *fun)
+ 		case BUILT_IN_ATOMIC_XOR_FETCH_4:
+ 		case BUILT_IN_ATOMIC_XOR_FETCH_8:
+ 		case BUILT_IN_ATOMIC_XOR_FETCH_16:
+-		  optimize_atomic_bit_test_and
+-			(&i, IFN_ATOMIC_BIT_TEST_AND_COMPLEMENT, true, true);
++		  if (optimize_atomic_bit_test_and
++			(&i, IFN_ATOMIC_BIT_TEST_AND_COMPLEMENT, true, true))
++		    break;
++		  optimize_atomic_op_fetch_cmp_0 (&i,
++						  IFN_ATOMIC_XOR_FETCH_CMP_0,
++						  true);
+ 		  break;
+ 		case BUILT_IN_SYNC_XOR_AND_FETCH_1:
+ 		case BUILT_IN_SYNC_XOR_AND_FETCH_2:
+ 		case BUILT_IN_SYNC_XOR_AND_FETCH_4:
+ 		case BUILT_IN_SYNC_XOR_AND_FETCH_8:
+ 		case BUILT_IN_SYNC_XOR_AND_FETCH_16:
+-		  optimize_atomic_bit_test_and
+-			(&i, IFN_ATOMIC_BIT_TEST_AND_COMPLEMENT, false, true);
++		  if (optimize_atomic_bit_test_and
++			(&i, IFN_ATOMIC_BIT_TEST_AND_COMPLEMENT, false, true))
++		    break;
++		  optimize_atomic_op_fetch_cmp_0 (&i,
++						  IFN_ATOMIC_XOR_FETCH_CMP_0,
++						  false);
+ 		  break;
+ 
+ 		case BUILT_IN_ATOMIC_FETCH_AND_1:
+@@ -3405,6 +4025,44 @@ pass_fold_builtins::execute (function *fun)
+ 						false, false);
+ 		  break;
+ 
++		case BUILT_IN_ATOMIC_AND_FETCH_1:
++		case BUILT_IN_ATOMIC_AND_FETCH_2:
++		case BUILT_IN_ATOMIC_AND_FETCH_4:
++		case BUILT_IN_ATOMIC_AND_FETCH_8:
++		case BUILT_IN_ATOMIC_AND_FETCH_16:
++		  optimize_atomic_op_fetch_cmp_0 (&i,
++						  IFN_ATOMIC_AND_FETCH_CMP_0,
++						  true);
++		  break;
++		case BUILT_IN_SYNC_AND_AND_FETCH_1:
++		case BUILT_IN_SYNC_AND_AND_FETCH_2:
++		case BUILT_IN_SYNC_AND_AND_FETCH_4:
++		case BUILT_IN_SYNC_AND_AND_FETCH_8:
++		case BUILT_IN_SYNC_AND_AND_FETCH_16:
++		  optimize_atomic_op_fetch_cmp_0 (&i,
++						  IFN_ATOMIC_AND_FETCH_CMP_0,
++						  false);
++		  break;
++
++		case BUILT_IN_ATOMIC_OR_FETCH_1:
++		case BUILT_IN_ATOMIC_OR_FETCH_2:
++		case BUILT_IN_ATOMIC_OR_FETCH_4:
++		case BUILT_IN_ATOMIC_OR_FETCH_8:
++		case BUILT_IN_ATOMIC_OR_FETCH_16:
++		  optimize_atomic_op_fetch_cmp_0 (&i,
++						  IFN_ATOMIC_OR_FETCH_CMP_0,
++						  true);
++		  break;
++		case BUILT_IN_SYNC_OR_AND_FETCH_1:
++		case BUILT_IN_SYNC_OR_AND_FETCH_2:
++		case BUILT_IN_SYNC_OR_AND_FETCH_4:
++		case BUILT_IN_SYNC_OR_AND_FETCH_8:
++		case BUILT_IN_SYNC_OR_AND_FETCH_16:
++		  optimize_atomic_op_fetch_cmp_0 (&i,
++						  IFN_ATOMIC_OR_FETCH_CMP_0,
++						  false);
++		  break;
++
+ 		case BUILT_IN_MEMCPY:
+ 		  if (gimple_call_builtin_p (stmt, BUILT_IN_NORMAL)
+ 		      && TREE_CODE (gimple_call_arg (stmt, 0)) == ADDR_EXPR
 diff --git a/gcc/tree-vect-generic.c b/gcc/tree-vect-generic.c
 index 3348545d18b..fb6b69c5b83 100644
 --- a/gcc/tree-vect-generic.c
