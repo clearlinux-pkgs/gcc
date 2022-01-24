@@ -2485,7 +2485,7 @@ index 7b8547bb1c3..4f517d35e07 100644
  Target Mask(ISA2_AVX512BF16) Var(ix86_isa_flags2) Save
  Support MMX, SSE, SSE2, SSE3, SSSE3, SSE4.1, SSE4.2, AVX, AVX2, AVX512F and
 diff --git a/gcc/config/i386/predicates.md b/gcc/config/i386/predicates.md
-index b1df8548af6..d7e335d4b63 100644
+index b815aca0da7..98844736b92 100644
 --- a/gcc/config/i386/predicates.md
 +++ b/gcc/config/i386/predicates.md
 @@ -1036,6 +1036,13 @@
@@ -2502,7 +2502,7 @@ index b1df8548af6..d7e335d4b63 100644
  ;; True if OP is acceptable as operand of DImode shift expander.
  (define_predicate "shiftdi_operand"
    (if_then_else (match_test "TARGET_64BIT")
-@@ -1524,6 +1531,38 @@
+@@ -1526,6 +1533,38 @@
    (and (match_code "mem")
         (match_test "MEM_ALIGN (op) < GET_MODE_BITSIZE (mode)")))
  
@@ -2542,7 +2542,7 @@ index b1df8548af6..d7e335d4b63 100644
  (define_predicate "vzeroall_operation"
    (match_code "parallel")
 diff --git a/gcc/config/i386/sse.md b/gcc/config/i386/sse.md
-index 25678c8145d..d1f16b8ac03 100644
+index d31e10184c3..19c9259990c 100644
 --- a/gcc/config/i386/sse.md
 +++ b/gcc/config/i386/sse.md
 @@ -95,7 +95,6 @@
@@ -2889,7 +2889,7 @@ index 25678c8145d..d1f16b8ac03 100644
  	(vec_select:V4SF
 @@ -24283,3 +24537,34 @@
    "TARGET_WIDEKL"
-   "aes<aeswideklvariant>\t{%0}"
+   "aes<aeswideklvariant>\t%0"
    [(set_attr "type" "other")])
 +
 +;; Modes handled by broadcast patterns.  NB: Allow V64QI and V32HI with
@@ -4782,7 +4782,7 @@ index c6599ce4894..e80707a0697 100644
 +
  #endif
 diff --git a/gcc/match.pd b/gcc/match.pd
-index 4fbba3922e5..70668ed92aa 100644
+index 05a08d0f96a..20c46a4c56c 100644
 --- a/gcc/match.pd
 +++ b/gcc/match.pd
 @@ -98,6 +98,39 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
@@ -4825,7 +4825,7 @@ index 4fbba3922e5..70668ed92aa 100644
  /* With nop_convert? combine convert? and view_convert? in one pattern
     plus conditionalize on tree_nop_conversion_p conversions.  */
  (match (nop_convert @0)
-@@ -3662,6 +3695,84 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
+@@ -3665,6 +3698,84 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
    (vec_cond @0 (op! @3 @1) (op! @3 @2))))
  #endif
  
