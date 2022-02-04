@@ -1697,7 +1697,7 @@ index 941e91636d8..7946613244a 100644
    (gcc::context *);
 -extern rtl_opt_pass *make_pass_constant_pool_broadcast (gcc::context *);
 diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
-index 8e8c8beb366..3625613d189 100644
+index bf471735d58..af2dc0731ed 100644
 --- a/gcc/config/i386/i386.c
 +++ b/gcc/config/i386/i386.c
 @@ -4195,6 +4195,18 @@ ix86_return_in_memory (const_tree type, const_tree fntype ATTRIBUTE_UNUSED)
@@ -1737,7 +1737,7 @@ index 8e8c8beb366..3625613d189 100644
        final_end_function ();
        init_insn_lengths ();
        free_after_compilation (cfun);
-@@ -7946,8 +7960,17 @@ ix86_finalize_stack_frame_flags (void)
+@@ -7947,8 +7961,17 @@ ix86_finalize_stack_frame_flags (void)
       assumed stack realignment might be needed or -fno-omit-frame-pointer
       is used, but in the end nothing that needed the stack alignment had
       been spilled nor stack access, clear frame_pointer_needed and say we
@@ -1757,7 +1757,7 @@ index 8e8c8beb366..3625613d189 100644
        && frame_pointer_needed
        && crtl->is_leaf
        && crtl->sp_is_unchanging
-@@ -10410,7 +10433,13 @@ ix86_legitimate_constant_p (machine_mode mode, rtx x)
+@@ -10411,7 +10434,13 @@ ix86_legitimate_constant_p (machine_mode mode, rtx x)
  	  /* FALLTHRU */
  	case E_OImode:
  	case E_XImode:
@@ -1772,7 +1772,7 @@ index 8e8c8beb366..3625613d189 100644
  	    return false;
  	default:
  	  break;
-@@ -11990,7 +12019,7 @@ output_pic_addr_const (FILE *file, rtx x, int code)
+@@ -11991,7 +12020,7 @@ output_pic_addr_const (FILE *file, rtx x, int code)
  	  assemble_name (file, name);
  	}
        if (!TARGET_MACHO && !(TARGET_64BIT && TARGET_PECOFF)
@@ -1781,7 +1781,7 @@ index 8e8c8beb366..3625613d189 100644
  	fputs ("@PLT", file);
        break;
  
-@@ -14114,6 +14143,18 @@ ix86_check_avx_upper_register (const_rtx exp)
+@@ -14115,6 +14144,18 @@ ix86_check_avx_upper_register (const_rtx exp)
  	  && GET_MODE_BITSIZE (GET_MODE (exp)) > 128);
  }
  
@@ -1800,7 +1800,7 @@ index 8e8c8beb366..3625613d189 100644
  /* Return needed mode for entity in optimize_mode_switching pass.  */
  
  static int
-@@ -14138,6 +14179,14 @@ ix86_avx_u128_mode_needed (rtx_insn *insn)
+@@ -14139,6 +14180,14 @@ ix86_avx_u128_mode_needed (rtx_insn *insn)
  	    }
  	}
  
@@ -1815,7 +1815,7 @@ index 8e8c8beb366..3625613d189 100644
        /* If the function is known to preserve some SSE registers,
  	 RA and previous passes can legitimately rely on that for
  	 modes wider than 256 bits.  It's only safe to issue a
-@@ -14150,6 +14199,94 @@ ix86_avx_u128_mode_needed (rtx_insn *insn)
+@@ -14151,6 +14200,94 @@ ix86_avx_u128_mode_needed (rtx_insn *insn)
        return AVX_U128_CLEAN;
      }
  
@@ -1910,7 +1910,7 @@ index 8e8c8beb366..3625613d189 100644
    /* Require DIRTY mode if a 256bit or 512bit AVX register is referenced.
       Hardware changes state only when a 256bit register is written to,
       but we need to prevent the compiler from moving optimal insertion
-@@ -14238,18 +14375,6 @@ ix86_mode_needed (int entity, rtx_insn *insn)
+@@ -14239,18 +14376,6 @@ ix86_mode_needed (int entity, rtx_insn *insn)
    return 0;
  }
  
@@ -1929,7 +1929,7 @@ index 8e8c8beb366..3625613d189 100644
  /* Calculate mode of upper 128bit AVX registers after the insn.  */
  
  static int
-@@ -15698,6 +15823,26 @@ ix86_zero_extend_to_Pmode (rtx exp)
+@@ -15699,6 +15824,26 @@ ix86_zero_extend_to_Pmode (rtx exp)
    return force_reg (Pmode, convert_to_mode (Pmode, exp, 1));
  }
  
@@ -1956,7 +1956,7 @@ index 8e8c8beb366..3625613d189 100644
  /* Return true if the function being called was marked with attribute
     "noplt" or using -fno-plt and we are compiling for non-PIC.  We need
     to handle the non-PIC case in the backend because there is no easy
-@@ -15730,9 +15875,14 @@ ix86_output_jmp_thunk_or_indirect (const char *thunk_name, const int regno)
+@@ -15731,9 +15876,14 @@ ix86_output_jmp_thunk_or_indirect (const char *thunk_name, const int regno)
  {
    if (thunk_name != NULL)
      {
@@ -1971,7 +1971,7 @@ index 8e8c8beb366..3625613d189 100644
      }
    else
      output_indirect_thunk (regno);
-@@ -15781,6 +15931,9 @@ ix86_output_indirect_branch_via_reg (rtx call_op, bool sibcall_p)
+@@ -15782,6 +15932,9 @@ ix86_output_indirect_branch_via_reg (rtx call_op, bool sibcall_p)
      {
        if (thunk_name != NULL)
  	{
@@ -1981,7 +1981,7 @@ index 8e8c8beb366..3625613d189 100644
  	  fprintf (asm_out_file, "\tcall\t");
  	  assemble_name (asm_out_file, thunk_name);
  	  putc ('\n', asm_out_file);
-@@ -15955,10 +16108,10 @@ ix86_output_indirect_jmp (rtx call_op)
+@@ -15956,10 +16109,10 @@ ix86_output_indirect_jmp (rtx call_op)
  	gcc_unreachable ();
  
        ix86_output_indirect_branch (call_op, "%0", true);
@@ -1994,7 +1994,7 @@ index 8e8c8beb366..3625613d189 100644
  }
  
  /* Output return instrumentation for current function if needed.  */
-@@ -16026,10 +16179,8 @@ ix86_output_function_return (bool long_p)
+@@ -16027,10 +16180,8 @@ ix86_output_function_return (bool long_p)
        return "";
      }
  
@@ -2007,7 +2007,7 @@ index 8e8c8beb366..3625613d189 100644
  }
  
  /* Output indirect function return.  RET_OP is the function return
-@@ -16064,11 +16215,14 @@ ix86_output_indirect_function_return (rtx ret_op)
+@@ -16065,11 +16216,14 @@ ix86_output_indirect_function_return (rtx ret_op)
  	}
        else
  	output_indirect_thunk (regno);
@@ -2025,7 +2025,7 @@ index 8e8c8beb366..3625613d189 100644
  }
  
  /* Output the assembly for a call instruction.  */
-@@ -16124,7 +16278,12 @@ ix86_output_call_insn (rtx_insn *insn, rtx call_op)
+@@ -16125,7 +16279,12 @@ ix86_output_call_insn (rtx_insn *insn, rtx call_op)
        if (output_indirect_p && !direct_p)
  	ix86_output_indirect_branch (call_op, xasm, true);
        else
@@ -2039,7 +2039,7 @@ index 8e8c8beb366..3625613d189 100644
        return "";
      }
  
-@@ -16764,6 +16923,8 @@ ix86_sched_init_global (FILE *, int, int)
+@@ -16765,6 +16924,8 @@ ix86_sched_init_global (FILE *, int, int)
      case PROCESSOR_NEHALEM:
      case PROCESSOR_SANDYBRIDGE:
      case PROCESSOR_HASWELL:
@@ -2048,7 +2048,7 @@ index 8e8c8beb366..3625613d189 100644
      case PROCESSOR_GENERIC:
        /* Do not perform multipass scheduling for pre-reload schedule
           to save compile time.  */
-@@ -20257,6 +20418,11 @@ ix86_rtx_costs (rtx x, machine_mode mode, int outer_code_i, int opno,
+@@ -20258,6 +20419,11 @@ ix86_rtx_costs (rtx x, machine_mode mode, int outer_code_i, int opno,
      case UNSPEC:
        if (XINT (x, 1) == UNSPEC_TP)
  	*total = 0;
@@ -2060,7 +2060,7 @@ index 8e8c8beb366..3625613d189 100644
        return false;
  
      case VEC_SELECT:
-@@ -23023,6 +23189,32 @@ ix86_optab_supported_p (int op, machine_mode mode1, machine_mode,
+@@ -23024,6 +23190,32 @@ ix86_optab_supported_p (int op, machine_mode mode1, machine_mode,
      }
  }
  
@@ -2093,7 +2093,7 @@ index 8e8c8beb366..3625613d189 100644
  /* Address space support.
  
     This is not "far pointers" in the 16-bit sense, but an easy way
-@@ -23553,6 +23745,9 @@ ix86_run_selftests (void)
+@@ -23554,6 +23746,9 @@ ix86_run_selftests (void)
  #undef TARGET_ADDRESS_COST
  #define TARGET_ADDRESS_COST ix86_address_cost
  
@@ -2103,7 +2103,7 @@ index 8e8c8beb366..3625613d189 100644
  #undef TARGET_FLAGS_REGNUM
  #define TARGET_FLAGS_REGNUM FLAGS_REG
  #undef TARGET_FIXED_CONDITION_CODE_REGS
-@@ -23602,6 +23797,8 @@ ix86_run_selftests (void)
+@@ -23603,6 +23798,8 @@ ix86_run_selftests (void)
  #define TARGET_C_EXCESS_PRECISION ix86_get_excess_precision
  #undef TARGET_PROMOTE_PROTOTYPES
  #define TARGET_PROMOTE_PROTOTYPES hook_bool_const_tree_true
@@ -2112,7 +2112,7 @@ index 8e8c8beb366..3625613d189 100644
  #undef TARGET_SETUP_INCOMING_VARARGS
  #define TARGET_SETUP_INCOMING_VARARGS ix86_setup_incoming_varargs
  #undef TARGET_MUST_PASS_IN_STACK
-@@ -23906,6 +24103,9 @@ ix86_run_selftests (void)
+@@ -23907,6 +24104,9 @@ ix86_run_selftests (void)
  #define TARGET_GET_MULTILIB_ABI_NAME \
    ix86_get_multilib_abi_name
  
@@ -2122,7 +2122,7 @@ index 8e8c8beb366..3625613d189 100644
  static bool ix86_libc_has_fast_function (int fcode ATTRIBUTE_UNUSED)
  {
  #ifdef OPTION_GLIBC
-@@ -23921,6 +24121,9 @@ static bool ix86_libc_has_fast_function (int fcode ATTRIBUTE_UNUSED)
+@@ -23922,6 +24122,9 @@ static bool ix86_libc_has_fast_function (int fcode ATTRIBUTE_UNUSED)
  #undef TARGET_LIBC_HAS_FAST_FUNCTION
  #define TARGET_LIBC_HAS_FAST_FUNCTION ix86_libc_has_fast_function
  
