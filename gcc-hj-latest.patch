@@ -1,10 +1,7 @@
-Arjan van de Ven (1):
-      Merge remote-tracking branch 'origin/releases/gcc-11' into HEAD
-
 Cui,Lili (1):
       x86: Update -mtune=alderlake
 
-H.J. Lu (50):
+H.J. Lu (51):
       op_by_pieces_d::run: Change a while loop to a do-while loop
       Generate offset adjusted operation for op_by_pieces operations
       Don't use nullptr return from simplify_gen_subreg
@@ -55,6 +52,7 @@ H.J. Lu (50):
       x86: Generate INT3 for __builtin_eh_return
       Adjust "x86: Add -mmove-max=bits and -mstore-max=bits"
       x86: Scan leal in PR target/83782 tests for x32
+      x86: Check each component of source operand for AVX_U128_DIRTY
 
 Hongyu Wang (2):
       PR target/103069: Relax cmpxchg loop for x86 target
@@ -1697,7 +1695,7 @@ index 941e91636d8..7946613244a 100644
    (gcc::context *);
 -extern rtl_opt_pass *make_pass_constant_pool_broadcast (gcc::context *);
 diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
-index bf471735d58..af2dc0731ed 100644
+index bf471735d58..8950d1cc9c9 100644
 --- a/gcc/config/i386/i386.c
 +++ b/gcc/config/i386/i386.c
 @@ -4195,6 +4195,18 @@ ix86_return_in_memory (const_tree type, const_tree fntype ATTRIBUTE_UNUSED)
@@ -1781,7 +1779,7 @@ index bf471735d58..af2dc0731ed 100644
  	fputs ("@PLT", file);
        break;
  
-@@ -14115,6 +14144,18 @@ ix86_check_avx_upper_register (const_rtx exp)
+@@ -14115,11 +14144,94 @@ ix86_check_avx_upper_register (const_rtx exp)
  	  && GET_MODE_BITSIZE (GET_MODE (exp)) > 128);
  }
  
@@ -1797,10 +1795,86 @@ index bf471735d58..af2dc0731ed 100644
 +    }
 + }
 +
++/* For YMM/ZMM store or YMM/ZMM extract.  Return mode for the source
++   operand of SRC DEFs in the same basic block before INSN.  */
++
++static int
++ix86_avx_u128_mode_source (rtx_insn *insn, const_rtx src)
++{
++  basic_block bb = BLOCK_FOR_INSN (insn);
++  rtx_insn *end = BB_END (bb);
++
++  /* Return AVX_U128_DIRTY if there is no DEF in the same basic
++     block.  */
++  int status = AVX_U128_DIRTY;
++
++  for (df_ref def = DF_REG_DEF_CHAIN (REGNO (src));
++       def; def = DF_REF_NEXT_REG (def))
++    if (DF_REF_BB (def) == bb)
++      {
++	/* Ignore DEF from different basic blocks.  */
++	rtx_insn *def_insn = DF_REF_INSN (def);
++
++	/* Check if DEF_INSN is before INSN.  */
++	rtx_insn *next;
++	for (next = NEXT_INSN (def_insn);
++	     next != nullptr && next != end && next != insn;
++	     next = NEXT_INSN (next))
++	  ;
++
++	/* Skip if DEF_INSN isn't before INSN.  */
++	if (next != insn)
++	  continue;
++
++	/* Return AVX_U128_DIRTY if the source operand of DEF_INSN
++	   isn't constant zero.  */
++
++	if (CALL_P (def_insn))
++	  {
++	    bool avx_upper_reg_found = false;
++	    note_stores (def_insn,
++			 ix86_check_avx_upper_stores,
++			 &avx_upper_reg_found);
++
++	    /* Return AVX_U128_DIRTY if call returns AVX.  */
++	    if (avx_upper_reg_found)
++	      return AVX_U128_DIRTY;
++
++	    continue;
++	  }
++
++	rtx set = single_set (def_insn);
++	if (!set)
++	  return AVX_U128_DIRTY;
++
++	rtx dest = SET_DEST (set);
++
++	/* Skip if DEF_INSN is not an AVX load.  Return AVX_U128_DIRTY
++	   if the source operand isn't constant zero.  */
++	if (ix86_check_avx_upper_register (dest)
++	    && standard_sse_constant_p (SET_SRC (set),
++					GET_MODE (dest)) != 1)
++	  return AVX_U128_DIRTY;
++
++	/* We get here only if all AVX loads are from constant zero.  */
++	status = AVX_U128_ANY;
++      }
++
++  return status;
++}
++
  /* Return needed mode for entity in optimize_mode_switching pass.  */
  
  static int
-@@ -14139,6 +14180,14 @@ ix86_avx_u128_mode_needed (rtx_insn *insn)
+ ix86_avx_u128_mode_needed (rtx_insn *insn)
+ {
++  if (DEBUG_INSN_P (insn))
++    return AVX_U128_ANY;
++
+   if (CALL_P (insn))
+     {
+       rtx link;
+@@ -14139,6 +14251,14 @@ ix86_avx_u128_mode_needed (rtx_insn *insn)
  	    }
  	}
  
@@ -1815,10 +1889,12 @@ index bf471735d58..af2dc0731ed 100644
        /* If the function is known to preserve some SSE registers,
  	 RA and previous passes can legitimately rely on that for
  	 modes wider than 256 bits.  It's only safe to issue a
-@@ -14151,6 +14200,94 @@ ix86_avx_u128_mode_needed (rtx_insn *insn)
+@@ -14151,11 +14271,41 @@ ix86_avx_u128_mode_needed (rtx_insn *insn)
        return AVX_U128_CLEAN;
      }
  
++  subrtx_iterator::array_type array;
++
 +  rtx set = single_set (insn);
 +  if (set)
 +    {
@@ -1833,74 +1909,15 @@ index bf471735d58..af2dc0731ed 100644
 +	  else
 +	    return AVX_U128_ANY;
 +	}
-+      else if (ix86_check_avx_upper_register (src))
++      else
 +	{
-+	  /* This is an YMM/ZMM store.  Check for the source operand
-+	     of SRC DEFs in the same basic block before INSN.  */
-+	  basic_block bb = BLOCK_FOR_INSN (insn);
-+	  rtx_insn *end = BB_END (bb);
-+
-+	  /* Return AVX_U128_DIRTY if there is no DEF in the same basic
-+	     block.  */
-+	  int status = AVX_U128_DIRTY;
-+
-+	  for (df_ref def = DF_REG_DEF_CHAIN (REGNO (src));
-+	       def; def = DF_REF_NEXT_REG (def))
-+	    if (DF_REF_BB (def) == bb)
++	  FOR_EACH_SUBRTX (iter, array, src, NONCONST)
++	    if (ix86_check_avx_upper_register (*iter))
 +	      {
-+		/* Ignore DEF from different basic blocks.  */
-+		rtx_insn *def_insn = DF_REF_INSN (def);
-+
-+		/* Check if DEF_INSN is before INSN.  */
-+		rtx_insn *next;
-+		for (next = NEXT_INSN (def_insn);
-+		     next != nullptr && next != end && next != insn;
-+		     next = NEXT_INSN (next))
-+		  ;
-+
-+		/* Skip if DEF_INSN isn't before INSN.  */
-+		if (next != insn)
-+		  continue;
-+
-+		/* Return AVX_U128_DIRTY if the source operand of
-+		   DEF_INSN isn't constant zero.  */
-+
-+		if (CALL_P (def_insn))
-+		  {
-+		    bool avx_upper_reg_found = false;
-+		    note_stores (def_insn, ix86_check_avx_upper_stores,
-+				 &avx_upper_reg_found);
-+
-+		    /* Return AVX_U128_DIRTY if call returns AVX.  */
-+		    if (avx_upper_reg_found)
-+		      return AVX_U128_DIRTY;
-+
-+		    continue;
-+		  }
-+
-+		set = single_set (def_insn);
-+		if (!set)
-+		  return AVX_U128_DIRTY;
-+
-+		dest = SET_DEST (set);
-+
-+		/* Skip if DEF_INSN is not an AVX load.  */
-+		if (ix86_check_avx_upper_register (dest))
-+		  {
-+		    src = SET_SRC (set);
-+		    /* Return AVX_U128_DIRTY if the source operand isn't
-+		       constant zero.  */
-+		    if (standard_sse_constant_p (src, GET_MODE (dest))
-+			!= 1)
-+		      return AVX_U128_DIRTY;
-+		  }
-+
-+		/* We get here only if all AVX loads are from constant
-+		   zero.  */
-+		status = AVX_U128_ANY;
++		int status = ix86_avx_u128_mode_source (insn, *iter);
++		if (status == AVX_U128_DIRTY)
++		  return status;
 +	      }
-+
-+	  return status;
 +	}
 +
 +      /* This isn't YMM/ZMM load/store.  */
@@ -1910,7 +1927,12 @@ index bf471735d58..af2dc0731ed 100644
    /* Require DIRTY mode if a 256bit or 512bit AVX register is referenced.
       Hardware changes state only when a 256bit register is written to,
       but we need to prevent the compiler from moving optimal insertion
-@@ -14239,18 +14376,6 @@ ix86_mode_needed (int entity, rtx_insn *insn)
+      point above eventual read from 256bit or 512 bit register.  */
+-  subrtx_iterator::array_type array;
+   FOR_EACH_SUBRTX (iter, array, PATTERN (insn), NONCONST)
+     if (ix86_check_avx_upper_register (*iter))
+       return AVX_U128_DIRTY;
+@@ -14239,18 +14389,6 @@ ix86_mode_needed (int entity, rtx_insn *insn)
    return 0;
  }
  
@@ -1929,7 +1951,7 @@ index bf471735d58..af2dc0731ed 100644
  /* Calculate mode of upper 128bit AVX registers after the insn.  */
  
  static int
-@@ -15699,6 +15824,26 @@ ix86_zero_extend_to_Pmode (rtx exp)
+@@ -15699,6 +15837,26 @@ ix86_zero_extend_to_Pmode (rtx exp)
    return force_reg (Pmode, convert_to_mode (Pmode, exp, 1));
  }
  
@@ -1956,7 +1978,7 @@ index bf471735d58..af2dc0731ed 100644
  /* Return true if the function being called was marked with attribute
     "noplt" or using -fno-plt and we are compiling for non-PIC.  We need
     to handle the non-PIC case in the backend because there is no easy
-@@ -15731,9 +15876,14 @@ ix86_output_jmp_thunk_or_indirect (const char *thunk_name, const int regno)
+@@ -15731,9 +15889,14 @@ ix86_output_jmp_thunk_or_indirect (const char *thunk_name, const int regno)
  {
    if (thunk_name != NULL)
      {
@@ -1971,7 +1993,7 @@ index bf471735d58..af2dc0731ed 100644
      }
    else
      output_indirect_thunk (regno);
-@@ -15782,6 +15932,9 @@ ix86_output_indirect_branch_via_reg (rtx call_op, bool sibcall_p)
+@@ -15782,6 +15945,9 @@ ix86_output_indirect_branch_via_reg (rtx call_op, bool sibcall_p)
      {
        if (thunk_name != NULL)
  	{
@@ -1981,7 +2003,7 @@ index bf471735d58..af2dc0731ed 100644
  	  fprintf (asm_out_file, "\tcall\t");
  	  assemble_name (asm_out_file, thunk_name);
  	  putc ('\n', asm_out_file);
-@@ -15956,10 +16109,10 @@ ix86_output_indirect_jmp (rtx call_op)
+@@ -15956,10 +16122,10 @@ ix86_output_indirect_jmp (rtx call_op)
  	gcc_unreachable ();
  
        ix86_output_indirect_branch (call_op, "%0", true);
@@ -1994,7 +2016,7 @@ index bf471735d58..af2dc0731ed 100644
  }
  
  /* Output return instrumentation for current function if needed.  */
-@@ -16027,10 +16180,8 @@ ix86_output_function_return (bool long_p)
+@@ -16027,10 +16193,8 @@ ix86_output_function_return (bool long_p)
        return "";
      }
  
@@ -2007,7 +2029,7 @@ index bf471735d58..af2dc0731ed 100644
  }
  
  /* Output indirect function return.  RET_OP is the function return
-@@ -16065,11 +16216,14 @@ ix86_output_indirect_function_return (rtx ret_op)
+@@ -16065,11 +16229,14 @@ ix86_output_indirect_function_return (rtx ret_op)
  	}
        else
  	output_indirect_thunk (regno);
@@ -2025,7 +2047,7 @@ index bf471735d58..af2dc0731ed 100644
  }
  
  /* Output the assembly for a call instruction.  */
-@@ -16125,7 +16279,12 @@ ix86_output_call_insn (rtx_insn *insn, rtx call_op)
+@@ -16125,7 +16292,12 @@ ix86_output_call_insn (rtx_insn *insn, rtx call_op)
        if (output_indirect_p && !direct_p)
  	ix86_output_indirect_branch (call_op, xasm, true);
        else
@@ -2039,7 +2061,7 @@ index bf471735d58..af2dc0731ed 100644
        return "";
      }
  
-@@ -16765,6 +16924,8 @@ ix86_sched_init_global (FILE *, int, int)
+@@ -16765,6 +16937,8 @@ ix86_sched_init_global (FILE *, int, int)
      case PROCESSOR_NEHALEM:
      case PROCESSOR_SANDYBRIDGE:
      case PROCESSOR_HASWELL:
@@ -2048,7 +2070,7 @@ index bf471735d58..af2dc0731ed 100644
      case PROCESSOR_GENERIC:
        /* Do not perform multipass scheduling for pre-reload schedule
           to save compile time.  */
-@@ -20258,6 +20419,11 @@ ix86_rtx_costs (rtx x, machine_mode mode, int outer_code_i, int opno,
+@@ -20258,6 +20432,11 @@ ix86_rtx_costs (rtx x, machine_mode mode, int outer_code_i, int opno,
      case UNSPEC:
        if (XINT (x, 1) == UNSPEC_TP)
  	*total = 0;
@@ -2060,7 +2082,7 @@ index bf471735d58..af2dc0731ed 100644
        return false;
  
      case VEC_SELECT:
-@@ -23024,6 +23190,32 @@ ix86_optab_supported_p (int op, machine_mode mode1, machine_mode,
+@@ -23024,6 +23203,32 @@ ix86_optab_supported_p (int op, machine_mode mode1, machine_mode,
      }
  }
  
@@ -2093,7 +2115,7 @@ index bf471735d58..af2dc0731ed 100644
  /* Address space support.
  
     This is not "far pointers" in the 16-bit sense, but an easy way
-@@ -23554,6 +23746,9 @@ ix86_run_selftests (void)
+@@ -23554,6 +23759,9 @@ ix86_run_selftests (void)
  #undef TARGET_ADDRESS_COST
  #define TARGET_ADDRESS_COST ix86_address_cost
  
@@ -2103,7 +2125,7 @@ index bf471735d58..af2dc0731ed 100644
  #undef TARGET_FLAGS_REGNUM
  #define TARGET_FLAGS_REGNUM FLAGS_REG
  #undef TARGET_FIXED_CONDITION_CODE_REGS
-@@ -23603,6 +23798,8 @@ ix86_run_selftests (void)
+@@ -23603,6 +23811,8 @@ ix86_run_selftests (void)
  #define TARGET_C_EXCESS_PRECISION ix86_get_excess_precision
  #undef TARGET_PROMOTE_PROTOTYPES
  #define TARGET_PROMOTE_PROTOTYPES hook_bool_const_tree_true
@@ -2112,7 +2134,7 @@ index bf471735d58..af2dc0731ed 100644
  #undef TARGET_SETUP_INCOMING_VARARGS
  #define TARGET_SETUP_INCOMING_VARARGS ix86_setup_incoming_varargs
  #undef TARGET_MUST_PASS_IN_STACK
-@@ -23907,6 +24104,9 @@ ix86_run_selftests (void)
+@@ -23907,6 +24117,9 @@ ix86_run_selftests (void)
  #define TARGET_GET_MULTILIB_ABI_NAME \
    ix86_get_multilib_abi_name
  
@@ -2122,7 +2144,7 @@ index bf471735d58..af2dc0731ed 100644
  static bool ix86_libc_has_fast_function (int fcode ATTRIBUTE_UNUSED)
  {
  #ifdef OPTION_GLIBC
-@@ -23922,6 +24122,9 @@ static bool ix86_libc_has_fast_function (int fcode ATTRIBUTE_UNUSED)
+@@ -23922,6 +24135,9 @@ static bool ix86_libc_has_fast_function (int fcode ATTRIBUTE_UNUSED)
  #undef TARGET_LIBC_HAS_FAST_FUNCTION
  #define TARGET_LIBC_HAS_FAST_FUNCTION ix86_libc_has_fast_function
  
@@ -2542,7 +2564,7 @@ index b815aca0da7..98844736b92 100644
  (define_predicate "vzeroall_operation"
    (match_code "parallel")
 diff --git a/gcc/config/i386/sse.md b/gcc/config/i386/sse.md
-index d31e10184c3..19c9259990c 100644
+index 957f85f9a7b..8b5988a22d8 100644
 --- a/gcc/config/i386/sse.md
 +++ b/gcc/config/i386/sse.md
 @@ -95,7 +95,6 @@
@@ -2862,7 +2884,7 @@ index d31e10184c3..19c9259990c 100644
    "TARGET_SSE2"
    "@
     %vmovq\t{%1, %0|%0, %1}
-@@ -22114,6 +22350,24 @@
+@@ -22115,6 +22351,24 @@
     (set_attr "prefix" "maybe_evex")
     (set_attr "mode" "<sseinsnmode>")])
  
@@ -2887,7 +2909,7 @@ index d31e10184c3..19c9259990c 100644
  (define_insn "vcvtph2ps<mask_name>"
    [(set (match_operand:V4SF 0 "register_operand" "=v")
  	(vec_select:V4SF
-@@ -24283,3 +24537,34 @@
+@@ -24284,3 +24538,34 @@
    "TARGET_WIDEKL"
    "aes<aeswideklvariant>\t%0"
    [(set_attr "type" "other")])
@@ -10602,6 +10624,107 @@ index 00000000000..705081e51d5
 +/* { dg-final { scan-assembler-times "lock;?\[ \t\]*btsw" 2 } } */
 +/* { dg-final { scan-assembler-times "lock;?\[ \t\]*btcw" 2 } } */
 +/* { dg-final { scan-assembler-not "cmpxchgw" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr104441-1a.c b/gcc/testsuite/gcc.target/i386/pr104441-1a.c
+new file mode 100644
+index 00000000000..f4d263205f8
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr104441-1a.c
+@@ -0,0 +1,57 @@
++/* { dg-do compile } */
++/* { dg-options "-O3 -mtune=skylake -Wno-attributes" } */
++
++#include <x86intrin.h>
++#include <stdint.h>
++
++__attribute__((always_inline, target("avx2")))
++static __m256i
++load8bit_4x4_avx2(const uint8_t *const src, const uint32_t stride)
++{
++  __m128i src01, src23;
++  src01 = _mm_cvtsi32_si128(*(int32_t*)(src + 0 * stride));
++  src23 = _mm_insert_epi32(src23, *(int32_t *)(src + 3 * stride), 1);
++  return _mm256_setr_m128i(src01, src23);
++}
++
++__attribute__ ((noinline, noipa, target("avx2")))
++uint32_t
++compute4x_m_sad_avx2_intrin(uint8_t *src, uint32_t src_stride,
++			    uint8_t *ref, uint32_t ref_stride,
++			    uint32_t height)
++{
++  __m128i xmm0;
++  __m256i ymm = _mm256_setzero_si256();
++  uint32_t y;
++
++  for (y = 0; y < height; y += 4) {
++    const __m256i src0123 = load8bit_4x4_avx2(src, src_stride);
++    const __m256i ref0123 = load8bit_4x4_avx2(ref, ref_stride);
++    ymm = _mm256_add_epi32(ymm, _mm256_sad_epu8(src0123, ref0123));
++    src += src_stride << 2;
++    ref += ref_stride << 2;
++  }
++
++  xmm0 = _mm_add_epi32(_mm256_castsi256_si128(ymm),
++		       _mm256_extracti128_si256(ymm, 1));
++
++  return (uint32_t)_mm_cvtsi128_si32(xmm0);
++}  
++
++/* Expect assembly like:
++
++	vextracti128	$0x1, %ymm3, %xmm3
++	vpaddd	%xmm3, %xmm0, %xmm0
++	vmovd	%xmm0, %eax
++	vzeroupper
++
++rather than:
++
++	vzeroupper
++	vextracti128	$0x1, %ymm3, %xmm3
++	vpaddd	%xmm3, %xmm0, %xmm0
++	vmovd	%xmm0, %eax
++
++ */
++
++/* { dg-final { scan-assembler "\[ \t\]+vextracti128\[ \t\]+\[^\n\]+\n\[ \t\]+vpaddd\[ \t\]+\[^\n\]+\n\[ \t\]+vmovd\[ \t\]+\[^\n\]+\n\[ \t\]+vzeroupper" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr104441-1b.c b/gcc/testsuite/gcc.target/i386/pr104441-1b.c
+new file mode 100644
+index 00000000000..0b8a796d93c
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr104441-1b.c
+@@ -0,0 +1,32 @@
++/* { dg-do run } */
++/* { dg-options "-O3 -mvzeroupper -Wno-attributes" } */
++
++#include "pr104441-1a.c"
++
++#define ARRAY_SIZE 255
++
++__attribute__ ((noinline, noipa))
++static void
++do_test (void)
++{
++  uint8_t src[ARRAY_SIZE];
++  uint8_t ref[ARRAY_SIZE];
++  uint32_t x;
++  uint32_t i;
++  for (i = 0; i < ARRAY_SIZE; i++)
++    {
++      src[i] = i;
++      ref[i] = i;
++    }
++  x = compute4x_m_sad_avx2_intrin(src, 64 >> 2, ref, 64, 4);
++  if (x != 0x240)
++    __builtin_abort ();
++}
++
++int
++main ()
++{
++  if (__builtin_cpu_supports ("avx2"))
++    do_test ();
++  return 0;
++}
 diff --git a/gcc/testsuite/gcc.target/i386/pr72839.c b/gcc/testsuite/gcc.target/i386/pr72839.c
 index ea724f70377..6888d9d0a55 100644
 --- a/gcc/testsuite/gcc.target/i386/pr72839.c
