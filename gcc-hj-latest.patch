@@ -1,7 +1,10 @@
+Arjan van de Ven (1):
+      Merge remote-tracking branch 'origin/releases/gcc-11' into HEAD
+
 Cui,Lili (1):
       x86: Update -mtune=alderlake
 
-H.J. Lu (51):
+H.J. Lu (52):
       op_by_pieces_d::run: Change a while loop to a do-while loop
       Generate offset adjusted operation for op_by_pieces operations
       Don't use nullptr return from simplify_gen_subreg
@@ -53,6 +56,7 @@ H.J. Lu (51):
       Adjust "x86: Add -mmove-max=bits and -mstore-max=bits"
       x86: Scan leal in PR target/83782 tests for x32
       x86: Check each component of source operand for AVX_U128_DIRTY
+      x86: Compile PR target/104441 tests with -march=x86-64
 
 Hongyu Wang (2):
       PR target/103069: Relax cmpxchg loop for x86 target
@@ -477,10 +481,10 @@ index 7d908c6a62b..32ba27e755f 100644
      }
  
 diff --git a/gcc/common/config/i386/i386-common.c b/gcc/common/config/i386/i386-common.c
-index 38dbb9d9263..ef382ec9a22 100644
+index 96549aa7d7e..153538a6e46 100644
 --- a/gcc/common/config/i386/i386-common.c
 +++ b/gcc/common/config/i386/i386-common.c
-@@ -1916,7 +1916,7 @@ const pta processor_alias_table[] =
+@@ -1917,7 +1917,7 @@ const pta processor_alias_table[] =
      M_CPU_TYPE (INTEL_GOLDMONT), P_PROC_SSE4_2},
    {"goldmont-plus", PROCESSOR_GOLDMONT_PLUS, CPU_GLM, PTA_GOLDMONT_PLUS,
      M_CPU_TYPE (INTEL_GOLDMONT_PLUS), P_PROC_SSE4_2},
@@ -530,7 +534,7 @@ index ae90610ad80..a60d9a79b0b 100644
  
  #ifndef CUMULATIVE_ARGS
 diff --git a/gcc/config/i386/i386-expand.c b/gcc/config/i386/i386-expand.c
-index 16765718cc3..5eebb41e543 100644
+index 1772fb16c9a..03f0d849f4e 100644
 --- a/gcc/config/i386/i386-expand.c
 +++ b/gcc/config/i386/i386-expand.c
 @@ -190,6 +190,82 @@ ix86_expand_clear (rtx dest)
@@ -793,7 +797,7 @@ index 16765718cc3..5eebb41e543 100644
        return;
      }
  
-@@ -1868,13 +2055,9 @@ void
+@@ -1871,13 +2058,9 @@ void
  ix86_expand_copysign (rtx operands[])
  {
    machine_mode mode, vmode;
@@ -809,7 +813,7 @@ index 16765718cc3..5eebb41e543 100644
  
    if (mode == SFmode)
      vmode = V4SFmode;
-@@ -1885,136 +2068,40 @@ ix86_expand_copysign (rtx operands[])
+@@ -1888,136 +2071,40 @@ ix86_expand_copysign (rtx operands[])
    else
      gcc_unreachable ();
  
@@ -970,7 +974,7 @@ index 16765718cc3..5eebb41e543 100644
  }
  
  /* Expand an xorsign operation.  */
-@@ -2023,7 +2110,7 @@ void
+@@ -2026,7 +2113,7 @@ void
  ix86_expand_xorsign (rtx operands[])
  {
    machine_mode mode, vmode;
@@ -979,7 +983,7 @@ index 16765718cc3..5eebb41e543 100644
  
    dest = operands[0];
    op0 = operands[1];
-@@ -2038,32 +2125,17 @@ ix86_expand_xorsign (rtx operands[])
+@@ -2041,32 +2128,17 @@ ix86_expand_xorsign (rtx operands[])
    else
      gcc_unreachable ();
  
@@ -1018,7 +1022,7 @@ index 16765718cc3..5eebb41e543 100644
    emit_insn (gen_rtx_SET (dest, x));
  }
  
-@@ -8074,7 +8146,7 @@ ix86_expand_call (rtx retval, rtx fnaddr, rtx callarg1,
+@@ -8077,7 +8149,7 @@ ix86_expand_call (rtx retval, rtx fnaddr, rtx callarg1,
  	 it an indirect call.  */
        if (flag_pic
  	  && GET_CODE (addr) == SYMBOL_REF
@@ -1027,7 +1031,7 @@ index 16765718cc3..5eebb41e543 100644
  	{
  	  if (flag_plt
  	      && (SYMBOL_REF_DECL (addr) == NULL_TREE
-@@ -11139,6 +11211,7 @@ ix86_expand_builtin (tree exp, rtx target, rtx subtarget,
+@@ -11142,6 +11214,7 @@ ix86_expand_builtin (tree exp, rtx target, rtx subtarget,
        char *opts = ix86_target_string (bisa, bisa2, 0, 0, NULL, NULL,
  				       (enum fpmath_unit) 0,
  				       (enum prefer_vector_width) 0,
@@ -1035,7 +1039,7 @@ index 16765718cc3..5eebb41e543 100644
  				       false, add_abi_p);
        if (!opts)
  	error ("%qE needs unknown isa option", fndecl);
-@@ -13598,7 +13671,7 @@ static bool expand_vec_perm_1 (struct expand_vec_perm_d *d);
+@@ -13601,7 +13674,7 @@ static bool expand_vec_perm_1 (struct expand_vec_perm_d *d);
  /* A subroutine of ix86_expand_vector_init.  Store into TARGET a vector
     with all elements equal to VAR.  Return true if successful.  */
  
@@ -1044,7 +1048,7 @@ index 16765718cc3..5eebb41e543 100644
  ix86_expand_vector_init_duplicate (bool mmx_ok, machine_mode mode,
  				   rtx target, rtx val)
  {
-@@ -21082,4 +21155,85 @@ ix86_expand_divmod_libfunc (rtx libfunc, machine_mode mode,
+@@ -21085,4 +21158,85 @@ ix86_expand_divmod_libfunc (rtx libfunc, machine_mode mode,
    *rem_p = rem;
  }
  
@@ -10626,12 +10630,12 @@ index 00000000000..705081e51d5
 +/* { dg-final { scan-assembler-not "cmpxchgw" } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pr104441-1a.c b/gcc/testsuite/gcc.target/i386/pr104441-1a.c
 new file mode 100644
-index 00000000000..f4d263205f8
+index 00000000000..83734f710bd
 --- /dev/null
 +++ b/gcc/testsuite/gcc.target/i386/pr104441-1a.c
 @@ -0,0 +1,57 @@
 +/* { dg-do compile } */
-+/* { dg-options "-O3 -mtune=skylake -Wno-attributes" } */
++/* { dg-options "-O3 -march=x86-64 -mtune=skylake -Wno-attributes" } */
 +
 +#include <x86intrin.h>
 +#include <stdint.h>
@@ -10689,12 +10693,12 @@ index 00000000000..f4d263205f8
 +/* { dg-final { scan-assembler "\[ \t\]+vextracti128\[ \t\]+\[^\n\]+\n\[ \t\]+vpaddd\[ \t\]+\[^\n\]+\n\[ \t\]+vmovd\[ \t\]+\[^\n\]+\n\[ \t\]+vzeroupper" } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pr104441-1b.c b/gcc/testsuite/gcc.target/i386/pr104441-1b.c
 new file mode 100644
-index 00000000000..0b8a796d93c
+index 00000000000..325af044bb8
 --- /dev/null
 +++ b/gcc/testsuite/gcc.target/i386/pr104441-1b.c
 @@ -0,0 +1,32 @@
 +/* { dg-do run } */
-+/* { dg-options "-O3 -mvzeroupper -Wno-attributes" } */
++/* { dg-options "-O3 -march=x86-64 -mvzeroupper -Wno-attributes" } */
 +
 +#include "pr104441-1a.c"
 +
