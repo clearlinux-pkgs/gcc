@@ -4,7 +4,7 @@ Arjan van de Ven (1):
 Cui,Lili (1):
       x86: Update -mtune=alderlake
 
-H.J. Lu (52):
+H.J. Lu (54):
       op_by_pieces_d::run: Change a while loop to a do-while loop
       Generate offset adjusted operation for op_by_pieces operations
       Don't use nullptr return from simplify_gen_subreg
@@ -57,6 +57,8 @@ H.J. Lu (52):
       x86: Scan leal in PR target/83782 tests for x32
       x86: Check each component of source operand for AVX_U128_DIRTY
       x86: Compile PR target/104441 tests with -march=x86-64
+      x86: Add -m[no-]direct-extern-access
+      x86: Update PR 35513 tests
 
 Hongyu Wang (2):
       PR target/103069: Relax cmpxchg loop for x86 target
@@ -533,6 +535,39 @@ index ae90610ad80..a60d9a79b0b 100644
  #define PUSH_ROUNDING(BYTES) cr16_push_rounding (BYTES)
  
  #ifndef CUMULATIVE_ARGS
+diff --git a/gcc/config/i386/gnu-property.c b/gcc/config/i386/gnu-property.c
+index 4ba04403002..d8d53555f4d 100644
+--- a/gcc/config/i386/gnu-property.c
++++ b/gcc/config/i386/gnu-property.c
+@@ -23,6 +23,7 @@ along with GCC; see the file COPYING3.  If not see
+ #include "tm.h"
+ #include "output.h"
+ #include "linux-common.h"
++#include "i386-protos.h"
+ 
+ static void
+ emit_gnu_property (unsigned int type, unsigned int data)
+@@ -60,7 +61,9 @@ file_end_indicate_exec_stack_and_gnu_property (void)
+ {
+   file_end_indicate_exec_stack ();
+ 
+-  if (flag_cf_protection == CF_NONE && !ix86_needed)
++  if (flag_cf_protection == CF_NONE
++      && !ix86_needed
++      && !ix86_has_no_direct_extern_access)
+     return;
+ 
+   unsigned int feature_1 = 0;
+@@ -121,4 +124,9 @@ file_end_indicate_exec_stack_and_gnu_property (void)
+   /* Generate GNU_PROPERTY_X86_ISA_1_NEEDED.  */
+   if (isa_1)
+     emit_gnu_property (0xc0008002, isa_1);
++
++  if (ix86_has_no_direct_extern_access)
++    /* Emite a GNU_PROPERTY_1_NEEDED note with
++       GNU_PROPERTY_1_NEEDED_INDIRECT_EXTERN_ACCESS.  */
++    emit_gnu_property (0xb0008000, (1U << 0));
+ }
 diff --git a/gcc/config/i386/i386-expand.c b/gcc/config/i386/i386-expand.c
 index 1772fb16c9a..03f0d849f4e 100644
 --- a/gcc/config/i386/i386-expand.c
@@ -1418,7 +1453,7 @@ index dbddfd8e48f..4e7014be034 100644
  /* The symbol Pmode stands for one of the above machine modes (usually SImode).
     The tm.h file specifies which one.  It is not a distinct mode.  */
 diff --git a/gcc/config/i386/i386-options.c b/gcc/config/i386/i386-options.c
-index 19632b5fd6b..8f030546365 100644
+index 19632b5fd6b..9f838862ee2 100644
 --- a/gcc/config/i386/i386-options.c
 +++ b/gcc/config/i386/i386-options.c
 @@ -131,7 +131,7 @@ along with GCC; see the file COPYING3.  If not see
@@ -1601,6 +1636,52 @@ index 19632b5fd6b..8f030546365 100644
    if (opts->x_ix86_recip_name)
      {
        char *p = ASTRDUP (opts->x_ix86_recip_name);
+@@ -3894,6 +3964,36 @@ ix86_handle_fentry_name (tree *node, tree name, tree args,
+   return NULL_TREE;
+ }
+ 
++/* Handle a "nodirect_extern_access" attribute; arguments as in
++   struct attribute_spec.handler.  */
++
++static tree
++handle_nodirect_extern_access_attribute (tree *pnode, tree name,
++					 tree ARG_UNUSED (args),
++					 int ARG_UNUSED (flags),
++					 bool *no_add_attrs)
++{
++  tree node = *pnode;
++
++  if (VAR_OR_FUNCTION_DECL_P (node))
++    {
++      if ((!TREE_STATIC (node) && TREE_CODE (node) != FUNCTION_DECL
++	   && !DECL_EXTERNAL (node)) || !TREE_PUBLIC (node))
++	{
++	  warning (OPT_Wattributes,
++		   "%qE attribute have effect only on public objects", name);
++	  *no_add_attrs = true;
++	}
++    }
++  else
++    {
++      warning (OPT_Wattributes, "%qE attribute ignored", name);
++      *no_add_attrs = true;
++    }
++
++  return NULL_TREE;
++}
++
+ /* Table of valid machine attributes.  */
+ const struct attribute_spec ix86_attribute_table[] =
+ {
+@@ -3974,6 +4074,8 @@ const struct attribute_spec ix86_attribute_table[] =
+     ix86_handle_fentry_name, NULL },
+   { "cf_check", 0, 0, true, false, false, false,
+     ix86_handle_fndecl_attribute, NULL },
++  { "nodirect_extern_access", 0, 0, true, false, false, false,
++    handle_nodirect_extern_access_attribute, NULL },
+ 
+   /* End element.  */
+   { NULL, 0, 0, false, false, false, false, NULL, NULL }
 diff --git a/gcc/config/i386/i386-options.h b/gcc/config/i386/i386-options.h
 index cdaca2644f4..e218e24d15b 100644
 --- a/gcc/config/i386/i386-options.h
@@ -1644,7 +1725,7 @@ index 44df00e94ac..29baf8acd0b 100644
    INSERT_PASS_AFTER (pass_combine, 1, pass_remove_partial_avx_dependency);
 -  INSERT_PASS_AFTER (pass_combine, 1, pass_constant_pool_broadcast);
 diff --git a/gcc/config/i386/i386-protos.h b/gcc/config/i386/i386-protos.h
-index 941e91636d8..7946613244a 100644
+index 941e91636d8..4fce0684ec8 100644
 --- a/gcc/config/i386/i386-protos.h
 +++ b/gcc/config/i386/i386-protos.h
 @@ -50,6 +50,8 @@ extern void ix86_reset_previous_fndecl (void);
@@ -1656,6 +1737,15 @@ index 941e91636d8..7946613244a 100644
  extern unsigned int ix86_regmode_natural_size (machine_mode);
  #ifdef RTX_CODE
  extern int standard_80387_constant_p (rtx);
+@@ -77,7 +79,7 @@ extern bool ix86_expand_cmpstrn_or_cmpmem (rtx, rtx, rtx, rtx, rtx, bool);
+ extern bool constant_address_p (rtx);
+ extern bool legitimate_pic_operand_p (rtx);
+ extern bool legitimate_pic_address_disp_p (rtx);
+-extern bool ix86_force_load_from_GOT_p (rtx);
++extern bool ix86_force_load_from_GOT_p (rtx, bool = false);
+ extern void print_reg (rtx, int, FILE*);
+ extern void ix86_print_operand (FILE *, rtx, int);
+ 
 @@ -132,10 +134,7 @@ extern void ix86_expand_fp_absneg_operator (enum rtx_code, machine_mode,
  extern void ix86_split_fp_absneg_operator (enum rtx_code, machine_mode,
  					   rtx[]);
@@ -1693,16 +1783,28 @@ index 941e91636d8..7946613244a 100644
  
  /* In i386-c.c  */
  extern void ix86_target_macros (void);
-@@ -393,4 +397,3 @@ extern rtl_opt_pass *make_pass_insert_endbr_and_patchable_area
+@@ -393,4 +397,5 @@ extern rtl_opt_pass *make_pass_insert_endbr_and_patchable_area
    (gcc::context *);
  extern rtl_opt_pass *make_pass_remove_partial_avx_dependency
    (gcc::context *);
 -extern rtl_opt_pass *make_pass_constant_pool_broadcast (gcc::context *);
++
++extern bool ix86_has_no_direct_extern_access;
 diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
-index bf471735d58..8950d1cc9c9 100644
+index ecb78087502..7600c8695c9 100644
 --- a/gcc/config/i386/i386.c
 +++ b/gcc/config/i386/i386.c
-@@ -4195,6 +4195,18 @@ ix86_return_in_memory (const_tree type, const_tree fntype ATTRIBUTE_UNUSED)
+@@ -362,6 +362,9 @@ unsigned int ix86_default_incoming_stack_boundary;
+ /* Alignment for incoming stack boundary in bits.  */
+ unsigned int ix86_incoming_stack_boundary;
+ 
++/* True if there is no direct access to extern symbols.  */
++bool ix86_has_no_direct_extern_access;
++
+ /* Calling abi specific va_list type nodes.  */
+ tree sysv_va_list_type_node;
+ tree ms_va_list_type_node;
+@@ -4199,6 +4202,18 @@ ix86_return_in_memory (const_tree type, const_tree fntype ATTRIBUTE_UNUSED)
      }
  }
  
@@ -1721,7 +1823,7 @@ index bf471735d58..8950d1cc9c9 100644
  
  /* Create the va_list data type.  */
  
-@@ -5798,6 +5810,8 @@ output_indirect_thunk (unsigned int regno)
+@@ -5802,6 +5817,8 @@ output_indirect_thunk (unsigned int regno)
      }
  
    fputs ("\tret\n", asm_out_file);
@@ -1730,7 +1832,7 @@ index bf471735d58..8950d1cc9c9 100644
  }
  
  /* Output a funtion with a call and return thunk for indirect branch.
-@@ -6000,7 +6014,7 @@ ix86_code_end (void)
+@@ -6004,7 +6021,7 @@ ix86_code_end (void)
        xops[0] = gen_rtx_REG (Pmode, regno);
        xops[1] = gen_rtx_MEM (Pmode, stack_pointer_rtx);
        output_asm_insn ("mov%z0\t{%1, %0|%0, %1}", xops);
@@ -1739,7 +1841,7 @@ index bf471735d58..8950d1cc9c9 100644
        final_end_function ();
        init_insn_lengths ();
        free_after_compilation (cfun);
-@@ -7947,8 +7961,17 @@ ix86_finalize_stack_frame_flags (void)
+@@ -7951,8 +7968,17 @@ ix86_finalize_stack_frame_flags (void)
       assumed stack realignment might be needed or -fno-omit-frame-pointer
       is used, but in the end nothing that needed the stack alignment had
       been spilled nor stack access, clear frame_pointer_needed and say we
@@ -1759,7 +1861,48 @@ index bf471735d58..8950d1cc9c9 100644
        && frame_pointer_needed
        && crtl->is_leaf
        && crtl->sp_is_unchanging
-@@ -10411,7 +10434,13 @@ ix86_legitimate_constant_p (machine_mode mode, rtx x)
+@@ -10309,13 +10335,17 @@ darwin_local_data_pic (rtx disp)
+ }
+ 
+ /* True if the function symbol operand X should be loaded from GOT.
++   If CALL_P is true, X is a call operand.
++
++   NB: -mno-direct-extern-access doesn't force load from GOT for
++   call.
+ 
+    NB: In 32-bit mode, only non-PIC is allowed in inline assembly
+    statements, since a PIC register could not be available at the
+    call site.  */
+ 
+ bool
+-ix86_force_load_from_GOT_p (rtx x)
++ix86_force_load_from_GOT_p (rtx x, bool call_p)
+ {
+   return ((TARGET_64BIT || (!flag_pic && HAVE_AS_IX86_GOT32X))
+ 	  && !TARGET_PECOFF && !TARGET_MACHO
+@@ -10323,11 +10353,16 @@ ix86_force_load_from_GOT_p (rtx x)
+ 	  && ix86_cmodel != CM_LARGE
+ 	  && ix86_cmodel != CM_LARGE_PIC
+ 	  && GET_CODE (x) == SYMBOL_REF
+-	  && SYMBOL_REF_FUNCTION_P (x)
+-	  && (!flag_plt
+-	      || (SYMBOL_REF_DECL (x)
+-		  && lookup_attribute ("noplt",
+-				       DECL_ATTRIBUTES (SYMBOL_REF_DECL (x)))))
++	  && ((!call_p
++	       && (!ix86_direct_extern_access
++		   || (SYMBOL_REF_DECL (x)
++		       && lookup_attribute ("nodirect_extern_access",
++					    DECL_ATTRIBUTES (SYMBOL_REF_DECL (x))))))
++	      || (SYMBOL_REF_FUNCTION_P (x)
++		  && (!flag_plt
++		      || (SYMBOL_REF_DECL (x)
++			  && lookup_attribute ("noplt",
++					       DECL_ATTRIBUTES (SYMBOL_REF_DECL (x)))))))
+ 	  && !SYMBOL_REF_LOCAL_P (x));
+ }
+ 
+@@ -10415,7 +10450,13 @@ ix86_legitimate_constant_p (machine_mode mode, rtx x)
  	  /* FALLTHRU */
  	case E_OImode:
  	case E_XImode:
@@ -1774,7 +1917,20 @@ index bf471735d58..8950d1cc9c9 100644
  	    return false;
  	default:
  	  break;
-@@ -11991,7 +12020,7 @@ output_pic_addr_const (FILE *file, rtx x, int code)
+@@ -10588,7 +10629,11 @@ legitimate_pic_address_disp_p (rtx disp)
+ 	    }
+ 	  else if (!SYMBOL_REF_FAR_ADDR_P (op0)
+ 		   && (SYMBOL_REF_LOCAL_P (op0)
+-		       || (HAVE_LD_PIE_COPYRELOC
++		       || ((ix86_direct_extern_access
++			    && !(SYMBOL_REF_DECL (op0)
++				 && lookup_attribute ("nodirect_extern_access",
++						      DECL_ATTRIBUTES (SYMBOL_REF_DECL (op0)))))
++			   && HAVE_LD_PIE_COPYRELOC
+ 			   && flag_pie
+ 			   && !SYMBOL_REF_WEAK (op0)
+ 			   && !SYMBOL_REF_FUNCTION_P (op0)))
+@@ -11995,7 +12040,7 @@ output_pic_addr_const (FILE *file, rtx x, int code)
  	  assemble_name (file, name);
  	}
        if (!TARGET_MACHO && !(TARGET_64BIT && TARGET_PECOFF)
@@ -1783,7 +1939,16 @@ index bf471735d58..8950d1cc9c9 100644
  	fputs ("@PLT", file);
        break;
  
-@@ -14115,11 +14144,94 @@ ix86_check_avx_upper_register (const_rtx exp)
+@@ -13521,7 +13566,7 @@ ix86_print_operand (FILE *file, rtx x, int code)
+ 
+       if (code == 'P')
+ 	{
+-	  if (ix86_force_load_from_GOT_p (x))
++	  if (ix86_force_load_from_GOT_p (x, true))
+ 	    {
+ 	      /* For inline assembly statement, load function address
+ 		 from GOT with 'P' operand modifier to avoid PLT.  */
+@@ -14119,11 +14164,94 @@ ix86_check_avx_upper_register (const_rtx exp)
  	  && GET_MODE_BITSIZE (GET_MODE (exp)) > 128);
  }
  
@@ -1878,7 +2043,7 @@ index bf471735d58..8950d1cc9c9 100644
    if (CALL_P (insn))
      {
        rtx link;
-@@ -14139,6 +14251,14 @@ ix86_avx_u128_mode_needed (rtx_insn *insn)
+@@ -14143,6 +14271,14 @@ ix86_avx_u128_mode_needed (rtx_insn *insn)
  	    }
  	}
  
@@ -1893,7 +2058,7 @@ index bf471735d58..8950d1cc9c9 100644
        /* If the function is known to preserve some SSE registers,
  	 RA and previous passes can legitimately rely on that for
  	 modes wider than 256 bits.  It's only safe to issue a
-@@ -14151,11 +14271,41 @@ ix86_avx_u128_mode_needed (rtx_insn *insn)
+@@ -14155,11 +14291,41 @@ ix86_avx_u128_mode_needed (rtx_insn *insn)
        return AVX_U128_CLEAN;
      }
  
@@ -1936,7 +2101,7 @@ index bf471735d58..8950d1cc9c9 100644
    FOR_EACH_SUBRTX (iter, array, PATTERN (insn), NONCONST)
      if (ix86_check_avx_upper_register (*iter))
        return AVX_U128_DIRTY;
-@@ -14239,18 +14389,6 @@ ix86_mode_needed (int entity, rtx_insn *insn)
+@@ -14243,18 +14409,6 @@ ix86_mode_needed (int entity, rtx_insn *insn)
    return 0;
  }
  
@@ -1955,7 +2120,7 @@ index bf471735d58..8950d1cc9c9 100644
  /* Calculate mode of upper 128bit AVX registers after the insn.  */
  
  static int
-@@ -15699,6 +15837,26 @@ ix86_zero_extend_to_Pmode (rtx exp)
+@@ -15703,6 +15857,26 @@ ix86_zero_extend_to_Pmode (rtx exp)
    return force_reg (Pmode, convert_to_mode (Pmode, exp, 1));
  }
  
@@ -1982,7 +2147,7 @@ index bf471735d58..8950d1cc9c9 100644
  /* Return true if the function being called was marked with attribute
     "noplt" or using -fno-plt and we are compiling for non-PIC.  We need
     to handle the non-PIC case in the backend because there is no easy
-@@ -15731,9 +15889,14 @@ ix86_output_jmp_thunk_or_indirect (const char *thunk_name, const int regno)
+@@ -15735,9 +15909,14 @@ ix86_output_jmp_thunk_or_indirect (const char *thunk_name, const int regno)
  {
    if (thunk_name != NULL)
      {
@@ -1997,7 +2162,7 @@ index bf471735d58..8950d1cc9c9 100644
      }
    else
      output_indirect_thunk (regno);
-@@ -15782,6 +15945,9 @@ ix86_output_indirect_branch_via_reg (rtx call_op, bool sibcall_p)
+@@ -15786,6 +15965,9 @@ ix86_output_indirect_branch_via_reg (rtx call_op, bool sibcall_p)
      {
        if (thunk_name != NULL)
  	{
@@ -2007,7 +2172,7 @@ index bf471735d58..8950d1cc9c9 100644
  	  fprintf (asm_out_file, "\tcall\t");
  	  assemble_name (asm_out_file, thunk_name);
  	  putc ('\n', asm_out_file);
-@@ -15956,10 +16122,10 @@ ix86_output_indirect_jmp (rtx call_op)
+@@ -15960,10 +16142,10 @@ ix86_output_indirect_jmp (rtx call_op)
  	gcc_unreachable ();
  
        ix86_output_indirect_branch (call_op, "%0", true);
@@ -2020,7 +2185,7 @@ index bf471735d58..8950d1cc9c9 100644
  }
  
  /* Output return instrumentation for current function if needed.  */
-@@ -16027,10 +16193,8 @@ ix86_output_function_return (bool long_p)
+@@ -16031,10 +16213,8 @@ ix86_output_function_return (bool long_p)
        return "";
      }
  
@@ -2033,7 +2198,7 @@ index bf471735d58..8950d1cc9c9 100644
  }
  
  /* Output indirect function return.  RET_OP is the function return
-@@ -16065,11 +16229,14 @@ ix86_output_indirect_function_return (rtx ret_op)
+@@ -16069,11 +16249,14 @@ ix86_output_indirect_function_return (rtx ret_op)
  	}
        else
  	output_indirect_thunk (regno);
@@ -2051,7 +2216,7 @@ index bf471735d58..8950d1cc9c9 100644
  }
  
  /* Output the assembly for a call instruction.  */
-@@ -16125,7 +16292,12 @@ ix86_output_call_insn (rtx_insn *insn, rtx call_op)
+@@ -16129,7 +16312,12 @@ ix86_output_call_insn (rtx_insn *insn, rtx call_op)
        if (output_indirect_p && !direct_p)
  	ix86_output_indirect_branch (call_op, xasm, true);
        else
@@ -2065,7 +2230,7 @@ index bf471735d58..8950d1cc9c9 100644
        return "";
      }
  
-@@ -16765,6 +16937,8 @@ ix86_sched_init_global (FILE *, int, int)
+@@ -16769,6 +16957,8 @@ ix86_sched_init_global (FILE *, int, int)
      case PROCESSOR_NEHALEM:
      case PROCESSOR_SANDYBRIDGE:
      case PROCESSOR_HASWELL:
@@ -2074,7 +2239,7 @@ index bf471735d58..8950d1cc9c9 100644
      case PROCESSOR_GENERIC:
        /* Do not perform multipass scheduling for pre-reload schedule
           to save compile time.  */
-@@ -20258,6 +20432,11 @@ ix86_rtx_costs (rtx x, machine_mode mode, int outer_code_i, int opno,
+@@ -20262,6 +20452,11 @@ ix86_rtx_costs (rtx x, machine_mode mode, int outer_code_i, int opno,
      case UNSPEC:
        if (XINT (x, 1) == UNSPEC_TP)
  	*total = 0;
@@ -2086,7 +2251,53 @@ index bf471735d58..8950d1cc9c9 100644
        return false;
  
      case VEC_SELECT:
-@@ -23024,6 +23203,32 @@ ix86_optab_supported_p (int op, machine_mode mode1, machine_mode,
+@@ -21810,10 +22005,10 @@ int
+ asm_preferred_eh_data_format (int code, int global)
+ {
+   /* PE-COFF is effectively always -fPIC because of the .reloc section.  */
+-  if (flag_pic || TARGET_PECOFF)
++  if (flag_pic || TARGET_PECOFF || !ix86_direct_extern_access)
+     {
+       int type = DW_EH_PE_sdata8;
+-      if (!TARGET_64BIT
++      if (ptr_mode == SImode
+ 	  || ix86_cmodel == CM_SMALL_PIC
+ 	  || (ix86_cmodel == CM_MEDIUM_PIC && (global || code)))
+ 	type = DW_EH_PE_sdata4;
+@@ -22889,10 +23084,28 @@ ix86_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
+ static bool
+ ix86_binds_local_p (const_tree exp)
+ {
+-  return default_binds_local_p_3 (exp, flag_shlib != 0, true, true,
+-				  (!flag_pic
+-				   || (TARGET_64BIT
+-				       && HAVE_LD_PIE_COPYRELOC != 0)));
++  bool direct_extern_access
++    = (ix86_direct_extern_access
++       && !(VAR_OR_FUNCTION_DECL_P (exp)
++	    && lookup_attribute ("nodirect_extern_access",
++				 DECL_ATTRIBUTES (exp))));
++  if (!direct_extern_access)
++    ix86_has_no_direct_extern_access = true;
++  return default_binds_local_p_3 (exp, flag_shlib != 0, true,
++				  direct_extern_access,
++				  (direct_extern_access
++				   && (!flag_pic
++				       || (TARGET_64BIT
++					   && HAVE_LD_PIE_COPYRELOC != 0))));
++}
++
++/* If flag_pic or ix86_direct_extern_access is false, then neither
++   local nor global relocs should be placed in readonly memory.  */
++
++static int
++ix86_reloc_rw_mask (void)
++{
++  return (flag_pic || !ix86_direct_extern_access) ? 3 : 0;
+ }
+ #endif
+ 
+@@ -23028,6 +23241,32 @@ ix86_optab_supported_p (int op, machine_mode mode1, machine_mode,
      }
  }
  
@@ -2119,7 +2330,7 @@ index bf471735d58..8950d1cc9c9 100644
  /* Address space support.
  
     This is not "far pointers" in the 16-bit sense, but an easy way
-@@ -23554,6 +23759,9 @@ ix86_run_selftests (void)
+@@ -23558,6 +23797,9 @@ ix86_run_selftests (void)
  #undef TARGET_ADDRESS_COST
  #define TARGET_ADDRESS_COST ix86_address_cost
  
@@ -2129,7 +2340,7 @@ index bf471735d58..8950d1cc9c9 100644
  #undef TARGET_FLAGS_REGNUM
  #define TARGET_FLAGS_REGNUM FLAGS_REG
  #undef TARGET_FIXED_CONDITION_CODE_REGS
-@@ -23603,6 +23811,8 @@ ix86_run_selftests (void)
+@@ -23607,6 +23849,8 @@ ix86_run_selftests (void)
  #define TARGET_C_EXCESS_PRECISION ix86_get_excess_precision
  #undef TARGET_PROMOTE_PROTOTYPES
  #define TARGET_PROMOTE_PROTOTYPES hook_bool_const_tree_true
@@ -2138,17 +2349,22 @@ index bf471735d58..8950d1cc9c9 100644
  #undef TARGET_SETUP_INCOMING_VARARGS
  #define TARGET_SETUP_INCOMING_VARARGS ix86_setup_incoming_varargs
  #undef TARGET_MUST_PASS_IN_STACK
-@@ -23907,6 +24117,9 @@ ix86_run_selftests (void)
+@@ -23911,6 +24155,14 @@ ix86_run_selftests (void)
  #define TARGET_GET_MULTILIB_ABI_NAME \
    ix86_get_multilib_abi_name
  
 +#undef TARGET_IFUNC_REF_LOCAL_OK
 +#define TARGET_IFUNC_REF_LOCAL_OK hook_bool_void_true
 +
++#if !TARGET_MACHO && !TARGET_DLLIMPORT_DECL_ATTRIBUTES
++# undef TARGET_ASM_RELOC_RW_MASK
++# define TARGET_ASM_RELOC_RW_MASK ix86_reloc_rw_mask
++#endif
++
  static bool ix86_libc_has_fast_function (int fcode ATTRIBUTE_UNUSED)
  {
  #ifdef OPTION_GLIBC
-@@ -23922,6 +24135,9 @@ static bool ix86_libc_has_fast_function (int fcode ATTRIBUTE_UNUSED)
+@@ -23926,6 +24178,9 @@ static bool ix86_libc_has_fast_function (int fcode ATTRIBUTE_UNUSED)
  #undef TARGET_LIBC_HAS_FAST_FUNCTION
  #define TARGET_LIBC_HAS_FAST_FUNCTION ix86_libc_has_fast_function
  
@@ -2443,7 +2659,7 @@ index db9dbf384ad..a3cc4f359d6 100644
  })
  
 diff --git a/gcc/config/i386/i386.opt b/gcc/config/i386/i386.opt
-index 7b8547bb1c3..4f517d35e07 100644
+index 7b8547bb1c3..b527281606e 100644
 --- a/gcc/config/i386/i386.opt
 +++ b/gcc/config/i386/i386.opt
 @@ -404,6 +404,10 @@ momit-leaf-frame-pointer
@@ -2510,6 +2726,14 @@ index 7b8547bb1c3..4f517d35e07 100644
  mavx512bf16
  Target Mask(ISA2_AVX512BF16) Var(ix86_isa_flags2) Save
  Support MMX, SSE, SSE2, SSE3, SSSE3, SSE4.1, SSE4.2, AVX, AVX2, AVX512F and
+@@ -1166,3 +1202,7 @@ Emit GNU_PROPERTY_X86_ISA_1_NEEDED GNU property.
+ mmwait
+ Target Mask(ISA2_MWAIT) Var(ix86_isa_flags2) Save
+ Support MWAIT and MONITOR built-in functions and code generation.
++
++mdirect-extern-access
++Target Var(ix86_direct_extern_access) Init(1)
++Do not use GOT to access external symbols.
 diff --git a/gcc/config/i386/predicates.md b/gcc/config/i386/predicates.md
 index b815aca0da7..98844736b92 100644
 --- a/gcc/config/i386/predicates.md
@@ -3863,8 +4087,25 @@ index 91216593e75..ba79a8e48ed 100644
  #endif
  #endif
  
+diff --git a/gcc/doc/extend.texi b/gcc/doc/extend.texi
+index 689ec7de4d3..d7e3bd60bd7 100644
+--- a/gcc/doc/extend.texi
++++ b/gcc/doc/extend.texi
+@@ -7072,6 +7072,12 @@ On x86 targets, the @code{fentry_section} attribute sets the name
+ of the section to record function entry instrumentation calls in when
+ enabled with @option{-pg -mrecord-mcount}
+ 
++@item nodirect_extern_access
++@cindex @code{nodirect_extern_access} function attribute
++@opindex mno-direct-extern-access
++This attribute, attached to a global variable or function, is the
++counterpart to option @option{-mno-direct-extern-access}.
++
+ @end table
+ 
+ @node Xstormy16 Function Attributes
 diff --git a/gcc/doc/invoke.texi b/gcc/doc/invoke.texi
-index 5a4b3c6c234..dbdf3d91022 100644
+index 5a4b3c6c234..17e5e593aec 100644
 --- a/gcc/doc/invoke.texi
 +++ b/gcc/doc/invoke.texi
 @@ -1375,6 +1375,7 @@ See RS/6000 and PowerPC Options.
@@ -3884,7 +4125,7 @@ index 5a4b3c6c234..dbdf3d91022 100644
  -mindirect-branch=@var{choice}  -mfunction-return=@var{choice} @gol
 --mindirect-branch-register -mneeded}
 +-mindirect-branch-register -mharden-sls=@var{choice} @gol
-+-mindirect-branch-cs-prefix -mneeded}
++-mindirect-branch-cs-prefix -mneeded -mno-direct-extern-access}
  
  @emph{x86 Windows Options}
  @gccoptlist{-mconsole  -mcygwin  -mno-cygwin  -mdll @gol
@@ -3943,6 +4184,26 @@ index 5a4b3c6c234..dbdf3d91022 100644
  @end table
  
  These @samp{-m} switches are supported in addition to the above
+@@ -31813,6 +31849,19 @@ x32 environments.
+ @opindex mneeded
+ Emit GNU_PROPERTY_X86_ISA_1_NEEDED GNU property for Linux target to
+ indicate the micro-architecture ISA level required to execute the binary.
++
++@item -mno-direct-extern-access
++@opindex mno-direct-extern-access
++@opindex mdirect-extern-access
++Without @option{-fpic} nor @option{-fPIC}, always use the GOT pointer
++to access external symbols.  With @option{-fpic} or @option{-fPIC},
++treat access to protected symbols as local symbols.  The default is
++@option{-mdirect-extern-access}.
++
++@strong{Warning:} shared libraries compiled with
++@option{-mno-direct-extern-access} and executable compiled with
++@option{-mdirect-extern-access} may not be binary compatible if
++protected symbols are used in shared libraries and executable.
+ @end table
+ 
+ @node x86 Windows Options
 diff --git a/gcc/doc/md.texi b/gcc/doc/md.texi
 index d166a0debed..a525ea9cb73 100644
 --- a/gcc/doc/md.texi
@@ -5483,6 +5744,96 @@ index 00000000000..adc11fcbf2d
 +
 +/* { dg-final { scan-assembler-times "lock;?\[ \t\]*btrq" 3 } } */
 +/* { dg-final { scan-assembler-not "cmpxchg" } } */
+diff --git a/gcc/testsuite/g++.target/i386/pr35513-1.C b/gcc/testsuite/g++.target/i386/pr35513-1.C
+new file mode 100644
+index 00000000000..daa615662c5
+--- /dev/null
++++ b/gcc/testsuite/g++.target/i386/pr35513-1.C
+@@ -0,0 +1,25 @@
++// { dg-do run { target property_1_needed } }
++// { dg-options "-O2 -mno-direct-extern-access" }
++
++#include <iostream>
++
++class Bug
++{
++};
++
++int throw_bug()
++{
++  throw Bug();
++
++  return 0;
++}
++
++int main()
++{
++  try {
++      std::cout << throw_bug();
++  } catch (Bug bug) {
++  };
++
++  return 0;
++}
+diff --git a/gcc/testsuite/g++.target/i386/pr35513-2.C b/gcc/testsuite/g++.target/i386/pr35513-2.C
+new file mode 100644
+index 00000000000..ecccdaeb666
+--- /dev/null
++++ b/gcc/testsuite/g++.target/i386/pr35513-2.C
+@@ -0,0 +1,53 @@
++// { dg-do run { target property_1_needed } }
++// { dg-options "-O2 -mno-direct-extern-access" }
++
++class Foo 
++{
++public:
++  Foo(int n) : n_(n) { }
++  int f() { return n_; }
++
++  int badTest();
++  int goodTest();
++
++private:
++
++  int n_;
++};
++
++int Foo::badTest()
++{
++  try {
++      throw int(99);
++  }
++
++  catch (int &i) {
++      n_ = 16;
++  }
++
++  return n_;
++}
++
++
++int Foo::goodTest()
++{
++  int	n;
++
++  try {
++      throw int(99);
++  }
++
++  catch (int &i) {
++      n = 16;
++  }
++
++  return n_;
++}
++
++int main() 
++{
++  Foo foo(5);
++  foo.goodTest();
++  foo.badTest();
++  return 0;
++}
 diff --git a/gcc/testsuite/g++.target/i386/pr80566-1.C b/gcc/testsuite/g++.target/i386/pr80566-1.C
 new file mode 100644
 index 00000000000..29da31d6bb6
@@ -10729,6 +11080,600 @@ index 00000000000..325af044bb8
 +    do_test ();
 +  return 0;
 +}
+diff --git a/gcc/testsuite/gcc.target/i386/pr35513-10a.c b/gcc/testsuite/gcc.target/i386/pr35513-10a.c
+new file mode 100644
+index 00000000000..d7b5c98fa8c
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr35513-10a.c
+@@ -0,0 +1,20 @@
++/* { dg-do compile { target *-*-linux* } } */
++/* { dg-options "-O2 -fpic -mno-direct-extern-access" } */
++
++/* Weak common symbol with -fpic.  */
++__attribute__((weak, visibility("protected")))
++int xxx;
++
++int
++foo ()
++{
++  return xxx;
++}
++
++/* { dg-final { scan-assembler "xxx\\(%rip\\)" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler-not "xxx@GOTPCREL" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "xxx@GOTOFF" { target ia32 } } } */
++/* { dg-final { scan-assembler-not "xxx@GOT\\(" { target ia32 } } } */
++/* { dg-final { scan-assembler "\.section\[ \t]+.note.gnu.property," } } */
++/* { dg-final { scan-assembler "\.long\[ \t]+0xb0008000" } } */
++
+diff --git a/gcc/testsuite/gcc.target/i386/pr35513-10b.c b/gcc/testsuite/gcc.target/i386/pr35513-10b.c
+new file mode 100644
+index 00000000000..a40692e6e3d
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr35513-10b.c
+@@ -0,0 +1,20 @@
++/* { dg-do compile { target *-*-linux* } } */
++/* { dg-options "-O2 -fpic -mdirect-extern-access" } */
++
++/* Weak common symbol with -fpic.  */
++__attribute__((weak, visibility("protected"),nodirect_extern_access))
++int xxx;
++
++int
++foo ()
++{
++  return xxx;
++}
++
++/* { dg-final { scan-assembler "xxx\\(%rip\\)" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler-not "xxx@GOTPCREL" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "xxx@GOTOFF" { target ia32 } } } */
++/* { dg-final { scan-assembler-not "xxx@GOT\\(" { target ia32 } } } */
++/* { dg-final { scan-assembler "\.section\[ \t]+.note.gnu.property," } } */
++/* { dg-final { scan-assembler "\.long\[ \t]+0xb0008000" } } */
++
+diff --git a/gcc/testsuite/gcc.target/i386/pr35513-11a.c b/gcc/testsuite/gcc.target/i386/pr35513-11a.c
+new file mode 100644
+index 00000000000..5489f1e5cee
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr35513-11a.c
+@@ -0,0 +1,20 @@
++/* { dg-do compile { target *-*-linux* } } */
++/* { dg-options "-O2 -fpic -mno-direct-extern-access" } */
++
++/* Initialized symbol with -fpic.  */
++__attribute__((visibility("protected")))
++int xxx = -1;
++
++int
++foo ()
++{
++  return xxx;
++}
++
++/* { dg-final { scan-assembler "xxx\\(%rip\\)" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler-not "xxx@GOTPCREL" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "xxx@GOTOFF" { target ia32 } } } */
++/* { dg-final { scan-assembler-not "xxx@GOT\\(" { target ia32 } } } */
++/* { dg-final { scan-assembler "\.section\[ \t]+.note.gnu.property," } } */
++/* { dg-final { scan-assembler "\.long\[ \t]+0xb0008000" } } */
++
+diff --git a/gcc/testsuite/gcc.target/i386/pr35513-11b.c b/gcc/testsuite/gcc.target/i386/pr35513-11b.c
+new file mode 100644
+index 00000000000..2704900fed5
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr35513-11b.c
+@@ -0,0 +1,20 @@
++/* { dg-do compile { target *-*-linux* } } */
++/* { dg-options "-O2 -fpic -mdirect-extern-access" } */
++
++/* Initialized symbol with -fpic.  */
++__attribute__((visibility("protected"), nodirect_extern_access))
++int xxx = -1;
++
++int
++foo ()
++{
++  return xxx;
++}
++
++/* { dg-final { scan-assembler "xxx\\(%rip\\)" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler-not "xxx@GOTPCREL" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "xxx@GOTOFF" { target ia32 } } } */
++/* { dg-final { scan-assembler-not "xxx@GOT\\(" { target ia32 } } } */
++/* { dg-final { scan-assembler "\.section\[ \t]+.note.gnu.property," } } */
++/* { dg-final { scan-assembler "\.long\[ \t]+0xb0008000" } } */
++
+diff --git a/gcc/testsuite/gcc.target/i386/pr35513-12a.c b/gcc/testsuite/gcc.target/i386/pr35513-12a.c
+new file mode 100644
+index 00000000000..8b3123f9042
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr35513-12a.c
+@@ -0,0 +1,20 @@
++/* { dg-do compile { target *-*-linux* } } */
++/* { dg-options "-O2 -fpic -mno-direct-extern-access" } */
++
++/* Weak initialized symbol with -fpic.  */
++__attribute__((weak, visibility("protected")))
++int xxx = -1;
++
++int
++foo ()
++{
++  return xxx;
++}
++
++/* { dg-final { scan-assembler "xxx\\(%rip\\)" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler-not "xxx@GOTPCREL" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "xxx@GOTOFF" { target ia32 } } } */
++/* { dg-final { scan-assembler-not "xxx@GOT\\(" { target ia32 } } } */
++/* { dg-final { scan-assembler "\.section\[ \t]+.note.gnu.property," } } */
++/* { dg-final { scan-assembler "\.long\[ \t]+0xb0008000" } } */
++
+diff --git a/gcc/testsuite/gcc.target/i386/pr35513-12b.c b/gcc/testsuite/gcc.target/i386/pr35513-12b.c
+new file mode 100644
+index 00000000000..a1b6b9e92df
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr35513-12b.c
+@@ -0,0 +1,20 @@
++/* { dg-do compile { target *-*-linux* } } */
++/* { dg-options "-O2 -fpic -mdirect-extern-access" } */
++
++/* Weak initialized symbol with -fpic.  */
++__attribute__((weak, visibility("protected"), nodirect_extern_access))
++int xxx = -1;
++
++int
++foo ()
++{
++  return xxx;
++}
++
++/* { dg-final { scan-assembler "xxx\\(%rip\\)" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler-not "xxx@GOTPCREL" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "xxx@GOTOFF" { target ia32 } } } */
++/* { dg-final { scan-assembler-not "xxx@GOT\\(" { target ia32 } } } */
++/* { dg-final { scan-assembler "\.section\[ \t]+.note.gnu.property," } } */
++/* { dg-final { scan-assembler "\.long\[ \t]+0xb0008000" } } */
++
+diff --git a/gcc/testsuite/gcc.target/i386/pr35513-1a.c b/gcc/testsuite/gcc.target/i386/pr35513-1a.c
+new file mode 100644
+index 00000000000..972542423cb
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr35513-1a.c
+@@ -0,0 +1,19 @@
++/* { dg-do compile { target *-*-linux* } } */
++/* { dg-options "-O2 -fno-pic -mno-direct-extern-access" } */
++
++extern void bar (void);
++extern void *p;
++
++void
++foo (void)
++{
++  p = &bar;
++}
++
++/* { dg-final { scan-assembler "mov\(l|q\)\[ \t\]*bar@GOTPCREL" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*bar@GOT," { target { ia32 && got32x_reloc } } } } */
++/* { dg-final { scan-assembler-not "mov\(l|q\)\[ \t\]*\\\$bar," { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler-not "mov\(l|q\)\[ \t\]*\\\$bar," { target { ia32 && got32x_reloc } } } } */
++/* { dg-final { scan-assembler "\.section\[ \t]+.note.gnu.property," } } */
++/* { dg-final { scan-assembler "\.long\[ \t]+0xb0008000" } } */
++
+diff --git a/gcc/testsuite/gcc.target/i386/pr35513-1b.c b/gcc/testsuite/gcc.target/i386/pr35513-1b.c
+new file mode 100644
+index 00000000000..54a579a9e37
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr35513-1b.c
+@@ -0,0 +1,19 @@
++/* { dg-do compile { target *-*-linux* } } */
++/* { dg-options "-O2 -fno-pic -mdirect-extern-access" } */
++
++extern void bar (void) __attribute__ ((nodirect_extern_access));
++extern void *p;
++
++void
++foo (void)
++{
++  p = &bar;
++}
++
++/* { dg-final { scan-assembler "mov\(l|q\)\[ \t\]*bar@GOTPCREL" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*bar@GOT," { target { ia32 && got32x_reloc } } } } */
++/* { dg-final { scan-assembler-not "mov\(l|q\)\[ \t\]*\\\$bar," { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler-not "mov\(l|q\)\[ \t\]*\\\$bar," { target { ia32 && got32x_reloc } } } } */
++/* { dg-final { scan-assembler "\.section\[ \t]+.note.gnu.property," } } */
++/* { dg-final { scan-assembler "\.long\[ \t]+0xb0008000" } } */
++
+diff --git a/gcc/testsuite/gcc.target/i386/pr35513-2a.c b/gcc/testsuite/gcc.target/i386/pr35513-2a.c
+new file mode 100644
+index 00000000000..74fa8fc9d97
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr35513-2a.c
+@@ -0,0 +1,18 @@
++/* { dg-do compile { target *-*-linux* } } */
++/* { dg-options "-O2 -fno-pic -mno-direct-extern-access" } */
++
++extern int bar;
++
++int
++foo (void)
++{
++  return bar;
++}
++
++/* { dg-final { scan-assembler "mov\(l|q\)\[ \t\]*bar@GOTPCREL" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*bar@GOT," { target { ia32 && got32x_reloc } } } } */
++/* { dg-final { scan-assembler-not "mov\(l|q\)\[ \t\]*\\\$bar," { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler-not "mov\(l|q\)\[ \t\]*\\\$bar," { target { ia32 && got32x_reloc } } } } */
++/* { dg-final { scan-assembler "\.section\[ \t]+.note.gnu.property," } } */
++/* { dg-final { scan-assembler "\.long\[ \t]+0xb0008000" } } */
++
+diff --git a/gcc/testsuite/gcc.target/i386/pr35513-2b.c b/gcc/testsuite/gcc.target/i386/pr35513-2b.c
+new file mode 100644
+index 00000000000..ae2edff8d93
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr35513-2b.c
+@@ -0,0 +1,18 @@
++/* { dg-do compile { target *-*-linux* } } */
++/* { dg-options "-O2 -fno-pic -mdirect-extern-access" } */
++
++extern int bar __attribute__ ((nodirect_extern_access));
++
++int
++foo (void)
++{
++  return bar;
++}
++
++/* { dg-final { scan-assembler "mov\(l|q\)\[ \t\]*bar@GOTPCREL" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*bar@GOT," { target { ia32 && got32x_reloc } } } } */
++/* { dg-final { scan-assembler-not "mov\(l|q\)\[ \t\]*\\\$bar," { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler-not "mov\(l|q\)\[ \t\]*\\\$bar," { target { ia32 && got32x_reloc } } } } */
++/* { dg-final { scan-assembler "\.section\[ \t]+.note.gnu.property," } } */
++/* { dg-final { scan-assembler "\.long\[ \t]+0xb0008000" } } */
++
+diff --git a/gcc/testsuite/gcc.target/i386/pr35513-3a.c b/gcc/testsuite/gcc.target/i386/pr35513-3a.c
+new file mode 100644
+index 00000000000..4ca4332c4ab
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr35513-3a.c
+@@ -0,0 +1,18 @@
++/* { dg-do compile { target *-*-linux* } } */
++/* { dg-options "-O2 -fpie -mno-direct-extern-access" } */
++
++extern int bar;
++
++int
++foo (void)
++{
++  return bar;
++}
++
++/* { dg-final { scan-assembler "mov\(l|q\)\[ \t\]*bar@GOTPCREL" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*bar@GOT" { target { ia32 && got32x_reloc } } } } */
++/* { dg-final { scan-assembler-not "mov\(l|q\)\[ \t\]*\\\$bar," { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler-not "mov\(l|q\)\[ \t\]*\\\$bar," { target { ia32 && got32x_reloc } } } } */
++/* { dg-final { scan-assembler "\.section\[ \t]+.note.gnu.property," } } */
++/* { dg-final { scan-assembler "\.long\[ \t]+0xb0008000" } } */
++
+diff --git a/gcc/testsuite/gcc.target/i386/pr35513-3b.c b/gcc/testsuite/gcc.target/i386/pr35513-3b.c
+new file mode 100644
+index 00000000000..c3888039834
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr35513-3b.c
+@@ -0,0 +1,18 @@
++/* { dg-do compile { target *-*-linux* } } */
++/* { dg-options "-O2 -fpie -mdirect-extern-access" } */
++
++extern int bar __attribute__ ((nodirect_extern_access));
++
++int
++foo (void)
++{
++  return bar;
++}
++
++/* { dg-final { scan-assembler "mov\(l|q\)\[ \t\]*bar@GOTPCREL" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "movl\[ \t\]*bar@GOT" { target { ia32 && got32x_reloc } } } } */
++/* { dg-final { scan-assembler-not "mov\(l|q\)\[ \t\]*\\\$bar," { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler-not "mov\(l|q\)\[ \t\]*\\\$bar," { target { ia32 && got32x_reloc } } } } */
++/* { dg-final { scan-assembler "\.section\[ \t]+.note.gnu.property," } } */
++/* { dg-final { scan-assembler "\.long\[ \t]+0xb0008000" } } */
++
+diff --git a/gcc/testsuite/gcc.target/i386/pr35513-4a.c b/gcc/testsuite/gcc.target/i386/pr35513-4a.c
+new file mode 100644
+index 00000000000..9c3a199404c
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr35513-4a.c
+@@ -0,0 +1,18 @@
++/* { dg-do compile { target *-*-linux* } } */
++/* { dg-options "-O2 -fplt -fno-pic -mno-direct-extern-access" } */
++
++extern void foo (void);
++
++int
++bar (void)
++{
++  foo ();
++  return 0;
++}
++
++/* { dg-final { scan-assembler "call\[ \t\]*foo" } } */
++/* { dg-final { scan-assembler-not "foo@GOTPCREL" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler-not "foo@GOT" { target ia32 } } } */
++/* { dg-final { scan-assembler "\.section\[ \t]+.note.gnu.property," } } */
++/* { dg-final { scan-assembler "\.long\[ \t]+0xb0008000" } } */
++
+diff --git a/gcc/testsuite/gcc.target/i386/pr35513-4b.c b/gcc/testsuite/gcc.target/i386/pr35513-4b.c
+new file mode 100644
+index 00000000000..e1a50784bf9
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr35513-4b.c
+@@ -0,0 +1,18 @@
++/* { dg-do compile { target *-*-linux* } } */
++/* { dg-options "-O2 -fplt -fno-pic -mdirect-extern-access" } */
++
++extern void foo (void) __attribute__ ((nodirect_extern_access));
++
++int
++bar (void)
++{
++  foo ();
++  return 0;
++}
++
++/* { dg-final { scan-assembler "call\[ \t\]*foo" } } */
++/* { dg-final { scan-assembler-not "foo@GOTPCREL" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler-not "foo@GOT" { target ia32 } } } */
++/* { dg-final { scan-assembler "\.section\[ \t]+.note.gnu.property," } } */
++/* { dg-final { scan-assembler "\.long\[ \t]+0xb0008000" } } */
++
+diff --git a/gcc/testsuite/gcc.target/i386/pr35513-5a.c b/gcc/testsuite/gcc.target/i386/pr35513-5a.c
+new file mode 100644
+index 00000000000..4d2e1732838
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr35513-5a.c
+@@ -0,0 +1,18 @@
++/* { dg-do compile { target *-*-linux* } } */
++/* { dg-options "-O2 -fplt -fpic -mno-direct-extern-access" } */
++
++extern void foo (void);
++
++int
++bar (void)
++{
++  foo ();
++  return 0;
++}
++
++/* { dg-final { scan-assembler "call\[ \t\]*foo@PLT" } } */
++/* { dg-final { scan-assembler-not "foo@GOTPCREL" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler-not "foo@GOT" { target ia32 } } } */
++/* { dg-final { scan-assembler "\.section\[ \t]+.note.gnu.property," } } */
++/* { dg-final { scan-assembler "\.long\[ \t]+0xb0008000" } } */
++
+diff --git a/gcc/testsuite/gcc.target/i386/pr35513-5b.c b/gcc/testsuite/gcc.target/i386/pr35513-5b.c
+new file mode 100644
+index 00000000000..81e98ed7836
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr35513-5b.c
+@@ -0,0 +1,18 @@
++/* { dg-do compile { target *-*-linux* } } */
++/* { dg-options "-O2 -fplt -fpic -mdirect-extern-access" } */
++
++extern void foo (void) __attribute__ ((nodirect_extern_access));
++
++int
++bar (void)
++{
++  foo ();
++  return 0;
++}
++
++/* { dg-final { scan-assembler "call\[ \t\]*foo@PLT" } } */
++/* { dg-final { scan-assembler-not "foo@GOTPCREL" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler-not "foo@GOT" { target ia32 } } } */
++/* { dg-final { scan-assembler "\.section\[ \t]+.note.gnu.property," } } */
++/* { dg-final { scan-assembler "\.long\[ \t]+0xb0008000" } } */
++
+diff --git a/gcc/testsuite/gcc.target/i386/pr35513-6a.c b/gcc/testsuite/gcc.target/i386/pr35513-6a.c
+new file mode 100644
+index 00000000000..ece878e3c3a
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr35513-6a.c
+@@ -0,0 +1,17 @@
++/* { dg-do compile { target *-*-linux* } } */
++/* { dg-options "-O2 -fplt -fno-pic -mno-direct-extern-access" } */
++
++extern void foo (void);
++
++void
++bar (void)
++{
++  foo ();
++}
++
++/* { dg-final { scan-assembler "jmp\[ \t\]*foo" } } */
++/* { dg-final { scan-assembler-not "foo@GOTPCREL" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler-not "foo@GOT" { target ia32 } } } */
++/* { dg-final { scan-assembler "\.section\[ \t]+.note.gnu.property," } } */
++/* { dg-final { scan-assembler "\.long\[ \t]+0xb0008000" } } */
++
+diff --git a/gcc/testsuite/gcc.target/i386/pr35513-6b.c b/gcc/testsuite/gcc.target/i386/pr35513-6b.c
+new file mode 100644
+index 00000000000..3f679defdab
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr35513-6b.c
+@@ -0,0 +1,17 @@
++/* { dg-do compile { target *-*-linux* } } */
++/* { dg-options "-O2 -fplt -fno-pic -mdirect-extern-access" } */
++
++extern void foo (void) __attribute__ ((nodirect_extern_access));
++
++void
++bar (void)
++{
++  foo ();
++}
++
++/* { dg-final { scan-assembler "jmp\[ \t\]*foo" } } */
++/* { dg-final { scan-assembler-not "foo@GOTPCREL" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler-not "foo@GOT" { target ia32 } } } */
++/* { dg-final { scan-assembler "\.section\[ \t]+.note.gnu.property," } } */
++/* { dg-final { scan-assembler "\.long\[ \t]+0xb0008000" } } */
++
+diff --git a/gcc/testsuite/gcc.target/i386/pr35513-7a.c b/gcc/testsuite/gcc.target/i386/pr35513-7a.c
+new file mode 100644
+index 00000000000..1de014d39c2
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr35513-7a.c
+@@ -0,0 +1,18 @@
++/* { dg-do compile { target *-*-linux* } } */
++/* { dg-options "-O2 -fplt -fpic -mno-direct-extern-access" } */
++
++extern void foo (void);
++
++void
++bar (void)
++{
++  foo ();
++}
++
++/* { dg-final { scan-assembler "jmp\[ \t\]*foo@PLT" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "call\[ \t\]*foo@PLT" { target ia32 } } } */
++/* { dg-final { scan-assembler-not "foo@GOTPCREL" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler-not "foo@GOT" { target ia32 } } } */
++/* { dg-final { scan-assembler "\.section\[ \t]+.note.gnu.property," } } */
++/* { dg-final { scan-assembler "\.long\[ \t]+0xb0008000" } } */
++
+diff --git a/gcc/testsuite/gcc.target/i386/pr35513-7b.c b/gcc/testsuite/gcc.target/i386/pr35513-7b.c
+new file mode 100644
+index 00000000000..984e2dc2752
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr35513-7b.c
+@@ -0,0 +1,18 @@
++/* { dg-do compile { target *-*-linux* } } */
++/* { dg-options "-O2 -fplt -fpic -mdirect-extern-access" } */
++
++extern void foo (void) __attribute__ ((nodirect_extern_access));
++
++void
++bar (void)
++{
++  foo ();
++}
++
++/* { dg-final { scan-assembler "jmp\[ \t\]*foo@PLT" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "call\[ \t\]*foo@PLT" { target ia32 } } } */
++/* { dg-final { scan-assembler-not "foo@GOTPCREL" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler-not "foo@GOT" { target ia32 } } } */
++/* { dg-final { scan-assembler "\.section\[ \t]+.note.gnu.property," } } */
++/* { dg-final { scan-assembler "\.long\[ \t]+0xb0008000" } } */
++
+diff --git a/gcc/testsuite/gcc.target/i386/pr35513-8.c b/gcc/testsuite/gcc.target/i386/pr35513-8.c
+new file mode 100644
+index 00000000000..d51f7efb353
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr35513-8.c
+@@ -0,0 +1,44 @@
++/* { dg-do compile { target { *-*-linux* && { ! ia32 } } } } */
++/* { dg-require-effective-target maybe_x32 } */
++/* { dg-options "-mx32 -O2 -fno-pic -fexceptions -fasynchronous-unwind-tables -mno-direct-extern-access" } */
++
++extern int foo (int);
++extern void exit (int __status) __attribute__ ((__nothrow__ )) __attribute__ ((__noreturn__));
++struct __pthread_cleanup_frame
++{
++  void (*__cancel_routine) (void *);
++  void *__cancel_arg;
++  int __do_it;
++  int __cancel_type;
++};
++extern __inline void
++__pthread_cleanup_routine (struct __pthread_cleanup_frame *__frame)
++{
++  if (__frame->__do_it)
++    __frame->__cancel_routine (__frame->__cancel_arg);
++}
++static int cl_called;
++
++static void
++cl (void *arg)
++{
++  ++cl_called;
++}
++
++
++void *
++tf_usleep (void *arg)
++{
++
++  do { struct __pthread_cleanup_frame __clframe __attribute__ ((__cleanup__ (__pthread_cleanup_routine))) = { .__cancel_routine = (cl), .__cancel_arg = (
++																			 ((void *)0)), .__do_it = 1 };;
++
++    foo (arg == ((void *)0) ? (0x7fffffffL * 2UL + 1UL) : 0);
++
++    __clframe.__do_it = (0); } while (0);
++
++  exit (1);
++}
++/* { dg-final { scan-assembler "\.section\[ \t]+.note.gnu.property," } } */
++/* { dg-final { scan-assembler "\.long\[ \t]+0xb0008000" } } */
++
+diff --git a/gcc/testsuite/gcc.target/i386/pr35513-9a.c b/gcc/testsuite/gcc.target/i386/pr35513-9a.c
+new file mode 100644
+index 00000000000..533f1d2ddb4
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr35513-9a.c
+@@ -0,0 +1,20 @@
++/* { dg-do compile { target *-*-linux* } } */
++/* { dg-options "-O2 -fpic -mno-direct-extern-access" } */
++
++/* Common symbol with -fpic.  */
++__attribute__((visibility("protected")))
++int xxx;
++
++int
++foo ()
++{
++  return xxx;
++}
++
++/* { dg-final { scan-assembler "xxx\\(%rip\\)" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler-not "xxx@GOTPCREL" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "xxx@GOTOFF" { target ia32 } } } */
++/* { dg-final { scan-assembler-not "xxx@GOT\\(" { target ia32 } } } */
++/* { dg-final { scan-assembler "\.section\[ \t]+.note.gnu.property," } } */
++/* { dg-final { scan-assembler "\.long\[ \t]+0xb0008000" } } */
++
+diff --git a/gcc/testsuite/gcc.target/i386/pr35513-9b.c b/gcc/testsuite/gcc.target/i386/pr35513-9b.c
+new file mode 100644
+index 00000000000..b6c66f43b40
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr35513-9b.c
+@@ -0,0 +1,20 @@
++/* { dg-do compile { target *-*-linux* } } */
++/* { dg-options "-O2 -fpic -mdirect-extern-access" } */
++
++/* Common symbol with -fpic.  */
++__attribute__((visibility("protected"), nodirect_extern_access))
++int xxx;
++
++int
++foo ()
++{
++  return xxx;
++}
++
++/* { dg-final { scan-assembler "xxx\\(%rip\\)" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler-not "xxx@GOTPCREL" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler "xxx@GOTOFF" { target ia32 } } } */
++/* { dg-final { scan-assembler-not "xxx@GOT\\(" { target ia32 } } } */
++/* { dg-final { scan-assembler "\.section\[ \t]+.note.gnu.property," } } */
++/* { dg-final { scan-assembler "\.long\[ \t]+0xb0008000" } } */
++
 diff --git a/gcc/testsuite/gcc.target/i386/pr72839.c b/gcc/testsuite/gcc.target/i386/pr72839.c
 index ea724f70377..6888d9d0a55 100644
 --- a/gcc/testsuite/gcc.target/i386/pr72839.c
@@ -13280,6 +14225,64 @@ index 00000000000..f2e2054b6fb
 +/* { dg-options "-O2 -mavx -mfpmath=sse -ftree-vectorize" } */
 +
 +#include "xorsign.c"
+diff --git a/gcc/testsuite/lib/target-supports.exp b/gcc/testsuite/lib/target-supports.exp
+index 857e57218c1..bca0c1035fe 100644
+--- a/gcc/testsuite/lib/target-supports.exp
++++ b/gcc/testsuite/lib/target-supports.exp
+@@ -30,6 +30,7 @@
+ #
+ # Assume by default that CONTENTS is C code.  
+ # Otherwise, code should contain:
++# "/* Assembly" for assembly code,
+ # "// C++" for c++,
+ # "// D" for D,
+ # "! Fortran" for Fortran code,
+@@ -57,6 +58,7 @@ proc check_compile {basename type contents args} {
+ 	set options ""
+     }
+     switch -glob -- $contents {
++	"*/* Assembly*" { set src ${basename}[pid].S }
+ 	"*! Fortran*" { set src ${basename}[pid].f90 }
+ 	"*// C++*" { set src ${basename}[pid].cc }
+ 	"*// D*" { set src ${basename}[pid].d }
+@@ -11235,3 +11237,37 @@ proc check_effective_target_lra { } {
+     return 1
+ }
+ 
++proc check_effective_target_property_1_needed { } {
++  return [check_no_compiler_messages property_1_needed executable {
++/* Assembly code */
++#ifdef __LP64__
++# define __PROPERTY_ALIGN 3
++#else
++# define __PROPERTY_ALIGN 2
++#endif
++
++	.section ".note.gnu.property", "a"
++	.p2align __PROPERTY_ALIGN
++	.long 1f - 0f		/* name length.  */
++	.long 4f - 1f		/* data length.  */
++	/* NT_GNU_PROPERTY_TYPE_0.   */
++	.long 5			/* note type.  */
++0:
++	.asciz "GNU"		/* vendor name.  */
++1:
++	.p2align __PROPERTY_ALIGN
++	/* GNU_PROPERTY_1_NEEDED.  */
++	.long 0xb0008000	/* pr_type.  */
++	.long 3f - 2f		/* pr_datasz.  */
++2:
++	/* GNU_PROPERTY_1_NEEDED_INDIRECT_EXTERN_ACCESS.  */
++	.long 1
++3:
++	.p2align __PROPERTY_ALIGN
++4:
++	.text
++	.globl main
++main:
++	.byte 0
++  } ""]
++}
 diff --git a/gcc/tree-ssa-ccp.c b/gcc/tree-ssa-ccp.c
 index aad8526eb21..93fbb34bb94 100644
 --- a/gcc/tree-ssa-ccp.c
