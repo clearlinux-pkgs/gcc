@@ -4951,6 +4951,25 @@ index 8f5e7d28f37..8a089048104 100644
  2022-02-04  Harald Anlauf  <anlauf@gmx.de>
  
  	Backported from master:
+diff --git a/gcc/fortran/expr.c b/gcc/fortran/expr.c
+index edacd974a21..b3be37fb476 100644
+--- a/gcc/fortran/expr.c
++++ b/gcc/fortran/expr.c
+@@ -1715,13 +1715,7 @@ find_array_section (gfc_expr *expr, gfc_ref *ref)
+ 	}
+ 
+       cons = gfc_constructor_lookup (base, limit);
+-      if (cons == NULL)
+-	{
+-	  gfc_error ("Error in array constructor referenced at %L",
+-		     &ref->u.ar.where);
+-	  t = false;
+-	  goto cleanup;
+-	}
++      gcc_assert (cons);
+       gfc_constructor_append_expr (&expr->value.constructor,
+ 				   gfc_copy_expr (cons->expr), NULL);
+     }
 diff --git a/gcc/fortran/trans-array.c b/gcc/fortran/trans-array.c
 index ad6a30a47ca..dc89e97b0a1 100644
 --- a/gcc/fortran/trans-array.c
@@ -14472,6 +14491,23 @@ index 5636a89e94a..00000000000
 -! descriptors is possible, i.e., execute always works.
 -! { dg-final { scan-tree-dump-times "desc\\.\[0-9\]+" 8 "original" } }
 -
+diff --git a/gcc/testsuite/gfortran.dg/pr104211.f90 b/gcc/testsuite/gfortran.dg/pr104211.f90
+deleted file mode 100644
+index 21b0a26a17f..00000000000
+--- a/gcc/testsuite/gfortran.dg/pr104211.f90
++++ /dev/null
+@@ -1,11 +0,0 @@
+-! { dg-do compile }
+-! PR fortran/104211 - ICE in find_array_section
+-! Contributed by G.Steinmetz
+-
+-program p
+-  type t
+-     real :: n
+-  end type
+-  type(t), parameter :: a(3) = [t(2)] ! { dg-error "Different shape" }
+-  type(t), parameter :: b(2) = a(2:3) ! { dg-error "Error in array constructor" }
+-end
 diff --git a/gcc/testsuite/lib/target-supports.exp b/gcc/testsuite/lib/target-supports.exp
 index 857e57218c1..bca0c1035fe 100644
 --- a/gcc/testsuite/lib/target-supports.exp
