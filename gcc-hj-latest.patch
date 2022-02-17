@@ -12061,12 +12061,12 @@ index ea724f70377..6888d9d0a55 100644
  
 diff --git a/gcc/testsuite/gcc.target/i386/pr79754.c b/gcc/testsuite/gcc.target/i386/pr79754.c
 deleted file mode 100644
-index 27845c9d5b9..00000000000
+index 9eadea3af3e..00000000000
 --- a/gcc/testsuite/gcc.target/i386/pr79754.c
 +++ /dev/null
 @@ -1,7 +0,0 @@
 -/* PR target/79754 */
--/* { dg-do compile } */
+-/* { dg-do compile { target dfp } } */
 -/* { dg-options "-Wno-psabi" } */
 -
 -typedef _Decimal32 V __attribute__ ((vector_size(16)));
