@@ -89,10 +89,76 @@ liuhongt (12):
       Fix typo in r12-5486.
 
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7c93916a91c..3c4bfe3117b 100644
+index 01668d85682..3c4bfe3117b 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,37 +1,3 @@
+@@ -1,103 +1,3 @@
+-2022-02-16  H.J. Lu  <hjl.tools@gmail.com>
+-
+-	Backported from master:
+-	2022-01-06  H.J. Lu  <hjl.tools@gmail.com>
+-
+-	PR target/103925
+-	* config/i386/i386.c (ix86_output_indirect_function_return):
+-	Generate INT3 after indirect jmp for -mharden-sls=indirect-jmp.
+-
+-2022-02-16  H.J. Lu  <hjl.tools@gmail.com>
+-
+-	Backported from master:
+-	2022-01-06  H.J. Lu  <hjl.tools@gmail.com>
+-
+-	PR target/102952
+-	* config/i386/i386-opts.h (harden_sls): Replace
+-	harden_sls_indirect_branch with harden_sls_indirect_jmp.
+-	* config/i386/i386.c (ix86_output_jmp_thunk_or_indirect):
+-	Likewise.
+-	(ix86_output_indirect_jmp): Likewise.
+-	(ix86_output_call_insn): Likewise.
+-	* config/i386/i386.opt: Replace indirect-branch with
+-	indirect-jmp.  Replace harden_sls_indirect_branch with
+-	harden_sls_indirect_jmp.
+-	* doc/invoke.texi (-harden-sls=): Replace indirect-branch with
+-	indirect-jmp.
+-
+-2022-02-16  H.J. Lu  <hjl.tools@gmail.com>
+-
+-	Backported from master:
+-	2021-11-18  H.J. Lu  <hjl.tools@gmail.com>
+-
+-	PR target/102952
+-	* config/i386/i386.c (ix86_output_jmp_thunk_or_indirect): Emit
+-	CS prefix for -mindirect-branch-cs-prefix.
+-	(ix86_output_indirect_branch_via_reg): Likewise.
+-	* config/i386/i386.opt: Add -mindirect-branch-cs-prefix.
+-	* doc/invoke.texi: Document -mindirect-branch-cs-prefix.
+-
+-2022-02-16  H.J. Lu  <hjl.tools@gmail.com>
+-
+-	Backported from master:
+-	2021-11-17  H.J. Lu  <hjl.tools@gmail.com>
+-
+-	PR target/102952
+-	* config/i386/i386-opts.h (harden_sls): New enum.
+-	* config/i386/i386.c (output_indirect_thunk): Mitigate against
+-	SLS for function return.
+-	(ix86_output_function_return): Likewise.
+-	(ix86_output_jmp_thunk_or_indirect): Mitigate against indirect
+-	branch.
+-	(ix86_output_indirect_jmp): Likewise.
+-	(ix86_output_call_insn): Likewise.
+-	* config/i386/i386.opt: Add -mharden-sls=.
+-	* doc/invoke.texi: Document -mharden-sls=.
+-
+-2022-02-16  H.J. Lu  <hjl.tools@gmail.com>
+-
+-	Backported from master:
+-	2021-11-17  H.J. Lu  <hjl.tools@gmail.com>
+-
+-	PR target/103307
+-	* config/i386/i386.c (ix86_code_end): Remove "%!" before ret.
+-	(ix86_output_function_return): Likewise.
+-	* config/i386/i386.md (simple_return_pop_internal): Likewise.
+-
 -2022-02-15  Kewen Lin  <linkw@linux.ibm.com>
 -
 -	Backported from master:
@@ -131,11 +197,11 @@ index 7c93916a91c..3c4bfe3117b 100644
  
  	Backported from master:
 diff --git a/gcc/DATESTAMP b/gcc/DATESTAMP
-index 07f9f515ad8..b975470831b 100644
+index 2215f56552d..b975470831b 100644
 --- a/gcc/DATESTAMP
 +++ b/gcc/DATESTAMP
 @@ -1 +1 @@
--20220216
+-20220217
 +20220212
 diff --git a/gcc/ada/ChangeLog b/gcc/ada/ChangeLog
 index 777a9c28912..819810d93a7 100644
@@ -1851,7 +1917,7 @@ index 941e91636d8..4fce0684ec8 100644
 +
 +extern bool ix86_has_no_direct_extern_access;
 diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
-index 3ef209169dd..c082c477ffb 100644
+index 5ddad92ad04..c082c477ffb 100644
 --- a/gcc/config/i386/i386.c
 +++ b/gcc/config/i386/i386.c
 @@ -362,6 +362,9 @@ unsigned int ix86_default_incoming_stack_boundary;
@@ -2214,6 +2280,15 @@ index 3ef209169dd..c082c477ffb 100644
      case PROCESSOR_GENERIC:
        /* Do not perform multipass scheduling for pre-reload schedule
           to save compile time.  */
+@@ -18247,7 +18417,7 @@ ix86_gimple_fold_builtin (gimple_stmt_iterator *gsi)
+ 
+     case IX86_BUILTIN_SHUFPD:
+       arg2 = gimple_call_arg (stmt, 2);
+-      if (TREE_CODE (arg2) == INTEGER_CST && gimple_call_lhs (stmt))
++      if (TREE_CODE (arg2) == INTEGER_CST)
+ 	{
+ 	  location_t loc = gimple_location (stmt);
+ 	  unsigned HOST_WIDE_INT imask = TREE_INT_CST_LOW (arg2);
 @@ -20278,6 +20448,11 @@ ix86_rtx_costs (rtx x, machine_mode mode, int outer_code_i, int opno,
      case UNSPEC:
        if (XINT (x, 1) == UNSPEC_TP)
@@ -4928,10 +5003,19 @@ index 1f0177a4cfa..084b26c80d8 100644
  extern rtx emit_block_move (rtx, rtx, rtx, enum block_op_methods);
  extern rtx emit_block_move_hints (rtx, rtx, rtx, enum block_op_methods,
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index 8f5e7d28f37..8a089048104 100644
+index d9bff2fb665..8a089048104 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,19 +1,3 @@
+@@ -1,28 +1,3 @@
+-2022-02-16  Harald Anlauf  <anlauf@gmx.de>
+-
+-	Backported from master:
+-	2022-02-14  Harald Anlauf  <anlauf@gmx.de>
+-
+-	PR fortran/104211
+-	* expr.c (find_array_section): Replace assertion by error
+-	recovery when encountering bad array constructor.
+-
 -2022-02-14  Andre Vehreschild  <vehre@gcc.gnu.org>
 -
 -	PR fortran/100337
@@ -5171,6 +5255,38 @@ index bd6e6039429..40dc983b751 100644
    if (derived && derived->attr.alloc_comp
        && code->resolved_isym->id == GFC_ISYM_CO_BROADCAST)
      /* The derived type has the attribute 'alloc_comp'.  */
+diff --git a/gcc/gimple-fold.c b/gcc/gimple-fold.c
+index 0308f098e18..0581338ea5f 100644
+--- a/gcc/gimple-fold.c
++++ b/gcc/gimple-fold.c
+@@ -285,9 +285,7 @@ get_symbol_constant_value (tree sym)
+       if (val)
+ 	{
+ 	  val = canonicalize_constructor_val (unshare_expr (val), sym);
+-	  if (val
+-	      && is_gimple_min_invariant (val)
+-	      && useless_type_conversion_p (TREE_TYPE (sym), TREE_TYPE (val)))
++	  if (val && is_gimple_min_invariant (val))
+ 	    return val;
+ 	  else
+ 	    return NULL_TREE;
+diff --git a/gcc/gimple-loop-jam.c b/gcc/gimple-loop-jam.c
+index 27465b049fb..69dbaeb6cb9 100644
+--- a/gcc/gimple-loop-jam.c
++++ b/gcc/gimple-loop-jam.c
+@@ -403,10 +403,10 @@ adjust_unroll_factor (class loop *inner, struct data_dependence_relation *ddr,
+ 	     a >= N, or b > 0, or b is zero and a > 0.  Otherwise the unroll
+ 	     factor needs to be limited so that the first condition holds.
+ 	     That may limit the factor down to zero in the worst case.  */
+-	  lambda_int dist = dist_v[0];
++	  int dist = dist_v[0];
+ 	  if (dist < 0)
+ 	    gcc_unreachable ();
+-	  else if (dist >= (lambda_int)*unroll)
++	  else if ((unsigned)dist >= *unroll)
+ 	    ;
+ 	  else if (lambda_vector_zerop (dist_v + 1, DDR_NB_LOOPS (ddr) - 1))
+ 	    {
 diff --git a/gcc/hooks.c b/gcc/hooks.c
 index 680271f76a4..4f14abff206 100644
 --- a/gcc/hooks.c
@@ -5584,10 +5700,47 @@ index 9928d064abd..458c3a6a4a9 100644
  extern pad_direction default_function_arg_padding (machine_mode, const_tree);
  extern rtx default_function_arg (cumulative_args_t, const function_arg_info &);
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e2833e9c5ba..307e82751a0 100644
+index e5a1dc9d6c4..307e82751a0 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,38 +1,3 @@
+@@ -1,75 +1,3 @@
+-2022-02-16  Harald Anlauf  <anlauf@gmx.de>
+-
+-	Backported from master:
+-	2022-02-14  Harald Anlauf  <anlauf@gmx.de>
+-
+-	PR fortran/104211
+-	* gfortran.dg/pr104211.f90: New test.
+-
+-2022-02-16  H.J. Lu  <hjl.tools@gmail.com>
+-
+-	Backported from master:
+-	2022-01-06  H.J. Lu  <hjl.tools@gmail.com>
+-
+-	PR target/103925
+-	* gcc.target/i386/harden-sls-6.c: New test.
+-
+-2022-02-16  H.J. Lu  <hjl.tools@gmail.com>
+-
+-	Backported from master:
+-	2021-11-18  H.J. Lu  <hjl.tools@gmail.com>
+-
+-	PR target/102952
+-	* gcc.target/i386/indirect-thunk-cs-prefix-1.c: New test.
+-	* gcc.target/i386/indirect-thunk-cs-prefix-2.c: Likewise.
+-
+-2022-02-16  H.J. Lu  <hjl.tools@gmail.com>
+-
+-	Backported from master:
+-	2021-11-17  H.J. Lu  <hjl.tools@gmail.com>
+-
+-	PR target/102952
+-	* gcc.target/i386/harden-sls-1.c: New test.
+-	* gcc.target/i386/harden-sls-2.c: Likewise.
+-	* gcc.target/i386/harden-sls-3.c: Likewise.
+-	* gcc.target/i386/harden-sls-4.c: Likewise.
+-	* gcc.target/i386/harden-sls-5.c: Likewise.
+-
 -2022-02-15  Kewen Lin  <linkw@linux.ibm.com>
 -
 -	Backported from master:
@@ -5712,6 +5865,30 @@ index 00000000000..bf9d8543c1b
 +{
 +  return record_increment ();
 +}
+diff --git a/gcc/testsuite/g++.dg/torture/pr103361.C b/gcc/testsuite/g++.dg/torture/pr103361.C
+deleted file mode 100644
+index ec1d6e1bae4..00000000000
+--- a/gcc/testsuite/g++.dg/torture/pr103361.C
++++ /dev/null
+@@ -1,18 +0,0 @@
+-/* { dg-do compile } */
+-/* { dg-additional-options "-floop-unroll-and-jam" } */
+-
+-char a, b;
+-extern unsigned short c[];
+-extern bool d[];
+-const unsigned short &e(const unsigned short &f, const unsigned short &g) {
+-  if (g < f)
+-    return g;
+-  return f;
+-}
+-void k() {
+-  for (int h = 0; b; h += 3)
+-    for (unsigned long i = 0; i < 11104842004558084287ULL;
+-         i += -11104842004558084300ULL)
+-      for (bool j(e(6, e(6, c[h + i]))); j < (bool)a; j = 7)
+-        d[7] = 0;
+-}
 diff --git a/gcc/testsuite/g++.target/i386/pr102566-1.C b/gcc/testsuite/g++.target/i386/pr102566-1.C
 new file mode 100644
 index 00000000000..94a66d717cc
@@ -6264,6 +6441,21 @@ index 00000000000..471fe92bc86
 +    __builtin_abort ();
 +  return 0;
 +}
+diff --git a/gcc/testsuite/gcc.dg/torture/pr100786.c b/gcc/testsuite/gcc.dg/torture/pr100786.c
+deleted file mode 100644
+index 42f4e485593..00000000000
+--- a/gcc/testsuite/gcc.dg/torture/pr100786.c
++++ /dev/null
+@@ -1,9 +0,0 @@
+-/* { dg-do compile } */
+-
+-const double a = 0;
+-extern int b __attribute__((alias("a")));
+-void inc() { b++; }
+-
+-const int a2 = 0;
+-extern double b2 __attribute__((alias("a2")));
+-void inc2() { b2+=1; }
 diff --git a/gcc/testsuite/gcc.dg/tree-ssa/pr98737-1.c b/gcc/testsuite/gcc.dg/tree-ssa/pr98737-1.c
 new file mode 100644
 index 00000000000..e313a7fa79d
@@ -6547,6 +6739,95 @@ index 00000000000..09149bcd4fe
 +B(55, __sync_add_and_fetch, -)
 +B(56, __sync_sub_and_fetch, +)
 +B(58, __sync_xor_and_fetch, ^)
+diff --git a/gcc/testsuite/gcc.dg/tree-ssa/ssa-dce-3.c b/gcc/testsuite/gcc.dg/tree-ssa/ssa-dce-3.c
+index fdfe37e0abd..863aa79b4eb 100644
+--- a/gcc/testsuite/gcc.dg/tree-ssa/ssa-dce-3.c
++++ b/gcc/testsuite/gcc.dg/tree-ssa/ssa-dce-3.c
+@@ -21,12 +21,11 @@ int main(void)
+   return 0;
+ }
+ 
+-/* We now can prove the infiniteness of the loop during CCP but we
+-   still want to eliminate the code inside the infinite loop.  See PR45178.  */
++/* We now can prove the infiniteness of the loop during CCP and fail
++   to eliminate the code inside the infinite loop because we start
++   by marking the j % 7 condition as useful.  See PR45178.  */
+ 
+ /* We should eliminate the inner condition, but the loop must be preserved
+-   as it is infinite.  Therefore there should be just one goto and no PHI
+-   and no if.  */
++   as it is infinite.  Therefore there should be just one goto and no PHI.  */
+ /* { dg-final { scan-tree-dump-times "PHI " 0 "cddce1" } } */
+-/* { dg-final { scan-tree-dump-times "if " 0 "cddce1" } } */
+ /* { dg-final { scan-tree-dump-times "goto" 1 "cddce1" } } */
+diff --git a/gcc/testsuite/gcc.dg/tree-ssa/ssa-dce-9.c b/gcc/testsuite/gcc.dg/tree-ssa/ssa-dce-9.c
+deleted file mode 100644
+index e1ffa7f038d..00000000000
+--- a/gcc/testsuite/gcc.dg/tree-ssa/ssa-dce-9.c
++++ /dev/null
+@@ -1,10 +0,0 @@
+-/* { dg-do compile } */
+-/* { dg-options "-O2 -fdump-tree-cddce1" } */
+-
+-int main()
+-{
+-  while(1)
+-    for(int i=0; i<9000000; i++){}
+-}
+-
+-/* { dg-final { scan-tree-dump-not "if" "cddce1" } } */
+diff --git a/gcc/testsuite/gcc.dg/vect/pr103544.c b/gcc/testsuite/gcc.dg/vect/pr103544.c
+deleted file mode 100644
+index c8bdee86e77..00000000000
+--- a/gcc/testsuite/gcc.dg/vect/pr103544.c
++++ /dev/null
+@@ -1,24 +0,0 @@
+-/* { dg-do compile } */
+-/* { dg-additional-options "-O3" } */
+-/* { dg-additional-options "-march=haswell" { target x86_64-*-* i?86-*-* } } */
+-
+-int crash_me(char* ptr, unsigned long size)
+-{
+-  short result[16] = {0};
+-
+-  unsigned long no_iters = 0;
+-  for(unsigned long i = 0; i < size - 12; i+= 13){
+-      for(unsigned long j = 0; j < 12; j++){
+-	  result[j] += ptr[i + j] - '0';
+-      }
+-      no_iters++;
+-  }
+-
+-  int result_int = 0;
+-  for(int j = 0; j < 12; j++){
+-      int bit_value = result[j] > no_iters/2 ? 1 : 0;
+-      result_int |= bit_value;
+-  }
+-
+-  return result_int;
+-}
+diff --git a/gcc/testsuite/gcc.dg/vect/pr103864.c b/gcc/testsuite/gcc.dg/vect/pr103864.c
+deleted file mode 100644
+index 464d5731a42..00000000000
+--- a/gcc/testsuite/gcc.dg/vect/pr103864.c
++++ /dev/null
+@@ -1,16 +0,0 @@
+-/* { dg-do compile } */
+-/* { dg-additional-options "-O3 -fno-tree-reassoc" } */
+-
+-void
+-crash_me (short int *crash_me_result, int i, char crash_me_ptr_0)
+-{
+-  while (i < 1)
+-    {
+-      int j;
+-
+-      for (j = 0; j < 2; ++j)
+-        crash_me_result[j] += crash_me_ptr_0 + 1;
+-
+-      i += 3;
+-    }
+-}
 diff --git a/gcc/testsuite/gcc.target/i386/avx-covert-1.c b/gcc/testsuite/gcc.target/i386/avx-covert-1.c
 new file mode 100644
 index 00000000000..b6c794ecbb8
@@ -14566,6 +14847,19 @@ index 857e57218c1..bca0c1035fe 100644
 +	.byte 0
 +  } ""]
 +}
+diff --git a/gcc/tree-data-ref.c b/gcc/tree-data-ref.c
+index b3dd2f0ca41..d04e95f7c28 100644
+--- a/gcc/tree-data-ref.c
++++ b/gcc/tree-data-ref.c
+@@ -393,7 +393,7 @@ print_lambda_vector (FILE * outfile, lambda_vector vector, int n)
+   int i;
+ 
+   for (i = 0; i < n; i++)
+-    fprintf (outfile, HOST_WIDE_INT_PRINT_DEC " ", vector[i]);
++    fprintf (outfile, "%3d ", (int)vector[i]);
+   fprintf (outfile, "\n");
+ }
+ 
 diff --git a/gcc/tree-ssa-ccp.c b/gcc/tree-ssa-ccp.c
 index aad8526eb21..93fbb34bb94 100644
 --- a/gcc/tree-ssa-ccp.c
@@ -15452,6 +15746,45 @@ index aad8526eb21..93fbb34bb94 100644
  		case BUILT_IN_MEMCPY:
  		  if (gimple_call_builtin_p (stmt, BUILT_IN_NORMAL)
  		      && TREE_CODE (gimple_call_arg (stmt, 0)) == ADDR_EXPR
+diff --git a/gcc/tree-ssa-dce.c b/gcc/tree-ssa-dce.c
+index 3509fe4c5cc..c027230acdc 100644
+--- a/gcc/tree-ssa-dce.c
++++ b/gcc/tree-ssa-dce.c
+@@ -427,9 +427,7 @@ find_obviously_necessary_stmts (bool aggressive)
+   if ((flags & (ECF_CONST|ECF_PURE)) && !(flags & ECF_LOOPING_CONST_OR_PURE))
+     return;
+ 
+-  /* Prevent the empty possibly infinite loops from being removed.  This is
+-     needed to make the logic in remove_dead_stmt work to identify the
+-     correct edge to keep when removing a controlling condition.  */
++  /* Prevent the empty possibly infinite loops from being removed.  */
+   if (aggressive)
+     {
+       class loop *loop;
+@@ -442,19 +440,17 @@ find_obviously_necessary_stmts (bool aggressive)
+ 		  && (e->flags & EDGE_IRREDUCIBLE_LOOP))
+ 		{
+ 	          if (dump_file)
+-		    fprintf (dump_file, "Marking back edge of irreducible "
+-			     "loop %i->%i\n", e->src->index, e->dest->index);
++	            fprintf (dump_file, "Marking back edge of irreducible loop %i->%i\n",
++		    	     e->src->index, e->dest->index);
+ 		  mark_control_dependent_edges_necessary (e->dest, false);
+ 		}
+ 	  }
+ 
+       FOR_EACH_LOOP (loop, 0)
+-	/* For loops without an exit do not mark any condition.  */
+-	if (loop->exits->next->e && !finite_loop_p (loop))
++	if (!finite_loop_p (loop))
+ 	  {
+ 	    if (dump_file)
+-	      fprintf (dump_file, "cannot prove finiteness of loop %i\n",
+-		       loop->num);
++	      fprintf (dump_file, "cannot prove finiteness of loop %i\n", loop->num);
+ 	    mark_control_dependent_edges_necessary (loop->latch, false);
+ 	  }
+     }
 diff --git a/gcc/tree-ssa-forwprop.c b/gcc/tree-ssa-forwprop.c
 index 0706fd862de..26b26e5ea92 100644
 --- a/gcc/tree-ssa-forwprop.c
@@ -15899,6 +16232,26 @@ index 3348545d18b..fb6b69c5b83 100644
  	      g = gimple_build_assign (lhs, new_rhs);
  	      gsi_replace (gsi, g, false);
  	      return;
+diff --git a/gcc/tree-vect-slp.c b/gcc/tree-vect-slp.c
+index 422e6432b74..230ff4081a5 100644
+--- a/gcc/tree-vect-slp.c
++++ b/gcc/tree-vect-slp.c
+@@ -2831,13 +2831,8 @@ vect_analyze_slp_instance (vec_info *vinfo,
+       vec<stmt_vec_info> reductions = as_a <loop_vec_info> (vinfo)->reductions;
+       scalar_stmts.create (reductions.length ());
+       for (i = 0; reductions.iterate (i, &next_info); i++)
+-	if ((STMT_VINFO_RELEVANT_P (next_info)
+-	     || STMT_VINFO_LIVE_P (next_info))
+-	    /* ???  Make sure we didn't skip a conversion around a reduction
+-	       path.  In that case we'd have to reverse engineer that conversion
+-	       stmt following the chain using reduc_idx and from the PHI
+-	       using reduc_def.  */
+-	    && STMT_VINFO_DEF_TYPE (next_info) == vect_reduction_def)
++	if (STMT_VINFO_RELEVANT_P (next_info)
++	    || STMT_VINFO_LIVE_P (next_info))
+ 	  scalar_stmts.quick_push (next_info);
+       /* If less than two were relevant/live there's nothing to SLP.  */
+       if (scalar_stmts.length () < 2)
 diff --git a/gcc/varasm.c b/gcc/varasm.c
 index a7ef9b8d9fe..153e6c68772 100644
 --- a/gcc/varasm.c
@@ -15945,3 +16298,48 @@ index 786b32c5bb0..7248acb7458 100644
  	else
  	  TARGET=X86_64;
  	fi
+diff --git a/libstdc++-v3/include/bits/stl_iterator.h b/libstdc++-v3/include/bits/stl_iterator.h
+index 2b7efcbf3c3..549bc26dee5 100644
+--- a/libstdc++-v3/include/bits/stl_iterator.h
++++ b/libstdc++-v3/include/bits/stl_iterator.h
+@@ -2338,7 +2338,6 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+   /// @} group iterators
+ 
+   template<typename _Iterator>
+-    _GLIBCXX20_CONSTEXPR
+     auto
+     __niter_base(move_iterator<_Iterator> __it)
+     -> decltype(make_move_iterator(__niter_base(__it.base())))
+@@ -2352,7 +2351,6 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+     };
+ 
+   template<typename _Iterator>
+-    _GLIBCXX20_CONSTEXPR
+     auto
+     __miter_base(move_iterator<_Iterator> __it)
+     -> decltype(__miter_base(__it.base()))
+diff --git a/libstdc++-v3/testsuite/25_algorithms/move/constexpr.cc b/libstdc++-v3/testsuite/25_algorithms/move/constexpr.cc
+deleted file mode 100644
+index 773c55cfb50..00000000000
+--- a/libstdc++-v3/testsuite/25_algorithms/move/constexpr.cc
++++ /dev/null
+@@ -1,19 +0,0 @@
+-// { dg-options "-std=gnu++20" }
+-// { dg-do compile { target c++20 } }
+-
+-#include <algorithm>
+-#include <span>
+-
+-constexpr bool
+-test01()
+-{
+-  // PR libstdc++/102358
+-  int x[2] = {1,2}, y[2];
+-  std::span in(x), out(y);
+-  std::move(std::move_iterator(in.begin()), std::move_iterator(in.end()),
+-	    out.begin());
+-  return std::equal(std::move_iterator(in.begin()), std::move_iterator(in.end()),
+-		    std::move_iterator(out.begin()));
+-}
+-
+-static_assert(test01());
