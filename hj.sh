@@ -1,10 +1,10 @@
-pushd ~/git/gcc
-git remote update
-git checkout hj3/users/hjl/x86/gcc-11
-git merge --no-edit origin/releases/gcc-11
-git shortlog origin/releases/gcc-11.. > ~/clear/packages/gcc/gcc-hj-latest.patch
-git diff origin/releases/gcc-11.. >> ~/clear/packages/gcc/gcc-hj-latest.patch
-git checkout master
-popd
-git add gcc-hj-latest.patch
+GCCGIT=~/git/gcc
 
+git -C $GCCGIT remote update
+git -C $GCCGIT checkout hj3/users/hjl/x86/gcc-11
+git -C $GCCGIT merge --no-edit -s ort -X ours origin/releases/gcc-11
+git -C $GCCGIT shortlog --no-merges origin/releases/gcc-11.. > ./gcc-hj-latest.patch
+git -C $GCCGIT diff origin/releases/gcc-11.. >> ./gcc-hj-latest.patch
+git -C $GCCGIT checkout master
+
+git add gcc-hj-latest.patch
