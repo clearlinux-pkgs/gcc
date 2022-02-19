@@ -88,6 +88,327 @@ liuhongt (12):
       Enhance optimize_atomic_bit_test_and to handle truncation.
       Fix typo in r12-5486.
 
+diff --git a/gcc/ChangeLog b/gcc/ChangeLog
+index 792ed6611d1..3c4bfe3117b 100644
+--- a/gcc/ChangeLog
++++ b/gcc/ChangeLog
+@@ -1,180 +1,3 @@
+-2022-02-18  Richard Biener  <rguenther@suse.de>
+-
+-	Backported from master:
+-	2021-05-10  Richard Biener  <rguenther@suse.de>
+-
+-	PR middle-end/100464
+-	PR c++/100468
+-	* gimple-fold.c (canonicalize_constructor_val): Do not set
+-	TREE_ADDRESSABLE.
+-
+-2022-02-17  Richard Biener  <rguenther@suse.de>
+-
+-	Backported from master:
+-	2021-10-22  Richard Biener  <rguenther@suse.de>
+-
+-	PR tree-optimization/102893
+-	* tree-ssa-dce.c (find_obviously_necessary_stmts): Fix the
+-	test for an exit edge.
+-
+-2022-02-17  Richard Biener  <rguenther@suse.de>
+-
+-	Backported from master:
+-	2021-08-27  Richard Biener  <rguenther@suse.de>
+-
+-	PR tree-optimization/45178
+-	* tree-ssa-dce.c (find_obviously_necessary_stmts): For
+-	infinite loops without exit do not mark control dependent
+-	edges of the latch necessary.
+-
+-2022-02-17  Richard Biener  <rguenther@suse.de>
+-
+-	Backported from master:
+-	2022-01-04  Richard Biener  <rguenther@suse.de>
+-
+-	PR tree-optimization/103864
+-	PR tree-optimization/103544
+-	* tree-vect-slp.c (vect_analyze_slp_instance): Exclude
+-	reductions wrapped in conversions from SLP handling.
+-	(vect_analyze_slp): Revert PR103544 change.
+-
+-2022-02-17  Richard Biener  <rguenther@suse.de>
+-
+-	Backported from master:
+-	2021-12-06  Richard Biener  <rguenther@suse.de>
+-
+-	PR tree-optimization/103544
+-	* tree-vect-slp.c (vect_analyze_slp): Only add a SLP reduction
+-	opportunity if the stmt in question is the reduction root.
+-
+-2022-02-17  Richard Biener  <rguenther@suse.de>
+-
+-	Backported from master:
+-	2021-11-23  Richard Biener  <rguenther@suse.de>
+-
+-	PR tree-optimization/103361
+-	* gimple-loop-jam.c (adjust_unroll_factor): Use lambda_int
+-	for the dependence distance.
+-	* tree-data-ref.c (print_lambda_vector): Properly print a lambda_int.
+-
+-2022-02-17  Richard Biener  <rguenther@suse.de>
+-
+-	Backported from master:
+-	2022-01-20  Richard Biener  <rguenther@suse.de>
+-
+-	PR middle-end/100786
+-	* gimple-fold.c (get_symbol_constant_value): Only return
+-	values of compatible type to the symbol.
+-
+-2022-02-17  Richard Biener  <rguenther@suse.de>
+-
+-	Backported from master:
+-	2022-01-20  Richard Biener  <rguenther@suse.de>
+-
+-	PR target/100784
+-	* config/i386/i386.c (ix86_gimple_fold_builtin): Check for
+-	LHS before folding __builtin_ia32_shufpd and friends.
+-
+-2022-02-16  H.J. Lu  <hjl.tools@gmail.com>
+-
+-	Backported from master:
+-	2022-01-06  H.J. Lu  <hjl.tools@gmail.com>
+-
+-	PR target/103925
+-	* config/i386/i386.c (ix86_output_indirect_function_return):
+-	Generate INT3 after indirect jmp for -mharden-sls=indirect-jmp.
+-
+-2022-02-16  H.J. Lu  <hjl.tools@gmail.com>
+-
+-	Backported from master:
+-	2022-01-06  H.J. Lu  <hjl.tools@gmail.com>
+-
+-	PR target/102952
+-	* config/i386/i386-opts.h (harden_sls): Replace
+-	harden_sls_indirect_branch with harden_sls_indirect_jmp.
+-	* config/i386/i386.c (ix86_output_jmp_thunk_or_indirect):
+-	Likewise.
+-	(ix86_output_indirect_jmp): Likewise.
+-	(ix86_output_call_insn): Likewise.
+-	* config/i386/i386.opt: Replace indirect-branch with
+-	indirect-jmp.  Replace harden_sls_indirect_branch with
+-	harden_sls_indirect_jmp.
+-	* doc/invoke.texi (-harden-sls=): Replace indirect-branch with
+-	indirect-jmp.
+-
+-2022-02-16  H.J. Lu  <hjl.tools@gmail.com>
+-
+-	Backported from master:
+-	2021-11-18  H.J. Lu  <hjl.tools@gmail.com>
+-
+-	PR target/102952
+-	* config/i386/i386.c (ix86_output_jmp_thunk_or_indirect): Emit
+-	CS prefix for -mindirect-branch-cs-prefix.
+-	(ix86_output_indirect_branch_via_reg): Likewise.
+-	* config/i386/i386.opt: Add -mindirect-branch-cs-prefix.
+-	* doc/invoke.texi: Document -mindirect-branch-cs-prefix.
+-
+-2022-02-16  H.J. Lu  <hjl.tools@gmail.com>
+-
+-	Backported from master:
+-	2021-11-17  H.J. Lu  <hjl.tools@gmail.com>
+-
+-	PR target/102952
+-	* config/i386/i386-opts.h (harden_sls): New enum.
+-	* config/i386/i386.c (output_indirect_thunk): Mitigate against
+-	SLS for function return.
+-	(ix86_output_function_return): Likewise.
+-	(ix86_output_jmp_thunk_or_indirect): Mitigate against indirect
+-	branch.
+-	(ix86_output_indirect_jmp): Likewise.
+-	(ix86_output_call_insn): Likewise.
+-	* config/i386/i386.opt: Add -mharden-sls=.
+-	* doc/invoke.texi: Document -mharden-sls=.
+-
+-2022-02-16  H.J. Lu  <hjl.tools@gmail.com>
+-
+-	Backported from master:
+-	2021-11-17  H.J. Lu  <hjl.tools@gmail.com>
+-
+-	PR target/103307
+-	* config/i386/i386.c (ix86_code_end): Remove "%!" before ret.
+-	(ix86_output_function_return): Likewise.
+-	* config/i386/i386.md (simple_return_pop_internal): Likewise.
+-
+-2022-02-15  Kewen Lin  <linkw@linux.ibm.com>
+-
+-	Backported from master:
+-	2022-02-07  Kewen Lin  <linkw@linux.ibm.com>
+-
+-	PR target/103627
+-	* config/rs6000/rs6000.c (rs6000_option_override_internal): Move the
+-	hunk affecting VSX and ALTIVEC to appropriate place.
+-
+-2022-02-15  Kewen Lin  <linkw@linux.ibm.com>
+-
+-	Backported from master:
+-	2022-02-07  Kewen Lin  <linkw@linux.ibm.com>
+-
+-	PR target/103627
+-	* config/rs6000/rs6000.c (rs6000_option_override_internal): Disable
+-	MMA if !TARGET_VSX.
+-
+-2022-02-14  Maciej W. Rozycki  <macro@embecosm.com>
+-
+-	Backported from master:
+-	2022-02-08  Maciej W. Rozycki  <macro@embecosm.com>
+-
+-	* config/riscv/t-riscv (riscv-sr.o): Add $(TM_H) dependency.
+-
+-2022-02-13  Uros Bizjak  <ubizjak@gmail.com>
+-
+-	Backported from master:
+-	2022-02-12  Uroš Bizjak  <ubizjak@gmail.com>
+-
+-	PR target/79754
+-	* config/i386/i386.c (type_natural_mode):
+-	Skip decimal float vector modes.
+-
+ 2022-02-11  Martin Liska  <mliska@suse.cz>
+ 
+ 	Backported from master:
+diff --git a/gcc/DATESTAMP b/gcc/DATESTAMP
+index 9fa888ee9ad..b975470831b 100644
+--- a/gcc/DATESTAMP
++++ b/gcc/DATESTAMP
+@@ -1 +1 @@
+-20220219
++20220212
+diff --git a/gcc/ada/ChangeLog b/gcc/ada/ChangeLog
+index 777a9c28912..819810d93a7 100644
+--- a/gcc/ada/ChangeLog
++++ b/gcc/ada/ChangeLog
+@@ -1,13 +1,3 @@
+-2022-02-13  Maciej W. Rozycki  <macro@orcam.me.uk>
+-
+-	Backported from master:
+-	2022-02-13  Maciej W. Rozycki  <macro@orcam.me.uk>
+-
+-	PR ada/98724
+-	PR ada/97504
+-	* Makefile.rtl (LIBGNAT_TARGET_PAIRS) <alpha*-*-linux*>: Use
+-	wraplf version of Aux_Long_Long_Float.
+-
+ 2022-01-28  Eric Botcazou  <ebotcazou@adacore.com>
+ 
+ 	PR ada/104258
+diff --git a/gcc/ada/Makefile.rtl b/gcc/ada/Makefile.rtl
+index b5b8b573ea4..96c0a5b089c 100644
+--- a/gcc/ada/Makefile.rtl
++++ b/gcc/ada/Makefile.rtl
+@@ -2651,7 +2651,6 @@ endif
+ ifeq ($(strip $(filter-out alpha% linux%,$(target_cpu) $(target_os))),)
+   LIBGNAT_TARGET_PAIRS = \
+   a-intnam.ads<libgnarl/a-intnam__linux.ads \
+-  a-nallfl.ads<libgnat/a-nallfl__wraplf.ads \
+   s-inmaop.adb<libgnarl/s-inmaop__posix.adb \
+   s-intman.adb<libgnarl/s-intman__posix.adb \
+   s-linux.ads<libgnarl/s-linux__alpha.ads \
+diff --git a/gcc/asan.c b/gcc/asan.c
+index d277c079238..d7449ce7d0e 100644
+--- a/gcc/asan.c
++++ b/gcc/asan.c
+@@ -63,7 +63,6 @@ along with GCC; see the file COPYING3.  If not see
+ #include "fnmatch.h"
+ #include "tree-inline.h"
+ #include "tree-ssa.h"
+-#include "tree-eh.h"
+ 
+ /* AddressSanitizer finds out-of-bounds and use-after-free bugs
+    with <2x slowdown on average.
+@@ -727,24 +726,14 @@ handle_builtin_alloca (gcall *call, gimple_stmt_iterator *iter)
+   gassign *g;
+   gcall *gg;
+   tree callee = gimple_call_fndecl (call);
+-  tree lhs = gimple_call_lhs (call);
+   tree old_size = gimple_call_arg (call, 0);
+-  tree ptr_type = lhs ? TREE_TYPE (lhs) : ptr_type_node;
++  tree ptr_type = gimple_call_lhs (call) ? TREE_TYPE (gimple_call_lhs (call))
++					 : ptr_type_node;
+   tree partial_size = NULL_TREE;
+   unsigned int align
+     = DECL_FUNCTION_CODE (callee) == BUILT_IN_ALLOCA
+       ? 0 : tree_to_uhwi (gimple_call_arg (call, 1));
+ 
+-  bool throws = false;
+-  edge e = NULL;
+-  if (stmt_can_throw_internal (cfun, call))
+-    {
+-      if (!lhs)
+-	return;
+-      throws = true;
+-      e = find_fallthru_edge (gsi_bb (*iter)->succs);
+-    }
+-
+   if (hwasan_sanitize_allocas_p ())
+     {
+       gimple_seq stmts = NULL;
+@@ -863,54 +852,29 @@ handle_builtin_alloca (gcall *call, gimple_stmt_iterator *iter)
+ 			  build_int_cst (size_type_node, align));
+   tree new_alloca_with_rz = make_ssa_name (ptr_type, gg);
+   gimple_call_set_lhs (gg, new_alloca_with_rz);
+-  if (throws)
+-    {
+-      gimple_call_set_lhs (call, NULL);
+-      gsi_replace (iter, gg, true);
+-    }
+-  else
+-    gsi_insert_before (iter, gg, GSI_SAME_STMT);
++  gsi_insert_before (iter, gg, GSI_SAME_STMT);
+ 
+   /* new_alloca = new_alloca_with_rz + align.  */
+   g = gimple_build_assign (make_ssa_name (ptr_type), POINTER_PLUS_EXPR,
+ 			   new_alloca_with_rz,
+ 			   build_int_cst (size_type_node,
+ 					  align / BITS_PER_UNIT));
+-  gimple_stmt_iterator gsi = gsi_none ();
+-  if (throws)
+-    {
+-      gsi_insert_on_edge_immediate (e, g);
+-      gsi = gsi_for_stmt (g);
+-    }
+-  else
+-    gsi_insert_before (iter, g, GSI_SAME_STMT);
++  gsi_insert_before (iter, g, GSI_SAME_STMT);
+   tree new_alloca = gimple_assign_lhs (g);
+ 
+   /* Poison newly created alloca redzones:
+       __asan_alloca_poison (new_alloca, old_size).  */
+   fn = builtin_decl_implicit (BUILT_IN_ASAN_ALLOCA_POISON);
+   gg = gimple_build_call (fn, 2, new_alloca, old_size);
+-  if (throws)
+-    gsi_insert_after (&gsi, gg, GSI_NEW_STMT);
+-  else
+-    gsi_insert_before (iter, gg, GSI_SAME_STMT);
++  gsi_insert_before (iter, gg, GSI_SAME_STMT);
+ 
+   /* Save new_alloca_with_rz value into last_alloca to use it during
+      allocas unpoisoning.  */
+   g = gimple_build_assign (last_alloca, new_alloca_with_rz);
+-  if (throws)
+-    gsi_insert_after (&gsi, g, GSI_NEW_STMT);
+-  else
+-    gsi_insert_before (iter, g, GSI_SAME_STMT);
++  gsi_insert_before (iter, g, GSI_SAME_STMT);
+ 
+   /* Finally, replace old alloca ptr with NEW_ALLOCA.  */
+-  if (throws)
+-    {
+-      g = gimple_build_assign (lhs, new_alloca);
+-      gsi_insert_after (&gsi, g, GSI_NEW_STMT);
+-    }
+-  else
+-    replace_call_with_value (iter, new_alloca);
++  replace_call_with_value (iter, new_alloca);
+ }
+ 
+ /* Return the memory references contained in a gimple statement
 diff --git a/gcc/builtins.c b/gcc/builtins.c
 index fb90c5d4a7c..92a5af5101c 100644
 --- a/gcc/builtins.c
@@ -448,6 +769,23 @@ index 307a20fbadb..a395d53ec99 100644
  extern rtx expand_builtin (tree, rtx, rtx, machine_mode, int);
  extern enum built_in_function builtin_mathfn_code (const_tree);
  extern tree fold_builtin_expect (location_t, tree, tree, tree, tree);
+diff --git a/gcc/c-family/c-common.c b/gcc/c-family/c-common.c
+index a133c9efdb1..a2809e79158 100644
+--- a/gcc/c-family/c-common.c
++++ b/gcc/c-family/c-common.c
+@@ -3019,11 +3019,7 @@ shorten_compare (location_t loc, tree *op0_ptr, tree *op1_ptr,
+   else if (real1 && real2
+ 	   && (DECIMAL_FLOAT_MODE_P (TYPE_MODE (TREE_TYPE (primop0)))
+ 	       || DECIMAL_FLOAT_MODE_P (TYPE_MODE (TREE_TYPE (primop1)))))
+-    {
+-      type = *restype_ptr;
+-      primop0 = op0;
+-      primop1 = op1;
+-    }
++    return NULL_TREE;
+ 
+   else if (real1 && real2
+ 	   && (TYPE_PRECISION (TREE_TYPE (primop0))
 diff --git a/gcc/calls.c b/gcc/calls.c
 index 7d908c6a62b..32ba27e755f 100644
 --- a/gcc/calls.c
@@ -479,6 +817,89 @@ index 7d908c6a62b..32ba27e755f 100644
  	argblock = push_block (gen_int_mode (args_size.constant, Pmode), 0, 0);
      }
  
+diff --git a/gcc/cfgrtl.c b/gcc/cfgrtl.c
+index 418b957e050..efd7a81ecc2 100644
+--- a/gcc/cfgrtl.c
++++ b/gcc/cfgrtl.c
+@@ -776,29 +776,6 @@ rtl_split_block (basic_block bb, void *insnp)
+   return new_bb;
+ }
+ 
+-/* Return true if LOC1 and LOC2 are equivalent for
+-   unique_locus_on_edge_between_p purposes.  */
+-
+-static bool
+-loc_equal (location_t loc1, location_t loc2)
+-{
+-  if (loc1 == loc2)
+-    return true;
+-
+-  expanded_location loce1 = expand_location (loc1);
+-  expanded_location loce2 = expand_location (loc2);
+-
+-  if (loce1.line != loce2.line
+-      || loce1.column != loce2.column
+-      || loce1.data != loce2.data)
+-    return false;
+-  if (loce1.file == loce2.file)
+-    return true;
+-  return (loce1.file != NULL
+-	  && loce2.file != NULL
+-	  && filename_cmp (loce1.file, loce2.file) == 0);
+-}
+-
+ /* Return true if the single edge between blocks A and B is the only place
+    in RTL which holds some unique locus.  */
+ 
+@@ -817,7 +794,7 @@ unique_locus_on_edge_between_p (basic_block a, basic_block b)
+   while (insn != end && (!NONDEBUG_INSN_P (insn) || !INSN_HAS_LOCATION (insn)))
+     insn = PREV_INSN (insn);
+ 
+-  if (insn != end && loc_equal (INSN_LOCATION (insn), goto_locus))
++  if (insn != end && INSN_LOCATION (insn) == goto_locus)
+     return false;
+ 
+   /* Then scan block B forward.  */
+@@ -829,7 +806,7 @@ unique_locus_on_edge_between_p (basic_block a, basic_block b)
+ 	insn = NEXT_INSN (insn);
+ 
+       if (insn != end && INSN_HAS_LOCATION (insn)
+-	  && loc_equal (INSN_LOCATION (insn), goto_locus))
++	  && INSN_LOCATION (insn) == goto_locus)
+ 	return false;
+     }
+ 
+diff --git a/gcc/combine.c b/gcc/combine.c
+index 58e55321897..6bf6707821b 100644
+--- a/gcc/combine.c
++++ b/gcc/combine.c
+@@ -4337,12 +4337,10 @@ try_combine (rtx_insn *i3, rtx_insn *i2, rtx_insn *i1, rtx_insn *i0,
+ 	  for (rtx_insn *insn = NEXT_INSN (i3);
+ 	       !done
+ 	       && insn
+-	       && INSN_P (insn)
++	       && NONDEBUG_INSN_P (insn)
+ 	       && BLOCK_FOR_INSN (insn) == this_basic_block;
+ 	       insn = NEXT_INSN (insn))
+ 	    {
+-	      if (DEBUG_INSN_P (insn))
+-		continue;
+ 	      struct insn_link *link;
+ 	      FOR_EACH_LOG_LINK (link, insn)
+ 		if (link->insn == i3 && link->regno == regno)
+@@ -5671,12 +5669,6 @@ subst (rtx x, rtx from, rtx to, int in_dest, int in_cond, int unique_copy)
+ 		  if (!x)
+ 		    return gen_rtx_CLOBBER (VOIDmode, const0_rtx);
+ 		}
+-	      /* CONST_INTs shouldn't be substituted into PRE_DEC, PRE_MODIFY
+-		 etc. arguments, otherwise we can ICE before trying to recog
+-		 it.  See PR104446.  */
+-	      else if (CONST_SCALAR_INT_P (new_rtx)
+-		       && GET_RTX_CLASS (GET_CODE (x)) == RTX_AUTOINC)
+-		return gen_rtx_CLOBBER (VOIDmode, const0_rtx);
+ 	      else
+ 		SUBST (XEXP (x, i), new_rtx);
+ 	    }
 diff --git a/gcc/common/config/i386/i386-common.c b/gcc/common/config/i386/i386-common.c
 index 96549aa7d7e..153538a6e46 100644
 --- a/gcc/common/config/i386/i386-common.c
@@ -1772,7 +2193,7 @@ index 941e91636d8..4fce0684ec8 100644
 +
 +extern bool ix86_has_no_direct_extern_access;
 diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
-index 5ddad92ad04..0283cd23c30 100644
+index 5ddad92ad04..c082c477ffb 100644
 --- a/gcc/config/i386/i386.c
 +++ b/gcc/config/i386/i386.c
 @@ -362,6 +362,9 @@ unsigned int ix86_default_incoming_stack_boundary;
@@ -1785,7 +2206,23 @@ index 5ddad92ad04..0283cd23c30 100644
  /* Calling abi specific va_list type nodes.  */
  tree sysv_va_list_type_node;
  tree ms_va_list_type_node;
-@@ -4199,6 +4202,18 @@ ix86_return_in_memory (const_tree type, const_tree fntype ATTRIBUTE_UNUSED)
+@@ -1872,14 +1875,10 @@ type_natural_mode (const_tree type, const CUMULATIVE_ARGS *cum,
+ 	{
+ 	  machine_mode innermode = TYPE_MODE (TREE_TYPE (type));
+ 
+-	  /* There are no XFmode vector modes ...  */
++	  /* There are no XFmode vector modes.  */
+ 	  if (innermode == XFmode)
+ 	    return mode;
+ 
+-	  /* ... and no decimal float vector modes.  */
+-	  if (DECIMAL_FLOAT_MODE_P (innermode))
+-	    return mode;
+-
+ 	  if (TREE_CODE (TREE_TYPE (type)) == REAL_TYPE)
+ 	    mode = MIN_MODE_VECTOR_FLOAT;
+ 	  else
+@@ -4199,6 +4198,18 @@ ix86_return_in_memory (const_tree type, const_tree fntype ATTRIBUTE_UNUSED)
      }
  }
  
@@ -1804,7 +2241,7 @@ index 5ddad92ad04..0283cd23c30 100644
  
  /* Create the va_list data type.  */
  
-@@ -7953,8 +7968,17 @@ ix86_finalize_stack_frame_flags (void)
+@@ -7953,8 +7964,17 @@ ix86_finalize_stack_frame_flags (void)
       assumed stack realignment might be needed or -fno-omit-frame-pointer
       is used, but in the end nothing that needed the stack alignment had
       been spilled nor stack access, clear frame_pointer_needed and say we
@@ -1824,7 +2261,7 @@ index 5ddad92ad04..0283cd23c30 100644
        && frame_pointer_needed
        && crtl->is_leaf
        && crtl->sp_is_unchanging
-@@ -10311,13 +10335,17 @@ darwin_local_data_pic (rtx disp)
+@@ -10311,13 +10331,17 @@ darwin_local_data_pic (rtx disp)
  }
  
  /* True if the function symbol operand X should be loaded from GOT.
@@ -1843,7 +2280,7 @@ index 5ddad92ad04..0283cd23c30 100644
  {
    return ((TARGET_64BIT || (!flag_pic && HAVE_AS_IX86_GOT32X))
  	  && !TARGET_PECOFF && !TARGET_MACHO
-@@ -10325,11 +10353,16 @@ ix86_force_load_from_GOT_p (rtx x)
+@@ -10325,11 +10349,16 @@ ix86_force_load_from_GOT_p (rtx x)
  	  && ix86_cmodel != CM_LARGE
  	  && ix86_cmodel != CM_LARGE_PIC
  	  && GET_CODE (x) == SYMBOL_REF
@@ -1865,7 +2302,7 @@ index 5ddad92ad04..0283cd23c30 100644
  	  && !SYMBOL_REF_LOCAL_P (x));
  }
  
-@@ -10417,7 +10450,13 @@ ix86_legitimate_constant_p (machine_mode mode, rtx x)
+@@ -10417,7 +10446,13 @@ ix86_legitimate_constant_p (machine_mode mode, rtx x)
  	  /* FALLTHRU */
  	case E_OImode:
  	case E_XImode:
@@ -1880,7 +2317,7 @@ index 5ddad92ad04..0283cd23c30 100644
  	    return false;
  	default:
  	  break;
-@@ -10590,7 +10629,11 @@ legitimate_pic_address_disp_p (rtx disp)
+@@ -10590,7 +10625,11 @@ legitimate_pic_address_disp_p (rtx disp)
  	    }
  	  else if (!SYMBOL_REF_FAR_ADDR_P (op0)
  		   && (SYMBOL_REF_LOCAL_P (op0)
@@ -1893,7 +2330,7 @@ index 5ddad92ad04..0283cd23c30 100644
  			   && flag_pie
  			   && !SYMBOL_REF_WEAK (op0)
  			   && !SYMBOL_REF_FUNCTION_P (op0)))
-@@ -11997,7 +12040,7 @@ output_pic_addr_const (FILE *file, rtx x, int code)
+@@ -11997,7 +12036,7 @@ output_pic_addr_const (FILE *file, rtx x, int code)
  	  assemble_name (file, name);
  	}
        if (!TARGET_MACHO && !(TARGET_64BIT && TARGET_PECOFF)
@@ -1902,7 +2339,7 @@ index 5ddad92ad04..0283cd23c30 100644
  	fputs ("@PLT", file);
        break;
  
-@@ -13523,7 +13566,7 @@ ix86_print_operand (FILE *file, rtx x, int code)
+@@ -13523,7 +13562,7 @@ ix86_print_operand (FILE *file, rtx x, int code)
  
        if (code == 'P')
  	{
@@ -1911,7 +2348,7 @@ index 5ddad92ad04..0283cd23c30 100644
  	    {
  	      /* For inline assembly statement, load function address
  		 from GOT with 'P' operand modifier to avoid PLT.  */
-@@ -14121,11 +14164,94 @@ ix86_check_avx_upper_register (const_rtx exp)
+@@ -14121,11 +14160,94 @@ ix86_check_avx_upper_register (const_rtx exp)
  	  && GET_MODE_BITSIZE (GET_MODE (exp)) > 128);
  }
  
@@ -2006,7 +2443,7 @@ index 5ddad92ad04..0283cd23c30 100644
    if (CALL_P (insn))
      {
        rtx link;
-@@ -14145,6 +14271,14 @@ ix86_avx_u128_mode_needed (rtx_insn *insn)
+@@ -14145,6 +14267,14 @@ ix86_avx_u128_mode_needed (rtx_insn *insn)
  	    }
  	}
  
@@ -2021,7 +2458,7 @@ index 5ddad92ad04..0283cd23c30 100644
        /* If the function is known to preserve some SSE registers,
  	 RA and previous passes can legitimately rely on that for
  	 modes wider than 256 bits.  It's only safe to issue a
-@@ -14157,11 +14291,41 @@ ix86_avx_u128_mode_needed (rtx_insn *insn)
+@@ -14157,11 +14287,41 @@ ix86_avx_u128_mode_needed (rtx_insn *insn)
        return AVX_U128_CLEAN;
      }
  
@@ -2064,7 +2501,7 @@ index 5ddad92ad04..0283cd23c30 100644
    FOR_EACH_SUBRTX (iter, array, PATTERN (insn), NONCONST)
      if (ix86_check_avx_upper_register (*iter))
        return AVX_U128_DIRTY;
-@@ -14245,18 +14409,6 @@ ix86_mode_needed (int entity, rtx_insn *insn)
+@@ -14245,18 +14405,6 @@ ix86_mode_needed (int entity, rtx_insn *insn)
    return 0;
  }
  
@@ -2083,7 +2520,7 @@ index 5ddad92ad04..0283cd23c30 100644
  /* Calculate mode of upper 128bit AVX registers after the insn.  */
  
  static int
-@@ -15705,6 +15857,26 @@ ix86_zero_extend_to_Pmode (rtx exp)
+@@ -15705,6 +15853,26 @@ ix86_zero_extend_to_Pmode (rtx exp)
    return force_reg (Pmode, convert_to_mode (Pmode, exp, 1));
  }
  
@@ -2110,7 +2547,7 @@ index 5ddad92ad04..0283cd23c30 100644
  /* Return true if the function being called was marked with attribute
     "noplt" or using -fno-plt and we are compiling for non-PIC.  We need
     to handle the non-PIC case in the backend because there is no easy
-@@ -16785,6 +16957,8 @@ ix86_sched_init_global (FILE *, int, int)
+@@ -16785,6 +16953,8 @@ ix86_sched_init_global (FILE *, int, int)
      case PROCESSOR_NEHALEM:
      case PROCESSOR_SANDYBRIDGE:
      case PROCESSOR_HASWELL:
@@ -2119,7 +2556,16 @@ index 5ddad92ad04..0283cd23c30 100644
      case PROCESSOR_GENERIC:
        /* Do not perform multipass scheduling for pre-reload schedule
           to save compile time.  */
-@@ -20278,6 +20452,11 @@ ix86_rtx_costs (rtx x, machine_mode mode, int outer_code_i, int opno,
+@@ -18247,7 +18417,7 @@ ix86_gimple_fold_builtin (gimple_stmt_iterator *gsi)
+ 
+     case IX86_BUILTIN_SHUFPD:
+       arg2 = gimple_call_arg (stmt, 2);
+-      if (TREE_CODE (arg2) == INTEGER_CST && gimple_call_lhs (stmt))
++      if (TREE_CODE (arg2) == INTEGER_CST)
+ 	{
+ 	  location_t loc = gimple_location (stmt);
+ 	  unsigned HOST_WIDE_INT imask = TREE_INT_CST_LOW (arg2);
+@@ -20278,6 +20448,11 @@ ix86_rtx_costs (rtx x, machine_mode mode, int outer_code_i, int opno,
      case UNSPEC:
        if (XINT (x, 1) == UNSPEC_TP)
  	*total = 0;
@@ -2131,7 +2577,7 @@ index 5ddad92ad04..0283cd23c30 100644
        return false;
  
      case VEC_SELECT:
-@@ -21826,10 +22005,10 @@ int
+@@ -21826,10 +22001,10 @@ int
  asm_preferred_eh_data_format (int code, int global)
  {
    /* PE-COFF is effectively always -fPIC because of the .reloc section.  */
@@ -2144,7 +2590,7 @@ index 5ddad92ad04..0283cd23c30 100644
  	  || ix86_cmodel == CM_SMALL_PIC
  	  || (ix86_cmodel == CM_MEDIUM_PIC && (global || code)))
  	type = DW_EH_PE_sdata4;
-@@ -22905,10 +23084,28 @@ ix86_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
+@@ -22905,10 +23080,28 @@ ix86_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
  static bool
  ix86_binds_local_p (const_tree exp)
  {
@@ -2177,7 +2623,7 @@ index 5ddad92ad04..0283cd23c30 100644
  }
  #endif
  
-@@ -23044,6 +23241,32 @@ ix86_optab_supported_p (int op, machine_mode mode1, machine_mode,
+@@ -23044,6 +23237,32 @@ ix86_optab_supported_p (int op, machine_mode mode1, machine_mode,
      }
  }
  
@@ -2210,7 +2656,7 @@ index 5ddad92ad04..0283cd23c30 100644
  /* Address space support.
  
     This is not "far pointers" in the 16-bit sense, but an easy way
-@@ -23574,6 +23797,9 @@ ix86_run_selftests (void)
+@@ -23574,6 +23793,9 @@ ix86_run_selftests (void)
  #undef TARGET_ADDRESS_COST
  #define TARGET_ADDRESS_COST ix86_address_cost
  
@@ -2220,7 +2666,7 @@ index 5ddad92ad04..0283cd23c30 100644
  #undef TARGET_FLAGS_REGNUM
  #define TARGET_FLAGS_REGNUM FLAGS_REG
  #undef TARGET_FIXED_CONDITION_CODE_REGS
-@@ -23623,6 +23849,8 @@ ix86_run_selftests (void)
+@@ -23623,6 +23845,8 @@ ix86_run_selftests (void)
  #define TARGET_C_EXCESS_PRECISION ix86_get_excess_precision
  #undef TARGET_PROMOTE_PROTOTYPES
  #define TARGET_PROMOTE_PROTOTYPES hook_bool_const_tree_true
@@ -2229,7 +2675,7 @@ index 5ddad92ad04..0283cd23c30 100644
  #undef TARGET_SETUP_INCOMING_VARARGS
  #define TARGET_SETUP_INCOMING_VARARGS ix86_setup_incoming_varargs
  #undef TARGET_MUST_PASS_IN_STACK
-@@ -23927,6 +24155,14 @@ ix86_run_selftests (void)
+@@ -23927,6 +24151,14 @@ ix86_run_selftests (void)
  #define TARGET_GET_MULTILIB_ABI_NAME \
    ix86_get_multilib_abi_name
  
@@ -2244,7 +2690,7 @@ index 5ddad92ad04..0283cd23c30 100644
  static bool ix86_libc_has_fast_function (int fcode ATTRIBUTE_UNUSED)
  {
  #ifdef OPTION_GLIBC
-@@ -23942,6 +24178,9 @@ static bool ix86_libc_has_fast_function (int fcode ATTRIBUTE_UNUSED)
+@@ -23942,6 +24174,9 @@ static bool ix86_libc_has_fast_function (int fcode ATTRIBUTE_UNUSED)
  #undef TARGET_LIBC_HAS_FAST_FUNCTION
  #define TARGET_LIBC_HAS_FAST_FUNCTION ix86_libc_has_fast_function
  
@@ -2358,7 +2804,7 @@ index 6fc1bf350d5..8a1542d8eaa 100644
  /* If a memory-to-memory move would take MOVE_RATIO or more simple
     move-instruction pairs, we will do a cpymem or libcall instead.
 diff --git a/gcc/config/i386/i386.md b/gcc/config/i386/i386.md
-index 1aff2ac2a82..a3cc4f359d6 100644
+index efe0b4ac3a8..a3cc4f359d6 100644
 --- a/gcc/config/i386/i386.md
 +++ b/gcc/config/i386/i386.md
 @@ -122,6 +122,9 @@
@@ -2381,6 +2827,17 @@ index 1aff2ac2a82..a3cc4f359d6 100644
     && optimize_function_for_speed_p (cfun)
     && (!REG_P (operands[1])
         || (!TARGET_AVX && REGNO (operands[0]) != REGNO (operands[1])))
+@@ -4504,8 +4508,8 @@
+      movddup is available.  */
+   if (REG_P (operands[1]))
+     {
+-      if ((!TARGET_SSE3 && REGNO (operands[0]) != REGNO (operands[1]))
+-	  || (EXT_REX_SSE_REG_P (operands[1]) && !TARGET_AVX512VL))
++      if (!TARGET_SSE3
++	  && REGNO (operands[0]) != REGNO (operands[1]))
+ 	{
+ 	  rtx tmp = lowpart_subreg (DFmode, operands[0], SFmode);
+ 	  emit_move_insn (tmp, operands[1]);
 @@ -4540,7 +4544,8 @@
          (float_truncate:SF
  	  (match_operand:DF 1 "nonimmediate_operand")))]
@@ -3891,6 +4348,152 @@ index 4c35a7d7ee3..9b6be323e6d 100644
  #define ACCUMULATE_OUTGOING_ARGS 1
  
  /* We define TARGET_RETURN_IN_MEMORY, so set to zero.  */
+diff --git a/gcc/config/riscv/t-riscv b/gcc/config/riscv/t-riscv
+index 63b155ef154..1215ea8b734 100644
+--- a/gcc/config/riscv/t-riscv
++++ b/gcc/config/riscv/t-riscv
+@@ -6,7 +6,7 @@ riscv-builtins.o: $(srcdir)/config/riscv/riscv-builtins.c $(CONFIG_H) \
+ 		$(srcdir)/config/riscv/riscv-builtins.c
+ 
+ riscv-sr.o: $(srcdir)/config/riscv/riscv-sr.c $(CONFIG_H) \
+-  $(SYSTEM_H) $(TM_H)
++  $(SYSTEM_H)
+ 	$(COMPILER) -c $(ALL_COMPILERFLAGS) $(ALL_CPPFLAGS) $(INCLUDES) \
+ 		$(srcdir)/config/riscv/riscv-sr.c
+ 
+diff --git a/gcc/config/rs6000/rs6000.c b/gcc/config/rs6000/rs6000.c
+index c892effdf2f..ae13c3ab825 100644
+--- a/gcc/config/rs6000/rs6000.c
++++ b/gcc/config/rs6000/rs6000.c
+@@ -3932,15 +3932,6 @@ rs6000_option_override_internal (bool global_init_p)
+   else if (TARGET_ALTIVEC)
+     rs6000_isa_flags |= (OPTION_MASK_PPC_GFXOPT & ~ignore_masks);
+ 
+-  /* Disable VSX and Altivec silently if the user switched cpus to power7 in a
+-     target attribute or pragma which automatically enables both options,
+-     unless the altivec ABI was set.  This is set by default for 64-bit, but
+-     not for 32-bit.  Don't move this before the above code using ignore_masks,
+-     since it can reset the cleared VSX/ALTIVEC flag again.  */
+-  if (main_target_opt && !main_target_opt->x_rs6000_altivec_abi)
+-    rs6000_isa_flags &= ~((OPTION_MASK_VSX | OPTION_MASK_ALTIVEC)
+-			  & ~rs6000_isa_flags_explicit);
+-
+   if (TARGET_CRYPTO && !TARGET_ALTIVEC)
+     {
+       if (rs6000_isa_flags_explicit & OPTION_MASK_CRYPTO)
+@@ -4357,6 +4348,18 @@ rs6000_option_override_internal (bool global_init_p)
+ 	}
+     }
+ 
++  /* Disable VSX and Altivec silently if the user switched cpus to power7 in a
++     target attribute or pragma which automatically enables both options,
++     unless the altivec ABI was set.  This is set by default for 64-bit, but
++     not for 32-bit.  */
++  if (main_target_opt != NULL && !main_target_opt->x_rs6000_altivec_abi)
++    {
++      TARGET_FLOAT128_TYPE = 0;
++      rs6000_isa_flags &= ~((OPTION_MASK_VSX | OPTION_MASK_ALTIVEC
++			     | OPTION_MASK_FLOAT128_KEYWORD)
++			    & ~rs6000_isa_flags_explicit);
++    }
++
+   /* Enable Altivec ABI for AIX -maltivec.  */
+   if (TARGET_XCOFF
+       && (TARGET_ALTIVEC || TARGET_VSX)
+@@ -4477,16 +4480,6 @@ rs6000_option_override_internal (bool global_init_p)
+       rs6000_isa_flags &= ~OPTION_MASK_MMA;
+     }
+ 
+-  /* MMA requires SIMD support as ISA 3.1 claims and our implementation
+-     such as "*movoo" uses vector pair access which use VSX registers.
+-     So make MMA require VSX support here.  */
+-  if (TARGET_MMA && !TARGET_VSX)
+-    {
+-      if ((rs6000_isa_flags_explicit & OPTION_MASK_MMA) != 0)
+-	error ("%qs requires %qs", "-mmma", "-mvsx");
+-      rs6000_isa_flags &= ~OPTION_MASK_MMA;
+-    }
+-
+   if (!TARGET_PCREL && TARGET_PCREL_OPT)
+     rs6000_isa_flags &= ~OPTION_MASK_PCREL_OPT;
+ 
+@@ -6214,11 +6207,8 @@ vspltis_shifted (rtx op)
+     return false;
+ 
+   /* We need to create pseudo registers to do the shift, so don't recognize
+-     shift vector constants after reload.  Don't match it even before RA
+-     after split1 is done, because there won't be further splitting pass
+-     before RA to do the splitting.  */
+-  if (!can_create_pseudo_p ()
+-      || (cfun->curr_properties & PROP_rtl_split_insns))
++     shift vector constants after reload.  */
++  if (!can_create_pseudo_p ())
+     return false;
+ 
+   nunits = GET_MODE_NUNITS (mode);
+diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
+index 365e0e1e9a8..35644be63f8 100644
+--- a/gcc/cp/ChangeLog
++++ b/gcc/cp/ChangeLog
+@@ -1,13 +1,3 @@
+-2022-02-18  Richard Biener  <rguenther@suse.de>
+-
+-	Backported from master:
+-	2021-05-10  Richard Biener  <rguenther@suse.de>
+-
+-	PR middle-end/100464
+-	PR c++/100468
+-	* call.c (set_up_extended_ref_temp): Mark the temporary
+-	addressable if the TARGET_EXPR was.
+-
+ 2022-02-08  Patrick Palka  <ppalka@redhat.com>
+ 
+ 	Backported from master:
+diff --git a/gcc/cp/call.c b/gcc/cp/call.c
+index 2280fde1926..81b0d0f27ff 100644
+--- a/gcc/cp/call.c
++++ b/gcc/cp/call.c
+@@ -12531,8 +12531,6 @@ set_up_extended_ref_temp (tree decl, tree expr, vec<tree, va_gc> **cleanups,
+      VAR.  */
+   if (TREE_CODE (expr) != TARGET_EXPR)
+     expr = get_target_expr (expr);
+-  else if (TREE_ADDRESSABLE (expr))
+-    TREE_ADDRESSABLE (var) = 1;
+ 
+   if (TREE_CODE (decl) == FIELD_DECL
+       && extra_warnings && !TREE_NO_WARNING (decl))
+diff --git a/gcc/cp/constexpr.c b/gcc/cp/constexpr.c
+index 4d86442ca11..57decc97455 100644
+--- a/gcc/cp/constexpr.c
++++ b/gcc/cp/constexpr.c
+@@ -1757,10 +1757,13 @@ cxx_eval_internal_function (const constexpr_ctx *ctx, tree t,
+ 						 false, non_constant_p,
+ 						 overflow_p);
+ 	if (TREE_CODE (arg) == VECTOR_CST)
+-	  if (tree r = fold_const_call (CFN_VEC_CONVERT, TREE_TYPE (t), arg))
+-	    return r;
++	  return fold_const_call (CFN_VEC_CONVERT, TREE_TYPE (t), arg);
++	else
++	  {
++	    *non_constant_p = true;
++	    return t;
++	  }
+       }
+-      /* FALLTHRU */
+ 
+     default:
+       if (!ctx->quiet)
+@@ -8914,8 +8917,8 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
+     case GOTO_EXPR:
+       {
+ 	tree *target = &TREE_OPERAND (t, 0);
+-	/* Gotos representing break, continue and cdtor return are OK.  */
+-	if (breaks (target) || continues (target) || returns (target))
++	/* Gotos representing break and continue are OK.  */
++	if (breaks (target) || continues (target))
+ 	  {
+ 	    *jump_target = *target;
+ 	    return true;
 diff --git a/gcc/defaults.h b/gcc/defaults.h
 index 91216593e75..ba79a8e48ed 100644
 --- a/gcc/defaults.h
@@ -4763,6 +5366,1337 @@ index 1f0177a4cfa..084b26c80d8 100644
  
  extern rtx emit_block_move (rtx, rtx, rtx, enum block_op_methods);
  extern rtx emit_block_move_hints (rtx, rtx, rtx, enum block_op_methods,
+diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
+index d9bff2fb665..8a089048104 100644
+--- a/gcc/fortran/ChangeLog
++++ b/gcc/fortran/ChangeLog
+@@ -1,28 +1,3 @@
+-2022-02-16  Harald Anlauf  <anlauf@gmx.de>
+-
+-	Backported from master:
+-	2022-02-14  Harald Anlauf  <anlauf@gmx.de>
+-
+-	PR fortran/104211
+-	* expr.c (find_array_section): Replace assertion by error
+-	recovery when encountering bad array constructor.
+-
+-2022-02-14  Andre Vehreschild  <vehre@gcc.gnu.org>
+-
+-	PR fortran/100337
+-	Backport from master.
+-	* trans-intrinsic.c (conv_co_collective): Check stat for null ptr
+-	before dereferrencing.
+-
+-2022-02-14  Andre Vehreschild  <vehre@gcc.gnu.org>
+-
+-	PR fortran/103790
+-	Backported from master.
+-	* trans-array.c (structure_alloc_comps): Prevent descriptor
+-	stacking for non-array data; do not broadcast caf-tokens.
+-	* trans-intrinsic.c (conv_co_collective): Prevent generation
+-	of unused descriptor.
+-
+ 2022-02-04  Harald Anlauf  <anlauf@gmx.de>
+ 
+ 	Backported from master:
+diff --git a/gcc/fortran/expr.c b/gcc/fortran/expr.c
+index edacd974a21..b3be37fb476 100644
+--- a/gcc/fortran/expr.c
++++ b/gcc/fortran/expr.c
+@@ -1715,13 +1715,7 @@ find_array_section (gfc_expr *expr, gfc_ref *ref)
+ 	}
+ 
+       cons = gfc_constructor_lookup (base, limit);
+-      if (cons == NULL)
+-	{
+-	  gfc_error ("Error in array constructor referenced at %L",
+-		     &ref->u.ar.where);
+-	  t = false;
+-	  goto cleanup;
+-	}
++      gcc_assert (cons);
+       gfc_constructor_append_expr (&expr->value.constructor,
+ 				   gfc_copy_expr (cons->expr), NULL);
+     }
+diff --git a/gcc/fortran/trans-array.c b/gcc/fortran/trans-array.c
+index ad6a30a47ca..dc89e97b0a1 100644
+--- a/gcc/fortran/trans-array.c
++++ b/gcc/fortran/trans-array.c
+@@ -8826,10 +8826,6 @@ structure_alloc_comps (gfc_symbol * der_type, tree decl,
+ 		continue;
+ 	    }
+ 
+-	  /* Do not broadcast a caf_token.  These are local to the image.  */
+-	  if (attr->caf_token)
+-	    continue;
+-
+ 	  add_when_allocated = NULL_TREE;
+ 	  if (cmp_has_alloc_comps
+ 	      && !c->attr.pointer && !c->attr.proc_pointer)
+@@ -8862,13 +8858,10 @@ structure_alloc_comps (gfc_symbol * der_type, tree decl,
+ 	  if (attr->dimension)
+ 	    {
+ 	      tmp = gfc_get_element_type (TREE_TYPE (comp));
+-	      if (!GFC_DESCRIPTOR_TYPE_P (TREE_TYPE (comp)))
+-		ubound = GFC_TYPE_ARRAY_SIZE (TREE_TYPE (comp));
+-	      else
+-		ubound = gfc_full_array_size (&tmpblock, comp,
+-					      c->ts.type == BT_CLASS
+-						? CLASS_DATA (c)->as->rank
+-						: c->as->rank);
++	      ubound = gfc_full_array_size (&tmpblock, comp,
++					    c->ts.type == BT_CLASS
++					    ? CLASS_DATA (c)->as->rank
++					    : c->as->rank);
+ 	    }
+ 	  else
+ 	    {
+@@ -8876,39 +8869,26 @@ structure_alloc_comps (gfc_symbol * der_type, tree decl,
+ 	      ubound = build_int_cst (gfc_array_index_type, 1);
+ 	    }
+ 
+-	  /* Treat strings like arrays.  Or the other way around, do not
+-	   * generate an additional array layer for scalar components.  */
+-	  if (attr->dimension || c->ts.type == BT_CHARACTER)
+-	    {
+-	      cdesc = gfc_get_array_type_bounds (tmp, 1, 0, &gfc_index_one_node,
+-						 &ubound, 1,
+-						 GFC_ARRAY_ALLOCATABLE, false);
++	  cdesc = gfc_get_array_type_bounds (tmp, 1, 0, &gfc_index_one_node,
++					     &ubound, 1,
++					     GFC_ARRAY_ALLOCATABLE, false);
+ 
+-	      cdesc = gfc_create_var (cdesc, "cdesc");
+-	      DECL_ARTIFICIAL (cdesc) = 1;
++	  cdesc = gfc_create_var (cdesc, "cdesc");
++	  DECL_ARTIFICIAL (cdesc) = 1;
+ 
+-	      gfc_add_modify (&tmpblock, gfc_conv_descriptor_dtype (cdesc),
+-			      gfc_get_dtype_rank_type (1, tmp));
+-	      gfc_conv_descriptor_lbound_set (&tmpblock, cdesc,
+-					      gfc_index_zero_node,
+-					      gfc_index_one_node);
+-	      gfc_conv_descriptor_stride_set (&tmpblock, cdesc,
+-					      gfc_index_zero_node,
+-					      gfc_index_one_node);
+-	      gfc_conv_descriptor_ubound_set (&tmpblock, cdesc,
+-					      gfc_index_zero_node, ubound);
+-	    }
+-	  else
+-	    /* Prevent warning.  */
+-	    cdesc = NULL_TREE;
++	  gfc_add_modify (&tmpblock, gfc_conv_descriptor_dtype (cdesc),
++	  		  gfc_get_dtype_rank_type (1, tmp));
++	  gfc_conv_descriptor_lbound_set (&tmpblock, cdesc,
++					  gfc_index_zero_node,
++					  gfc_index_one_node);
++	  gfc_conv_descriptor_stride_set (&tmpblock, cdesc,
++					  gfc_index_zero_node,
++					  gfc_index_one_node);
++	  gfc_conv_descriptor_ubound_set (&tmpblock, cdesc,
++					  gfc_index_zero_node, ubound);
+ 
+ 	  if (attr->dimension)
+-	    {
+-	      if (GFC_DESCRIPTOR_TYPE_P (TREE_TYPE (comp)))
+-		comp = gfc_conv_descriptor_data_get (comp);
+-	      else
+-		comp = gfc_build_addr_expr (NULL_TREE, comp);
+-	    }
++	    comp = gfc_conv_descriptor_data_get (comp);
+ 	  else
+ 	    {
+ 	      gfc_se se;
+@@ -8916,18 +8896,14 @@ structure_alloc_comps (gfc_symbol * der_type, tree decl,
+ 	      gfc_init_se (&se, NULL);
+ 
+ 	      comp = gfc_conv_scalar_to_descriptor (&se, comp,
+-						    c->ts.type == BT_CLASS
+-						      ? CLASS_DATA (c)->attr
+-						      : c->attr);
+-	      if (c->ts.type == BT_CHARACTER)
+-		comp = gfc_build_addr_expr (NULL_TREE, comp);
++	      					    c->ts.type == BT_CLASS
++	      					    ? CLASS_DATA (c)->attr
++	      					    : c->attr);
++	      comp = gfc_build_addr_expr (NULL_TREE, comp);
+ 	      gfc_add_block_to_block (&tmpblock, &se.pre);
+ 	    }
+ 
+-	  if (attr->dimension || c->ts.type == BT_CHARACTER)
+-	    gfc_conv_descriptor_data_set (&tmpblock, cdesc, comp);
+-	  else
+-	    cdesc = comp;
++	  gfc_conv_descriptor_data_set (&tmpblock, cdesc, comp);
+ 
+ 	  tree fndecl;
+ 
+diff --git a/gcc/fortran/trans-intrinsic.c b/gcc/fortran/trans-intrinsic.c
+index bd6e6039429..40dc983b751 100644
+--- a/gcc/fortran/trans-intrinsic.c
++++ b/gcc/fortran/trans-intrinsic.c
+@@ -11267,56 +11267,29 @@ conv_co_collective (gfc_code *code)
+   if (flag_coarray == GFC_FCOARRAY_SINGLE)
+     {
+       if (stat != NULL_TREE)
+-	{
+-	  /* For optional stats, check the pointer is valid before zero'ing.  */
+-	  if (gfc_expr_attr (stat_expr).optional)
+-	    {
+-	      tree tmp;
+-	      stmtblock_t ass_block;
+-	      gfc_start_block (&ass_block);
+-	      gfc_add_modify (&ass_block, stat,
+-			      fold_convert (TREE_TYPE (stat),
+-					    integer_zero_node));
+-	      tmp = fold_build2 (NE_EXPR, logical_type_node,
+-				 gfc_build_addr_expr (NULL_TREE, stat),
+-				 null_pointer_node);
+-	      tmp = fold_build3 (COND_EXPR, void_type_node, tmp,
+-				 gfc_finish_block (&ass_block),
+-				 build_empty_stmt (input_location));
+-	      gfc_add_expr_to_block (&block, tmp);
+-	    }
+-	  else
+-	    gfc_add_modify (&block, stat,
+-			    fold_convert (TREE_TYPE (stat), integer_zero_node));
+-	}
++	gfc_add_modify (&block, stat,
++			fold_convert (TREE_TYPE (stat), integer_zero_node));
+       return gfc_finish_block (&block);
+     }
+ 
+-  gfc_symbol *derived = code->ext.actual->expr->ts.type == BT_DERIVED
+-    ? code->ext.actual->expr->ts.u.derived : NULL;
+-
+   /* Handle the array.  */
+   gfc_init_se (&argse, NULL);
+-  if (!derived || !derived->attr.alloc_comp
+-      || code->resolved_isym->id != GFC_ISYM_CO_BROADCAST)
++  if (code->ext.actual->expr->rank == 0)
+     {
+-      if (code->ext.actual->expr->rank == 0)
+-	{
+-	  symbol_attribute attr;
+-	  gfc_clear_attr (&attr);
+-	  gfc_init_se (&argse, NULL);
+-	  gfc_conv_expr (&argse, code->ext.actual->expr);
+-	  gfc_add_block_to_block (&block, &argse.pre);
+-	  gfc_add_block_to_block (&post_block, &argse.post);
+-	  array = gfc_conv_scalar_to_descriptor (&argse, argse.expr, attr);
+-	  array = gfc_build_addr_expr (NULL_TREE, array);
+-	}
+-      else
+-	{
+-	  argse.want_pointer = 1;
+-	  gfc_conv_expr_descriptor (&argse, code->ext.actual->expr);
+-	  array = argse.expr;
+-	}
++      symbol_attribute attr;
++      gfc_clear_attr (&attr);
++      gfc_init_se (&argse, NULL);
++      gfc_conv_expr (&argse, code->ext.actual->expr);
++      gfc_add_block_to_block (&block, &argse.pre);
++      gfc_add_block_to_block (&post_block, &argse.post);
++      array = gfc_conv_scalar_to_descriptor (&argse, argse.expr, attr);
++      array = gfc_build_addr_expr (NULL_TREE, array);
++    }
++  else
++    {
++      argse.want_pointer = 1;
++      gfc_conv_expr_descriptor (&argse, code->ext.actual->expr);
++      array = argse.expr;
+     }
+ 
+   gfc_add_block_to_block (&block, &argse.pre);
+@@ -11377,6 +11350,9 @@ conv_co_collective (gfc_code *code)
+       gcc_unreachable ();
+     }
+ 
++  gfc_symbol *derived = code->ext.actual->expr->ts.type == BT_DERIVED
++    ? code->ext.actual->expr->ts.u.derived : NULL;
++
+   if (derived && derived->attr.alloc_comp
+       && code->resolved_isym->id == GFC_ISYM_CO_BROADCAST)
+     /* The derived type has the attribute 'alloc_comp'.  */
+diff --git a/gcc/gimple-fold.c b/gcc/gimple-fold.c
+index bb4db5af280..0581338ea5f 100644
+--- a/gcc/gimple-fold.c
++++ b/gcc/gimple-fold.c
+@@ -245,9 +245,7 @@ canonicalize_constructor_val (tree cval, tree from_decl)
+       if (TREE_TYPE (base) == error_mark_node)
+ 	return NULL_TREE;
+       if (VAR_P (base))
+-	/* ???  We should be able to assert that TREE_ADDRESSABLE is set,
+-	   but since the use can be in a debug stmt we can't.  */
+-	;
++	TREE_ADDRESSABLE (base) = 1;
+       else if (TREE_CODE (base) == FUNCTION_DECL)
+ 	{
+ 	  /* Make sure we create a cgraph node for functions we'll reference.
+@@ -287,9 +285,7 @@ get_symbol_constant_value (tree sym)
+       if (val)
+ 	{
+ 	  val = canonicalize_constructor_val (unshare_expr (val), sym);
+-	  if (val
+-	      && is_gimple_min_invariant (val)
+-	      && useless_type_conversion_p (TREE_TYPE (sym), TREE_TYPE (val)))
++	  if (val && is_gimple_min_invariant (val))
+ 	    return val;
+ 	  else
+ 	    return NULL_TREE;
+diff --git a/gcc/gimple-loop-jam.c b/gcc/gimple-loop-jam.c
+index 27465b049fb..69dbaeb6cb9 100644
+--- a/gcc/gimple-loop-jam.c
++++ b/gcc/gimple-loop-jam.c
+@@ -403,10 +403,10 @@ adjust_unroll_factor (class loop *inner, struct data_dependence_relation *ddr,
+ 	     a >= N, or b > 0, or b is zero and a > 0.  Otherwise the unroll
+ 	     factor needs to be limited so that the first condition holds.
+ 	     That may limit the factor down to zero in the worst case.  */
+-	  lambda_int dist = dist_v[0];
++	  int dist = dist_v[0];
+ 	  if (dist < 0)
+ 	    gcc_unreachable ();
+-	  else if (dist >= (lambda_int)*unroll)
++	  else if ((unsigned)dist >= *unroll)
+ 	    ;
+ 	  else if (lambda_vector_zerop (dist_v + 1, DDR_NB_LOOPS (ddr) - 1))
+ 	    {
+diff --git a/gcc/gimple-ssa-store-merging.c b/gcc/gimple-ssa-store-merging.c
+index a0142d5ca93..0bd5cab3c54 100644
+--- a/gcc/gimple-ssa-store-merging.c
++++ b/gcc/gimple-ssa-store-merging.c
+@@ -5280,7 +5280,6 @@ get_status_for_store_merging (basic_block bb)
+   unsigned int num_constructors = 0;
+   gimple_stmt_iterator gsi;
+   edge e;
+-  gimple *last_stmt = NULL;
+ 
+   for (gsi = gsi_after_labels (bb); !gsi_end_p (gsi); gsi_next (&gsi))
+     {
+@@ -5289,8 +5288,6 @@ get_status_for_store_merging (basic_block bb)
+       if (is_gimple_debug (stmt))
+ 	continue;
+ 
+-      last_stmt = stmt;
+-
+       if (store_valid_for_store_merging_p (stmt) && ++num_statements >= 2)
+ 	break;
+ 
+@@ -5317,7 +5314,7 @@ get_status_for_store_merging (basic_block bb)
+     return BB_INVALID;
+ 
+   if (cfun->can_throw_non_call_exceptions && cfun->eh
+-      && store_valid_for_store_merging_p (last_stmt)
++      && store_valid_for_store_merging_p (gimple_seq_last_stmt (bb_seq (bb)))
+       && (e = find_fallthru_edge (bb->succs))
+       && e->dest == bb->next_bb)
+     return BB_EXTENDED_VALID;
+diff --git a/gcc/go/ChangeLog b/gcc/go/ChangeLog
+index 888631485d8..346c7582114 100644
+--- a/gcc/go/ChangeLog
++++ b/gcc/go/ChangeLog
+@@ -1,12 +1,3 @@
+-2022-02-18  Ian Lance Taylor  <iant@golang.org>
+-
+-	Backported from master:
+-	2021-05-24  Ian Lance Taylor  <iant@golang.org>
+-
+-	PR go/100537
+-	* go-gcc.cc (class Gcc_backend): Update methods that create
+-	variables to take a flags parameter.
+-
+ 2021-07-28  Release Manager
+ 
+ 	* GCC 11.2.0 released.
+diff --git a/gcc/go/go-gcc.cc b/gcc/go/go-gcc.cc
+index 41f309e7294..5d9dbb5d068 100644
+--- a/gcc/go/go-gcc.cc
++++ b/gcc/go/go-gcc.cc
+@@ -415,46 +415,47 @@ class Gcc_backend : public Backend
+   global_variable(const std::string& var_name,
+ 		  const std::string& asm_name,
+ 		  Btype* btype,
+-		  unsigned int flags,
++		  bool is_external,
++		  bool is_hidden,
++		  bool in_unique_section,
+ 		  Location location);
+ 
+   void
+   global_variable_set_init(Bvariable*, Bexpression*);
+ 
+   Bvariable*
+-  local_variable(Bfunction*, const std::string&, Btype*, Bvariable*,
+-		 unsigned int, Location);
++  local_variable(Bfunction*, const std::string&, Btype*, Bvariable*, bool,
++		 Location);
+ 
+   Bvariable*
+-  parameter_variable(Bfunction*, const std::string&, Btype*, unsigned int,
++  parameter_variable(Bfunction*, const std::string&, Btype*, bool,
+ 		     Location);
+ 
+   Bvariable*
+-  static_chain_variable(Bfunction*, const std::string&, Btype*, unsigned int,
+-			Location);
++  static_chain_variable(Bfunction*, const std::string&, Btype*, Location);
+ 
+   Bvariable*
+-  temporary_variable(Bfunction*, Bblock*, Btype*, Bexpression*, unsigned int,
++  temporary_variable(Bfunction*, Bblock*, Btype*, Bexpression*, bool,
+ 		     Location, Bstatement**);
+ 
+   Bvariable*
+   implicit_variable(const std::string&, const std::string&, Btype*,
+-                    unsigned int, int64_t);
++                    bool, bool, bool, int64_t);
+ 
+   void
+   implicit_variable_set_init(Bvariable*, const std::string&, Btype*,
+-			     unsigned int, Bexpression*);
++			     bool, bool, bool, Bexpression*);
+ 
+   Bvariable*
+   implicit_variable_reference(const std::string&, const std::string&, Btype*);
+ 
+   Bvariable*
+   immutable_struct(const std::string&, const std::string&,
+-                   unsigned int, Btype*, Location);
++                   bool, bool, Btype*, Location);
+ 
+   void
+-  immutable_struct_set_init(Bvariable*, const std::string&, unsigned int,
+-			    Btype*, Location, Bexpression*);
++  immutable_struct_set_init(Bvariable*, const std::string&, bool, bool, Btype*,
++			    Location, Bexpression*);
+ 
+   Bvariable*
+   immutable_struct_reference(const std::string&, const std::string&,
+@@ -2695,7 +2696,9 @@ Bvariable*
+ Gcc_backend::global_variable(const std::string& var_name,
+ 			     const std::string& asm_name,
+ 			     Btype* btype,
+-			     unsigned int flags,
++			     bool is_external,
++			     bool is_hidden,
++			     bool in_unique_section,
+ 			     Location location)
+ {
+   tree type_tree = btype->get_tree();
+@@ -2704,49 +2707,30 @@ Gcc_backend::global_variable(const std::string& var_name,
+ 
+   // The GNU linker does not like dynamic variables with zero size.
+   tree orig_type_tree = type_tree;
+-  bool is_external = (flags & variable_is_external) != 0;
+-  bool is_hidden = (flags & variable_is_hidden) != 0;
+   if ((is_external || !is_hidden) && int_size_in_bytes(type_tree) == 0)
+     type_tree = this->non_zero_size_type(type_tree);
+ 
+   tree decl = build_decl(location.gcc_location(), VAR_DECL,
+ 			 get_identifier_from_string(var_name),
+ 			 type_tree);
+-  if ((flags & variable_is_external) != 0)
+-    {
+-      DECL_EXTERNAL(decl) = 1;
+-      flags &=~ variable_is_external;
+-    }
++  if (is_external)
++    DECL_EXTERNAL(decl) = 1;
+   else
+     TREE_STATIC(decl) = 1;
+-
+-  if ((flags & variable_is_hidden) == 0)
+-    TREE_PUBLIC(decl) = 1;
++  if (!is_hidden)
++    {
++      TREE_PUBLIC(decl) = 1;
++      SET_DECL_ASSEMBLER_NAME(decl, get_identifier_from_string(asm_name));
++    }
+   else
+-    flags &=~ variable_is_hidden;
+-
+-  if ((flags & variable_address_is_taken) != 0)
+     {
+-      TREE_ADDRESSABLE(decl) = 1;
+-      flags &=~ variable_address_is_taken;
++      SET_DECL_ASSEMBLER_NAME(decl, get_identifier_from_string(asm_name));
+     }
+ 
+-  // We take the address in Bvariable::get_tree if orig_type_tree is
+-  // different from type_tree.
+-  if (orig_type_tree != type_tree)
+-    TREE_ADDRESSABLE(decl) = 1;
+-
+-  SET_DECL_ASSEMBLER_NAME(decl, get_identifier_from_string(asm_name));
+-
+   TREE_USED(decl) = 1;
+ 
+-  if ((flags & variable_in_unique_section) != 0)
+-    {
+-      resolve_unique_section (decl, 0, 1);
+-      flags &=~ variable_in_unique_section;
+-    }
+-
+-  gcc_assert(flags == 0);
++  if (in_unique_section)
++    resolve_unique_section (decl, 0, 1);
+ 
+   go_preserve_from_gc(decl);
+ 
+@@ -2784,7 +2768,7 @@ Gcc_backend::global_variable_set_init(Bvariable* var, Bexpression* expr)
+ Bvariable*
+ Gcc_backend::local_variable(Bfunction* function, const std::string& name,
+ 			    Btype* btype, Bvariable* decl_var, 
+-			    unsigned int flags, Location location)
++			    bool is_address_taken, Location location)
+ {
+   tree type_tree = btype->get_tree();
+   if (type_tree == error_mark_node)
+@@ -2794,17 +2778,13 @@ Gcc_backend::local_variable(Bfunction* function, const std::string& name,
+ 			 type_tree);
+   DECL_CONTEXT(decl) = function->get_tree();
+   TREE_USED(decl) = 1;
+-  if ((flags & variable_address_is_taken) != 0)
+-    {
+-      TREE_ADDRESSABLE(decl) = 1;
+-      flags &=~ variable_address_is_taken;
+-    }
++  if (is_address_taken)
++    TREE_ADDRESSABLE(decl) = 1;
+   if (decl_var != NULL)
+     {
+       DECL_HAS_VALUE_EXPR_P(decl) = 1;
+       SET_DECL_VALUE_EXPR(decl, decl_var->get_decl());
+     }
+-  go_assert(flags == 0);
+   go_preserve_from_gc(decl);
+   return new Bvariable(decl);
+ }
+@@ -2813,7 +2793,7 @@ Gcc_backend::local_variable(Bfunction* function, const std::string& name,
+ 
+ Bvariable*
+ Gcc_backend::parameter_variable(Bfunction* function, const std::string& name,
+-				Btype* btype, unsigned int flags,
++				Btype* btype, bool is_address_taken,
+ 				Location location)
+ {
+   tree type_tree = btype->get_tree();
+@@ -2825,12 +2805,8 @@ Gcc_backend::parameter_variable(Bfunction* function, const std::string& name,
+   DECL_CONTEXT(decl) = function->get_tree();
+   DECL_ARG_TYPE(decl) = type_tree;
+   TREE_USED(decl) = 1;
+-  if ((flags & variable_address_is_taken) != 0)
+-    {
+-      TREE_ADDRESSABLE(decl) = 1;
+-      flags &=~ variable_address_is_taken;
+-    }
+-  go_assert(flags == 0);
++  if (is_address_taken)
++    TREE_ADDRESSABLE(decl) = 1;
+   go_preserve_from_gc(decl);
+   return new Bvariable(decl);
+ }
+@@ -2839,8 +2815,7 @@ Gcc_backend::parameter_variable(Bfunction* function, const std::string& name,
+ 
+ Bvariable*
+ Gcc_backend::static_chain_variable(Bfunction* function, const std::string& name,
+-				   Btype* btype, unsigned int flags,
+-				   Location location)
++				   Btype* btype, Location location)
+ {
+   tree type_tree = btype->get_tree();
+   if (type_tree == error_mark_node)
+@@ -2865,7 +2840,6 @@ Gcc_backend::static_chain_variable(Bfunction* function, const std::string& name,
+   gcc_assert(f->static_chain_decl == NULL);
+   f->static_chain_decl = decl;
+   DECL_STATIC_CHAIN(fndecl) = 1;
+-  go_assert(flags == 0);
+ 
+   go_preserve_from_gc(decl);
+   return new Bvariable(decl);
+@@ -2876,7 +2850,7 @@ Gcc_backend::static_chain_variable(Bfunction* function, const std::string& name,
+ Bvariable*
+ Gcc_backend::temporary_variable(Bfunction* function, Bblock* bblock,
+ 				Btype* btype, Bexpression* binit,
+-				unsigned int flags,
++				bool is_address_taken,
+ 				Location location,
+ 				Bstatement** pstatement)
+ {
+@@ -2930,13 +2904,8 @@ Gcc_backend::temporary_variable(Bfunction* function, Bblock* bblock,
+       && TREE_TYPE(init_tree) != void_type_node)
+     DECL_INITIAL(var) = this->convert_tree(type_tree, init_tree, location);
+ 
+-  if ((flags & variable_address_is_taken) != 0)
+-    {
+-      TREE_ADDRESSABLE(var) = 1;
+-      flags &=~ variable_address_is_taken;
+-    }
+-
+-  gcc_assert(flags == 0);
++  if (is_address_taken)
++    TREE_ADDRESSABLE(var) = 1;
+ 
+   *pstatement = this->make_statement(build1_loc(location.gcc_location(),
+                                                 DECL_EXPR,
+@@ -2960,8 +2929,8 @@ Gcc_backend::temporary_variable(Bfunction* function, Bblock* bblock,
+ Bvariable*
+ Gcc_backend::implicit_variable(const std::string& name,
+                                const std::string& asm_name,
+-                               Btype* type, unsigned int flags,
+-			       int64_t alignment)
++                               Btype* type, bool is_hidden, bool is_constant,
++			       bool is_common, int64_t alignment)
+ {
+   tree type_tree = type->get_tree();
+   if (type_tree == error_mark_node)
+@@ -2970,14 +2939,11 @@ Gcc_backend::implicit_variable(const std::string& name,
+   tree decl = build_decl(BUILTINS_LOCATION, VAR_DECL,
+                          get_identifier_from_string(name), type_tree);
+   DECL_EXTERNAL(decl) = 0;
+-  if ((flags & variable_is_hidden) != 0)
+-    flags &=~ variable_is_hidden;
+-  else
+-    TREE_PUBLIC(decl) = 1;
++  TREE_PUBLIC(decl) = !is_hidden;
+   TREE_STATIC(decl) = 1;
+   TREE_USED(decl) = 1;
+   DECL_ARTIFICIAL(decl) = 1;
+-  if ((flags & variable_is_common) != 0)
++  if (is_common)
+     {
+       DECL_COMMON(decl) = 1;
+ 
+@@ -2994,19 +2960,11 @@ Gcc_backend::implicit_variable(const std::string& name,
+       // mark this symbol as weak here.  We undo that below in
+       // immutable_struct_set_init before calling mark_decl_one_only.
+       DECL_WEAK(decl) = 1;
+-
+-      flags &=~ variable_is_common;
+     }
+-  if ((flags & variable_is_constant) != 0)
++  if (is_constant)
+     {
+       TREE_READONLY(decl) = 1;
+       TREE_CONSTANT(decl) = 1;
+-      flags &=~ variable_is_constant;
+-    }
+-  if ((flags & variable_address_is_taken) != 0)
+-    {
+-      TREE_ADDRESSABLE(decl) = 1;
+-      flags &=~ variable_address_is_taken;
+     }
+   if (alignment != 0)
+     {
+@@ -3015,7 +2973,6 @@ Gcc_backend::implicit_variable(const std::string& name,
+     }
+   if (! asm_name.empty())
+     SET_DECL_ASSEMBLER_NAME(decl, get_identifier_from_string(asm_name));
+-  gcc_assert(flags == 0);
+ 
+   go_preserve_from_gc(decl);
+   return new Bvariable(decl);
+@@ -3026,7 +2983,7 @@ Gcc_backend::implicit_variable(const std::string& name,
+ 
+ void
+ Gcc_backend::implicit_variable_set_init(Bvariable* var, const std::string&,
+-					Btype*, unsigned int flags,
++					Btype*, bool, bool, bool is_common,
+ 					Bexpression* init)
+ {
+   tree decl = var->get_decl();
+@@ -3042,7 +2999,7 @@ Gcc_backend::implicit_variable_set_init(Bvariable* var, const std::string&,
+ 
+   // Now that DECL_INITIAL is set, we can't call make_decl_one_only.
+   // See the comment where DECL_WEAK is set in implicit_variable.
+-  if ((flags & variable_is_common) != 0)
++  if (is_common)
+     {
+       DECL_WEAK(decl) = 0;
+       make_decl_one_only(decl, DECL_ASSEMBLER_NAME(decl));
+@@ -3081,8 +3038,8 @@ Gcc_backend::implicit_variable_reference(const std::string& name,
+ Bvariable*
+ Gcc_backend::immutable_struct(const std::string& name,
+                               const std::string& asm_name,
+-			      unsigned int flags, Btype* btype,
+-			      Location location)
++                              bool is_hidden,
++			      bool is_common, Btype* btype, Location location)
+ {
+   tree type_tree = btype->get_tree();
+   if (type_tree == error_mark_node)
+@@ -3096,17 +3053,10 @@ Gcc_backend::immutable_struct(const std::string& name,
+   TREE_READONLY(decl) = 1;
+   TREE_CONSTANT(decl) = 1;
+   DECL_ARTIFICIAL(decl) = 1;
+-  if ((flags & variable_is_hidden) != 0)
+-    flags &=~ variable_is_hidden;
+-  else
++  if (!is_hidden)
+     TREE_PUBLIC(decl) = 1;
+   if (! asm_name.empty())
+     SET_DECL_ASSEMBLER_NAME(decl, get_identifier_from_string(asm_name));
+-  if ((flags & variable_address_is_taken) != 0)
+-    {
+-      TREE_ADDRESSABLE(decl) = 1;
+-      flags &=~ variable_address_is_taken;
+-    }
+ 
+   // When the initializer for one immutable_struct refers to another,
+   // it needs to know the visibility of the referenced struct so that
+@@ -3120,13 +3070,8 @@ Gcc_backend::immutable_struct(const std::string& name,
+   // the right value if some other initializer refers to this one, we
+   // mark this symbol as weak here.  We undo that below in
+   // immutable_struct_set_init before calling mark_decl_one_only.
+-  if ((flags & variable_is_common) != 0)
+-    {
+-      DECL_WEAK(decl) = 1;
+-      flags &=~ variable_is_common;
+-    }
+-
+-  gcc_assert(flags == 0);
++  if (is_common)
++    DECL_WEAK(decl) = 1;
+ 
+   // We don't call rest_of_decl_compilation until we have the
+   // initializer.
+@@ -3140,7 +3085,7 @@ Gcc_backend::immutable_struct(const std::string& name,
+ 
+ void
+ Gcc_backend::immutable_struct_set_init(Bvariable* var, const std::string&,
+-				       unsigned int flags, Btype*, Location,
++				       bool, bool is_common, Btype*, Location,
+ 				       Bexpression* initializer)
+ {
+   tree decl = var->get_decl();
+@@ -3152,7 +3097,7 @@ Gcc_backend::immutable_struct_set_init(Bvariable* var, const std::string&,
+ 
+   // Now that DECL_INITIAL is set, we can't call make_decl_one_only.
+   // See the comment where DECL_WEAK is set in immutable_struct.
+-  if ((flags & variable_is_common) != 0)
++  if (is_common)
+     {
+       DECL_WEAK(decl) = 0;
+       make_decl_one_only(decl, DECL_ASSEMBLER_NAME(decl));
+diff --git a/gcc/go/gofrontend/MERGE b/gcc/go/gofrontend/MERGE
+index 1f38c9110ba..efb7a772882 100644
+--- a/gcc/go/gofrontend/MERGE
++++ b/gcc/go/gofrontend/MERGE
+@@ -1,4 +1,4 @@
+-5a801b15699cced5203af5c7339b375cd55ecbac
++9782e85bef1c16c72a4980856d921cea104b129c
+ 
+ The first line of this file holds the git revision number of the last
+ merge done from the gofrontend repository.
+diff --git a/gcc/go/gofrontend/backend.h b/gcc/go/gofrontend/backend.h
+index 5b6ffea0f6c..c5b5d8f2054 100644
+--- a/gcc/go/gofrontend/backend.h
++++ b/gcc/go/gofrontend/backend.h
+@@ -481,51 +481,24 @@ class Backend
+   virtual Bvariable*
+   error_variable() = 0;
+ 
+-  // Bit flags to pass to the various methods that return Bvariable*.
+-  // Not all flags are meaningful for all methods.
+-
+-  // Set if the variable's address is taken.  For a local variable
+-  // this implies that the address does not escape the function, as
+-  // otherwise the variable would be on the heap.
+-  static const unsigned int variable_address_is_taken = 1 << 0;
+-
+-  // Set if the variable is defined in some other package.  Only
+-  // meaningful for the global_variable method.  At most one of
+-  // is_external, is_hidden, and is_common may be set.
+-  static const unsigned int variable_is_external = 1 << 1;
+-
+-  // Set if the variable is not exported, and as such is only defined
+-  // in the current package.  Only meaningful for global_variable,
+-  // implicit_variable, and immutable_struct.  At most one of
+-  // is_external, is_hidden, and is_common may be set.
+-  static const unsigned variable_is_hidden = 1 << 2;
+-
+-  // Set if the variable should be treated as a common variable:
+-  // multiple definitions with different sizes permitted in different
+-  // object files, all merged into the largest definition at link
+-  // time.  Only meaningful for implicit_variable and immutable_struct.
+-  // At most one of is_external, is_hidden, and is_common may be set.
+-  static const unsigned int variable_is_common = 1 << 3;
+-
+-  // Set if the variable should be put into a unique section if
+-  // possible; this is intended to permit the linker to garbage
+-  // collect the value if it is not referenced.  Only meaningful for
+-  // global_variable.
+-  static const unsigned int variable_in_unique_section = 1 << 4;
+-
+-  // Set if the variable should be treated as immutable.  Only
+-  // meaningful for implicit_variable.  For example, this is set for
+-  // slice initializers if the values must be copied to the heap.
+-  static const unsigned int variable_is_constant = 1 << 5;
+-
+   // Create a global variable. NAME is the package-qualified name of
+   // the variable.  ASM_NAME is the encoded identifier for the
+   // variable, incorporating the package, and made safe for the
+-  // assembler.  BTYPE is the type of the variable.  FLAGS is the bit
+-  // flags defined above.  LOCATION is where the variable was defined.
++  // assembler.  BTYPE is the type of the variable.  IS_EXTERNAL is
++  // true if the variable is defined in some other package.  IS_HIDDEN
++  // is true if the variable is not exported (name begins with a lower
++  // case letter).  IN_UNIQUE_SECTION is true if the variable should
++  // be put into a unique section if possible; this is intended to
++  // permit the linker to garbage collect the variable if it is not
++  // referenced.  LOCATION is where the variable was defined.
+   virtual Bvariable*
+-  global_variable(const std::string& name, const std::string& asm_name,
+-		  Btype* btype, unsigned int flags, Location location) = 0;
++  global_variable(const std::string& name,
++                  const std::string& asm_name,
++		  Btype* btype,
++		  bool is_external,
++		  bool is_hidden,
++		  bool in_unique_section,
++		  Location location) = 0;
+ 
+   // A global variable will 1) be initialized to zero, or 2) be
+   // initialized to a constant value, or 3) be initialized in the init
+@@ -543,40 +516,42 @@ class Backend
+   // null, gives the location at which the value of this variable may
+   // be found, typically used to create an inner-scope reference to an
+   // outer-scope variable, to extend the lifetime of the variable beyond
+-  // the inner scope.  FLAGS is the bit flags defined above.
++  // the inner scope.  IS_ADDRESS_TAKEN is true if the address of this
++  // variable is taken (this implies that the address does not escape
++  // the function, as otherwise the variable would be on the heap).
+   // LOCATION is where the variable is defined.  For each local variable
+   // the frontend will call init_statement to set the initial value.
+   virtual Bvariable*
+   local_variable(Bfunction* function, const std::string& name, Btype* type,
+-		 Bvariable* decl_var, unsigned int flags,
+-		 Location location) = 0;
++		 Bvariable* decl_var, bool is_address_taken, Location location) = 0;
+ 
+   // Create a function parameter.  This is an incoming parameter, not
+   // a result parameter (result parameters are treated as local
+   // variables).  The arguments are as for local_variable.
+   virtual Bvariable*
+   parameter_variable(Bfunction* function, const std::string& name,
+-		     Btype* type, unsigned int flags, Location location) = 0;
++		     Btype* type, bool is_address_taken,
++		     Location location) = 0;
+ 
+   // Create a static chain parameter.  This is the closure parameter.
+   virtual Bvariable*
+   static_chain_variable(Bfunction* function, const std::string& name,
+-		        Btype* type, unsigned int flags,
+-			Location location) = 0;
++		        Btype* type, Location location) = 0;
+ 
+   // Create a temporary variable.  A temporary variable has no name,
+   // just a type.  We pass in FUNCTION and BLOCK in case they are
+   // needed.  If INIT is not NULL, the variable should be initialized
+   // to that value.  Otherwise the initial value is irrelevant--the
+   // backend does not have to explicitly initialize it to zero.
+-  // FLAGS is the bit flags defined above.  LOCATION is the location of
++  // ADDRESS_IS_TAKEN is true if the programs needs to take the
++  // address of this temporary variable.  LOCATION is the location of
+   // the statement or expression which requires creating the temporary
+   // variable, and may not be very useful.  This function should
+   // return a variable which can be referenced later and should set
+   // *PSTATEMENT to a statement which initializes the variable.
+   virtual Bvariable*
+   temporary_variable(Bfunction*, Bblock*, Btype*, Bexpression* init,
+-		     unsigned int flags, Location location,
++		     bool address_is_taken, Location location,
+ 		     Bstatement** pstatement) = 0;
+ 
+   // Create an implicit variable that is compiler-defined.  This is
+@@ -591,33 +566,46 @@ class Backend
+   //
+   // TYPE is the type of the implicit variable.
+   //
+-  // FLAGS is the bit flags defined above.
++  // IS_HIDDEN will be true if the descriptor should only be visible
++  // within the current object.
++  //
++  // IS_CONSTANT is true if the implicit variable should be treated like it is
++  // immutable.  For slice initializers, if the values must be copied to the
++  // heap, the variable IS_CONSTANT.
++  //
++  // IS_COMMON is true if the implicit variable should
++  // be treated as a common variable (multiple definitions with
++  // different sizes permitted in different object files, all merged
++  // into the largest definition at link time); this will be true for
++  // the zero value.  IS_HIDDEN and IS_COMMON will never both be true.
+   //
+   // If ALIGNMENT is not zero, it is the desired alignment of the variable.
+   virtual Bvariable*
+   implicit_variable(const std::string& name, const std::string& asm_name,
+-                    Btype* type, unsigned int flags, int64_t alignment) = 0;
++                    Btype* type, bool is_hidden, bool is_constant,
++                    bool is_common, int64_t alignment) = 0;
+ 
+ 
+   // Set the initial value of a variable created by implicit_variable.
+   // This must be called even if there is no initializer, i.e., INIT is NULL.
+-  // The NAME, TYPE, and FLAGS parameters are the same ones passed to
+-  // implicit_variable.  INIT will be a composite literal of type
+-  // TYPE.  It will not contain any function calls or anything else
+-  // that can not be put into a read-only data section.  It may
+-  // contain the address of variables created by implicit_variable.
++  // The NAME, TYPE, IS_HIDDEN, IS_CONSTANT, and IS_COMMON parameters are
++  // the same ones passed to implicit_variable.  INIT will be a composite
++  // literal of type TYPE.  It will not contain any function calls or anything
++  // else that can not be put into a read-only data section.
++  // It may contain the address of variables created by implicit_variable.
+   //
+-  // If variable_is_common is set in FLAGS, INIT will be NULL, and the
++  // If IS_COMMON is true, INIT will be NULL, and the
+   // variable should be initialized to all zeros.
+   virtual void
+   implicit_variable_set_init(Bvariable*, const std::string& name, Btype* type,
+-			     unsigned int flags, Bexpression* init) = 0;
++			     bool is_hidden, bool is_constant, bool is_common,
++			     Bexpression* init) = 0;
+ 
+   // Create a reference to a named implicit variable defined in some
+   // other package.  This will be a variable created by a call to
+   // implicit_variable with the same NAME, ASM_NAME and TYPE and with
+-  // variable_is_common not set in FLAGS.  This corresponds to an
+-  // extern global variable in C.
++  // IS_COMMON passed as false.  This corresponds to an extern global
++  // variable in C.
+   virtual Bvariable*
+   implicit_variable_reference(const std::string& name,
+                               const std::string& asm_name,
+@@ -634,12 +622,15 @@ class Backend
+   // ASM_NAME is the encoded, assembler-friendly version of NAME, or
+   // the empty string if no encoding is needed.
+   //
+-  // FLAGS is the bit flags defined above.  The variable_is_common
+-  // flag will be set if NAME may be defined by several packages, and
+-  // the linker should merge all such definitions.  If the
+-  // variable_is_common flag is not set, NAME should be defined in
+-  // only one file.  In general variable_is_common will be set for the
+-  // type descriptor of an unnamed type or a builtin type.
++  // IS_HIDDEN will be true if the descriptor should only be visible
++  // within the current object.
++  //
++  // IS_COMMON is true if NAME may be defined by several packages, and
++  // the linker should merge all such definitions.  If IS_COMMON is
++  // false, NAME should be defined in only one file.  In general
++  // IS_COMMON will be true for the type descriptor of an unnamed type
++  // or a builtin type.  IS_HIDDEN and IS_COMMON will never both be
++  // true.
+   //
+   // TYPE will be a struct type; the type of the returned expression
+   // must be a pointer to this struct type.
+@@ -649,26 +640,28 @@ class Backend
+   // address.  After calling this the frontend will call
+   // immutable_struct_set_init.
+   virtual Bvariable*
+-  immutable_struct(const std::string& name, const std::string& asm_name,
+-		   unsigned int flags, Btype* type, Location) = 0;
++  immutable_struct(const std::string& name,
++                   const std::string& asm_name,
++                   bool is_hidden, bool is_common,
++		   Btype* type, Location) = 0;
+ 
+   // Set the initial value of a variable created by immutable_struct.
+-  // The NAME, FLAGS, TYPE, and location parameters are the same ones
+-  // passed to immutable_struct.  INITIALIZER will be a composite
+-  // literal of type TYPE.  It will not contain any function calls or
+-  // anything else that can not be put into a read-only data section.
+-  // It may contain the address of variables created by
++  // The NAME, IS_HIDDEN, IS_COMMON, TYPE, and location parameters are
++  // the same ones passed to immutable_struct.  INITIALIZER will be a
++  // composite literal of type TYPE.  It will not contain any function
++  // calls or anything else that can not be put into a read-only data
++  // section.  It may contain the address of variables created by
+   // immutable_struct.
+   virtual void
+   immutable_struct_set_init(Bvariable*, const std::string& name,
+-			    unsigned int flags, Btype* type,
++			    bool is_hidden, bool is_common, Btype* type,
+ 			    Location, Bexpression* initializer) = 0;
+ 
+   // Create a reference to a named immutable initialized data
+   // structure defined in some other package.  This will be a
+   // structure created by a call to immutable_struct with the same
+-  // NAME, ASM_NAME and TYPE and with variable_is_common not set in
+-  // flags.  This corresponds to an extern const global variable in C.
++  // NAME, ASM_NAME and TYPE and with IS_COMMON passed as false.  This
++  // corresponds to an extern const global variable in C.
+   virtual Bvariable*
+   immutable_struct_reference(const std::string& name,
+                              const std::string& asm_name,
+diff --git a/gcc/go/gofrontend/expressions.cc b/gcc/go/gofrontend/expressions.cc
+index 5591c23321d..de8399f8231 100644
+--- a/gcc/go/gofrontend/expressions.cc
++++ b/gcc/go/gofrontend/expressions.cc
+@@ -1427,7 +1427,7 @@ Sink_expression::do_get_backend(Translate_context* context)
+       Bstatement* decl;
+       this->bvar_ =
+ 	gogo->backend()->temporary_variable(fn_ctx, context->bblock(), bt, NULL,
+-					    0, loc, &decl);
++					    false, loc, &decl);
+       Bexpression* var_ref =
+           gogo->backend()->var_expression(this->bvar_, loc);
+       var_ref = gogo->backend()->compound_expression(decl, var_ref, loc);
+@@ -1724,12 +1724,10 @@ Func_descriptor_expression::do_get_backend(Translate_context* context)
+       if (no->is_function() && no->func_value()->is_referenced_by_inline())
+ 	is_hidden = false;
+ 
+-      unsigned int flags = 0;
+-      if (is_hidden)
+-	flags |= Backend::variable_is_hidden;
+       bvar = context->backend()->immutable_struct(bname.name(),
+ 						  bname.optional_asm_name(),
+-						  flags, btype, bloc);
++                                                  is_hidden, false,
++						  btype, bloc);
+       Expression_list* vals = new Expression_list();
+       vals->push_back(Expression::make_func_code_reference(this->fn_, bloc));
+       Expression* init =
+@@ -1738,7 +1736,8 @@ Func_descriptor_expression::do_get_backend(Translate_context* context)
+       bcontext.set_is_const();
+       Bexpression* binit = init->get_backend(&bcontext);
+       context->backend()->immutable_struct_set_init(bvar, bname.name(),
+-						    flags, btype, bloc, binit);
++						    is_hidden, false, btype,
++						    bloc, binit);
+     }
+ 
+   this->dvar_ = bvar;
+@@ -5281,14 +5280,12 @@ Unary_expression::do_get_backend(Translate_context* context)
+ 	      copy_to_heap = (context->function() != NULL
+                               || context->is_const());
+ 	    }
+-	  unsigned int flags = (Backend::variable_is_hidden
+-				| Backend::variable_address_is_taken);
+-	  if (copy_to_heap)
+-	    flags |= Backend::variable_is_constant;
+ 	  Bvariable* implicit =
+-	    gogo->backend()->implicit_variable(var_name, "", btype, flags, 0);
++              gogo->backend()->implicit_variable(var_name, "", btype, true,
++						 copy_to_heap, false, 0);
+ 	  gogo->backend()->implicit_variable_set_init(implicit, var_name, btype,
+-						      flags, bexpr);
++						      true, copy_to_heap, false,
++						      bexpr);
+ 	  bexpr = gogo->backend()->var_expression(implicit, loc);
+ 
+ 	  // If we are not copying a slice initializer to the heap,
+@@ -5310,24 +5307,22 @@ Unary_expression::do_get_backend(Translate_context* context)
+ 	       && this->expr_->is_static_initializer())
+         {
+ 	  std::string var_name(gogo->initializer_name());
+-	  unsigned int flags = (Backend::variable_is_hidden
+-				| Backend::variable_address_is_taken);
+           Bvariable* decl =
+-	    gogo->backend()->immutable_struct(var_name, "", flags, btype, loc);
+-          gogo->backend()->immutable_struct_set_init(decl, var_name, flags,
+-						     btype, loc, bexpr);
++              gogo->backend()->immutable_struct(var_name, "", true, false,
++						btype, loc);
++          gogo->backend()->immutable_struct_set_init(decl, var_name, true,
++						     false, btype, loc, bexpr);
+           bexpr = gogo->backend()->var_expression(decl, loc);
+         }
+       else if (this->expr_->is_constant())
+         {
+           std::string var_name(gogo->initializer_name());
+-	  unsigned int flags = (Backend::variable_is_hidden
+-				| Backend::variable_is_constant
+-				| Backend::variable_address_is_taken);
+           Bvariable* decl =
+-	    gogo->backend()->implicit_variable(var_name, "", btype, flags, 0);
++              gogo->backend()->implicit_variable(var_name, "", btype,
++                                                 true, true, false, 0);
+           gogo->backend()->implicit_variable_set_init(decl, var_name, btype,
+-						      flags, bexpr);
++                                                      true, true, false,
++                                                      bexpr);
+           bexpr = gogo->backend()->var_expression(decl, loc);
+         }
+ 
+@@ -14893,9 +14888,7 @@ Allocation_expression::do_get_backend(Translate_context* context)
+                            : gogo->backend()->zero_expression(btype));
+       Bvariable* temp =
+         gogo->backend()->temporary_variable(fndecl, context->bblock(), btype,
+-                                            init,
+-					    Backend::variable_address_is_taken,
+-					    loc, &decl);
++                                            init, true, loc, &decl);
+       Bexpression* ret = gogo->backend()->var_expression(temp, loc);
+       ret = gogo->backend()->address_expression(ret, loc);
+       ret = gogo->backend()->compound_expression(decl, ret, loc);
+@@ -17254,9 +17247,7 @@ Heap_expression::do_get_backend(Translate_context* context)
+   Bfunction* fndecl = fn->func_value()->get_or_make_decl(gogo, fn);
+   Bvariable* space_temp =
+     gogo->backend()->temporary_variable(fndecl, context->bblock(), btype,
+-					space,
+-					Backend::variable_address_is_taken,
+-					loc, &decl);
++					space, true, loc, &decl);
+   Btype* expr_btype = etype->get_backend(gogo);
+ 
+   Bexpression* bexpr = this->expr_->get_backend(context);
+@@ -17277,9 +17268,8 @@ Heap_expression::do_get_backend(Translate_context* context)
+       Bstatement* edecl;
+       Bvariable* btemp =
+ 	gogo->backend()->temporary_variable(fndecl, context->bblock(),
+-					    expr_btype, bexpr,
+-					    Backend::variable_address_is_taken,
+-					    loc, &edecl);
++					    expr_btype, bexpr, true, loc,
++					    &edecl);
+       Bexpression* btempref = gogo->backend()->var_expression(btemp,
+ 							      loc);
+       space = gogo->backend()->var_expression(space_temp, loc);
+@@ -18497,13 +18487,10 @@ Interface_mtable_expression::do_get_backend(Translate_context* context)
+   Bexpression* ctor =
+       gogo->backend()->constructor_expression(btype, ctor_bexprs, loc);
+ 
+-  unsigned int flags = 0;
+-  if (!is_public)
+-    flags |= Backend::variable_is_hidden;
+-  this->bvar_ = gogo->backend()->immutable_struct(mangled_name, "", flags,
+-						  btype, loc);
+-  gogo->backend()->immutable_struct_set_init(this->bvar_, mangled_name, flags,
+-					     btype, loc, ctor);
++  this->bvar_ = gogo->backend()->immutable_struct(mangled_name, "", false,
++						  !is_public, btype, loc);
++  gogo->backend()->immutable_struct_set_init(this->bvar_, mangled_name, false,
++                                             !is_public, btype, loc, ctor);
+   return gogo->backend()->var_expression(this->bvar_, loc);
+ }
+ 
+diff --git a/gcc/go/gofrontend/gogo.cc b/gcc/go/gofrontend/gogo.cc
+index 95b76bd317c..335982d2e80 100644
+--- a/gcc/go/gofrontend/gogo.cc
++++ b/gcc/go/gofrontend/gogo.cc
+@@ -918,8 +918,9 @@ Gogo::build_type_descriptor_list()
+ 
+   // Create the variable
+   std::string name = this->type_descriptor_list_symbol(this->pkgpath_symbol());
+-  unsigned int flags = Backend::variable_is_constant;
+-  Bvariable* bv = this->backend()->implicit_variable(name, name, bt, flags, 0);
++  Bvariable* bv = this->backend()->implicit_variable(name, name, bt,
++                                                     false, true, false,
++                                                     0);
+ 
+   // Build the initializer
+   std::vector<unsigned long> indexes;
+@@ -945,7 +946,8 @@ Gogo::build_type_descriptor_list()
+   Bexpression* binit =
+     this->backend()->constructor_expression(bt, fields, builtin_loc);
+ 
+-  this->backend()->implicit_variable_set_init(bv, name, bt, flags, binit);
++  this->backend()->implicit_variable_set_init(bv, name, bt, false,
++                                              true, false, binit);
+ }
+ 
+ // Register the type descriptors with the runtime.  This is to help
+@@ -1000,11 +1002,11 @@ Gogo::register_type_descriptors(std::vector<Bstatement*>& init_stmts,
+ 
+   // Create a variable holding the list.
+   std::string name = this->typelists_symbol();
+-  unsigned int flags = (Backend::variable_is_hidden
+-			| Backend::variable_is_constant);
+-  Bvariable* bv = this->backend()->implicit_variable(name, name, bat, flags,
++  Bvariable* bv = this->backend()->implicit_variable(name, name, bat,
++                                                     true, true, false,
+                                                      0);
+-  this->backend()->implicit_variable_set_init(bv, name, bat, flags, barray);
++  this->backend()->implicit_variable_set_init(bv, name, bat, true, true,
++                                              false, barray);
+ 
+   // Build the call in main package's init function.
+   Translate_context context(this, NULL, NULL, NULL);
+@@ -8100,24 +8102,16 @@ Variable::get_backend_variable(Gogo* gogo, Named_object* function,
+ 	      if (package != NULL)
+ 		is_hidden = false;
+ 
+-	      unsigned int flags = 0;
+-	      if (this->is_address_taken_
+-		  || this->is_non_escaping_address_taken_)
+-		flags |= Backend::variable_address_is_taken;
+-	      if (package != NULL)
+-		flags |= Backend::variable_is_external;
+-	      if (is_hidden)
+-		flags |= Backend::variable_is_hidden;
+-	      if (this->in_unique_section_)
+-		flags |= Backend::variable_in_unique_section;
+-
+ 	      // For some reason asm_name can't be the empty string
+ 	      // for global_variable, so we call asm_name rather than
+ 	      // optional_asm_name here.  FIXME.
+ 
+ 	      bvar = backend->global_variable(bname.name(),
+ 					      bname.asm_name(),
+-					      btype, flags,
++					      btype,
++					      package != NULL,
++					      is_hidden,
++					      this->in_unique_section_,
+ 					      this->location_);
+ 	    }
+ 	  else if (function == NULL)
+@@ -8129,16 +8123,15 @@ Variable::get_backend_variable(Gogo* gogo, Named_object* function,
+ 	    {
+ 	      const std::string n = Gogo::unpack_hidden_name(name);
+ 	      Bfunction* bfunction = function->func_value()->get_decl();
+-	      unsigned int flags = 0;
+-	      if (this->is_non_escaping_address_taken_
+-		  && !this->is_in_heap())
+-		flags |= Backend::variable_address_is_taken;
++	      bool is_address_taken = (this->is_non_escaping_address_taken_
++				       && !this->is_in_heap());
+ 	      if (this->is_closure())
+ 		bvar = backend->static_chain_variable(bfunction, n, btype,
+-						      flags, this->location_);
++						      this->location_);
+ 	      else if (is_parameter)
+ 		bvar = backend->parameter_variable(bfunction, n, btype,
+-						   flags, this->location_);
++						   is_address_taken,
++						   this->location_);
+ 	      else
+                 {
+                   Bvariable* bvar_decl = NULL;
+@@ -8149,7 +8142,8 @@ Variable::get_backend_variable(Gogo* gogo, Named_object* function,
+                         ->get_backend_variable(&context);
+                     }
+                   bvar = backend->local_variable(bfunction, n, btype,
+-                                                 bvar_decl, flags,
++                                                 bvar_decl,
++                                                 is_address_taken,
+                                                  this->location_);
+                 }
+ 	    }
+@@ -8180,12 +8174,10 @@ Result_variable::get_backend_variable(Gogo* gogo, Named_object* function,
+ 	  Btype* btype = type->get_backend(gogo);
+ 	  Bfunction* bfunction = function->func_value()->get_decl();
+ 	  std::string n = Gogo::unpack_hidden_name(name);
+-	  unsigned int flags = 0;
+-	  if (this->is_non_escaping_address_taken_
+-	      && !this->is_in_heap())
+-	    flags |= Backend::variable_address_is_taken;
++	  bool is_address_taken = (this->is_non_escaping_address_taken_
++				   && !this->is_in_heap());
+ 	  this->backend_ = backend->local_variable(bfunction, n, btype,
+-						   NULL, flags,
++						   NULL, is_address_taken,
+ 						   this->location_);
+ 	}
+     }
+diff --git a/gcc/go/gofrontend/statements.cc b/gcc/go/gofrontend/statements.cc
+index 9643d1b42b3..b0660111ac8 100644
+--- a/gcc/go/gofrontend/statements.cc
++++ b/gcc/go/gofrontend/statements.cc
+@@ -643,13 +643,11 @@ Temporary_statement::do_get_backend(Translate_context* context)
+     binit = context->backend()->convert_expression(btype, binit,
+                                                    this->location());
+ 
+-  unsigned int flags = 0;
+-  if (this->is_address_taken_)
+-    flags |= Backend::variable_address_is_taken;
+   Bstatement* statement;
+   this->bvariable_ =
+     context->backend()->temporary_variable(bfunction, context->bblock(),
+-					   btype, binit, flags,
++					   btype, binit,
++					   this->is_address_taken_,
+ 					   this->location(), &statement);
+   return statement;
+ }
+diff --git a/gcc/go/gofrontend/types.cc b/gcc/go/gofrontend/types.cc
+index ab7166b8b1b..ecf382302f7 100644
+--- a/gcc/go/gofrontend/types.cc
++++ b/gcc/go/gofrontend/types.cc
+@@ -1410,12 +1410,10 @@ Type::make_type_descriptor_var(Gogo* gogo)
+   // ensure that type_descriptor_pointer will work if called while
+   // converting INITIALIZER.
+ 
+-  unsigned int flags = 0;
+-  if (is_common)
+-    flags |= Backend::variable_is_common;
+   this->type_descriptor_var_ =
+     gogo->backend()->immutable_struct(bname.name(), bname.optional_asm_name(),
+-				      flags, initializer_btype, loc);
++				      false, is_common, initializer_btype,
++				      loc);
+   if (phash != NULL)
+     *phash = this->type_descriptor_var_;
+ 
+@@ -1424,7 +1422,7 @@ Type::make_type_descriptor_var(Gogo* gogo)
+   Bexpression* binitializer = initializer->get_backend(&context);
+ 
+   gogo->backend()->immutable_struct_set_init(this->type_descriptor_var_,
+-					     bname.name(), flags,
++					     bname.name(), false, is_common,
+ 					     initializer_btype, loc,
+ 					     binitializer);
+ 
+@@ -2716,13 +2714,9 @@ Type::make_gc_symbol_var(Gogo* gogo)
+   // Since we are building the GC symbol in this package, we must create the
+   // variable before converting the initializer to its backend representation
+   // because the initializer may refer to the GC symbol for this type.
+-  unsigned int flags = Backend::variable_is_constant;
+-  if (is_common)
+-    flags |= Backend::variable_is_common;
+-  else
+-    flags |= Backend::variable_is_hidden;
+   this->gc_symbol_var_ =
+-    gogo->backend()->implicit_variable(sym_name, "", sym_btype, flags, 0);
++      gogo->backend()->implicit_variable(sym_name, "", sym_btype, false, true,
++					 is_common, 0);
+   if (phash != NULL)
+     *phash = this->gc_symbol_var_;
+ 
+@@ -2730,7 +2724,8 @@ Type::make_gc_symbol_var(Gogo* gogo)
+   context.set_is_const();
+   Bexpression* sym_binit = sym_init->get_backend(&context);
+   gogo->backend()->implicit_variable_set_init(this->gc_symbol_var_, sym_name,
+-					      sym_btype, flags, sym_binit);
++					      sym_btype, false, true, is_common,
++					      sym_binit);
+ }
+ 
+ // Return whether this type needs a GC program, and set *PTRDATA to
+@@ -3018,12 +3013,11 @@ Type::gc_ptrmask_var(Gogo* gogo, int64_t ptrsize, int64_t ptrdata)
+   Bexpression* bval = val->get_backend(&context);
+ 
+   Btype *btype = val->type()->get_backend(gogo);
+-  unsigned int flags = (Backend::variable_is_constant
+-			| Backend::variable_is_common);
+   Bvariable* ret = gogo->backend()->implicit_variable(sym_name, "",
+-						      btype, flags, 0);
+-  gogo->backend()->implicit_variable_set_init(ret, sym_name, btype, flags,
+-					      bval);
++						      btype, false, true,
++						      true, 0);
++  gogo->backend()->implicit_variable_set_init(ret, sym_name, btype, false,
++					      true, true, bval);
+   ins.first->second = ret;
+   return ret;
+ }
+@@ -8151,12 +8145,11 @@ Map_type::backend_zero_value(Gogo* gogo)
+   Btype* barray_type = gogo->backend()->array_type(buint8_type, blength);
+ 
+   std::string zname = Map_type::zero_value->name();
+-  unsigned int flags = Backend::variable_is_common;
+   Bvariable* zvar =
+-    gogo->backend()->implicit_variable(zname, "", barray_type, flags,
+-				       Map_type::zero_value_align);
++      gogo->backend()->implicit_variable(zname, "", barray_type, false, false,
++					 true, Map_type::zero_value_align);
+   gogo->backend()->implicit_variable_set_init(zvar, zname, barray_type,
+-					      flags, NULL);
++					      false, false, true, NULL);
+   return zvar;
+ }
+ 
 diff --git a/gcc/hooks.c b/gcc/hooks.c
 index 680271f76a4..4f14abff206 100644
 --- a/gcc/hooks.c
@@ -5008,6 +6942,47 @@ index 05a08d0f96a..20c46a4c56c 100644
  /* (v ? w : 0) ? a : b is just (v & w) ? a : b
     Currently disabled after pass lvec because ARM understands
     VEC_COND_EXPR<v==w,-1,0> but not a plain v==w fed to BIT_IOR_EXPR.  */
+diff --git a/gcc/omp-low.c b/gcc/omp-low.c
+index 962cf886710..3b39b55f2d9 100644
+--- a/gcc/omp-low.c
++++ b/gcc/omp-low.c
+@@ -187,7 +187,6 @@ static int target_nesting_level;
+ static bitmap task_shared_vars;
+ static bitmap global_nonaddressable_vars;
+ static vec<omp_context *> taskreg_contexts;
+-static vec<gomp_task *> task_cpyfns;
+ 
+ static void scan_omp (gimple_seq *, omp_context *);
+ static tree scan_omp_1_op (tree *, int *, void *);
+@@ -1062,6 +1061,9 @@ delete_omp_context (splay_tree_value value)
+ 	DECL_ABSTRACT_ORIGIN (t) = NULL;
+     }
+ 
++  if (is_task_ctx (ctx))
++    finalize_task_copyfn (as_a <gomp_task *> (ctx->stmt));
++
+   if (ctx->task_reduction_map)
+     {
+       ctx->task_reductions.release ();
+@@ -11304,7 +11306,6 @@ create_task_copyfn (gomp_task *task_stmt, omp_context *ctx)
+   size_t looptempno = 0;
+ 
+   child_fn = gimple_omp_task_copy_fn (task_stmt);
+-  task_cpyfns.safe_push (task_stmt);
+   child_cfun = DECL_STRUCT_FUNCTION (child_fn);
+   gcc_assert (child_cfun->cfg == NULL);
+   DECL_SAVED_TREE (child_fn) = alloc_stmt_list ();
+@@ -13629,10 +13630,6 @@ execute_lower_omp (void)
+       && (TREE_CODE (TREE_TYPE (DECL_ARGUMENTS (current_function_decl)))
+ 	  == POINTER_TYPE))
+     remove_member_access_dummy_vars (DECL_INITIAL (current_function_decl));
+-
+-  for (auto task_stmt : task_cpyfns)
+-    finalize_task_copyfn (task_stmt);
+-  task_cpyfns.release ();
+   return 0;
+ }
+ 
 diff --git a/gcc/optabs.def b/gcc/optabs.def
 index b192a9d070b..318a2ffed37 100644
 --- a/gcc/optabs.def
@@ -5175,6 +7150,255 @@ index 9928d064abd..458c3a6a4a9 100644
  extern HOST_WIDE_INT default_function_arg_offset (machine_mode, const_tree);
  extern pad_direction default_function_arg_padding (machine_mode, const_tree);
  extern rtx default_function_arg (cumulative_args_t, const function_arg_info &);
+diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
+index e2a43be72b1..307e82751a0 100644
+--- a/gcc/testsuite/ChangeLog
++++ b/gcc/testsuite/ChangeLog
+@@ -1,139 +1,3 @@
+-2022-02-18  Richard Biener  <rguenther@suse.de>
+-
+-	Backported from master:
+-	2021-05-10  Richard Biener  <rguenther@suse.de>
+-
+-	PR middle-end/100464
+-	PR c++/100468
+-	* gcc.dg/pr100464.c: New testcase.
+-	* g++.dg/tree-ssa/array-temp1.C: Adjust.
+-
+-2022-02-17  Eric Botcazou  <ebotcazou@adacore.com>
+-
+-	PR target/79754
+-	* gcc.target/i386/pr79754.c: Add target dfp.
+-
+-2022-02-17  Richard Biener  <rguenther@suse.de>
+-
+-	Backported from master:
+-	2021-10-22  Richard Biener  <rguenther@suse.de>
+-
+-	PR tree-optimization/102893
+-	* gcc.dg/tree-ssa/ssa-dce-9.c: New testcase.
+-
+-2022-02-17  Richard Biener  <rguenther@suse.de>
+-
+-	Backported from master:
+-	2021-08-27  Richard Biener  <rguenther@suse.de>
+-
+-	PR tree-optimization/45178
+-	* gcc.dg/tree-ssa/ssa-dce-3.c: Adjust testcase.
+-
+-2022-02-17  Richard Biener  <rguenther@suse.de>
+-
+-	Backported from master:
+-	2022-01-04  Richard Biener  <rguenther@suse.de>
+-
+-	PR tree-optimization/103864
+-	PR tree-optimization/103544
+-	* gcc.dg/vect/pr103864.c: New testcase.
+-
+-2022-02-17  Richard Biener  <rguenther@suse.de>
+-
+-	Backported from master:
+-	2021-12-06  Richard Biener  <rguenther@suse.de>
+-
+-	PR tree-optimization/103544
+-	* gcc.dg/vect/pr103544.c: New testcase.
+-
+-2022-02-17  Richard Biener  <rguenther@suse.de>
+-
+-	Backported from master:
+-	2021-11-23  Richard Biener  <rguenther@suse.de>
+-
+-	PR tree-optimization/103361
+-	* g++.dg/torture/pr103361.C: New testcase.
+-
+-2022-02-17  Richard Biener  <rguenther@suse.de>
+-
+-	Backported from master:
+-	2022-01-20  Richard Biener  <rguenther@suse.de>
+-
+-	PR middle-end/100786
+-	* gcc.dg/torture/pr100786.c: New testcase.
+-
+-2022-02-16  Harald Anlauf  <anlauf@gmx.de>
+-
+-	Backported from master:
+-	2022-02-14  Harald Anlauf  <anlauf@gmx.de>
+-
+-	PR fortran/104211
+-	* gfortran.dg/pr104211.f90: New test.
+-
+-2022-02-16  H.J. Lu  <hjl.tools@gmail.com>
+-
+-	Backported from master:
+-	2022-01-06  H.J. Lu  <hjl.tools@gmail.com>
+-
+-	PR target/103925
+-	* gcc.target/i386/harden-sls-6.c: New test.
+-
+-2022-02-16  H.J. Lu  <hjl.tools@gmail.com>
+-
+-	Backported from master:
+-	2021-11-18  H.J. Lu  <hjl.tools@gmail.com>
+-
+-	PR target/102952
+-	* gcc.target/i386/indirect-thunk-cs-prefix-1.c: New test.
+-	* gcc.target/i386/indirect-thunk-cs-prefix-2.c: Likewise.
+-
+-2022-02-16  H.J. Lu  <hjl.tools@gmail.com>
+-
+-	Backported from master:
+-	2021-11-17  H.J. Lu  <hjl.tools@gmail.com>
+-
+-	PR target/102952
+-	* gcc.target/i386/harden-sls-1.c: New test.
+-	* gcc.target/i386/harden-sls-2.c: Likewise.
+-	* gcc.target/i386/harden-sls-3.c: Likewise.
+-	* gcc.target/i386/harden-sls-4.c: Likewise.
+-	* gcc.target/i386/harden-sls-5.c: Likewise.
+-
+-2022-02-15  Kewen Lin  <linkw@linux.ibm.com>
+-
+-	Backported from master:
+-	2022-02-07  Kewen Lin  <linkw@linux.ibm.com>
+-
+-	PR target/103627
+-	* gcc.target/powerpc/pr103627-3.c: New test.
+-
+-2022-02-15  Kewen Lin  <linkw@linux.ibm.com>
+-
+-	Backported from master:
+-	2022-02-07  Kewen Lin  <linkw@linux.ibm.com>
+-
+-	PR target/103627
+-	* gcc.target/powerpc/pr103627-1.c: New test.
+-	* gcc.target/powerpc/pr103627-2.c: New test.
+-
+-2022-02-14  Andre Vehreschild  <vehre@gcc.gnu.org>
+-
+-	PR fortran/100337
+-	* gfortran.dg/coarray_collectives_17.f90: New test.
+-
+-2022-02-14  Andre Vehreschild  <vehre@gcc.gnu.org>
+-
+-	PR fortran/103790
+-	* gfortran.dg/coarray_collectives_18.f90: New test.
+-
+-2022-02-13  Uros Bizjak  <ubizjak@gmail.com>
+-
+-	Backported from master:
+-	2022-02-12  Uroš Bizjak  <ubizjak@gmail.com>
+-
+-	PR target/79754
+-	* gcc.target/i386/pr79754.c: New test.
+-
+ 2022-02-11  Martin Liska  <mliska@suse.cz>
+ 
+ 	Backported from master:
+diff --git a/gcc/testsuite/c-c++-common/cpp/pr104147.c b/gcc/testsuite/c-c++-common/cpp/pr104147.c
+deleted file mode 100644
+index 4ee237ed6ba..00000000000
+--- a/gcc/testsuite/c-c++-common/cpp/pr104147.c
++++ /dev/null
+@@ -1,27 +0,0 @@
+-/* PR preprocessor/104147 */
+-/* { dg-do run } */
+-
+-#define X(x,y) 	x y
+-#define STR_(x) #x
+-#define STR(x) 	STR_(x)
+-const char *str =
+-STR(X(Y,Y))
+-#define Y()
+-STR(X(Y,Y))
+-#undef Y
+-STR(X(Y,Y))
+-#define Y()
+-STR(X(Y,Y))
+-STR(X(Y,
+-Y))
+-STR(X(Y
+-,Y))
+-;
+-
+-int
+-main ()
+-{
+-  if (__builtin_strcmp (str, "Y YY YY YY YY YY Y") != 0)
+-    __builtin_abort ();
+-  return 0;
+-}
+diff --git a/gcc/testsuite/g++.dg/asan/pr104449.C b/gcc/testsuite/g++.dg/asan/pr104449.C
+deleted file mode 100644
+index 166ed8ddb91..00000000000
+--- a/gcc/testsuite/g++.dg/asan/pr104449.C
++++ /dev/null
+@@ -1,16 +0,0 @@
+-// PR sanitizer/104449
+-// { dg-do compile }
+-// { dg-options "-fexceptions -fsanitize=address -fstack-check=generic" }
+-
+-void bar (int *);
+-struct A { A (); ~A (); };
+-
+-void
+-foo (int n)
+-{
+-  A b;
+-  {
+-    int a[n];
+-    bar (a);
+-  }
+-}
+diff --git a/gcc/testsuite/g++.dg/cpp0x/constexpr-104472.C b/gcc/testsuite/g++.dg/cpp0x/constexpr-104472.C
+deleted file mode 100644
+index c9c8bf414fe..00000000000
+--- a/gcc/testsuite/g++.dg/cpp0x/constexpr-104472.C
++++ /dev/null
+@@ -1,9 +0,0 @@
+-// PR c++/104472
+-// { dg-options "-O2 -frounding-math" }
+-// { dg-add-options float16 }
+-// { dg-require-effective-target float16 }
+-
+-typedef short __attribute__((__vector_size__ (16))) V;
+-typedef _Float16 __attribute__((__vector_size__ (16))) F;
+-
+-V v = __builtin_convertvector (__builtin_convertvector ((V){5534}, F), V) < 8;
+diff --git a/gcc/testsuite/g++.dg/cpp1y/constexpr-104513.C b/gcc/testsuite/g++.dg/cpp1y/constexpr-104513.C
+deleted file mode 100644
+index 4fa78a3e025..00000000000
+--- a/gcc/testsuite/g++.dg/cpp1y/constexpr-104513.C
++++ /dev/null
+@@ -1,10 +0,0 @@
+-// PR c++/104513
+-// { dg-do compile { target c++14 } }
+-
+-struct A {
+-  int a1;
+-  short a2, a3;
+-  long a4;
+-  constexpr A() : a1(42), a2(42), a3(42), a4(42) { return; }
+-};
+-constexpr A a;
+diff --git a/gcc/testsuite/g++.dg/cpp2a/constexpr-dtor12.C b/gcc/testsuite/g++.dg/cpp2a/constexpr-dtor12.C
+deleted file mode 100644
+index 19f9099b9a5..00000000000
+--- a/gcc/testsuite/g++.dg/cpp2a/constexpr-dtor12.C
++++ /dev/null
+@@ -1,13 +0,0 @@
+-// PR c++/104513
+-// { dg-do compile { target c++20 } }
+-
+-struct S {
+-  constexpr S () : s (nullptr) {}
+-  constexpr ~S () { delete s; }
+-  int *s;
+-};
+-struct T : S {
+-  constexpr T () : S () {}
+-  constexpr ~T () { s = new int (42); return; }
+-};
+-constexpr T t;
 diff --git a/gcc/testsuite/g++.dg/pr90773-1.h b/gcc/testsuite/g++.dg/pr90773-1.h
 new file mode 100644
 index 00000000000..abdb78b078b
@@ -5260,6 +7484,44 @@ index 00000000000..bf9d8543c1b
 +int main ()
 +{
 +  return record_increment ();
++}
+diff --git a/gcc/testsuite/g++.dg/torture/pr103361.C b/gcc/testsuite/g++.dg/torture/pr103361.C
+deleted file mode 100644
+index ec1d6e1bae4..00000000000
+--- a/gcc/testsuite/g++.dg/torture/pr103361.C
++++ /dev/null
+@@ -1,18 +0,0 @@
+-/* { dg-do compile } */
+-/* { dg-additional-options "-floop-unroll-and-jam" } */
+-
+-char a, b;
+-extern unsigned short c[];
+-extern bool d[];
+-const unsigned short &e(const unsigned short &f, const unsigned short &g) {
+-  if (g < f)
+-    return g;
+-  return f;
+-}
+-void k() {
+-  for (int h = 0; b; h += 3)
+-    for (unsigned long i = 0; i < 11104842004558084287ULL;
+-         i += -11104842004558084300ULL)
+-      for (bool j(e(6, e(6, c[h + i]))); j < (bool)a; j = 7)
+-        d[7] = 0;
+-}
+diff --git a/gcc/testsuite/g++.dg/tree-ssa/array-temp1.C b/gcc/testsuite/g++.dg/tree-ssa/array-temp1.C
+index 3df7aadd30a..97c2e0521c9 100644
+--- a/gcc/testsuite/g++.dg/tree-ssa/array-temp1.C
++++ b/gcc/testsuite/g++.dg/tree-ssa/array-temp1.C
+@@ -13,3 +13,9 @@ int f()
+   using AR = const int[];
+   return AR{ 1,42,3,4,5,6,7,8,9,0 }[5];
+ }
++
++int g()
++{
++  std::initializer_list<int> a = {1,42,3};
++  return a.begin()[0];
 +}
 diff --git a/gcc/testsuite/g++.target/i386/pr102566-1.C b/gcc/testsuite/g++.target/i386/pr102566-1.C
 new file mode 100644
@@ -5686,6 +7948,180 @@ index 00000000000..9ffd2c8cadb
 +}
 +
 +/* { dg-final { scan-assembler-times "vmovdqu\[ \\t\]+\[^\n\]*%ymm" 4 } } */
+diff --git a/gcc/testsuite/gcc.dg/asan/pr104449.c b/gcc/testsuite/gcc.dg/asan/pr104449.c
+deleted file mode 100644
+index 50540273a3d..00000000000
+--- a/gcc/testsuite/gcc.dg/asan/pr104449.c
++++ /dev/null
+@@ -1,12 +0,0 @@
+-/* PR sanitizer/104449 */
+-/* { dg-do compile } */
+-/* { dg-options "-fexceptions -fsanitize=address -fstack-check=generic" } */
+-
+-void bar (int *);
+-
+-void
+-foo (void)
+-{
+-  int a[16];
+-  bar (a);
+-}
+diff --git a/gcc/testsuite/gcc.dg/dfp/pr104510.c b/gcc/testsuite/gcc.dg/dfp/pr104510.c
+deleted file mode 100644
+index 85f4e9707de..00000000000
+--- a/gcc/testsuite/gcc.dg/dfp/pr104510.c
++++ /dev/null
+@@ -1,12 +0,0 @@
+-/* PR c/104510 */
+-/* { dg-do compile } */
+-/* { dg-options "" } */
+-
+-float f;
+-_Decimal64 d;
+-
+-int
+-foo (void)
+-{
+-  return d > (_Decimal32) (_Decimal64) f;
+-}
+diff --git a/gcc/testsuite/gcc.dg/dfp/pr104557.c b/gcc/testsuite/gcc.dg/dfp/pr104557.c
+deleted file mode 100644
+index a4a1cc63409..00000000000
+--- a/gcc/testsuite/gcc.dg/dfp/pr104557.c
++++ /dev/null
+@@ -1,22 +0,0 @@
+-/* PR debug/104557 */
+-/* { dg-do compile } */
+-/* { dg-options "-O -g -Wno-psabi" } */
+-
+-typedef int __attribute__((__vector_size__ (32))) U;
+-typedef double __attribute__((__vector_size__ (32))) F;
+-typedef _Decimal64 __attribute__((__vector_size__ (32))) D;
+-
+-F
+-bar (void)
+-{
+-  F f = __builtin_convertvector ((D) (-10.d < (D) ((D) (U) { 0, 0, 0, 0, 0, 0, 0, -0xe0 }
+-						   >= (D) { 80000000 })), F);
+-  return f;
+-}
+-
+-F
+-foo ()
+-{
+-  F x = bar ();
+-  return x;
+-}
+diff --git a/gcc/testsuite/gcc.dg/gomp/pr104517.c b/gcc/testsuite/gcc.dg/gomp/pr104517.c
+deleted file mode 100644
+index 133e5c36d95..00000000000
+--- a/gcc/testsuite/gcc.dg/gomp/pr104517.c
++++ /dev/null
+@@ -1,53 +0,0 @@
+-/* PR debug/104517 */
+-/* { dg-do compile } */
+-/* { dg-options "-O1 -fcompare-debug -fopenmp -fno-tree-ter -save-temps" } */
+-
+-enum {
+-  omp_default_mem_alloc,
+-  omp_large_cap_mem_alloc,
+-  omp_const_mem_alloc,
+-  omp_high_bw_mem_alloc
+-} omp_allocator_handle_t;
+-
+-int t, bar_nte, bar_tl, bar_i3, bar_dd;
+-
+-#pragma omp threadprivate(t)
+-#pragma omp declare target
+-int f, l, ll, r, r2;
+-#pragma omp end declare target
+-
+-void
+-bar (int *idp, int s, int nth, int g, int nta, int fi, int pp, int *q,
+-     int ntm)
+-{
+-  int p = 0, i2 = 0, i1 = 0, m = 0, d = 0;
+-
+-#pragma omp target parallel for                               \
+-  device(p) firstprivate (f) allocate (f)
+-  for (int i = 0; i < 4; i++)
+-    ll++;
+-
+-#pragma omp target parallel for                                         \
+-  device(d) map (m)                                                     \
+-  if (target: p) firstprivate (f) defaultmap(tofrom: scalar) is_device_ptr (idp) \
+-  if (parallel: i2) reduction(+:r) num_threads (nth) linear (ll)        \
+-  schedule(static) collapse(1) nowait depend(inout: d) allocate (f)
+-  for (int i = 0; i < 4; i++)
+-    ll++;
+-
+-#pragma omp taskloop simd firstprivate(f) lastprivate(s) grainsize(g) \
+-  collapse(1) untied if (i1) final(fi) mergeable nogroup              \
+-  priority(pp) linear(ll) aligned(q) allocate(f)
+-  for (int i = 0; i < 4; i++)
+-    ll++;
+-
+-#pragma omp taskloop simd firstprivate(f) lastprivate(s) num_tasks(nta) \
+-  collapse(1) if (i1) final(fi) priority(pp) safelen(8) simdlen(4)      \
+-  linear(ll) aligned(q) nontemporal(ntm) order(concurrent) allocate(f)
+-  for (int i = 0; i < 4; i++)
+-    ll++;
+-
+-#pragma omp parallel master firstprivate(f) shared(nth) proc_bind(spread) \
+-  copyin(t) allocate(f)
+-  ;
+-}
+diff --git a/gcc/testsuite/gcc.dg/pr100464.c b/gcc/testsuite/gcc.dg/pr100464.c
+deleted file mode 100644
+index 46cc37dff54..00000000000
+--- a/gcc/testsuite/gcc.dg/pr100464.c
++++ /dev/null
+@@ -1,16 +0,0 @@
+-/* { dg-do compile } */
+-/* { dg-options "-O3 -fcompare-debug" } */
+-
+-int *a;
+-static int b, c, d, e, g, h;
+-int f;
+-void i() {
+-  int *j[] = {&e, &b, &b, &d, &b, &b, &g, &e, &g, &b, &b,
+-              &b, &b, &g, &e, &e, &b, &b, &d, &b, &b, &e,
+-              &e, &g, &b, &b, &b, &b, &g, &e, &g, &c, &e};
+-  int **k = &j[5];
+-  for (; f;)
+-    b |= *a;
+-  *k = &h;
+-}
+-int main() {}
+diff --git a/gcc/testsuite/gcc.dg/pr102140.c b/gcc/testsuite/gcc.dg/pr102140.c
+deleted file mode 100644
+index 813ba8766aa..00000000000
+--- a/gcc/testsuite/gcc.dg/pr102140.c
++++ /dev/null
+@@ -1,23 +0,0 @@
+-/* PR target/102140 */
+-/* { dg-do compile { target int128 } } */
+-/* { dg-options "-Og -fipa-cp -fno-tree-ccp -fno-tree-ter -Wno-psabi" } */
+-
+-typedef int __attribute__((__vector_size__ (64))) U;
+-typedef __int128 __attribute__((__vector_size__ (64))) V;
+-
+-int a, b;
+-
+-static void
+-bar (char c, V v)
+-{
+-  v *= c;
+-  U u = a + (U) v;
+-  (union { U b; }) { u };
+-  b = 0;
+-}
+-
+-void
+-foo (void)
+-{
+-  bar (1, (V){((__int128) 9223372036854775808ULL) << 64});
+-}
 diff --git a/gcc/testsuite/gcc.dg/pr103184-1.c b/gcc/testsuite/gcc.dg/pr103184-1.c
 new file mode 100644
 index 00000000000..e567f95f63f
@@ -5787,6 +8223,62 @@ index 00000000000..12283bb43d9
 +  pscc_a_1_4 = __sync_fetch_and_and (&pscc_a_2_3, 1);
 +}
 +
+diff --git a/gcc/testsuite/gcc.dg/pr104263.c b/gcc/testsuite/gcc.dg/pr104263.c
+deleted file mode 100644
+index 79b548c629c..00000000000
+--- a/gcc/testsuite/gcc.dg/pr104263.c
++++ /dev/null
+@@ -1,25 +0,0 @@
+-/* PR tree-optimization/104263 */
+-/* { dg-do compile } */
+-/* { dg-options "-O2 -fcompare-debug -fnon-call-exceptions -fno-inline-small-functions" } */
+-
+-int n;
+-
+-int
+-bar (void)
+-{
+-  int a;
+-
+-  n = 0;
+-  a = 0;
+-
+-  return n;
+-}
+-
+-__attribute__ ((pure, returns_twice)) int
+-foo (void)
+-{
+-  n = bar () + 1;
+-  foo ();
+-
+-  return 0;
+-}
+diff --git a/gcc/testsuite/gcc.dg/pr104544.c b/gcc/testsuite/gcc.dg/pr104544.c
+deleted file mode 100644
+index 275b666923d..00000000000
+--- a/gcc/testsuite/gcc.dg/pr104544.c
++++ /dev/null
+@@ -1,19 +0,0 @@
+-/* PR rtl-optimization/104544 */
+-/* { dg-do compile { target int128 } } */
+-/* { dg-options "-O2 -fcompare-debug" } */
+-
+-int m, n;
+-__int128 q;
+-
+-void
+-bar (unsigned __int128 x, int y)
+-{
+-  if (x)
+-    q += y;
+-}
+-
+-void
+-foo (void)
+-{
+-  bar (!!q - 1, (m += m ? m : 1) < n);
+-}
 diff --git a/gcc/testsuite/gcc.dg/pr89984.c b/gcc/testsuite/gcc.dg/pr89984.c
 new file mode 100644
 index 00000000000..471fe92bc86
@@ -5813,6 +8305,21 @@ index 00000000000..471fe92bc86
 +    __builtin_abort ();
 +  return 0;
 +}
+diff --git a/gcc/testsuite/gcc.dg/torture/pr100786.c b/gcc/testsuite/gcc.dg/torture/pr100786.c
+deleted file mode 100644
+index 42f4e485593..00000000000
+--- a/gcc/testsuite/gcc.dg/torture/pr100786.c
++++ /dev/null
+@@ -1,9 +0,0 @@
+-/* { dg-do compile } */
+-
+-const double a = 0;
+-extern int b __attribute__((alias("a")));
+-void inc() { b++; }
+-
+-const int a2 = 0;
+-extern double b2 __attribute__((alias("a2")));
+-void inc2() { b2+=1; }
 diff --git a/gcc/testsuite/gcc.dg/tree-ssa/pr98737-1.c b/gcc/testsuite/gcc.dg/tree-ssa/pr98737-1.c
 new file mode 100644
 index 00000000000..e313a7fa79d
@@ -6096,6 +8603,95 @@ index 00000000000..09149bcd4fe
 +B(55, __sync_add_and_fetch, -)
 +B(56, __sync_sub_and_fetch, +)
 +B(58, __sync_xor_and_fetch, ^)
+diff --git a/gcc/testsuite/gcc.dg/tree-ssa/ssa-dce-3.c b/gcc/testsuite/gcc.dg/tree-ssa/ssa-dce-3.c
+index fdfe37e0abd..863aa79b4eb 100644
+--- a/gcc/testsuite/gcc.dg/tree-ssa/ssa-dce-3.c
++++ b/gcc/testsuite/gcc.dg/tree-ssa/ssa-dce-3.c
+@@ -21,12 +21,11 @@ int main(void)
+   return 0;
+ }
+ 
+-/* We now can prove the infiniteness of the loop during CCP but we
+-   still want to eliminate the code inside the infinite loop.  See PR45178.  */
++/* We now can prove the infiniteness of the loop during CCP and fail
++   to eliminate the code inside the infinite loop because we start
++   by marking the j % 7 condition as useful.  See PR45178.  */
+ 
+ /* We should eliminate the inner condition, but the loop must be preserved
+-   as it is infinite.  Therefore there should be just one goto and no PHI
+-   and no if.  */
++   as it is infinite.  Therefore there should be just one goto and no PHI.  */
+ /* { dg-final { scan-tree-dump-times "PHI " 0 "cddce1" } } */
+-/* { dg-final { scan-tree-dump-times "if " 0 "cddce1" } } */
+ /* { dg-final { scan-tree-dump-times "goto" 1 "cddce1" } } */
+diff --git a/gcc/testsuite/gcc.dg/tree-ssa/ssa-dce-9.c b/gcc/testsuite/gcc.dg/tree-ssa/ssa-dce-9.c
+deleted file mode 100644
+index e1ffa7f038d..00000000000
+--- a/gcc/testsuite/gcc.dg/tree-ssa/ssa-dce-9.c
++++ /dev/null
+@@ -1,10 +0,0 @@
+-/* { dg-do compile } */
+-/* { dg-options "-O2 -fdump-tree-cddce1" } */
+-
+-int main()
+-{
+-  while(1)
+-    for(int i=0; i<9000000; i++){}
+-}
+-
+-/* { dg-final { scan-tree-dump-not "if" "cddce1" } } */
+diff --git a/gcc/testsuite/gcc.dg/vect/pr103544.c b/gcc/testsuite/gcc.dg/vect/pr103544.c
+deleted file mode 100644
+index c8bdee86e77..00000000000
+--- a/gcc/testsuite/gcc.dg/vect/pr103544.c
++++ /dev/null
+@@ -1,24 +0,0 @@
+-/* { dg-do compile } */
+-/* { dg-additional-options "-O3" } */
+-/* { dg-additional-options "-march=haswell" { target x86_64-*-* i?86-*-* } } */
+-
+-int crash_me(char* ptr, unsigned long size)
+-{
+-  short result[16] = {0};
+-
+-  unsigned long no_iters = 0;
+-  for(unsigned long i = 0; i < size - 12; i+= 13){
+-      for(unsigned long j = 0; j < 12; j++){
+-	  result[j] += ptr[i + j] - '0';
+-      }
+-      no_iters++;
+-  }
+-
+-  int result_int = 0;
+-  for(int j = 0; j < 12; j++){
+-      int bit_value = result[j] > no_iters/2 ? 1 : 0;
+-      result_int |= bit_value;
+-  }
+-
+-  return result_int;
+-}
+diff --git a/gcc/testsuite/gcc.dg/vect/pr103864.c b/gcc/testsuite/gcc.dg/vect/pr103864.c
+deleted file mode 100644
+index 464d5731a42..00000000000
+--- a/gcc/testsuite/gcc.dg/vect/pr103864.c
++++ /dev/null
+@@ -1,16 +0,0 @@
+-/* { dg-do compile } */
+-/* { dg-additional-options "-O3 -fno-tree-reassoc" } */
+-
+-void
+-crash_me (short int *crash_me_result, int i, char crash_me_ptr_0)
+-{
+-  while (i < 1)
+-    {
+-      int j;
+-
+-      for (j = 0; j < 2; ++j)
+-        crash_me_result[j] += crash_me_ptr_0 + 1;
+-
+-      i += 3;
+-    }
+-}
 diff --git a/gcc/testsuite/gcc.target/i386/avx-covert-1.c b/gcc/testsuite/gcc.target/i386/avx-covert-1.c
 new file mode 100644
 index 00000000000..b6c794ecbb8
@@ -10620,6 +13216,18 @@ index 00000000000..705081e51d5
 +/* { dg-final { scan-assembler-times "lock;?\[ \t\]*btsw" 2 } } */
 +/* { dg-final { scan-assembler-times "lock;?\[ \t\]*btcw" 2 } } */
 +/* { dg-final { scan-assembler-not "cmpxchgw" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr104307.c b/gcc/testsuite/gcc.target/i386/pr104307.c
+deleted file mode 100644
+index 1301539851c..00000000000
+--- a/gcc/testsuite/gcc.target/i386/pr104307.c
++++ /dev/null
+@@ -1,6 +0,0 @@
+-/* PR middle-end/104307 */
+-/* { dg-do compile } */
+-/* { dg-require-effective-target int128 } */
+-/* { dg-options "-O2 -mavx512f -fcompare-debug " } */
+-
+-#include "pr78669.c"
 diff --git a/gcc/testsuite/gcc.target/i386/pr104441-1a.c b/gcc/testsuite/gcc.target/i386/pr104441-1a.c
 new file mode 100644
 index 00000000000..83734f710bd
@@ -10721,6 +13329,79 @@ index 00000000000..325af044bb8
 +    do_test ();
 +  return 0;
 +}
+diff --git a/gcc/testsuite/gcc.target/i386/pr104446.c b/gcc/testsuite/gcc.target/i386/pr104446.c
+deleted file mode 100644
+index 510cb69cfb6..00000000000
+--- a/gcc/testsuite/gcc.target/i386/pr104446.c
++++ /dev/null
+@@ -1,15 +0,0 @@
+-/* PR middle-end/104446 */
+-/* { dg-do compile { target ia32 } } */
+-/* { dg-options "-O2 -mrtd" } */
+-
+-register volatile int a __asm__("%esp");
+-void foo (void *);
+-void bar (void *);
+-
+-void
+-baz (void)
+-{
+-  foo (__builtin_return_address (0));
+-  a = 0;
+-  bar (__builtin_return_address (0));
+-}
+diff --git a/gcc/testsuite/gcc.target/i386/pr104448.c b/gcc/testsuite/gcc.target/i386/pr104448.c
+deleted file mode 100644
+index b10345afc48..00000000000
+--- a/gcc/testsuite/gcc.target/i386/pr104448.c
++++ /dev/null
+@@ -1,9 +0,0 @@
+-/* PR target/104448 */
+-/* { dg-do compile { target { *-*-linux* && lp64 } } } */
+-/* { dg-options "-mavx5124vnniw -mno-xsave -mabi=ms" } */
+-
+-int
+-main ()
+-{
+-  return 0;
+-}
+diff --git a/gcc/testsuite/gcc.target/i386/pr104502.c b/gcc/testsuite/gcc.target/i386/pr104502.c
+deleted file mode 100644
+index 7a6eb260e41..00000000000
+--- a/gcc/testsuite/gcc.target/i386/pr104502.c
++++ /dev/null
+@@ -1,31 +0,0 @@
+-/* PR target/104502 */
+-/* { dg-do compile { target fstack_protector } } */
+-/* { dg-options "-O -flive-range-shrinkage -march=barcelona -fstack-protector-all -mavx512f" } */
+-
+-typedef char __attribute__((__vector_size__ (8))) U;
+-typedef int __attribute__((__vector_size__ (8))) A;
+-typedef int __attribute__((__vector_size__ (16))) B;
+-typedef int __attribute__((__vector_size__ (32))) C;
+-typedef int __attribute__((__vector_size__ (64))) D;
+-typedef __float128 __attribute__((__vector_size__ (32))) F;
+-
+-char s;
+-U u;
+-A a;
+-int i;
+-C c;
+-double d;
+-
+-U
+-foo (U u0, A a0, B b0, B b1, C c0, C c1, C c2, C c3, A a1, A a2, F f0)
+-{
+-  C ca = c |= (short) (float) d;
+-  C cb = c0 + c1 + c2 + c3 + ca + (C) f0;
+-  U ua = s << (u & 4);
+-  B ba = ((union {C a; B b;}) cb).b + b0 + b1;
+-  U ub = ((union {B a; U b;}) ba).b +
+-    u0 + u + ua + (U) a + (U) a + (U) a0 + (U) a1 + (U) a2;
+-  long long u64_r = i + d;
+-  char u8_r = u64_r;
+-  return ub + u8_r;
+-}
 diff --git a/gcc/testsuite/gcc.target/i386/pr35513-10a.c b/gcc/testsuite/gcc.target/i386/pr35513-10a.c
 new file mode 100644
 index 00000000000..d7b5c98fa8c
@@ -11327,6 +14008,19 @@ index ea724f70377..6888d9d0a55 100644
  
  extern char *strcpy (char *, const char *);
  
+diff --git a/gcc/testsuite/gcc.target/i386/pr79754.c b/gcc/testsuite/gcc.target/i386/pr79754.c
+deleted file mode 100644
+index 9eadea3af3e..00000000000
+--- a/gcc/testsuite/gcc.target/i386/pr79754.c
++++ /dev/null
+@@ -1,7 +0,0 @@
+-/* PR target/79754 */
+-/* { dg-do compile { target dfp } } */
+-/* { dg-options "-Wno-psabi" } */
+-
+-typedef _Decimal32 V __attribute__ ((vector_size(16)));
+-
+-V fn1 (V a) { return a; }
 diff --git a/gcc/testsuite/gcc.target/i386/pr82941-1.c b/gcc/testsuite/gcc.target/i386/pr82941-1.c
 index d7e530d5116..c3be2f5b797 100644
 --- a/gcc/testsuite/gcc.target/i386/pr82941-1.c
@@ -13866,6 +16560,184 @@ index 00000000000..f2e2054b6fb
 +/* { dg-options "-O2 -mavx -mfpmath=sse -ftree-vectorize" } */
 +
 +#include "xorsign.c"
+diff --git a/gcc/testsuite/gcc.target/powerpc/pr103627-1.c b/gcc/testsuite/gcc.target/powerpc/pr103627-1.c
+deleted file mode 100644
+index 5cecf515e58..00000000000
+--- a/gcc/testsuite/gcc.target/powerpc/pr103627-1.c
++++ /dev/null
+@@ -1,16 +0,0 @@
+-/* { dg-require-effective-target power10_ok } */
+-/* { dg-options "-mdejagnu-cpu=power10 -mno-vsx" } */
+-
+-/* Verify compiler emits error message instead of ICE.  */
+-
+-extern float *dest;
+-extern __vector_quad src;
+-
+-int
+-foo ()
+-{
+-  __builtin_mma_disassemble_acc (dest, &src);
+-  /* { dg-error "'__builtin_mma_disassemble_acc' requires the '-mmma' option" "" { target *-*-* } .-1 } */
+-  return 0;
+-}
+-
+diff --git a/gcc/testsuite/gcc.target/powerpc/pr103627-2.c b/gcc/testsuite/gcc.target/powerpc/pr103627-2.c
+deleted file mode 100644
+index 89ae4f607bf..00000000000
+--- a/gcc/testsuite/gcc.target/powerpc/pr103627-2.c
++++ /dev/null
+@@ -1,16 +0,0 @@
+-/* { dg-require-effective-target power10_ok } */
+-/* { dg-options "-mdejagnu-cpu=power10 -mmma -mno-vsx" } */
+-
+-/* Verify the emitted error message.  */
+-
+-extern float *dest;
+-extern __vector_quad src;
+-
+-int
+-foo ()
+-{
+-  __builtin_mma_disassemble_acc (dest, &src);
+-  /* { dg-error "'-mmma' requires '-mvsx'" "mma" { target *-*-* } 0 } */
+-  return 0;
+-}
+-
+diff --git a/gcc/testsuite/gcc.target/powerpc/pr103627-3.c b/gcc/testsuite/gcc.target/powerpc/pr103627-3.c
+deleted file mode 100644
+index 5a4d5ba5701..00000000000
+--- a/gcc/testsuite/gcc.target/powerpc/pr103627-3.c
++++ /dev/null
+@@ -1,20 +0,0 @@
+-/* There are no error messages for either LE or BE 64bit.  */
+-/* { dg-require-effective-target be } */
+-/* { dg-require-effective-target ilp32 } */
+-/* { dg-options "-mdejagnu-cpu=power6" } */
+-
+-/* Verify compiler emits error message instead of ICE.  */
+-
+-/* Option -mno-avoid-indexed-addresses is to disable the unexpected
+-   warning on indexed addressing which can affect dg checks.  */
+-#pragma GCC target "cpu=power10,no-avoid-indexed-addresses"
+-int
+-main ()
+-{
+-  float *b;
+-  __vector_quad c;
+-  __builtin_mma_disassemble_acc (b, &c);
+-  /* { dg-error "'__builtin_mma_disassemble_acc' requires the '-mmma' option" "" { target *-*-* } .-1 } */
+-  return 0;
+-}
+-
+diff --git a/gcc/testsuite/gfortran.dg/coarray_collectives_17.f90 b/gcc/testsuite/gfortran.dg/coarray_collectives_17.f90
+deleted file mode 100644
+index 84a6645865e..00000000000
+--- a/gcc/testsuite/gfortran.dg/coarray_collectives_17.f90
++++ /dev/null
+@@ -1,42 +0,0 @@
+-! { dg-do run }
+-! { dg-options "-fcoarray=single" }
+-!
+-! PR 100337
+-! Test case inspired by code submitted by Brad Richardson
+-
+-program main
+-    implicit none
+-
+-    integer, parameter :: MESSAGE = 42
+-    integer :: result
+-
+-    call myco_broadcast(MESSAGE, result, 1)
+-
+-    if (result /= MESSAGE) error stop 1
+-contains
+-    subroutine myco_broadcast(m, r, source_image, stat, errmsg)
+-        integer, intent(in) :: m
+-        integer, intent(out) :: r
+-        integer, intent(in) :: source_image
+-        integer, intent(out), optional :: stat
+-        character(len=*), intent(inout), optional :: errmsg
+-
+-        integer :: data_length 
+-
+-        data_length = 1
+-
+-        call co_broadcast(data_length, source_image, stat, errmsg)
+-
+-        if (present(stat)) then
+-            if (stat /= 0) return
+-        end if
+-
+-        if (this_image() == source_image) then
+-            r = m
+-        end if
+-
+-        call co_broadcast(r, source_image, stat, errmsg)
+-    end subroutine
+-
+-end program
+-
+diff --git a/gcc/testsuite/gfortran.dg/coarray_collectives_18.f90 b/gcc/testsuite/gfortran.dg/coarray_collectives_18.f90
+deleted file mode 100644
+index 5636a89e94a..00000000000
+--- a/gcc/testsuite/gfortran.dg/coarray_collectives_18.f90
++++ /dev/null
+@@ -1,37 +0,0 @@
+-! { dg-do compile }
+-! { dg-additional-options "-fdump-tree-original -fcoarray=lib" }
+-!
+-! PR 103970
+-! Test case inspired by code submitted by Damian Rousson
+-
+-program main
+-
+-  implicit none
+-
+-  type foo_t
+-    integer i
+-    integer, allocatable :: j
+-  end type
+-
+-  type(foo_t) foo
+-  integer, parameter :: source_image = 1
+-
+-  if (this_image() == source_image)  then
+-    foo = foo_t(2,3)
+-  else
+-    allocate(foo%j)
+-  end if
+-  call co_broadcast(foo, source_image)
+-
+-  if ((foo%i /= 2) .or. (foo%j /= 3))  error stop 1
+-  sync all
+-
+-end program
+-
+-! Wrong code generation produced too many temp descriptors
+-! leading to stacked descriptors handed to the co_broadcast.
+-! This lead to access to non exsitant memory in opencoarrays.
+-! In single image mode just checking for reduced number of
+-! descriptors is possible, i.e., execute always works.
+-! { dg-final { scan-tree-dump-times "desc\\.\[0-9\]+" 8 "original" } }
+-
+diff --git a/gcc/testsuite/gfortran.dg/pr104211.f90 b/gcc/testsuite/gfortran.dg/pr104211.f90
+deleted file mode 100644
+index 21b0a26a17f..00000000000
+--- a/gcc/testsuite/gfortran.dg/pr104211.f90
++++ /dev/null
+@@ -1,11 +0,0 @@
+-! { dg-do compile }
+-! PR fortran/104211 - ICE in find_array_section
+-! Contributed by G.Steinmetz
+-
+-program p
+-  type t
+-     real :: n
+-  end type
+-  type(t), parameter :: a(3) = [t(2)] ! { dg-error "Different shape" }
+-  type(t), parameter :: b(2) = a(2:3) ! { dg-error "Error in array constructor" }
+-end
 diff --git a/gcc/testsuite/lib/target-supports.exp b/gcc/testsuite/lib/target-supports.exp
 index 857e57218c1..bca0c1035fe 100644
 --- a/gcc/testsuite/lib/target-supports.exp
@@ -13924,6 +16796,19 @@ index 857e57218c1..bca0c1035fe 100644
 +	.byte 0
 +  } ""]
 +}
+diff --git a/gcc/tree-data-ref.c b/gcc/tree-data-ref.c
+index b3dd2f0ca41..d04e95f7c28 100644
+--- a/gcc/tree-data-ref.c
++++ b/gcc/tree-data-ref.c
+@@ -393,7 +393,7 @@ print_lambda_vector (FILE * outfile, lambda_vector vector, int n)
+   int i;
+ 
+   for (i = 0; i < n; i++)
+-    fprintf (outfile, HOST_WIDE_INT_PRINT_DEC " ", vector[i]);
++    fprintf (outfile, "%3d ", (int)vector[i]);
+   fprintf (outfile, "\n");
+ }
+ 
 diff --git a/gcc/tree-ssa-ccp.c b/gcc/tree-ssa-ccp.c
 index aad8526eb21..93fbb34bb94 100644
 --- a/gcc/tree-ssa-ccp.c
@@ -14810,6 +17695,45 @@ index aad8526eb21..93fbb34bb94 100644
  		case BUILT_IN_MEMCPY:
  		  if (gimple_call_builtin_p (stmt, BUILT_IN_NORMAL)
  		      && TREE_CODE (gimple_call_arg (stmt, 0)) == ADDR_EXPR
+diff --git a/gcc/tree-ssa-dce.c b/gcc/tree-ssa-dce.c
+index 3509fe4c5cc..c027230acdc 100644
+--- a/gcc/tree-ssa-dce.c
++++ b/gcc/tree-ssa-dce.c
+@@ -427,9 +427,7 @@ find_obviously_necessary_stmts (bool aggressive)
+   if ((flags & (ECF_CONST|ECF_PURE)) && !(flags & ECF_LOOPING_CONST_OR_PURE))
+     return;
+ 
+-  /* Prevent the empty possibly infinite loops from being removed.  This is
+-     needed to make the logic in remove_dead_stmt work to identify the
+-     correct edge to keep when removing a controlling condition.  */
++  /* Prevent the empty possibly infinite loops from being removed.  */
+   if (aggressive)
+     {
+       class loop *loop;
+@@ -442,19 +440,17 @@ find_obviously_necessary_stmts (bool aggressive)
+ 		  && (e->flags & EDGE_IRREDUCIBLE_LOOP))
+ 		{
+ 	          if (dump_file)
+-		    fprintf (dump_file, "Marking back edge of irreducible "
+-			     "loop %i->%i\n", e->src->index, e->dest->index);
++	            fprintf (dump_file, "Marking back edge of irreducible loop %i->%i\n",
++		    	     e->src->index, e->dest->index);
+ 		  mark_control_dependent_edges_necessary (e->dest, false);
+ 		}
+ 	  }
+ 
+       FOR_EACH_LOOP (loop, 0)
+-	/* For loops without an exit do not mark any condition.  */
+-	if (loop->exits->next->e && !finite_loop_p (loop))
++	if (!finite_loop_p (loop))
+ 	  {
+ 	    if (dump_file)
+-	      fprintf (dump_file, "cannot prove finiteness of loop %i\n",
+-		       loop->num);
++	      fprintf (dump_file, "cannot prove finiteness of loop %i\n", loop->num);
+ 	    mark_control_dependent_edges_necessary (loop->latch, false);
+ 	  }
+     }
 diff --git a/gcc/tree-ssa-forwprop.c b/gcc/tree-ssa-forwprop.c
 index 0706fd862de..26b26e5ea92 100644
 --- a/gcc/tree-ssa-forwprop.c
@@ -15147,7 +18071,7 @@ index 0706fd862de..26b26e5ea92 100644
        break;
      }
 diff --git a/gcc/tree-vect-generic.c b/gcc/tree-vect-generic.c
-index 3348545d18b..fb6b69c5b83 100644
+index 0828ff97569..fb6b69c5b83 100644
 --- a/gcc/tree-vect-generic.c
 +++ b/gcc/tree-vect-generic.c
 @@ -281,16 +281,22 @@ expand_vector_piecewise (gimple_stmt_iterator *gsi, elem_op_func f,
@@ -15174,7 +18098,57 @@ index 3348545d18b..fb6b69c5b83 100644
  }
  
  /* Expand a vector operation to scalars with the freedom to use
-@@ -1057,6 +1063,7 @@ expand_vector_condition (gimple_stmt_iterator *gsi, bitmap dce_ssa_names)
+@@ -380,31 +386,29 @@ expand_vector_comparison (gimple_stmt_iterator *gsi, tree type, tree op0,
+      feeding a VEC_COND_EXPR statement.  */
+   auto_vec<gimple *> uses;
+   FOR_EACH_IMM_USE_FAST (use_p, iterator, lhs)
++    uses.safe_push (USE_STMT (use_p));
++
++  for (unsigned i = 0; i < uses.length (); i ++)
+     {
+-      gimple *use = USE_STMT (use_p);
+-      if (is_gimple_debug (use))
+-	continue;
+-      if (is_gimple_assign (use)
++      gassign *use = dyn_cast<gassign *> (uses[i]);
++      if (use != NULL
+ 	  && gimple_assign_rhs_code (use) == VEC_COND_EXPR
+-	  && gimple_assign_rhs1 (use) == lhs
+-	  && gimple_assign_rhs2 (use) != lhs
+-	  && gimple_assign_rhs3 (use) != lhs)
+-	uses.safe_push (use);
++	  && gimple_assign_rhs1 (use) == lhs)
++	{
++	  gimple_stmt_iterator it = gsi_for_stmt (use);
++	  if (!expand_vector_condition (&it, dce_ssa_names))
++	    {
++	      vec_cond_expr_only = false;
++	      break;
++	    }
++	}
+       else
+-	vec_cond_expr_only = false;
++	{
++	  vec_cond_expr_only = false;
++	  break;
++	}
+     }
+ 
+-  if (vec_cond_expr_only)
+-    for (gimple *use : uses)
+-      {
+-	gimple_stmt_iterator it = gsi_for_stmt (use);
+-	if (!expand_vector_condition (&it, dce_ssa_names))
+-	  {
+-	    vec_cond_expr_only = false;
+-	    break;
+-	  }
+-      }
+-
+   if (!uses.is_empty () && vec_cond_expr_only)
+     return NULL_TREE;
+ 
+@@ -1059,6 +1063,7 @@ expand_vector_condition (gimple_stmt_iterator *gsi, bitmap dce_ssa_names)
  
    int nunits = nunits_for_known_piecewise_op (type);
    vec_alloc (v, nunits);
@@ -15182,7 +18156,7 @@ index 3348545d18b..fb6b69c5b83 100644
    for (int i = 0; i < nunits; i++)
      {
        tree aa, result;
-@@ -1081,6 +1088,8 @@ expand_vector_condition (gimple_stmt_iterator *gsi, bitmap dce_ssa_names)
+@@ -1083,6 +1088,8 @@ expand_vector_condition (gimple_stmt_iterator *gsi, bitmap dce_ssa_names)
        else
  	aa = tree_vec_extract (gsi, cond_type, a, width, index);
        result = gimplify_build3 (gsi, COND_EXPR, inner_type, aa, bb, cc);
@@ -15191,7 +18165,7 @@ index 3348545d18b..fb6b69c5b83 100644
        constructor_elt ce = {NULL_TREE, result};
        v->quick_push (ce);
        index = int_const_binop (PLUS_EXPR, index, width);
-@@ -1090,7 +1099,10 @@ expand_vector_condition (gimple_stmt_iterator *gsi, bitmap dce_ssa_names)
+@@ -1092,7 +1099,10 @@ expand_vector_condition (gimple_stmt_iterator *gsi, bitmap dce_ssa_names)
  	comp_index = int_const_binop (PLUS_EXPR, comp_index, comp_width);
      }
  
@@ -15203,7 +18177,7 @@ index 3348545d18b..fb6b69c5b83 100644
    gimple_assign_set_rhs_from_tree (gsi, constr);
    update_stmt (gsi_stmt (*gsi));
  
-@@ -1530,6 +1542,7 @@ lower_vec_perm (gimple_stmt_iterator *gsi)
+@@ -1532,6 +1542,7 @@ lower_vec_perm (gimple_stmt_iterator *gsi)
                "vector shuffling operation will be expanded piecewise");
  
    vec_alloc (v, elements);
@@ -15211,7 +18185,7 @@ index 3348545d18b..fb6b69c5b83 100644
    for (i = 0; i < elements; i++)
      {
        si = size_int (i);
-@@ -1591,10 +1604,15 @@ lower_vec_perm (gimple_stmt_iterator *gsi)
+@@ -1593,10 +1604,15 @@ lower_vec_perm (gimple_stmt_iterator *gsi)
  	    t = v0_val;
          }
  
@@ -15228,7 +18202,7 @@ index 3348545d18b..fb6b69c5b83 100644
    gimple_assign_set_rhs_from_tree (gsi, constr);
    update_stmt (gsi_stmt (*gsi));
  }
-@@ -1966,6 +1984,7 @@ expand_vector_conversion (gimple_stmt_iterator *gsi)
+@@ -1968,6 +1984,7 @@ expand_vector_conversion (gimple_stmt_iterator *gsi)
  		}
  
  	      vec_alloc (v, (nunits + delta - 1) / delta * 2);
@@ -15236,7 +18210,7 @@ index 3348545d18b..fb6b69c5b83 100644
  	      for (i = 0; i < nunits;
  		   i += delta, index = int_const_binop (PLUS_EXPR, index,
  							part_width))
-@@ -1976,12 +1995,19 @@ expand_vector_conversion (gimple_stmt_iterator *gsi)
+@@ -1978,12 +1995,19 @@ expand_vector_conversion (gimple_stmt_iterator *gsi)
  					  index);
  		  tree result = gimplify_build1 (gsi, code1, cretd_type, a);
  		  constructor_elt ce = { NULL_TREE, result };
@@ -15257,6 +18231,41 @@ index 3348545d18b..fb6b69c5b83 100644
  	      g = gimple_build_assign (lhs, new_rhs);
  	      gsi_replace (gsi, g, false);
  	      return;
+diff --git a/gcc/tree-vect-slp.c b/gcc/tree-vect-slp.c
+index 422e6432b74..230ff4081a5 100644
+--- a/gcc/tree-vect-slp.c
++++ b/gcc/tree-vect-slp.c
+@@ -2831,13 +2831,8 @@ vect_analyze_slp_instance (vec_info *vinfo,
+       vec<stmt_vec_info> reductions = as_a <loop_vec_info> (vinfo)->reductions;
+       scalar_stmts.create (reductions.length ());
+       for (i = 0; reductions.iterate (i, &next_info); i++)
+-	if ((STMT_VINFO_RELEVANT_P (next_info)
+-	     || STMT_VINFO_LIVE_P (next_info))
+-	    /* ???  Make sure we didn't skip a conversion around a reduction
+-	       path.  In that case we'd have to reverse engineer that conversion
+-	       stmt following the chain using reduc_idx and from the PHI
+-	       using reduc_def.  */
+-	    && STMT_VINFO_DEF_TYPE (next_info) == vect_reduction_def)
++	if (STMT_VINFO_RELEVANT_P (next_info)
++	    || STMT_VINFO_LIVE_P (next_info))
+ 	  scalar_stmts.quick_push (next_info);
+       /* If less than two were relevant/live there's nothing to SLP.  */
+       if (scalar_stmts.length () < 2)
+diff --git a/gcc/valtrack.c b/gcc/valtrack.c
+index 14d6f3c5752..225b0fc24a9 100644
+--- a/gcc/valtrack.c
++++ b/gcc/valtrack.c
+@@ -559,9 +559,7 @@ debug_lowpart_subreg (machine_mode outer_mode, rtx expr,
+   rtx ret = simplify_gen_subreg (outer_mode, expr, inner_mode, offset);
+   if (ret)
+     return ret;
+-  if (GET_MODE (expr) != VOIDmode)
+-    return gen_rtx_raw_SUBREG (outer_mode, expr, offset);
+-  return NULL_RTX;
++  return gen_rtx_raw_SUBREG (outer_mode, expr, offset);
+ }
+ 
+ /* If UREGNO is referenced by any entry in DEBUG, emit a debug insn
 diff --git a/gcc/varasm.c b/gcc/varasm.c
 index a7ef9b8d9fe..153e6c68772 100644
 --- a/gcc/varasm.c
@@ -15271,6 +18280,37 @@ index a7ef9b8d9fe..153e6c68772 100644
  	  && cgraph_node::get (exp)
  	  && cgraph_node::get (exp)->ifunc_resolver))
      return false;
+diff --git a/libcpp/directives.c b/libcpp/directives.c
+index 347ddb8b1e1..f4aa17d1156 100644
+--- a/libcpp/directives.c
++++ b/libcpp/directives.c
+@@ -1929,7 +1929,8 @@ destringize_and_run (cpp_reader *pfile, const cpp_string *in,
+   else
+     {
+       count = 1;
+-      toks = &pfile->avoid_paste;
++      toks = XNEW (cpp_token);
++      toks[0] = pfile->directive_result;
+ 
+       /* If we handled the entire pragma internally, make sure we get the
+ 	 line number correct for the next token.  */
+diff --git a/libcpp/macro.c b/libcpp/macro.c
+index 364d5adc651..0aa2de8274f 100644
+--- a/libcpp/macro.c
++++ b/libcpp/macro.c
+@@ -1346,11 +1346,8 @@ funlike_invocation_p (cpp_reader *pfile, cpp_hashnode *node,
+       token = cpp_get_token (pfile);
+       if (token->type != CPP_PADDING)
+ 	break;
+-      gcc_assert ((token->flags & PREV_WHITE) == 0);
+       if (padding == NULL
+-	  || padding->val.source == NULL
+-	  || (!(padding->val.source->flags & PREV_WHITE)
+-	      && token->val.source == NULL))
++	  || (!(padding->flags & PREV_WHITE) && token->val.source == NULL))
+ 	padding = token;
+     }
+ 
 diff --git a/libffi/configure.host b/libffi/configure.host
 index 786b32c5bb0..7248acb7458 100644
 --- a/libffi/configure.host
@@ -15303,3 +18343,152 @@ index 786b32c5bb0..7248acb7458 100644
  	else
  	  TARGET=X86_64;
  	fi
+diff --git a/libgomp/task.c b/libgomp/task.c
+index f5d26873d5b..feb4796a3ac 100644
+--- a/libgomp/task.c
++++ b/libgomp/task.c
+@@ -1226,8 +1226,6 @@ gomp_task_run_post_handle_dependers (struct gomp_task *child_task,
+ 		}
+ 	    }
+ 	}
+-      else
+-	task->parent = NULL;
+       if (taskgroup)
+ 	{
+ 	  priority_queue_insert (PQ_TASKGROUP, &taskgroup->taskgroup_queue,
+diff --git a/libgomp/testsuite/libgomp.c/pr104385.c b/libgomp/testsuite/libgomp.c/pr104385.c
+deleted file mode 100644
+index 07495e65e58..00000000000
+--- a/libgomp/testsuite/libgomp.c/pr104385.c
++++ /dev/null
+@@ -1,26 +0,0 @@
+-/* PR libgomp/104385 */
+-
+-#include <unistd.h>
+-
+-int
+-main ()
+-{
+-  int j = 0;
+-  #pragma omp parallel shared(j) num_threads(2)
+-  {
+-    #pragma omp barrier
+-    #pragma omp master
+-    #pragma omp task shared(j)
+-    {
+-      #pragma omp task depend(out: j) shared(j)
+-      {
+-        usleep (10000);
+-        j = 1;
+-      }
+-
+-      #pragma omp task depend(inout: j) shared(j)
+-      j += 1;
+-    }
+-  }
+-  return j - 2;
+-}
+diff --git a/libsanitizer/sanitizer_common/sanitizer_linux_libcdep.cpp b/libsanitizer/sanitizer_common/sanitizer_linux_libcdep.cpp
+index 15b697bdc1b..bc10e89b1ed 100644
+--- a/libsanitizer/sanitizer_common/sanitizer_linux_libcdep.cpp
++++ b/libsanitizer/sanitizer_common/sanitizer_linux_libcdep.cpp
+@@ -265,8 +265,10 @@ void InitTlsSize() { }
+ // sizeof(struct pthread) from glibc.
+ static atomic_uintptr_t thread_descriptor_size;
+ 
+-static uptr ThreadDescriptorSizeFallback() {
+-  uptr val = 0;
++uptr ThreadDescriptorSize() {
++  uptr val = atomic_load_relaxed(&thread_descriptor_size);
++  if (val)
++    return val;
+ #if defined(__x86_64__) || defined(__i386__) || defined(__arm__)
+   int major;
+   int minor;
+@@ -321,21 +323,8 @@ static uptr ThreadDescriptorSizeFallback() {
+ #elif defined(__s390__)
+   val = FIRST_32_SECOND_64(1152, 1776); // valid for glibc 2.22
+ #endif
+-  return val;
+-}
+-
+-uptr ThreadDescriptorSize() {
+-  uptr val = atomic_load_relaxed(&thread_descriptor_size);
+   if (val)
+-    return val;
+-  // _thread_db_sizeof_pthread is a GLIBC_PRIVATE symbol that is exported in
+-  // glibc 2.34 and later.
+-  if (unsigned *psizeof = static_cast<unsigned *>(
+-          dlsym(RTLD_DEFAULT, "_thread_db_sizeof_pthread")))
+-    val = *psizeof;
+-  if (!val)
+-    val = ThreadDescriptorSizeFallback();
+-  atomic_store_relaxed(&thread_descriptor_size, val);
++    atomic_store_relaxed(&thread_descriptor_size, val);
+   return val;
+ }
+ 
+diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
+index 7d9bd497c0b..72618b9d3ef 100644
+--- a/libstdc++-v3/ChangeLog
++++ b/libstdc++-v3/ChangeLog
+@@ -1,14 +1,3 @@
+-2022-02-17  Patrick Palka  <ppalka@redhat.com>
+-
+-	Backported from master:
+-	2021-10-21  Patrick Palka  <ppalka@redhat.com>
+-
+-	PR libstdc++/102358
+-	* include/bits/stl_iterator.h (__niter_base): Make constexpr
+-	for C++20.
+-	(__miter_base): Likewise.
+-	* testsuite/25_algorithms/move/constexpr.cc: New test.
+-
+ 2022-02-11  Patrick Palka  <ppalka@redhat.com>
+ 
+ 	PR libstdc++/103904
+diff --git a/libstdc++-v3/include/bits/stl_iterator.h b/libstdc++-v3/include/bits/stl_iterator.h
+index 2b7efcbf3c3..549bc26dee5 100644
+--- a/libstdc++-v3/include/bits/stl_iterator.h
++++ b/libstdc++-v3/include/bits/stl_iterator.h
+@@ -2338,7 +2338,6 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+   /// @} group iterators
+ 
+   template<typename _Iterator>
+-    _GLIBCXX20_CONSTEXPR
+     auto
+     __niter_base(move_iterator<_Iterator> __it)
+     -> decltype(make_move_iterator(__niter_base(__it.base())))
+@@ -2352,7 +2351,6 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+     };
+ 
+   template<typename _Iterator>
+-    _GLIBCXX20_CONSTEXPR
+     auto
+     __miter_base(move_iterator<_Iterator> __it)
+     -> decltype(__miter_base(__it.base()))
+diff --git a/libstdc++-v3/testsuite/25_algorithms/move/constexpr.cc b/libstdc++-v3/testsuite/25_algorithms/move/constexpr.cc
+deleted file mode 100644
+index 773c55cfb50..00000000000
+--- a/libstdc++-v3/testsuite/25_algorithms/move/constexpr.cc
++++ /dev/null
+@@ -1,19 +0,0 @@
+-// { dg-options "-std=gnu++20" }
+-// { dg-do compile { target c++20 } }
+-
+-#include <algorithm>
+-#include <span>
+-
+-constexpr bool
+-test01()
+-{
+-  // PR libstdc++/102358
+-  int x[2] = {1,2}, y[2];
+-  std::span in(x), out(y);
+-  std::move(std::move_iterator(in.begin()), std::move_iterator(in.end()),
+-	    out.begin());
+-  return std::equal(std::move_iterator(in.begin()), std::move_iterator(in.end()),
+-		    std::move_iterator(out.begin()));
+-}
+-
+-static_assert(test01());
