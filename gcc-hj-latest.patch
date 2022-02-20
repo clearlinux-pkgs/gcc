@@ -89,10 +89,110 @@ liuhongt (12):
       Fix typo in r12-5486.
 
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 792ed6611d1..3c4bfe3117b 100644
+index 90d6f6c56b2..3c4bfe3117b 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,180 +1,3 @@
+@@ -1,280 +1,3 @@
+-2022-02-19  Jakub Jelinek  <jakub@redhat.com>
+-
+-	Backported from master:
+-	2022-02-17  Jakub Jelinek  <jakub@redhat.com>
+-
+-	PR debug/104557
+-	* valtrack.c (debug_lowpart_subreg): Don't call gen_rtx_raw_SUBREG
+-	if expr has VOIDmode.
+-
+-2022-02-19  Jakub Jelinek  <jakub@redhat.com>
+-
+-	Backported from master:
+-	2022-02-16  Jakub Jelinek  <jakub@redhat.com>
+-
+-	PR rtl-optimization/104544
+-	* combine.c (try_combine): When looking for insn whose links
+-	should be updated from i3 to i2, don't stop on debug insns, instead
+-	skip over them.
+-
+-2022-02-19  Jakub Jelinek  <jakub@redhat.com>
+-
+-	Backported from master:
+-	2022-02-15  Jakub Jelinek  <jakub@redhat.com>
+-
+-	PR debug/104517
+-	* omp-low.c (task_cpyfns): New variable.
+-	(delete_omp_context): Don't call finalize_task_copyfn from here.
+-	(create_task_copyfn): Push task_stmt into task_cpyfns.
+-	(execute_lower_omp): Call finalize_task_copyfn here on entries from
+-	task_cpyfns vector and release the vector.
+-
+-2022-02-19  Jakub Jelinek  <jakub@redhat.com>
+-
+-	Backported from master:
+-	2022-02-12  Jakub Jelinek  <jakub@redhat.com>
+-
+-	PR sanitizer/104449
+-	* asan.c: Include tree-eh.h.
+-	(handle_builtin_alloca): Handle the case when __builtin_alloca or
+-	__builtin_alloca_with_align can throw.
+-
+-2022-02-19  Jakub Jelinek  <jakub@redhat.com>
+-
+-	Backported from master:
+-	2022-02-12  Jakub Jelinek  <jakub@redhat.com>
+-
+-	PR target/104502
+-	* config/i386/i386.md (cvtsd2ss splitter): If operands[1] is xmm16+
+-	and AVX512VL isn't available, move operands[1] to operands[0] first.
+-
+-2022-02-19  Jakub Jelinek  <jakub@redhat.com>
+-
+-	Backported from master:
+-	2022-02-11  Jakub Jelinek  <jakub@redhat.com>
+-
+-	PR middle-end/104446
+-	* combine.c (subst): Don't substitute CONST_INTs into RTX_AUTOINC
+-	operands.
+-
+-2022-02-19  Jakub Jelinek  <jakub@redhat.com>
+-
+-	Backported from master:
+-	2022-02-08  Jakub Jelinek  <jakub@redhat.com>
+-
+-	PR target/102140
+-	* config/rs6000/rs6000.c (vspltis_shifted): Return false also if
+-	split1 pass has finished already.
+-
+-2022-02-19  Jakub Jelinek  <jakub@redhat.com>
+-
+-	Backported from master:
+-	2022-02-01  Jakub Jelinek  <jakub@redhat.com>
+-
+-	PR middle-end/104307
+-	* tree-vect-generic.c (expand_vector_comparison): Don't push debug
+-	stmts to uses vector, just set vec_cond_expr_only to false for
+-	non-VEC_COND_EXPRs instead of pushing them into uses.  Treat
+-	VEC_COND_EXPRs that use lhs not just in rhs1, but rhs2 or rhs3 too
+-	like non-VEC_COND_EXPRs.
+-
+-2022-02-19  Jakub Jelinek  <jakub@redhat.com>
+-
+-	Backported from master:
+-	2022-01-28  Jakub Jelinek  <jakub@redhat.com>
+-
+-	PR tree-optimization/104263
+-	* gimple-ssa-store-merging.c (get_status_for_store_merging): For
+-	cfun->can_throw_non_call_exceptions && cfun->eh test whether
+-	last non-debug stmt in the bb is store_valid_for_store_merging_p
+-	rather than last stmt.
+-
+-2022-02-19  Jakub Jelinek  <jakub@redhat.com>
+-
+-	Backported from master:
+-	2022-01-28  Jakub Jelinek  <jakub@redhat.com>
+-
+-	PR lto/104237
+-	* cfgrtl.c (loc_equal): New function.
+-	(unique_locus_on_edge_between_p): Use it.
+-
 -2022-02-18  Richard Biener  <rguenther@suse.de>
 -
 -	Backported from master:
@@ -274,11 +374,11 @@ index 792ed6611d1..3c4bfe3117b 100644
  
  	Backported from master:
 diff --git a/gcc/DATESTAMP b/gcc/DATESTAMP
-index 9fa888ee9ad..b975470831b 100644
+index b9255102454..b975470831b 100644
 --- a/gcc/DATESTAMP
 +++ b/gcc/DATESTAMP
 @@ -1 +1 @@
--20220219
+-20220220
 +20220212
 diff --git a/gcc/ada/ChangeLog b/gcc/ada/ChangeLog
 index 777a9c28912..819810d93a7 100644
@@ -769,6 +869,23 @@ index 307a20fbadb..a395d53ec99 100644
  extern rtx expand_builtin (tree, rtx, rtx, machine_mode, int);
  extern enum built_in_function builtin_mathfn_code (const_tree);
  extern tree fold_builtin_expect (location_t, tree, tree, tree, tree);
+diff --git a/gcc/c-family/ChangeLog b/gcc/c-family/ChangeLog
+index 05ab3b0e92f..bca36adf8de 100644
+--- a/gcc/c-family/ChangeLog
++++ b/gcc/c-family/ChangeLog
+@@ -1,12 +1,3 @@
+-2022-02-19  Jakub Jelinek  <jakub@redhat.com>
+-
+-	Backported from master:
+-	2022-02-16  Jakub Jelinek  <jakub@redhat.com>
+-
+-	PR c/104510
+-	* c-common.c (shorten_compare): Convert original arguments to
+-	the original *restype_ptr when mixing binary and decimal float.
+-
+ 2022-01-24  Jakub Jelinek  <jakub@redhat.com>
+ 
+ 	Backported from master:
 diff --git a/gcc/c-family/c-common.c b/gcc/c-family/c-common.c
 index a133c9efdb1..a2809e79158 100644
 --- a/gcc/c-family/c-common.c
@@ -4432,10 +4549,30 @@ index c892effdf2f..ae13c3ab825 100644
  
    nunits = GET_MODE_NUNITS (mode);
 diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
-index 365e0e1e9a8..35644be63f8 100644
+index 2b002826eaa..35644be63f8 100644
 --- a/gcc/cp/ChangeLog
 +++ b/gcc/cp/ChangeLog
-@@ -1,13 +1,3 @@
+@@ -1,33 +1,3 @@
+-2022-02-19  Jakub Jelinek  <jakub@redhat.com>
+-
+-	Backported from master:
+-	2022-02-14  Jakub Jelinek  <jakub@redhat.com>
+-
+-	PR c++/104513
+-	* constexpr.c (potential_constant_expression_1) <case GOTO_EXPR>:
+-	Don't punt if returns (target).
+-
+-2022-02-19  Jakub Jelinek  <jakub@redhat.com>
+-
+-	Backported from master:
+-	2022-02-11  Jakub Jelinek  <jakub@redhat.com>
+-
+-	PR c++/104472
+-	* constexpr.c (cxx_eval_internal_function) <case IFN_VEC_CONVERT>:
+-	Only return fold_const_call result if it is non-NULL.  Otherwise
+-	fall through into the default: case to return t, set *non_constant_p
+-	and emit diagnostics if needed.
+-
 -2022-02-18  Richard Biener  <rguenther@suse.de>
 -
 -	Backported from master:
@@ -7151,10 +7288,124 @@ index 9928d064abd..458c3a6a4a9 100644
  extern pad_direction default_function_arg_padding (machine_mode, const_tree);
  extern rtx default_function_arg (cumulative_args_t, const function_arg_info &);
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e2a43be72b1..307e82751a0 100644
+index 8433bf456a5..307e82751a0 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,139 +1,3 @@
+@@ -1,253 +1,3 @@
+-2022-02-19  Jakub Jelinek  <jakub@redhat.com>
+-
+-	Backported from master:
+-	2022-02-17  Jakub Jelinek  <jakub@redhat.com>
+-
+-	PR debug/104557
+-	* gcc.dg/dfp/pr104557.c: New test.
+-
+-2022-02-19  Jakub Jelinek  <jakub@redhat.com>
+-
+-	Backported from master:
+-	2022-02-16  Jakub Jelinek  <jakub@redhat.com>
+-
+-	PR target/104448
+-	* gcc.target/i386/pr104448.c: New test.
+-
+-2022-02-19  Jakub Jelinek  <jakub@redhat.com>
+-
+-	Backported from master:
+-	2022-02-16  Jakub Jelinek  <jakub@redhat.com>
+-
+-	PR rtl-optimization/104544
+-	* gcc.dg/pr104544.c: New test.
+-
+-2022-02-19  Jakub Jelinek  <jakub@redhat.com>
+-
+-	Backported from master:
+-	2022-02-16  Jakub Jelinek  <jakub@redhat.com>
+-
+-	PR c/104510
+-	* gcc.dg/dfp/pr104510.c: New test.
+-
+-2022-02-19  Jakub Jelinek  <jakub@redhat.com>
+-
+-	Backported from master:
+-	2022-02-15  Jakub Jelinek  <jakub@redhat.com>
+-
+-	PR debug/104517
+-	* gcc.dg/gomp/pr104517.c: New test.
+-
+-2022-02-19  Jakub Jelinek  <jakub@redhat.com>
+-
+-	Backported from master:
+-	2022-02-14  Jakub Jelinek  <jakub@redhat.com>
+-
+-	PR c++/104513
+-	* g++.dg/cpp1y/constexpr-104513.C: New test.
+-	* g++.dg/cpp2a/constexpr-dtor12.C: New test.
+-
+-2022-02-19  Jakub Jelinek  <jakub@redhat.com>
+-
+-	Backported from master:
+-	2022-02-12  Jakub Jelinek  <jakub@redhat.com>
+-
+-	PR sanitizer/104449
+-	* gcc.dg/asan/pr104449.c: New test.
+-	* g++.dg/asan/pr104449.C: New test.
+-
+-2022-02-19  Jakub Jelinek  <jakub@redhat.com>
+-
+-	Backported from master:
+-	2022-02-12  Jakub Jelinek  <jakub@redhat.com>
+-
+-	PR target/104502
+-	* gcc.target/i386/pr104502.c: New test.
+-
+-2022-02-19  Jakub Jelinek  <jakub@redhat.com>
+-
+-	Backported from master:
+-	2022-02-11  Jakub Jelinek  <jakub@redhat.com>
+-
+-	PR c++/104472
+-	* g++.dg/cpp0x/constexpr-104472.C: New test.
+-
+-2022-02-19  Jakub Jelinek  <jakub@redhat.com>
+-
+-	Backported from master:
+-	2022-02-11  Jakub Jelinek  <jakub@redhat.com>
+-
+-	PR middle-end/104446
+-	* gcc.target/i386/pr104446.c: New test.
+-
+-2022-02-19  Jakub Jelinek  <jakub@redhat.com>
+-
+-	Backported from master:
+-	2022-02-08  Jakub Jelinek  <jakub@redhat.com>
+-
+-	PR target/102140
+-	* gcc.dg/pr102140.c: New test.
+-
+-2022-02-19  Jakub Jelinek  <jakub@redhat.com>
+-
+-	Backported from master:
+-	2022-02-01  Jakub Jelinek  <jakub@redhat.com>
+-
+-	PR preprocessor/104147
+-	* c-c++-common/cpp/pr104147.c: New test.
+-
+-2022-02-19  Jakub Jelinek  <jakub@redhat.com>
+-
+-	Backported from master:
+-	2022-02-01  Jakub Jelinek  <jakub@redhat.com>
+-
+-	PR middle-end/104307
+-	* gcc.target/i386/pr104307.c: New test.
+-
+-2022-02-19  Jakub Jelinek  <jakub@redhat.com>
+-
+-	Backported from master:
+-	2022-01-28  Jakub Jelinek  <jakub@redhat.com>
+-
+-	PR tree-optimization/104263
+-	* gcc.dg/pr104263.c: New test.
+-
 -2022-02-18  Richard Biener  <rguenther@suse.de>
 -
 -	Backported from master:
@@ -18280,6 +18531,34 @@ index a7ef9b8d9fe..153e6c68772 100644
  	  && cgraph_node::get (exp)
  	  && cgraph_node::get (exp)->ifunc_resolver))
      return false;
+diff --git a/libcpp/ChangeLog b/libcpp/ChangeLog
+index c139ef0e66a..4e08f328f18 100644
+--- a/libcpp/ChangeLog
++++ b/libcpp/ChangeLog
+@@ -1,23 +1,3 @@
+-2022-02-19  Jakub Jelinek  <jakub@redhat.com>
+-
+-	Backported from master:
+-	2022-02-01  Jakub Jelinek  <jakub@redhat.com>
+-
+-	PR preprocessor/104147
+-	* macro.c (funlike_invocation_p): For padding prefer a token
+-	with val.source non-NULL especially if it has PREV_WHITE set
+-	on val.source->flags.  Add gcc_assert that CPP_PADDING tokens
+-	don't have PREV_WHITE set in flags.
+-
+-2022-02-19  Jakub Jelinek  <jakub@redhat.com>
+-
+-	Backported from master:
+-	2022-02-01  Jakub Jelinek  <jakub@redhat.com>
+-
+-	* directives.c (destringize_and_run): Push &pfile->avoid_paste
+-	instead of a copy of pfile->directive_result for the CPP_PADDING
+-	case.
+-
+ 2022-01-24  Jakub Jelinek  <jakub@redhat.com>
+ 
+ 	Backported from master:
 diff --git a/libcpp/directives.c b/libcpp/directives.c
 index 347ddb8b1e1..f4aa17d1156 100644
 --- a/libcpp/directives.c
@@ -18343,6 +18622,24 @@ index 786b32c5bb0..7248acb7458 100644
  	else
  	  TARGET=X86_64;
  	fi
+diff --git a/libgomp/ChangeLog b/libgomp/ChangeLog
+index fec16dce7dd..42006b08854 100644
+--- a/libgomp/ChangeLog
++++ b/libgomp/ChangeLog
+@@ -1,13 +1,3 @@
+-2022-02-19  Jakub Jelinek  <jakub@redhat.com>
+-
+-	Backported from master:
+-	2022-02-08  Jakub Jelinek  <jakub@redhat.com>
+-
+-	PR libgomp/104385
+-	* task.c (gomp_task_run_post_handle_dependers): If parent is NULL,
+-	clear task->parent.
+-	* testsuite/libgomp.c/pr104385.c: New test.
+-
+ 2021-11-29  Jakub Jelinek  <jakub@redhat.com>
+ 
+ 	Backported from master:
 diff --git a/libgomp/task.c b/libgomp/task.c
 index f5d26873d5b..feb4796a3ac 100644
 --- a/libgomp/task.c
@@ -18388,6 +18685,22 @@ index 07495e65e58..00000000000
 -  }
 -  return j - 2;
 -}
+diff --git a/libsanitizer/ChangeLog b/libsanitizer/ChangeLog
+index 6fec03e4d2a..2892dca944f 100644
+--- a/libsanitizer/ChangeLog
++++ b/libsanitizer/ChangeLog
+@@ -1,11 +1,3 @@
+-2022-02-19  Jakub Jelinek  <jakub@redhat.com>
+-
+-	Backported from master:
+-	2022-02-15  Jakub Jelinek  <jakub@redhat.com>
+-
+-	* sanitizer_common/sanitizer_linux_libcdep.cpp: Cherry-pick
+-	llvm-project revision ef14b78d9a144ba81ba02083fe21eb286a88732b.
+-
+ 2022-01-12  H.J. Lu  <hjl.tools@gmail.com>
+ 
+ 	PR sanitizer/102911
 diff --git a/libsanitizer/sanitizer_common/sanitizer_linux_libcdep.cpp b/libsanitizer/sanitizer_common/sanitizer_linux_libcdep.cpp
 index 15b697bdc1b..bc10e89b1ed 100644
 --- a/libsanitizer/sanitizer_common/sanitizer_linux_libcdep.cpp
