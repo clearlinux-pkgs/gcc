@@ -14,7 +14,7 @@
 
 Name     : gcc
 Version  : 11.2.0
-Release  : 1484
+Release  : 1485
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://gcc.gnu.org/pub/gcc/releases/gcc-11.2.0/gcc-11.2.0.tar.xz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.16.1.tar.bz2
@@ -348,7 +348,7 @@ export LIBRARY_PATH=%{_libdir}
     --with-gcc-major-version-only \
     --enable-default-pie
 
-make %{?_smp_mflags} profiledbootstrap
+make -O %{?_smp_mflags} profiledbootstrap
 
 popd
 
@@ -404,7 +404,7 @@ export LIBRARY_PATH=%{_libdir}
     --with-gcc-major-version-only \
     --enable-default-pie
 
-make %{?_smp_mflags} profiledbootstrap
+make -O %{?_smp_mflags} profiledbootstrap
 
 popd
 
@@ -425,7 +425,7 @@ for dir in ../gcc-build/x86_64-generic-linux/{,32}; do
         rename lib savedlib lib*.so.* || :
 
         make clean
-        make %{?_smp_mflags} CPPFLAGS="-D_GLIBCXX_GTHREAD_USE_WEAK=0" \
+        make -O %{?_smp_mflags} CPPFLAGS="-D_GLIBCXX_GTHREAD_USE_WEAK=0" \
              LIBGCC2_DEBUG_CFLAGS="-g -DGTHREAD_USE_WEAK=0"
 
         # Restore the saved shared libraries (if any)
@@ -443,7 +443,7 @@ done
 %check
 pushd ../gcc-build
 export CHECK_TEST_FRAMEWORK=1
-#make -k  %{?_smp_mflags} check  || :
+#make -O -k %{?_smp_mflags} check  || :
 popd
 
 
