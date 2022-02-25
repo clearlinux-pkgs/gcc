@@ -3941,10 +3941,10 @@ index cf536a15116..17e5e593aec 100644
  
  @node x86 Windows Options
 diff --git a/gcc/doc/md.texi b/gcc/doc/md.texi
-index d166a0debed..a525ea9cb73 100644
+index ac761100894..289f02c14ca 100644
 --- a/gcc/doc/md.texi
 +++ b/gcc/doc/md.texi
-@@ -7801,6 +7801,30 @@ If these patterns are not defined, attempts will be made to use
+@@ -7805,6 +7805,30 @@ If these patterns are not defined, attempts will be made to use
  counterparts.  If none of these are available a compare-and-swap
  loop will be used.
  
