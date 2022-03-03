@@ -2,7 +2,7 @@
 %define gcc_target x86_64-generic-linux
 %define libstdcxx_maj 6
 %define libstdcxx_full 6.0.26
-%define isl_version 0.16.1
+%define isl_version 0.24
 %define gccver 11
 %define gccpath gcc-11.2.0
 # Highest optimisation ABI we target
@@ -14,10 +14,10 @@
 
 Name     : gcc
 Version  : 11.2.0
-Release  : 1493
+Release  : 1494
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://gcc.gnu.org/pub/gcc/releases/gcc-11.2.0/gcc-11.2.0.tar.xz
-Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.16.1.tar.bz2
+Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.24.tar.bz2
 Source2  : DATESTAMP
 Source3  : REVISION
 Summary  : GNU cc and gcc C compilers
