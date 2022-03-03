@@ -293,7 +293,7 @@ export LIBRARY_PATH=/usr/lib64
     --with-gcc-major-version-only \
     --enable-default-pie
 
-make %{?_smp_mflags} profiledbootstrap
+make -O %{?_smp_mflags} profiledbootstrap
 
 popd
 
