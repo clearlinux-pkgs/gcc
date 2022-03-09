@@ -14,7 +14,7 @@
 
 Name     : gcc
 Version  : 11.2.0
-Release  : 1497
+Release  : 1498
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://gcc.gnu.org/pub/gcc/releases/gcc-11.2.0/gcc-11.2.0.tar.xz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.24.tar.bz2
@@ -602,6 +602,19 @@ cat *.lang > gcc.lang
 /usr/lib64/*.a
 /usr/lib64/*.o
 
+# libgcc-s-dev
+/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtbegin.o
+/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtbeginS.o
+/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtbeginT.o
+/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtend.o
+/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtendS.o
+/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtfastmath.o
+/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtprec32.o
+/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtprec64.o
+/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtprec80.o
+/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/libgcc.a
+/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/libgcc_eh.a
+/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/libgcov.a
 
 #gfortran
 /usr/bin/%{gcc_target}-gfortran
@@ -620,20 +633,7 @@ cat *.lang > gcc.lang
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/plugin/*.so
 
 %files dev
-# libgcc-s-dev
-/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/libgcc.a
-/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtendS.o
-/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/libgcc_eh.a
-/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtprec32.o
-/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtend.o
-/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtbegin.o
-/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtprec80.o
-/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtfastmath.o
-/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtbeginS.o
-/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtprec64.o
-/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtbeginT.o
 /usr/lib64/libgcc_s.so
-/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/libgcov.a
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/include/ssp
 /usr/lib64/libssp*.a
 /usr/lib64/libgomp.a
