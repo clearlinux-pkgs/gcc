@@ -246,8 +246,8 @@ mkdir ../gcc-build
 pushd ../gcc-build
 unset CFLAGS
 unset CXXFLAGS
-export CFLAGS="-march=westmere -g1 -O3 -fstack-protector -Wl,-z -Wl,now -Wl,-z -Wl,relro  -Wl,-z,max-page-size=0x1000 -mtune=skylake-avx512"
-export CXXFLAGS="-march=westmere -g1 -O3  -Wl,-z,max-page-size=0x1000 -mtune=skylake-avx512"
+export CFLAGS="-march=westmere -g1 -O3 -fstack-protector -Wl,-z -Wl,now -Wl,-z -Wl,relro  -Wl,-z,max-page-size=0x1000 -mtune=skylake-avx512 -fPIC"
+export CXXFLAGS="-march=westmere -g1 -O3  -Wl,-z,max-page-size=0x1000 -mtune=skylake-avx512 -fPIC"
 export CFLAGS_FOR_TARGET="$CFLAGS"
 export CXXFLAGS_FOR_TARGET="$CXXFLAGS"
 export FFLAGS_FOR_TARGET="$FFLAGS"
@@ -272,18 +272,19 @@ export LIBRARY_PATH=/usr/lib64
     --enable-clocale=gnu\
     --disable-multiarch\
     --enable-multilib\
-    --enable-lto\
+    --enable-lto --with-pic \
     --disable-werror \
     --enable-linker-build-id \
     --build=%{gcc_target}\
     --target=%{gcc_target}\
-    --enable-languages="c,c++,fortran,go" \
+    --enable-host-shared \
+    --enable-languages="c,c++,fortran,go,jit" \
     --enable-bootstrap \
     --with-ppl=yes \
     --with-isl \
     --includedir=/usr/include \
     --exec-prefix=/usr \
-    --with-glibc-version=2.19 \
+    --with-glibc-version=2.35 \
     --disable-libunwind-exceptions \
     --with-gnu-ld \
     --with-tune=skylake-avx512 \
@@ -317,7 +318,7 @@ export LIBRARY_PATH=%{_libdir}
     --enable-libstdcxx-pch\
     --libexecdir=/usr/lib64 \
     --with-system-zlib\
-    --enable-shared\
+    --enable-shared \
     --enable-gnu-indirect-function \
     --disable-vtable-verify \
     --enable-threads=posix\
@@ -327,18 +328,19 @@ export LIBRARY_PATH=%{_libdir}
     --enable-clocale=gnu\
     --disable-multiarch\
     --enable-multilib\
-    --enable-lto\
+    --enable-lto --with-pic\
     --disable-werror \
     --enable-linker-build-id \
     --build=%{gcc_target}\
     --target=%{gcc_target}\
-    --enable-languages="c,c++,fortran,go" \
+    --enable-host-shared \
+    --enable-languages="c,c++,fortran,go,jit" \
     --enable-bootstrap \
     --with-ppl=yes \
     --with-isl \
     --includedir=/usr/include \
     --exec-prefix=/usr \
-    --with-glibc-version=2.19 \
+    --with-glibc-version=2.35 \
     --disable-libunwind-exceptions \
     --with-gnu-ld \
     --with-tune=skylake-avx512 \
@@ -383,18 +385,19 @@ export LIBRARY_PATH=%{_libdir}
     --enable-clocale=gnu\
     --disable-multiarch\
     --enable-multilib\
-    --enable-lto\
+    --enable-lto --with-pic\
     --disable-werror \
     --enable-linker-build-id \
     --build=%{gcc_target}\
     --target=%{gcc_target}\
-    --enable-languages="c,c++,fortran,go" \
+    --enable-host-shared \
+    --enable-languages="c,c++,fortran,go,jit" \
     --enable-bootstrap \
     --with-ppl=yes \
     --with-isl \
     --includedir=/usr/include \
     --exec-prefix=/usr \
-    --with-glibc-version=2.19 \
+    --with-glibc-version=2.35 \
     --disable-libunwind-exceptions \
     --with-gnu-ld \
     --with-tune=skylake-avx512 \
@@ -712,6 +715,9 @@ cat *.lang > gcc.lang
 /usr/lib32/libubsan.a
 /usr/lib32/libubsan.so
 #/usr/lib64/gcc/x86_64-generic-linux/*/32/include/ISO_Fortran_binding.h
+/usr/include/libgccjit++.h
+/usr/include/libgccjit.h
+/usr/lib64/libgccjit.so
 
 
 #/usr/lib/libvtv.a
@@ -768,6 +774,8 @@ cat *.lang > gcc.lang
 
 %files -n libstdc++
 /usr/lib64/libstdc++.so.*
+/usr/lib64/libgccjit.so.0
+/usr/lib64/libgccjit.so.0.0.1
 
 #avx2
 
