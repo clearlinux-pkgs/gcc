@@ -106,6 +106,7 @@ Provides:       gcc-plugin-dev
 Provides:       libstdc++-dev
 Requires:       gcc-libs-math = %{version}-%{release}
 Requires:       libstdc++ = %{version}-%{release}
+Requires:	gcc-jit = %{version}-%{release}
 
 %description -n gcc-dev
 GNU cc and gcc C compilers dev files
@@ -158,6 +159,15 @@ Group:          devel
 
 %description -n libstdc++
 GNU cc and gcc C compilers.
+
+%package  jit
+License:        GPL-3.0-with-GCC-exception and GPL-3.0
+Summary:        GNU cc and gcc C compilers
+Group:          devel
+
+%description jit
+GNU cc and gcc C compilers.
+
 
 %package libstdc++32
 License:        GPL-3.0-with-GCC-exception and GPL-3.0
@@ -774,6 +784,8 @@ cat *.lang > gcc.lang
 
 %files -n libstdc++
 /usr/lib64/libstdc++.so.*
+
+%files jit
 /usr/lib64/libgccjit.so.0
 /usr/lib64/libgccjit.so.0.0.1
 
