@@ -1769,7 +1769,7 @@ index 941e91636d8..4fce0684ec8 100644
 +
 +extern bool ix86_has_no_direct_extern_access;
 diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
-index 5ddad92ad04..53792fbbce3 100644
+index 48300af9a09..01cc86fe29d 100644
 --- a/gcc/config/i386/i386.c
 +++ b/gcc/config/i386/i386.c
 @@ -362,6 +362,9 @@ unsigned int ix86_default_incoming_stack_boundary;
@@ -2044,7 +2044,7 @@ index 5ddad92ad04..53792fbbce3 100644
      case PROCESSOR_GENERIC:
        /* Do not perform multipass scheduling for pre-reload schedule
           to save compile time.  */
-@@ -20278,6 +20380,11 @@ ix86_rtx_costs (rtx x, machine_mode mode, int outer_code_i, int opno,
+@@ -20280,6 +20382,11 @@ ix86_rtx_costs (rtx x, machine_mode mode, int outer_code_i, int opno,
      case UNSPEC:
        if (XINT (x, 1) == UNSPEC_TP)
  	*total = 0;
@@ -2056,7 +2056,7 @@ index 5ddad92ad04..53792fbbce3 100644
        return false;
  
      case VEC_SELECT:
-@@ -21826,10 +21933,10 @@ int
+@@ -21828,10 +21935,10 @@ int
  asm_preferred_eh_data_format (int code, int global)
  {
    /* PE-COFF is effectively always -fPIC because of the .reloc section.  */
@@ -2069,7 +2069,7 @@ index 5ddad92ad04..53792fbbce3 100644
  	  || ix86_cmodel == CM_SMALL_PIC
  	  || (ix86_cmodel == CM_MEDIUM_PIC && (global || code)))
  	type = DW_EH_PE_sdata4;
-@@ -22905,10 +23012,28 @@ ix86_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
+@@ -22907,10 +23014,28 @@ ix86_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
  static bool
  ix86_binds_local_p (const_tree exp)
  {
@@ -2102,7 +2102,7 @@ index 5ddad92ad04..53792fbbce3 100644
  }
  #endif
  
-@@ -23044,6 +23169,32 @@ ix86_optab_supported_p (int op, machine_mode mode1, machine_mode,
+@@ -23046,6 +23171,32 @@ ix86_optab_supported_p (int op, machine_mode mode1, machine_mode,
      }
  }
  
@@ -2135,7 +2135,7 @@ index 5ddad92ad04..53792fbbce3 100644
  /* Address space support.
  
     This is not "far pointers" in the 16-bit sense, but an easy way
-@@ -23574,6 +23725,9 @@ ix86_run_selftests (void)
+@@ -23576,6 +23727,9 @@ ix86_run_selftests (void)
  #undef TARGET_ADDRESS_COST
  #define TARGET_ADDRESS_COST ix86_address_cost
  
@@ -2145,7 +2145,7 @@ index 5ddad92ad04..53792fbbce3 100644
  #undef TARGET_FLAGS_REGNUM
  #define TARGET_FLAGS_REGNUM FLAGS_REG
  #undef TARGET_FIXED_CONDITION_CODE_REGS
-@@ -23623,6 +23777,8 @@ ix86_run_selftests (void)
+@@ -23625,6 +23779,8 @@ ix86_run_selftests (void)
  #define TARGET_C_EXCESS_PRECISION ix86_get_excess_precision
  #undef TARGET_PROMOTE_PROTOTYPES
  #define TARGET_PROMOTE_PROTOTYPES hook_bool_const_tree_true
@@ -2154,7 +2154,7 @@ index 5ddad92ad04..53792fbbce3 100644
  #undef TARGET_SETUP_INCOMING_VARARGS
  #define TARGET_SETUP_INCOMING_VARARGS ix86_setup_incoming_varargs
  #undef TARGET_MUST_PASS_IN_STACK
-@@ -23927,6 +24083,14 @@ ix86_run_selftests (void)
+@@ -23929,6 +24085,14 @@ ix86_run_selftests (void)
  #define TARGET_GET_MULTILIB_ABI_NAME \
    ix86_get_multilib_abi_name
  
@@ -2169,7 +2169,7 @@ index 5ddad92ad04..53792fbbce3 100644
  static bool ix86_libc_has_fast_function (int fcode ATTRIBUTE_UNUSED)
  {
  #ifdef OPTION_GLIBC
-@@ -23942,6 +24106,9 @@ static bool ix86_libc_has_fast_function (int fcode ATTRIBUTE_UNUSED)
+@@ -23944,6 +24108,9 @@ static bool ix86_libc_has_fast_function (int fcode ATTRIBUTE_UNUSED)
  #undef TARGET_LIBC_HAS_FAST_FUNCTION
  #define TARGET_LIBC_HAS_FAST_FUNCTION ix86_libc_has_fast_function
  
@@ -14738,7 +14738,7 @@ index aad8526eb21..93fbb34bb94 100644
  		  if (gimple_call_builtin_p (stmt, BUILT_IN_NORMAL)
  		      && TREE_CODE (gimple_call_arg (stmt, 0)) == ADDR_EXPR
 diff --git a/gcc/tree-ssa-forwprop.c b/gcc/tree-ssa-forwprop.c
-index 0706fd862de..26b26e5ea92 100644
+index 3bb4a07d58c..5d98ac381e4 100644
 --- a/gcc/tree-ssa-forwprop.c
 +++ b/gcc/tree-ssa-forwprop.c
 @@ -1240,12 +1240,19 @@ constant_pointer_difference (tree p1, tree p2)
