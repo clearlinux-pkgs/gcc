@@ -1,7 +1,7 @@
 Cui,Lili (1):
       x86: Update -mtune=alderlake
 
-H.J. Lu (50):
+H.J. Lu (53):
       op_by_pieces_d::run: Change a while loop to a do-while loop
       Generate offset adjusted operation for op_by_pieces operations
       Don't use nullptr return from simplify_gen_subreg
@@ -52,17 +52,22 @@ H.J. Lu (50):
       x86: Add -m[no-]direct-extern-access
       x86: Update PR 35513 tests
       pieces-memset-21.c: Expect vzeroupper for ia32
+      x86: Always return pseudo register in ix86_gen_scratch_sse_rtx
+      x86: Disallow unsupported EH return
+      x86: Also check _SOFT_FLOAT in <x86gprintrin.h>
 
 Hongyu Wang (2):
       PR target/103069: Relax cmpxchg loop for x86 target
       i386: Fix wrong codegen for -mrelax-cmpxchg-loop
 
-Jakub Jelinek (5):
+Jakub Jelinek (7):
       i386: Punt on broadcasts from TImode integers [PR101286]
       i386: Fix up @xorsign<mode>3_1 [PR102224]
       i386: Fix up xorsign for AVX [PR89984]
       i386, fab: Optimize __atomic_{add,sub,and,or,xor}_fetch (x, y, z) {==,!=,<,<=,>,>=} 0 [PR98737]
       forwprop: Canonicalize atomic fetch_op op x to op_fetch or vice versa [PR98737]
+      x86: Define LIBGCC2_UNWIND_ATTRIBUTE on ia32 [PR104781]
+      i386: Use no-mmx,no-sse for LIBGCC2_UNWIND_ATTRIBUTE [PR104890]
 
 Richard Biener (2):
       middle-end/100951 - make sure to generate VECTOR_CST in lowering
@@ -1769,7 +1774,7 @@ index 941e91636d8..4fce0684ec8 100644
 +
 +extern bool ix86_has_no_direct_extern_access;
 diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
-index 48300af9a09..01cc86fe29d 100644
+index 48300af9a09..5d3a5a5a43d 100644
 --- a/gcc/config/i386/i386.c
 +++ b/gcc/config/i386/i386.c
 @@ -362,6 +362,9 @@ unsigned int ix86_default_incoming_stack_boundary;
@@ -1821,7 +1826,27 @@ index 48300af9a09..01cc86fe29d 100644
        && frame_pointer_needed
        && crtl->is_leaf
        && crtl->sp_is_unchanging
-@@ -10311,13 +10335,17 @@ darwin_local_data_pic (rtx disp)
+@@ -9252,12 +9276,15 @@ ix86_expand_epilogue (int style)
+ 	  rtx sa = EH_RETURN_STACKADJ_RTX;
+ 	  rtx_insn *insn;
+ 
+-	  /* %ecx can't be used for both DRAP register and eh_return.  */
+-	  if (crtl->drap_reg)
+-	    gcc_assert (REGNO (crtl->drap_reg) != CX_REG);
++	  /* Stack realignment doesn't work with eh_return.  */
++	  if (crtl->stack_realign_needed)
++	    sorry ("Stack realignment not supported with "
++		   "%<__builtin_eh_return%>");
+ 
+ 	  /* regparm nested functions don't work with eh_return.  */
+-	  gcc_assert (!ix86_static_chain_on_stack);
++	  if (ix86_static_chain_on_stack)
++	    sorry ("regparm nested function not supported with "
++		   "%<__builtin_eh_return%>");
+ 
+ 	  if (frame_pointer_needed)
+ 	    {
+@@ -10311,13 +10338,17 @@ darwin_local_data_pic (rtx disp)
  }
  
  /* True if the function symbol operand X should be loaded from GOT.
@@ -1840,7 +1865,7 @@ index 48300af9a09..01cc86fe29d 100644
  {
    return ((TARGET_64BIT || (!flag_pic && HAVE_AS_IX86_GOT32X))
  	  && !TARGET_PECOFF && !TARGET_MACHO
-@@ -10325,11 +10353,16 @@ ix86_force_load_from_GOT_p (rtx x)
+@@ -10325,11 +10356,16 @@ ix86_force_load_from_GOT_p (rtx x)
  	  && ix86_cmodel != CM_LARGE
  	  && ix86_cmodel != CM_LARGE_PIC
  	  && GET_CODE (x) == SYMBOL_REF
@@ -1862,7 +1887,7 @@ index 48300af9a09..01cc86fe29d 100644
  	  && !SYMBOL_REF_LOCAL_P (x));
  }
  
-@@ -10417,7 +10450,13 @@ ix86_legitimate_constant_p (machine_mode mode, rtx x)
+@@ -10417,7 +10453,13 @@ ix86_legitimate_constant_p (machine_mode mode, rtx x)
  	  /* FALLTHRU */
  	case E_OImode:
  	case E_XImode:
@@ -1877,7 +1902,7 @@ index 48300af9a09..01cc86fe29d 100644
  	    return false;
  	default:
  	  break;
-@@ -10590,7 +10629,11 @@ legitimate_pic_address_disp_p (rtx disp)
+@@ -10590,7 +10632,11 @@ legitimate_pic_address_disp_p (rtx disp)
  	    }
  	  else if (!SYMBOL_REF_FAR_ADDR_P (op0)
  		   && (SYMBOL_REF_LOCAL_P (op0)
@@ -1890,7 +1915,7 @@ index 48300af9a09..01cc86fe29d 100644
  			   && flag_pie
  			   && !SYMBOL_REF_WEAK (op0)
  			   && !SYMBOL_REF_FUNCTION_P (op0)))
-@@ -11997,7 +12040,7 @@ output_pic_addr_const (FILE *file, rtx x, int code)
+@@ -11997,7 +12043,7 @@ output_pic_addr_const (FILE *file, rtx x, int code)
  	  assemble_name (file, name);
  	}
        if (!TARGET_MACHO && !(TARGET_64BIT && TARGET_PECOFF)
@@ -1899,7 +1924,7 @@ index 48300af9a09..01cc86fe29d 100644
  	fputs ("@PLT", file);
        break;
  
-@@ -13523,7 +13566,7 @@ ix86_print_operand (FILE *file, rtx x, int code)
+@@ -13523,7 +13569,7 @@ ix86_print_operand (FILE *file, rtx x, int code)
  
        if (code == 'P')
  	{
@@ -1908,7 +1933,7 @@ index 48300af9a09..01cc86fe29d 100644
  	    {
  	      /* For inline assembly statement, load function address
  		 from GOT with 'P' operand modifier to avoid PLT.  */
-@@ -14121,11 +14164,26 @@ ix86_check_avx_upper_register (const_rtx exp)
+@@ -14121,11 +14167,26 @@ ix86_check_avx_upper_register (const_rtx exp)
  	  && GET_MODE_BITSIZE (GET_MODE (exp)) > 128);
  }
  
@@ -1935,7 +1960,7 @@ index 48300af9a09..01cc86fe29d 100644
    if (CALL_P (insn))
      {
        rtx link;
-@@ -14145,6 +14203,14 @@ ix86_avx_u128_mode_needed (rtx_insn *insn)
+@@ -14145,6 +14206,14 @@ ix86_avx_u128_mode_needed (rtx_insn *insn)
  	    }
  	}
  
@@ -1950,7 +1975,7 @@ index 48300af9a09..01cc86fe29d 100644
        /* If the function is known to preserve some SSE registers,
  	 RA and previous passes can legitimately rely on that for
  	 modes wider than 256 bits.  It's only safe to issue a
-@@ -14157,11 +14223,37 @@ ix86_avx_u128_mode_needed (rtx_insn *insn)
+@@ -14157,11 +14226,37 @@ ix86_avx_u128_mode_needed (rtx_insn *insn)
        return AVX_U128_CLEAN;
      }
  
@@ -1989,7 +2014,7 @@ index 48300af9a09..01cc86fe29d 100644
    FOR_EACH_SUBRTX (iter, array, PATTERN (insn), NONCONST)
      if (ix86_check_avx_upper_register (*iter))
        return AVX_U128_DIRTY;
-@@ -14245,18 +14337,6 @@ ix86_mode_needed (int entity, rtx_insn *insn)
+@@ -14245,18 +14340,6 @@ ix86_mode_needed (int entity, rtx_insn *insn)
    return 0;
  }
  
@@ -2008,7 +2033,7 @@ index 48300af9a09..01cc86fe29d 100644
  /* Calculate mode of upper 128bit AVX registers after the insn.  */
  
  static int
-@@ -15705,6 +15785,26 @@ ix86_zero_extend_to_Pmode (rtx exp)
+@@ -15705,6 +15788,26 @@ ix86_zero_extend_to_Pmode (rtx exp)
    return force_reg (Pmode, convert_to_mode (Pmode, exp, 1));
  }
  
@@ -2035,7 +2060,7 @@ index 48300af9a09..01cc86fe29d 100644
  /* Return true if the function being called was marked with attribute
     "noplt" or using -fno-plt and we are compiling for non-PIC.  We need
     to handle the non-PIC case in the backend because there is no easy
-@@ -16785,6 +16885,8 @@ ix86_sched_init_global (FILE *, int, int)
+@@ -16785,6 +16888,8 @@ ix86_sched_init_global (FILE *, int, int)
      case PROCESSOR_NEHALEM:
      case PROCESSOR_SANDYBRIDGE:
      case PROCESSOR_HASWELL:
@@ -2044,7 +2069,7 @@ index 48300af9a09..01cc86fe29d 100644
      case PROCESSOR_GENERIC:
        /* Do not perform multipass scheduling for pre-reload schedule
           to save compile time.  */
-@@ -20280,6 +20382,11 @@ ix86_rtx_costs (rtx x, machine_mode mode, int outer_code_i, int opno,
+@@ -20280,6 +20385,11 @@ ix86_rtx_costs (rtx x, machine_mode mode, int outer_code_i, int opno,
      case UNSPEC:
        if (XINT (x, 1) == UNSPEC_TP)
  	*total = 0;
@@ -2056,7 +2081,7 @@ index 48300af9a09..01cc86fe29d 100644
        return false;
  
      case VEC_SELECT:
-@@ -21828,10 +21935,10 @@ int
+@@ -21828,10 +21938,10 @@ int
  asm_preferred_eh_data_format (int code, int global)
  {
    /* PE-COFF is effectively always -fPIC because of the .reloc section.  */
@@ -2069,7 +2094,7 @@ index 48300af9a09..01cc86fe29d 100644
  	  || ix86_cmodel == CM_SMALL_PIC
  	  || (ix86_cmodel == CM_MEDIUM_PIC && (global || code)))
  	type = DW_EH_PE_sdata4;
-@@ -22907,10 +23014,28 @@ ix86_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
+@@ -22907,10 +23017,28 @@ ix86_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
  static bool
  ix86_binds_local_p (const_tree exp)
  {
@@ -2102,7 +2127,7 @@ index 48300af9a09..01cc86fe29d 100644
  }
  #endif
  
-@@ -23046,6 +23171,32 @@ ix86_optab_supported_p (int op, machine_mode mode1, machine_mode,
+@@ -23046,6 +23174,15 @@ ix86_optab_supported_p (int op, machine_mode mode1, machine_mode,
      }
  }
  
@@ -2112,30 +2137,13 @@ index 48300af9a09..01cc86fe29d 100644
 +rtx
 +ix86_gen_scratch_sse_rtx (machine_mode mode)
 +{
-+  if (TARGET_SSE && !lra_in_progress)
-+    {
-+      unsigned int regno;
-+      if (TARGET_64BIT)
-+	{
-+	  /* In 64-bit mode, use XMM31 to avoid vzeroupper and always
-+	     use XMM31 for CSE.  */
-+	  if (ix86_hard_regno_mode_ok (LAST_EXT_REX_SSE_REG, mode))
-+	    regno = LAST_EXT_REX_SSE_REG;
-+	  else
-+	    regno = LAST_REX_SSE_REG;
-+	}
-+      else
-+	regno = LAST_SSE_REG;
-+      return gen_rtx_REG (mode, regno);
-+    }
-+  else
-+    return gen_reg_rtx (mode);
++  return gen_reg_rtx (mode);
 +}
 +
  /* Address space support.
  
     This is not "far pointers" in the 16-bit sense, but an easy way
-@@ -23576,6 +23727,9 @@ ix86_run_selftests (void)
+@@ -23576,6 +23713,9 @@ ix86_run_selftests (void)
  #undef TARGET_ADDRESS_COST
  #define TARGET_ADDRESS_COST ix86_address_cost
  
@@ -2145,7 +2153,7 @@ index 48300af9a09..01cc86fe29d 100644
  #undef TARGET_FLAGS_REGNUM
  #define TARGET_FLAGS_REGNUM FLAGS_REG
  #undef TARGET_FIXED_CONDITION_CODE_REGS
-@@ -23625,6 +23779,8 @@ ix86_run_selftests (void)
+@@ -23625,6 +23765,8 @@ ix86_run_selftests (void)
  #define TARGET_C_EXCESS_PRECISION ix86_get_excess_precision
  #undef TARGET_PROMOTE_PROTOTYPES
  #define TARGET_PROMOTE_PROTOTYPES hook_bool_const_tree_true
@@ -2154,7 +2162,7 @@ index 48300af9a09..01cc86fe29d 100644
  #undef TARGET_SETUP_INCOMING_VARARGS
  #define TARGET_SETUP_INCOMING_VARARGS ix86_setup_incoming_varargs
  #undef TARGET_MUST_PASS_IN_STACK
-@@ -23929,6 +24085,14 @@ ix86_run_selftests (void)
+@@ -23929,6 +24071,14 @@ ix86_run_selftests (void)
  #define TARGET_GET_MULTILIB_ABI_NAME \
    ix86_get_multilib_abi_name
  
@@ -2169,7 +2177,7 @@ index 48300af9a09..01cc86fe29d 100644
  static bool ix86_libc_has_fast_function (int fcode ATTRIBUTE_UNUSED)
  {
  #ifdef OPTION_GLIBC
-@@ -23944,6 +24108,9 @@ static bool ix86_libc_has_fast_function (int fcode ATTRIBUTE_UNUSED)
+@@ -23944,6 +24094,9 @@ static bool ix86_libc_has_fast_function (int fcode ATTRIBUTE_UNUSED)
  #undef TARGET_LIBC_HAS_FAST_FUNCTION
  #define TARGET_LIBC_HAS_FAST_FUNCTION ix86_libc_has_fast_function
  
@@ -2180,7 +2188,7 @@ index 48300af9a09..01cc86fe29d 100644
  #undef TARGET_RUN_TARGET_SELFTESTS
  #define TARGET_RUN_TARGET_SELFTESTS selftest::ix86_run_selftests
 diff --git a/gcc/config/i386/i386.h b/gcc/config/i386/i386.h
-index 6fc1bf350d5..8a1542d8eaa 100644
+index 6fc1bf350d5..8956ade84f7 100644
 --- a/gcc/config/i386/i386.h
 +++ b/gcc/config/i386/i386.h
 @@ -554,6 +554,10 @@ extern unsigned char ix86_tune_features[X86_TUNE_LAST];
@@ -2282,6 +2290,19 @@ index 6fc1bf350d5..8a1542d8eaa 100644
  
  /* If a memory-to-memory move would take MOVE_RATIO or more simple
     move-instruction pairs, we will do a cpymem or libcall instead.
+@@ -3089,6 +3111,12 @@ extern enum attr_cpu ix86_schedule;
+ #define NUM_X86_64_MS_CLOBBERED_REGS 12
+ #endif
+ 
++/* __builtin_eh_return can't handle stack realignment, so disable MMX/SSE
++   in 32-bit libgcc functions that call it.  */
++#ifndef __x86_64__
++#define LIBGCC2_UNWIND_ATTRIBUTE __attribute__((target ("no-mmx,no-sse")))
++#endif
++
+ /*
+ Local variables:
+ version-control: t
 diff --git a/gcc/config/i386/i386.md b/gcc/config/i386/i386.md
 index efe0b4ac3a8..f14b5a6e7e4 100644
 --- a/gcc/config/i386/i386.md
@@ -3766,6 +3787,19 @@ index eb057a67750..7e9a61d64ba 100644
  /*****************************************************************************/
  /* Historical relics: tuning flags that helps a specific old CPU designs     */
  /*****************************************************************************/
+diff --git a/gcc/config/i386/x86gprintrin.h b/gcc/config/i386/x86gprintrin.h
+index b7fefa780a6..7319e373ae9 100644
+--- a/gcc/config/i386/x86gprintrin.h
++++ b/gcc/config/i386/x86gprintrin.h
+@@ -24,7 +24,7 @@
+ #ifndef _X86GPRINTRIN_H_INCLUDED
+ #define _X86GPRINTRIN_H_INCLUDED
+ 
+-#if defined __MMX__ || defined __SSE__
++#if !defined _SOFT_FLOAT || defined __MMX__ || defined __SSE__
+ #pragma GCC push_options
+ #pragma GCC target("general-regs-only")
+ #define __DISABLE_GENERAL_REGS_ONLY__
 diff --git a/gcc/config/m32c/m32c.c b/gcc/config/m32c/m32c.c
 index b1cb3591da6..d22bdd79c71 100644
 --- a/gcc/config/m32c/m32c.c
@@ -6606,12 +6640,12 @@ index 57666ac60b6..658eb3e25bb 100644
  __attribute__ ((cold)) void
 diff --git a/gcc/testsuite/gcc.target/i386/eh_return-1.c b/gcc/testsuite/gcc.target/i386/eh_return-1.c
 new file mode 100644
-index 00000000000..b21fd75fc93
+index 00000000000..43f94f01a97
 --- /dev/null
 +++ b/gcc/testsuite/gcc.target/i386/eh_return-1.c
 @@ -0,0 +1,26 @@
 +/* { dg-do compile } */
-+/* { dg-options "-O2 -march=haswell -mno-avx512f -mtune-ctrl=avx256_move_by_pieces" } */
++/* { dg-options "-O2 -mincoming-stack-boundary=4 -march=haswell -mno-avx512f -mtune-ctrl=avx256_move_by_pieces" } */
 +
 +struct _Unwind_Context
 +{
@@ -6638,13 +6672,13 @@ index 00000000000..b21fd75fc93
 +/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
 diff --git a/gcc/testsuite/gcc.target/i386/eh_return-2.c b/gcc/testsuite/gcc.target/i386/eh_return-2.c
 new file mode 100644
-index 00000000000..f23f4492dac
+index 00000000000..cb762f92cc2
 --- /dev/null
 +++ b/gcc/testsuite/gcc.target/i386/eh_return-2.c
 @@ -0,0 +1,16 @@
 +/* PR target/101772  */
 +/* { dg-do compile } */
-+/* { dg-additional-options "-O0 -march=x86-64 -mstackrealign" } */
++/* { dg-additional-options "-O0 -mincoming-stack-boundary=4 -march=x86-64 -mstackrealign" } */
 +
 +struct _Unwind_Context _Unwind_Resume_or_Rethrow_this_context;
 +
@@ -6672,7 +6706,7 @@ index 4deff93c1e8..b0d3dc38a0c 100644
  
  v2df __attribute__((noinline))
 diff --git a/gcc/testsuite/gcc.target/i386/incoming-11.c b/gcc/testsuite/gcc.target/i386/incoming-11.c
-index a830c96f7d1..4b822684b88 100644
+index a830c96f7d1..a06fdee477d 100644
 --- a/gcc/testsuite/gcc.target/i386/incoming-11.c
 +++ b/gcc/testsuite/gcc.target/i386/incoming-11.c
 @@ -15,4 +15,4 @@ void f()
@@ -6680,7 +6714,7 @@ index a830c96f7d1..4b822684b88 100644
  }
  
 -/* { dg-final { scan-assembler "andl\[\\t \]*\\$-16,\[\\t \]*%esp" } } */
-+/* { dg-final { scan-assembler-not "andl\[\\t \]*\\$-16,\[\\t \]*%esp" } } */
++/* { dg-final { scan-assembler-not "andl\[\\t \]*\\$-16,\[\\t \]*%esp"  { xfail *-*-* } } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pieces-memcpy-10.c b/gcc/testsuite/gcc.target/i386/pieces-memcpy-10.c
 new file mode 100644
 index 00000000000..5faee21f9b9
@@ -7294,10 +7328,10 @@ index 00000000000..1dc4db180d3
 +/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-21.c b/gcc/testsuite/gcc.target/i386/pieces-memset-21.c
 new file mode 100644
-index 00000000000..4e2a7407c8a
+index 00000000000..a04f7eb55c7
 --- /dev/null
 +++ b/gcc/testsuite/gcc.target/i386/pieces-memset-21.c
-@@ -0,0 +1,19 @@
+@@ -0,0 +1,18 @@
 +/* { dg-do compile } */
 +/* { dg-options "-O2 -mavx512vl -mavx512f -mtune=generic" } */
 +
@@ -7311,8 +7345,7 @@ index 00000000000..4e2a7407c8a
 +
 +/* { dg-final { scan-assembler-times "vpxor(?:d|)\[ \\t\]+\[^\n\]*%xmm" 1 } } */
 +/* { dg-final { scan-assembler-times "vmovdqu(?:64|8)\[ \\t\]+\[^\n\]*%zmm" 1 } } */
-+/* { dg-final { scan-assembler-not "vzeroupper" { target { ! ia32 } } } } */
-+/* { dg-final { scan-assembler "vzeroupper" { target ia32 } } } */
++/* { dg-final { scan-assembler "vzeroupper" } } */
 +/* No need to dynamically realign the stack here.  */
 +/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
 +/* Nor use a frame pointer.  */
@@ -7503,7 +7536,7 @@ index 00000000000..3b07a64e3f6
 +/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-3.c b/gcc/testsuite/gcc.target/i386/pieces-memset-3.c
 new file mode 100644
-index 00000000000..2aed6dbc68e
+index 00000000000..765441a7c4a
 --- /dev/null
 +++ b/gcc/testsuite/gcc.target/i386/pieces-memset-3.c
 @@ -0,0 +1,18 @@
@@ -7522,9 +7555,9 @@ index 00000000000..2aed6dbc68e
 +/* { dg-final { scan-assembler-times "vinserti64x4\[ \\t\]+\[^\n\]*%zmm" 1 } } */
 +/* { dg-final { scan-assembler-times "vmovdqu64\[ \\t\]+\[^\n\]*%zmm" 1 } } */
 +/* No need to dynamically realign the stack here.  */
-+/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" { xfail *-*-* } } } */
 +/* Nor use a frame pointer.  */
-+/* { dg-final { scan-assembler-not "%\[re\]bp" { target { ! ia32 } } } } */
++/* { dg-final { scan-assembler-not "%\[re\]bp" { xfail *-*-* } } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-30.c b/gcc/testsuite/gcc.target/i386/pieces-memset-30.c
 new file mode 100644
 index 00000000000..59595e6d3c4
@@ -7688,7 +7721,7 @@ index 00000000000..d1f1263c7b2
 +/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-37.c b/gcc/testsuite/gcc.target/i386/pieces-memset-37.c
 new file mode 100644
-index 00000000000..fd09bd153ce
+index 00000000000..0c5056be54d
 --- /dev/null
 +++ b/gcc/testsuite/gcc.target/i386/pieces-memset-37.c
 @@ -0,0 +1,15 @@
@@ -7704,9 +7737,9 @@ index 00000000000..fd09bd153ce
 +/* { dg-final { scan-assembler-times "vpbroadcastb\[ \\t\]+\[^\n\]*%ymm" 1 } } */
 +/* { dg-final { scan-assembler-times "vmovdqu\[ \\t\]+\[^\n\]*%ymm" 2 } } */
 +/* No need to dynamically realign the stack here.  */
-+/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" { xfail *-*-* } } } */
 +/* Nor use a frame pointer.  */
-+/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
++/* { dg-final { scan-assembler-not "%\[re\]bp" { xfail *-*-* } } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-38.c b/gcc/testsuite/gcc.target/i386/pieces-memset-38.c
 new file mode 100644
 index 00000000000..ed4a24a54fd
@@ -7732,7 +7765,7 @@ index 00000000000..ed4a24a54fd
 +/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-39.c b/gcc/testsuite/gcc.target/i386/pieces-memset-39.c
 new file mode 100644
-index 00000000000..0ed88b274bd
+index 00000000000..e33644c2f10
 --- /dev/null
 +++ b/gcc/testsuite/gcc.target/i386/pieces-memset-39.c
 @@ -0,0 +1,16 @@
@@ -7749,9 +7782,9 @@ index 00000000000..0ed88b274bd
 +/* { dg-final { scan-assembler-not "vinserti64x4" } } */
 +/* { dg-final { scan-assembler-times "vmovdqu8\[ \\t\]+\[^\n\]*%zmm" 1 } } */
 +/* No need to dynamically realign the stack here.  */
-+/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
++/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" { xfail *-*-* } } } */
 +/* Nor use a frame pointer.  */
-+/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
++/* { dg-final { scan-assembler-not "%\[re\]bp" { xfail *-*-* } } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-4.c b/gcc/testsuite/gcc.target/i386/pieces-memset-4.c
 new file mode 100644
 index 00000000000..9256919bfdf
@@ -7913,10 +7946,10 @@ index 00000000000..70c80e5064b
 +/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-46.c b/gcc/testsuite/gcc.target/i386/pieces-memset-46.c
 new file mode 100644
-index 00000000000..3d54052ff28
+index 00000000000..be1b054eed2
 --- /dev/null
 +++ b/gcc/testsuite/gcc.target/i386/pieces-memset-46.c
-@@ -0,0 +1,18 @@
+@@ -0,0 +1,17 @@
 +/* { dg-do compile } */
 +/* { dg-options "-O2 -march=sapphirerapids" } */
 +
@@ -7929,7 +7962,6 @@ index 00000000000..3d54052ff28
 +}
 +
 +/* { dg-final { scan-assembler-times "vmovdqu8\[ \\t\]+\[^\n\]*%zmm" 1 } } */
-+/* Xfail this in GCC 11 since vmovw from AVX512FP16 isn't available.  */
 +/* { dg-final { scan-assembler-times "vmovw\[ \\t\]+\[^\n\]*%xmm" 1 { xfail *-*-* } } } */
 +/* No need to dynamically realign the stack here.  */
 +/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
@@ -7937,10 +7969,10 @@ index 00000000000..3d54052ff28
 +/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-47.c b/gcc/testsuite/gcc.target/i386/pieces-memset-47.c
 new file mode 100644
-index 00000000000..24d7171e4d4
+index 00000000000..78d3290c74f
 --- /dev/null
 +++ b/gcc/testsuite/gcc.target/i386/pieces-memset-47.c
-@@ -0,0 +1,18 @@
+@@ -0,0 +1,17 @@
 +/* { dg-do compile } */
 +/* { dg-options "-O2 -march=sapphirerapids -mstore-max=128" } */
 +
@@ -7953,7 +7985,6 @@ index 00000000000..24d7171e4d4
 +}
 +
 +/* { dg-final { scan-assembler-times "vmovdqu(?:8|)\[ \\t\]+\[^\n\]*%xmm" 4 } } */
-+/* Xfail this in GCC 11 since vmovw from AVX512FP16 isn't available.  */
 +/* { dg-final { scan-assembler-times "vmovw\[ \\t\]+\[^\n\]*%xmm" 1 { xfail *-*-* } } } */
 +/* No need to dynamically realign the stack here.  */
 +/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
@@ -7961,10 +7992,10 @@ index 00000000000..24d7171e4d4
 +/* { dg-final { scan-assembler-not "%\[re\]bp" } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pieces-memset-48.c b/gcc/testsuite/gcc.target/i386/pieces-memset-48.c
 new file mode 100644
-index 00000000000..680f1a1dee6
+index 00000000000..6342dbb91b0
 --- /dev/null
 +++ b/gcc/testsuite/gcc.target/i386/pieces-memset-48.c
-@@ -0,0 +1,18 @@
+@@ -0,0 +1,17 @@
 +/* { dg-do compile } */
 +/* { dg-options "-O2 -march=sapphirerapids -mstore-max=256" } */
 +
@@ -7977,7 +8008,6 @@ index 00000000000..680f1a1dee6
 +}
 +
 +/* { dg-final { scan-assembler-times "vmovdqu(?:8|)\[ \\t\]+\[^\n\]*%ymm" 2 } } */
-+/* Xfail this in GCC 11 since vmovw from AVX512FP16 isn't available.  */
 +/* { dg-final { scan-assembler-times "vmovw\[ \\t\]+\[^\n\]*%xmm" 1 { xfail *-*-* } } } */
 +/* No need to dynamically realign the stack here.  */
 +/* { dg-final { scan-assembler-not "and\[^\n\r]*%\[re\]sp" } } */
@@ -8298,7 +8328,7 @@ index 00000000000..04ce1662f3c
 +/* { dg-final { scan-assembler-times "vmovdqa\[\\t \]%xmm\[0-9\]+, " 16 } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pr100865-11b.c b/gcc/testsuite/gcc.target/i386/pr100865-11b.c
 new file mode 100644
-index 00000000000..7e458e85cdd
+index 00000000000..12d55b9a642
 --- /dev/null
 +++ b/gcc/testsuite/gcc.target/i386/pr100865-11b.c
 @@ -0,0 +1,8 @@
@@ -8309,7 +8339,7 @@ index 00000000000..7e458e85cdd
 +
 +/* { dg-final { scan-assembler-times "movabsq" 1 } } */
 +/* { dg-final { scan-assembler-times "vpbroadcastq\[\\t \]+%(?:r|e)\[^\n\]*, %xmm\[0-9\]+" 1 } } */
-+/* { dg-final { scan-assembler-times "vmovdqa64\[\\t \]%xmm\[0-9\]+, " 16 } } */
++/* { dg-final { scan-assembler-times "vmovdqa\[\\t \]%xmm\[0-9\]+, " 16 } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pr100865-11c.c b/gcc/testsuite/gcc.target/i386/pr100865-11c.c
 new file mode 100644
 index 00000000000..de56c84b9ca
@@ -8352,7 +8382,7 @@ index 00000000000..d4833d44475
 +/* { dg-final { scan-assembler-times "vmovdqa\[\\t \]%xmm\[0-9\]+, " 16 } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pr100865-12b.c b/gcc/testsuite/gcc.target/i386/pr100865-12b.c
 new file mode 100644
-index 00000000000..dee0cfb016a
+index 00000000000..63a5629b90c
 --- /dev/null
 +++ b/gcc/testsuite/gcc.target/i386/pr100865-12b.c
 @@ -0,0 +1,8 @@
@@ -8363,7 +8393,7 @@ index 00000000000..dee0cfb016a
 +
 +/* { dg-final { scan-assembler-times "movabsq" 1 } } */
 +/* { dg-final { scan-assembler-times "vpbroadcastq\[\\t \]+%(?:r|e)\[^\n\]*, %xmm\[0-9\]+" 1 } } */
-+/* { dg-final { scan-assembler-times "vmovdqa64\[\\t \]%xmm\[0-9\]+, " 16 } } */
++/* { dg-final { scan-assembler-times "vmovdqa\[\\t \]%xmm\[0-9\]+, " 16 } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pr100865-12c.c b/gcc/testsuite/gcc.target/i386/pr100865-12c.c
 new file mode 100644
 index 00000000000..77415f22c97
@@ -8618,7 +8648,7 @@ index 00000000000..4d50bb7e2f6
 +/* { dg-final { scan-assembler-not "vmovdqa" { target { ! ia32 } } } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pr100865-8a.c b/gcc/testsuite/gcc.target/i386/pr100865-8a.c
 new file mode 100644
-index 00000000000..544a14db6f7
+index 00000000000..911b14d4a25
 --- /dev/null
 +++ b/gcc/testsuite/gcc.target/i386/pr100865-8a.c
 @@ -0,0 +1,24 @@
@@ -8644,11 +8674,11 @@ index 00000000000..544a14db6f7
 +    array[i] = MK_CONST128_BROADCAST_SIGNED (-45);
 +}
 +
-+/* { dg-final { scan-assembler-times "(?:vpbroadcastd|vpshufd)\[\\t \]+\[^\n\]*, %xmm\[0-9\]+" 1 } } */
++/* { dg-final { scan-assembler-times "(?:vpbroadcastd|vpshufd)\[\\t \]+\[^\n\]*, %xmm\[0-9\]+" 1 { xfail *-*-* } } } */
 +/* { dg-final { scan-assembler-times "vmovdqa\[\\t \]%xmm\[0-9\]+, " 16 } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pr100865-8b.c b/gcc/testsuite/gcc.target/i386/pr100865-8b.c
 new file mode 100644
-index 00000000000..4b7dd7cee3e
+index 00000000000..99a10ad83bd
 --- /dev/null
 +++ b/gcc/testsuite/gcc.target/i386/pr100865-8b.c
 @@ -0,0 +1,7 @@
@@ -8658,10 +8688,10 @@ index 00000000000..4b7dd7cee3e
 +#include "pr100865-8a.c"
 +
 +/* { dg-final { scan-assembler-times "vpbroadcastd\[\\t \]+%(?:r|e)\[^\n\]*, %xmm\[0-9\]+" 1 } } */
-+/* { dg-final { scan-assembler-times "vmovdqa64\[\\t \]%xmm\[0-9\]+, " 16 } } */
++/* { dg-final { scan-assembler-times "vmovdqa\[\\t \]%xmm\[0-9\]+, " 16 } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pr100865-8c.c b/gcc/testsuite/gcc.target/i386/pr100865-8c.c
 new file mode 100644
-index 00000000000..efee0488614
+index 00000000000..00682edb8c9
 --- /dev/null
 +++ b/gcc/testsuite/gcc.target/i386/pr100865-8c.c
 @@ -0,0 +1,7 @@
@@ -8670,7 +8700,7 @@ index 00000000000..efee0488614
 +
 +#include "pr100865-8a.c"
 +
-+/* { dg-final { scan-assembler-times "vpshufd\[\\t \]+\[^\n\]*, %xmm\[0-9\]+" 1 } } */
++/* { dg-final { scan-assembler-times "vpshufd\[\\t \]+\[^\n\]*, %xmm\[0-9\]+" 1 { xfail *-*-* } } } */
 +/* { dg-final { scan-assembler-times "vmovdqa\[\\t \]%xmm\[0-9\]+, " 16 } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pr100865-9a.c b/gcc/testsuite/gcc.target/i386/pr100865-9a.c
 new file mode 100644
@@ -8705,7 +8735,7 @@ index 00000000000..45d0e0d0e2e
 +/* { dg-final { scan-assembler-times "vmovdqa\[\\t \]%xmm\[0-9\]+, " 16 } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pr100865-9b.c b/gcc/testsuite/gcc.target/i386/pr100865-9b.c
 new file mode 100644
-index 00000000000..a315dde7c52
+index 00000000000..14696248525
 --- /dev/null
 +++ b/gcc/testsuite/gcc.target/i386/pr100865-9b.c
 @@ -0,0 +1,7 @@
@@ -8715,10 +8745,10 @@ index 00000000000..a315dde7c52
 +#include "pr100865-9a.c"
 +
 +/* { dg-final { scan-assembler-times "vpbroadcastw\[\\t \]+%(?:r|e)\[^\n\]*, %xmm\[0-9\]+" 1 } } */
-+/* { dg-final { scan-assembler-times "vmovdqa64\[\\t \]%xmm\[0-9\]+, " 16 } } */
++/* { dg-final { scan-assembler-times "vmovdqa\[\\t \]%xmm\[0-9\]+, " 16 } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pr100865-9c.c b/gcc/testsuite/gcc.target/i386/pr100865-9c.c
 new file mode 100644
-index 00000000000..e6f25902c1d
+index 00000000000..8ffcdc1629d
 --- /dev/null
 +++ b/gcc/testsuite/gcc.target/i386/pr100865-9c.c
 @@ -0,0 +1,7 @@
@@ -8727,7 +8757,7 @@ index 00000000000..e6f25902c1d
 +
 +#include "pr100865-9a.c"
 +
-+/* { dg-final { scan-assembler-times "vpshufd\[\\t \]+\[^\n\]*, %xmm\[0-9\]+" 1 } } */
++/* { dg-final { scan-assembler-times "vpshufd\[\\t \]+\[^\n\]*, %xmm\[0-9\]+" 1 { xfail *-*-* } } } */
 +/* { dg-final { scan-assembler-times "vmovdqa\[\\t \]%xmm\[0-9\]+, " 16 } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pr100951.c b/gcc/testsuite/gcc.target/i386/pr100951.c
 new file mode 100644
@@ -10648,6 +10678,257 @@ index 00000000000..325af044bb8
 +    do_test ();
 +  return 0;
 +}
+diff --git a/gcc/testsuite/gcc.target/i386/pr104704-1.c b/gcc/testsuite/gcc.target/i386/pr104704-1.c
+new file mode 100644
+index 00000000000..28c499f4c44
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr104704-1.c
+@@ -0,0 +1,33 @@
++/* { dg-do run { target { ! ia32 } } } */
++/* { dg-options "-O2 -march=x86-64 -mavx512f" } */
++
++#include <immintrin.h>
++
++__m512d y, z;
++
++int i;
++
++__attribute__((noipa))
++int
++do_test (void)
++{
++  register int xmm31 __asm ("xmm31") = i;
++  asm volatile ("" : "+v" (xmm31));
++  z = y;
++  register int xmm2 __asm ("xmm2") = xmm31;
++  asm volatile ("" : "+v" (xmm2));
++  return xmm2;
++}
++
++__attribute__((target("arch=x86-64")))
++int
++main (void)
++{
++ if (__builtin_cpu_supports ("avx512f"))
++   {
++     i = 4;
++     if (do_test () != 4)
++       __builtin_abort ();
++   }
++  return 0;
++}
+diff --git a/gcc/testsuite/gcc.target/i386/pr104704-2.c b/gcc/testsuite/gcc.target/i386/pr104704-2.c
+new file mode 100644
+index 00000000000..79b04b2543a
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr104704-2.c
+@@ -0,0 +1,33 @@
++/* { dg-do run { target { ! ia32 } } } */
++/* { dg-options "-O2 -march=x86-64 -mavx2" } */
++
++#include <immintrin.h>
++
++__m256d y, z;
++
++int i;
++
++__attribute__((noipa))
++int
++do_test (void)
++{
++  register int xmm15 __asm ("xmm15") = i;
++  asm volatile ("" : "+v" (xmm15));
++  z = y;
++  register int xmm2 __asm ("xmm2") = xmm15;
++  asm volatile ("" : "+v" (xmm2));
++  return xmm2;
++}
++
++__attribute__((target("arch=x86-64")))
++int
++main (void)
++{
++ if (__builtin_cpu_supports ("avx2"))
++   {
++     i = 4;
++     if (do_test () != 4)
++       __builtin_abort ();
++   }
++  return 0;
++}
+diff --git a/gcc/testsuite/gcc.target/i386/pr104704-3.c b/gcc/testsuite/gcc.target/i386/pr104704-3.c
+new file mode 100644
+index 00000000000..d0648d82fbd
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr104704-3.c
+@@ -0,0 +1,33 @@
++/* { dg-do run { target ia32 } } */
++/* { dg-options "-O2 -march=i686 -msse2" } */
++
++#include <immintrin.h>
++
++__m128d y, z;
++
++int i;
++
++__attribute__((noipa))
++int
++do_test (void)
++{
++  register int xmm7 __asm ("xmm7") = i;
++  asm volatile ("" : "+v" (xmm7));
++  z = y;
++  register int xmm2 __asm ("xmm2") = xmm7;
++  asm volatile ("" : "+v" (xmm2));
++  return xmm2;
++}
++
++__attribute__((target("arch=i486")))
++int
++main (void)
++{
++ if (__builtin_cpu_supports ("sse2"))
++   {
++     i = 4;
++     if (do_test () != 4)
++       __builtin_abort ();
++   }
++  return 0;
++}
+diff --git a/gcc/testsuite/gcc.target/i386/pr104704-4.c b/gcc/testsuite/gcc.target/i386/pr104704-4.c
+new file mode 100644
+index 00000000000..c97666293b7
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr104704-4.c
+@@ -0,0 +1,33 @@
++/* { dg-do run { target { ! ia32 } } } */
++/* { dg-options "-O2 -march=x86-64 -mavx512f" } */
++
++#include <immintrin.h>
++
++char z[128];
++
++int i;
++
++__attribute__((noipa))
++int
++do_test (void)
++{
++  register int xmm31 __asm ("xmm31") = i;
++  asm volatile ("" : "+v" (xmm31));
++  __builtin_memset (&z, 0, sizeof (z));
++  register int xmm2 __asm ("xmm2") = xmm31;
++  asm volatile ("" : "+v" (xmm2));
++  return xmm2;
++}
++
++__attribute__((target("arch=x86-64")))
++int
++main (void)
++{
++ if (__builtin_cpu_supports ("avx512f"))
++   {
++     i = 4;
++     if (do_test () != 4)
++       __builtin_abort ();
++   }
++  return 0;
++}
+diff --git a/gcc/testsuite/gcc.target/i386/pr104704-5.c b/gcc/testsuite/gcc.target/i386/pr104704-5.c
+new file mode 100644
+index 00000000000..de9466e697d
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr104704-5.c
+@@ -0,0 +1,33 @@
++/* { dg-do run { target { ! ia32 } } } */
++/* { dg-options "-O2 -march=x86-64 -mtune=skylake -mavx2" } */
++
++#include <immintrin.h>
++
++char z[64];
++
++int i;
++
++__attribute__((noipa))
++int
++do_test (void)
++{
++  register int xmm15 __asm ("xmm15") = i;
++  asm volatile ("" : "+v" (xmm15));
++  __builtin_memset (&z, 0, sizeof (z));
++  register int xmm2 __asm ("xmm2") = xmm15;
++  asm volatile ("" : "+v" (xmm2));
++  return xmm2;
++}
++
++__attribute__((target("arch=x86-64")))
++int
++main (void)
++{
++ if (__builtin_cpu_supports ("avx2"))
++   {
++     i = 4;
++     if (do_test () != 4)
++       __builtin_abort ();
++   }
++  return 0;
++}
+diff --git a/gcc/testsuite/gcc.target/i386/pr104704-6.c b/gcc/testsuite/gcc.target/i386/pr104704-6.c
+new file mode 100644
+index 00000000000..e6a4cb840ee
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr104704-6.c
+@@ -0,0 +1,33 @@
++/* { dg-do run { target ia32 } } */
++/* { dg-options "-O2 -march=i686 -mtune=skylake -msse2" } */
++
++#include <immintrin.h>
++
++char z[16];
++
++int i;
++
++__attribute__((noipa))
++int
++do_test (void)
++{
++  register int xmm7 __asm ("xmm7") = i;
++  asm volatile ("" : "+v" (xmm7));
++  __builtin_memset (&z, 0, sizeof (z));
++  register int xmm2 __asm ("xmm2") = xmm7;
++  asm volatile ("" : "+v" (xmm2));
++  return xmm2;
++}
++
++__attribute__((target("arch=i486")))
++int
++main (void)
++{
++ if (__builtin_cpu_supports ("sse2"))
++   {
++     i = 4;
++     if (do_test () != 4)
++       __builtin_abort ();
++   }
++  return 0;
++}
+diff --git a/gcc/testsuite/gcc.target/i386/pr104890.c b/gcc/testsuite/gcc.target/i386/pr104890.c
+new file mode 100644
+index 00000000000..cb430eef688
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr104890.c
+@@ -0,0 +1,11 @@
++/* { dg-do compile { target ia32 } } */
++/* { dg-options "-O2 -mshstk -march=i686" } */
++
++#include <x86gprintrin.h>
++
++__attribute__((target ("general-regs-only")))
++int
++foo ()
++{
++  return _get_ssp ();
++}
 diff --git a/gcc/testsuite/gcc.target/i386/pr35513-10a.c b/gcc/testsuite/gcc.target/i386/pr35513-10a.c
 new file mode 100644
 index 00000000000..d7b5c98fa8c
@@ -11254,61 +11535,6 @@ index ea724f70377..6888d9d0a55 100644
  
  extern char *strcpy (char *, const char *);
  
-diff --git a/gcc/testsuite/gcc.target/i386/pr82941-1.c b/gcc/testsuite/gcc.target/i386/pr82941-1.c
-index d7e530d5116..c3be2f5b797 100644
---- a/gcc/testsuite/gcc.target/i386/pr82941-1.c
-+++ b/gcc/testsuite/gcc.target/i386/pr82941-1.c
-@@ -11,4 +11,5 @@ pr82941 ()
-   z = y;
- }
- 
--/* { dg-final { scan-assembler-times "vzeroupper" 1 } } */
-+/* { dg-final { scan-assembler-times "vzeroupper" 1 { target ia32 } } } */
-+/* { dg-final { scan-assembler-not "vzeroupper" { target { ! ia32 } } } } */
-diff --git a/gcc/testsuite/gcc.target/i386/pr82942-1.c b/gcc/testsuite/gcc.target/i386/pr82942-1.c
-index 9cdf81a9d60..29ead049a67 100644
---- a/gcc/testsuite/gcc.target/i386/pr82942-1.c
-+++ b/gcc/testsuite/gcc.target/i386/pr82942-1.c
-@@ -3,4 +3,5 @@
- 
- #include "pr82941-1.c"
- 
--/* { dg-final { scan-assembler-times "vzeroupper" 1 } } */
-+/* { dg-final { scan-assembler-times "vzeroupper" 1 { target ia32 } } } */
-+/* { dg-final { scan-assembler-not "vzeroupper" { target { ! ia32 } } } } */
-diff --git a/gcc/testsuite/gcc.target/i386/pr82990-1.c b/gcc/testsuite/gcc.target/i386/pr82990-1.c
-index ff1d6d40eb2..bbf580fea77 100644
---- a/gcc/testsuite/gcc.target/i386/pr82990-1.c
-+++ b/gcc/testsuite/gcc.target/i386/pr82990-1.c
-@@ -11,4 +11,5 @@ pr82941 ()
-   z = y;
- }
- 
--/* { dg-final { scan-assembler-times "vzeroupper" 1 } } */
-+/* { dg-final { scan-assembler-times "vzeroupper" 1 { target ia32 } } } */
-+/* { dg-final { scan-assembler-not "vzeroupper" { target { ! ia32 } } } } */
-diff --git a/gcc/testsuite/gcc.target/i386/pr82990-3.c b/gcc/testsuite/gcc.target/i386/pr82990-3.c
-index 201fa98d8d4..89ddb20adb3 100644
---- a/gcc/testsuite/gcc.target/i386/pr82990-3.c
-+++ b/gcc/testsuite/gcc.target/i386/pr82990-3.c
-@@ -3,4 +3,5 @@
- 
- #include "pr82941-1.c"
- 
--/* { dg-final { scan-assembler-times "vzeroupper" 1 } } */
-+/* { dg-final { scan-assembler-times "vzeroupper" 1 { target ia32 } } } */
-+/* { dg-final { scan-assembler-not "vzeroupper" { target { ! ia32 } } } } */
-diff --git a/gcc/testsuite/gcc.target/i386/pr82990-5.c b/gcc/testsuite/gcc.target/i386/pr82990-5.c
-index 9932bdc5375..b9da0e706b1 100644
---- a/gcc/testsuite/gcc.target/i386/pr82990-5.c
-+++ b/gcc/testsuite/gcc.target/i386/pr82990-5.c
-@@ -11,4 +11,5 @@ pr82941 ()
-   z = y;
- }
- 
--/* { dg-final { scan-assembler-times "vzeroupper" 1 } } */
-+/* { dg-final { scan-assembler-times "vzeroupper" 1 { target ia32 } } } */
-+/* { dg-final { scan-assembler-not "vzeroupper" { target { ! ia32 } } } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pr83782-1.c b/gcc/testsuite/gcc.target/i386/pr83782-1.c
 new file mode 100644
 index 00000000000..ce97b12e65d
@@ -11496,7 +11722,7 @@ index 00000000000..4d5ae8d1086
 +/* { dg-final { scan-assembler-not "mov\[bwlq\]" } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pr90773-14.c b/gcc/testsuite/gcc.target/i386/pr90773-14.c
 new file mode 100644
-index 00000000000..96ee5cb08c1
+index 00000000000..60763bb7c37
 --- /dev/null
 +++ b/gcc/testsuite/gcc.target/i386/pr90773-14.c
 @@ -0,0 +1,13 @@
@@ -11512,7 +11738,7 @@ index 00000000000..96ee5cb08c1
 +}
 +
 +/* { dg-final { scan-assembler-times "movups\[\\t \]+%xmm\[0-9\]+, \\(%\[\^,\]+\\)" 1 } } */
-+/* { dg-final { scan-assembler-times "movd\[\\t \]+%xmm\[0-9\]+, 16\\(%\[\^,\]+\\)" 1 } } */
++/* { dg-final { scan-assembler-times "movd\[\\t \]+%xmm\[0-9\]+, 16\\(%\[\^,\]+\\)" 1 { xfail *-*-* } } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pr90773-15.c b/gcc/testsuite/gcc.target/i386/pr90773-15.c
 new file mode 100644
 index 00000000000..403cdb248a2
@@ -11555,7 +11781,7 @@ index 00000000000..bb0aadbc77e
 +/* { dg-final { scan-assembler-times "movb\[\\t \]+\\\$-1, 16\\(%\[\^,\]+\\)" 1 } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pr90773-17.c b/gcc/testsuite/gcc.target/i386/pr90773-17.c
 new file mode 100644
-index 00000000000..73d5d5abaee
+index 00000000000..570748366f8
 --- /dev/null
 +++ b/gcc/testsuite/gcc.target/i386/pr90773-17.c
 @@ -0,0 +1,14 @@
@@ -11572,7 +11798,7 @@ index 00000000000..73d5d5abaee
 +
 +/* { dg-final { scan-assembler-times "vpbroadcastb" 1 } } */
 +/* { dg-final { scan-assembler-times "vmovdqu8\[\\t \]+%xmm\[0-9\]+, \\(%\[\^,\]+\\)" 1 } } */
-+/* { dg-final { scan-assembler-times "vmovd\[\\t \]+%xmm\[0-9\]+, 15\\(%\[\^,\]+\\)" 1 } } */
++/* { dg-final { scan-assembler-times "vmovd\[\\t \]+%xmm\[0-9\]+, 16\\(%\[\^,\]+\\)" 1 { xfail *-*-* } } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pr90773-18.c b/gcc/testsuite/gcc.target/i386/pr90773-18.c
 new file mode 100644
 index 00000000000..b0687abbe01
@@ -11853,7 +12079,7 @@ index 00000000000..ee4c04678d1
 +/* { dg-final { scan-assembler-times "movups\[\\t \]+%xmm\[0-9\]+, 15\\(%\[\^,\]+\\)" 1 } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pr90773-5.c b/gcc/testsuite/gcc.target/i386/pr90773-5.c
 new file mode 100644
-index 00000000000..27185a236a7
+index 00000000000..9ef96279960
 --- /dev/null
 +++ b/gcc/testsuite/gcc.target/i386/pr90773-5.c
 @@ -0,0 +1,13 @@
@@ -11869,7 +12095,7 @@ index 00000000000..27185a236a7
 +}
 +
 +/* { dg-final { scan-assembler-times "movups\[\\t \]+%xmm\[0-9\]+, \\(%\[\^,\]+\\)" 1 } } */
-+/* { dg-final { scan-assembler-times "movq\[\\t \]+%xmm\[0-9\]+, 13\\(%\[\^,\]+\\)" 1 } } */
++/* { dg-final { scan-assembler-times "movq\[\\t \]+%xmm\[0-9\]+, 13\\(%\[\^,\]+\\)" 1 { xfail *-*-* } } } */
 diff --git a/gcc/testsuite/gcc.target/i386/pr90773-6.c b/gcc/testsuite/gcc.target/i386/pr90773-6.c
 new file mode 100644
 index 00000000000..46498f6f50c
