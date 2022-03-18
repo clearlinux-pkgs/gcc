@@ -2188,7 +2188,7 @@ index 48300af9a09..5d3a5a5a43d 100644
  #undef TARGET_RUN_TARGET_SELFTESTS
  #define TARGET_RUN_TARGET_SELFTESTS selftest::ix86_run_selftests
 diff --git a/gcc/config/i386/i386.h b/gcc/config/i386/i386.h
-index 6fc1bf350d5..8956ade84f7 100644
+index 431f0bcb4f2..b323f1073b2 100644
 --- a/gcc/config/i386/i386.h
 +++ b/gcc/config/i386/i386.h
 @@ -554,6 +554,10 @@ extern unsigned char ix86_tune_features[X86_TUNE_LAST];
@@ -3897,7 +3897,7 @@ index 689ec7de4d3..d7e3bd60bd7 100644
  
  @node Xstormy16 Function Attributes
 diff --git a/gcc/doc/invoke.texi b/gcc/doc/invoke.texi
-index cf536a15116..17e5e593aec 100644
+index e7d936861bb..ae93c7b5f70 100644
 --- a/gcc/doc/invoke.texi
 +++ b/gcc/doc/invoke.texi
 @@ -1375,6 +1375,7 @@ See RS/6000 and PowerPC Options.
@@ -3921,7 +3921,7 @@ index cf536a15116..17e5e593aec 100644
  
  @emph{x86 Windows Options}
  @gccoptlist{-mconsole  -mcygwin  -mno-cygwin  -mdll @gol
-@@ -31158,6 +31159,18 @@ This option instructs GCC to use 128-bit AVX instructions instead of
+@@ -31160,6 +31161,18 @@ This option instructs GCC to use 128-bit AVX instructions instead of
  This option instructs GCC to use @var{opt}-bit vector width in instructions
  instead of default on the selected platform.
  
@@ -3940,7 +3940,7 @@ index cf536a15116..17e5e593aec 100644
  @table @samp
  @item none
  No extra limitations applied to GCC other than defined by the selected platform.
-@@ -31680,6 +31693,13 @@ Generate code that uses only the general-purpose registers.  This
+@@ -31682,6 +31695,13 @@ Generate code that uses only the general-purpose registers.  This
  prevents the compiler from using floating-point, vector, mask and bound
  registers.
  
@@ -3954,7 +3954,7 @@ index cf536a15116..17e5e593aec 100644
  @item -mindirect-branch=@var{choice}
  @opindex mindirect-branch
  Convert indirect call and jump with @var{choice}.  The default is
-@@ -31829,6 +31849,19 @@ x32 environments.
+@@ -31831,6 +31851,19 @@ x32 environments.
  @opindex mneeded
  Emit GNU_PROPERTY_X86_ISA_1_NEEDED GNU property for Linux target to
  indicate the micro-architecture ISA level required to execute the binary.
