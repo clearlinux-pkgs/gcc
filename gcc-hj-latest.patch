@@ -482,7 +482,7 @@ index 7d908c6a62b..32ba27e755f 100644
      }
  
 diff --git a/gcc/common/config/i386/i386-common.c b/gcc/common/config/i386/i386-common.c
-index 96549aa7d7e..153538a6e46 100644
+index c2d57de6411..096de98ea79 100644
 --- a/gcc/common/config/i386/i386-common.c
 +++ b/gcc/common/config/i386/i386-common.c
 @@ -1917,7 +1917,7 @@ const pta processor_alias_table[] =
@@ -3787,19 +3787,6 @@ index eb057a67750..7e9a61d64ba 100644
  /*****************************************************************************/
  /* Historical relics: tuning flags that helps a specific old CPU designs     */
  /*****************************************************************************/
-diff --git a/gcc/config/i386/x86gprintrin.h b/gcc/config/i386/x86gprintrin.h
-index b7fefa780a6..7319e373ae9 100644
---- a/gcc/config/i386/x86gprintrin.h
-+++ b/gcc/config/i386/x86gprintrin.h
-@@ -24,7 +24,7 @@
- #ifndef _X86GPRINTRIN_H_INCLUDED
- #define _X86GPRINTRIN_H_INCLUDED
- 
--#if defined __MMX__ || defined __SSE__
-+#if !defined _SOFT_FLOAT || defined __MMX__ || defined __SSE__
- #pragma GCC push_options
- #pragma GCC target("general-regs-only")
- #define __DISABLE_GENERAL_REGS_ONLY__
 diff --git a/gcc/config/m32c/m32c.c b/gcc/config/m32c/m32c.c
 index b1cb3591da6..d22bdd79c71 100644
 --- a/gcc/config/m32c/m32c.c
@@ -10911,23 +10898,6 @@ index 00000000000..e6a4cb840ee
 +       __builtin_abort ();
 +   }
 +  return 0;
-+}
-diff --git a/gcc/testsuite/gcc.target/i386/pr104890.c b/gcc/testsuite/gcc.target/i386/pr104890.c
-new file mode 100644
-index 00000000000..cb430eef688
---- /dev/null
-+++ b/gcc/testsuite/gcc.target/i386/pr104890.c
-@@ -0,0 +1,11 @@
-+/* { dg-do compile { target ia32 } } */
-+/* { dg-options "-O2 -mshstk -march=i686" } */
-+
-+#include <x86gprintrin.h>
-+
-+__attribute__((target ("general-regs-only")))
-+int
-+foo ()
-+{
-+  return _get_ssp ();
 +}
 diff --git a/gcc/testsuite/gcc.target/i386/pr35513-10a.c b/gcc/testsuite/gcc.target/i386/pr35513-10a.c
 new file mode 100644
