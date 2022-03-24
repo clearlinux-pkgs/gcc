@@ -4826,7 +4826,7 @@ index c6599ce4894..e80707a0697 100644
 +
  #endif
 diff --git a/gcc/match.pd b/gcc/match.pd
-index 05a08d0f96a..20c46a4c56c 100644
+index a005dcd42bd..92d99099da7 100644
 --- a/gcc/match.pd
 +++ b/gcc/match.pd
 @@ -98,6 +98,39 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
@@ -4869,7 +4869,7 @@ index 05a08d0f96a..20c46a4c56c 100644
  /* With nop_convert? combine convert? and view_convert? in one pattern
     plus conditionalize on tree_nop_conversion_p conversions.  */
  (match (nop_convert @0)
-@@ -3665,6 +3698,84 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
+@@ -3670,6 +3703,84 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
    (vec_cond @0 (op! @3 @1) (op! @3 @2))))
  #endif
  
