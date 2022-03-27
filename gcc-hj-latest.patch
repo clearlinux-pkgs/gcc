@@ -2571,7 +2571,7 @@ index b815aca0da7..98844736b92 100644
  (define_predicate "vzeroall_operation"
    (match_code "parallel")
 diff --git a/gcc/config/i386/sse.md b/gcc/config/i386/sse.md
-index 03975f92426..d87565bc055 100644
+index 32c2036b3a2..bb7ed176d1d 100644
 --- a/gcc/config/i386/sse.md
 +++ b/gcc/config/i386/sse.md
 @@ -95,7 +95,6 @@
