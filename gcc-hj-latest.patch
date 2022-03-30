@@ -91,7 +91,7 @@ liuhongt (12):
       Fix typo in r12-5486.
 
 diff --git a/gcc/builtins.c b/gcc/builtins.c
-index fb90c5d4a7c..92a5af5101c 100644
+index f36ac1ef4a5..41aeb373581 100644
 --- a/gcc/builtins.c
 +++ b/gcc/builtins.c
 @@ -128,7 +128,6 @@ static rtx expand_builtin_va_copy (tree);
@@ -131,7 +131,7 @@ index fb90c5d4a7c..92a5af5101c 100644
  }
  
  /* LEN specify length of the block of memcpy/memset operation.
-@@ -6412,15 +6413,17 @@ expand_builtin_stpncpy (tree exp, rtx)
+@@ -6415,15 +6416,17 @@ expand_builtin_stpncpy (tree exp, rtx)
     constant.  */
  
  rtx
@@ -152,7 +152,7 @@ index fb90c5d4a7c..92a5af5101c 100644
  }
  
  /* Helper to check the sizes of sequences and the destination of calls
-@@ -6621,30 +6624,134 @@ expand_builtin_strncpy (tree exp, rtx target)
+@@ -6624,30 +6627,134 @@ expand_builtin_strncpy (tree exp, rtx target)
    return NULL_RTX;
  }
  
@@ -296,7 +296,7 @@ index fb90c5d4a7c..92a5af5101c 100644
  {
    rtx target, coeff;
    size_t size;
-@@ -6654,9 +6761,33 @@ builtin_memset_gen_str (void *data, HOST_WIDE_INT offset ATTRIBUTE_UNUSED,
+@@ -6657,9 +6764,33 @@ builtin_memset_gen_str (void *data, HOST_WIDE_INT offset ATTRIBUTE_UNUSED,
    if (size == 1)
      return (rtx) data;
  
@@ -331,7 +331,7 @@ index fb90c5d4a7c..92a5af5101c 100644
  
    target = convert_to_mode (mode, (rtx) data, 1);
    target = expand_mult (mode, target, coeff, NULL_RTX, 1);
-@@ -8990,6 +9121,93 @@ expand_ifn_atomic_bit_test_and (gcall *call)
+@@ -8993,6 +9124,93 @@ expand_ifn_atomic_bit_test_and (gcall *call)
      emit_move_insn (target, result);
  }
  
@@ -568,7 +568,7 @@ index 4ba04403002..d8d53555f4d 100644
 +    emit_gnu_property (0xb0008000, (1U << 0));
  }
 diff --git a/gcc/config/i386/i386-expand.c b/gcc/config/i386/i386-expand.c
-index 1772fb16c9a..03f0d849f4e 100644
+index 23eed966529..4b6147215c8 100644
 --- a/gcc/config/i386/i386-expand.c
 +++ b/gcc/config/i386/i386-expand.c
 @@ -190,6 +190,82 @@ ix86_expand_clear (rtx dest)
@@ -1073,7 +1073,7 @@ index 1772fb16c9a..03f0d849f4e 100644
  				       false, add_abi_p);
        if (!opts)
  	error ("%qE needs unknown isa option", fndecl);
-@@ -13601,7 +13674,7 @@ static bool expand_vec_perm_1 (struct expand_vec_perm_d *d);
+@@ -13604,7 +13677,7 @@ static bool expand_vec_perm_1 (struct expand_vec_perm_d *d);
  /* A subroutine of ix86_expand_vector_init.  Store into TARGET a vector
     with all elements equal to VAR.  Return true if successful.  */
  
@@ -1082,7 +1082,7 @@ index 1772fb16c9a..03f0d849f4e 100644
  ix86_expand_vector_init_duplicate (bool mmx_ok, machine_mode mode,
  				   rtx target, rtx val)
  {
-@@ -21085,4 +21158,85 @@ ix86_expand_divmod_libfunc (rtx libfunc, machine_mode mode,
+@@ -21088,4 +21161,85 @@ ix86_expand_divmod_libfunc (rtx libfunc, machine_mode mode,
    *rem_p = rem;
  }
  
@@ -2188,7 +2188,7 @@ index 48300af9a09..5d3a5a5a43d 100644
  #undef TARGET_RUN_TARGET_SELFTESTS
  #define TARGET_RUN_TARGET_SELFTESTS selftest::ix86_run_selftests
 diff --git a/gcc/config/i386/i386.h b/gcc/config/i386/i386.h
-index 431f0bcb4f2..b323f1073b2 100644
+index ac0e5da623c..270487337aa 100644
 --- a/gcc/config/i386/i386.h
 +++ b/gcc/config/i386/i386.h
 @@ -554,6 +554,10 @@ extern unsigned char ix86_tune_features[X86_TUNE_LAST];
@@ -2290,7 +2290,7 @@ index 431f0bcb4f2..b323f1073b2 100644
  
  /* If a memory-to-memory move would take MOVE_RATIO or more simple
     move-instruction pairs, we will do a cpymem or libcall instead.
-@@ -3089,6 +3111,12 @@ extern enum attr_cpu ix86_schedule;
+@@ -3090,6 +3112,12 @@ extern enum attr_cpu ix86_schedule;
  #define NUM_X86_64_MS_CLOBBERED_REGS 12
  #endif
  
@@ -2304,7 +2304,7 @@ index 431f0bcb4f2..b323f1073b2 100644
  Local variables:
  version-control: t
 diff --git a/gcc/config/i386/i386.md b/gcc/config/i386/i386.md
-index efe0b4ac3a8..f14b5a6e7e4 100644
+index 238ce09672e..61d037da921 100644
 --- a/gcc/config/i386/i386.md
 +++ b/gcc/config/i386/i386.md
 @@ -122,6 +122,9 @@
@@ -2337,7 +2337,7 @@ index efe0b4ac3a8..f14b5a6e7e4 100644
     && optimize_function_for_speed_p (cfun)
     && (!REG_P (operands[1])
         || (!TARGET_AVX && REGNO (operands[0]) != REGNO (operands[1])))
-@@ -5053,7 +5058,8 @@
+@@ -5052,7 +5057,8 @@
    [(set (match_operand:MODEF 0 "sse_reg_operand")
  	(float:MODEF (match_operand:SWI48 1 "nonimmediate_operand")))]
    "!TARGET_AVX
@@ -2347,7 +2347,7 @@ index efe0b4ac3a8..f14b5a6e7e4 100644
     && optimize_function_for_speed_p (cfun)
     && (!EXT_REX_SSE_REG_P (operands[0])
         || TARGET_AVX512VL)"
-@@ -10476,50 +10482,6 @@
+@@ -10475,50 +10481,6 @@
     || (TARGET_SSE && (<MODE>mode == TFmode))"
    "ix86_expand_copysign (operands); DONE;")
  
@@ -2398,7 +2398,7 @@ index efe0b4ac3a8..f14b5a6e7e4 100644
  (define_expand "xorsign<mode>3"
    [(match_operand:MODEF 0 "register_operand")
     (match_operand:MODEF 1 "register_operand")
-@@ -10532,19 +10494,6 @@
+@@ -10531,19 +10493,6 @@
      ix86_expand_xorsign (operands);
    DONE;
  })
@@ -2418,7 +2418,7 @@ index efe0b4ac3a8..f14b5a6e7e4 100644
  
  ;; One complement instructions
  
-@@ -17313,6 +17262,17 @@
+@@ -17312,6 +17261,17 @@
    DONE;
  })
  
@@ -2436,7 +2436,7 @@ index efe0b4ac3a8..f14b5a6e7e4 100644
  (define_expand "ldexpxf3"
    [(match_operand:XF 0 "register_operand")
     (match_operand:XF 1 "register_operand")
-@@ -17333,17 +17293,30 @@
+@@ -17332,17 +17292,30 @@
    [(use (match_operand:MODEF 0 "register_operand"))
     (use (match_operand:MODEF 1 "general_operand"))
     (use (match_operand:SI 2 "register_operand"))]
@@ -2571,7 +2571,7 @@ index b815aca0da7..98844736b92 100644
  (define_predicate "vzeroall_operation"
    (match_code "parallel")
 diff --git a/gcc/config/i386/sse.md b/gcc/config/i386/sse.md
-index 56eb8849f36..d01b2d377dc 100644
+index fcfcba0134d..b921ea54845 100644
 --- a/gcc/config/i386/sse.md
 +++ b/gcc/config/i386/sse.md
 @@ -95,7 +95,6 @@
@@ -3884,7 +3884,7 @@ index 689ec7de4d3..d7e3bd60bd7 100644
  
  @node Xstormy16 Function Attributes
 diff --git a/gcc/doc/invoke.texi b/gcc/doc/invoke.texi
-index e7d936861bb..ae93c7b5f70 100644
+index f3168f2ebab..ed985c20997 100644
 --- a/gcc/doc/invoke.texi
 +++ b/gcc/doc/invoke.texi
 @@ -1375,6 +1375,7 @@ See RS/6000 and PowerPC Options.
@@ -4826,7 +4826,7 @@ index c6599ce4894..e80707a0697 100644
 +
  #endif
 diff --git a/gcc/match.pd b/gcc/match.pd
-index a005dcd42bd..92d99099da7 100644
+index e89601c0c14..e5e5deafef5 100644
 --- a/gcc/match.pd
 +++ b/gcc/match.pd
 @@ -98,6 +98,39 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
@@ -4869,7 +4869,7 @@ index a005dcd42bd..92d99099da7 100644
  /* With nop_convert? combine convert? and view_convert? in one pattern
     plus conditionalize on tree_nop_conversion_p conversions.  */
  (match (nop_convert @0)
-@@ -3670,6 +3703,84 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
+@@ -3672,6 +3705,84 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
    (vec_cond @0 (op! @3 @1) (op! @3 @2))))
  #endif
  
