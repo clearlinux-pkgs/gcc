@@ -568,7 +568,7 @@ index 4ba04403002..d8d53555f4d 100644
 +    emit_gnu_property (0xb0008000, (1U << 0));
  }
 diff --git a/gcc/config/i386/i386-expand.c b/gcc/config/i386/i386-expand.c
-index 23eed966529..4b6147215c8 100644
+index 7721534751b..a439e42a12d 100644
 --- a/gcc/config/i386/i386-expand.c
 +++ b/gcc/config/i386/i386-expand.c
 @@ -190,6 +190,82 @@ ix86_expand_clear (rtx dest)
