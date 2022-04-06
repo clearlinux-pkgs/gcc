@@ -3,8 +3,8 @@
 %define libstdcxx_maj 6
 %define libstdcxx_full 6.0.26
 %define isl_version 0.24
-%define gccver 11
-%define gccpath gcc-11.2.0
+%define gccver 12
+%define gccpath gcc-12-20220403
 # Highest optimisation ABI we target
 %define mtune skylake-avx512
 
@@ -13,10 +13,10 @@
 %define march westmere
 
 Name     : gcc
-Version  : 11.2.0
-Release  : 1525
+Version  : 12.0.0
+Release  : 1526
 URL      : http://www.gnu.org/software/gcc/
-Source0  : https://gcc.gnu.org/pub/gcc/releases/gcc-11.2.0/gcc-11.2.0.tar.xz
+Source0  : https://gcc.gnu.org/pub/gcc/snapshots/LATEST-12/gcc-12-20220403.tar.xz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.24.tar.bz2
 Source2  : DATESTAMP
 Source3  : REVISION
@@ -30,7 +30,6 @@ Patch1   : 0001-Fix-stack-protection-issues.patch
 Patch2   : openmp-vectorize-v2.patch
 Patch3   : fortran-vector-v2.patch
 Patch5   : optimize.patch
-Patch6   : ipa-cp.patch
 Patch9   : gomp-relax.patch
 Patch11  : memcpy-avx2.patch
 Patch12	 : avx512-when-we-ask-for-it.patch
@@ -220,25 +219,24 @@ GNU cc and gcc C compilers.
 
 %prep
 %setup -q -n %{gccpath}
-%patch0 -p1
+#%patch0 -p1
 
-%patch1 -p1
-%patch2 -p1
-%patch3 -p1
+#%patch1 -p1
+#%patch2 -p1
+#%patch3 -p1
 %patch5 -p1
-%patch6 -p1
 %patch9 -p1
 
-#%patch12 -p1
+%patch12 -p1
 
 %patch14 -p1
 
 %patch15 -p1
 %patch16 -p1
 %patch19 -p1
-%patch20 -p1
+#%patch20 -p1
 
-%patch30 -p1
+#%patch30 -p1
 
 
 
@@ -567,8 +565,8 @@ popd
 %find_lang libstdc++ cxx.lang
 cat *.lang > gcc.lang
 
-/usr/bin/elf-move.py avx2 %{buildroot}-v3 %{buildroot}/usr/share/clear/optimized-elf/ %{buildroot}/usr/share/clear/filemap/filemap-%{name} --skip --path /usr/lib64/gcc/x86_64-generic-linux/11/plugin/include/configargs.h
-/usr/bin/elf-move.py avx512 %{buildroot}-v4 %{buildroot}/usr/share/clear/optimized-elf/ %{buildroot}/usr/share/clear/filemap/filemap-%{name} --skip --path /usr/lib64/gcc/x86_64-generic-linux/11/plugin/include/configargs.h
+/usr/bin/elf-move.py avx2 %{buildroot}-v3 %{buildroot}/usr/share/clear/optimized-elf/ %{buildroot}/usr/share/clear/filemap/filemap-%{name} --skip --path /usr/lib64/gcc/x86_64-generic-linux/12/plugin/include/configargs.h
+/usr/bin/elf-move.py avx512 %{buildroot}-v4 %{buildroot}/usr/share/clear/optimized-elf/ %{buildroot}/usr/share/clear/filemap/filemap-%{name} --skip --path /usr/lib64/gcc/x86_64-generic-linux/12/plugin/include/configargs.h
 
 /usr/bin/elf-move.py avx2 %{buildroot}-v3 %{buildroot}/usr/share/clear/optimized-elf/ %{buildroot}/usr/share/clear/filemap/filemap-%{name}
 /usr/bin/elf-move.py avx512 %{buildroot}-v4 %{buildroot}/usr/share/clear/optimized-elf/ %{buildroot}/usr/share/clear/filemap/filemap-%{name}
@@ -595,7 +593,7 @@ cat *.lang > gcc.lang
 #/usr/lib64/libvtv*
 /usr/lib64/libcc1*
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/include-fixed/
-%exclude  /usr/lib64/gcc/x86_64-generic-linux/11/include-fixed/bits/statx.h
+%exclude  /usr/lib64/gcc/x86_64-generic-linux/12/include-fixed/bits/statx.h
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/install-tools/
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/libcaf_*
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/include/

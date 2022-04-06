@@ -1,12 +1,27 @@
---- gcc-8.2.0/gcc/config/i386/driver-i386.c~	2018-04-20 13:30:13.000000000 +0000
-+++ gcc-8.2.0/gcc/config/i386/driver-i386.c	2019-01-17 20:53:33.310525767 +0000
-@@ -432,6 +432,9 @@
-   if (argc < 1)
+From 5e866eb8873191cb1e7fc44233ef278db82ad6cc Mon Sep 17 00:00:00 2001
+From: William Douglas <william.douglas@intel.com>
+Date: Tue, 5 Apr 2022 10:05:26 -0700
+Subject: [PATCH] arch native override
+
+If GCC_ARCH_NATIVE_OVERRIDE is in the environment, use it for i386.
+---
+ gcc/config/i386/driver-i386.cc | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/gcc/config/i386/driver-i386.cc b/gcc/config/i386/driver-i386.cc
+index 9e0ae0b2b..00bd280aa 100644
+--- a/gcc/config/i386/driver-i386.cc
++++ b/gcc/config/i386/driver-i386.cc
+@@ -404,6 +404,9 @@ const char *host_detect_local_cpu (int argc, const char **argv)
+   if (argc < 2)
      return NULL;
  
 +  if (getenv("GCC_ARCH_NATIVE_OVERRIDE"))
-+	 return concat ("-m", argv[0], "=", getenv("GCC_ARCH_NATIVE_OVERRIDE"), options, NULL);
++    return concat ("-m", argv[0], "=", getenv("GCC_ARCH_NATIVE_OVERRIDE"), options, NULL);
 +
    arch = !strcmp (argv[0], "arch");
  
    if (!arch && strcmp (argv[0], "tune"))
+-- 
+2.35.1
+
