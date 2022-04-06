@@ -14,7 +14,7 @@
 
 Name     : gcc
 Version  : 12.0.0
-Release  : 1526
+Release  : 1527
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://gcc.gnu.org/pub/gcc/snapshots/LATEST-12/gcc-12-20220403.tar.xz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.24.tar.bz2
@@ -509,7 +509,7 @@ ln -sf %{gcc_target}-g++ g++
 ln -sf %{gcc_target}-gcc gcc
 #ln -sf %{gcc_target}-cpp cpp
 install -d %{buildroot}/usr/lib
-ln -sf /usr/bin/cpp %{buildroot}/usr/lib/cpp
+ln -sf ../bin/cpp %{buildroot}/usr/lib/cpp
 ln -sf g++ c++
 ln -sf gcc cc
 cd -
@@ -565,8 +565,8 @@ popd
 %find_lang libstdc++ cxx.lang
 cat *.lang > gcc.lang
 
-/usr/bin/elf-move.py avx2 %{buildroot}-v3 %{buildroot}/usr/share/clear/optimized-elf/ %{buildroot}/usr/share/clear/filemap/filemap-%{name} --skip --path /usr/lib64/gcc/x86_64-generic-linux/12/plugin/include/configargs.h
-/usr/bin/elf-move.py avx512 %{buildroot}-v4 %{buildroot}/usr/share/clear/optimized-elf/ %{buildroot}/usr/share/clear/filemap/filemap-%{name} --skip --path /usr/lib64/gcc/x86_64-generic-linux/12/plugin/include/configargs.h
+/usr/bin/elf-move.py avx2 %{buildroot}-v3 %{buildroot}/usr/share/clear/optimized-elf/ %{buildroot}/usr/share/clear/filemap/filemap-%{name} --skip --path /usr/lib64/gcc/x86_64-generic-linux/%{gccver}/plugin/include/configargs.h
+/usr/bin/elf-move.py avx512 %{buildroot}-v4 %{buildroot}/usr/share/clear/optimized-elf/ %{buildroot}/usr/share/clear/filemap/filemap-%{name} --skip --path /usr/lib64/gcc/x86_64-generic-linux/%{gccver}/plugin/include/configargs.h
 
 /usr/bin/elf-move.py avx2 %{buildroot}-v3 %{buildroot}/usr/share/clear/optimized-elf/ %{buildroot}/usr/share/clear/filemap/filemap-%{name}
 /usr/bin/elf-move.py avx512 %{buildroot}-v4 %{buildroot}/usr/share/clear/optimized-elf/ %{buildroot}/usr/share/clear/filemap/filemap-%{name}
@@ -593,7 +593,6 @@ cat *.lang > gcc.lang
 #/usr/lib64/libvtv*
 /usr/lib64/libcc1*
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/include-fixed/
-%exclude  /usr/lib64/gcc/x86_64-generic-linux/12/include-fixed/bits/statx.h
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/install-tools/
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/libcaf_*
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/include/
@@ -602,9 +601,6 @@ cat *.lang > gcc.lang
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/collect2
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/cc1plus
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/g++-mapper-server
-
-#/usr/lib64/gcc/%{gcc_target}/%{gccver}/liblto_plugin.so.0.0.0
-#/usr/lib64/gcc/%{gcc_target}/%{gccver}/liblto_plugin.so.0
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/cc1
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/plugin/gtype.state
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/plugin/*.so.*
@@ -751,9 +747,7 @@ cat *.lang > gcc.lang
 #avx512
 
 %files libgcc32
-/usr/lib32/libasan.so.6
-/usr/lib32/libasan.so.6.0.0
-/usr/lib32/libasan_preinit.o
+/usr/lib32/libasan*
 /usr/lib32/libatomic.so.1
 /usr/lib32/libatomic.so.1.2.0
 #/usr/lib32/libcilkrts.so.5
@@ -777,8 +771,6 @@ cat *.lang > gcc.lang
 /usr/lib32/libssp_nonshared.a
 /usr/lib32/libubsan.so.1
 /usr/lib32/libubsan.so.1.0.0
-#/usr/lib/libvtv.so.0
-#/usr/lib/libvtv.so.0.0.0
 
 %files -n libstdc++
 /usr/lib64/libstdc++.so.*
