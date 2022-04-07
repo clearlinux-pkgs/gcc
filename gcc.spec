@@ -14,7 +14,7 @@
 
 Name     : gcc
 Version  : 12.0.0
-Release  : 1527
+Release  : 1528
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://gcc.gnu.org/pub/gcc/snapshots/LATEST-12/gcc-12-20220403.tar.xz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.24.tar.bz2
