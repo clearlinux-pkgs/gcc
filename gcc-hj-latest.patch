@@ -91,7 +91,7 @@ liuhongt (12):
       Fix typo in r12-5486.
 
 diff --git a/gcc/builtins.c b/gcc/builtins.c
-index f36ac1ef4a5..41aeb373581 100644
+index 64f4999ab07..6c7dc519989 100644
 --- a/gcc/builtins.c
 +++ b/gcc/builtins.c
 @@ -128,7 +128,6 @@ static rtx expand_builtin_va_copy (tree);
@@ -110,7 +110,7 @@ index f36ac1ef4a5..41aeb373581 100644
  static rtx expand_builtin_memset (tree, rtx, machine_mode);
  static rtx expand_builtin_memset_args (tree, tree, tree, rtx, machine_mode, tree);
  static rtx expand_builtin_bzero (tree);
-@@ -3860,14 +3858,17 @@ expand_builtin_strnlen (tree exp, rtx target, machine_mode target_mode)
+@@ -3872,14 +3870,17 @@ expand_builtin_strnlen (tree exp, rtx target, machine_mode target_mode)
     a target constant.  */
  
  static rtx
@@ -131,7 +131,7 @@ index f36ac1ef4a5..41aeb373581 100644
  }
  
  /* LEN specify length of the block of memcpy/memset operation.
-@@ -6415,15 +6416,17 @@ expand_builtin_stpncpy (tree exp, rtx)
+@@ -6427,15 +6428,17 @@ expand_builtin_stpncpy (tree exp, rtx)
     constant.  */
  
  rtx
@@ -152,7 +152,7 @@ index f36ac1ef4a5..41aeb373581 100644
  }
  
  /* Helper to check the sizes of sequences and the destination of calls
-@@ -6624,30 +6627,134 @@ expand_builtin_strncpy (tree exp, rtx target)
+@@ -6636,30 +6639,134 @@ expand_builtin_strncpy (tree exp, rtx target)
    return NULL_RTX;
  }
  
@@ -296,7 +296,7 @@ index f36ac1ef4a5..41aeb373581 100644
  {
    rtx target, coeff;
    size_t size;
-@@ -6657,9 +6764,33 @@ builtin_memset_gen_str (void *data, HOST_WIDE_INT offset ATTRIBUTE_UNUSED,
+@@ -6669,9 +6776,33 @@ builtin_memset_gen_str (void *data, HOST_WIDE_INT offset ATTRIBUTE_UNUSED,
    if (size == 1)
      return (rtx) data;
  
@@ -331,7 +331,7 @@ index f36ac1ef4a5..41aeb373581 100644
  
    target = convert_to_mode (mode, (rtx) data, 1);
    target = expand_mult (mode, target, coeff, NULL_RTX, 1);
-@@ -8993,6 +9124,93 @@ expand_ifn_atomic_bit_test_and (gcall *call)
+@@ -9005,6 +9136,93 @@ expand_ifn_atomic_bit_test_and (gcall *call)
      emit_move_insn (target, result);
  }
  
@@ -568,7 +568,7 @@ index 4ba04403002..d8d53555f4d 100644
 +    emit_gnu_property (0xb0008000, (1U << 0));
  }
 diff --git a/gcc/config/i386/i386-expand.c b/gcc/config/i386/i386-expand.c
-index 7721534751b..a439e42a12d 100644
+index 31eae75d277..1f00eb3af25 100644
 --- a/gcc/config/i386/i386-expand.c
 +++ b/gcc/config/i386/i386-expand.c
 @@ -190,6 +190,82 @@ ix86_expand_clear (rtx dest)
@@ -1082,7 +1082,7 @@ index 7721534751b..a439e42a12d 100644
  ix86_expand_vector_init_duplicate (bool mmx_ok, machine_mode mode,
  				   rtx target, rtx val)
  {
-@@ -21088,4 +21161,85 @@ ix86_expand_divmod_libfunc (rtx libfunc, machine_mode mode,
+@@ -21093,4 +21166,85 @@ ix86_expand_divmod_libfunc (rtx libfunc, machine_mode mode,
    *rem_p = rem;
  }
  
