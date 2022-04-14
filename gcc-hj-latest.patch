@@ -1,7 +1,7 @@
 Cui,Lili (1):
       x86: Update -mtune=alderlake
 
-H.J. Lu (53):
+H.J. Lu (52):
       op_by_pieces_d::run: Change a while loop to a do-while loop
       Generate offset adjusted operation for op_by_pieces operations
       Don't use nullptr return from simplify_gen_subreg
@@ -54,7 +54,6 @@ H.J. Lu (53):
       pieces-memset-21.c: Expect vzeroupper for ia32
       x86: Always return pseudo register in ix86_gen_scratch_sse_rtx
       x86: Disallow unsupported EH return
-      x86: Also check _SOFT_FLOAT in <x86gprintrin.h>
 
 Hongyu Wang (2):
       PR target/103069: Relax cmpxchg loop for x86 target
@@ -3884,7 +3883,7 @@ index 689ec7de4d3..d7e3bd60bd7 100644
  
  @node Xstormy16 Function Attributes
 diff --git a/gcc/doc/invoke.texi b/gcc/doc/invoke.texi
-index f3168f2ebab..ed985c20997 100644
+index 9f5b40cabbc..1483adfc4aa 100644
 --- a/gcc/doc/invoke.texi
 +++ b/gcc/doc/invoke.texi
 @@ -1375,6 +1375,7 @@ See RS/6000 and PowerPC Options.
@@ -3908,7 +3907,7 @@ index f3168f2ebab..ed985c20997 100644
  
  @emph{x86 Windows Options}
  @gccoptlist{-mconsole  -mcygwin  -mno-cygwin  -mdll @gol
-@@ -31160,6 +31161,18 @@ This option instructs GCC to use 128-bit AVX instructions instead of
+@@ -31161,6 +31162,18 @@ This option instructs GCC to use 128-bit AVX instructions instead of
  This option instructs GCC to use @var{opt}-bit vector width in instructions
  instead of default on the selected platform.
  
@@ -3927,7 +3926,7 @@ index f3168f2ebab..ed985c20997 100644
  @table @samp
  @item none
  No extra limitations applied to GCC other than defined by the selected platform.
-@@ -31682,6 +31695,13 @@ Generate code that uses only the general-purpose registers.  This
+@@ -31683,6 +31696,13 @@ Generate code that uses only the general-purpose registers.  This
  prevents the compiler from using floating-point, vector, mask and bound
  registers.
  
@@ -3941,7 +3940,7 @@ index f3168f2ebab..ed985c20997 100644
  @item -mindirect-branch=@var{choice}
  @opindex mindirect-branch
  Convert indirect call and jump with @var{choice}.  The default is
-@@ -31831,6 +31851,19 @@ x32 environments.
+@@ -31832,6 +31852,19 @@ x32 environments.
  @opindex mneeded
  Emit GNU_PROPERTY_X86_ISA_1_NEEDED GNU property for Linux target to
  indicate the micro-architecture ISA level required to execute the binary.
@@ -3997,7 +3996,7 @@ index ac761100894..289f02c14ca 100644
  @item @samp{mem_thread_fence}
  This pattern emits code required to implement a thread fence with
 diff --git a/gcc/doc/tm.texi b/gcc/doc/tm.texi
-index b370bc76b25..1432aa4c080 100644
+index 602929518ec..95b61a3ec0c 100644
 --- a/gcc/doc/tm.texi
 +++ b/gcc/doc/tm.texi
 @@ -3807,14 +3807,17 @@ cases of mismatch, it also makes for better code on certain machines.
@@ -4040,7 +4039,7 @@ index b370bc76b25..1432aa4c080 100644
  @deftypefn {Target Hook} int TARGET_COMPARE_BY_PIECES_BRANCH_RATIO (machine_mode @var{mode})
  When expanding a block comparison in MODE, gcc can try to reduce the
  number of branches at the expense of more memory operations.  This hook
-@@ -11937,6 +11947,13 @@ This function prepares to emit a conditional comparison within a sequence
+@@ -11945,6 +11955,13 @@ This function prepares to emit a conditional comparison within a sequence
   @var{bit_code} is @code{AND} or @code{IOR}, which is the op on the compares.
  @end deftypefn
  
@@ -4054,7 +4053,7 @@ index b370bc76b25..1432aa4c080 100644
  @deftypefn {Target Hook} unsigned TARGET_LOOP_UNROLL_ADJUST (unsigned @var{nunroll}, class loop *@var{loop})
  This target hook returns a new value for the number of times @var{loop}
  should be unrolled. The parameter @var{nunroll} is the number of times
-@@ -12159,6 +12176,11 @@ The support includes the assembler, linker and dynamic linker.
+@@ -12167,6 +12184,11 @@ The support includes the assembler, linker and dynamic linker.
  The default value of this hook is based on target's libc.
  @end deftypefn
  
@@ -4067,7 +4066,7 @@ index b370bc76b25..1432aa4c080 100644
  If defined, this function returns an appropriate alignment in bits for an atomic object of machine_mode @var{mode}.  If 0 is returned then the default alignment for the specified mode is used. 
  @end deftypefn
 diff --git a/gcc/doc/tm.texi.in b/gcc/doc/tm.texi.in
-index 2974dae2701..1ebc966f487 100644
+index 732396acb6d..af6a3076494 100644
 --- a/gcc/doc/tm.texi.in
 +++ b/gcc/doc/tm.texi.in
 @@ -3100,14 +3100,7 @@ control passing certain arguments in registers.
@@ -4095,7 +4094,7 @@ index 2974dae2701..1ebc966f487 100644
  @hook TARGET_COMPARE_BY_PIECES_BRANCH_RATIO
  
  @defmac MOVE_MAX_PIECES
-@@ -8030,6 +8025,8 @@ lists.
+@@ -8032,6 +8027,8 @@ lists.
  
  @hook TARGET_GEN_CCMP_NEXT
  
@@ -4104,7 +4103,7 @@ index 2974dae2701..1ebc966f487 100644
  @hook TARGET_LOOP_UNROLL_ADJUST
  
  @defmac POWI_MAX_MULTS
-@@ -8145,6 +8142,8 @@ and the associated definitions of those functions.
+@@ -8147,6 +8144,8 @@ and the associated definitions of those functions.
  
  @hook TARGET_HAS_IFUNC_P
  
@@ -5015,7 +5014,7 @@ index 67a49e65fd8..f4663b04c2e 100644
  	      poly_uint64 rounded_1 = PUSH_ROUNDING (poly_int64 (1));
  	      alignment = MIN (known_alignment (rounded_1), alignment);
 diff --git a/gcc/target.def b/gcc/target.def
-index 0ebfb58fa6f..ba947812bd4 100644
+index 258b414e230..2c2c683eed1 100644
 --- a/gcc/target.def
 +++ b/gcc/target.def
 @@ -2692,6 +2692,15 @@ DEFHOOK
