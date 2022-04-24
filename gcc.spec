@@ -4,7 +4,7 @@
 %define libstdcxx_full 6.0.26
 %define isl_version 0.24
 %define gccver 12
-%define gccpath gcc-12-20220417
+%define gccpath gcc-12-20220424
 # Highest optimisation ABI we target
 %define mtune skylake-avx512
 
@@ -16,7 +16,7 @@ Name     : gcc
 Version  : 12.0.0
 Release  : 1545
 URL      : http://www.gnu.org/software/gcc/
-Source0  : https://gcc.gnu.org/pub/gcc/snapshots/LATEST-12/gcc-12-20220417.tar.xz
+Source0  : https://gcc.gnu.org/pub/gcc/snapshots/LATEST-12/gcc-12-20220424.tar.xz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.24.tar.bz2
 Source2  : DATESTAMP
 Source3  : REVISION
