@@ -219,7 +219,7 @@ GNU cc and gcc C compilers.
 
 %prep
 %setup -q -n %{gccpath}
-#%patch0 -p1
+%patch0 -p1
 
 #%patch1 -p1
 #%patch2 -p1
