@@ -1841,7 +1841,8 @@ Frederik Harwath (1):
 Fritz Reese (1):
       fortran: Fix conv of UNION constructors [PR105310]
 
-GCC Administrator (375):
+GCC Administrator (376):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -4115,7 +4116,7 @@ John Ericson (1):
 Jojo R (1):
       RISC-V: Add tune info for T-HEAD C906.
 
-Jonathan Wakely (655):
+Jonathan Wakely (656):
       libstdc++: Define __cpp_lib_to_chars for C++20 [PR 100146]
       libstdc++: Disable tests that fail after atomic wait/notify rewrite
       libstdc++: Fix whitespace in license boilerplate
@@ -4771,6 +4772,7 @@ Jonathan Wakely (655):
       libstdc++: Fix error reporting in filesystem::copy [PR99290]
       libstdc++: Update docs for release branch
       libstdc++: Add missing exports for ppc64le --with-long-double-format=ibm [PR105417]
+      libstdc++: Fix deserialization for std::normal_distribution [PR105502]
 
 Jonathan Wright (81):
       aarch64: Use RTL builtins for vq[r]dmulh[q]_n intrinsics
@@ -5878,7 +5880,7 @@ Michael Forney (2):
       config: Backport "Rely less on internal symbols" (serial 69) to gettext.m4
       config: Backport "Rely less on internal symbols" (serial 68) to gettext.m4
 
-Michael Meissner (35):
+Michael Meissner (36):
       Fix Fortran rounding issues, PR fortran/96983.
       Fix logic error in 32-bit trampolines.
       Define target hook to emit KFmode constants for libgcc.
@@ -5914,6 +5916,7 @@ Michael Meissner (35):
       Fix DImode to TImode sign extend issue
       Allow vsx_extract_<mode> to use Altivec registers.
       Disable float128 tests on VxWorks, PR target/104253.
+      rs6000: Ignore fusion option flags for inlining test [PR102059]
 
 Michael de Lang (2):
       TSAN: add new test

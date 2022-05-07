@@ -1,6 +1,9 @@
 Alexandre Oliva (1):
       [PR105324] libstdc++: testsuite: pr105324 requires FP from_char
 
+GCC Administrator (1):
+      Daily bump.
+
 H.J. Lu (2):
       libsanitizer: cherry-pick commit b226894d475b from upstream
       x86: Add missing .note.GNU-stack to assembly source
@@ -8,6 +11,12 @@ H.J. Lu (2):
 Jakub Jelinek (2):
       Bump BASE-VER
       c++: Don't emit deprecated warnings or unavailable errors on lambda declarations
+
+Jonathan Wakely (1):
+      libstdc++: Fix deserialization for std::normal_distribution [PR105502]
+
+Michael Meissner (1):
+      rs6000: Ignore fusion option flags for inlining test [PR102059]
 
 Patrick Palka (2):
       libstdc++: Don't use std::tolower in <charconv> [PR103911]
@@ -21,6 +30,21 @@ Richard Biener (6):
       tree-optimization/105484 - VEC_SET and EH
       middle-end/105376 - invalid REAL_CST for DFP constant
 
+diff --git a/contrib/ChangeLog b/contrib/ChangeLog
+index 76e3cb0ce82..9925a567602 100644
+--- a/contrib/ChangeLog
++++ b/contrib/ChangeLog
+@@ -1,3 +1,10 @@
++2022-05-06  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2022-05-06  Jakub Jelinek  <jakub@redhat.com>
++
++	* gennews (files): Add files for GCC 12.
++
+ 2022-05-06  Release Manager
+ 
+ 	* GCC 12.1.0 released.
 diff --git a/gcc/BASE-VER b/gcc/BASE-VER
 index 77903b35f3a..a5545292c4e 100644
 --- a/gcc/BASE-VER
@@ -28,6 +52,119 @@ index 77903b35f3a..a5545292c4e 100644
 @@ -1 +1 @@
 -12.1.0
 +12.1.1
+diff --git a/gcc/ChangeLog b/gcc/ChangeLog
+index 609fd421e6b..375565c834c 100644
+--- a/gcc/ChangeLog
++++ b/gcc/ChangeLog
+@@ -1,3 +1,66 @@
++2022-05-06  Michael Meissner  <meissner@linux.ibm.com>
++
++	Backported from master:
++	2022-05-06   Michael Meissner  <meissner@linux.ibm.com>
++
++	PR target/102059
++	* config/rs6000/rs6000.cc (rs6000_can_inline_p): Ignore -mpower8-fusion
++	and -mpower10-fusion options for inlining purposes.
++
++2022-05-06  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2022-04-29  Richard Biener  <rguenther@suse.de>
++
++	PR middle-end/105376
++	* tree.cc (build_real): Special case dconst* arguments
++	for decimal floating point types.
++
++2022-05-06  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2022-05-05  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/105484
++	* gimple-isel.cc (gimple_expand_vec_set_expr): Clean EH, return
++	whether the CFG changed.
++	(gimple_expand_vec_exprs): When the CFG changed, clean it up.
++
++2022-05-06  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2022-05-03  Richard Biener  <rguenther@suse.de>
++
++	PR middle-end/105461
++	* opts.cc (finish_options): Match the condition to
++	disable flag_var_tracking to that of process_options.
++
++2022-05-06  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2022-05-03  Richard Biener  <rguenther@suse.de>
++
++	* opts.cc: #undef OPTIONS_SET_P.
++	(finish_options): Use opts_set instead of OPTIONS_SET_P.
++
++2022-05-06  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2022-05-02  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/105437
++	* tree-vect-slp.cc (vect_schedule_slp_node): Handle the
++	case where last_stmt alters control flow.
++
++2022-05-06  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2022-05-03  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/105394
++	* tree-vect-generic.cc (expand_vector_condition): Adjust
++	comp_width for non-integer mode masks as well.
++
+ 2022-05-06  Release Manager
+ 
+ 	* GCC 12.1.0 released.
+diff --git a/gcc/config/rs6000/rs6000.cc b/gcc/config/rs6000/rs6000.cc
+index bc619592b9e..4030864aa1a 100644
+--- a/gcc/config/rs6000/rs6000.cc
++++ b/gcc/config/rs6000/rs6000.cc
+@@ -25350,6 +25350,11 @@ rs6000_can_inline_p (tree caller, tree callee)
+ 	    }
+ 	}
+ 
++      /* Ignore -mpower8-fusion and -mpower10-fusion options for inlining
++	 purposes.  */
++      callee_isa &= ~(OPTION_MASK_P8_FUSION | OPTION_MASK_P10_FUSION);
++      explicit_isa &= ~(OPTION_MASK_P8_FUSION | OPTION_MASK_P10_FUSION);
++
+       /* The callee's options must be a subset of the caller's options, i.e.
+ 	 a vsx function may inline an altivec function, but a no-vsx function
+ 	 must not inline a vsx function.  However, for those options that the
+diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
+index 411bd5a959b..1ffada88326 100644
+--- a/gcc/cp/ChangeLog
++++ b/gcc/cp/ChangeLog
+@@ -1,3 +1,21 @@
++2022-05-06  Patrick Palka  <ppalka@redhat.com>
++
++	Backported from master:
++	2022-05-04  Patrick Palka  <ppalka@redhat.com>
++
++	PR c++/105476
++	* pt.cc (maybe_aggr_guide): Set processing_template_decl when
++	partially instantiating the guide's parameter list.
++
++2022-05-06  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2022-05-04  Jakub Jelinek  <jakub@redhat.com>
++
++	* lambda.cc: Include decl.h.
++	(maybe_add_lambda_conv_op): Temporarily override deprecated_state to
++	UNAVAILABLE_DEPRECATED_SUPPRESS.
++
+ 2022-05-06  Release Manager
+ 
+ 	* GCC 12.1.0 released.
 diff --git a/gcc/cp/lambda.cc b/gcc/cp/lambda.cc
 index 65579edc316..ce49e28cd4c 100644
 --- a/gcc/cp/lambda.cc
@@ -192,6 +329,86 @@ index e5e3119a980..2ffbf429b7b 100644
      flag_var_tracking_assignments
        = (flag_var_tracking
  	 && !(flag_selective_scheduling || flag_selective_scheduling2));
+diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
+index 2f7ffdfac60..41c2037a6b0 100644
+--- a/gcc/testsuite/ChangeLog
++++ b/gcc/testsuite/ChangeLog
+@@ -1,3 +1,75 @@
++2022-05-06  Michael Meissner  <meissner@linux.ibm.com>
++
++	Backported from master:
++	2022-05-06   Michael Meissner  <meissner@linux.ibm.com>
++
++	PR target/102059
++	* gcc.target/powerpc/pr102059-4.c: New test.
++
++2022-05-06  H.J. Lu  <hjl.tools@gmail.com>
++
++	Backported from master:
++	2022-05-02  H.J. Lu  <hjl.tools@gmail.com>
++
++	PR testsuite/105433
++	* gcc.target/i386/iamcu/asm-support.S: Add .note.GNU-stack.
++	* gcc.target/x86_64/abi/asm-support.S: Likewise.
++	* gcc.target/x86_64/abi/avx/asm-support.S: Likewise.
++	* gcc.target/x86_64/abi/avx512f/asm-support.S: Likewise.
++	* gcc.target/x86_64/abi/avx512fp16/asm-support.S: Likewise.
++	* gcc.target/x86_64/abi/avx512fp16/m256h/asm-support.S: Likewise.
++	* gcc.target/x86_64/abi/avx512fp16/m512h/asm-support.S: Likewise.
++	* gcc.target/x86_64/abi/ms-sysv/do-test.S: Likewise.
++
++2022-05-06  Patrick Palka  <ppalka@redhat.com>
++
++	Backported from master:
++	2022-05-04  Patrick Palka  <ppalka@redhat.com>
++
++	PR c++/105476
++	* g++.dg/cpp2a/class-deduction-aggr13.C: New test.
++	* g++.dg/cpp2a/class-deduction-aggr13a.C: New test.
++
++2022-05-06  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2022-04-29  Richard Biener  <rguenther@suse.de>
++
++	PR middle-end/105376
++	* gcc.dg/pr105376.c: New testcase.
++
++2022-05-06  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2022-05-04  Jakub Jelinek  <jakub@redhat.com>
++
++	* g++.dg/cpp23/lambda-attr1.C: New test.
++	* g++.dg/cpp23/lambda-attr2.C: New test.
++
++2022-05-06  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2022-05-05  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/105484
++	* gcc.dg/torture/pr105484.c: New testcase.
++
++2022-05-06  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2022-05-03  Richard Biener  <rguenther@suse.de>
++
++	PR middle-end/105461
++	* gcc.dg/pr105461.c: New testcase.
++
++2022-05-06  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2022-05-02  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/105437
++	* g++.dg/vect/pr105437.cc: New testcase.
++
+ 2022-05-06  Release Manager
+ 
+ 	* GCC 12.1.0 released.
 diff --git a/gcc/testsuite/g++.dg/cpp23/lambda-attr1.C b/gcc/testsuite/g++.dg/cpp23/lambda-attr1.C
 new file mode 100644
 index 00000000000..a653c732fca
@@ -398,6 +615,35 @@ index b4a4a140e54..db08f52a34f 100644
  .LCiamcu_noprintf1:
  	.long	1132527616
 +	.section	.note.GNU-stack,"",@progbits
+diff --git a/gcc/testsuite/gcc.target/powerpc/pr102059-4.c b/gcc/testsuite/gcc.target/powerpc/pr102059-4.c
+new file mode 100644
+index 00000000000..5fe66f8af4b
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/powerpc/pr102059-4.c
+@@ -0,0 +1,23 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mdejagnu-cpu=power10" } */
++/* { dg-require-effective-target power10_ok } */
++
++/* Verify that power10 can explicity include functions compiled for power8.
++   The issue was -mcpu=power8 enables -mpower8-fusion, but -mcpu=power9 or
++   -mcpu=power10 do not set power8-fusion by default.  Thus when doing this
++   compilation, they would get an error that the inline function failed in its
++   inlining due to having incompatible options.  */
++
++static inline int __attribute__ ((always_inline,target("cpu=power8")))
++foo (int *b)
++{
++  *b += 10;
++  return *b;
++}
++
++int
++bar (int *a)
++{
++  *a = foo (a);
++  return 0;
++}
 diff --git a/gcc/testsuite/gcc.target/x86_64/abi/asm-support.S b/gcc/testsuite/gcc.target/x86_64/abi/asm-support.S
 index 7a8ed03d119..2f8d3a09c6b 100644
 --- a/gcc/testsuite/gcc.target/x86_64/abi/asm-support.S
@@ -560,6 +806,59 @@ index 0c260b6b516..4f22c78a183 100644
    *size = g_tls_size;
    *addr -= *size;
    *addr += ThreadDescriptorSize();
+diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
+index ea745c2f816..a8e513d9238 100644
+--- a/libstdc++-v3/ChangeLog
++++ b/libstdc++-v3/ChangeLog
+@@ -1,3 +1,35 @@
++2022-05-06  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2022-05-06  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/105502
++	* include/bits/random.tcc
++	(operator>>(basic_istream<C,T>&, normal_distribution<R>&)):
++	Update state when __state_avail is false.
++	* testsuite/26_numerics/random/normal_distribution/operators/serialize.cc:
++	Check that deserialized object equals serialized one.
++
++2022-05-06  Patrick Palka  <ppalka@redhat.com>
++
++	Backported from master:
++	2022-05-02  Patrick Palka  <ppalka@redhat.com>
++
++	PR libstdc++/103911
++	* src/c++17/floating_from_chars.cc (find_end_of_float): Accept
++	two delimeters for the exponent part in the form of a possibly
++	NULL string of length two.  Don't use std::tolower.
++	(pattern): Adjust calls to find_end_of_float accordingly.
++
++2022-05-06  Alexandre Oliva  <oliva@adacore.com>
++
++	Backported from master:
++	2022-05-03  Alexandre Oliva  <oliva@adacore.com>
++
++	PR c++/105324
++	* testsuite/20_util/from_chars/pr105324.cc: Guard test body
++	with conditional for floating-point overloads of from_char.
++
+ 2022-05-06  Release Manager
+ 
+ 	* GCC 12.1.0 released.
+diff --git a/libstdc++-v3/include/bits/random.tcc b/libstdc++-v3/include/bits/random.tcc
+index 6c72e991007..87a16a21336 100644
+--- a/libstdc++-v3/include/bits/random.tcc
++++ b/libstdc++-v3/include/bits/random.tcc
+@@ -1961,7 +1961,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       bool __saved_avail;
+       if (__is >> __mean >> __stddev >> __saved_avail)
+ 	{
+-	  if (__saved_avail && (__is >> __x._M_saved))
++	  if (!__saved_avail || (__is >> __x._M_saved))
+ 	    {
+ 	      __x._M_saved_available = __saved_avail;
+ 	      __x.param(param_type(__mean, __stddev));
 diff --git a/libstdc++-v3/src/c++17/floating_from_chars.cc b/libstdc++-v3/src/c++17/floating_from_chars.cc
 index e7f3a58cf18..5d2a931d5dd 100644
 --- a/libstdc++-v3/src/c++17/floating_from_chars.cc
@@ -628,4 +927,61 @@ index cecb17e41cc..ef24b4c5c7b 100644
    long double d;
    std::from_chars(s.data(), s.data() + s.size(), d);
 +#endif
+ }
+diff --git a/libstdc++-v3/testsuite/26_numerics/random/normal_distribution/operators/serialize.cc b/libstdc++-v3/testsuite/26_numerics/random/normal_distribution/operators/serialize.cc
+index 9d8f8278fb3..d4f9f374643 100644
+--- a/libstdc++-v3/testsuite/26_numerics/random/normal_distribution/operators/serialize.cc
++++ b/libstdc++-v3/testsuite/26_numerics/random/normal_distribution/operators/serialize.cc
+@@ -25,6 +25,7 @@
+ 
+ #include <random>
+ #include <sstream>
++#include <testsuite_hooks.h>
+ 
+ void
+ test01()
+@@ -37,10 +38,43 @@ test01()
+   str << u;
+ 
+   str >> v;
++  VERIFY( u == v );
++}
++
++void
++test_pr105502()
++{
++  // PR libstdc++/105502 std::normal_distribution deserialization issue
++  std::stringstream str;
++  std::normal_distribution<> d{1, 2}, d2;
++  std::minstd_rand0 g;
++  str << d;
++  VERIFY( str );
++  str >> d2;
++  VERIFY( str );
++  VERIFY( d == d2 );
++
++  (void) d(g); // sets d._M_saved_available = true
++  str.str("");
++  str.clear();
++  str << d;
++  VERIFY( str );
++  str >> d2;
++  VERIFY( str );
++  VERIFY( d == d2 );
++
++  (void) d(g); // sets d._M_saved_available = false
++  str.str("");
++  str.clear();
++  str << d;
++  VERIFY( str );
++  str >> d2;
++  VERIFY( str );
++  VERIFY( d == d2 );
+ }
+ 
+ int main()
+ {
+   test01();
+-  return 0;
++  test_pr105502();
  }
