@@ -1,7 +1,9 @@
 Alexandre Oliva (1):
       [PR105324] libstdc++: testsuite: pr105324 requires FP from_char
 
-GCC Administrator (1):
+GCC Administrator (3):
+      Daily bump.
+      Daily bump.
       Daily bump.
 
 H.J. Lu (2):
@@ -12,8 +14,9 @@ Jakub Jelinek (2):
       Bump BASE-VER
       c++: Don't emit deprecated warnings or unavailable errors on lambda declarations
 
-Jonathan Wakely (1):
+Jonathan Wakely (2):
       libstdc++: Fix deserialization for std::normal_distribution [PR105502]
+      libstdc++: Fix test that fails on Solaris [PR104731]
 
 Michael Meissner (1):
       rs6000: Ignore fusion option flags for inlining test [PR102059]
@@ -985,3 +988,65 @@ index 9d8f8278fb3..d4f9f374643 100644
 -  return 0;
 +  test_pr105502();
  }
+diff --git a/libstdc++-v3/testsuite/27_io/filesystem/iterators/error_reporting.cc b/libstdc++-v3/testsuite/27_io/filesystem/iterators/error_reporting.cc
+index 1f297a731a3..1c8ea4c9249 100644
+--- a/libstdc++-v3/testsuite/27_io/filesystem/iterators/error_reporting.cc
++++ b/libstdc++-v3/testsuite/27_io/filesystem/iterators/error_reporting.cc
+@@ -28,35 +28,44 @@
+ 
+ int choice;
+ 
+-struct dirent global_dirent;
+-
+ extern "C" struct dirent* readdir(DIR*)
+ {
++  // On some targets dirent::d_name is very small, but the OS allocates
++  // a trailing char array after the dirent struct. Emulate that here.
++  union State
++  {
++    struct dirent d;
++    char buf[sizeof(struct dirent) + 16] = {};
++  };
++
++  static State state;
++  char* d_name = state.buf + offsetof(struct dirent, d_name);
++
+   switch (choice)
+   {
+   case 1:
+-    global_dirent.d_ino = 999;
++    state.d.d_ino = 999;
+ #if defined _GLIBCXX_HAVE_STRUCT_DIRENT_D_TYPE && defined DT_REG
+-    global_dirent.d_type = DT_REG;
++    state.d.d_type = DT_REG;
+ #endif
+-    global_dirent.d_reclen = 0;
+-    std::char_traits<char>::copy(global_dirent.d_name, "file", 5);
++    state.d.d_reclen = 0;
++    std::char_traits<char>::copy(d_name, "file", 5);
+     choice = 0;
+-    return &global_dirent;
++    return &state.d;
+   case 2:
+-    global_dirent.d_ino = 111;
++    state.d.d_ino = 111;
+ #if defined _GLIBCXX_HAVE_STRUCT_DIRENT_D_TYPE && defined DT_DIR
+-    global_dirent.d_type = DT_DIR;
++    state.d.d_type = DT_DIR;
+ #endif
+-    global_dirent.d_reclen = 60;
+-    std::char_traits<char>::copy(global_dirent.d_name, "subdir", 7);
++    state.d.d_reclen = 60;
++    std::char_traits<char>::copy(d_name, "subdir", 7);
+     choice = 1;
+-    return &global_dirent;
++    return &state.d;
+   default:
+     errno = EIO;
+     return nullptr;
+   }
+-  return &global_dirent;
++  return &state.d;
+ }
+ 
+ void

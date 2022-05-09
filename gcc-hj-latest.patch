@@ -1841,7 +1841,9 @@ Frederik Harwath (1):
 Fritz Reese (1):
       fortran: Fix conv of UNION constructors [PR105310]
 
-GCC Administrator (376):
+GCC Administrator (378):
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -4116,7 +4118,7 @@ John Ericson (1):
 Jojo R (1):
       RISC-V: Add tune info for T-HEAD C906.
 
-Jonathan Wakely (656):
+Jonathan Wakely (657):
       libstdc++: Define __cpp_lib_to_chars for C++20 [PR 100146]
       libstdc++: Disable tests that fail after atomic wait/notify rewrite
       libstdc++: Fix whitespace in license boilerplate
@@ -4773,6 +4775,7 @@ Jonathan Wakely (656):
       libstdc++: Update docs for release branch
       libstdc++: Add missing exports for ppc64le --with-long-double-format=ibm [PR105417]
       libstdc++: Fix deserialization for std::normal_distribution [PR105502]
+      libstdc++: Fix test that fails on Solaris [PR104731]
 
 Jonathan Wright (81):
       aarch64: Use RTL builtins for vq[r]dmulh[q]_n intrinsics
