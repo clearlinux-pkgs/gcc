@@ -4871,7 +4871,7 @@ Jose E. Marchesi (3):
       bpf: mark/remove unused arguments and remove an unused function
       bpf: do not --enable-gcov for bpf-*-* targets
 
-Joseph Myers (45):
+Joseph Myers (46):
       Regenerate gcc.pot.
       Update gcc .po files.
       c: C2x changes to function type compatibility
@@ -4917,6 +4917,7 @@ Joseph Myers (45):
       Update gcc sv.po
       Update cpplib es.po
       Regenerate gcc.pot
+      Update gcc .po files
 
 José Rui Faustino de Sousa (2):
       Fortran: Fix double function call with -fcheck=pointer [PR]
