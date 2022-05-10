@@ -1493,7 +1493,7 @@ Ed Schonberg (36):
 Ed Smith-Rowland (1):
       MAINTAINERS: Update my email and add myself to the DCO list.
 
-Eric Botcazou (224):
+Eric Botcazou (225):
       Add XFAIL for gcc.dg/pr84877.c on the SPARC
       Fix loss of optimization of array iteration due to inlining
       Get rid of useless temporary for call to pure function
@@ -1718,6 +1718,7 @@ Eric Botcazou (224):
       Add optmization testcase for incorrect optimization in Ada
       Add missing target selector
       Fix issue for pointers to anonymous types with -fdump-ada-spec
+      Fix internal error with vectorization on SPARC
 
 Eric Gallager (6):
       Add obj-c++.srcman target to gcc/objcp/Makefile.
@@ -1841,7 +1842,8 @@ Frederik Harwath (1):
 Fritz Reese (1):
       fortran: Fix conv of UNION constructors [PR105310]
 
-GCC Administrator (378):
+GCC Administrator (379):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
