@@ -2344,7 +2344,7 @@ Giuliano Belinassi (1):
 Guo, Xuepeng (1):
       AVX512FP16: Initial support for AVX512FP16 feature and scalar _Float16 instructions.
 
-H.J. Lu (148):
+H.J. Lu (149):
       x86: Use crc32 target option for CRC32 intrinsics
       x86: Add -mmwait for -mgeneral-regs-only
       op_by_pieces_d::run: Change a while loop to a do-while loop
@@ -2493,6 +2493,7 @@ H.J. Lu (148):
       x86: Also use Yw in *ssse3_pshufbv8qi3 clobber
       libsanitizer: cherry-pick commit b226894d475b from upstream
       x86: Add missing .note.GNU-stack to assembly source
+      x86: Add .note.GNU-stack section only for Linux
 
 Hafiz Abid Qadeer (6):
       [amdgcn] Update CFI configuration
@@ -3051,7 +3052,7 @@ Indu Bhagat (31):
 Ivan Sorokin (1):
       x86: Build only one __cpu_model/__cpu_features2 variables
 
-Jakub Jelinek (556):
+Jakub Jelinek (557):
       Bump BASE-VER.
       Update crontab and git_update_version.py
       libstdc++: Update ppc64le baseline_symbols.txt
@@ -3608,6 +3609,7 @@ Jakub Jelinek (556):
       Update ChangeLog and version files for release
       Bump BASE-VER
       c++: Don't emit deprecated warnings or unavailable errors on lambda declarations
+      isel: Fix up gimple_expand_vec_set_expr [PR105528]
 
 Jan Hubicka (106):
       Implement EAF_NOT_RETURNED tracking in ipa-modref
