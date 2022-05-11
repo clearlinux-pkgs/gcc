@@ -1842,7 +1842,8 @@ Frederik Harwath (1):
 Fritz Reese (1):
       fortran: Fix conv of UNION constructors [PR105310]
 
-GCC Administrator (379):
+GCC Administrator (380):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -4122,7 +4123,7 @@ John Ericson (1):
 Jojo R (1):
       RISC-V: Add tune info for T-HEAD C906.
 
-Jonathan Wakely (657):
+Jonathan Wakely (659):
       libstdc++: Define __cpp_lib_to_chars for C++20 [PR 100146]
       libstdc++: Disable tests that fail after atomic wait/notify rewrite
       libstdc++: Fix whitespace in license boilerplate
@@ -4780,6 +4781,8 @@ Jonathan Wakely (657):
       libstdc++: Add missing exports for ppc64le --with-long-double-format=ibm [PR105417]
       libstdc++: Fix deserialization for std::normal_distribution [PR105502]
       libstdc++: Fix test that fails on Solaris [PR104731]
+      libstdc++: Add <syncstream> declarations to <iosfwd> [PR105284]
+      libstdc++: Add <spanstream> declarations to <iosfwd> [PR105284]
 
 Jonathan Wright (81):
       aarch64: Use RTL builtins for vq[r]dmulh[q]_n intrinsics
@@ -4875,7 +4878,7 @@ Jose E. Marchesi (3):
       bpf: mark/remove unused arguments and remove an unused function
       bpf: do not --enable-gcov for bpf-*-* targets
 
-Joseph Myers (46):
+Joseph Myers (47):
       Regenerate gcc.pot.
       Update gcc .po files.
       c: C2x changes to function type compatibility
@@ -4922,6 +4925,7 @@ Joseph Myers (46):
       Update cpplib es.po
       Regenerate gcc.pot
       Update gcc .po files
+      Update gcc hr.po
 
 José Rui Faustino de Sousa (2):
       Fortran: Fix double function call with -fcheck=pointer [PR]
