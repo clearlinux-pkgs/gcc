@@ -1842,7 +1842,8 @@ Frederik Harwath (1):
 Fritz Reese (1):
       fortran: Fix conv of UNION constructors [PR105310]
 
-GCC Administrator (380):
+GCC Administrator (381):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -5301,7 +5302,7 @@ Marius Hillenbrand (3):
 Mark Wielaard (1):
       libiberty rust-demangle, ignore .suffix
 
-Martin Jambor (41):
+Martin Jambor (42):
       ipa-sra: Release dead LHS SSA_NAME when removing it (PR 99951)
       ipa-sra: Do not bail out when callers cannot be cloned
       ipa: Get rid of IPA_NODE_REF and IPA_EDGE_REF
@@ -5343,6 +5344,7 @@ Martin Jambor (41):
       ipa-cp: Do not create clones for values outside known value range (PR 102513)
       ipa: Careful processing ANCESTOR jump functions and NULL pointers (PR 103083)
       testsuite: Increase auto-inlining param in gcc.dg/ipa/remref-7.c (PR 105183)
+      ipa: Release body of clone_of when removing its last clone (PR 100413)
 
 Martin Liska (341):
       Document ranger-logical-depth in invoke.texi
