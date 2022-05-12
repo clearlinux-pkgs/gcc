@@ -30,6 +30,7 @@ Patch1   : 0001-Fix-stack-protection-issues.patch
 Patch2   : openmp-vectorize-v2.patch
 Patch3   : fortran-vector-v2.patch
 Patch5   : optimize.patch
+Patch6   : vectorize.patch
 Patch9   : gomp-relax.patch
 Patch11  : memcpy-avx2.patch
 Patch12	 : avx512-when-we-ask-for-it.patch
@@ -225,6 +226,7 @@ GNU cc and gcc C compilers.
 #%patch2 -p1
 #%patch3 -p1
 %patch5 -p1
+%patch6 -p1
 %patch9 -p1
 
 %patch12 -p1
@@ -300,6 +302,8 @@ export LIBRARY_PATH=/usr/lib64
     --enable-cet \
     --disable-libmpx \
     --with-gcc-major-version-only \
+    --enable-linux-futex \
+    --enable-gnu-indirect-function \
     --enable-default-pie
 
 make -O %{?_smp_mflags} profiledbootstrap
@@ -356,6 +360,8 @@ export LIBRARY_PATH=%{_libdir}
     --enable-cet \
     --disable-libmpx \
     --with-gcc-major-version-only \
+    --enable-linux-futex \
+    --enable-gnu-indirect-function \
     --enable-default-pie
 
 make -O %{?_smp_mflags} profiledbootstrap
@@ -413,6 +419,8 @@ export LIBRARY_PATH=%{_libdir}
     --enable-cet \
     --disable-libmpx \
     --with-gcc-major-version-only \
+    --enable-linux-futex \
+    --enable-gnu-indirect-function \
     --enable-default-pie
 
 make -O %{?_smp_mflags} profiledbootstrap
