@@ -217,7 +217,7 @@ Alex Coplan (9):
       testsuite: Fix typo in comment in aapcs64 test
       doc: Fix typos in match.pd documentation
 
-Alexandre Oliva (45):
+Alexandre Oliva (47):
       fix asm-not pattern in dwarf2/inline5.c
       omit frame pointer in pr89676
       add ASM_OUTPUT_MAX_SKIP_ALIGN to i386.h
@@ -263,6 +263,8 @@ Alexandre Oliva (45):
       ppc: testsuite: skip pr60203 on no ldbl128
       testsuite: vect: update unaligned message
       [PR105324] libstdc++: testsuite: pr105324 requires FP from_char
+      libstdc++: ppc: conditionalize vsx-only simd intrinsics
+      [PR105455] Set edge probabilities when hardening conditionals
 
 Alistair Lee (1):
       aarch64: Replace some uses of GET_CODE with RTL predicate macros
@@ -1493,7 +1495,7 @@ Ed Schonberg (36):
 Ed Smith-Rowland (1):
       MAINTAINERS: Update my email and add myself to the DCO list.
 
-Eric Botcazou (225):
+Eric Botcazou (226):
       Add XFAIL for gcc.dg/pr84877.c on the SPARC
       Fix loss of optimization of array iteration due to inlining
       Get rid of useless temporary for call to pure function
@@ -1719,6 +1721,7 @@ Eric Botcazou (225):
       Add missing target selector
       Fix issue for pointers to anonymous types with -fdump-ada-spec
       Fix internal error with vectorization on SPARC
+      Fix wrong SRA with VIEW_CONVERT_EXPR and reverse SSO
 
 Eric Gallager (6):
       Add obj-c++.srcman target to gcc/objcp/Makefile.
@@ -1842,7 +1845,8 @@ Frederik Harwath (1):
 Fritz Reese (1):
       fortran: Fix conv of UNION constructors [PR105310]
 
-GCC Administrator (381):
+GCC Administrator (382):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -5346,7 +5350,7 @@ Martin Jambor (42):
       testsuite: Increase auto-inlining param in gcc.dg/ipa/remref-7.c (PR 105183)
       ipa: Release body of clone_of when removing its last clone (PR 100413)
 
-Martin Liska (341):
+Martin Liska (342):
       Document ranger-logical-depth in invoke.texi
       Bump version to 12.
       Fix typo in param description.
@@ -5688,6 +5692,7 @@ Martin Liska (341):
       contrib: filter out a new Clang warning
       contrib: filter out a new Clang warning
       lto: use diagnostics_context in print_lto_docs_link
+      libgcov: use proper type for n_functions
 
 Martin Sebor (135):
       Remove malformed dg-warning directives.
