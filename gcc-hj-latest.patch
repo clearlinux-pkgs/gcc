@@ -1845,7 +1845,10 @@ Frederik Harwath (1):
 Fritz Reese (1):
       fortran: Fix conv of UNION constructors [PR105310]
 
-GCC Administrator (382):
+GCC Administrator (385):
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -2558,7 +2561,7 @@ Haochen Jiang (6):
       Extend predicate of operands[1] from register_operand to vector_operand for andnot insn.
       Optimize a ^ ((a ^ b) & mask) to (~mask & a) | (b & mask).
 
-Harald Anlauf (110):
+Harald Anlauf (111):
       Fortran - allow target of pointer from evaluation of function-reference
       PR fortran/100154 - ICE in gfc_conv_procedure_call, at fortran/trans-expr.c:6131
       PR fortran/100274 - ICE in gfc_conv_procedure_call, at fortran/trans-expr.c:6131
@@ -2669,6 +2672,7 @@ Harald Anlauf (110):
       Fortran: a RECURSIVE procedure cannot be an INTRINSIC
       Fortran: improve error recovery for invalid coarray function declarations
       Fortran: fix checking of coshape specification in ALLOCATE statement
+      Fortran: fix error recovery on invalid array section
 
 Hongyu Wang (33):
       Clear odata for aes(enc|dec)(wide)?kl intrinsics when ZF is set.
@@ -2708,7 +2712,7 @@ Hongyu Wang (33):
 Hugo Beauzée-Luyssen (1):
       libstdc++: Check for TLS support on mingw cross-compilers
 
-Iain Buclaw (99):
+Iain Buclaw (100):
       libphobos: Fix build fails for powerpc-linux
       libphobos: Fix visibility of std.process.searchPathFor
       d: Fix qualifier ignored in alias definition if parentheses are not present
@@ -2808,6 +2812,7 @@ Iain Buclaw (99):
       d: Merge upstream dmd 313d28b3d, druntime e361d200.
       d: Merge upstream dmd 081d61e15, druntime 9c0d4f91, phobos dba1bbe27.
       d: Merge upstream dmd 88de5e369.
+      d: Merge upstream dmd a53934d18, phobos 604534d7c.
 
 Iain Sandoe (125):
       Darwin, X86 : Fix bootstrap break from flags changes.
@@ -3733,7 +3738,7 @@ Jan-Benedict Glaw (6):
       Fix redefinition warning
       Mark argument as unused
 
-Jason Merrill (219):
+Jason Merrill (222):
       c++: unexpanded pack in enum in lambda [PR100109]
       c++: -Wdeprecated-copy and using operator= [PR92145]
       c++: unset COMPOUND_LITERAL_P [PR100079]
@@ -3953,6 +3958,9 @@ Jason Merrill (219):
       c++: generic lambda fn parm pack [PR104624]
       c++: pack init-capture of unresolved overload [PR102629]
       c++: add comments
+      c++: typeid and instantiation [PR102651]
+      c++: alias CTAD and member alias templates [PR104470]
+      c++: array {}-init [PR105589]
 
 Javier Miranda (14):
       [Ada] Wrong membership test computation for interface type
