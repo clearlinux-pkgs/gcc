@@ -1495,7 +1495,7 @@ Ed Schonberg (36):
 Ed Smith-Rowland (1):
       MAINTAINERS: Update my email and add myself to the DCO list.
 
-Eric Botcazou (226):
+Eric Botcazou (227):
       Add XFAIL for gcc.dg/pr84877.c on the SPARC
       Fix loss of optimization of array iteration due to inlining
       Get rid of useless temporary for call to pure function
@@ -1722,6 +1722,7 @@ Eric Botcazou (226):
       Fix issue for pointers to anonymous types with -fdump-ada-spec
       Fix internal error with vectorization on SPARC
       Fix wrong SRA with VIEW_CONVERT_EXPR and reverse SSO
+      Do not use DW_OP_not for TRUTH_NOT_EXPR in conditional expressions
 
 Eric Gallager (6):
       Add obj-c++.srcman target to gcc/objcp/Makefile.
@@ -4136,7 +4137,7 @@ John Ericson (1):
 Jojo R (1):
       RISC-V: Add tune info for T-HEAD C906.
 
-Jonathan Wakely (659):
+Jonathan Wakely (663):
       libstdc++: Define __cpp_lib_to_chars for C++20 [PR 100146]
       libstdc++: Disable tests that fail after atomic wait/notify rewrite
       libstdc++: Fix whitespace in license boilerplate
@@ -4796,6 +4797,10 @@ Jonathan Wakely (659):
       libstdc++: Fix test that fails on Solaris [PR104731]
       libstdc++: Add <syncstream> declarations to <iosfwd> [PR105284]
       libstdc++: Add <spanstream> declarations to <iosfwd> [PR105284]
+      libstdc++: Fix status docs for <bit> support
+      libstdc++: Add C++23 status docs
+      libstdc++: Update C++23 status docs
+      libstdc++: Fix hyperlink in docs
 
 Jonathan Wright (81):
       aarch64: Use RTL builtins for vq[r]dmulh[q]_n intrinsics
@@ -6799,7 +6804,7 @@ Rasmus Villemoes (9):
       libgcc: vxcrtstuff.c: make ctor/dtor functions static
       libstdc++: vxworks: remove stray <iostream> include
 
-Richard Biener (480):
+Richard Biener (481):
       Remove pedantic_non_lvalue_loc
       Simplify maybe_fold_reference API
       testsuite/100176 - fix struct-layout-1_generate.c compile
@@ -7280,6 +7285,7 @@ Richard Biener (480):
       middle-end/105461 - opts processing of -fvar-tracking
       tree-optimization/105484 - VEC_SET and EH
       middle-end/105376 - invalid REAL_CST for DFP constant
+      ipa/105598 - testcase for PR105598
 
 Richard Earnshaw (33):
       arm: fix UB when compiling thumb2 with PIC [PR100236]
@@ -7693,6 +7699,9 @@ Sebastian Huber (9):
       powerc: Fix asm machine directive for some CPUs
       gcov: Reword comment for gcov_read_string()
       ada: Fix build for RTEMS
+
+Sebastian Pop (1):
+      [AArch64] add barriers to ool __sync builtins
 
 Segher Boessenkool (21):
       rs6000: Fix cpu selection w/ isel (PR100108)
