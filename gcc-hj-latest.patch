@@ -1846,7 +1846,8 @@ Frederik Harwath (1):
 Fritz Reese (1):
       fortran: Fix conv of UNION constructors [PR105310]
 
-GCC Administrator (385):
+GCC Administrator (386):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -3064,7 +3065,7 @@ Indu Bhagat (31):
 Ivan Sorokin (1):
       x86: Build only one __cpu_model/__cpu_features2 variables
 
-Jakub Jelinek (557):
+Jakub Jelinek (558):
       Bump BASE-VER.
       Update crontab and git_update_version.py
       libstdc++: Update ppc64le baseline_symbols.txt
@@ -3622,6 +3623,7 @@ Jakub Jelinek (557):
       Bump BASE-VER
       c++: Don't emit deprecated warnings or unavailable errors on lambda declarations
       isel: Fix up gimple_expand_vec_set_expr [PR105528]
+      libgomp: Clarify that omp_display_env is fully implemented
 
 Jan Hubicka (106):
       Implement EAF_NOT_RETURNED tracking in ipa-modref
