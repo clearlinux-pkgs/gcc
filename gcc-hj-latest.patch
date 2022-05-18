@@ -338,7 +338,7 @@ Andrew Burgess (4):
       top-level configure: setup target_configdirs based on repository
       update my email address
 
-Andrew MacLeod (134):
+Andrew MacLeod (135):
       Enhance initial global value setting.
       Change x mod 0 to produce UNDEFINED rather than VARYING.
       Don't over-allocate switch default range object.
@@ -473,6 +473,7 @@ Andrew MacLeod (134):
       Use range_compatible_p in condexpr_adjust
       Always use dominators in the cache when available.
       Retain existing range knowledge when prefilling statements.
+      Check for equivalence after merging relations.
 
 Andrew Pinski (89):
       Don't simplify (A & C) != 0 ? D : 0 for pointer types.
@@ -1846,7 +1847,8 @@ Frederik Harwath (1):
 Fritz Reese (1):
       fortran: Fix conv of UNION constructors [PR105310]
 
-GCC Administrator (386):
+GCC Administrator (387):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
