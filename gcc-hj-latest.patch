@@ -1496,7 +1496,7 @@ Ed Schonberg (36):
 Ed Smith-Rowland (1):
       MAINTAINERS: Update my email and add myself to the DCO list.
 
-Eric Botcazou (227):
+Eric Botcazou (228):
       Add XFAIL for gcc.dg/pr84877.c on the SPARC
       Fix loss of optimization of array iteration due to inlining
       Get rid of useless temporary for call to pure function
@@ -1724,6 +1724,7 @@ Eric Botcazou (227):
       Fix internal error with vectorization on SPARC
       Fix wrong SRA with VIEW_CONVERT_EXPR and reverse SSO
       Do not use DW_OP_not for TRUTH_NOT_EXPR in conditional expressions
+      Reduce usage of limited_with clauses with -fdump-ada-spec
 
 Eric Gallager (6):
       Add obj-c++.srcman target to gcc/objcp/Makefile.
