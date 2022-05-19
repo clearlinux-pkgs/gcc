@@ -1,0 +1,14 @@
+--- gcc-12.1.0/libgomp/env.c~	2022-05-06 07:31:00.000000000 +0000
++++ gcc-12.1.0/libgomp/env.c	2022-05-19 17:56:44.803854389 +0000
+@@ -1557,9 +1557,9 @@
+ 	 Depending on the CPU speed, this can be e.g. 5 times longer
+ 	 or 5 times shorter.  */
+       if (wait_policy > 0)
+-	gomp_spin_count_var = 30000000000LL;
++	gomp_spin_count_var = 30000LL;
+       else if (wait_policy < 0)
+-	gomp_spin_count_var = 300000LL;
++	gomp_spin_count_var = 300LL;
+     }
+   /* gomp_throttled_spin_count_var is used when there are more libgomp
+      managed threads than available CPUs.  Use very short spinning.  */
