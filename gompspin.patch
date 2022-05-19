@@ -12,3 +12,14 @@
      }
    /* gomp_throttled_spin_count_var is used when there are more libgomp
       managed threads than available CPUs.  Use very short spinning.  */
+--- gcc-12.1.0/libgomp/config/linux/wait.h~	2022-05-06 07:31:00.000000000 +0000
++++ gcc-12.1.0/libgomp/config/linux/wait.h	2022-05-19 23:05:21.511241685 +0000
+@@ -53,7 +53,7 @@
+                                          MEMMODEL_RELAXED)
+                         > gomp_available_cpus, 0))
+     count = gomp_throttled_spin_count_var;
+-  for (i = 0; i < count; i++)
++  for (i = 0; i < 1; i++)
+     if (__builtin_expect (__atomic_load_n (addr, MEMMODEL_RELAXED) != val, 0))
+       return 0;
+     else
