@@ -1848,7 +1848,8 @@ Frederik Harwath (1):
 Fritz Reese (1):
       fortran: Fix conv of UNION constructors [PR105310]
 
-GCC Administrator (388):
+GCC Administrator (389):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -6810,7 +6811,7 @@ Rasmus Villemoes (9):
       libgcc: vxcrtstuff.c: make ctor/dtor functions static
       libstdc++: vxworks: remove stray <iostream> include
 
-Richard Biener (489):
+Richard Biener (490):
       Remove pedantic_non_lvalue_loc
       Simplify maybe_fold_reference API
       testsuite/100176 - fix struct-layout-1_generate.c compile
@@ -7300,6 +7301,7 @@ Richard Biener (489):
       rtl-optimization/105577 - RTL DSE and non-call EH
       rtl-optimization/105577 - testcase for the PR
       tree-optimization/105618 - restore load sinking
+      tree-optimization/103116 - SLP permutes and peeling for gaps
 
 Richard Earnshaw (33):
       arm: fix UB when compiling thumb2 with PIC [PR100236]
