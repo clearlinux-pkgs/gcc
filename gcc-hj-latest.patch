@@ -1848,7 +1848,10 @@ Frederik Harwath (1):
 Fritz Reese (1):
       fortran: Fix conv of UNION constructors [PR105310]
 
-GCC Administrator (389):
+GCC Administrator (392):
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -6366,7 +6369,7 @@ Pavel I. Kryukov (1):
 Pekka Seppänen (1):
       Adjust CPP_FOR_BUILD
 
-Peter Bergner (20):
+Peter Bergner (21):
       rs6000: MMA test case ICEs using -O3 [PR99842]
       rs6000: Add new __builtin_vsx_build_pair and __builtin_mma_build_acc built-ins
       i386: Add V8QI and other 64bit vector permutations [PR89021]
@@ -6387,6 +6390,7 @@ Peter Bergner (20):
       rs6000: Fix invalid address passed to __builtin_mma_disassemble_acc [PR104923]
       rs6000: Update testsuite to use -mdejagnu-cpu= and -mdejagnu-tune= options
       rs6000: Handle pcrel sibcalls to longcall functions [PR104894]
+      rs6000: Prefer assigning the MMA vector operands to altivec registers [PR105556]
 
 Petter Tomner (5):
       MAINTAINERS: Adding myself to to DCO and write after approval

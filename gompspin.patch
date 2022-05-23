@@ -19,7 +19,7 @@
                          > gomp_available_cpus, 0))
      count = gomp_throttled_spin_count_var;
 -  for (i = 0; i < count; i++)
-+  for (i = 0; i < 1; i++)
++  for (i = 0; i < 10000; i++)
      if (__builtin_expect (__atomic_load_n (addr, MEMMODEL_RELAXED) != val, 0))
        return 0;
      else
