@@ -6779,7 +6779,7 @@ Qian Jianhua (3):
       print-tree:Avoid warnings of overflow
       MAINTAINERS: Update my email address
 
-Qing Zhao (7):
+Qing Zhao (8):
       Apply pattern initialization only when have_insn_for return true.
       Change the 3rd parameter of function .DEFERRED_INIT from IS_VLA to decl name.
       Enable -Wuninitialized + -ftrivial-auto-var-init for address taken variables.
@@ -6787,6 +6787,7 @@ Qing Zhao (7):
       Suppress uninitialized warnings for new created uses from __builtin_clear_padding folding [PR104550]
       Don't emit switch-unreachable warnings for -ftrivial-auto-var-init (PR102276)
       Add an assertion: the zeroed_hardregs set is a subset of all call used regs.
+      i386: Adjust -fzero-call-used-regs to always use XOR [PR101891]
 
 Rainer Orth (11):
       testsuite: i386: Use -fomit-frame-pointer for gcc.target/i386/pr100704-1.c etc.

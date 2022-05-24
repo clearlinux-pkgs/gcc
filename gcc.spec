@@ -14,7 +14,7 @@
 
 Name     : gcc
 Version  : 12.1.0
-Release  : 1578
+Release  : 1579
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://gcc.gnu.org/pub/gcc/releases/gcc-12.1.0/gcc-12.1.0.tar.xz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.24.tar.bz2
@@ -362,6 +362,7 @@ export LIBRARY_PATH=%{_libdir}
     --with-gcc-major-version-only \
     --enable-linux-futex \
     --enable-gnu-indirect-function \
+    --with-zstd \
     --enable-default-pie
 
 make -O %{?_smp_mflags} profiledbootstrap
@@ -421,6 +422,7 @@ export LIBRARY_PATH=%{_libdir}
     --with-gcc-major-version-only \
     --enable-linux-futex \
     --enable-gnu-indirect-function \
+    --with-zstd \
     --enable-default-pie
 
 make -O %{?_smp_mflags} profiledbootstrap
