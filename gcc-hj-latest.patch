@@ -980,6 +980,9 @@ Boris Yakobowski (3):
       [Ada] Do not catch 'N mod -1' in CodePeer_Mode
       [Ada] Do not catch 'N rem -1' in CodePeer_Mode
 
+Bruno Haible (1):
+      Extend --with-zstd documentation
+
 Carl Love (8):
       rs6000, Fix arguments in altivec_vrlwmi and altivec_rlwdi builtins
       RS6000 add 128-bit Integer Operations part 1
@@ -1848,7 +1851,8 @@ Frederik Harwath (1):
 Fritz Reese (1):
       fortran: Fix conv of UNION constructors [PR105310]
 
-GCC Administrator (392):
+GCC Administrator (393):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -5373,7 +5377,7 @@ Martin Jambor (42):
       testsuite: Increase auto-inlining param in gcc.dg/ipa/remref-7.c (PR 105183)
       ipa: Release body of clone_of when removing its last clone (PR 100413)
 
-Martin Liska (342):
+Martin Liska (343):
       Document ranger-logical-depth in invoke.texi
       Bump version to 12.
       Fix typo in param description.
@@ -5716,6 +5720,7 @@ Martin Liska (342):
       contrib: filter out a new Clang warning
       lto: use diagnostics_context in print_lto_docs_link
       libgcov: use proper type for n_functions
+      docs: document --with-zstd
 
 Martin Sebor (135):
       Remove malformed dg-warning directives.

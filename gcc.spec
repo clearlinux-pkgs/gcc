@@ -14,7 +14,7 @@
 
 Name     : gcc
 Version  : 12.1.0
-Release  : 1577
+Release  : 1578
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://gcc.gnu.org/pub/gcc/releases/gcc-12.1.0/gcc-12.1.0.tar.xz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.24.tar.bz2
@@ -32,7 +32,6 @@ Patch3   : fortran-vector-v2.patch
 Patch5   : optimize.patch
 Patch6   : vectorize.patch
 Patch9   : gomp-relax.patch
-Patch10  : gompspin.patch
 Patch11  : memcpy-avx2.patch
 Patch12	 : avx512-when-we-ask-for-it.patch
 Patch14  : arch-native-override.patch
@@ -229,7 +228,6 @@ GNU cc and gcc C compilers.
 %patch5 -p1
 %patch6 -p1
 %patch9 -p1
-%patch10 -p1
 
 %patch12 -p1
 
