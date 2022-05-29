@@ -1816,7 +1816,7 @@ Francois-Xavier Coudert (26):
       Fortran: fix issignaling() implementation
       Fortran: fix bootstrap on SPARC/Solaris
 
-François Dumont (13):
+François Dumont (14):
       libstdc++: Limit allocation on iterator insertion in Hashtable [PR 96088]
       libstdc++: [_GLIBCXX_DEBUG] Enhance rendering of assert message
       libstdc++: Fix dg-prune-output assertion message
@@ -1830,6 +1830,7 @@ François Dumont (13):
       libstdc++: Overload std::__to_address for __gnu_cxx::__normal_iterator.
       libstdc++: Optimize operations on small size hashtable [PR 68303]
       libstdc++: Remove redundant line in versioned namespace linker script
+      libstdc++: Fix printing of std::span for versioned namespace
 
 François-Xavier Coudert (2):
       Darwin: Future-proof and homogeneize detection of darwin versions
@@ -1851,7 +1852,9 @@ Frederik Harwath (1):
 Fritz Reese (1):
       fortran: Fix conv of UNION constructors [PR105310]
 
-GCC Administrator (396):
+GCC Administrator (398):
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -4154,7 +4157,7 @@ John Ericson (1):
 Jojo R (1):
       RISC-V: Add tune info for T-HEAD C906.
 
-Jonathan Wakely (663):
+Jonathan Wakely (671):
       libstdc++: Define __cpp_lib_to_chars for C++20 [PR 100146]
       libstdc++: Disable tests that fail after atomic wait/notify rewrite
       libstdc++: Fix whitespace in license boilerplate
@@ -4818,6 +4821,14 @@ Jonathan Wakely (663):
       libstdc++: Add C++23 status docs
       libstdc++: Update C++23 status docs
       libstdc++: Fix hyperlink in docs
+      libstdc++: Add noexcept to std::launch operators
+      libstdc++: Fix typo in doxygen @headerfile command
+      libstdc++: Skip tests that fail for the versioned namespace
+      libstdc++: Reduce <random> test iterations for simulators
+      libstdc++: Implement LWG 3683 for pmr::polymorphic_allocator
+      libstdc++: Add constexpr to std::counted_iterator post-increment (LWG 3643)
+      libstdc++: Fix printing of std::atomic<shared_ptr<T>> for versioned namespace
+      libstdc++: Fix atomic and error_code printers for versioned namespace
 
 Jonathan Wright (81):
       aarch64: Use RTL builtins for vq[r]dmulh[q]_n intrinsics
@@ -5245,7 +5256,7 @@ Marcel Vollweiler (11):
       C, C++, Fortran, OpenMP: Add 'has_device_addr' clause to 'target' construct.
       OpenMP, Fortran: Bugfix for omp_set_num_teams.
 
-Marek Polacek (82):
+Marek Polacek (83):
       c++: Don't allow defining types in enum-base [PR96380]
       c++: Prevent bogus -Wtype-limits warning with NTTP [PR100161]
       c++: Add testcase for already fixed PR [PR94102]
@@ -5328,6 +5339,7 @@ Marek Polacek (82):
       c++: __builtin_shufflevector with value-dep expr [PR105353]
       c++: enum in generic lambda at global scope [PR105398]
       c++: global-namespace-qualified var after class def [PR90107]
+      c++: Fix ICE with -Wmismatched-tags [PR105725]
 
 Marius Hillenbrand (3):
       IBM Z: Fix error checking for builtin vec_permi
