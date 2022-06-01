@@ -1852,7 +1852,8 @@ Frederik Harwath (1):
 Fritz Reese (1):
       fortran: Fix conv of UNION constructors [PR105310]
 
-GCC Administrator (400):
+GCC Administrator (401):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -6127,7 +6128,7 @@ Patrick McGehearty (2):
       Practical improvement to libgcc complex divide
       Fix for powerpc64 long double complex divide failure
 
-Patrick Palka (228):
+Patrick Palka (229):
       libstdc++: Implement P2259R1 changes [PR95983]
       c++: Add testcase for already fixed PR [PR16617]
       c++: Add testcase for already fixed PR [PR84689]
@@ -6356,6 +6357,7 @@ Patrick Palka (228):
       libstdc++: case-sensitivity in hexfloat std::from_chars [PR105441]
       libstdc++: Don't use std::tolower in <charconv> [PR103911]
       c++: ICE during aggr CTAD for member tmpl [PR105476]
+      c++: constexpr init of union sub-aggr w/ base [PR105491]
 
 Paul A. Clarke (29):
       rs6000: Add support for SSE4.1 "test" intrinsics
