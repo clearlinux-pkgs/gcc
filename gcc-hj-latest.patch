@@ -1852,7 +1852,8 @@ Frederik Harwath (1):
 Fritz Reese (1):
       fortran: Fix conv of UNION constructors [PR105310]
 
-GCC Administrator (401):
+GCC Administrator (402):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -3768,7 +3769,7 @@ Jan-Benedict Glaw (6):
       Fix redefinition warning
       Mark argument as unused
 
-Jason Merrill (226):
+Jason Merrill (228):
       c++: unexpanded pack in enum in lambda [PR100109]
       c++: -Wdeprecated-copy and using operator= [PR92145]
       c++: unset COMPOUND_LITERAL_P [PR100079]
@@ -3995,6 +3996,8 @@ Jason Merrill (226):
       c++: deduction from auto fn [PR105623]
       c++: CTAD with alias and nested template [PR105655]
       c++: lambda in concept [PR105652]
+      c++: auto function as function argument [PR105779]
+      c++: auto and dependent member name [PR105734]
 
 Javier Miranda (14):
       [Ada] Wrong membership test computation for interface type
@@ -5752,7 +5755,7 @@ Martin Liska (343):
       libgcov: use proper type for n_functions
       docs: document --with-zstd
 
-Martin Sebor (135):
+Martin Sebor (136):
       Remove malformed dg-warning directives.
       Move pass free_lang_data to its own file.
       PR middle-end/100250 - ICE related to -Wmaybe-uninitialized
@@ -5888,6 +5891,7 @@ Martin Sebor (135):
       Add a test for true positives related to PR104715.
       Call mark_dfs_back_edges before testing EDGE_DFS_BACK [PR104761].
       Avoid -Wdangling-pointer for by-transparent-reference arguments [PR104436].
+      PR middle-end/105604 - ICE: in tree_to_shwi with vla in struct and sprintf
 
 Martin Uecker (6):
       Correct a mistake in a warnung for -Wnonnull.
@@ -6852,7 +6856,7 @@ Rasmus Villemoes (9):
       libgcc: vxcrtstuff.c: make ctor/dtor functions static
       libstdc++: vxworks: remove stray <iostream> include
 
-Richard Biener (490):
+Richard Biener (493):
       Remove pedantic_non_lvalue_loc
       Simplify maybe_fold_reference API
       testsuite/100176 - fix struct-layout-1_generate.c compile
@@ -7343,6 +7347,9 @@ Richard Biener (490):
       rtl-optimization/105577 - testcase for the PR
       tree-optimization/105618 - restore load sinking
       tree-optimization/103116 - SLP permutes and peeling for gaps
+      middle-end/105711 - properly handle CONST_INT when expanding bitfields
+      tree-optimization/105726 - adjust array bound heuristic
+      tree-optimization/105786 - avoid strlen replacement for pointers
 
 Richard Earnshaw (33):
       arm: fix UB when compiling thumb2 with PIC [PR100236]
@@ -8585,6 +8592,9 @@ Vincent Lefevre (1):
 
 Vincent Lefèvre (1):
       gcov: check return code of a fclose
+
+Vineet Gupta (1):
+      RISC-V: Inhibit FP <--> int register moves via tune param
 
 Vladimir N. Makarov (16):
       Make profitability calculation of RA conflict presentations independent of host compiler type sizes. [PR102147]
