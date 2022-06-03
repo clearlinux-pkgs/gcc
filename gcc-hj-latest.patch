@@ -3769,7 +3769,7 @@ Jan-Benedict Glaw (6):
       Fix redefinition warning
       Mark argument as unused
 
-Jason Merrill (228):
+Jason Merrill (229):
       c++: unexpanded pack in enum in lambda [PR100109]
       c++: -Wdeprecated-copy and using operator= [PR92145]
       c++: unset COMPOUND_LITERAL_P [PR100079]
@@ -3998,6 +3998,7 @@ Jason Merrill (228):
       c++: lambda in concept [PR105652]
       c++: auto function as function argument [PR105779]
       c++: auto and dependent member name [PR105734]
+      c++: constexpr empty aggr [PR105795]
 
 Javier Miranda (14):
       [Ada] Wrong membership test computation for interface type
@@ -6443,8 +6444,9 @@ Philipp Fent (2):
       libstdc++: Add pretty printer for std::span
       libstdc++: Add pretty printer for std::initializer_list
 
-Philipp Tomsich (1):
+Philipp Tomsich (2):
       aarch64: enable Ampere-1 CPU
+      RISC-V: Implement C[LT]Z_DEFINED_VALUE_AT_ZERO
 
 Philippe Blain (1):
       libstdc++: Install libstdc++*-gdb.py more robustly [PR 99453]
