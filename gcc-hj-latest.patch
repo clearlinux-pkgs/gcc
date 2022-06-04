@@ -1852,7 +1852,8 @@ Frederik Harwath (1):
 Fritz Reese (1):
       fortran: Fix conv of UNION constructors [PR105310]
 
-GCC Administrator (402):
+GCC Administrator (403):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -3769,7 +3770,7 @@ Jan-Benedict Glaw (6):
       Fix redefinition warning
       Mark argument as unused
 
-Jason Merrill (229):
+Jason Merrill (230):
       c++: unexpanded pack in enum in lambda [PR100109]
       c++: -Wdeprecated-copy and using operator= [PR92145]
       c++: unset COMPOUND_LITERAL_P [PR100079]
@@ -3999,6 +4000,7 @@ Jason Merrill (229):
       c++: auto function as function argument [PR105779]
       c++: auto and dependent member name [PR105734]
       c++: constexpr empty aggr [PR105795]
+      c++: redeclared hidden friend [PR105761]
 
 Javier Miranda (14):
       [Ada] Wrong membership test computation for interface type
