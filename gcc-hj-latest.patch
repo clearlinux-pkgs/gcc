@@ -1852,7 +1852,11 @@ Frederik Harwath (1):
 Fritz Reese (1):
       fortran: Fix conv of UNION constructors [PR105310]
 
-GCC Administrator (403):
+GCC Administrator (407):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -8816,7 +8820,7 @@ konglin1 (8):
       i386: vcvtph2ps and vcvtps2ph should be used to convert _Float16 to SFmode with -mf16c [PR 102811]
       i386: Enable intrinsics that convert float and bf16 data to each other.
 
-liuhongt (189):
+liuhongt (190):
       MASK_AVX256_SPLIT_UNALIGNED_STORE/LOAD should be cleared in opts->x_target_flags when X86_TUNE_AVX256_UNALIGNED_LOAD/STORE_OPTIMAL is enabled by target attribute.
       Add folding and remove expanders for x86 *pcmp{et,gt}* builtins [PR target/98911]
       i386: Optimize vpblendvb on inverted mask register to vpblendvb on swapping the order of operand 1 and operand 2. [PR target/99908]
@@ -9006,6 +9010,7 @@ liuhongt (189):
       Fix typo in vec_setv8hi_0.
       Split vector load from parm_del to elemental loads to avoid STLF stalls.
       Refine and/ior/xor/andn masked patterns for V*HFmode.
+      Fix insn does not satisfy its constraints: sse2_lshrv1ti3
 
 marxin (1):
       gcov: Use system IO buffering
