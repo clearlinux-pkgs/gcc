@@ -1852,7 +1852,8 @@ Frederik Harwath (1):
 Fritz Reese (1):
       fortran: Fix conv of UNION constructors [PR105310]
 
-GCC Administrator (407):
+GCC Administrator (408):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -3774,7 +3775,7 @@ Jan-Benedict Glaw (6):
       Fix redefinition warning
       Mark argument as unused
 
-Jason Merrill (230):
+Jason Merrill (231):
       c++: unexpanded pack in enum in lambda [PR100109]
       c++: -Wdeprecated-copy and using operator= [PR92145]
       c++: unset COMPOUND_LITERAL_P [PR100079]
@@ -4005,6 +4006,7 @@ Jason Merrill (230):
       c++: auto and dependent member name [PR105734]
       c++: constexpr empty aggr [PR105795]
       c++: redeclared hidden friend [PR105761]
+      c++: redeclared hidden friend take 2 [PR105852]
 
 Javier Miranda (14):
       [Ada] Wrong membership test computation for interface type
@@ -4180,7 +4182,7 @@ John Ericson (1):
 Jojo R (1):
       RISC-V: Add tune info for T-HEAD C906.
 
-Jonathan Wakely (671):
+Jonathan Wakely (674):
       libstdc++: Define __cpp_lib_to_chars for C++20 [PR 100146]
       libstdc++: Disable tests that fail after atomic wait/notify rewrite
       libstdc++: Fix whitespace in license boilerplate
@@ -4852,6 +4854,9 @@ Jonathan Wakely (671):
       libstdc++: Add constexpr to std::counted_iterator post-increment (LWG 3643)
       libstdc++: Fix printing of std::atomic<shared_ptr<T>> for versioned namespace
       libstdc++: Fix atomic and error_code printers for versioned namespace
+      libstdc++: Only include <ext/atomicity.h> for COW string
+      libstdc++: Fix narrowing conversions for 16-bit size_t [PR105681]
+      libstdc++: Mark non-exported function always_inline [PR105671]
 
 Jonathan Wright (81):
       aarch64: Use RTL builtins for vq[r]dmulh[q]_n intrinsics
@@ -5951,9 +5956,10 @@ Matthieu Eyraud (3):
 Matwey V. Kornilov (1):
       avr: Add atmega324pb MCU
 
-Max Filippov (2):
+Max Filippov (3):
       gcc: xtensa: fix PR target/102115
       gcc: xtensa: fix PR target/102336
+      gcc: xtensa: fix PR target/105879
 
 Maxim Blinov (1):
       analyzer: Fix bootstrap with clang
