@@ -1852,7 +1852,8 @@ Frederik Harwath (1):
 Fritz Reese (1):
       fortran: Fix conv of UNION constructors [PR105310]
 
-GCC Administrator (408):
+GCC Administrator (409):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -4952,7 +4953,7 @@ Jose E. Marchesi (3):
       bpf: mark/remove unused arguments and remove an unused function
       bpf: do not --enable-gcov for bpf-*-* targets
 
-Joseph Myers (47):
+Joseph Myers (48):
       Regenerate gcc.pot.
       Update gcc .po files.
       c: C2x changes to function type compatibility
@@ -5000,6 +5001,7 @@ Joseph Myers (47):
       Regenerate gcc.pot
       Update gcc .po files
       Update gcc hr.po
+      Update gcc sv.po
 
 José Rui Faustino de Sousa (2):
       Fortran: Fix double function call with -fcheck=pointer [PR]
