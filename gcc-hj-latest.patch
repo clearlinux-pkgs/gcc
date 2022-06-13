@@ -1852,7 +1852,10 @@ Frederik Harwath (1):
 Fritz Reese (1):
       fortran: Fix conv of UNION constructors [PR105310]
 
-GCC Administrator (409):
+GCC Administrator (412):
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -2743,7 +2746,7 @@ Hongyu Wang (33):
 Hugo Beauzée-Luyssen (1):
       libstdc++: Check for TLS support on mingw cross-compilers
 
-Iain Buclaw (101):
+Iain Buclaw (102):
       libphobos: Fix build fails for powerpc-linux
       libphobos: Fix visibility of std.process.searchPathFor
       d: Fix qualifier ignored in alias definition if parentheses are not present
@@ -2845,6 +2848,7 @@ Iain Buclaw (101):
       d: Merge upstream dmd 88de5e369.
       d: Merge upstream dmd a53934d18, phobos 604534d7c.
       d: Fix D lexer sometimes fails to compile code read from stdin
+      d: Improve TypeInfo errors when compiling in -fno-rtti mode
 
 Iain Sandoe (125):
       Darwin, X86 : Fix bootstrap break from flags changes.
@@ -6147,7 +6151,7 @@ Patrick McGehearty (2):
       Practical improvement to libgcc complex divide
       Fix for powerpc64 long double complex divide failure
 
-Patrick Palka (229):
+Patrick Palka (230):
       libstdc++: Implement P2259R1 changes [PR95983]
       c++: Add testcase for already fixed PR [PR16617]
       c++: Add testcase for already fixed PR [PR84689]
@@ -6377,6 +6381,7 @@ Patrick Palka (229):
       libstdc++: Don't use std::tolower in <charconv> [PR103911]
       c++: ICE during aggr CTAD for member tmpl [PR105476]
       c++: constexpr init of union sub-aggr w/ base [PR105491]
+      c++: value-dep but not type-dep decltype expr [PR105756]
 
 Paul A. Clarke (29):
       rs6000: Add support for SSE4.1 "test" intrinsics
