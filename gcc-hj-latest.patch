@@ -1852,7 +1852,8 @@ Frederik Harwath (1):
 Fritz Reese (1):
       fortran: Fix conv of UNION constructors [PR105310]
 
-GCC Administrator (412):
+GCC Administrator (413):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -6463,9 +6464,10 @@ Philipp Fent (2):
       libstdc++: Add pretty printer for std::span
       libstdc++: Add pretty printer for std::initializer_list
 
-Philipp Tomsich (2):
+Philipp Tomsich (3):
       aarch64: enable Ampere-1 CPU
       RISC-V: Implement C[LT]Z_DEFINED_VALUE_AT_ZERO
+      RISC-V: bitmanip: improve constant-loading for (1ULL << 31) in DImode
 
 Philippe Blain (1):
       libstdc++: Install libstdc++*-gdb.py more robustly [PR 99453]
