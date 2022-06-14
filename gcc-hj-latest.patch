@@ -2388,7 +2388,7 @@ Giuliano Belinassi (1):
 Guo, Xuepeng (1):
       AVX512FP16: Initial support for AVX512FP16 feature and scalar _Float16 instructions.
 
-H.J. Lu (149):
+H.J. Lu (150):
       x86: Use crc32 target option for CRC32 intrinsics
       x86: Add -mmwait for -mgeneral-regs-only
       op_by_pieces_d::run: Change a while loop to a do-while loop
@@ -2538,6 +2538,7 @@ H.J. Lu (149):
       libsanitizer: cherry-pick commit b226894d475b from upstream
       x86: Add missing .note.GNU-stack to assembly source
       x86: Add .note.GNU-stack section only for Linux
+      x86: Require AVX for F16C and VAES
 
 Hafiz Abid Qadeer (6):
       [amdgcn] Update CFI configuration
@@ -4188,7 +4189,7 @@ John Ericson (1):
 Jojo R (1):
       RISC-V: Add tune info for T-HEAD C906.
 
-Jonathan Wakely (674):
+Jonathan Wakely (675):
       libstdc++: Define __cpp_lib_to_chars for C++20 [PR 100146]
       libstdc++: Disable tests that fail after atomic wait/notify rewrite
       libstdc++: Fix whitespace in license boilerplate
@@ -4863,6 +4864,7 @@ Jonathan Wakely (674):
       libstdc++: Only include <ext/atomicity.h> for COW string
       libstdc++: Fix narrowing conversions for 16-bit size_t [PR105681]
       libstdc++: Mark non-exported function always_inline [PR105671]
+      libstdc++: Use type_identity_t for non-deducible std::atomic_xxx args
 
 Jonathan Wright (81):
       aarch64: Use RTL builtins for vq[r]dmulh[q]_n intrinsics
@@ -5380,6 +5382,9 @@ Marius Hillenbrand (3):
       IBM Z: Fix error checking for builtin vec_permi
       IBM Z: Avoid bash-specific substitution in configure
       IBM Z: Fix vector intrinsics vec_double and vec_floate
+
+Mark Mentovai (1):
+      libstdc++: Rename __null_terminated to avoid collision with Apple SDK
 
 Mark Wielaard (1):
       libiberty rust-demangle, ignore .suffix
