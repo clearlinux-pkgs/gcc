@@ -1852,7 +1852,8 @@ Frederik Harwath (1):
 Fritz Reese (1):
       fortran: Fix conv of UNION constructors [PR105310]
 
-GCC Administrator (413):
+GCC Administrator (414):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -2748,7 +2749,7 @@ Hongyu Wang (33):
 Hugo Beauzée-Luyssen (1):
       libstdc++: Check for TLS support on mingw cross-compilers
 
-Iain Buclaw (102):
+Iain Buclaw (103):
       libphobos: Fix build fails for powerpc-linux
       libphobos: Fix visibility of std.process.searchPathFor
       d: Fix qualifier ignored in alias definition if parentheses are not present
@@ -2851,6 +2852,7 @@ Iain Buclaw (102):
       d: Merge upstream dmd a53934d18, phobos 604534d7c.
       d: Fix D lexer sometimes fails to compile code read from stdin
       d: Improve TypeInfo errors when compiling in -fno-rtti mode
+      d: Set TYPE_ARTIFICIAL on internal TypeInfo types
 
 Iain Sandoe (125):
       Darwin, X86 : Fix bootstrap break from flags changes.
@@ -8840,7 +8842,7 @@ konglin1 (8):
       i386: vcvtph2ps and vcvtps2ph should be used to convert _Float16 to SFmode with -mf16c [PR 102811]
       i386: Enable intrinsics that convert float and bf16 data to each other.
 
-liuhongt (190):
+liuhongt (191):
       MASK_AVX256_SPLIT_UNALIGNED_STORE/LOAD should be cleared in opts->x_target_flags when X86_TUNE_AVX256_UNALIGNED_LOAD/STORE_OPTIMAL is enabled by target attribute.
       Add folding and remove expanders for x86 *pcmp{et,gt}* builtins [PR target/98911]
       i386: Optimize vpblendvb on inverted mask register to vpblendvb on swapping the order of operand 1 and operand 2. [PR target/99908]
@@ -9031,6 +9033,7 @@ liuhongt (190):
       Split vector load from parm_del to elemental loads to avoid STLF stalls.
       Refine and/ior/xor/andn masked patterns for V*HFmode.
       Fix insn does not satisfy its constraints: sse2_lshrv1ti3
+      Fix ICE in extract_insn, at recog.cc:2791
 
 marxin (1):
       gcov: Use system IO buffering
