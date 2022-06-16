@@ -1852,7 +1852,8 @@ Frederik Harwath (1):
 Fritz Reese (1):
       fortran: Fix conv of UNION constructors [PR105310]
 
-GCC Administrator (414):
+GCC Administrator (415):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -2854,7 +2855,7 @@ Iain Buclaw (103):
       d: Improve TypeInfo errors when compiling in -fno-rtti mode
       d: Set TYPE_ARTIFICIAL on internal TypeInfo types
 
-Iain Sandoe (125):
+Iain Sandoe (126):
       Darwin, X86 : Fix bootstrap break from flags changes.
       Darwin : Adjust darwin_binds_local_p for PIC code [PR100152].
       Revert "Darwin : Adjust darwin_binds_local_p for PIC code [PR100152]."
@@ -2980,6 +2981,7 @@ Iain Sandoe (125):
       c++, coroutines: Account for overloaded promise return_value() [PR105301].
       c++, coroutines: Improve check for throwing final await [PR104051].
       c++, coroutines: Partial reversion of r12-8308-g15a176a833f23e [PR105426].
+      Darwin: Fix empty g++ command lines [PR105599].
 
 Ian Lance Taylor (69):
       libgo: use Windows line endings in testwinsignal
@@ -5385,8 +5387,9 @@ Marius Hillenbrand (3):
       IBM Z: Avoid bash-specific substitution in configure
       IBM Z: Fix vector intrinsics vec_double and vec_floate
 
-Mark Mentovai (1):
+Mark Mentovai (2):
       libstdc++: Rename __null_terminated to avoid collision with Apple SDK
+      Darwin: Future-proof -mmacosx-version-min
 
 Mark Wielaard (1):
       libiberty rust-demangle, ignore .suffix
@@ -7381,7 +7384,7 @@ Richard Biener (493):
       tree-optimization/105726 - adjust array bound heuristic
       tree-optimization/105786 - avoid strlen replacement for pointers
 
-Richard Earnshaw (33):
+Richard Earnshaw (34):
       arm: fix UB when compiling thumb2 with PIC [PR100236]
       arm: fix UB due to missing mode check [PR100311]
       arm: correctly handle inequality comparisons against max constants [PR100563]
@@ -7415,6 +7418,7 @@ Richard Earnshaw (33):
       arm: correctly handle zero-sized bit-fields in AAPCS [PR102024]
       aarch64: correctly handle zero-sized bit-fields in AAPCS64 [PR102024]
       arm: fix testsuite failure of reg_equal_test.c [PR101755]
+      arm: big-endian issue in gen_cpymem_ldrd_strd [PR105981]
 
 Richard Henderson (1):
       MAINTAINERS: Update my email address.
@@ -7880,6 +7884,9 @@ Siddhesh Poyarekar (24):
 
 Simon Cook (1):
       RISC-V: Don't unconditionally add m,a,f,d in arch-canonicalize
+
+Simon Wright (1):
+      Darwin: Truncate kernel-provided version to OS major for Darwin >= 20.
 
 Srinath Parvathaneni (4):
       arm: Remove duplicate definitions from arm_mve.h (pr100419).
