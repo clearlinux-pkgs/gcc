@@ -1852,7 +1852,9 @@ Frederik Harwath (1):
 Fritz Reese (1):
       fortran: Fix conv of UNION constructors [PR105310]
 
-GCC Administrator (416):
+GCC Administrator (418):
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -3106,7 +3108,7 @@ Indu Bhagat (31):
 Ivan Sorokin (1):
       x86: Build only one __cpu_model/__cpu_features2 variables
 
-Jakub Jelinek (563):
+Jakub Jelinek (567):
       Bump BASE-VER.
       Update crontab and git_update_version.py
       libstdc++: Update ppc64le baseline_symbols.txt
@@ -3670,8 +3672,12 @@ Jakub Jelinek (563):
       fold-const: Fix up -fsanitize=null in C++ [PR105729]
       libgomp: Don't define GOMP_HAVE_EFFICIENT_ALIGNED_ALLOC for _aligned_malloc [PR105745]
       libcpp: Ignore CPP_PADDING tokens in _cpp_parse_expr [PR105732]
+      c++: Fix up ICE on __builtin_shufflevector constexpr evaluation [PR105871]
+      expand: Fix up IFN_ATOMIC_{BIT*,*CMP_0} expansion [PR105951]
+      c++: Use fold_non_dependent_expr rather than maybe_constant_value in __builtin_shufflevector handling [PR106001]
+      varasm: Fix up ICE in narrowing_initializer_constant_valid_p [PR105998]
 
-Jan Hubicka (106):
+Jan Hubicka (107):
       Implement EAF_NOT_RETURNED tracking in ipa-modref
       Support EAF_NOT_RETURNED in tree-ssa-structalias
       Fix min_flags handling in mod-ref
@@ -3778,6 +3784,7 @@ Jan Hubicka (106):
       Propagate nondeterministic and side_effects flags in modref summary after inlining
       Update semantic_interposition flag at analysis time
       Fix overflows in ipa-modref-tree.cc
+      Fix ipa-cp wrt volatile loads
 
 Jan-Benedict Glaw (6):
       arc: Remove useless register keyword
