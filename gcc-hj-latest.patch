@@ -2395,7 +2395,7 @@ Giuliano Belinassi (1):
 Guo, Xuepeng (1):
       AVX512FP16: Initial support for AVX512FP16 feature and scalar _Float16 instructions.
 
-H.J. Lu (150):
+H.J. Lu (151):
       x86: Use crc32 target option for CRC32 intrinsics
       x86: Add -mmwait for -mgeneral-regs-only
       op_by_pieces_d::run: Change a while loop to a do-while loop
@@ -2546,6 +2546,7 @@ H.J. Lu (150):
       x86: Add missing .note.GNU-stack to assembly source
       x86: Add .note.GNU-stack section only for Linux
       x86: Require AVX for F16C and VAES
+      i386: Disallow sibcall for calling ifunc functions with PIC register
 
 Hafiz Abid Qadeer (6):
       [amdgcn] Update CFI configuration
