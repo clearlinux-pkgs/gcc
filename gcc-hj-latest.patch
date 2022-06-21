@@ -1852,7 +1852,8 @@ Frederik Harwath (1):
 Fritz Reese (1):
       fortran: Fix conv of UNION constructors [PR105310]
 
-GCC Administrator (419):
+GCC Administrator (420):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -8527,7 +8528,7 @@ Ulrich Drepper (1):
 Ulrich Weigand (1):
       MAINTAINERS: Remove Hartmut Penner as s390 maintainer
 
-Uros Bizjak (101):
+Uros Bizjak (103):
       i386: Fix unsigned int -> double conversion on i386 w/ -mfpmath=sse [PR100119]
       i386: Fix atomic FP peepholes [PR100182]
       i386: Reject -m96bit-long-double for 64bit targets [PR100041]
@@ -8629,6 +8630,8 @@ Uros Bizjak (101):
       i386: Fix vec_unpacks_float_lo_v4si operand constraint [PR104469]
       i386: Skip decimal float vector modes in type_natural_mode [PR79754]
       i386: Fix movv2qi_internal xmm reg to xmm reg move for AVX512FP16 [PR105139]
+      i386: Fix assert in ix86_function_arg [PR105970]
+      alpha: Introduce target specific store_data_bypass_p function [PR105209]
 
 Vadim Godunko (1):
       [Ada] Fix operations on Unbounded_String...
