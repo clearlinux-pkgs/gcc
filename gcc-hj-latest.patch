@@ -1852,7 +1852,8 @@ Frederik Harwath (1):
 Fritz Reese (1):
       fortran: Fix conv of UNION constructors [PR105310]
 
-GCC Administrator (421):
+GCC Administrator (422):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -3798,7 +3799,7 @@ Jan-Benedict Glaw (6):
       Fix redefinition warning
       Mark argument as unused
 
-Jason Merrill (231):
+Jason Merrill (233):
       c++: unexpanded pack in enum in lambda [PR100109]
       c++: -Wdeprecated-copy and using operator= [PR92145]
       c++: unset COMPOUND_LITERAL_P [PR100079]
@@ -4030,6 +4031,8 @@ Jason Merrill (231):
       c++: constexpr empty aggr [PR105795]
       c++: redeclared hidden friend [PR105761]
       c++: redeclared hidden friend take 2 [PR105852]
+      c++: class scope function lookup [PR105908]
+      c++: dependence of baselink [PR105964]
 
 Javier Miranda (14):
       [Ada] Wrong membership test computation for interface type
@@ -5093,7 +5096,7 @@ Justin Squirek (40):
       [Ada] Task arrays trigger spurious unreferenced warnings
       [Ada] Include generic instance names in non-visible entity errors
 
-Kewen Lin (69):
+Kewen Lin (70):
       rs6000: Move rs6000_vect_nonmem into target cost_data
       vect: Add costing_for_scalar parameter to init_cost hook
       rs6000: Guard density_test only for vector version
@@ -5163,6 +5166,7 @@ Kewen Lin (69):
       testsuite: Skip pr105250.c for powerpc and s390 [PR105266]
       rs6000: Move V2DI vec_neg under power8-vector [PR105271]
       testsuite: Add test case for pack/unpack bifs at soft-float [PR105334]
+      vect: Move suggested_unroll_factor applying [PR105940]
 
 Kito Cheng (27):
       testuite: Check pthread for omp module testing
@@ -5451,7 +5455,7 @@ Martin Jambor (43):
       ipa: Release body of clone_of when removing its last clone (PR 100413)
       ipa: Check cst type when propagating controled uses info
 
-Martin Liska (343):
+Martin Liska (344):
       Document ranger-logical-depth in invoke.texi
       Bump version to 12.
       Fix typo in param description.
@@ -5795,6 +5799,7 @@ Martin Liska (343):
       lto: use diagnostics_context in print_lto_docs_link
       libgcov: use proper type for n_functions
       docs: document --with-zstd
+      ipa-icf: skip variables with body_removed
 
 Martin Sebor (136):
       Remove malformed dg-warning directives.
@@ -7464,7 +7469,7 @@ Richard Purdie (3):
       gcc/nios2: Define the musl linker
       gcc: Fix "argument list too long" from install-plugins
 
-Richard Sandiford (129):
+Richard Sandiford (130):
       varasm: Two SECTION_RETAIN fixes [PR100130]
       aarch64: Always use .init/.fini_array for GNU/Linux
       Add dg-final option-based target selectors
@@ -7594,6 +7599,7 @@ Richard Sandiford (129):
       aarch64: Stop +mops clobbering variable values
       vect: Fix mask handling for SLP gathers [PR103761]
       aarch64: Make sure the UF divides the VF [PR105254]
+      aarch64: Revert bogus fix for PR105254
 
 Richard Wai (1):
       [Ada] Hashed container Cursor type predefined equality non-conformance
@@ -7868,7 +7874,7 @@ SiYu Wu (2):
       RISC-V: Add option defines for Scalar Cryptography
       RISC-V: Add implied defines of Zk, Zkn and Zks
 
-Siddhesh Poyarekar (24):
+Siddhesh Poyarekar (25):
       analyzer: Recognize __builtin_free as a matching deallocator
       analyzer: Handle strdup builtins
       MAINTAINERS: Add myself to DCO section
@@ -7893,6 +7899,7 @@ Siddhesh Poyarekar (24):
       tree-optimization/104942: Retain sizetype conversions till the end
       tree-optimization/104941: Actually assign the conversion result
       tree-optimization/104970: Limit size computation for access attribute
+      tree-object-size: Don't let error_mark_node escape for ADDR_EXPR [PR105736]
 
 Simon Cook (1):
       RISC-V: Don't unconditionally add m,a,f,d in arch-canonicalize
