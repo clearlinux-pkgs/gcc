@@ -1852,7 +1852,8 @@ Frederik Harwath (1):
 Fritz Reese (1):
       fortran: Fix conv of UNION constructors [PR105310]
 
-GCC Administrator (422):
+GCC Administrator (423):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -3799,7 +3800,7 @@ Jan-Benedict Glaw (6):
       Fix redefinition warning
       Mark argument as unused
 
-Jason Merrill (233):
+Jason Merrill (235):
       c++: unexpanded pack in enum in lambda [PR100109]
       c++: -Wdeprecated-copy and using operator= [PR92145]
       c++: unset COMPOUND_LITERAL_P [PR100079]
@@ -4033,6 +4034,8 @@ Jason Merrill (233):
       c++: redeclared hidden friend take 2 [PR105852]
       c++: class scope function lookup [PR105908]
       c++: dependence of baselink [PR105964]
+      c++: -Waddress and value-dependent expr [PR105885]
+      c++: anon union designated init [PR105925]
 
 Javier Miranda (14):
       [Ada] Wrong membership test computation for interface type
@@ -6179,7 +6182,7 @@ Patrick McGehearty (2):
       Practical improvement to libgcc complex divide
       Fix for powerpc64 long double complex divide failure
 
-Patrick Palka (230):
+Patrick Palka (231):
       libstdc++: Implement P2259R1 changes [PR95983]
       c++: Add testcase for already fixed PR [PR16617]
       c++: Add testcase for already fixed PR [PR84689]
@@ -6410,6 +6413,7 @@ Patrick Palka (230):
       c++: ICE during aggr CTAD for member tmpl [PR105476]
       c++: constexpr init of union sub-aggr w/ base [PR105491]
       c++: value-dep but not type-dep decltype expr [PR105756]
+      c++: constexpr folding in unevaluated context [PR105931]
 
 Paul A. Clarke (29):
       rs6000: Add support for SSE4.1 "test" intrinsics
