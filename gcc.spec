@@ -14,7 +14,7 @@
 
 Name     : gcc
 Version  : 12.1.0
-Release  : 1614
+Release  : 1615
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://gcc.gnu.org/pub/gcc/releases/gcc-12.1.0/gcc-12.1.0.tar.xz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.24.tar.bz2
@@ -586,7 +586,6 @@ cat *.lang > gcc.lang
 %files
 /usr/share/clear/optimized-elf/
 /usr/share/clear/filemap/
-/usr/lib64/glibc-hwcaps/
 /usr/bin/%{gcc_target}-gcc-ar
 /usr/bin/%{gcc_target}-gcc-ranlib
 /usr/bin/%{gcc_target}-gcc-nm
@@ -621,6 +620,12 @@ cat *.lang > gcc.lang
 /usr/share/gcc-%{gccver}
 /usr/lib64/*.a
 /usr/lib64/*.o
+
+#avx2
+/usr/lib64/glibc-hwcaps/x86-64-v3/libcc1*
+
+#avx512
+/usr/lib64/glibc-hwcaps/x86-64-v4/libcc1*
 
 # libgcc-s-dev
 /usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtbegin.o
@@ -660,6 +665,8 @@ cat *.lang > gcc.lang
 /usr/lib64/libgomp.spec
 /usr/lib64/libgfortran.so
 /usr/lib64/libgfortran.spec
+/usr/include/libgccjit++.h
+/usr/include/libgccjit.h
 # gcc-plugin-dev
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/plugin/gengtype
 
@@ -676,6 +683,12 @@ cat *.lang > gcc.lang
 /usr/lib64/libitm.so
 /usr/lib64/libitm.spec
 /usr/lib64/libquadmath.so
+
+#avx2
+/usr/lib64/glibc-hwcaps/x86-64-v3/libstdc++.so
+
+#avx512
+/usr/lib64/glibc-hwcaps/x86-64-v4/libstdc++.so
 
 %files dev32
 /usr/lib32/crtbegin.o
@@ -732,10 +745,6 @@ cat *.lang > gcc.lang
 /usr/lib32/libubsan.a
 /usr/lib32/libubsan.so
 #/usr/lib64/gcc/x86_64-generic-linux/*/32/include/ISO_Fortran_binding.h
-/usr/include/libgccjit++.h
-/usr/include/libgccjit.h
-/usr/lib64/libgccjit.so
-
 
 #/usr/lib/libvtv.a
 #/usr/lib/libvtv.so
@@ -746,7 +755,11 @@ cat *.lang > gcc.lang
 %files -n libgcc1
 /usr/lib64/libgcc_s.so.1
 
+#avx2
+/usr/lib64/glibc-hwcaps/x86-64-v3/libgcc_s.so.1
 
+#avx512
+/usr/lib64/glibc-hwcaps/x86-64-v4/libgcc_s.so.1
 
 %files libs-math
 /usr/lib64/libssp.so*
@@ -757,7 +770,20 @@ cat *.lang > gcc.lang
 /usr/lib64/libgfortran*.so.*
 
 #avx2
+/usr/lib64/glibc-hwcaps/x86-64-v3/libssp.so*
+/usr/lib64/glibc-hwcaps/x86-64-v3/libgomp*so*
+/usr/lib64/glibc-hwcaps/x86-64-v3/libatomic*.so.*
+/usr/lib64/glibc-hwcaps/x86-64-v3/libitm*.so.*
+/usr/lib64/glibc-hwcaps/x86-64-v3/libquadmath*.so.*
+/usr/lib64/glibc-hwcaps/x86-64-v3/libgfortran*.so.*
+
 #avx512
+/usr/lib64/glibc-hwcaps/x86-64-v4/libssp.so*
+/usr/lib64/glibc-hwcaps/x86-64-v4/libgomp*so*
+/usr/lib64/glibc-hwcaps/x86-64-v4/libatomic*.so.*
+/usr/lib64/glibc-hwcaps/x86-64-v4/libitm*.so.*
+/usr/lib64/glibc-hwcaps/x86-64-v4/libquadmath*.so.*
+/usr/lib64/glibc-hwcaps/x86-64-v4/libgfortran*.so.*
 
 %files libgcc32
 /usr/lib32/libasan*
@@ -788,13 +814,26 @@ cat *.lang > gcc.lang
 %files -n libstdc++
 /usr/lib64/libstdc++.so.*
 
+#avx2
+/usr/lib64/glibc-hwcaps/x86-64-v3/libstdc++.so.*
+
+#avx512
+/usr/lib64/glibc-hwcaps/x86-64-v4/libstdc++.so.*
+
 %files jit
+/usr/lib64/libgccjit.so
 /usr/lib64/libgccjit.so.0
 /usr/lib64/libgccjit.so.0.0.1
 
 #avx2
+/usr/lib64/glibc-hwcaps/x86-64-v3/libgccjit.so
+/usr/lib64/glibc-hwcaps/x86-64-v3/libgccjit.so.0
+/usr/lib64/glibc-hwcaps/x86-64-v3/libgccjit.so.0.0.1
 
 #avx512
+/usr/lib64/glibc-hwcaps/x86-64-v4/libgccjit.so
+/usr/lib64/glibc-hwcaps/x86-64-v4/libgccjit.so.0
+/usr/lib64/glibc-hwcaps/x86-64-v4/libgccjit.so.0.0.1
 
 %files libstdc++32
 /usr/lib32/libstdc++.so.*
@@ -814,18 +853,25 @@ cat *.lang > gcc.lang
 /usr/lib64/gcc/x86_64-generic-linux/*/buildid
 /usr/lib64/gcc/x86_64-generic-linux/*/test2json
 /usr/lib64/gcc/x86_64-generic-linux/*/vet
-/usr/lib64/libgo.a
-/usr/lib64/libgo.so
-/usr/lib64/libgobegin.a
-/usr/lib64/libgolibbegin.a
-#no 32 bit go
-%exclude /usr/lib32/go/
-
-%files go-lib
-/usr/lib64/libgo.so.*
 /usr/lib64/go/*/x86_64-generic-linux/*.gox
 /usr/lib64/go/*/x86_64-generic-linux/*/*.gox
 /usr/lib64/go/*/x86_64-generic-linux/*/*/*.gox
+/usr/lib64/libgo.a
+/usr/lib64/libgo.so
+/usr/lib64/libgo.so.*
+/usr/lib64/libgobegin.a
+/usr/lib64/libgolibbegin.a
+
+#no 32 bit go
+%exclude /usr/lib32/go/
+
+#avx2
+/usr/lib64/glibc-hwcaps/x86-64-v3/libgo.so
+/usr/lib64/glibc-hwcaps/x86-64-v3/libgo.so.*
+
+#avx512
+/usr/lib64/glibc-hwcaps/x86-64-v4/libgo.so
+/usr/lib64/glibc-hwcaps/x86-64-v4/libgo.so.*
 
 %files -n gcc-locale -f gcc.lang
 
@@ -837,3 +883,13 @@ cat *.lang > gcc.lang
 /usr/lib64/libsanit*
 
 #avx2
+/usr/lib64/glibc-hwcaps/x86-64-v3/libubsan*
+/usr/lib64/glibc-hwcaps/x86-64-v3/libasan*
+/usr/lib64/glibc-hwcaps/x86-64-v3/libtsan*
+/usr/lib64/glibc-hwcaps/x86-64-v3/liblsan*
+
+#avx512
+/usr/lib64/glibc-hwcaps/x86-64-v4/libubsan*
+/usr/lib64/glibc-hwcaps/x86-64-v4/libasan*
+/usr/lib64/glibc-hwcaps/x86-64-v4/libtsan*
+/usr/lib64/glibc-hwcaps/x86-64-v4/liblsan*
