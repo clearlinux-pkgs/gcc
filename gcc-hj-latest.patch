@@ -1852,7 +1852,8 @@ Frederik Harwath (1):
 Fritz Reese (1):
       fortran: Fix conv of UNION constructors [PR105310]
 
-GCC Administrator (426):
+GCC Administrator (427):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -3118,7 +3119,7 @@ Indu Bhagat (31):
 Ivan Sorokin (1):
       x86: Build only one __cpu_model/__cpu_features2 variables
 
-Jakub Jelinek (567):
+Jakub Jelinek (570):
       Bump BASE-VER.
       Update crontab and git_update_version.py
       libstdc++: Update ppc64le baseline_symbols.txt
@@ -3686,6 +3687,9 @@ Jakub Jelinek (567):
       expand: Fix up IFN_ATOMIC_{BIT*,*CMP_0} expansion [PR105951]
       c++: Use fold_non_dependent_expr rather than maybe_constant_value in __builtin_shufflevector handling [PR106001]
       varasm: Fix up ICE in narrowing_initializer_constant_valid_p [PR105998]
+      libgomp: Fix up target-31.c test [PR106045]
+      expand: Fix up expand_cond_expr_using_cmove [PR106030]
+      ifcvt: Don't introduce trapping or faulting reads in noce_try_sign_mask [PR106032]
 
 Jan Hubicka (107):
       Implement EAF_NOT_RETURNED tracking in ipa-modref
@@ -5462,7 +5466,7 @@ Martin Jambor (43):
       ipa: Release body of clone_of when removing its last clone (PR 100413)
       ipa: Check cst type when propagating controled uses info
 
-Martin Liska (344):
+Martin Liska (345):
       Document ranger-logical-depth in invoke.texi
       Bump version to 12.
       Fix typo in param description.
@@ -5807,6 +5811,7 @@ Martin Liska (344):
       libgcov: use proper type for n_functions
       docs: document --with-zstd
       ipa-icf: skip variables with body_removed
+      libgomp: fix typo in mold linker detection
 
 Martin Sebor (136):
       Remove malformed dg-warning directives.
@@ -8695,7 +8700,7 @@ Wilco Dijkstra (7):
 Will Wray (1):
       c++: designated init of char array by string constant [PR55227]
 
-Xi Ruoyao (28):
+Xi Ruoyao (29):
       testsuite: add -fwrapv for 950704-1.c
       testsuite: avoid no-stack-protector-attr-3 fail on mips*-*-*
       fixinc: don't "fix" machine names in __has_include(...) [PR91085]
@@ -8724,6 +8729,7 @@ Xi Ruoyao (28):
       loongarch: testsuite: adapt stack-usage-1.c for LP64
       mips: testsuite: enforce -ffat-lto-objects for pr102024-4.c
       loongarch: ignore zero-size fields in calling convention
+      loongarch: exclude LARCH_PROLOGUE_TEMP from SIBCALL_REGS [PR 106096]
 
 Xionghu Luo (22):
       Run pass_sink_code once more before store_merging
