@@ -14,7 +14,7 @@
 
 Name     : gcc
 Version  : 12.1.0
-Release  : 1615
+Release  : 1616
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://gcc.gnu.org/pub/gcc/releases/gcc-12.1.0/gcc-12.1.0.tar.xz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.24.tar.bz2
@@ -685,9 +685,17 @@ cat *.lang > gcc.lang
 /usr/lib64/libquadmath.so
 
 #avx2
+/usr/lib64/glibc-hwcaps/x86-64-v3/libatomic.so
+/usr/lib64/glibc-hwcaps/x86-64-v3/libgfortran.so
+/usr/lib64/glibc-hwcaps/x86-64-v3/libitm.so
+/usr/lib64/glibc-hwcaps/x86-64-v3/libquadmath.so
 /usr/lib64/glibc-hwcaps/x86-64-v3/libstdc++.so
 
 #avx512
+/usr/lib64/glibc-hwcaps/x86-64-v4/libatomic.so
+/usr/lib64/glibc-hwcaps/x86-64-v4/libgfortran.so
+/usr/lib64/glibc-hwcaps/x86-64-v4/libitm.so
+/usr/lib64/glibc-hwcaps/x86-64-v4/libquadmath.so
 /usr/lib64/glibc-hwcaps/x86-64-v4/libstdc++.so
 
 %files dev32
