@@ -544,10 +544,10 @@ find %{buildroot}*/usr/lib64 %{buildroot}/usr/lib*/gcc -name '*.o' -print0 | xar
 
 
 # This is only for gdb
-mkdir -p %{buildroot}//usr/share/gdb/auto-load//usr/lib64
-mkdir -p %{buildroot}//usr/share/gdb/auto-load//usr/lib32
-mv %{buildroot}//usr/lib64/libstdc++.so.*-gdb.py %{buildroot}//usr/share/gdb/auto-load//usr/lib64/.
-mv %{buildroot}//usr/lib32/libstdc++.so.*-gdb.py %{buildroot}//usr/share/gdb/auto-load//usr/lib32/.
+mkdir -p %{buildroot}/usr/share/gdb/auto-load/usr/lib64
+mkdir -p %{buildroot}/usr/share/gdb/auto-load/usr/lib32
+mv %{buildroot}/usr/lib64/libstdc++.so.*-gdb.py %{buildroot}/usr/share/gdb/auto-load/usr/lib64/.
+mv %{buildroot}/usr/lib32/libstdc++.so.*-gdb.py %{buildroot}/usr/share/gdb/auto-load/usr/lib32/.
 
 # merge the two C++ include trees (needed for Clang)
 pushd %{buildroot}/usr/include/c++/*/x86_64-generic-linux
@@ -668,7 +668,7 @@ cat *.lang > gcc.lang
 /usr/lib64/libstdc++.a
 /usr/lib64/libsupc++.a
 /usr/include/c++/*
-/usr/share/gdb/auto-load//usr/lib64/libstdc++.so.*
+/usr/share/gdb/auto-load/usr/lib64/libstdc++.so.*
 /usr/lib64/libstdc++fs.a
 /usr/bin/gcov-dump
 /usr/lib64/gcc/x86_64-generic-linux/%{gccver}/32/finclude/
@@ -739,7 +739,7 @@ cat *.lang > gcc.lang
 
 #/usr/lib/libvtv.a
 #/usr/lib/libvtv.so
-/usr/share/gdb/auto-load//usr/lib32/libstdc++.so.*
+/usr/share/gdb/auto-load/usr/lib32/libstdc++.so.*
 
 
 
