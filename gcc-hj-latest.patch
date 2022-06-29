@@ -1852,7 +1852,8 @@ Frederik Harwath (1):
 Fritz Reese (1):
       fortran: Fix conv of UNION constructors [PR105310]
 
-GCC Administrator (427):
+GCC Administrator (428):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -5257,9 +5258,10 @@ Luc Michel (1):
 Lucas A. M. Magalhaes (1):
       rs6000: Remove LINK_OS_EXTRA_SPEC{32,64} from --with-advance-toolchain
 
-Lulu Cheng (2):
+Lulu Cheng (3):
       LoongArch: Add '(clobber (mem:BLK (scratch)))' to PLV instruction templates.
       LoongArch: Add fdiv define_expand template.
+      LoongArch: Remove undefined behavior from code [PR 106097]
 
 Luís Ferreira (7):
       libiberty: prevent buffer overflow when decoding user input
@@ -5466,7 +5468,7 @@ Martin Jambor (43):
       ipa: Release body of clone_of when removing its last clone (PR 100413)
       ipa: Check cst type when propagating controled uses info
 
-Martin Liska (345):
+Martin Liska (346):
       Document ranger-logical-depth in invoke.texi
       Bump version to 12.
       Fix typo in param description.
@@ -5812,6 +5814,7 @@ Martin Liska (345):
       docs: document --with-zstd
       ipa-icf: skip variables with body_removed
       libgomp: fix typo in mold linker detection
+      libsanitizer: cherry-pick 791e0d1bc85d
 
 Martin Sebor (136):
       Remove malformed dg-warning directives.
@@ -6919,7 +6922,7 @@ Rasmus Villemoes (9):
       libgcc: vxcrtstuff.c: make ctor/dtor functions static
       libstdc++: vxworks: remove stray <iostream> include
 
-Richard Biener (493):
+Richard Biener (494):
       Remove pedantic_non_lvalue_loc
       Simplify maybe_fold_reference API
       testsuite/100176 - fix struct-layout-1_generate.c compile
@@ -7413,6 +7416,7 @@ Richard Biener (493):
       middle-end/105711 - properly handle CONST_INT when expanding bitfields
       tree-optimization/105726 - adjust array bound heuristic
       tree-optimization/105786 - avoid strlen replacement for pointers
+      bootstrap/105551 - restore nvptx build
 
 Richard Earnshaw (34):
       arm: fix UB when compiling thumb2 with PIC [PR100236]
