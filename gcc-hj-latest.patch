@@ -1852,7 +1852,8 @@ Frederik Harwath (1):
 Fritz Reese (1):
       fortran: Fix conv of UNION constructors [PR105310]
 
-GCC Administrator (429):
+GCC Administrator (430):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -2614,7 +2615,7 @@ Haochen Jiang (6):
       Extend predicate of operands[1] from register_operand to vector_operand for andnot insn.
       Optimize a ^ ((a ^ b) & mask) to (~mask & a) | (b & mask).
 
-Harald Anlauf (111):
+Harald Anlauf (114):
       Fortran - allow target of pointer from evaluation of function-reference
       PR fortran/100154 - ICE in gfc_conv_procedure_call, at fortran/trans-expr.c:6131
       PR fortran/100274 - ICE in gfc_conv_procedure_call, at fortran/trans-expr.c:6131
@@ -2726,6 +2727,9 @@ Harald Anlauf (111):
       Fortran: improve error recovery for invalid coarray function declarations
       Fortran: fix checking of coshape specification in ALLOCATE statement
       Fortran: fix error recovery on invalid array section
+      Fortran: fix checking of arguments to UNPACK when MASK is a variable [PR105813]
+      Fortran: fix simplification of INDEX(str1,str2) [PR105691]
+      Fortran: handle explicit-shape specs with constant bounds [PR105954]
 
 Hongyu Wang (33):
       Clear odata for aes(enc|dec)(wide)?kl intrinsics when ZF is set.
