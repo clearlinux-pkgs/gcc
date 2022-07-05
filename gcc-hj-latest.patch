@@ -338,7 +338,7 @@ Andrew Burgess (4):
       top-level configure: setup target_configdirs based on repository
       update my email address
 
-Andrew MacLeod (135):
+Andrew MacLeod (136):
       Enhance initial global value setting.
       Change x mod 0 to produce UNDEFINED rather than VARYING.
       Don't over-allocate switch default range object.
@@ -474,6 +474,7 @@ Andrew MacLeod (135):
       Always use dominators in the cache when available.
       Retain existing range knowledge when prefilling statements.
       Check for equivalence after merging relations.
+      Don't use gori depedencies to optimize.
 
 Andrew Pinski (89):
       Don't simplify (A & C) != 0 ? D : 0 for pointer types.
@@ -1852,7 +1853,11 @@ Frederik Harwath (1):
 Fritz Reese (1):
       fortran: Fix conv of UNION constructors [PR105310]
 
-GCC Administrator (430):
+GCC Administrator (434):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -2615,7 +2620,7 @@ Haochen Jiang (6):
       Extend predicate of operands[1] from register_operand to vector_operand for andnot insn.
       Optimize a ^ ((a ^ b) & mask) to (~mask & a) | (b & mask).
 
-Harald Anlauf (114):
+Harald Anlauf (116):
       Fortran - allow target of pointer from evaluation of function-reference
       PR fortran/100154 - ICE in gfc_conv_procedure_call, at fortran/trans-expr.c:6131
       PR fortran/100274 - ICE in gfc_conv_procedure_call, at fortran/trans-expr.c:6131
@@ -2730,6 +2735,8 @@ Harald Anlauf (114):
       Fortran: fix checking of arguments to UNPACK when MASK is a variable [PR105813]
       Fortran: fix simplification of INDEX(str1,str2) [PR105691]
       Fortran: handle explicit-shape specs with constant bounds [PR105954]
+      Fortran: improve error recovery for EXTENDS_TYPE_OF() [PR106121]
+      Fortran: error recovery on invalid CLASS(), PARAMETER declarations [PR105243]
 
 Hongyu Wang (33):
       Clear odata for aes(enc|dec)(wide)?kl intrinsics when ZF is set.
@@ -2769,7 +2776,7 @@ Hongyu Wang (33):
 Hugo Beauzée-Luyssen (1):
       libstdc++: Check for TLS support on mingw cross-compilers
 
-Iain Buclaw (104):
+Iain Buclaw (105):
       libphobos: Fix build fails for powerpc-linux
       libphobos: Fix visibility of std.process.searchPathFor
       d: Fix qualifier ignored in alias definition if parentheses are not present
@@ -2874,6 +2881,7 @@ Iain Buclaw (104):
       d: Improve TypeInfo errors when compiling in -fno-rtti mode
       d: Set TYPE_ARTIFICIAL on internal TypeInfo types
       tilegx: Fix infinite loop in gen-mul-tables generator
+      d: Fix error: aggregate value used where floating point was expected
 
 Iain Sandoe (126):
       Darwin, X86 : Fix bootstrap break from flags changes.
@@ -3814,7 +3822,7 @@ Jan-Benedict Glaw (6):
       Fix redefinition warning
       Mark argument as unused
 
-Jason Merrill (235):
+Jason Merrill (239):
       c++: unexpanded pack in enum in lambda [PR100109]
       c++: -Wdeprecated-copy and using operator= [PR92145]
       c++: unset COMPOUND_LITERAL_P [PR100079]
@@ -4050,6 +4058,10 @@ Jason Merrill (235):
       c++: dependence of baselink [PR105964]
       c++: -Waddress and value-dependent expr [PR105885]
       c++: anon union designated init [PR105925]
+      c++: dependent generic lambda template-id [PR106024]
+      c++: tweak resolve_args change
+      c++: lambda template in requires [PR105541]
+      c++: simpler fix for PR106024
 
 Javier Miranda (14):
       [Ada] Wrong membership test computation for interface type
@@ -7659,7 +7671,7 @@ Robin Dapp (27):
       s390: Add scheduler description for z16.
       testsuite/s390: Silence warning in pr80725.c
 
-Roger Sayle (116):
+Roger Sayle (118):
       PR middle-end/53267: Constant fold BUILT_IN_FMOD.
       PR tree-optimization/96392 Optimize x+0.0 if x is an integer
       PR tree-optimization/96392 Optimize x+0.0 if x is an integer
@@ -7776,6 +7788,8 @@ Roger Sayle (116):
       PR 90356: Use xor to load const_double 0.0 on SSE (always)
       PR middle-end/104885: Fix ICE with large stack frame on powerpc64.
       Support pandn for V1TI mode (i.e. *andnotv1ti3).
+      PR target/106122: Don't update %esp via the stack with -Oz on x86.
+      PR target/105991: Recognize PLUS and XOR forms of rldimi in rs6000.md.
 
 Roman Zhuykov (1):
       modulo-sched: skip loops with strange register defs [PR100225]
@@ -7876,7 +7890,7 @@ Serge Belyshev (6):
       configure: remove gas versions from tls check
       gcc_update: use human readable name for revision string in gcc/REVISION
 
-Sergei Trofimovich (11):
+Sergei Trofimovich (13):
       docs: drop unbalanced parenthesis in rtl.texi
       docs: Fix s/net yet/not yet/ typo
       docs: add missing 'see' word
@@ -7888,6 +7902,8 @@ Sergei Trofimovich (11):
       libgcc: m68k: avoid TEXTRELs in shared library (PR 86224)
       libgcc: IA64: don't compile glibc-based unwinder without libc headers
       gcov-profile: Allow negative counts of indirect calls [PR105282]
+      c++: avoid <memory> poisoning on musl [PR106102]
+      jit: avoid calloc() poisoning on musl [PR106102]
 
 Sergey Rybin (1):
       [Ada] Clarify the documentation of -gnaty0 style check option
@@ -8676,6 +8692,9 @@ Vincent Lefèvre (1):
 Vineet Gupta (1):
       RISC-V: Inhibit FP <--> int register moves via tune param
 
+Vladimir Makarov (1):
+      Fix ICE on sh
+
 Vladimir N. Makarov (16):
       Make profitability calculation of RA conflict presentations independent of host compiler type sizes. [PR102147]
       [PR102627] Use at least natural mode during splitting hard reg live range
@@ -8709,7 +8728,7 @@ Wilco Dijkstra (7):
 Will Wray (1):
       c++: designated init of char array by string constant [PR55227]
 
-Xi Ruoyao (29):
+Xi Ruoyao (30):
       testsuite: add -fwrapv for 950704-1.c
       testsuite: avoid no-stack-protector-attr-3 fail on mips*-*-*
       fixinc: don't "fix" machine names in __has_include(...) [PR91085]
@@ -8739,6 +8758,7 @@ Xi Ruoyao (29):
       mips: testsuite: enforce -ffat-lto-objects for pr102024-4.c
       loongarch: ignore zero-size fields in calling convention
       loongarch: exclude LARCH_PROLOGUE_TEMP from SIBCALL_REGS [PR 106096]
+      loongarch: use -mno-check-zero-division as the default for optimized code
 
 Xionghu Luo (22):
       Run pass_sink_code once more before store_merging
