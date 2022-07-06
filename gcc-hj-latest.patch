@@ -4238,7 +4238,7 @@ John Ericson (1):
 Jojo R (1):
       RISC-V: Add tune info for T-HEAD C906.
 
-Jonathan Wakely (675):
+Jonathan Wakely (676):
       libstdc++: Define __cpp_lib_to_chars for C++20 [PR 100146]
       libstdc++: Disable tests that fail after atomic wait/notify rewrite
       libstdc++: Fix whitespace in license boilerplate
@@ -4914,6 +4914,7 @@ Jonathan Wakely (675):
       libstdc++: Fix narrowing conversions for 16-bit size_t [PR105681]
       libstdc++: Mark non-exported function always_inline [PR105671]
       libstdc++: Use type_identity_t for non-deducible std::atomic_xxx args
+      c-family: Add <time.h> names to diagnostics for known headers
 
 Jonathan Wright (81):
       aarch64: Use RTL builtins for vq[r]dmulh[q]_n intrinsics
