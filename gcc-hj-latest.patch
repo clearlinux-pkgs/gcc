@@ -1853,7 +1853,8 @@ Frederik Harwath (1):
 Fritz Reese (1):
       fortran: Fix conv of UNION constructors [PR105310]
 
-GCC Administrator (434):
+GCC Administrator (435):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -5343,7 +5344,7 @@ Marcel Vollweiler (11):
       C, C++, Fortran, OpenMP: Add 'has_device_addr' clause to 'target' construct.
       OpenMP, Fortran: Bugfix for omp_set_num_teams.
 
-Marek Polacek (83):
+Marek Polacek (84):
       c++: Don't allow defining types in enum-base [PR96380]
       c++: Prevent bogus -Wtype-limits warning with NTTP [PR100161]
       c++: Add testcase for already fixed PR [PR94102]
@@ -5427,6 +5428,7 @@ Marek Polacek (83):
       c++: enum in generic lambda at global scope [PR105398]
       c++: global-namespace-qualified var after class def [PR90107]
       c++: Fix ICE with -Wmismatched-tags [PR105725]
+      c-family: Prevent -Wformat warnings with u8 strings [PR105626]
 
 Marius Hillenbrand (3):
       IBM Z: Fix error checking for builtin vec_permi

@@ -14,7 +14,7 @@
 
 Name     : gcc
 Version  : 12.1.0
-Release  : 1620
+Release  : 1621
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://gcc.gnu.org/pub/gcc/releases/gcc-12.1.0/gcc-12.1.0.tar.xz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.24.tar.bz2
