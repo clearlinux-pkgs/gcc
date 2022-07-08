@@ -1853,7 +1853,8 @@ Frederik Harwath (1):
 Fritz Reese (1):
       fortran: Fix conv of UNION constructors [PR105310]
 
-GCC Administrator (436):
+GCC Administrator (437):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -4239,7 +4240,7 @@ John Ericson (1):
 Jojo R (1):
       RISC-V: Add tune info for T-HEAD C906.
 
-Jonathan Wakely (676):
+Jonathan Wakely (678):
       libstdc++: Define __cpp_lib_to_chars for C++20 [PR 100146]
       libstdc++: Disable tests that fail after atomic wait/notify rewrite
       libstdc++: Fix whitespace in license boilerplate
@@ -4916,6 +4917,8 @@ Jonathan Wakely (676):
       libstdc++: Mark non-exported function always_inline [PR105671]
       libstdc++: Use type_identity_t for non-deducible std::atomic_xxx args
       c-family: Add <time.h> names to diagnostics for known headers
+      libstdc++: Properly remove temporary directories in filesystem tests
+      libstdc++: Add missing prerequisite to generated header [PR106162]
 
 Jonathan Wright (81):
       aarch64: Use RTL builtins for vq[r]dmulh[q]_n intrinsics
@@ -5278,10 +5281,11 @@ Luc Michel (1):
 Lucas A. M. Magalhaes (1):
       rs6000: Remove LINK_OS_EXTRA_SPEC{32,64} from --with-advance-toolchain
 
-Lulu Cheng (3):
+Lulu Cheng (4):
       LoongArch: Add '(clobber (mem:BLK (scratch)))' to PLV instruction templates.
       LoongArch: Add fdiv define_expand template.
       LoongArch: Remove undefined behavior from code [PR 106097]
+      LoongArch: Modify fp_sp_offset and gp_sp_offset's calculation method when frame->mask or frame->fmask is zero.
 
 Luís Ferreira (7):
       libiberty: prevent buffer overflow when decoding user input
