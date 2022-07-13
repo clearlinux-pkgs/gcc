@@ -1,5 +1,5 @@
 set -e -o pipefail
-
+exit
 GCCGIT=~/git/gcc
 
 git -C $GCCGIT remote update
