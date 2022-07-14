@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e -o pipefail
 
-bash hj.sh
+#bash hj.sh
 
 export GCCGIT=~/git/gcc
 export GCCVER=12.1.0
