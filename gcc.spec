@@ -308,7 +308,7 @@ export LIBRARY_PATH=/usr/lib64
     --enable-gnu-indirect-function \
     --enable-default-pie
 
-make -O %{?_smp_mflags} profiledbootstrap
+make -O %{?_smp_mflags} bootstrap
 
 popd
 
@@ -367,7 +367,7 @@ export LIBRARY_PATH=%{_libdir}
     --with-zstd \
     --enable-default-pie
 
-make -O %{?_smp_mflags} profiledbootstrap
+make -O %{?_smp_mflags} bootstrap
 
 popd
 
