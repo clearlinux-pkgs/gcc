@@ -4,7 +4,7 @@
 %define libstdcxx_full 6.0.26
 %define isl_version 0.24
 %define gccver 12
-%define gccpath gcc-12.1.0
+%define gccpath gcc-12.2.0
 # Highest optimisation ABI we target
 %define mtune skylake-avx512
 
@@ -13,10 +13,10 @@
 %define march westmere
 
 Name     : gcc
-Version  : 12.1.0
-Release  : 1664
+Version  : 12.2.0
+Release  : 1665
 URL      : http://www.gnu.org/software/gcc/
-Source0  : https://gcc.gnu.org/pub/gcc/releases/gcc-12.1.0/gcc-12.1.0.tar.xz
+Source0  : https://gcc.gnu.org/pub/gcc/releases/gcc-12.2.0/gcc-12.2.0.tar.xz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.24.tar.bz2
 Source2  : DATESTAMP
 Source3  : REVISION

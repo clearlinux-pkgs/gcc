@@ -4,7 +4,7 @@ set -e -o pipefail
 #bash hj.sh
 
 export GCCGIT=~/git/gcc
-export GCCVER=12.1.0
+export GCCVER=12.2.0
 
 GCCTAG=releases/gcc-"${GCCVER}"
 GCCBRANCH=origin/releases/gcc-"$(echo "$GCCVER" | sed 's/\..*//')"
