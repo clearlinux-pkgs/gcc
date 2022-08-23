@@ -1,10 +1,16 @@
-GCC Administrator (3):
+GCC Administrator (4):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
 
 Richard Biener (1):
       Bump BASE-VER
+
+Tobias Burnus (3):
+      OpenMP: Fix var replacement with 'simd' and linear-step vars [PR106548]
+      Fortran: OpenMP fix declare simd inside modules and absent linear step [PR106566]
+      gcn/mkoffload: Cleanup temporary dbgobj file
 
 diff --git a/gcc/BASE-VER b/gcc/BASE-VER
 index 685332623b2..9e3b205825b 100644
@@ -13,3 +19,356 @@ index 685332623b2..9e3b205825b 100644
 @@ -1 +1 @@
 -12.2.0
 +12.2.1
+diff --git a/gcc/config/gcn/mkoffload.cc b/gcc/config/gcn/mkoffload.cc
+index 94ba7ffa5af..a8b1b6e05c2 100644
+--- a/gcc/config/gcn/mkoffload.cc
++++ b/gcc/config/gcn/mkoffload.cc
+@@ -1082,6 +1082,7 @@ main (int argc, char **argv)
+ 		    }
+ 		  else
+ 		    dbgobj = make_temp_file (".mkoffload.dbg.o");
++		  obstack_ptr_grow (&files_to_cleanup, dbgobj);
+ 
+ 		  /* If the copy fails then just ignore it.  */
+ 		  if (copy_early_debug_info (argv[ix], dbgobj))
+diff --git a/gcc/fortran/openmp.cc b/gcc/fortran/openmp.cc
+index 5018a37ec46..14f2521f1df 100644
+--- a/gcc/fortran/openmp.cc
++++ b/gcc/fortran/openmp.cc
+@@ -4027,9 +4027,13 @@ gfc_match_omp_declare_simd (void)
+   gfc_omp_declare_simd *ods;
+   bool needs_space = false;
+ 
+-  switch (gfc_match (" ( %s ) ", &proc_name))
++  switch (gfc_match (" ( "))
+     {
+-    case MATCH_YES: break;
++    case MATCH_YES:
++      if (gfc_match_symbol (&proc_name, /* host assoc = */ true) != MATCH_YES
++	  || gfc_match (" ) ") != MATCH_YES)
++	return MATCH_ERROR;
++      break;
+     case MATCH_NO: proc_name = NULL; needs_space = true; break;
+     case MATCH_ERROR: return MATCH_ERROR;
+     }
+diff --git a/gcc/omp-low.cc b/gcc/omp-low.cc
+index eefd9107b89..584ec09d31b 100644
+--- a/gcc/omp-low.cc
++++ b/gcc/omp-low.cc
+@@ -6152,6 +6152,8 @@ lower_rec_input_clauses (tree clauses, gimple_seq *ilist, gimple_seq *dlist,
+ 		      && gimple_omp_for_combined_into_p (ctx->stmt))
+ 		    {
+ 		      tree t = OMP_CLAUSE_LINEAR_STEP (c);
++		      if (DECL_P (t))
++			t = build_outer_var_ref (t, ctx);
+ 		      tree stept = TREE_TYPE (t);
+ 		      tree ct = omp_find_clause (clauses,
+ 						 OMP_CLAUSE__LOOPTEMP_);
+diff --git a/gcc/testsuite/gfortran.dg/gomp/declare-simd-6.f90 b/gcc/testsuite/gfortran.dg/gomp/declare-simd-6.f90
+new file mode 100644
+index 00000000000..83f2c0ab7cb
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/gomp/declare-simd-6.f90
+@@ -0,0 +1,42 @@
++! { dg-do compile }
++! { dg-additional-options "-fdump-tree-gimple" }
++!
++! PR fortran/106566
++!
++! { dg-final { scan-tree-dump-times "__attribute__\\(\\(omp declare simd \\(linear\\(ref\\(0\\):4\\) simdlen\\(8\\)\\)\\)\\)" 2 "gimple" } }
++! { dg-final { scan-tree-dump-times "__attribute__\\(\\(omp declare simd \\(linear\\(ref\\(0\\):8\\) simdlen\\(8\\)\\)\\)\\)" 2 "gimple" } }
++
++subroutine add_one2(p)
++  implicit none
++  !$omp declare simd(add_one2) linear(ref(p)) simdlen(8)
++  integer(kind=4) :: p
++
++  p = p + 1
++end subroutine
++
++subroutine linear_add_one2(p)
++  implicit none
++  !$omp declare simd(linear_add_one2) linear(ref(p) : 2) simdlen(8)
++  integer(kind=4) :: p
++
++  p = p + 1
++end subroutine
++
++module m
++   integer, parameter :: NN = 1023
++   integer(kind=4) :: a(NN)
++contains
++  subroutine module_add_one2(q)
++    implicit none
++    !$omp declare simd(module_add_one2) linear(ref(q)) simdlen(8)
++    integer(kind=4) :: q
++    q = q + 1
++  end subroutine
++
++  subroutine linear_add_one2(q)
++    implicit none
++    !$omp declare simd(linear_add_one2) linear(ref(q) : 2) simdlen(8)
++    integer(kind=4) :: q
++    q = q + 1
++  end subroutine
++end module
+diff --git a/libgomp/testsuite/libgomp.c/linear-2.c b/libgomp/testsuite/libgomp.c/linear-2.c
+new file mode 100644
+index 00000000000..fd549a89490
+--- /dev/null
++++ b/libgomp/testsuite/libgomp.c/linear-2.c
+@@ -0,0 +1,254 @@
++/* PR middle-end/106548.  */
++/* { dg-additional-options "-msse2" { target sse2_runtime } } */
++/* { dg-additional-options "-mavx" { target avx_runtime } } */
++
++int a[256];
++
++__attribute__((noinline, noclone)) int
++f1 (int i)
++{
++  #pragma omp parallel for simd linear (i: 4)
++  for (int j = 16; j < 64; j++)
++    {
++      a[i] = j;
++      i += 4;
++    }
++  return i;
++}
++
++__attribute__((noinline, noclone)) short int
++f2 (short int i, char k)
++{
++  #pragma omp parallel for simd linear (i: k + 1)
++  for (long j = 16; j < 64; j++)
++    {
++      a[i] = j;
++      i += 4;
++    }
++  return i;
++}
++
++__attribute__((noinline, noclone)) long long int
++f3 (long long int i, long long int k)
++{
++  #pragma omp parallel for simd linear (i: k)
++  for (short j = 16; j < 64; j++)
++    {
++      a[i] = j;
++      i += 4;
++    }
++  return i;
++}
++
++__attribute__((noinline, noclone)) int
++f4 (int i)
++{
++  #pragma omp parallel for simd linear (i: 4) schedule(static, 3)
++  for (int j = 16; j < 64; j++)
++    {
++      a[i] = j;
++      i += 4;
++    }
++  return i;
++}
++
++__attribute__((noinline, noclone)) short int
++f5 (short int i, char k)
++{
++  #pragma omp parallel for simd linear (i: k + 1) schedule(static, 5)
++  for (long j = 16; j < 64; j++)
++    {
++      a[i] = j;
++      i += 4;
++    }
++  return i;
++}
++
++__attribute__((noinline, noclone)) long long int
++f6 (long long int i, long long int k)
++{
++  #pragma omp parallel for simd linear (i: k) schedule(static, 7)
++  for (short j = 16; j < 64; j++)
++    {
++      a[i] = j;
++      i += 4;
++    }
++  return i;
++}
++
++__attribute__((noinline, noclone)) int
++f7 (int i)
++{
++  #pragma omp parallel for simd linear (i: 4) schedule(dynamic, 3)
++  for (int j = 16; j < 64; j++)
++    {
++      a[i] = j;
++      i += 4;
++    }
++  return i;
++}
++
++__attribute__((noinline, noclone)) short int
++f8 (short int i, char k)
++{
++  #pragma omp parallel for simd linear (i: k + 1) schedule(dynamic, 5)
++  for (long j = 16; j < 64; j++)
++    {
++      a[i] = j;
++      i += 4;
++    }
++  return i;
++}
++
++__attribute__((noinline, noclone)) long long int
++f9 (long long int i, long long int k)
++{
++  #pragma omp parallel for simd linear (i: k) schedule(dynamic, 7)
++  for (short j = 16; j < 64; j++)
++    {
++      a[i] = j;
++      i += 4;
++    }
++  return i;
++}
++
++__attribute__((noinline, noclone)) int
++f10 (int i, long step)
++{
++  #pragma omp parallel for simd linear (i: 4)
++  for (int j = 16; j < 112; j += step)
++    {
++      a[i] = j / 2 + 8;
++      i += 4;
++    }
++  return i;
++}
++
++__attribute__((noinline, noclone)) short int
++f11 (short int i, char k, char step)
++{
++  #pragma omp parallel for simd linear (i: k + 1)
++  for (long j = 16; j < 112; j += step)
++    {
++      a[i] = j / 2 + 8;
++      i += 4;
++    }
++  return i;
++}
++
++__attribute__((noinline, noclone)) long long int
++f12 (long long int i, long long int k, int step)
++{
++  #pragma omp parallel for simd linear (i: k)
++  for (short j = 16; j < 112; j += step)
++    {
++      a[i] = j / 2 + 8;
++      i += 4;
++    }
++  return i;
++}
++
++__attribute__((noinline, noclone)) int
++f13 (int i, long long int step)
++{
++  #pragma omp parallel for simd linear (i: 4) schedule(static, 3)
++  for (int j = 16; j < 112; j += step)
++    {
++      a[i] = j / 2 + 8;
++      i += 4;
++    }
++  return i;
++}
++
++__attribute__((noinline, noclone)) short int
++f14 (short int i, char k, int step)
++{
++  #pragma omp parallel for simd linear (i: k + 1) schedule(static, 5)
++  for (long j = 16; j < 112; j += step)
++    {
++      a[i] = j / 2 + 8;
++      i += 4;
++    }
++  return i;
++}
++
++__attribute__((noinline, noclone)) long long int
++f15 (long long int i, long long int k, long int step)
++{
++  #pragma omp parallel for simd linear (i: k) schedule(static, 7)
++  for (short j = 16; j < 112; j += step)
++    {
++      a[i] = j / 2 + 8;
++      i += 4;
++    }
++  return i;
++}
++
++__attribute__((noinline, noclone)) int
++f16 (int i, long long int step)
++{
++  #pragma omp parallel for simd linear (i: 4) schedule(dynamic, 3)
++  for (int j = 16; j < 112; j += step)
++    {
++      a[i] = j / 2 + 8;
++      i += 4;
++    }
++  return i;
++}
++
++__attribute__((noinline, noclone)) short int
++f17 (short int i, char k, int step)
++{
++  #pragma omp parallel for simd linear (i: k + 1) schedule(dynamic, 5)
++  for (long j = 16; j < 112; j += step)
++    {
++      a[i] = j / 2 + 8;
++      i += 4;
++    }
++  return i;
++}
++
++__attribute__((noinline, noclone)) long long int
++f18 (long long int i, long long int k, long int step)
++{
++  #pragma omp parallel for simd linear (i: k) schedule(dynamic, 7)
++  for (short j = 16; j < 112; j += step)
++    {
++      a[i] = j / 2 + 8;
++      i += 4;
++    }
++  return i;
++}
++
++int
++main ()
++{
++#define TEST(x) \
++  if (x != 8 + 48 * 4)				\
++    __builtin_abort ();				\
++  for (int i = 0; i < 256; i++)			\
++    if (a[i] != (((i & 3) == 0 && i >= 8	\
++		  && i < 8 + 48 * 4)		\
++		 ? ((i - 8) / 4) + 16 : 0))	\
++      __builtin_abort ();			\
++  __builtin_memset (a, 0, sizeof (a))
++  TEST (f1 (8));
++  TEST (f2 (8, 3));
++  TEST (f3 (8LL, 4LL));
++  TEST (f4 (8));
++  TEST (f5 (8, 3));
++  TEST (f6 (8LL, 4LL));
++  TEST (f7 (8));
++  TEST (f8 (8, 3));
++  TEST (f9 (8LL, 4LL));
++  TEST (f10 (8, 2));
++  TEST (f11 (8, 3, 2));
++  TEST (f12 (8LL, 4LL, 2));
++  TEST (f13 (8, 2));
++  TEST (f14 (8, 3, 2));
++  TEST (f15 (8LL, 4LL, 2));
++  TEST (f16 (8, 2));
++  TEST (f17 (8, 3, 2));
++  TEST (f18 (8LL, 4LL, 2));
++  return 0;
++}
