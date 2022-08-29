@@ -583,6 +583,11 @@ cat *.lang > gcc.lang
 /usr/bin/elf-move.py avx2 %{buildroot}-v3 %{buildroot} %{buildroot}/usr/share/clear/filemap/filemap-%{name}
 /usr/bin/elf-move.py avx512 %{buildroot}-v4 %{buildroot} %{buildroot}/usr/share/clear/filemap/filemap-%{name}
 
+# we don't want per subarch .a files
+rm -f /usr/lib64/glibc-hwcaps/x86-64-v3/*.a
+rm -f /usr/lib64/glibc-hwcaps/x86-64-v4/*.a
+
+
 %files
 /usr/share/clear/optimized-elf/
 /usr/share/clear/filemap/
