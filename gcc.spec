@@ -688,7 +688,42 @@ rm -f /usr/lib64/glibc-hwcaps/x86-64-v4/*.a
 /usr/lib64/libitm.so
 /usr/lib64/libitm.spec
 /usr/lib64/libquadmath.so
-
+   /usr/lib64/glibc-hwcaps/x86-64-v3/libatomic.a
+   /usr/lib64/glibc-hwcaps/x86-64-v3/libgcc_s.so
+   /usr/lib64/glibc-hwcaps/x86-64-v3/libgfortran.a
+   /usr/lib64/glibc-hwcaps/x86-64-v3/libgfortran.spec
+   /usr/lib64/glibc-hwcaps/x86-64-v3/libgo.a
+   /usr/lib64/glibc-hwcaps/x86-64-v3/libgobegin.a
+   /usr/lib64/glibc-hwcaps/x86-64-v3/libgolibbegin.a
+   /usr/lib64/glibc-hwcaps/x86-64-v3/libgomp.a
+   /usr/lib64/glibc-hwcaps/x86-64-v3/libgomp.spec
+   /usr/lib64/glibc-hwcaps/x86-64-v3/libitm.a
+   /usr/lib64/glibc-hwcaps/x86-64-v3/libitm.spec
+   /usr/lib64/glibc-hwcaps/x86-64-v3/libquadmath.a
+   /usr/lib64/glibc-hwcaps/x86-64-v3/libsanitizer.spec
+   /usr/lib64/glibc-hwcaps/x86-64-v3/libssp.a
+   /usr/lib64/glibc-hwcaps/x86-64-v3/libssp_nonshared.a
+   /usr/lib64/glibc-hwcaps/x86-64-v3/libstdc++.a
+   /usr/lib64/glibc-hwcaps/x86-64-v3/libstdc++fs.a
+   /usr/lib64/glibc-hwcaps/x86-64-v3/libsupc++.a
+   /usr/lib64/glibc-hwcaps/x86-64-v4/libatomic.a
+   /usr/lib64/glibc-hwcaps/x86-64-v4/libgcc_s.so
+   /usr/lib64/glibc-hwcaps/x86-64-v4/libgfortran.a
+   /usr/lib64/glibc-hwcaps/x86-64-v4/libgfortran.spec
+   /usr/lib64/glibc-hwcaps/x86-64-v4/libgo.a
+   /usr/lib64/glibc-hwcaps/x86-64-v4/libgobegin.a
+   /usr/lib64/glibc-hwcaps/x86-64-v4/libgolibbegin.a
+   /usr/lib64/glibc-hwcaps/x86-64-v4/libgomp.a
+   /usr/lib64/glibc-hwcaps/x86-64-v4/libgomp.spec
+   /usr/lib64/glibc-hwcaps/x86-64-v4/libitm.a
+   /usr/lib64/glibc-hwcaps/x86-64-v4/libitm.spec
+   /usr/lib64/glibc-hwcaps/x86-64-v4/libquadmath.a
+   /usr/lib64/glibc-hwcaps/x86-64-v4/libsanitizer.spec
+   /usr/lib64/glibc-hwcaps/x86-64-v4/libssp.a
+   /usr/lib64/glibc-hwcaps/x86-64-v4/libssp_nonshared.a
+   /usr/lib64/glibc-hwcaps/x86-64-v4/libstdc++.a
+   /usr/lib64/glibc-hwcaps/x86-64-v4/libstdc++fs.a
+   /usr/lib64/glibc-hwcaps/x86-64-v4/libsupc++.a
 #avx2
 /usr/lib64/glibc-hwcaps/x86-64-v3/libatomic.so
 /usr/lib64/glibc-hwcaps/x86-64-v3/libgfortran.so
