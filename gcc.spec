@@ -14,7 +14,7 @@
 
 Name     : gcc
 Version  : 12.2.0
-Release  : 1673
+Release  : 1674
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://gcc.gnu.org/pub/gcc/releases/gcc-12.2.0/gcc-12.2.0.tar.xz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.24.tar.bz2
@@ -111,6 +111,16 @@ Requires:	gcc-jit = %{version}-%{release}
 
 %description -n gcc-dev
 GNU cc and gcc C compilers dev files
+
+%package staticdev
+License:        GPL-3.0-with-GCC-exception and GPL-3.0
+Summary:        GNU cc and gcc C compilers
+Group:          devel
+
+%description staticdev
+GNU cc and gcc C compilers dev files (static)
+
+
 
 
 
@@ -584,8 +594,8 @@ cat *.lang > gcc.lang
 /usr/bin/elf-move.py avx512 %{buildroot}-v4 %{buildroot} %{buildroot}/usr/share/clear/filemap/filemap-%{name}
 
 # we don't want per subarch .a files
-rm -f /usr/lib64/glibc-hwcaps/x86-64-v3/*.a
-rm -f /usr/lib64/glibc-hwcaps/x86-64-v4/*.a
+#rm -f /usr/lib64/glibc-hwcaps/x86-64-v3/*.a
+#rm -f /usr/lib64/glibc-hwcaps/x86-64-v4/*.a
 
 
 %files
@@ -688,48 +698,14 @@ rm -f /usr/lib64/glibc-hwcaps/x86-64-v4/*.a
 /usr/lib64/libitm.so
 /usr/lib64/libitm.spec
 /usr/lib64/libquadmath.so
-   /usr/lib64/glibc-hwcaps/x86-64-v3/libatomic.a
-   /usr/lib64/glibc-hwcaps/x86-64-v3/libgcc_s.so
-   /usr/lib64/glibc-hwcaps/x86-64-v3/libgfortran.a
-   /usr/lib64/glibc-hwcaps/x86-64-v3/libgfortran.spec
-   /usr/lib64/glibc-hwcaps/x86-64-v3/libgo.a
-   /usr/lib64/glibc-hwcaps/x86-64-v3/libgobegin.a
-   /usr/lib64/glibc-hwcaps/x86-64-v3/libgolibbegin.a
-   /usr/lib64/glibc-hwcaps/x86-64-v3/libgomp.a
-   /usr/lib64/glibc-hwcaps/x86-64-v3/libgomp.spec
-   /usr/lib64/glibc-hwcaps/x86-64-v3/libitm.a
-   /usr/lib64/glibc-hwcaps/x86-64-v3/libitm.spec
-   /usr/lib64/glibc-hwcaps/x86-64-v3/libquadmath.a
-   /usr/lib64/glibc-hwcaps/x86-64-v3/libsanitizer.spec
-   /usr/lib64/glibc-hwcaps/x86-64-v3/libssp.a
-   /usr/lib64/glibc-hwcaps/x86-64-v3/libssp_nonshared.a
-   /usr/lib64/glibc-hwcaps/x86-64-v3/libstdc++.a
-   /usr/lib64/glibc-hwcaps/x86-64-v3/libstdc++fs.a
-   /usr/lib64/glibc-hwcaps/x86-64-v3/libsupc++.a
-   /usr/lib64/glibc-hwcaps/x86-64-v4/libatomic.a
-   /usr/lib64/glibc-hwcaps/x86-64-v4/libgcc_s.so
-   /usr/lib64/glibc-hwcaps/x86-64-v4/libgfortran.a
-   /usr/lib64/glibc-hwcaps/x86-64-v4/libgfortran.spec
-   /usr/lib64/glibc-hwcaps/x86-64-v4/libgo.a
-   /usr/lib64/glibc-hwcaps/x86-64-v4/libgobegin.a
-   /usr/lib64/glibc-hwcaps/x86-64-v4/libgolibbegin.a
-   /usr/lib64/glibc-hwcaps/x86-64-v4/libgomp.a
-   /usr/lib64/glibc-hwcaps/x86-64-v4/libgomp.spec
-   /usr/lib64/glibc-hwcaps/x86-64-v4/libitm.a
-   /usr/lib64/glibc-hwcaps/x86-64-v4/libitm.spec
-   /usr/lib64/glibc-hwcaps/x86-64-v4/libquadmath.a
-   /usr/lib64/glibc-hwcaps/x86-64-v4/libsanitizer.spec
-   /usr/lib64/glibc-hwcaps/x86-64-v4/libssp.a
-   /usr/lib64/glibc-hwcaps/x86-64-v4/libssp_nonshared.a
-   /usr/lib64/glibc-hwcaps/x86-64-v4/libstdc++.a
-   /usr/lib64/glibc-hwcaps/x86-64-v4/libstdc++fs.a
-   /usr/lib64/glibc-hwcaps/x86-64-v4/libsupc++.a
+
 #avx2
 /usr/lib64/glibc-hwcaps/x86-64-v3/libatomic.so
 /usr/lib64/glibc-hwcaps/x86-64-v3/libgfortran.so
 /usr/lib64/glibc-hwcaps/x86-64-v3/libitm.so
 /usr/lib64/glibc-hwcaps/x86-64-v3/libquadmath.so
 /usr/lib64/glibc-hwcaps/x86-64-v3/libstdc++.so
+/usr/lib64/glibc-hwcaps/x86-64-v3/libgcc_s.so
 
 #avx512
 /usr/lib64/glibc-hwcaps/x86-64-v4/libatomic.so
@@ -737,6 +713,43 @@ rm -f /usr/lib64/glibc-hwcaps/x86-64-v4/*.a
 /usr/lib64/glibc-hwcaps/x86-64-v4/libitm.so
 /usr/lib64/glibc-hwcaps/x86-64-v4/libquadmath.so
 /usr/lib64/glibc-hwcaps/x86-64-v4/libstdc++.so
+/usr/lib64/glibc-hwcaps/x86-64-v4/libgcc_s.so
+
+%files staticdev
+/usr/lib64/glibc-hwcaps/x86-64-v3/libatomic.a
+/usr/lib64/glibc-hwcaps/x86-64-v3/libgfortran.a
+/usr/lib64/glibc-hwcaps/x86-64-v3/libgfortran.spec
+/usr/lib64/glibc-hwcaps/x86-64-v3/libgo.a
+/usr/lib64/glibc-hwcaps/x86-64-v3/libgobegin.a
+/usr/lib64/glibc-hwcaps/x86-64-v3/libgolibbegin.a
+/usr/lib64/glibc-hwcaps/x86-64-v3/libgomp.a
+/usr/lib64/glibc-hwcaps/x86-64-v3/libgomp.spec
+/usr/lib64/glibc-hwcaps/x86-64-v3/libitm.a
+/usr/lib64/glibc-hwcaps/x86-64-v3/libitm.spec
+/usr/lib64/glibc-hwcaps/x86-64-v3/libquadmath.a
+/usr/lib64/glibc-hwcaps/x86-64-v3/libsanitizer.spec
+/usr/lib64/glibc-hwcaps/x86-64-v3/libssp.a
+/usr/lib64/glibc-hwcaps/x86-64-v3/libssp_nonshared.a
+/usr/lib64/glibc-hwcaps/x86-64-v3/libstdc++.a
+/usr/lib64/glibc-hwcaps/x86-64-v3/libstdc++fs.a
+/usr/lib64/glibc-hwcaps/x86-64-v3/libsupc++.a
+/usr/lib64/glibc-hwcaps/x86-64-v4/libatomic.a
+/usr/lib64/glibc-hwcaps/x86-64-v4/libgfortran.a
+/usr/lib64/glibc-hwcaps/x86-64-v4/libgfortran.spec
+/usr/lib64/glibc-hwcaps/x86-64-v4/libgo.a
+/usr/lib64/glibc-hwcaps/x86-64-v4/libgobegin.a
+/usr/lib64/glibc-hwcaps/x86-64-v4/libgolibbegin.a
+/usr/lib64/glibc-hwcaps/x86-64-v4/libgomp.a
+/usr/lib64/glibc-hwcaps/x86-64-v4/libgomp.spec
+/usr/lib64/glibc-hwcaps/x86-64-v4/libitm.a
+/usr/lib64/glibc-hwcaps/x86-64-v4/libitm.spec
+/usr/lib64/glibc-hwcaps/x86-64-v4/libquadmath.a
+/usr/lib64/glibc-hwcaps/x86-64-v4/libsanitizer.spec
+/usr/lib64/glibc-hwcaps/x86-64-v4/libssp.a
+/usr/lib64/glibc-hwcaps/x86-64-v4/libssp_nonshared.a
+/usr/lib64/glibc-hwcaps/x86-64-v4/libstdc++.a
+/usr/lib64/glibc-hwcaps/x86-64-v4/libstdc++fs.a
+/usr/lib64/glibc-hwcaps/x86-64-v4/libsupc++.a
 
 %files dev32
 /usr/lib32/crtbegin.o
