@@ -99,9 +99,7 @@ Summary:        GNU cc and gcc C compilers
 Group:          devel
 Provides:       libgcov-dev
 Provides:       libssp-dev
-Provides:       libssp-staticdev
 Provides:       libgomp-dev
-Provides:       libgomp-staticdev
 Provides:       libgcc-s-dev
 Provides:       gcc-plugin-dev
 Provides:       libstdc++-dev
@@ -116,6 +114,8 @@ GNU cc and gcc C compilers dev files
 License:        GPL-3.0-with-GCC-exception and GPL-3.0
 Summary:        GNU cc and gcc C compilers
 Group:          devel
+Provides:       libssp-staticdev
+Provides:       libgomp-staticdev
 
 %description staticdev
 GNU cc and gcc C compilers dev files (static)
@@ -639,7 +639,6 @@ rm -rf %{buildroot}-v4/usr/lib32
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/plugin/*.so.*
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/plugin/include/
 /usr/share/gcc-%{gccver}
-/usr/lib64/*.a
 /usr/lib64/*.o
 
 #avx2
@@ -658,9 +657,6 @@ rm -rf %{buildroot}-v4/usr/lib32
 /usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtprec32.o
 /usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtprec64.o
 /usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtprec80.o
-/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/libgcc.a
-/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/libgcc_eh.a
-/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/libgcov.a
 
 #gfortran
 /usr/bin/%{gcc_target}-gfortran
@@ -681,8 +677,6 @@ rm -rf %{buildroot}-v4/usr/lib32
 %files dev
 /usr/lib64/libgcc_s.so
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/include/ssp
-/usr/lib64/libssp*.a
-/usr/lib64/libgomp.a
 /usr/lib64/libgomp.spec
 /usr/lib64/libgfortran.so
 /usr/lib64/libgfortran.spec
@@ -693,11 +687,8 @@ rm -rf %{buildroot}-v4/usr/lib32
 
 # libstdc++
 /usr/lib64/libstdc++.so
-/usr/lib64/libstdc++.a
-/usr/lib64/libsupc++.a
 /usr/include/c++/*
 /usr/share/gdb/auto-load/usr/lib64/libstdc++.so.*
-/usr/lib64/libstdc++fs.a
 /usr/bin/gcov-dump
 /usr/lib64/gcc/x86_64-generic-linux/%{gccver}/32/finclude/
 /usr/lib64/libatomic.so
@@ -721,7 +712,18 @@ rm -rf %{buildroot}-v4/usr/lib32
 /usr/lib64/glibc-hwcaps/x86-64-v4/libstdc++.so
 /usr/lib64/glibc-hwcaps/x86-64-v4/libgcc_s.so
 
+# some basic static files
+/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/libgcc.a
+/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/libgcc_eh.a
+
 %files staticdev
+/usr/lib64/*.a
+/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/libgcov.a
+/usr/lib64/libssp*.a
+/usr/lib64/libgomp.a
+/usr/lib64/libstdc++.a
+/usr/lib64/libsupc++.a
+/usr/lib64/libstdc++fs.a
 /usr/lib64/glibc-hwcaps/x86-64-v3/libatomic.a
 /usr/lib64/glibc-hwcaps/x86-64-v3/libgfortran.a
 /usr/lib64/glibc-hwcaps/x86-64-v3/libgfortran.spec
