@@ -712,18 +712,14 @@ rm -f %{buildroot}/usr/lib64/glibc-hwcaps/x86-64-v4/*.a
 /usr/lib64/glibc-hwcaps/x86-64-v4/libstdc++.so
 /usr/lib64/glibc-hwcaps/x86-64-v4/libgcc_s.so
 
+
 # some basic static files
 /usr/lib64/gcc/x86_64-generic-linux/%{gccver}/libgcc.a
 /usr/lib64/gcc/x86_64-generic-linux/%{gccver}/libgcc_eh.a
+/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/libgcov.a
 
 %files staticdev
 /usr/lib64/*.a
-/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/libgcov.a
-/usr/lib64/libssp*.a
-/usr/lib64/libgomp.a
-/usr/lib64/libstdc++.a
-/usr/lib64/libsupc++.a
-/usr/lib64/libstdc++fs.a
 
 %files dev32
 /usr/lib32/crtbegin.o
