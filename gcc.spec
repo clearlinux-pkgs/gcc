@@ -951,20 +951,20 @@ rm -rf %{buildroot}-v4/usr/lib32
 %files -n gcc-locale -f gcc.lang
 
 %files libubsan
-/usr/lib64/libubsan*
-/usr/lib64/libasan*
-/usr/lib64/libtsan*
-/usr/lib64/liblsan*
-/usr/lib64/libsanit*
+/usr/lib64/libubsan*so*
+/usr/lib64/libasan*so*
+/usr/lib64/libtsan*so*
+/usr/lib64/liblsan*so*
+/usr/lib64/libsanit*so*
 
 #avx2
-/usr/lib64/glibc-hwcaps/x86-64-v3/libubsan*
-/usr/lib64/glibc-hwcaps/x86-64-v3/libasan*
-/usr/lib64/glibc-hwcaps/x86-64-v3/libtsan*
-/usr/lib64/glibc-hwcaps/x86-64-v3/liblsan*
+/usr/lib64/glibc-hwcaps/x86-64-v3/libubsan*so*
+/usr/lib64/glibc-hwcaps/x86-64-v3/libasan*so*
+/usr/lib64/glibc-hwcaps/x86-64-v3/libtsan*so*
+/usr/lib64/glibc-hwcaps/x86-64-v3/liblsan*so*
 
 #avx512
-/usr/lib64/glibc-hwcaps/x86-64-v4/libubsan*
-/usr/lib64/glibc-hwcaps/x86-64-v4/libasan*
-/usr/lib64/glibc-hwcaps/x86-64-v4/libtsan*
-/usr/lib64/glibc-hwcaps/x86-64-v4/liblsan*
+/usr/lib64/glibc-hwcaps/x86-64-v4/libubsan*so*
+/usr/lib64/glibc-hwcaps/x86-64-v4/libasan*so*
+/usr/lib64/glibc-hwcaps/x86-64-v4/libtsan*so*
+/usr/lib64/glibc-hwcaps/x86-64-v4/liblsan*so*
