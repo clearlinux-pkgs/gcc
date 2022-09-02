@@ -643,9 +643,13 @@ rm -rf %{buildroot}-v4/usr/lib32
 
 #avx2
 /usr/lib64/glibc-hwcaps/x86-64-v3/libcc1*
+%exclude  /usr/lib64/glibc-hwcaps/x86-64-v3/*.a
 
 #avx512
 /usr/lib64/glibc-hwcaps/x86-64-v4/libcc1*
+
+%exclude  /usr/lib64/glibc-hwcaps/x86-64-v3/*.a
+%exclude  /usr/lib64/glibc-hwcaps/x86-64-v4/*.a
 
 # libgcc-s-dev
 /usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtbegin.o
@@ -758,6 +762,8 @@ rm -rf %{buildroot}-v4/usr/lib32
 /usr/lib64/glibc-hwcaps/x86-64-v4/libstdc++.a
 /usr/lib64/glibc-hwcaps/x86-64-v4/libstdc++fs.a
 /usr/lib64/glibc-hwcaps/x86-64-v4/libsupc++.a
+/usr/lib64/glibc-hwcaps/x86-64-v3/*.a
+/usr/lib64/glibc-hwcaps/x86-64-v4/*.a
 
 %files dev32
 /usr/lib32/crtbegin.o
