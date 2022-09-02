@@ -911,7 +911,7 @@ rm -f %{buildroot}/usr/lib64/glibc-hwcaps/x86-64-v4/*.a
 /usr/lib64/libasan*so*
 /usr/lib64/libtsan*so*
 /usr/lib64/liblsan*so*
-/usr/lib64/libsanit*so*
+/usr/lib64/libsanit*
 
 #avx2
 /usr/lib64/glibc-hwcaps/x86-64-v3/libubsan*so*
