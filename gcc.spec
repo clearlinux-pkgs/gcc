@@ -717,6 +717,7 @@ rm -f %{buildroot}/usr/lib64/glibc-hwcaps/x86-64-v4/*.a
 /usr/lib64/gcc/x86_64-generic-linux/%{gccver}/libgcc.a
 /usr/lib64/gcc/x86_64-generic-linux/%{gccver}/libgcc_eh.a
 /usr/lib64/gcc/x86_64-generic-linux/%{gccver}/libgcov.a
+/usr/lib64/libgcov.a
 
 %files staticdev
 /usr/lib64/*.a
