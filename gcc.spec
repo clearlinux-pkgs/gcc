@@ -116,6 +116,7 @@ Summary:        GNU cc and gcc C compilers
 Group:          devel
 Provides:       libssp-staticdev
 Provides:       libgomp-staticdev
+Requires:	gcc-dev
 
 %description staticdev
 GNU cc and gcc C compilers dev files (static)
