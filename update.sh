@@ -1,6 +1,13 @@
 #!/bin/bash
 set -e -o pipefail
 
+if ! test `find "timestamp" -mmin +10000`
+then
+    echo "not old enough"
+    exit
+fi
+touch timestamp
+
 #bash hj.sh
 
 export GCCGIT=~/git/gcc
