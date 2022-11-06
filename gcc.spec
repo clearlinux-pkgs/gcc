@@ -40,7 +40,7 @@ Patch16  : 0001-Always-use-z-now-when-linking-with-pie.patch
 Patch19  : tune-inline.patch
 Patch20  : vectorcost.patch
 Patch21  : x86-always-generate-branch-hint.patch
-
+Patch22  : compilespeed.patch
 Patch30  : gcc-hj-latest.patch
 
 Patch31  : avx512move.patch
@@ -250,6 +250,7 @@ GNU cc and gcc C compilers.
 %patch19 -p1
 #%patch20 -p1
 %patch21 -p1
+%patch22 -p1
 
 #%patch30 -p1
 
