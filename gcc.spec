@@ -44,6 +44,7 @@ Patch22  : compilespeed.patch
 Patch30  : gcc-hj-latest.patch
 
 Patch31  : avx512move.patch
+Patch32  : tune-fma.patch
 
 # cves: 1xx
 
@@ -253,6 +254,8 @@ GNU cc and gcc C compilers.
 %patch22 -p1
 
 #%patch30 -p1
+
+%patch32 -p1
 
 
 
