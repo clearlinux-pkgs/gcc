@@ -314,7 +314,7 @@ export LIBRARY_PATH=/usr/lib64
     --with-glibc-version=2.35 \
     --disable-libunwind-exceptions \
     --with-gnu-ld \
-    --with-tune=skylake-avx512 \
+    --with-tune=sapphirerapids \
     --with-arch=westmere \
     --enable-cet \
     --disable-libmpx \
@@ -372,7 +372,7 @@ export LIBRARY_PATH=%{_libdir}
     --with-glibc-version=2.35 \
     --disable-libunwind-exceptions \
     --with-gnu-ld \
-    --with-tune=skylake-avx512 \
+    --with-tune=sapphirerapids \
     --with-arch=x86-64-v3 \
     --enable-cet \
     --disable-libmpx \
@@ -432,7 +432,7 @@ export LIBRARY_PATH=%{_libdir}
     --with-glibc-version=2.35 \
     --disable-libunwind-exceptions \
     --with-gnu-ld \
-    --with-tune=skylake-avx512 \
+    --with-tune=sapphirerapids \
     --with-arch=x86-64-v3 \
     --enable-cet \
     --disable-libmpx \
