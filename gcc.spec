@@ -45,6 +45,8 @@ Patch30  : gcc-hj-latest.patch
 
 Patch31  : avx512move.patch
 Patch32  : tune-fma.patch
+# partial upstream backport
+Patch33  : ftz.patch
 
 # cves: 1xx
 
@@ -256,7 +258,7 @@ GNU cc and gcc C compilers.
 #%patch30 -p1
 
 %patch32 -p1
-
+%patch33 -p1
 
 
 %build
