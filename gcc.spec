@@ -47,7 +47,7 @@ Patch31  : avx512move.patch
 Patch32  : tune-fma.patch
 # partial upstream backport
 Patch33  : ftz.patch
-
+Patch34  : default-no-plt.patch
 # cves: 1xx
 
 
@@ -259,6 +259,7 @@ GNU cc and gcc C compilers.
 
 %patch32 -p1
 %patch33 -p1
+%patch34 -p1
 
 
 %build
