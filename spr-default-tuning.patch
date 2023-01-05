@@ -1,0 +1,11 @@
+--- gcc-12.1.0/gcc/config/i386/i386-options.cc~	2022-05-06 07:30:56.000000000 +0000
++++ gcc-12.1.0/gcc/config/i386/i386-options.cc	2023-01-05 19:22:49.963341442 +0000
+@@ -2155,7 +2155,7 @@
+ 	if ((processor_alias_table[i].flags & PTA_NO_TUNE) == 0)
+ 	  ix86_tune = ix86_arch;
+ 	else
+-	  ix86_tune = PROCESSOR_GENERIC;
++	  ix86_tune = PROCESSOR_SAPPHIRERAPIDS;
+ 
+ 	/* Enable PTA flags that are enabled by default by a -march option.  */
+ #define TARGET_EXPLICIT_NO_SAHF_P(opts) (false)

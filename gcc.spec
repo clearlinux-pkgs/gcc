@@ -41,6 +41,7 @@ Patch19  : tune-inline.patch
 Patch20  : vectorcost.patch
 Patch21  : x86-always-generate-branch-hint.patch
 Patch22  : compilespeed.patch
+Patch23  : spr-default-tuning.patch
 Patch30  : gcc-hj-latest.patch
 
 Patch31  : avx512move.patch
@@ -252,6 +253,7 @@ GNU cc and gcc C compilers.
 #%patch20 -p1
 %patch21 -p1
 %patch22 -p1
+%patch23 -p1
 
 #%patch30 -p1
 
