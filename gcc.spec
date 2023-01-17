@@ -274,8 +274,8 @@ mkdir ../gcc-build
 pushd ../gcc-build
 unset CFLAGS
 unset CXXFLAGS
-export CFLAGS="-march=westmere -g1 -O3 -fstack-protector -Wl,-z -Wl,now -Wl,-z -Wl,relro  -Wl,-z,max-page-size=0x1000 -mtune=skylake-avx512 -fPIC -falign-functions=32"
-export CXXFLAGS="-march=westmere -g1 -O3  -Wl,-z,max-page-size=0x1000 -mtune=skylake-avx512 -fPIC"
+export CFLAGS="-march=westmere -g1 -O3 -fstack-protector -Wl,-z -Wl,now -Wl,-z -Wl,relro  -Wl,-z,max-page-size=0x1000 -mtune=sapphirerapids  -fPIC -falign-functions=32"
+export CXXFLAGS="-march=westmere -g1 -O3  -Wl,-z,max-page-size=0x1000 -mtune=sapphirerapids  -fPIC"
 export CFLAGS_FOR_TARGET="$CFLAGS"
 export CXXFLAGS_FOR_TARGET="$CXXFLAGS"
 export FFLAGS_FOR_TARGET="$FFLAGS"
@@ -335,9 +335,9 @@ unset CFLAGS
 unset CXXFLAGS
 export CFLAGS="-march=ivybridge -g -O3 -fstack-protector -Wl,-z -Wl,now -Wl,-z -Wl,relro  -Wl,-z,max-page-size=0x1000"
 export CXXFLAGS="-march=ivybridge -g -O3  -Wl,-z,max-page-size=0x1000"
-export CFLAGS_FOR_TARGET="$CFLAGS -march=haswell -mtune=skylake-avx512 -fno-semantic-interposition "
-export CXXFLAGS_FOR_TARGET="$CXXFLAGS -march=haswell -mtune=skylake-avx512 -fno-semantic-interposition "
-export FFLAGS_FOR_TARGET="$FFLAGS -march=haswell -mtune=skylake-avx512 -fno-semantic-interposition "
+export CFLAGS_FOR_TARGET="$CFLAGS -march=haswell -mtune=sapphirerapids  -fno-semantic-interposition "
+export CXXFLAGS_FOR_TARGET="$CXXFLAGS -march=haswell -mtune=sapphirerapids  -fno-semantic-interposition "
+export FFLAGS_FOR_TARGET="$FFLAGS -march=haswell -mtune=sapphirerapids  -fno-semantic-interposition "
 
 export CPATH=/usr/include
 export LIBRARY_PATH=%{_libdir}
