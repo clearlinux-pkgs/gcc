@@ -14,7 +14,7 @@
 
 Name     : gcc
 Version  : 12.2.0
-Release  : 1725
+Release  : 1726
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://gcc.gnu.org/pub/gcc/releases/gcc-12.2.0/gcc-12.2.0.tar.xz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.24.tar.bz2
@@ -599,6 +599,9 @@ cat *.lang > gcc.lang
 rm -rf %{buildroot}-v3/usr/lib32
 rm -rf %{buildroot}-v4/usr/lib32
 
+# These were moved after elf-move so need to be specially deleted
+rm -f %{buildroot}-v3/usr/lib64/libstdc++.so.*-gdb.py
+rm -f %{buildroot}-v4/usr/lib64/libstdc++.so.*-gdb.py
 
 /usr/bin/elf-move.py avx2 %{buildroot}-v3 %{buildroot} %{buildroot}/usr/share/clear/filemap/filemap-%{name} --skip --path /usr/lib64/gcc/x86_64-generic-linux/%{gccver}/plugin/include/configargs.h
 /usr/bin/elf-move.py avx512 %{buildroot}-v4 %{buildroot} %{buildroot}/usr/share/clear/filemap/filemap-%{name} --skip --path /usr/lib64/gcc/x86_64-generic-linux/%{gccver}/plugin/include/configargs.h
@@ -609,8 +612,6 @@ rm -rf %{buildroot}-v4/usr/lib32
 # we don't want per subarch .a files
 rm -f %{buildroot}/usr/lib64/glibc-hwcaps/x86-64-v3/*.a
 rm -f %{buildroot}/usr/lib64/glibc-hwcaps/x86-64-v4/*.a
-
-
 
 %files
 /usr/share/clear/optimized-elf/
