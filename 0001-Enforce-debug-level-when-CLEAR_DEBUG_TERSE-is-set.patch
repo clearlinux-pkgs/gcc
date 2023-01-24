@@ -1,0 +1,47 @@
+From 59d8ac8e108888575db2f391d4d6ff24a3422b1d Mon Sep 17 00:00:00 2001
+From: William Douglas <william.douglas@intel.com>
+Date: Tue, 24 Jan 2023 11:05:13 -0800
+Subject: [PATCH] Enforce debug level when CLEAR_DEBUG_TERSE is set
+
+When building packages, a special environment variable
+CLEAR_DEBUG_TERSE will be used to allow packages to be created with
+debug info in terse form by default. Check this environment variable
+in gcc to modify debug flag behavior.
+
+Signed-off-by: William Douglas <william.douglas@intel.com>
+---
+ gcc/opts.cc | 18 ++++++++++++++----
+ 1 file changed, 14 insertions(+), 4 deletions(-)
+
+diff --git a/gcc/opts.cc b/gcc/opts.cc
+index 3a89da2dd..68eb74e8d 100644
+--- a/gcc/opts.cc
++++ b/gcc/opts.cc
+@@ -3381,10 +3381,20 @@ set_debug_level (uint32_t dinfo, int extended, const char *arg,
+ 	 at level 3, don't lower it.  */
+       if (*arg == '\0')
+ 	{
+-	  if (dinfo == CTF_DEBUG)
+-	    opts->x_ctf_debug_info_level = CTFINFO_LEVEL_NORMAL;
+-	  else if (opts->x_debug_info_level < DINFO_LEVEL_NORMAL)
+-	    opts->x_debug_info_level = DINFO_LEVEL_NORMAL;
++	  if (getenv ("CLEAR_DEBUG_TERSE") != NULL)
++	    {
++	      if (dinfo == CTF_DEBUG)
++		opts->x_ctf_debug_info_level = CTFINFO_LEVEL_TERSE;
++	      else if (opts->x_debug_info_level < DINFO_LEVEL_TERSE)
++		opts->x_debug_info_level = DINFO_LEVEL_TERSE;
++	    }
++	  else
++	    {
++	      if (dinfo == CTF_DEBUG)
++		opts->x_ctf_debug_info_level = CTFINFO_LEVEL_NORMAL;
++	      else if (opts->x_debug_info_level < DINFO_LEVEL_NORMAL)
++		opts->x_debug_info_level = DINFO_LEVEL_NORMAL;
++	    }
+ 	}
+       else
+ 	{
+-- 
+2.38.1
+
