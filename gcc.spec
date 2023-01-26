@@ -694,7 +694,7 @@ rm -f %{buildroot}/usr/lib64/glibc-hwcaps/x86-64-v4/*.a
 /usr/lib64/glibc-hwcaps/x86-64-v3/libitm.spec
 /usr/lib64/glibc-hwcaps/x86-64-v3/libgomp.spec
 /usr/lib64/glibc-hwcaps/x86-64-v3/libgfortran.spec
-/usr/lib64/glibc-hwcaps/x86-64-v4/libgomp.spec
+/usr/lib64/glibc-hwcaps/x86-64-v4/libitm.spec
 /usr/lib64/glibc-hwcaps/x86-64-v4/libgomp.spec
 /usr/lib64/glibc-hwcaps/x86-64-v4/libgfortran.spec
 /usr/include/libgccjit++.h
