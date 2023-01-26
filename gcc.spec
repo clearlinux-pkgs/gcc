@@ -481,6 +481,8 @@ for dir in ../gcc-build/x86_64-generic-linux/{,32}; do
     done
 done
 
+
+
 %check
 pushd ../gcc-build
 export CHECK_TEST_FRAMEWORK=1
@@ -689,6 +691,12 @@ rm -f %{buildroot}/usr/lib64/glibc-hwcaps/x86-64-v4/*.a
 /usr/lib64/libgomp.spec
 /usr/lib64/libgfortran.so
 /usr/lib64/libgfortran.spec
+/usr/lib64/glibc-hwcaps/x86-64-v3/libitm.spec
+/usr/lib64/glibc-hwcaps/x86-64-v3/libgomp.spec
+/usr/lib64/glibc-hwcaps/x86-64-v3/libgfortran.spec
+/usr/lib64/glibc-hwcaps/x86-64-v4/libgomp.spec
+/usr/lib64/glibc-hwcaps/x86-64-v4/libgomp.spec
+/usr/lib64/glibc-hwcaps/x86-64-v4/libgfortran.spec
 /usr/include/libgccjit++.h
 /usr/include/libgccjit.h
 # gcc-plugin-dev
@@ -923,16 +931,10 @@ rm -f %{buildroot}/usr/lib64/glibc-hwcaps/x86-64-v4/*.a
 /usr/lib64/liblsan*so*
 /usr/lib64/libsanit*
 /usr/lib64/glibc-hwcaps/x86-64-v3/libasan_preinit.o
-/usr/lib64/glibc-hwcaps/x86-64-v3/libgfortran.spec
-/usr/lib64/glibc-hwcaps/x86-64-v3/libgomp.spec
-/usr/lib64/glibc-hwcaps/x86-64-v3/libitm.spec
 /usr/lib64/glibc-hwcaps/x86-64-v3/liblsan_preinit.o
 /usr/lib64/glibc-hwcaps/x86-64-v3/libsanitizer.spec
 /usr/lib64/glibc-hwcaps/x86-64-v3/libtsan_preinit.o
 /usr/lib64/glibc-hwcaps/x86-64-v4/libasan_preinit.o
-/usr/lib64/glibc-hwcaps/x86-64-v4/libgfortran.spec
-/usr/lib64/glibc-hwcaps/x86-64-v4/libgomp.spec
-/usr/lib64/glibc-hwcaps/x86-64-v4/libitm.spec
 /usr/lib64/glibc-hwcaps/x86-64-v4/liblsan_preinit.o
 /usr/lib64/glibc-hwcaps/x86-64-v4/libsanitizer.spec
 /usr/lib64/glibc-hwcaps/x86-64-v4/libtsan_preinit.o
