@@ -33,7 +33,6 @@ Patch5   : optimize.patch
 Patch6   : vectorize.patch
 Patch9   : gomp-relax.patch
 Patch11  : memcpy-avx2.patch
-Patch12	 : avx512-when-we-ask-for-it.patch
 Patch14  : arch-native-override.patch
 Patch15  : 0001-Ignore-Werror-if-GCC_IGNORE_WERROR-environment-varia.patch
 Patch16  : 0001-Always-use-z-now-when-linking-with-pie.patch
@@ -243,8 +242,6 @@ GNU cc and gcc C compilers.
 %patch5 -p1
 %patch6 -p1
 %patch9 -p1
-
-%patch12 -p1
 
 %patch14 -p1
 
