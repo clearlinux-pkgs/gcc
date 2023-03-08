@@ -14,7 +14,7 @@
 
 Name     : gcc
 Version  : 12.2.0
-Release  : 1737
+Release  : 1738
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://gcc.gnu.org/pub/gcc/releases/gcc-12.2.0/gcc-12.2.0.tar.xz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.24.tar.bz2
@@ -107,7 +107,8 @@ Provides:       gcc-plugin-dev
 Provides:       libstdc++-dev
 Requires:       gcc-libs-math = %{version}-%{release}
 Requires:       libstdc++ = %{version}-%{release}
-Requires:	gcc-jit = %{version}-%{release}
+Requires:       gcc-jit = %{version}-%{release}
+Requires:       gcc = %{version}-%{release}
 
 %description -n gcc-dev
 GNU cc and gcc C compilers dev files
@@ -118,7 +119,7 @@ Summary:        GNU cc and gcc C compilers
 Group:          devel
 Provides:       libssp-staticdev
 Provides:       libgomp-staticdev
-Requires:	gcc-dev
+Requires:       gcc-dev
 
 %description staticdev
 GNU cc and gcc C compilers dev files (static)
