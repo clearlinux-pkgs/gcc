@@ -396,7 +396,7 @@ export CFLAGS="-march=ivybridge -g -O3 -fstack-protector -Wl,-z -Wl,now -Wl,-z -
 export CXXFLAGS="-march=ivybridge -g -O3  -Wl,-z,max-page-size=0x1000"
 export CFLAGS_FOR_TARGET="$CFLAGS -march=x86-64-v4 -mtune=sapphirerapids -fno-semantic-interposition "
 export CXXFLAGS_FOR_TARGET="$CXXFLAGS -march=x86-64-v4 -mtune=sapphirerapids -fno-semantic-interposition "
-export FFLAGS_FOR_TARGET="$FFLAGS -march=x86-64-v42 -mtune=sapphirerapids -fno-semantic-interposition "
+export FFLAGS_FOR_TARGET="$FFLAGS -march=x86-64-v4 -mtune=sapphirerapids -fno-semantic-interposition "
 
 export CPATH=/usr/include
 export LIBRARY_PATH=%{_libdir}
