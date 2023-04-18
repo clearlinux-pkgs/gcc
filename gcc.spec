@@ -42,6 +42,7 @@ Patch21  : x86-always-generate-branch-hint.patch
 Patch22  : compilespeed.patch
 Patch23  : spr-default-tuning.patch
 Patch24  : 0001-Enforce-debug-level-when-CLEAR_DEBUG_TERSE-is-set.patch
+Patch25  : adaptive-mutex.patch
 Patch30  : gcc-hj-latest.patch
 
 Patch31  : avx512move.patch
@@ -254,6 +255,7 @@ GNU cc and gcc C compilers.
 %patch22 -p1
 %patch23 -p1
 %patch24 -p1
+%patch25 -p1
 
 #%patch30 -p1
 

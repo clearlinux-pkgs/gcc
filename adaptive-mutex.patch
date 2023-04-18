@@ -1,0 +1,11 @@
+--- gcc-12.2.0/libgcc/gthr-posix.h~	2022-08-19 08:09:54.000000000 +0000
++++ gcc-12.2.0/libgcc/gthr-posix.h	2023-04-18 21:58:41.232699356 +0000
+@@ -56,7 +56,7 @@
+    in gthr.h for details. */
+ #define __GTHREAD_HAS_COND	1
+ 
+-#define __GTHREAD_MUTEX_INIT PTHREAD_MUTEX_INITIALIZER
++#define __GTHREAD_MUTEX_INIT PTHREAD_ADAPTIVE_MUTEX_INITIALIZER_NP
+ #define __GTHREAD_MUTEX_INIT_FUNCTION __gthread_mutex_init_function
+ #define __GTHREAD_ONCE_INIT PTHREAD_ONCE_INIT
+ #if defined(PTHREAD_RECURSIVE_MUTEX_INITIALIZER)
