@@ -3,8 +3,8 @@
 %define libstdcxx_maj 6
 %define libstdcxx_full 6.0.26
 %define isl_version 0.24
-%define gccver 12
-%define gccpath gcc-12.2.0
+%define gccver 13
+%define gccpath gcc-13.1.0
 # Highest optimisation ABI we target
 %define mtune sapphirerapids
 
@@ -13,7 +13,7 @@
 %define march westmere
 
 Name     : gcc
-Version  : 12.2.0
+Version  : 13.1.0
 Release  : 1748
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://gcc.gnu.org/pub/gcc/releases/gcc-13.1.0/gcc-13.1.0.tar.xz
@@ -47,7 +47,6 @@ Patch30  : gcc-hj-latest.patch
 
 Patch31  : avx512move.patch
 # partial upstream backport
-Patch33  : ftz.patch
 # cves: 1xx
 
 
@@ -259,7 +258,6 @@ GNU cc and gcc C compilers.
 
 #%patch30 -p1
 
-%patch33 -p1
 
 
 %build
@@ -949,3 +947,15 @@ rm -f %{buildroot}/usr/lib64/glibc-hwcaps/x86-64-v4/*.a
 /usr/lib64/glibc-hwcaps/x86-64-v4/libasan*so*
 /usr/lib64/glibc-hwcaps/x86-64-v4/libtsan*so*
 /usr/lib64/glibc-hwcaps/x86-64-v4/liblsan*so*
+
+/usr/lib64/glibc-hwcaps/x86-64-v3/libhwasan.so
+/usr/lib64/glibc-hwcaps/x86-64-v3/libhwasan.so.0
+/usr/lib64/glibc-hwcaps/x86-64-v3/libhwasan.so.0.0.0
+/usr/lib64/glibc-hwcaps/x86-64-v3/libhwasan_preinit.o
+/usr/lib64/glibc-hwcaps/x86-64-v4/libhwasan.so
+/usr/lib64/glibc-hwcaps/x86-64-v4/libhwasan.so.0
+/usr/lib64/glibc-hwcaps/x86-64-v4/libhwasan.so.0.0.0
+/usr/lib64/glibc-hwcaps/x86-64-v4/libhwasan_preinit.o
+/usr/lib64/libhwasan.so
+/usr/lib64/libhwasan.so.0
+/usr/lib64/libhwasan.so.0.0.0

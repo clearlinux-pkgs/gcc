@@ -4,7 +4,7 @@ set -e -o pipefail
 if ! test `find "timestamp" -mmin +10000`
 then
     echo "not old enough"
-#    exit
+    exit
 fi
 touch timestamp
 
