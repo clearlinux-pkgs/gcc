@@ -4,14 +4,14 @@ set -e -o pipefail
 if ! test `find "timestamp" -mmin +10000`
 then
     echo "not old enough"
-    exit
+#    exit
 fi
 touch timestamp
 
 #bash hj.sh
 
 export GCCGIT=~/git/gcc
-export GCCVER=12.2.0
+export GCCVER=13.1.0
 
 GCCTAG=releases/gcc-"${GCCVER}"
 GCCBRANCH=origin/releases/gcc-"$(echo "$GCCVER" | sed 's/\..*//')"
