@@ -6,17 +6,41 @@ Andrew Stubbs (3):
 Eric Botcazou (1):
       Remove obsolete configure code in gnattools
 
-Jakub Jelinek (4):
+GCC Administrator (1):
+      Daily bump.
+
+Jakub Jelinek (6):
       Bump BASE-VER
       c: Avoid -Wenum-int-mismatch warning for redeclaration of builtin acc_on_device [PR107041]
       testsuite: Fix up ext-floating15.C tests on powerpc64-linux [PR109278]
       testsuite: Fix up ext-floating2.C on powerpc64-linux
+      c: Fix up error-recovery on functions initialized as variables [PR109412]
+      c: Fix up error-recovery on non-empty VLA initializers [PR109409]
+
+Jonathan Wakely (2):
+      libstdc++: Reduce Doxygen output for PDF
+      libstdc++: Fix typos in doxygen comments
 
 Richard Biener (3):
       tree-optimization/109573 - avoid ICEing on unexpected live def
       rtl-optimization/109585 - alias analysis typo
       tree-optimization/109609 - correctly interpret arg size in fnspec
 
+diff --git a/contrib/ChangeLog b/contrib/ChangeLog
+index e9362593c88..ca754d92152 100644
+--- a/contrib/ChangeLog
++++ b/contrib/ChangeLog
+@@ -1,3 +1,10 @@
++2023-04-26  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2023-04-26  Jakub Jelinek  <jakub@redhat.com>
++
++	* gennews (files): Add files for GCC 13.
++
+ 2023-04-26  Release Manager
+ 
+ 	* GCC 13.1.0 released.
 diff --git a/gcc/BASE-VER b/gcc/BASE-VER
 index e6ba351366d..21b80e995f7 100644
 --- a/gcc/BASE-VER
@@ -24,6 +48,70 @@ index e6ba351366d..21b80e995f7 100644
 @@ -1 +1 @@
 -13.1.0
 +13.1.1
+diff --git a/gcc/ChangeLog b/gcc/ChangeLog
+index be07b08a516..4151c5366fa 100644
+--- a/gcc/ChangeLog
++++ b/gcc/ChangeLog
+@@ -1,3 +1,59 @@
++2023-04-26  Andrew Stubbs  <ams@codesourcery.com>
++
++	Backported from master:
++	2023-04-20  Andrew Stubbs  <ams@codesourcery.com>
++
++	* config/gcn/gcn-valu.md (vnsi, VnSI): Add scalar modes.
++	(ldexp<mode>3): Delete.
++	(ldexp<mode>3<exec>): Change "B" to "A".
++
++2023-04-26  Andrew Stubbs  <ams@codesourcery.com>
++
++	Backported from master:
++	2023-04-18  Andrew Stubbs  <ams@codesourcery.com>
++
++	* config/gcn/gcn-valu.md (SV_SFDF): New iterator.
++	(SV_FP): New iterator.
++	(scalar_mode, SCALAR_MODE): Add identity mappings for scalar modes.
++	(recip<mode>2): Unify the two patterns using SV_FP.
++	(div_scale<mode><exec_vcc>): New insn.
++	(div_fmas<mode><exec>): New insn.
++	(div_fixup<mode><exec>): New insn.
++	(div<mode>3): Unify the two expanders and rewrite using hardfp.
++	* config/gcn/gcn.cc (gcn_md_reorg): Support "vccwait" attribute.
++	* config/gcn/gcn.md (unspec): Add UNSPEC_DIV_SCALE, UNSPEC_DIV_FMAS,
++	and UNSPEC_DIV_FIXUP.
++	(vccwait): New attribute.
++
++2023-04-26  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2023-04-25  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/109609
++	* attr-fnspec.h (arg_max_access_size_given_by_arg_p):
++	Clarify semantics.
++	* tree-ssa-alias.cc (check_fnspec): Correctly interpret
++	the size given by arg_max_access_size_given_by_arg_p as
++	maximum, not exact, size.
++
++2023-04-26  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2023-04-25  Richard Biener  <rguenther@suse.de>
++
++	PR rtl-optimization/109585
++	* tree-ssa-alias.cc (aliasing_component_refs_p): Fix typo.
++
++2023-04-26  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2023-04-21  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/109573
++	* tree-vect-loop.cc (vectorizable_live_operation): Allow
++	unhandled SSA copy as well.  Demote assert to checking only.
++
+ 2023-04-26  Release Manager
+ 
+ 	* GCC 13.1.0 released.
 diff --git a/gcc/attr-fnspec.h b/gcc/attr-fnspec.h
 index acf1c5f6be7..99d5f896e8b 100644
 --- a/gcc/attr-fnspec.h
@@ -46,6 +134,23 @@ index acf1c5f6be7..99d5f896e8b 100644
       by another argument.  In this case set ARG.  */
    bool
    arg_max_access_size_given_by_arg_p (unsigned int i, unsigned int *arg)
+diff --git a/gcc/c/ChangeLog b/gcc/c/ChangeLog
+index 7e98008a65d..2f8b8d7b0e8 100644
+--- a/gcc/c/ChangeLog
++++ b/gcc/c/ChangeLog
+@@ -1,3 +1,12 @@
++2023-04-26  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2023-04-20  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c/107041
++	* c-decl.cc (diagnose_mismatched_decls): Avoid -Wenum-int-mismatch
++	warning on acc_on_device declaration.
++
+ 2023-04-26  Release Manager
+ 
+ 	* GCC 13.1.0 released.
 diff --git a/gcc/c/c-decl.cc b/gcc/c/c-decl.cc
 index e537d33f398..1b53f2d0785 100644
 --- a/gcc/c/c-decl.cc
@@ -66,6 +171,45 @@ index e537d33f398..1b53f2d0785 100644
      warned = warning_at (DECL_SOURCE_LOCATION (newdecl),
  			 OPT_Wenum_int_mismatch,
  			 "conflicting types for %q+D due to enum/integer "
+diff --git a/gcc/c/c-parser.cc b/gcc/c/c-parser.cc
+index 21bc3167ce2..3627a3fbdc7 100644
+--- a/gcc/c/c-parser.cc
++++ b/gcc/c/c-parser.cc
+@@ -5677,11 +5677,14 @@ c_parser_initializer (c_parser *parser, tree decl)
+     {
+       struct c_expr ret;
+       location_t loc = c_parser_peek_token (parser)->location;
+-      if (decl != error_mark_node && C_DECL_VARIABLE_SIZE (decl))
+-	error_at (loc,
+-		  "variable-sized object may not be initialized except "
+-		  "with an empty initializer");
+       ret = c_parser_expr_no_commas (parser, NULL);
++      if (decl != error_mark_node && C_DECL_VARIABLE_SIZE (decl))
++	{
++	  error_at (loc,
++		    "variable-sized object may not be initialized except "
++		    "with an empty initializer");
++	  ret.set_error ();
++	}
+       /* This is handled mostly by gimplify.cc, but we have to deal with
+ 	 not warning about int x = x; as it is a GCC extension to turn off
+ 	 this warning but only if warn_init_self is zero.  */
+diff --git a/gcc/c/c-typeck.cc b/gcc/c/c-typeck.cc
+index 7079d4ee145..a17879698ec 100644
+--- a/gcc/c/c-typeck.cc
++++ b/gcc/c/c-typeck.cc
+@@ -9374,6 +9374,11 @@ pop_init_level (location_t loc, int implicit,
+ 	{
+ 	  if (constructor_erroneous || constructor_type == error_mark_node)
+ 	    ret.value = error_mark_node;
++	  else if (TREE_CODE (constructor_type) == FUNCTION_TYPE)
++	    {
++	      error_init (loc, "invalid initializer");
++	      ret.value = error_mark_node;
++	    }
+ 	  else if (TREE_CODE (constructor_type) == POINTER_TYPE)
+ 	    /* Ensure this is a null pointer constant in the case of a
+ 	       'constexpr' object initialized with {}.  */
 diff --git a/gcc/config/gcn/gcn-valu.md b/gcc/config/gcn/gcn-valu.md
 index e3d6d65e9a9..44c48468dd6 100644
 --- a/gcc/config/gcn/gcn-valu.md
@@ -194,9 +338,6 @@ index e3d6d65e9a9..44c48468dd6 100644
 -	(unspec:FP
 -	  [(match_operand:FP 1 "gcn_alu_operand" "vSvB")]
 -	  UNSPEC_RCP))]
--  ""
--  "v_rcp%i0\t%0, %1"
--  [(set_attr "type" "vop1")
 +;; v_div_scale takes a numerator (op2) and denominator (op1) and returns the
 +;; one that matches op3 adjusted for best results in reciprocal division.
 +;; It also emits a VCC mask that is intended for input to v_div_fmas.
@@ -213,7 +354,9 @@ index e3d6d65e9a9..44c48468dd6 100644
 +	(unspec:DI
 +	  [(match_dup 1) (match_dup 2) (match_dup 3)]
 +	  UNSPEC_DIV_SCALE))]
-+  ""
+   ""
+-  "v_rcp%i0\t%0, %1"
+-  [(set_attr "type" "vop1")
 +  "v_div_scale%i0\t%0, %4, %3, %1, %2"
 +  [(set_attr "type" "vop3b")
     (set_attr "length" "8")])
@@ -444,6 +587,81 @@ index c90303c54b5..7065acf402b 100644
  ;; }}}
  ;; {{{ Iterators useful across the wole machine description
  
+diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
+index 4badb39132c..4f603cb8f3f 100644
+--- a/gcc/testsuite/ChangeLog
++++ b/gcc/testsuite/ChangeLog
+@@ -1,3 +1,70 @@
++2023-04-26  Andrew Stubbs  <ams@codesourcery.com>
++
++	Backported from master:
++	2023-04-20  Andrew Stubbs  <ams@codesourcery.com>
++
++	* lib/target-supports.exp
++	(check_effective_target_vect_call_copysignf): Add amdgcn.
++	(check_effective_target_vect_call_sqrtf): Add amdgcn.
++	(check_effective_target_vect_call_ceilf): Add amdgcn.
++	(check_effective_target_vect_call_floor): Add amdgcn.
++	(check_effective_target_vect_logical_reduc): Add amdgcn.
++
++2023-04-26  Andrew Stubbs  <ams@codesourcery.com>
++
++	Backported from master:
++	2023-04-18  Andrew Stubbs  <ams@codesourcery.com>
++
++	* gcc.target/gcn/fpdiv.c: Remove the -ffast-math requirement.
++
++2023-04-26  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2023-04-25  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/109609
++	* gcc.dg/torture/pr109609.c: New testcase.
++
++2023-04-26  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2023-04-25  Richard Biener  <rguenther@suse.de>
++
++	PR rtl-optimization/109585
++	* gcc.dg/torture/pr109585.c: New testcase.
++
++2023-04-26  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2023-04-21  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/109573
++	* g++.dg/vect/pr109573.cc: New testcase.
++
++2023-04-26  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2023-04-25  Jakub Jelinek  <jakub@redhat.com>
++
++	* g++.dg/cpp23/ext-floating2.C: Add dg-add-options for
++	float16, float32, float64 and float128.
++
++2023-04-26  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2023-04-25  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/109278
++	* g++.dg/cpp23/ext-floating15.C: Add dg-add-options float128.
++
++2023-04-26  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2023-04-20  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c/107041
++	* gcc.dg/goacc/pr107041.c: New test.
++
+ 2023-04-26  Release Manager
+ 
+ 	* GCC 13.1.0 released.
 diff --git a/gcc/testsuite/g++.dg/cpp23/ext-floating15.C b/gcc/testsuite/g++.dg/cpp23/ext-floating15.C
 index 316dd5abacd..6d7dc6ad682 100644
 --- a/gcc/testsuite/g++.dg/cpp23/ext-floating15.C
@@ -597,6 +815,48 @@ index 00000000000..ed7fb5a5b5d
 +{
 +  return acc_on_device (acc_device_host);
 +}
+diff --git a/gcc/testsuite/gcc.dg/pr109409.c b/gcc/testsuite/gcc.dg/pr109409.c
+new file mode 100644
+index 00000000000..097a511c07e
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/pr109409.c
+@@ -0,0 +1,10 @@
++/* PR c/109409 */
++/* { dg-do compile } */
++/* { dg-options "-Wall" } */
++
++void
++foo (int n)
++{
++  const char c[n] = "1";	/* { dg-error "variable-sized object may not be initialized except with an empty initializer" } */
++  __builtin_printf (c);
++}
+diff --git a/gcc/testsuite/gcc.dg/pr109412.c b/gcc/testsuite/gcc.dg/pr109412.c
+new file mode 100644
+index 00000000000..11adce52509
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/pr109412.c
+@@ -0,0 +1,20 @@
++/* PR c/107682 */
++/* PR c/109412 */
++/* { dg-do compile } */
++/* { dg-options "" } */
++
++char bar () = {};	/* { dg-error "function 'bar' is initialized like a variable" } */
++			/* { dg-error "invalid initializer" "" { target *-*-* } .-1 } */
++			/* { dg-message "near initialization for 'bar'" "" { target *-*-* } .-2 } */
++char baz () = { 1 };	/* { dg-error "function 'baz' is initialized like a variable" } */
++			/* { dg-error "invalid initializer" "" { target *-*-* } .-1 } */
++			/* { dg-message "near initialization for 'baz'" "" { target *-*-* } .-2 } */
++void
++foo ()
++{
++  int qux () = {};	/* { dg-error "function 'qux' is initialized like a variable" } */
++			/* { dg-error "invalid initializer" "" { target *-*-* } .-1 } */
++			/* { dg-message "near initialization for 'qux'" "" { target *-*-* } .-2 } */
++  int corge () = { 1 };	/* { dg-error "function 'corge' is initialized like a variable" } */
++			/* { dg-error "invalid initializer" "" { target *-*-* } .-1 } */
++}			/* { dg-message "near initialization for 'corge'" "" { target *-*-* } .-2 } */
 diff --git a/gcc/testsuite/gcc.dg/torture/pr109585.c b/gcc/testsuite/gcc.dg/torture/pr109585.c
 new file mode 100644
 index 00000000000..f92de7c1f2e
@@ -787,6 +1047,20 @@ index ba28214f09a..6ea0f21fd13 100644
  		if (dump_enabled_p ())
  		  dump_printf_loc (MSG_MISSED_OPTIMIZATION, vect_location,
  				   "Using original scalar computation for "
+diff --git a/gnattools/ChangeLog b/gnattools/ChangeLog
+index 97676c998c1..529ecd9b163 100644
+--- a/gnattools/ChangeLog
++++ b/gnattools/ChangeLog
+@@ -1,3 +1,9 @@
++2023-04-26  Eric Botcazou  <ebotcazou@adacore.com>
++
++	* configure.ac (TOOLS_TARGET_PAIRS): Remove obsolete settings.
++	(EXTRA_GNATTOOLS): Likewise.
++	* configure: Regenerate.
++
+ 2023-04-26  Release Manager
+ 
+ 	* GCC 13.1.0 released.
 diff --git a/gnattools/configure b/gnattools/configure
 index 423527da1b6..6cdfbe67af2 100755
 --- a/gnattools/configure
@@ -965,3 +1239,158 @@ index 5b6f34ed9f4..38a28b6ee62 100644
  # From user or toplevel makefile.
  AC_SUBST(ADA_CFLAGS)
  
+diff --git a/libstdc++-v3/doc/doxygen/user.cfg.in b/libstdc++-v3/doc/doxygen/user.cfg.in
+index 31613f51517..9d814af8614 100644
+--- a/libstdc++-v3/doc/doxygen/user.cfg.in
++++ b/libstdc++-v3/doc/doxygen/user.cfg.in
+@@ -1217,7 +1217,7 @@ USE_MDFILE_AS_MAINPAGE =
+ # also VERBATIM_HEADERS is set to NO.
+ # The default value is: NO.
+ 
+-SOURCE_BROWSER         = YES
++SOURCE_BROWSER         = @do_html@
+ 
+ # Setting the INLINE_SOURCES tag to YES will include the body of functions,
+ # classes and enums directly into the documentation.
+diff --git a/libstdc++-v3/include/bits/gslice_array.h b/libstdc++-v3/include/bits/gslice_array.h
+index f117a172678..6a48d418477 100644
+--- a/libstdc++-v3/include/bits/gslice_array.h
++++ b/libstdc++-v3/include/bits/gslice_array.h
+@@ -183,6 +183,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+ 			      _Array<size_t>(_M_index));
+       }
+ 
++  /// @cond undocumented
+ #undef _DEFINE_VALARRAY_OPERATOR
+ #define _DEFINE_VALARRAY_OPERATOR(_Op, _Name)				\
+   template<typename _Tp>						\
+@@ -214,6 +215,7 @@ _DEFINE_VALARRAY_OPERATOR(<<, __shift_left)
+ _DEFINE_VALARRAY_OPERATOR(>>, __shift_right)
+ 
+ #undef _DEFINE_VALARRAY_OPERATOR
++  /// @endcond
+ 
+   /// @} group numeric_arrays
+ 
+diff --git a/libstdc++-v3/include/bits/indirect_array.h b/libstdc++-v3/include/bits/indirect_array.h
+index deeed99893c..8d34a365799 100644
+--- a/libstdc++-v3/include/bits/indirect_array.h
++++ b/libstdc++-v3/include/bits/indirect_array.h
+@@ -174,6 +174,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       indirect_array<_Tp>::operator=(const _Expr<_Dom, _Tp>& __e) const
+       { std::__valarray_copy(__e, _M_sz, _M_array, _M_index); }
+ 
++  /// @cond undocumented
+ #undef _DEFINE_VALARRAY_OPERATOR
+ #define _DEFINE_VALARRAY_OPERATOR(_Op, _Name)				\
+   template<typename _Tp>						\
+@@ -203,6 +204,7 @@ _DEFINE_VALARRAY_OPERATOR(<<, __shift_left)
+ _DEFINE_VALARRAY_OPERATOR(>>, __shift_right)
+ 
+ #undef _DEFINE_VALARRAY_OPERATOR
++  /// @endcond
+ 
+   /// @} group numeric_arrays
+ 
+diff --git a/libstdc++-v3/include/bits/mask_array.h b/libstdc++-v3/include/bits/mask_array.h
+index d4112a9d0a3..a3174dd7074 100644
+--- a/libstdc++-v3/include/bits/mask_array.h
++++ b/libstdc++-v3/include/bits/mask_array.h
+@@ -181,6 +181,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+ 	std::__valarray_copy(__e, __e.size(), _M_array, _M_mask);
+       }
+ 
++  /// @cond undocumented
+ #undef _DEFINE_VALARRAY_OPERATOR
+ #define _DEFINE_VALARRAY_OPERATOR(_Op, _Name)				\
+   template<typename _Tp>						\
+@@ -213,6 +214,7 @@ _DEFINE_VALARRAY_OPERATOR(<<, __shift_left)
+ _DEFINE_VALARRAY_OPERATOR(>>, __shift_right)
+ 
+ #undef _DEFINE_VALARRAY_OPERATOR
++  /// @endcond
+ 
+   /// @} group numeric_arrays
+ 
+diff --git a/libstdc++-v3/include/bits/mofunc_impl.h b/libstdc++-v3/include/bits/mofunc_impl.h
+index 47e1e506306..318a55e618f 100644
+--- a/libstdc++-v3/include/bits/mofunc_impl.h
++++ b/libstdc++-v3/include/bits/mofunc_impl.h
+@@ -51,14 +51,13 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+    *  @headerfile functional
+    *
+    *  The `std::move_only_function` class template is a call wrapper similar
+-   *  to *  `std::function`, but does not require the stored target function
++   *  to `std::function`, but does not require the stored target function
+    *  to be copyable.
+    *
+    *  It also supports const-qualification, ref-qualification, and
+    *  no-throw guarantees. The qualifications and exception-specification
+    *  of the `move_only_function::operator()` member function are respected
+    *  when invoking the target function.
+-   *
+    */
+   template<typename _Res, typename... _ArgTypes, bool _Noex>
+     class move_only_function<_Res(_ArgTypes...) _GLIBCXX_MOF_CV
+diff --git a/libstdc++-v3/include/bits/slice_array.h b/libstdc++-v3/include/bits/slice_array.h
+index 571e372c292..42b136d7dce 100644
+--- a/libstdc++-v3/include/bits/slice_array.h
++++ b/libstdc++-v3/include/bits/slice_array.h
+@@ -245,6 +245,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+     slice_array<_Tp>::operator=(const _Expr<_Dom,_Tp>& __e) const
+     { std::__valarray_copy(__e, _M_sz, _M_array, _M_stride); }
+ 
++  /// @cond undocumented
+ #undef _DEFINE_VALARRAY_OPERATOR
+ #define _DEFINE_VALARRAY_OPERATOR(_Op,_Name)				\
+   template<typename _Tp>						\
+@@ -275,6 +276,7 @@ _DEFINE_VALARRAY_OPERATOR(<<, __shift_left)
+ _DEFINE_VALARRAY_OPERATOR(>>, __shift_right)
+ 
+ #undef _DEFINE_VALARRAY_OPERATOR
++  /// @endcond
+ 
+   /// @} group numeric_arrays
+ 
+diff --git a/libstdc++-v3/include/std/format b/libstdc++-v3/include/std/format
+index e4ef4f9b6d9..6edc3208afa 100644
+--- a/libstdc++-v3/include/std/format
++++ b/libstdc++-v3/include/std/format
+@@ -185,7 +185,7 @@ namespace __format
+   __failed_to_parse_format_spec()
+   { __throw_format_error("format error: failed to parse format-spec"); }
+ } // namespace __format
+-/// @endcond
++  /// @endcond
+ 
+   // [format.parse.ctx], class template basic_format_parse_context
+   template<typename _CharT> class basic_format_parse_context;
+@@ -3870,7 +3870,7 @@ namespace __format
+     };
+ #endif
+ } // namespace __format
+-/// @@endcond
++/// @endcond
+ 
+   template<typename... _Args>
+     [[nodiscard]]
+diff --git a/libstdc++-v3/include/std/valarray b/libstdc++-v3/include/std/valarray
+index 504d02b7359..6bd23e0914b 100644
+--- a/libstdc++-v3/include/std/valarray
++++ b/libstdc++-v3/include/std/valarray
+@@ -1080,6 +1080,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       return _Expr<_Closure, _Tp>(_Closure(*this, __func));
+     }
+ 
++  /// @cond undocumented
+ #define _DEFINE_VALARRAY_UNARY_OPERATOR(_Op, _Name)                     \
+   template<typename _Tp>						\
+     inline typename valarray<_Tp>::template _UnaryOp<_Name>::_Rt	\
+@@ -1206,6 +1207,7 @@ _DEFINE_BINARY_OPERATOR(<=, __less_equal)
+ _DEFINE_BINARY_OPERATOR(>=, __greater_equal)
+ 
+ #undef _DEFINE_BINARY_OPERATOR
++  /// @endcond
+ 
+ #if __cplusplus >= 201103L
+   /**
