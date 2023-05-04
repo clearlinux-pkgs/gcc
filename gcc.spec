@@ -14,7 +14,7 @@
 
 Name     : gcc
 Version  : 13.1.0
-Release  : 1750
+Release  : 1751
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://gcc.gnu.org/pub/gcc/releases/gcc-13.1.0/gcc-13.1.0.tar.xz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.24.tar.bz2
@@ -614,8 +614,6 @@ rm -f %{buildroot}/usr/lib64/glibc-hwcaps/x86-64-v3/*.a
 rm -f %{buildroot}/usr/lib64/glibc-hwcaps/x86-64-v4/*.a
 
 %files
-/usr/share/clear/optimized-elf/
-/usr/share/clear/filemap/
 /usr/bin/%{gcc_target}-gcc-ar
 /usr/bin/%{gcc_target}-gcc-ranlib
 /usr/bin/%{gcc_target}-gcc-nm
@@ -682,6 +680,145 @@ rm -f %{buildroot}/usr/lib64/glibc-hwcaps/x86-64-v4/*.a
 # gcc-dev
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/liblto_plugin.so
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/plugin/*.so
+
+
+
+
+/V3/usr/bin/%{gcc_target}-gcc-ar
+/V3/usr/bin/%{gcc_target}-gcc-ranlib
+/V3/usr/bin/%{gcc_target}-gcc-nm
+/V3/usr/bin/%{gcc_target}-gcc
+/V3/usr/bin/%{gcc_target}-c++
+/V3/usr/bin/%{gcc_target}-gcc-%{gccver}
+/V3/usr/bin/gcc
+/V3/usr/bin/cc
+/V3/usr/bin/gcc-ar
+/V3/usr/bin/gcc-nm
+/V3/usr/bin/gcc-ranlib
+/V3/usr/bin/gcov
+/V3/usr/bin/gcov-tool
+/V3/usr/lib/cpp
+/V3/usr/bin/cpp
+/V3/usr/bin/lto-dump
+#/usr/lib64/libvtv*
+/V3/usr/lib64/libcc1*
+/V3/usr/lib64/gcc/%{gcc_target}/%{gccver}/include-fixed/
+/V3/usr/lib64/gcc/%{gcc_target}/%{gccver}/install-tools/
+/V3/usr/lib64/gcc/%{gcc_target}/%{gccver}/libcaf_*
+/V3/usr/lib64/gcc/%{gcc_target}/%{gccver}/include/
+/V3/usr/lib64/gcc/%{gcc_target}/%{gccver}/lto1
+/V3/usr/lib64/gcc/%{gcc_target}/%{gccver}/lto-wrapper
+/V3/usr/lib64/gcc/%{gcc_target}/%{gccver}/collect2
+/V3/usr/lib64/gcc/%{gcc_target}/%{gccver}/cc1plus
+/V3/usr/lib64/gcc/%{gcc_target}/%{gccver}/g++-mapper-server
+/V3/usr/lib64/gcc/%{gcc_target}/%{gccver}/cc1
+/V3/usr/lib64/gcc/%{gcc_target}/%{gccver}/plugin/gtype.state
+/V3/usr/lib64/gcc/%{gcc_target}/%{gccver}/plugin/*.so.*
+/V3/usr/lib64/gcc/%{gcc_target}/%{gccver}/plugin/include/
+/V3/usr/share/gcc-%{gccver}
+/V3/usr/lib64/*.o
+
+#avx2
+/V3/usr/lib64/glibc-hwcaps/x86-64-v3/libcc1*
+
+#avx512
+/V3/usr/lib64/glibc-hwcaps/x86-64-v4/libcc1*
+
+# libgcc-s-dev
+/V3/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtbegin.o
+/V3/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtbeginS.o
+/V3/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtbeginT.o
+/V3/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtend.o
+/V3/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtendS.o
+/V3/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtfastmath.o
+/V3/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtprec32.o
+/V3/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtprec64.o
+/V3/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtprec80.o
+
+#gfortran
+/V3/usr/bin/%{gcc_target}-gfortran
+/V3/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/f951
+/V3/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/finclude
+/V3/usr/bin/f95
+/V3/usr/bin/gfortran
+
+#g++
+/V3/usr/bin/%{gcc_target}-g++
+/V3/usr/bin/c++
+/V3/usr/bin/g++
+
+# gcc-dev
+/V3/usr/lib64/gcc/%{gcc_target}/%{gccver}/liblto_plugin.so
+/V3/usr/lib64/gcc/%{gcc_target}/%{gccver}/plugin/*.so
+
+/V4/usr/bin/%{gcc_target}-gcc-ar
+/V4/usr/bin/%{gcc_target}-gcc-ranlib
+/V4/usr/bin/%{gcc_target}-gcc-nm
+/V4/usr/bin/%{gcc_target}-gcc
+/V4/usr/bin/%{gcc_target}-c++
+/V4/usr/bin/%{gcc_target}-gcc-%{gccver}
+/V4/usr/bin/gcc
+/V4/usr/bin/cc
+/V4/usr/bin/gcc-ar
+/V4/usr/bin/gcc-nm
+/V4/usr/bin/gcc-ranlib
+/V4/usr/bin/gcov
+/V4/usr/bin/gcov-tool
+/V4/usr/lib/cpp
+/V4/usr/bin/cpp
+/V4/usr/bin/lto-dump
+#/usr/lib64/libvtv*
+/V4/usr/lib64/libcc1*
+/V4/usr/lib64/gcc/%{gcc_target}/%{gccver}/include-fixed/
+/V4/usr/lib64/gcc/%{gcc_target}/%{gccver}/install-tools/
+/V4/usr/lib64/gcc/%{gcc_target}/%{gccver}/libcaf_*
+/V4/usr/lib64/gcc/%{gcc_target}/%{gccver}/include/
+/V4/usr/lib64/gcc/%{gcc_target}/%{gccver}/lto1
+/V4/usr/lib64/gcc/%{gcc_target}/%{gccver}/lto-wrapper
+/V4/usr/lib64/gcc/%{gcc_target}/%{gccver}/collect2
+/V4/usr/lib64/gcc/%{gcc_target}/%{gccver}/cc1plus
+/V4/usr/lib64/gcc/%{gcc_target}/%{gccver}/g++-mapper-server
+/V4/usr/lib64/gcc/%{gcc_target}/%{gccver}/cc1
+/V4/usr/lib64/gcc/%{gcc_target}/%{gccver}/plugin/gtype.state
+/V4/usr/lib64/gcc/%{gcc_target}/%{gccver}/plugin/*.so.*
+/V4/usr/lib64/gcc/%{gcc_target}/%{gccver}/plugin/include/
+/V4/usr/share/gcc-%{gccver}
+/V4/usr/lib64/*.o
+
+#avx2
+/V4/usr/lib64/glibc-hwcaps/x86-64-v3/libcc1*
+
+#avx512
+/V4/usr/lib64/glibc-hwcaps/x86-64-v4/libcc1*
+
+# libgcc-s-dev
+/V4/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtbegin.o
+/V4/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtbeginS.o
+/V4/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtbeginT.o
+/V4/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtend.o
+/V4/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtendS.o
+/V4/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtfastmath.o
+/V4/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtprec32.o
+/V4/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtprec64.o
+/V4/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtprec80.o
+
+#gfortran
+/V4/usr/bin/%{gcc_target}-gfortran
+/V4/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/f951
+/V4/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/finclude
+/V4/usr/bin/f95
+/V4/usr/bin/gfortran
+
+#g++
+/V4/usr/bin/%{gcc_target}-g++
+/V4/usr/bin/c++
+/V4/usr/bin/g++
+
+# gcc-dev
+/V4/usr/lib64/gcc/%{gcc_target}/%{gccver}/liblto_plugin.so
+/V4/usr/lib64/gcc/%{gcc_target}/%{gccver}/plugin/*.so
+
+
 
 %files dev
 /usr/lib64/libgcc_s.so
