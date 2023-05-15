@@ -1066,14 +1066,14 @@ rm -f %{buildroot}/usr/lib64/glibc-hwcaps/x86-64-v4/*.a
 /usr/lib64/libtsan*so*
 /usr/lib64/liblsan*so*
 /usr/lib64/libsanit*
-/usr/lib64/glibc-hwcaps/x86-64-v3/libasan_preinit.o
-/usr/lib64/glibc-hwcaps/x86-64-v3/liblsan_preinit.o
+%exclude /usr/lib64/glibc-hwcaps/x86-64-v3/libasan_preinit.o
+%exclude /usr/lib64/glibc-hwcaps/x86-64-v3/liblsan_preinit.o
 /usr/lib64/glibc-hwcaps/x86-64-v3/libsanitizer.spec
-/usr/lib64/glibc-hwcaps/x86-64-v3/libtsan_preinit.o
-/usr/lib64/glibc-hwcaps/x86-64-v4/libasan_preinit.o
-/usr/lib64/glibc-hwcaps/x86-64-v4/liblsan_preinit.o
+%exclude /usr/lib64/glibc-hwcaps/x86-64-v3/libtsan_preinit.o
+%exclude /usr/lib64/glibc-hwcaps/x86-64-v4/libasan_preinit.o
+%exclude /usr/lib64/glibc-hwcaps/x86-64-v4/liblsan_preinit.o
 /usr/lib64/glibc-hwcaps/x86-64-v4/libsanitizer.spec
-/usr/lib64/glibc-hwcaps/x86-64-v4/libtsan_preinit.o
+%exclude /usr/lib64/glibc-hwcaps/x86-64-v4/libtsan_preinit.o
 #avx2
 /usr/lib64/glibc-hwcaps/x86-64-v3/libubsan*so*
 /usr/lib64/glibc-hwcaps/x86-64-v3/libasan*so*
@@ -1089,11 +1089,11 @@ rm -f %{buildroot}/usr/lib64/glibc-hwcaps/x86-64-v4/*.a
 /usr/lib64/glibc-hwcaps/x86-64-v3/libhwasan.so
 /usr/lib64/glibc-hwcaps/x86-64-v3/libhwasan.so.0
 /usr/lib64/glibc-hwcaps/x86-64-v3/libhwasan.so.0.0.0
-/usr/lib64/glibc-hwcaps/x86-64-v3/libhwasan_preinit.o
+%exclude /usr/lib64/glibc-hwcaps/x86-64-v3/libhwasan_preinit.o
 /usr/lib64/glibc-hwcaps/x86-64-v4/libhwasan.so
 /usr/lib64/glibc-hwcaps/x86-64-v4/libhwasan.so.0
 /usr/lib64/glibc-hwcaps/x86-64-v4/libhwasan.so.0.0.0
-/usr/lib64/glibc-hwcaps/x86-64-v4/libhwasan_preinit.o
+%exclude /usr/lib64/glibc-hwcaps/x86-64-v4/libhwasan_preinit.o
 /usr/lib64/libhwasan.so
 /usr/lib64/libhwasan.so.0
 /usr/lib64/libhwasan.so.0.0.0
