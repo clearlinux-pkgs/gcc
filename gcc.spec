@@ -610,8 +610,7 @@ rm -f %{buildroot}-v4/usr/lib64/libstdc++.so.*-gdb.py
 /usr/bin/elf-move.py avx512 %{buildroot}-v4 %{buildroot} %{buildroot}/usr/share/clear/filemap/filemap-%{name}
 
 # we don't want per subarch .a files
-rm -f %{buildroot}/usr/lib64/glibc-hwcaps/x86-64-v3/*.a
-rm -f %{buildroot}/usr/lib64/glibc-hwcaps/x86-64-v4/*.a
+rm -f %{buildroot}-v*/usr/lib64/*.a
 
 %files
 /usr/bin/%{gcc_target}-gcc-ar
@@ -649,10 +648,10 @@ rm -f %{buildroot}/usr/lib64/glibc-hwcaps/x86-64-v4/*.a
 /usr/lib64/*.o
 
 #avx2
-/usr/lib64/glibc-hwcaps/x86-64-v3/libcc1*
+/V3/usr/lib64/libcc1*
 
 #avx512
-/usr/lib64/glibc-hwcaps/x86-64-v4/libcc1*
+/V4/usr/lib64/libcc1*
 
 # libgcc-s-dev
 /usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtbegin.o
@@ -691,38 +690,31 @@ rm -f %{buildroot}/usr/lib64/glibc-hwcaps/x86-64-v4/*.a
 /V3/usr/bin/%{gcc_target}-c++
 /V3/usr/bin/%{gcc_target}-gcc-%{gccver}
 /V3/usr/bin/gcc
-/V3/usr/bin/cc
 /V3/usr/bin/gcc-ar
 /V3/usr/bin/gcc-nm
 /V3/usr/bin/gcc-ranlib
 /V3/usr/bin/gcov
 /V3/usr/bin/gcov-tool
-/V3/usr/lib/cpp
 /V3/usr/bin/cpp
 /V3/usr/bin/lto-dump
 #/usr/lib64/libvtv*
 /V3/usr/lib64/libcc1*
-/V3/usr/lib64/gcc/%{gcc_target}/%{gccver}/include-fixed/
 /V3/usr/lib64/gcc/%{gcc_target}/%{gccver}/install-tools/
-/V3/usr/lib64/gcc/%{gcc_target}/%{gccver}/libcaf_*
-/V3/usr/lib64/gcc/%{gcc_target}/%{gccver}/include/
 /V3/usr/lib64/gcc/%{gcc_target}/%{gccver}/lto1
 /V3/usr/lib64/gcc/%{gcc_target}/%{gccver}/lto-wrapper
 /V3/usr/lib64/gcc/%{gcc_target}/%{gccver}/collect2
 /V3/usr/lib64/gcc/%{gcc_target}/%{gccver}/cc1plus
 /V3/usr/lib64/gcc/%{gcc_target}/%{gccver}/g++-mapper-server
 /V3/usr/lib64/gcc/%{gcc_target}/%{gccver}/cc1
-/V3/usr/lib64/gcc/%{gcc_target}/%{gccver}/plugin/gtype.state
 /V3/usr/lib64/gcc/%{gcc_target}/%{gccver}/plugin/*.so.*
 /V3/usr/lib64/gcc/%{gcc_target}/%{gccver}/plugin/include/
-/V3/usr/share/gcc-%{gccver}
 /V3/usr/lib64/*.o
 
 #avx2
-/V3/usr/lib64/glibc-hwcaps/x86-64-v3/libcc1*
+/V3/usr/lib64/libcc1*
 
 #avx512
-/V3/usr/lib64/glibc-hwcaps/x86-64-v4/libcc1*
+/V4/usr/lib64/libcc1*
 
 # libgcc-s-dev
 /V3/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtbegin.o
@@ -738,8 +730,6 @@ rm -f %{buildroot}/usr/lib64/glibc-hwcaps/x86-64-v4/*.a
 #gfortran
 /V3/usr/bin/%{gcc_target}-gfortran
 /V3/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/f951
-/V3/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/finclude
-/V3/usr/bin/f95
 /V3/usr/bin/gfortran
 
 #g++
@@ -758,38 +748,31 @@ rm -f %{buildroot}/usr/lib64/glibc-hwcaps/x86-64-v4/*.a
 /V4/usr/bin/%{gcc_target}-c++
 /V4/usr/bin/%{gcc_target}-gcc-%{gccver}
 /V4/usr/bin/gcc
-/V4/usr/bin/cc
 /V4/usr/bin/gcc-ar
 /V4/usr/bin/gcc-nm
 /V4/usr/bin/gcc-ranlib
 /V4/usr/bin/gcov
 /V4/usr/bin/gcov-tool
-/V4/usr/lib/cpp
 /V4/usr/bin/cpp
 /V4/usr/bin/lto-dump
 #/usr/lib64/libvtv*
 /V4/usr/lib64/libcc1*
-/V4/usr/lib64/gcc/%{gcc_target}/%{gccver}/include-fixed/
 /V4/usr/lib64/gcc/%{gcc_target}/%{gccver}/install-tools/
-/V4/usr/lib64/gcc/%{gcc_target}/%{gccver}/libcaf_*
-/V4/usr/lib64/gcc/%{gcc_target}/%{gccver}/include/
 /V4/usr/lib64/gcc/%{gcc_target}/%{gccver}/lto1
 /V4/usr/lib64/gcc/%{gcc_target}/%{gccver}/lto-wrapper
 /V4/usr/lib64/gcc/%{gcc_target}/%{gccver}/collect2
 /V4/usr/lib64/gcc/%{gcc_target}/%{gccver}/cc1plus
 /V4/usr/lib64/gcc/%{gcc_target}/%{gccver}/g++-mapper-server
 /V4/usr/lib64/gcc/%{gcc_target}/%{gccver}/cc1
-/V4/usr/lib64/gcc/%{gcc_target}/%{gccver}/plugin/gtype.state
 /V4/usr/lib64/gcc/%{gcc_target}/%{gccver}/plugin/*.so.*
 /V4/usr/lib64/gcc/%{gcc_target}/%{gccver}/plugin/include/
-/V4/usr/share/gcc-%{gccver}
 /V4/usr/lib64/*.o
 
 #avx2
-/V4/usr/lib64/glibc-hwcaps/x86-64-v3/libcc1*
+/V3/usr/lib64/libcc1*
 
 #avx512
-/V4/usr/lib64/glibc-hwcaps/x86-64-v4/libcc1*
+/V4/usr/lib64/libcc1*
 
 # libgcc-s-dev
 /V4/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtbegin.o
@@ -805,8 +788,6 @@ rm -f %{buildroot}/usr/lib64/glibc-hwcaps/x86-64-v4/*.a
 #gfortran
 /V4/usr/bin/%{gcc_target}-gfortran
 /V4/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/f951
-/V4/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/finclude
-/V4/usr/bin/f95
 /V4/usr/bin/gfortran
 
 #g++
@@ -826,22 +807,20 @@ rm -f %{buildroot}/usr/lib64/glibc-hwcaps/x86-64-v4/*.a
 /usr/lib64/libgomp.spec
 /usr/lib64/libgfortran.so
 /usr/lib64/libgfortran.spec
-/usr/lib64/glibc-hwcaps/x86-64-v3/libitm.spec
-/usr/lib64/glibc-hwcaps/x86-64-v3/libgomp.spec
-/usr/lib64/glibc-hwcaps/x86-64-v3/libgfortran.spec
-/usr/lib64/glibc-hwcaps/x86-64-v4/libitm.spec
-/usr/lib64/glibc-hwcaps/x86-64-v4/libgomp.spec
-/usr/lib64/glibc-hwcaps/x86-64-v4/libgfortran.spec
 /usr/include/libgccjit++.h
 /usr/include/libgccjit.h
 # gcc-plugin-dev
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/plugin/gengtype
+/V3/usr/lib64/gcc/%{gcc_target}/%{gccver}/plugin/gengtype
+/V4/usr/lib64/gcc/%{gcc_target}/%{gccver}/plugin/gengtype
 
 # libstdc++
 /usr/lib64/libstdc++.so
 /usr/include/c++/*
 /usr/share/gdb/auto-load/usr/lib64/libstdc++.so.*
 /usr/bin/gcov-dump
+/V3/usr/bin/gcov-dump
+/V4/usr/bin/gcov-dump
 /usr/lib64/gcc/x86_64-generic-linux/%{gccver}/32/finclude/
 /usr/lib64/libatomic.so
 /usr/lib64/libitm.so
@@ -849,20 +828,18 @@ rm -f %{buildroot}/usr/lib64/glibc-hwcaps/x86-64-v4/*.a
 /usr/lib64/libquadmath.so
 
 #avx2
-/usr/lib64/glibc-hwcaps/x86-64-v3/libatomic.so
-/usr/lib64/glibc-hwcaps/x86-64-v3/libgfortran.so
-/usr/lib64/glibc-hwcaps/x86-64-v3/libitm.so
-/usr/lib64/glibc-hwcaps/x86-64-v3/libquadmath.so
-/usr/lib64/glibc-hwcaps/x86-64-v3/libstdc++.so
-/usr/lib64/glibc-hwcaps/x86-64-v3/libgcc_s.so
+/V3/usr/lib64/libatomic.so
+/V3/usr/lib64/libgfortran.so
+/V3/usr/lib64/libitm.so
+/V3/usr/lib64/libquadmath.so
+/V3/usr/lib64/libstdc++.so
 
 #avx512
-/usr/lib64/glibc-hwcaps/x86-64-v4/libatomic.so
-/usr/lib64/glibc-hwcaps/x86-64-v4/libgfortran.so
-/usr/lib64/glibc-hwcaps/x86-64-v4/libitm.so
-/usr/lib64/glibc-hwcaps/x86-64-v4/libquadmath.so
-/usr/lib64/glibc-hwcaps/x86-64-v4/libstdc++.so
-/usr/lib64/glibc-hwcaps/x86-64-v4/libgcc_s.so
+/V4/usr/lib64/libatomic.so
+/V4/usr/lib64/libgfortran.so
+/V4/usr/lib64/libitm.so
+/V4/usr/lib64/libquadmath.so
+/V4/usr/lib64/libstdc++.so
 
 
 # some basic static files
@@ -901,6 +878,24 @@ rm -f %{buildroot}/usr/lib64/glibc-hwcaps/x86-64-v4/*.a
 /usr/lib64/gcc/x86_64-generic-linux/*/32/crtprec32.o
 /usr/lib64/gcc/x86_64-generic-linux/*/32/crtprec64.o
 /usr/lib64/gcc/x86_64-generic-linux/*/32/crtprec80.o
+/V3/usr/lib64/gcc/x86_64-generic-linux/*/32/crtbegin.o
+/V3/usr/lib64/gcc/x86_64-generic-linux/*/32/crtbeginS.o
+/V3/usr/lib64/gcc/x86_64-generic-linux/*/32/crtbeginT.o
+/V3/usr/lib64/gcc/x86_64-generic-linux/*/32/crtend.o
+/V3/usr/lib64/gcc/x86_64-generic-linux/*/32/crtendS.o
+/V3/usr/lib64/gcc/x86_64-generic-linux/*/32/crtfastmath.o
+/V3/usr/lib64/gcc/x86_64-generic-linux/*/32/crtprec32.o
+/V3/usr/lib64/gcc/x86_64-generic-linux/*/32/crtprec64.o
+/V3/usr/lib64/gcc/x86_64-generic-linux/*/32/crtprec80.o
+/V4/usr/lib64/gcc/x86_64-generic-linux/*/32/crtbegin.o
+/V4/usr/lib64/gcc/x86_64-generic-linux/*/32/crtbeginS.o
+/V4/usr/lib64/gcc/x86_64-generic-linux/*/32/crtbeginT.o
+/V4/usr/lib64/gcc/x86_64-generic-linux/*/32/crtend.o
+/V4/usr/lib64/gcc/x86_64-generic-linux/*/32/crtendS.o
+/V4/usr/lib64/gcc/x86_64-generic-linux/*/32/crtfastmath.o
+/V4/usr/lib64/gcc/x86_64-generic-linux/*/32/crtprec32.o
+/V4/usr/lib64/gcc/x86_64-generic-linux/*/32/crtprec64.o
+/V4/usr/lib64/gcc/x86_64-generic-linux/*/32/crtprec80.o
 /usr/lib64/gcc/x86_64-generic-linux/*/32/finclude/ieee_arithmetic.mod
 /usr/lib64/gcc/x86_64-generic-linux/*/32/finclude/ieee_exceptions.mod
 /usr/lib64/gcc/x86_64-generic-linux/*/32/finclude/ieee_features.mod
@@ -941,10 +936,10 @@ rm -f %{buildroot}/usr/lib64/glibc-hwcaps/x86-64-v4/*.a
 /usr/lib64/libgcc_s.so.1
 
 #avx2
-/usr/lib64/glibc-hwcaps/x86-64-v3/libgcc_s.so.1
+/V3/usr/lib64/libgcc_s.so.1
 
 #avx512
-/usr/lib64/glibc-hwcaps/x86-64-v4/libgcc_s.so.1
+/V4/usr/lib64/libgcc_s.so.1
 
 %files libs-math
 /usr/lib64/libssp.so*
@@ -955,20 +950,20 @@ rm -f %{buildroot}/usr/lib64/glibc-hwcaps/x86-64-v4/*.a
 /usr/lib64/libgfortran*.so.*
 
 #avx2
-/usr/lib64/glibc-hwcaps/x86-64-v3/libssp.so*
-/usr/lib64/glibc-hwcaps/x86-64-v3/libgomp*so*
-/usr/lib64/glibc-hwcaps/x86-64-v3/libatomic*.so.*
-/usr/lib64/glibc-hwcaps/x86-64-v3/libitm*.so.*
-/usr/lib64/glibc-hwcaps/x86-64-v3/libquadmath*.so.*
-/usr/lib64/glibc-hwcaps/x86-64-v3/libgfortran*.so.*
+/V3/usr/lib64/libssp.so*
+/V3/usr/lib64/libgomp*so*
+/V3/usr/lib64/libatomic*.so.*
+/V3/usr/lib64/libitm*.so.*
+/V3/usr/lib64/libquadmath*.so.*
+/V3/usr/lib64/libgfortran*.so.*
 
 #avx512
-/usr/lib64/glibc-hwcaps/x86-64-v4/libssp.so*
-/usr/lib64/glibc-hwcaps/x86-64-v4/libgomp*so*
-/usr/lib64/glibc-hwcaps/x86-64-v4/libatomic*.so.*
-/usr/lib64/glibc-hwcaps/x86-64-v4/libitm*.so.*
-/usr/lib64/glibc-hwcaps/x86-64-v4/libquadmath*.so.*
-/usr/lib64/glibc-hwcaps/x86-64-v4/libgfortran*.so.*
+/V4/usr/lib64/libssp.so*
+/V4/usr/lib64/libgomp*so*
+/V4/usr/lib64/libatomic*.so.*
+/V4/usr/lib64/libitm*.so.*
+/V4/usr/lib64/libquadmath*.so.*
+/V4/usr/lib64/libgfortran*.so.*
 
 %files libgcc32
 /usr/lib32/libasan*
@@ -1000,10 +995,10 @@ rm -f %{buildroot}/usr/lib64/glibc-hwcaps/x86-64-v4/*.a
 /usr/lib64/libstdc++.so.*
 
 #avx2
-/usr/lib64/glibc-hwcaps/x86-64-v3/libstdc++.so.*
+/V3/usr/lib64/libstdc++.so.*
 
 #avx512
-/usr/lib64/glibc-hwcaps/x86-64-v4/libstdc++.so.*
+/V4/usr/lib64/libstdc++.so.*
 
 %files jit
 /usr/lib64/libgccjit.so
@@ -1011,14 +1006,14 @@ rm -f %{buildroot}/usr/lib64/glibc-hwcaps/x86-64-v4/*.a
 /usr/lib64/libgccjit.so.0.0.1
 
 #avx2
-/usr/lib64/glibc-hwcaps/x86-64-v3/libgccjit.so
-/usr/lib64/glibc-hwcaps/x86-64-v3/libgccjit.so.0
-/usr/lib64/glibc-hwcaps/x86-64-v3/libgccjit.so.0.0.1
+/V3/usr/lib64/libgccjit.so
+/V3/usr/lib64/libgccjit.so.0
+/V3/usr/lib64/libgccjit.so.0.0.1
 
 #avx512
-/usr/lib64/glibc-hwcaps/x86-64-v4/libgccjit.so
-/usr/lib64/glibc-hwcaps/x86-64-v4/libgccjit.so.0
-/usr/lib64/glibc-hwcaps/x86-64-v4/libgccjit.so.0.0.1
+/V4/usr/lib64/libgccjit.so
+/V4/usr/lib64/libgccjit.so.0
+/V4/usr/lib64/libgccjit.so.0.0.1
 
 %files libstdc++32
 /usr/lib32/libstdc++.so.*
@@ -1033,14 +1028,35 @@ rm -f %{buildroot}/usr/lib64/glibc-hwcaps/x86-64-v4/*.a
 /usr/libexec/gccgo/bin/*
 /usr/bin/gccgo
 /usr/bin/x86_64-generic-linux-gccgo
+/V3/usr/bin/gccgo
+/V3/usr/bin/x86_64-generic-linux-gccgo
+/V4/usr/bin/gccgo
+/V4/usr/bin/x86_64-generic-linux-gccgo
 /usr/lib64/gcc/x86_64-generic-linux/*/cgo
 /usr/lib64/gcc/x86_64-generic-linux/*/go1
 /usr/lib64/gcc/x86_64-generic-linux/*/buildid
+/V3/usr/lib64/gcc/x86_64-generic-linux/*/cgo
+/V3/usr/lib64/gcc/x86_64-generic-linux/*/go1
+/V3/usr/lib64/gcc/x86_64-generic-linux/*/buildid
+/V4/usr/lib64/gcc/x86_64-generic-linux/*/cgo
+/V4/usr/lib64/gcc/x86_64-generic-linux/*/go1
+/V4/usr/lib64/gcc/x86_64-generic-linux/*/buildid
 /usr/lib64/gcc/x86_64-generic-linux/*/test2json
 /usr/lib64/gcc/x86_64-generic-linux/*/vet
+/V3/usr/lib64/gcc/x86_64-generic-linux/*/test2json
+/V3/usr/lib64/gcc/x86_64-generic-linux/*/vet
+/V4/usr/lib64/gcc/x86_64-generic-linux/*/test2json
+/V4/usr/lib64/gcc/x86_64-generic-linux/*/vet
 /usr/lib64/go/*/x86_64-generic-linux/*.gox
 /usr/lib64/go/*/x86_64-generic-linux/*/*.gox
 /usr/lib64/go/*/x86_64-generic-linux/*/*/*.gox
+/V3/usr/lib64/go/*/x86_64-generic-linux/*.gox
+/V3/usr/lib64/go/*/x86_64-generic-linux/*/*.gox
+/V3/usr/lib64/go/*/x86_64-generic-linux/*/*/*.gox
+/V4/usr/lib64/go/*/x86_64-generic-linux/*.gox
+/V4/usr/lib64/go/*/x86_64-generic-linux/*/*.gox
+/V4/usr/lib64/go/*/x86_64-generic-linux/*/*/*.gox
+
 /usr/lib64/libgo.a
 /usr/lib64/libgo.so
 /usr/lib64/libgo.so.*
@@ -1051,12 +1067,12 @@ rm -f %{buildroot}/usr/lib64/glibc-hwcaps/x86-64-v4/*.a
 %exclude /usr/lib32/go/
 
 #avx2
-/usr/lib64/glibc-hwcaps/x86-64-v3/libgo.so
-/usr/lib64/glibc-hwcaps/x86-64-v3/libgo.so.*
+/V3/usr/lib64/libgo.so
+/V3/usr/lib64/libgo.so.*
 
 #avx512
-/usr/lib64/glibc-hwcaps/x86-64-v4/libgo.so
-/usr/lib64/glibc-hwcaps/x86-64-v4/libgo.so.*
+/V4/usr/lib64/libgo.so
+/V4/usr/lib64/libgo.so.*
 
 %files -n gcc-locale -f gcc.lang
 
@@ -1066,34 +1082,34 @@ rm -f %{buildroot}/usr/lib64/glibc-hwcaps/x86-64-v4/*.a
 /usr/lib64/libtsan*so*
 /usr/lib64/liblsan*so*
 /usr/lib64/libsanit*
-%exclude /usr/lib64/glibc-hwcaps/x86-64-v3/libasan_preinit.o
-%exclude /usr/lib64/glibc-hwcaps/x86-64-v3/liblsan_preinit.o
-/usr/lib64/glibc-hwcaps/x86-64-v3/libsanitizer.spec
-%exclude /usr/lib64/glibc-hwcaps/x86-64-v3/libtsan_preinit.o
-%exclude /usr/lib64/glibc-hwcaps/x86-64-v4/libasan_preinit.o
-%exclude /usr/lib64/glibc-hwcaps/x86-64-v4/liblsan_preinit.o
-/usr/lib64/glibc-hwcaps/x86-64-v4/libsanitizer.spec
-%exclude /usr/lib64/glibc-hwcaps/x86-64-v4/libtsan_preinit.o
+%exclude /V3/usr/lib64/libasan_preinit.o
+%exclude /V3/usr/lib64/liblsan_preinit.o
+/usr/lib64/libsanitizer.spec
+%exclude /V3/usr/lib64/libtsan_preinit.o
+%exclude /V4/usr/lib64/libasan_preinit.o
+%exclude /V4/usr/lib64/liblsan_preinit.o
+/usr/lib64/libsanitizer.spec
+%exclude /V4/usr/lib64/libtsan_preinit.o
 #avx2
-/usr/lib64/glibc-hwcaps/x86-64-v3/libubsan*so*
-/usr/lib64/glibc-hwcaps/x86-64-v3/libasan*so*
-/usr/lib64/glibc-hwcaps/x86-64-v3/libtsan*so*
-/usr/lib64/glibc-hwcaps/x86-64-v3/liblsan*so*
+/V3/usr/lib64/libubsan*so*
+/V3/usr/lib64/libasan*so*
+/V3/usr/lib64/libtsan*so*
+/V3/usr/lib64/liblsan*so*
 
 #avx512
-/usr/lib64/glibc-hwcaps/x86-64-v4/libubsan*so*
-/usr/lib64/glibc-hwcaps/x86-64-v4/libasan*so*
-/usr/lib64/glibc-hwcaps/x86-64-v4/libtsan*so*
-/usr/lib64/glibc-hwcaps/x86-64-v4/liblsan*so*
+/V4/usr/lib64/libubsan*so*
+/V4/usr/lib64/libasan*so*
+/V4/usr/lib64/libtsan*so*
+/V4/usr/lib64/liblsan*so*
 
-/usr/lib64/glibc-hwcaps/x86-64-v3/libhwasan.so
-/usr/lib64/glibc-hwcaps/x86-64-v3/libhwasan.so.0
-/usr/lib64/glibc-hwcaps/x86-64-v3/libhwasan.so.0.0.0
-%exclude /usr/lib64/glibc-hwcaps/x86-64-v3/libhwasan_preinit.o
-/usr/lib64/glibc-hwcaps/x86-64-v4/libhwasan.so
-/usr/lib64/glibc-hwcaps/x86-64-v4/libhwasan.so.0
-/usr/lib64/glibc-hwcaps/x86-64-v4/libhwasan.so.0.0.0
-%exclude /usr/lib64/glibc-hwcaps/x86-64-v4/libhwasan_preinit.o
+/V3/usr/lib64/libhwasan.so
+/V3/usr/lib64/libhwasan.so.0
+/V3/usr/lib64/libhwasan.so.0.0.0
+%exclude /V3/usr/lib64/libhwasan_preinit.o
+/V4/usr/lib64/libhwasan.so
+/V4/usr/lib64/libhwasan.so.0
+/V4/usr/lib64/libhwasan.so.0.0.0
+%exclude /V4/usr/lib64/libhwasan_preinit.o
 /usr/lib64/libhwasan.so
 /usr/lib64/libhwasan.so.0
 /usr/lib64/libhwasan.so.0.0.0
