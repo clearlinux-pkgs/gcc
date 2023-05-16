@@ -538,8 +538,8 @@ fi
 ln -sf %{gcc_target}-g++ g++
 ln -sf %{gcc_target}-gcc gcc
 #ln -sf %{gcc_target}-cpp cpp
-install -d %{buildroot}/usr/lib
-ln -sf ../bin/cpp %{buildroot}/usr/lib/cpp
+install -d %{buildroot}-v3/usr/lib
+ln -sf ../bin/cpp %{buildroot}-v3/usr/lib/cpp
 ln -sf g++ c++
 ln -sf gcc cc
 cd -
@@ -557,8 +557,8 @@ fi
 ln -sf %{gcc_target}-g++ g++
 ln -sf %{gcc_target}-gcc gcc
 #ln -sf %{gcc_target}-cpp cpp
-install -d %{buildroot}/usr/lib
-ln -sf ../bin/cpp %{buildroot}/usr/lib/cpp
+install -d %{buildroot}-v4/usr/lib
+ln -sf ../bin/cpp %{buildroot}-v4/usr/lib/cpp
 ln -sf g++ c++
 ln -sf gcc cc
 cd -
