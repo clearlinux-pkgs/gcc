@@ -526,6 +526,44 @@ rm -f %{buildroot}-v4/usr/bin/go
 rm -f %{buildroot}-v4/usr/bin/gofmt
 
 
+cd %{buildroot}-v3/usr/bin
+if [ -e %{gcc_target}-g77 ]; then
+    ln -sf %{gcc_target}-g77 g77 || true
+    ln -sf g77 f77 || true
+fi
+if [ -e x86_64-generic-linux-gfortran ]; then
+    ln -sf %{gcc_target}-gfortran gfortran || true
+    ln -sf gfortran f95 || true
+fi
+ln -sf %{gcc_target}-g++ g++
+ln -sf %{gcc_target}-gcc gcc
+#ln -sf %{gcc_target}-cpp cpp
+install -d %{buildroot}/usr/lib
+ln -sf ../bin/cpp %{buildroot}/usr/lib/cpp
+ln -sf g++ c++
+ln -sf gcc cc
+cd -
+
+
+cd %{buildroot}-v4/usr/bin
+if [ -e %{gcc_target}-g77 ]; then
+    ln -sf %{gcc_target}-g77 g77 || true
+    ln -sf g77 f77 || true
+fi
+if [ -e x86_64-generic-linux-gfortran ]; then
+    ln -sf %{gcc_target}-gfortran gfortran || true
+    ln -sf gfortran f95 || true
+fi
+ln -sf %{gcc_target}-g++ g++
+ln -sf %{gcc_target}-gcc gcc
+#ln -sf %{gcc_target}-cpp cpp
+install -d %{buildroot}/usr/lib
+ln -sf ../bin/cpp %{buildroot}/usr/lib/cpp
+ln -sf g++ c++
+ln -sf gcc cc
+cd -
+
+
 cd %{buildroot}/usr/bin
 if [ -e %{gcc_target}-g77 ]; then
     ln -sf %{gcc_target}-g77 g77 || true
@@ -543,6 +581,8 @@ ln -sf ../bin/cpp %{buildroot}/usr/lib/cpp
 ln -sf g++ c++
 ln -sf gcc cc
 cd -
+
+
 
 # This conflicts with golang, stash away
 # We use gccgo to build golang
