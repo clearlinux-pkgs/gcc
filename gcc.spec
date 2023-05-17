@@ -795,6 +795,12 @@ rm -f %{buildroot}-v*/usr/lib64/*.a
 /V4/usr/bin/gcov-tool
 /V4/usr/bin/cpp
 /V4/usr/bin/lto-dump
+/V3/usr/bin/cc
+/V3/usr/bin/f95
+/V3/usr/lib/cpp
+/V4/usr/bin/cc
+/V4/usr/bin/f95
+/V4/usr/lib/cpp
 #/usr/lib64/libvtv*
 /V4/usr/lib64/libcc1*
 /V4/usr/lib64/gcc/%{gcc_target}/%{gccver}/install-tools/
