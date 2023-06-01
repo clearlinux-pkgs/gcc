@@ -729,13 +729,11 @@ rm -f %{buildroot}-v*/usr/lib64/*.a
 /V3/usr/bin/%{gcc_target}-gcc
 /V3/usr/bin/%{gcc_target}-c++
 /V3/usr/bin/%{gcc_target}-gcc-%{gccver}
-/V3/usr/bin/gcc
 /V3/usr/bin/gcc-ar
 /V3/usr/bin/gcc-nm
 /V3/usr/bin/gcc-ranlib
 /V3/usr/bin/gcov
 /V3/usr/bin/gcov-tool
-/V3/usr/bin/cpp
 /V3/usr/bin/lto-dump
 #/usr/lib64/libvtv*
 /V3/usr/lib64/libcc1*
@@ -770,16 +768,11 @@ rm -f %{buildroot}-v*/usr/lib64/*.a
 #gfortran
 /V3/usr/bin/%{gcc_target}-gfortran
 /V3/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/f951
-/V3/usr/bin/gfortran
 
 #g++
 /V3/usr/bin/%{gcc_target}-g++
-/V3/usr/bin/c++
-/V3/usr/bin/g++
 
 # gcc-dev
-/V3/usr/lib64/gcc/%{gcc_target}/%{gccver}/liblto_plugin.so
-/V3/usr/lib64/gcc/%{gcc_target}/%{gccver}/plugin/*.so
 
 /V4/usr/bin/%{gcc_target}-gcc-ar
 /V4/usr/bin/%{gcc_target}-gcc-ranlib
@@ -787,20 +780,12 @@ rm -f %{buildroot}-v*/usr/lib64/*.a
 /V4/usr/bin/%{gcc_target}-gcc
 /V4/usr/bin/%{gcc_target}-c++
 /V4/usr/bin/%{gcc_target}-gcc-%{gccver}
-/V4/usr/bin/gcc
 /V4/usr/bin/gcc-ar
 /V4/usr/bin/gcc-nm
 /V4/usr/bin/gcc-ranlib
 /V4/usr/bin/gcov
 /V4/usr/bin/gcov-tool
-/V4/usr/bin/cpp
 /V4/usr/bin/lto-dump
-/V3/usr/bin/cc
-/V3/usr/bin/f95
-/V3/usr/lib/cpp
-/V4/usr/bin/cc
-/V4/usr/bin/f95
-/V4/usr/lib/cpp
 #/usr/lib64/libvtv*
 /V4/usr/lib64/libcc1*
 /V4/usr/lib64/gcc/%{gcc_target}/%{gccver}/install-tools/
@@ -838,8 +823,6 @@ rm -f %{buildroot}-v*/usr/lib64/*.a
 
 #g++
 /V4/usr/bin/%{gcc_target}-g++
-/V4/usr/bin/c++
-/V4/usr/bin/g++
 
 # gcc-dev
 /V4/usr/lib64/gcc/%{gcc_target}/%{gccver}/liblto_plugin.so
