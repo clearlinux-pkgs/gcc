@@ -1024,13 +1024,9 @@ rm -f %{buildroot}-v*/usr/lib64/*.a
 /usr/lib64/libgccjit.so.0.0.1
 
 #avx2
-/V3/usr/lib64/libgccjit.so
-/V3/usr/lib64/libgccjit.so.0
 /V3/usr/lib64/libgccjit.so.0.0.1
 
 #avx512
-/V4/usr/lib64/libgccjit.so
-/V4/usr/lib64/libgccjit.so.0
 /V4/usr/lib64/libgccjit.so.0.0.1
 
 %files libstdc++32
