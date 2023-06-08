@@ -820,14 +820,12 @@ rm -f %{buildroot}-v*/usr/lib64/*.a
 #gfortran
 /V4/usr/bin/%{gcc_target}-gfortran
 /V4/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/f951
-/V4/usr/bin/gfortran
 
 #g++
 /V4/usr/bin/%{gcc_target}-g++
 
 # gcc-dev
 /V4/usr/lib64/gcc/%{gcc_target}/%{gccver}/liblto_plugin.so
-/V4/usr/lib64/gcc/%{gcc_target}/%{gccver}/plugin/*.so
 
 
 
