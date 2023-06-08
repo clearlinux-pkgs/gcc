@@ -1120,12 +1120,8 @@ rm -f %{buildroot}-v*/usr/lib64/*.a
 /V4/usr/lib64/libtsan*so*
 /V4/usr/lib64/liblsan*so*
 
-/V3/usr/lib64/libhwasan.so
-/V3/usr/lib64/libhwasan.so.0
 /V3/usr/lib64/libhwasan.so.0.0.0
 %exclude /V3/usr/lib64/libhwasan_preinit.o
-/V4/usr/lib64/libhwasan.so
-/V4/usr/lib64/libhwasan.so.0
 /V4/usr/lib64/libhwasan.so.0.0.0
 %exclude /V4/usr/lib64/libhwasan_preinit.o
 /usr/lib64/libhwasan.so
