@@ -856,18 +856,8 @@ rm -f %{buildroot}-v*/usr/lib64/*.a
 /usr/lib64/libquadmath.so
 
 #avx2
-/V3/usr/lib64/libatomic.so
-/V3/usr/lib64/libgfortran.so
-/V3/usr/lib64/libitm.so
-/V3/usr/lib64/libquadmath.so
-/V3/usr/lib64/libstdc++.so
 
 #avx512
-/V4/usr/lib64/libatomic.so
-/V4/usr/lib64/libgfortran.so
-/V4/usr/lib64/libitm.so
-/V4/usr/lib64/libquadmath.so
-/V4/usr/lib64/libstdc++.so
 
 
 # some basic static files
