@@ -1081,11 +1081,9 @@ rm -f %{buildroot}-v*/usr/lib64/*.a
 %exclude /usr/lib32/go/
 
 #avx2
-/V3/usr/lib64/libgo.so
 /V3/usr/lib64/libgo.so.*
 
 #avx512
-/V4/usr/lib64/libgo.so
 /V4/usr/lib64/libgo.so.*
 
 %files -n gcc-locale -f gcc.lang
