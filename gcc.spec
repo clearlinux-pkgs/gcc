@@ -693,6 +693,8 @@ rm -f %{buildroot}-v*/usr/lib64/*.a
 
 #avx512
 /V4/usr/lib64/libcc1*
+/V3/usr/bin/cpp
+/V4/usr/bin/cpp
 
 # libgcc-s-dev
 /usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtbegin.o
@@ -720,6 +722,7 @@ rm -f %{buildroot}-v*/usr/lib64/*.a
 # gcc-dev
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/liblto_plugin.so
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/plugin/*.so
+/V3/usr/lib64/gcc/x86_64-generic-linux/13/liblto_plugin.so
 
 
 
@@ -1121,3 +1124,5 @@ rm -f %{buildroot}-v*/usr/lib64/*.a
 /usr/lib64/libhwasan.so
 /usr/lib64/libhwasan.so.0
 /usr/lib64/libhwasan.so.0.0.0
+
+
