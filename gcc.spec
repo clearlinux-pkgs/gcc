@@ -46,6 +46,7 @@ Patch25  : adaptive-mutex.patch
 Patch30  : gcc-hj-latest.patch
 
 Patch31  : avx512move.patch
+Patch32  : fortran.patch
 # partial upstream backport
 # cves: 1xx
 
@@ -258,6 +259,8 @@ GNU cc and gcc C compilers.
 %patch25 -p1
 
 #%patch30 -p1
+
+%patch32 -p1
 
 
 
