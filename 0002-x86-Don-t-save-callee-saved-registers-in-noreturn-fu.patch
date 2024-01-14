@@ -1,0 +1,279 @@
+From d592522bb569db569b3300cd9d1251593e5bc722 Mon Sep 17 00:00:00 2001
+From: "H.J. Lu" <hjl.tools@gmail.com>
+Date: Fri, 12 Jan 2024 14:36:08 -0800
+Subject: [PATCH 2/3] x86: Don't save callee-saved registers in noreturn
+ functions
+
+There is no need to save callee-saved registers in noreturn functions
+if they don't throw nor support exceptions.  We can treat them the same
+as functions with no_callee_saved_registers attribute.
+
+Adjust stack-check-17.c for noreturn function which no longer saves any
+registers.
+
+Note: With this change, __libc_start_main in glibc, which is a noreturn
+function, is changed from
+
+__libc_start_main:
+	endbr64
+	push   %r15
+	push   %r14
+	mov    %rcx,%r14
+	push   %r13
+	push   %r12
+	push   %rbp
+	mov    %esi,%ebp
+	push   %rbx
+	mov    %rdx,%rbx
+	sub    $0x28,%rsp
+	mov    %rdi,(%rsp)
+	mov    %fs:0x28,%rax
+	mov    %rax,0x18(%rsp)
+	xor    %eax,%eax
+	test   %r9,%r9
+
+to
+
+__libc_start_main:
+	endbr64
+        sub    $0x28,%rsp
+        mov    %esi,%ebp
+        mov    %rdx,%rbx
+        mov    %rcx,%r14
+        mov    %rdi,(%rsp)
+        mov    %fs:0x28,%rax
+        mov    %rax,0x18(%rsp)
+        xor    %eax,%eax
+        test   %r9,%r9
+
+In Linux kernel 6.7.0 on x86-64, do_exit is changed from
+
+do_exit:
+        endbr64
+        call   <do_exit+0x9>
+        push   %r15
+        push   %r14
+        push   %r13
+        push   %r12
+        mov    %rdi,%r12
+        push   %rbp
+        push   %rbx
+        mov    %gs:0x0,%rbx
+        sub    $0x28,%rsp
+        mov    %gs:0x28,%rax
+        mov    %rax,0x20(%rsp)
+        xor    %eax,%eax
+        call   *0x0(%rip)        # <do_exit+0x39>
+        test   $0x2,%ah
+        je     <do_exit+0x8d3>
+
+to
+
+do_exit:
+        endbr64
+        call   <do_exit+0x9>
+        sub    $0x28,%rsp
+        mov    %rdi,%r12
+        mov    %gs:0x28,%rax
+        mov    %rax,0x20(%rsp)
+        xor    %eax,%eax
+        mov    %gs:0x0,%rbx
+        call   *0x0(%rip)        # <do_exit+0x2f>
+        test   $0x2,%ah
+        je     <do_exit+0x8c9>
+
+gcc/
+
+	PR target/38534
+	* config/i386/i386-options.cc (ix86_set_func_type): Don't
+	save and restore callee saved registers for a noreturn function
+	with nothrow or compiled with -fno-exceptions.
+
+gcc/testsuite/
+
+	PR target/38534
+	* gcc.target/i386/pr38534-1.c: New file.
+	* gcc.target/i386/pr38534-2.c: Likewise.
+	* gcc.target/i386/pr38534-3.c: Likewise.
+	* gcc.target/i386/pr38534-4.c: Likewise.
+	* gcc.target/i386/stack-check-17.c: Updated.
+---
+ gcc/config/i386/i386-options.cc               | 16 ++++++++++--
+ gcc/testsuite/gcc.target/i386/pr38534-1.c     | 26 +++++++++++++++++++
+ gcc/testsuite/gcc.target/i386/pr38534-2.c     | 18 +++++++++++++
+ gcc/testsuite/gcc.target/i386/pr38534-3.c     | 19 ++++++++++++++
+ gcc/testsuite/gcc.target/i386/pr38534-4.c     | 18 +++++++++++++
+ .../gcc.target/i386/stack-check-17.c          | 19 +++++---------
+ 6 files changed, 102 insertions(+), 14 deletions(-)
+ create mode 100644 gcc/testsuite/gcc.target/i386/pr38534-1.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pr38534-2.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pr38534-3.c
+ create mode 100644 gcc/testsuite/gcc.target/i386/pr38534-4.c
+
+diff --git a/gcc/config/i386/i386-options.cc b/gcc/config/i386/i386-options.cc
+index 349b6f14a52..efd00cab8d7 100644
+--- a/gcc/config/i386/i386-options.cc
++++ b/gcc/config/i386/i386-options.cc
+@@ -3146,9 +3146,21 @@ ix86_simd_clone_adjust (struct cgraph_node *node)
+ static void
+ ix86_set_func_type (tree fndecl)
+ {
++  /* No need to save and restore callee-saved registers for a noreturn
++     function with nothrow or compiled with -fno-exceptions.
++
++     NB: Don't use TREE_THIS_VOLATILE to check if this is a noreturn
++     function.  The local-pure-const pass turns an interrupt function
++     into a noreturn function by setting TREE_THIS_VOLATILE.  Normally
++     the local-pure-const pass is run after ix86_set_func_type is called.
++     When the local-pure-const pass is enabled for LTO, the interrupt
++     function is marked as noreturn in the IR output, which leads the
++     incompatible attribute error in LTO1.  */
+   bool has_no_callee_saved_registers
+-    = lookup_attribute ("no_callee_saved_registers",
+-			TYPE_ATTRIBUTES (TREE_TYPE (fndecl)));
++    = (((TREE_NOTHROW (fndecl) || !flag_exceptions)
++	&& lookup_attribute ("noreturn", DECL_ATTRIBUTES (fndecl)))
++       || lookup_attribute ("no_callee_saved_registers",
++			    TYPE_ATTRIBUTES (TREE_TYPE (fndecl))));
+ 
+   if (cfun->machine->func_type == TYPE_UNKNOWN)
+     {
+diff --git a/gcc/testsuite/gcc.target/i386/pr38534-1.c b/gcc/testsuite/gcc.target/i386/pr38534-1.c
+new file mode 100644
+index 00000000000..9297959e759
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr38534-1.c
+@@ -0,0 +1,26 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mtune-ctrl=^prologue_using_move,^epilogue_using_move" } */
++
++#define ARRAY_SIZE 256
++
++extern int array[ARRAY_SIZE][ARRAY_SIZE][ARRAY_SIZE];
++extern int value (int, int, int)
++#ifndef __x86_64__
++__attribute__ ((regparm(3)))
++#endif
++;
++
++void
++__attribute__((noreturn))
++no_return_to_caller (void)
++{
++  unsigned i, j, k;
++  for (i = ARRAY_SIZE; i > 0; --i)
++    for (j = ARRAY_SIZE; j > 0; --j)
++      for (k = ARRAY_SIZE; k > 0; --k)
++	array[i - 1][j - 1][k - 1] = value (i, j, k);
++  while (1);
++}
++
++/* { dg-final { scan-assembler-not "push" } } */
++/* { dg-final { scan-assembler-not "pop" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr38534-2.c b/gcc/testsuite/gcc.target/i386/pr38534-2.c
+new file mode 100644
+index 00000000000..1fb01363273
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr38534-2.c
+@@ -0,0 +1,18 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mtune-ctrl=^prologue_using_move,^epilogue_using_move" } */
++
++extern void bar (void) __attribute__ ((no_callee_saved_registers));
++extern void fn (void) __attribute__ ((noreturn));
++
++__attribute__ ((noreturn))
++void
++foo (void)
++{
++  bar ();
++  fn ();
++}
++
++/* { dg-final { scan-assembler-not "push" } } */
++/* { dg-final { scan-assembler-not "pop" } } */
++/* { dg-final { scan-assembler-not "jmp\[\\t \]+_?bar" } } */
++/* { dg-final { scan-assembler "call\[\\t \]+_?bar" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr38534-3.c b/gcc/testsuite/gcc.target/i386/pr38534-3.c
+new file mode 100644
+index 00000000000..87fc35f3fe9
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr38534-3.c
+@@ -0,0 +1,19 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mtune-ctrl=^prologue_using_move,^epilogue_using_move" } */
++
++typedef void (*fn_t) (void) __attribute__ ((no_callee_saved_registers));
++extern fn_t bar;
++extern void fn (void) __attribute__ ((noreturn));
++
++__attribute__ ((noreturn))
++void
++foo (void)
++{
++  bar ();
++  fn ();
++}
++
++/* { dg-final { scan-assembler-not "push" } } */
++/* { dg-final { scan-assembler-not "pop" } } */
++/* { dg-final { scan-assembler-not "jmp" } } */
++/* { dg-final { scan-assembler "call\[\\t \]+" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr38534-4.c b/gcc/testsuite/gcc.target/i386/pr38534-4.c
+new file mode 100644
+index 00000000000..561ebeef194
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr38534-4.c
+@@ -0,0 +1,18 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -mtune-ctrl=^prologue_using_move,^epilogue_using_move" } */
++
++typedef void (*fn_t) (void) __attribute__ ((no_callee_saved_registers));
++extern void fn (void) __attribute__ ((noreturn));
++
++__attribute__ ((noreturn))
++void
++foo (fn_t bar)
++{
++  bar ();
++  fn ();
++}
++
++/* { dg-final { scan-assembler-not "push" } } */
++/* { dg-final { scan-assembler-not "pop" } } */
++/* { dg-final { scan-assembler-not "jmp" } } */
++/* { dg-final { scan-assembler "call\[\\t \]+" } } */
+diff --git a/gcc/testsuite/gcc.target/i386/stack-check-17.c b/gcc/testsuite/gcc.target/i386/stack-check-17.c
+index b3e41cb3d25..061484e1319 100644
+--- a/gcc/testsuite/gcc.target/i386/stack-check-17.c
++++ b/gcc/testsuite/gcc.target/i386/stack-check-17.c
+@@ -23,19 +23,14 @@ f3 (void)
+ /* Verify no explicit probes.  */
+ /* { dg-final { scan-assembler-not "or\[ql\]" } } */
+ 
+-/* We also want to verify we did not use a push/pop sequence
+-   to probe *sp as the callee register saves are sufficient
+-   to probe *sp.
+-
+-   y0/y1 are live across the call and thus must be allocated
++/* y0/y1 are live across the call and thus must be allocated
+    into either a stack slot or callee saved register.  The former
+    would be rather dumb.  So assume it does not happen.
+ 
+-   So search for two/four pushes for the callee register saves/argument pushes
+-   (plus one for the PIC register if needed on ia32) and no pops (since the
+-   function has no reachable epilogue).  */
+-/* { dg-final { scan-assembler-times "push\[ql\]" 2 { target { ! ia32 } } } }  */
+-/* { dg-final { scan-assembler-times "push\[ql\]" 4 { target { ia32 && nonpic } } } }  */
+-/* { dg-final { scan-assembler-times "push\[ql\]" 5 { target { ia32 && { ! nonpic } } } } }  */
+-/* { dg-final { scan-assembler-not "pop" } } */
++   So search for a push/pop sequence for stack probe and 2 argument
++   pushes on ia32.  There is no need to save and restore the PIC
++   register on ia32 for a noreturn function.  */
++/* { dg-final { scan-assembler-times "push\[ql\]" 1 { target { ! ia32 } } } }  */
++/* { dg-final { scan-assembler-times "push\[ql\]" 3 { target ia32 } } }  */
++/* { dg-final { scan-assembler-times "pop" 1 } } */
+ 
+-- 
+2.43.0
+

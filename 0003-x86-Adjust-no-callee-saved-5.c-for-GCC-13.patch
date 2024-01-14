@@ -1,0 +1,28 @@
+From a54dca3f7e82bc14e01bf67b864f09e91811cf10 Mon Sep 17 00:00:00 2001
+From: "H.J. Lu" <hjl.tools@gmail.com>
+Date: Fri, 12 Jan 2024 16:25:26 -0800
+Subject: [PATCH 3/3] x86: Adjust no-callee-saved-5.c for GCC 13
+
+Change dg-error to dg-warning for GCC 13.
+
+	PR target/103503
+	PR target/113312
+	* gcc.target/i386/no-callee-saved-5.c: Change dg-error to
+	dg-warning.
+---
+ gcc/testsuite/gcc.target/i386/no-callee-saved-5.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/gcc/testsuite/gcc.target/i386/no-callee-saved-5.c b/gcc/testsuite/gcc.target/i386/no-callee-saved-5.c
+index b28b211986a..d9f1a66dc4f 100644
+--- a/gcc/testsuite/gcc.target/i386/no-callee-saved-5.c
++++ b/gcc/testsuite/gcc.target/i386/no-callee-saved-5.c
+@@ -8,4 +8,4 @@ foo (void *frame)
+ {
+ }
+ 
+-fn_t func = foo; /* { dg-error "incompatible pointer type" } */
++fn_t func = foo; /* { dg-warning "incompatible pointer type" } */
+-- 
+2.43.0
+
