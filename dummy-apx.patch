@@ -1,0 +1,12 @@
+--- gcc-13.1.0/gcc/config/i386/i386.opt~	2023-04-26 07:09:39.000000000 +0000
++++ gcc-13.1.0/gcc/config/i386/i386.opt	2024-01-31 18:06:07.739378338 +0000
+@@ -1278,3 +1278,9 @@
+ mamx-complex
+ Target Mask(ISA2_AMX_COMPLEX) Var(ix86_isa_flags2) Save
+ Support AMX-COMPLEX built-in functions and code generation.
++
++mapxf
++Dummy apx flag
++
++mavx10.1
++Dummy avx10.1 flag

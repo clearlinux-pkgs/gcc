@@ -47,6 +47,7 @@ Patch30  : gcc-hj-latest.patch
 
 Patch31  : avx512move.patch
 Patch32  : fortran.patch
+Patch33  : dummy-apx.patch
 
 patch40  : 0001-x86-Add-no_callee_saved_registers-function-attribute.patch
 Patch41	 : 0002-x86-Don-t-save-callee-saved-registers-in-noreturn-fu.patch
@@ -266,6 +267,7 @@ GNU cc and gcc C compilers.
 #%patch30 -p1
 
 %patch32 -p1
+%patch33 -p1
 
 
 %patch40 -p1
