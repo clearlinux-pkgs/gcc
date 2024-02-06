@@ -14,7 +14,7 @@
 
 Name     : gcc
 Version  : 13.1.0
-Release  : 1812
+Release  : 1813
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://gcc.gnu.org/pub/gcc/releases/gcc-13.1.0/gcc-13.1.0.tar.xz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.24.tar.bz2
@@ -397,7 +397,7 @@ export LIBRARY_PATH=%{_libdir}
     --with-zstd \
     --enable-default-pie
 
-make -O %{?_smp_mflags} bootstrap
+make -O %{?_smp_mflags} profiledbootstrap
 
 popd
 

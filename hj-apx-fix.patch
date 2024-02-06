@@ -1,0 +1,1044 @@
+commit 6cf22d7ee944fb31eb371feac132bf9a8683b3cc
+Author: H.J. Lu <hjl.tools@intel.com>
+Date:   Fri Feb 2 12:51:22 2024 -0800
+
+    x86: Update constraints for APX NDD instructions
+    
+    1. The only supported TLS code sequence with ADD is
+    
+            addq foo@gottpoff(%rip),%reg
+    
+    Change je constraint to a memory operand in APX NDD patterns with
+    register operand.
+    
+    2. The instruction length of APX NDD instructions with immediate operand:
+    
+    op imm, mem, reg
+    
+    may exceed the size limit of 15 byes when non-default address space,
+    segment register or address size prefix are used.
+    
+    Add jM constraint which is a memory operand valid for APX NDD instructions
+    with immediate operand and add jO constraint which is an offsetable memory
+    operand valid for APX NDD instructions with immediate operand.  Update
+    APX NDD patterns with jM and jO constraints.
+    
+    gcc/
+    
+            PR target/113711
+            PR target/113733
+            * config/i386/constraints.md:  List all constraints with j
+            prefix.
+            (j>): Change auto-dec to auto-inc in documentation.
+            (je): Changed to a memory constraint with APX NDD TLS operand
+            check.
+            (jM): New memory constraint for APX NDD instructions.
+            (jO): Likewise.
+            * config/i386/i386-protos.h (x86_poff_operand_p): Removed.
+            * config/i386/i386.cc (x86_poff_operand_p): Likewise.
+            * config/i386/i386.md (*add<dwi>3_doubleword): Use rjO.
+            (*add<mode>_1[SWI48]): Use je and jM.
+            (addsi_1_zext): Use jM.
+            (*addv<dwi>4_doubleword_1[DWI]): Likewise.
+            (@add<mode>3_cc_overflow_1[SWI]): Likewise.
+            (*add<dwi>3_doubleword_cc_overflow_1): Use rjO.
+            (*anddi_1): Use jM.
+            (*andsi_1_zext): Likewise.
+            (*and<mode>_1[SWI24]): Likewise.
+            (*code<mode>_1[any_or SWI248]): Likewise.
+            (*<code>si_1_zext[zero_extend + any_or]): Likewise.
+            * config/i386/predicates.md (apx_ndd_memory_operand): New.
+            (apx_ndd_no_tls_memory_operand): Likewise.
+    
+    gcc/testsuite/
+    
+            PR target/113711
+            PR target/113733
+            * gcc.target/i386/apx-ndd-base-index-1.c: New test.
+            * gcc.target/i386/apx-ndd-no-seg-global-1.c: Likewise.
+            * gcc.target/i386/apx-ndd-seg-1.c: Likewise.
+            * gcc.target/i386/apx-ndd-seg-2.c: Likewise.
+            * gcc.target/i386/apx-ndd-seg-3.c: Likewise.
+            * gcc.target/i386/apx-ndd-seg-4.c: Likewise.
+            * gcc.target/i386/apx-ndd-tls-1.c: Likewise.
+            * gcc.target/i386/apx-ndd-tls-2.c: Likewise.
+            * gcc.target/i386/apx-ndd-tls-3.c: Likewise.
+            * gcc.target/i386/apx-ndd-tls-4.c: Likewise.
+            * gcc.target/i386/apx-ndd-x32-1.c: Likewise.
+
+diff --git a/gcc/config/i386/constraints.md b/gcc/config/i386/constraints.md
+index 280e4c8e36c..a8fff2705d0 100644
+--- a/gcc/config/i386/constraints.md
++++ b/gcc/config/i386/constraints.md
+@@ -372,6 +372,24 @@
+   "Address operand without segment register"
+   (match_operand 0 "address_no_seg_operand"))
+ 
++;; j prefix is used for APX operand constraints.
++;;  <  Auto-dec memory operand without GPR32.
++;;  >  Auto-inc memory operand without GPR32.
++;;  a  Vector memory operand without GPR32.
++;;  b  VSIB address operand without EGPR.
++;;  c  Integer register.  GENERAL_GPR16 for TARGET_APX_EGPR and
++;;     !TARGET_AVX, otherwise GENERAL_REGS.
++;;  e  Memory operand, with APX NDD TLS operand check.
++;;  j  Integer register.  GENERAL_GPR16 for TARGET_APX_EGPR, otherwise
++;;     GENERAL_REGS.
++;;  o  Offsetable memory operand without GPR32.
++;;  p  General address operand without GPR32.
++;;  m  Memory operand without GPR32.
++;;  M  Memory operand, with APX NDD check.
++;;  R  Integer register.  GENERAL_REGS.
++;;  O  Offsettable memory operand, with APX NDD check.
++;;  V  Non-offsetable memory operand without GPR32.
++
+ ;; Constraint that force to use EGPR, can only adopt to register class.
+ (define_register_constraint  "jR" "GENERAL_REGS")
+ 
+@@ -393,7 +411,7 @@
+ 		 (match_test "x86_extended_rex2reg_mentioned_p (op)")))))
+ 
+ (define_constraint "j>"
+-  "@internal auto-dec memory operand without GPR32."
++  "@internal auto-inc memory operand without GPR32."
+   (and (and (match_code "mem")
+ 	    (ior (match_test "GET_CODE (XEXP (op, 0)) == PRE_INC")
+ 	         (match_test "GET_CODE (XEXP (op, 0)) == POST_INC")))
+@@ -439,6 +457,14 @@
+  "TARGET_APX_EGPR && !TARGET_AVX ? GENERAL_GPR16 : GENERAL_REGS")
+ 
+ (define_constraint  "je"
+-  "@internal constant that do not allow any unspec global offsets"
+-  (and (match_operand 0 "x86_64_immediate_operand")
+-       (match_test "!x86_poff_operand_p (op)")))
++  "@internal Memory operand, with APX NDD TLS operand check."
++  (match_operand 0 "apx_ndd_no_tls_memory_operand"))
++
++(define_constraint "jM"
++  "@internal Memory operand, with APX NDD check."
++  (match_operand 0 "apx_ndd_memory_operand"))
++
++(define_constraint "jO"
++  "@internal Offsettable memory operand, with APX NDD check."
++  (and (match_operand 0 "apx_ndd_memory_operand")
++	   (match_test "offsettable_nonstrict_memref_p (op)")))
+diff --git a/gcc/config/i386/i386-protos.h b/gcc/config/i386/i386-protos.h
+index 34b93773b69..46214a63974 100644
+--- a/gcc/config/i386/i386-protos.h
++++ b/gcc/config/i386/i386-protos.h
+@@ -66,7 +66,6 @@ extern bool x86_extended_QIreg_mentioned_p (rtx_insn *);
+ extern bool x86_extended_reg_mentioned_p (rtx);
+ extern bool x86_extended_rex2reg_mentioned_p (rtx);
+ extern bool x86_evex_reg_mentioned_p (rtx [], int);
+-extern bool x86_poff_operand_p (rtx);
+ extern bool x86_maybe_negate_const_int (rtx *, machine_mode);
+ extern machine_mode ix86_cc_mode (enum rtx_code, rtx, rtx);
+ 
+diff --git a/gcc/config/i386/i386.cc b/gcc/config/i386/i386.cc
+index b3e7c74846e..706dfe8f5b2 100644
+--- a/gcc/config/i386/i386.cc
++++ b/gcc/config/i386/i386.cc
+@@ -23406,31 +23406,6 @@ x86_evex_reg_mentioned_p (rtx operands[], int nops)
+   return false;
+ }
+ 
+-/* Return true when rtx operand does not contain any UNSPEC_*POFF related
+-   constant to avoid APX_NDD instructions excceed encoding length limit.  */
+-bool
+-x86_poff_operand_p (rtx operand)
+-{
+-  if (GET_CODE (operand) == CONST)
+-    {
+-      rtx op = XEXP (operand, 0);
+-      if (GET_CODE (op) == PLUS)
+-	op = XEXP (op, 0);
+-	
+-      if (GET_CODE (op) == UNSPEC)
+-	{
+-	  int unspec = XINT (op, 1);
+-	  return (unspec == UNSPEC_NTPOFF
+-		  || unspec == UNSPEC_TPOFF
+-		  || unspec == UNSPEC_DTPOFF
+-		  || unspec == UNSPEC_GOTTPOFF
+-		  || unspec == UNSPEC_GOTNTPOFF
+-		  || unspec == UNSPEC_INDNTPOFF);
+-	}
+-    }
+-  return false;
+-}
+-
+ /* If profitable, negate (without causing overflow) integer constant
+    of mode MODE at location LOC.  Return true in this case.  */
+ bool
+diff --git a/gcc/config/i386/i386.md b/gcc/config/i386/i386.md
+index a82f2e456fe..ea3afc3e1b9 100644
+--- a/gcc/config/i386/i386.md
++++ b/gcc/config/i386/i386.md
+@@ -6290,10 +6290,10 @@
+ })
+ 
+ (define_insn_and_split "*add<dwi>3_doubleword"
+-  [(set (match_operand:<DWI> 0 "nonimmediate_operand" "=ro,r,&r,&r")
++  [(set (match_operand:<DWI> 0 "nonimmediate_operand" "=ro,r,&r,&r,&r")
+ 	(plus:<DWI>
+-	  (match_operand:<DWI> 1 "nonimmediate_operand" "%0,0,ro,r")
+-	  (match_operand:<DWI> 2 "x86_64_hilo_general_operand" "r<di>,o,r<di>,r")))
++	  (match_operand:<DWI> 1 "nonimmediate_operand" "%0,0,ro,rjO,r")
++	  (match_operand:<DWI> 2 "x86_64_hilo_general_operand" "r<di>,o,r,<di>,r")))
+    (clobber (reg:CC FLAGS_REG))]
+   "ix86_binary_operator_ok (PLUS, <DWI>mode, operands, TARGET_APX_NDD)"
+   "#"
+@@ -6332,7 +6332,7 @@
+       DONE;
+     }
+ }
+-[(set_attr "isa" "*,*,apx_ndd,apx_ndd")])
++[(set_attr "isa" "*,*,apx_ndd,apx_ndd,apx_ndd")])
+ 
+ (define_insn_and_split "*add<dwi>3_doubleword_zext"
+   [(set (match_operand:<DWI> 0 "nonimmediate_operand" "=r,o,&r,&r")
+@@ -6424,10 +6424,10 @@
+  "split_double_mode (<DWI>mode, &operands[0], 1, &operands[0], &operands[5]);")
+ 
+ (define_insn "*add<mode>_1"
+-  [(set (match_operand:SWI48 0 "nonimmediate_operand" "=rm,r,r,r,r,r,r,r")
++  [(set (match_operand:SWI48 0 "nonimmediate_operand" "=rm,r,r,r,r,r,r")
+ 	(plus:SWI48
+-	  (match_operand:SWI48 1 "nonimmediate_operand" "%0,0,r,r,rm,r,m,r")
+-	  (match_operand:SWI48 2 "x86_64_general_operand" "re,BM,0,le,r,e,je,BM")))
++	  (match_operand:SWI48 1 "nonimmediate_operand" "%0,0,r,r,rje,jM,r")
++	  (match_operand:SWI48 2 "x86_64_general_operand" "re,BM,0,le,r,e,BM")))
+    (clobber (reg:CC FLAGS_REG))]
+   "ix86_binary_operator_ok (PLUS, <MODE>mode, operands, TARGET_APX_NDD)"
+ {
+@@ -6462,7 +6462,7 @@
+ 		    : "add{<imodesuffix>}\t{%2, %0|%0, %2}";
+     }
+ }
+-  [(set_attr "isa" "*,*,*,*,apx_ndd,apx_ndd,apx_ndd,apx_ndd")
++  [(set_attr "isa" "*,*,*,*,apx_ndd,apx_ndd,apx_ndd")
+    (set (attr "type")
+      (cond [(eq_attr "alternative" "3")
+               (const_string "lea")
+@@ -6484,10 +6484,10 @@
+ ;; patterns constructed from addsi_1 to match.
+ 
+ (define_insn "addsi_1_zext"
+-  [(set (match_operand:DI 0 "register_operand" "=r,r,r,r,r")
++  [(set (match_operand:DI 0 "register_operand" "=r,r,r,r,r,r")
+ 	(zero_extend:DI
+-	  (plus:SI (match_operand:SI 1 "nonimmediate_operand" "%0,r,r,r,rm")
+-		   (match_operand:SI 2 "x86_64_general_operand" "rBMe,0,le,rBMe,re"))))
++	  (plus:SI (match_operand:SI 1 "nonimmediate_operand" "%0,r,r,r,rm,jM")
++		   (match_operand:SI 2 "x86_64_general_operand" "rBMe,0,le,rBMe,r,e"))))
+    (clobber (reg:CC FLAGS_REG))]
+   "TARGET_64BIT
+    && ix86_binary_operator_ok (PLUS, SImode, operands, TARGET_APX_NDD)"
+@@ -6523,7 +6523,7 @@
+ 		     : "add{l}\t{%2, %k0|%k0, %2}";
+     }
+ }
+-  [(set_attr "isa" "*,*,*,apx_ndd,apx_ndd")
++  [(set_attr "isa" "*,*,*,apx_ndd,apx_ndd,apx_ndd")
+    (set (attr "type")
+      (cond [(eq_attr "alternative" "2")
+ 	      (const_string "lea")
+@@ -7463,7 +7463,7 @@
+ 	(eq:CCO
+ 	  (plus:<QPWI>
+ 	    (sign_extend:<QPWI>
+-	      (match_operand:<DWI> 1 "nonimmediate_operand" "%0,rm"))
++	      (match_operand:<DWI> 1 "nonimmediate_operand" "%0,rjM"))
+ 	    (match_operand:<QPWI> 3 "const_scalar_int_operand" "n,n"))
+ 	  (sign_extend:<QPWI>
+ 	    (plus:<DWI>
+@@ -9370,18 +9370,19 @@
+   [(set (reg:CCC FLAGS_REG)
+ 	(compare:CCC
+ 	    (plus:SWI
+-		(match_operand:SWI 1 "nonimmediate_operand" "%0,0,rm,r")
+-		(match_operand:SWI 2 "<general_operand>" "<r><i>,<m>,r<i>,<m>"))
++		(match_operand:SWI 1 "nonimmediate_operand" "%0,0,rm,rjM,r")
++		(match_operand:SWI 2 "<general_operand>" "<r><i>,<m>,r,<i>,<m>"))
+ 	    (match_dup 1)))
+-   (set (match_operand:SWI 0 "nonimmediate_operand" "=<r>m,<r>,r,r")
++   (set (match_operand:SWI 0 "nonimmediate_operand" "=<r>m,<r>,r,r,r")
+ 	(plus:SWI (match_dup 1) (match_dup 2)))]
+   "ix86_binary_operator_ok (PLUS, <MODE>mode, operands, TARGET_APX_NDD)"
+   "@
+    add{<imodesuffix>}\t{%2, %0|%0, %2}
+    add{<imodesuffix>}\t{%2, %0|%0, %2}
+    add{<imodesuffix>}\t{%2, %1, %0|%0, %1, %2}
++   add{<imodesuffix>}\t{%2, %1, %0|%0, %1, %2}
+    add{<imodesuffix>}\t{%2, %1, %0|%0, %1, %2}"
+-  [(set_attr "isa" "*,*,apx_ndd,apx_ndd")
++  [(set_attr "isa" "*,*,apx_ndd,apx_ndd,apx_ndd")
+    (set_attr "type" "alu")
+    (set_attr "mode" "<MODE>")])
+ 
+@@ -9501,10 +9502,10 @@
+   [(set (reg:CCC FLAGS_REG)
+ 	(compare:CCC
+ 	  (plus:<DWI>
+-	    (match_operand:<DWI> 1 "nonimmediate_operand" "%0,0,ro,r")
+-	    (match_operand:<DWI> 2 "x86_64_hilo_general_operand" "r<di>,o,r<di>,o"))
++	    (match_operand:<DWI> 1 "nonimmediate_operand" "%0,0,ro,rjO,r")
++	    (match_operand:<DWI> 2 "x86_64_hilo_general_operand" "r<di>,o,r,<di>,o"))
+ 	  (match_dup 1)))
+-   (set (match_operand:<DWI> 0 "nonimmediate_operand" "=ro,r,&r,&r")
++   (set (match_operand:<DWI> 0 "nonimmediate_operand" "=ro,r,&r,&r,&r")
+ 	(plus:<DWI> (match_dup 1) (match_dup 2)))]
+   "ix86_binary_operator_ok (PLUS, <DWI>mode, operands, TARGET_APX_NDD)"
+   "#"
+@@ -9546,7 +9547,7 @@
+   else
+     operands[6] = gen_rtx_ZERO_EXTEND (<DWI>mode, operands[5]);
+ }
+-[(set_attr "isa" "*,*,apx_ndd,apx_ndd")])
++[(set_attr "isa" "*,*,apx_ndd,apx_ndd,apx_ndd")])
+ 
+ ;; x == 0 with zero flag test can be done also as x < 1U with carry flag
+ ;; test, where the latter is preferrable if we have some carry consuming
+@@ -11733,10 +11734,10 @@
+ [(set_attr "isa" "*,*,apx_ndd,apx_ndd")])
+ 
+ (define_insn "*anddi_1"
+-  [(set (match_operand:DI 0 "nonimmediate_operand" "=r,r,rm,r,r,r,r,?k")
++  [(set (match_operand:DI 0 "nonimmediate_operand" "=r,r,rm,r,r,r,r,r,?k")
+ 	(and:DI
+-	 (match_operand:DI 1 "nonimmediate_operand" "%0,r,0,0,rm,r,qm,k")
+-	 (match_operand:DI 2 "x86_64_szext_general_operand" "Z,Z,re,m,re,m,L,k")))
++	 (match_operand:DI 1 "nonimmediate_operand" "%0,r,0,0,rm,jM,r,qm,k")
++	 (match_operand:DI 2 "x86_64_szext_general_operand" "Z,Z,re,m,r,e,m,L,k")))
+    (clobber (reg:CC FLAGS_REG))]
+   "TARGET_64BIT
+    && ix86_binary_operator_ok (AND, DImode, operands, TARGET_APX_NDD)"
+@@ -11747,11 +11748,12 @@
+    and{q}\t{%2, %0|%0, %2}
+    and{q}\t{%2, %1, %0|%0, %1, %2}
+    and{q}\t{%2, %1, %0|%0, %1, %2}
++   and{q}\t{%2, %1, %0|%0, %1, %2}
+    #
+    #"
+-  [(set_attr "isa" "x64,apx_ndd,x64,x64,apx_ndd,apx_ndd,x64,avx512bw")
+-   (set_attr "type" "alu,alu,alu,alu,alu,alu,imovx,msklog")
+-   (set_attr "length_immediate" "*,*,*,*,*,*,0,*")
++  [(set_attr "isa" "x64,apx_ndd,x64,x64,apx_ndd,apx_ndd,apx_ndd,x64,avx512bw")
++   (set_attr "type" "alu,alu,alu,alu,alu,alu,alu,imovx,msklog")
++   (set_attr "length_immediate" "*,*,*,*,*,*,*,0,*")
+    (set (attr "prefix_rex")
+      (if_then_else
+        (and (eq_attr "type" "imovx")
+@@ -11759,7 +11761,7 @@
+ 		 (match_operand 1 "ext_QIreg_operand")))
+        (const_string "1")
+        (const_string "*")))
+-   (set_attr "mode" "SI,SI,DI,DI,DI,DI,SI,DI")])
++   (set_attr "mode" "SI,SI,DI,DI,DI,DI,DI,SI,DI")])
+ 
+ (define_insn_and_split "*anddi_1_btr"
+   [(set (match_operand:DI 0 "nonimmediate_operand" "=rm")
+@@ -11814,25 +11816,26 @@
+ 
+ ;; See comment for addsi_1_zext why we do use nonimmediate_operand
+ (define_insn "*andsi_1_zext"
+-  [(set (match_operand:DI 0 "register_operand" "=r,r,r")
++  [(set (match_operand:DI 0 "register_operand" "=r,r,r,r")
+ 	(zero_extend:DI
+-	  (and:SI (match_operand:SI 1 "nonimmediate_operand" "%0,rm,r")
+-		  (match_operand:SI 2 "x86_64_general_operand" "rBMe,re,BM"))))
++	  (and:SI (match_operand:SI 1 "nonimmediate_operand" "%0,rm,jM,r")
++		  (match_operand:SI 2 "x86_64_general_operand" "rBMe,r,e,BM"))))
+    (clobber (reg:CC FLAGS_REG))]
+   "TARGET_64BIT
+    && ix86_binary_operator_ok (AND, SImode, operands, TARGET_APX_NDD)"
+   "@
+   and{l}\t{%2, %k0|%k0, %2}
+   and{l}\t{%2, %1, %k0|%k0, %1, %2}
++  and{l}\t{%2, %1, %k0|%k0, %1, %2}
+   and{l}\t{%2, %1, %k0|%k0, %1, %2}"
+   [(set_attr "type" "alu")
+-   (set_attr "isa" "*,apx_ndd,apx_ndd")
++   (set_attr "isa" "*,apx_ndd,apx_ndd,apx_ndd")
+    (set_attr "mode" "SI")])
+ 
+ (define_insn "*and<mode>_1"
+-  [(set (match_operand:SWI24 0 "nonimmediate_operand" "=rm,r,r,r,Ya,?k")
+-	(and:SWI24 (match_operand:SWI24 1 "nonimmediate_operand" "%0,0,rm,r,qm,k")
+-		   (match_operand:SWI24 2 "<general_operand>" "r<i>,<m>,r<i>,<m>,L,k")))
++  [(set (match_operand:SWI24 0 "nonimmediate_operand" "=rm,r,r,r,r,Ya,?k")
++	(and:SWI24 (match_operand:SWI24 1 "nonimmediate_operand" "%0,0,rm,jM,r,qm,k")
++		   (match_operand:SWI24 2 "<general_operand>" "r<i>,<m>,r,<i>,<m>,L,k")))
+    (clobber (reg:CC FLAGS_REG))]
+   "ix86_binary_operator_ok (AND, <MODE>mode, operands, TARGET_APX_NDD)"
+   "@
+@@ -11840,19 +11843,20 @@
+    and{<imodesuffix>}\t{%2, %0|%0, %2}
+    and{<imodesuffix>}\t{%2, %1, %0|%0, %1, %2}
+    and{<imodesuffix>}\t{%2, %1, %0|%0, %1, %2}
++   and{<imodesuffix>}\t{%2, %1, %0|%0, %1, %2}
+    #
+    #"
+   [(set (attr "isa")
+-	(cond [(eq_attr "alternative" "2,3")
++	(cond [(eq_attr "alternative" "2,3,4")
+ 		 (const_string "apx_ndd")
+-	       (eq_attr "alternative" "5")
++	       (eq_attr "alternative" "6")
+ 		 (if_then_else (eq_attr "mode" "SI")
+ 		   (const_string "avx512bw")
+ 		   (const_string "avx512f"))
+ 	      ]
+ 	      (const_string "*")))
+-   (set_attr "type" "alu,alu,alu,alu,imovx,msklog")
+-   (set_attr "length_immediate" "*,*,*,*,0,*")
++   (set_attr "type" "alu,alu,alu,alu,alu,imovx,msklog")
++   (set_attr "length_immediate" "*,*,*,*,*,0,*")
+    (set (attr "prefix_rex")
+      (if_then_else
+        (and (eq_attr "type" "imovx")
+@@ -11860,7 +11864,7 @@
+ 		 (match_operand 1 "ext_QIreg_operand")))
+        (const_string "1")
+        (const_string "*")))
+-   (set_attr "mode" "<MODE>,<MODE>,<MODE>,<MODE>,SI,<MODE>")])
++   (set_attr "mode" "<MODE>,<MODE>,<MODE>,<MODE>,<MODE>,SI,<MODE>")])
+ 
+ (define_insn "*andqi_1"
+   [(set (match_operand:QI 0 "nonimmediate_operand" "=qm,q,r,r,r,?k")
+@@ -12738,7 +12742,7 @@
+ (define_insn "*<code><mode>_1"
+   [(set (match_operand:SWI248 0 "nonimmediate_operand" "=rm,r,r,r,?k")
+ 	(any_or:SWI248
+-	 (match_operand:SWI248 1 "nonimmediate_operand" "%0,0,rm,r,k")
++	 (match_operand:SWI248 1 "nonimmediate_operand" "%0,0,rjM,r,k")
+ 	 (match_operand:SWI248 2 "<general_operand>" "r<i>,<m>,r<i>,<m>,k")))
+    (clobber (reg:CC FLAGS_REG))]
+   "ix86_binary_operator_ok (<CODE>, <MODE>mode, operands, TARGET_APX_NDD)"
+@@ -12864,19 +12868,20 @@
+ 
+ ;; See comment for addsi_1_zext why we do use nonimmediate_operand
+ (define_insn "*<code>si_1_zext"
+-  [(set (match_operand:DI 0 "register_operand" "=r,r,r")
++  [(set (match_operand:DI 0 "register_operand" "=r,r,r,r")
+ 	(zero_extend:DI
+-	 (any_or:SI (match_operand:SI 1 "nonimmediate_operand" "%0,rm,r")
+-		    (match_operand:SI 2 "x86_64_general_operand" "rBMe,re,BM"))))
++	 (any_or:SI (match_operand:SI 1 "nonimmediate_operand" "%0,rm,jM,r")
++		    (match_operand:SI 2 "x86_64_general_operand" "rBMe,r,e,BM"))))
+    (clobber (reg:CC FLAGS_REG))]
+   "TARGET_64BIT
+    && ix86_binary_operator_ok (<CODE>, SImode, operands, TARGET_APX_NDD)"
+   "@
+   <logic>{l}\t{%2, %k0|%k0, %2}
+   <logic>{l}\t{%2, %1, %k0|%k0, %1, %2}
++  <logic>{l}\t{%2, %1, %k0|%k0, %1, %2}
+   <logic>{l}\t{%2, %1, %k0|%k0, %1, %2}"
+   [(set_attr "type" "alu")
+-   (set_attr "isa" "*,apx_ndd,apx_ndd")
++   (set_attr "isa" "*,apx_ndd,apx_ndd,apx_ndd")
+    (set_attr "mode" "SI")])
+ 
+ (define_insn "*<code>si_1_zext_imm"
+diff --git a/gcc/config/i386/predicates.md b/gcc/config/i386/predicates.md
+index 06027a84532..a699f4a8e72 100644
+--- a/gcc/config/i386/predicates.md
++++ b/gcc/config/i386/predicates.md
+@@ -2248,3 +2248,75 @@
+     }
+   return true;
+ })
++
++;; Return true if OP is a memory operand that can be also used in APX
++;; NDD patterns with immediate operand.  With non-default address space,
++;; segment register or address size prefix, APX NDD instruction length
++;; can exceed the 15 byte size limit.
++(define_special_predicate "apx_ndd_memory_operand"
++  (match_operand 0 "memory_operand")
++{
++  /* OK if immediate operand size < 4 bytes.  */
++  if (GET_MODE_SIZE (mode) < 4)
++    return true;
++
++  bool default_addr = ADDR_SPACE_GENERIC_P (MEM_ADDR_SPACE (op));
++  bool address_size_prefix = TARGET_X32 && Pmode == SImode;
++
++  struct ix86_address parts;
++  int ok;
++
++  op = XEXP (op, 0);
++  ok = ix86_decompose_address (op, &parts);
++  gcc_assert (ok);
++
++  if (default_addr)
++    {
++      /* Default address space.  */
++
++      /* Not OK with address size prefix, index register and disp.  */
++      if (address_size_prefix
++          && parts.index
++          && parts.disp
++          && parts.disp != const0_rtx)
++        return false;
++    }
++  else
++    {
++      /* Non-default address space.  */
++
++      /* Not OK without base register.  */
++      if (!parts.base)
++        return false;
++
++      /* Not OK with disp and address size prefix.  */
++      if (address_size_prefix && parts.disp)
++        return false;
++    }
++
++  return true;
++})
++
++;; Return true if OP is a memory operand which can be used in APX NDD
++;; patterns.  TLS memory operand isn't allowed with APX NDD.
++(define_special_predicate "apx_ndd_no_tls_memory_operand"
++  (match_operand 0 "memory_operand")
++{
++  op = XEXP (op, 0);
++
++  /* Disallow any NDD instructions in TLS code sequence.  */
++  if (GET_CODE (op) == CONST && GET_CODE (XEXP (op, 0)) == UNSPEC)
++	switch (XINT (XEXP (op, 0), 1))
++	  {
++      case UNSPEC_NTPOFF:
++      case UNSPEC_DTPOFF:
++      case UNSPEC_GOTNTPOFF:
++      case UNSPEC_GOTTPOFF:
++      case UNSPEC_INDNTPOFF:
++        return false;
++      default:
++        break;
++	  }
++
++  return true;
++})
+diff --git a/gcc/testsuite/gcc.target/i386/apx-ndd-base-index-1.c b/gcc/testsuite/gcc.target/i386/apx-ndd-base-index-1.c
+new file mode 100644
+index 00000000000..b59bc45370b
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/apx-ndd-base-index-1.c
+@@ -0,0 +1,48 @@
++/* PR target/113711 */
++/* { dg-do compile { target { ! ia32 } } } */
++/* { dg-options "-mapxf -O2" } */
++
++#define FOO(TYPE, OP_NAME, OP, IMM)				\
++TYPE								\
++foo_##OP_NAME##_##TYPE (TYPE *p, long off)			\
++{								\
++  TYPE b = p[off] OP IMM;					\
++  return b;							\
++}			
++
++FOO (char, add, +, 0x7)
++FOO (short, add, +, 0x2000)
++FOO (int, add, +, 0x2000)
++FOO (long, add, +, 0x2000)
++
++FOO (char, sub, -, 0x7)
++FOO (short, sub, -, 0x2000)
++FOO (int, sub, -, 0x2000)
++FOO (long, sub, -, 0x2000)
++
++FOO (char, and, &, 0x7)
++FOO (short, and, &, 0x2000)
++FOO (int, and, &, 0x2000)
++FOO (long, and, &, 0x2000)
++
++FOO (char, or, |, 0x7)
++FOO (short, or, |, 0x2000)
++FOO (int, or, |, 0x2000)
++FOO (long, or, |, 0x2000)
++
++FOO (char, xor, ^, 0x7)
++FOO (short, xor, ^, 0x2000)
++FOO (int, xor, ^, 0x2000)
++FOO (long, xor, ^, 0x2000)
++
++FOO (char, shl, <<, 0x7)
++FOO (short, shl, <<, 0x7)
++FOO (int, shl, <<, 0x7)
++FOO (long, shl, <<, 0x7)
++
++FOO (char, sar, >>, 0x7)
++FOO (short, sar, >>, 0x7)
++FOO (int, sar, >>, 0x7)
++FOO (long, sar, >>, 0x7)
++
++/* { dg-final { scan-assembler-not "mov"} } */
+diff --git a/gcc/testsuite/gcc.target/i386/apx-ndd-no-seg-global-1.c b/gcc/testsuite/gcc.target/i386/apx-ndd-no-seg-global-1.c
+new file mode 100644
+index 00000000000..cbbac015919
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/apx-ndd-no-seg-global-1.c
+@@ -0,0 +1,72 @@
++/* PR target/113711 */
++/* { dg-do compile { target { ! ia32 } } } */
++/* { dg-options "-mapxf -O2" } */
++
++#define FOO(TYPE, OP_NAME, OP, IMM)				\
++extern TYPE foo_##OP_NAME##_##TYPE##_var;			\
++TYPE								\
++foo_##OP_NAME##_##TYPE (void)					\
++{								\
++  TYPE b = foo_##OP_NAME##_##TYPE##_var OP IMM;			\
++  return b;							\
++}			
++
++#define BAR(TYPE, OP_NAME, OP, IMM)				\
++extern unsigned TYPE bar_##OP_NAME##_##TYPE##_var;		\
++long								\
++bar_##OP_NAME##_##TYPE (void)					\
++{								\
++  long b = bar_##OP_NAME##_##TYPE##_var OP IMM;			\
++  return b;							\
++}			
++
++FOO (char, add, +, 0x7)
++FOO (short, add, +, 0x2000)
++FOO (int, add, +, 0x2000)
++BAR (int, add, +, 0x2000)
++FOO (long, add, +, 0x2000)
++BAR (long, add, +, 0x2000)
++
++FOO (char, sub, -, 0x7)
++FOO (short, sub, -, 0x2000)
++FOO (int, sub, -, 0x2000)
++BAR (int, sub, -, 0x2000)
++FOO (long, sub, -, 0x2000)
++BAR (long, sub, -, 0x2000)
++
++FOO (char, and, &, 0x7)
++FOO (short, and, &, 0x2000)
++FOO (int, and, &, 0x2000)
++BAR (int, and, &, 0x2000)
++FOO (long, and, &, 0x2000)
++BAR (long, and, &, 0x2000)
++
++FOO (char, or, |, 0x7)
++FOO (short, or, |, 0x2000)
++FOO (int, or, |, 0x2000)
++BAR (int, or, |, 0x2000)
++FOO (long, or, |, 0x2000)
++BAR (long, or, |, 0x2000)
++
++FOO (char, xor, ^, 0x7)
++FOO (short, xor, ^, 0x2000)
++FOO (int, xor, ^, 0x2000)
++BAR (int, xor, ^, 0x2000)
++FOO (long, xor, ^, 0x2000)
++BAR (long, xor, ^, 0x2000)
++
++FOO (char, shl, <<, 0x7)
++FOO (short, shl, <<, 0x7)
++FOO (int, shl, <<, 0x7)
++BAR (int, shl, <<, 0x7)
++FOO (long, shl, <<, 0x7)
++BAR (long, shl, <<, 0x7)
++
++FOO (char, sar, >>, 0x7)
++FOO (short, sar, >>, 0x7)
++FOO (int, sar, >>, 0x7)
++BAR (int, sar, >>, 0x7)
++FOO (long, sar, >>, 0x7)
++BAR (long, sar, >>, 0x7)
++
++/* { dg-final { scan-assembler-not "mov"} } */
+diff --git a/gcc/testsuite/gcc.target/i386/apx-ndd-seg-1.c b/gcc/testsuite/gcc.target/i386/apx-ndd-seg-1.c
+new file mode 100644
+index 00000000000..bd6fde2d99c
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/apx-ndd-seg-1.c
+@@ -0,0 +1,82 @@
++/* PR target/113711 */
++/* { dg-do assemble { target { apxf && { ! ia32 } } } } */
++/* { dg-options "-mapxf -O2" } */
++
++#define FOO(TYPE, OP_NAME, OP, IMM)				\
++TYPE								\
++foo_##OP_NAME##_##TYPE (void)					\
++{								\
++  TYPE b = (*(TYPE __seg_fs *) 0) OP IMM;			\
++  return b;							\
++}			
++
++#define BAR(TYPE, OP_NAME, OP, IMM)				\
++long long							\
++bar_##OP_NAME##_##TYPE (void)					\
++{								\
++  long long b = (*(unsigned TYPE __seg_fs *) 0) OP IMM;		\
++  return b;							\
++}			
++
++FOO (char, add, +, 0x7)
++BAR (char, add, +, 0x7)
++FOO (short, add, +, 0x2000)
++BAR (short, add, +, 0x2000)
++FOO (int, add, +, 0x2000)
++BAR (int, add, +, 0x2000)
++FOO (long, add, +, 0x2000)
++BAR (long, add, +, 0x2000)
++
++FOO (char, sub, -, 0x7)
++BAR (char, sub, -, 0x7)
++FOO (short, sub, -, 0x2000)
++BAR (short, sub, -, 0x2000)
++FOO (int, sub, -, 0x2000)
++BAR (int, sub, -, 0x2000)
++FOO (long, sub, -, 0x2000)
++BAR (long, sub, -, 0x2000)
++
++FOO (char, and, &, 0x7)
++BAR (char, and, &, 0x7)
++FOO (short, and, &, 0x2000)
++BAR (short, and, &, 0x2000)
++FOO (int, and, &, 0x2000)
++BAR (int, and, &, 0x2000)
++FOO (long, and, &, 0x2000)
++BAR (long, and, &, 0x2000)
++
++FOO (char, or, |, 0x7)
++BAR (char, or, |, 0x7)
++FOO (short, or, |, 0x2000)
++BAR (short, or, |, 0x2000)
++FOO (int, or, |, 0x2000)
++BAR (int, or, |, 0x2000)
++FOO (long, or, |, 0x2000)
++BAR (long, or, |, 0x2000)
++
++FOO (char, xor, ^, 0x7)
++BAR (char, xor, ^, 0x7)
++FOO (short, xor, ^, 0x2000)
++BAR (short, xor, ^, 0x2000)
++FOO (int, xor, ^, 0x2000)
++BAR (int, xor, ^, 0x2000)
++FOO (long, xor, ^, 0x2000)
++BAR (long, xor, ^, 0x2000)
++
++FOO (char, shl, <<, 0x7)
++BAR (char, shl, <<, 0x7)
++FOO (short, shl, <<, 0x7)
++BAR (short, shl, <<, 0x7)
++FOO (int, shl, <<, 0x7)
++BAR (int, shl, <<, 0x7)
++FOO (long, shl, <<, 0x7)
++BAR (long, shl, <<, 0x7)
++
++FOO (char, sar, >>, 0x7)
++BAR (char, sar, >>, 0x7)
++FOO (short, sar, >>, 0x7)
++BAR (short, sar, >>, 0x7)
++FOO (int, sar, >>, 0x7)
++BAR (int, sar, >>, 0x7)
++FOO (long, sar, >>, 0x7)
++BAR (long, sar, >>, 0x7)
+diff --git a/gcc/testsuite/gcc.target/i386/apx-ndd-seg-2.c b/gcc/testsuite/gcc.target/i386/apx-ndd-seg-2.c
+new file mode 100644
+index 00000000000..f1b177c2353
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/apx-ndd-seg-2.c
+@@ -0,0 +1,96 @@
++/* PR target/113711 */
++/* { dg-do compile { target { ! ia32 } } } */
++/* { dg-options "-mapxf -O2" } */
++
++#define FOO(TYPE, OP_NAME, OP, IMM)				\
++TYPE								\
++foo_##OP_NAME##_##TYPE (void)					\
++{								\
++  TYPE b = (*(TYPE *) 0x20000) OP IMM;				\
++  return b;							\
++}			
++
++#define BAR(TYPE, OP_NAME, OP, IMM)				\
++long								\
++bar_##OP_NAME##_##TYPE (void)					\
++{								\
++  long b = (*(unsigned TYPE *) 0x20000) OP IMM;		\
++  return b;							\
++}			
++
++#define SEG(TYPE, OP_NAME, OP, IMM)				\
++TYPE								\
++seg_##OP_NAME##_##TYPE (void)					\
++{								\
++  TYPE b = (*(TYPE __seg_fs *) 0) OP IMM;			\
++  return b;							\
++}			
++
++FOO (char, add, +, 0x7)
++SEG (char, add, +, 0x7)
++FOO (short, add, +, 0x2000)
++SEG (short, add, +, 0x2000)
++FOO (int, add, +, 0x2000)
++BAR (int, add, +, 0x2000)
++FOO (long, add, +, 0x2000)
++BAR (long, add, +, 0x2000)
++
++FOO (char, sub, -, 0x7)
++SEG (char, sub, -, 0x7)
++FOO (short, sub, -, 0x2000)
++SEG (short, sub, -, 0x2000)
++FOO (int, sub, -, 0x2000)
++BAR (int, sub, -, 0x2000)
++FOO (long, sub, -, 0x2000)
++BAR (long, sub, -, 0x2000)
++
++FOO (char, and, &, 0x7)
++SEG (char, and, &, 0x7)
++FOO (short, and, &, 0x2000)
++SEG (short, and, &, 0x2000)
++FOO (int, and, &, 0x2000)
++BAR (int, and, &, 0x2000)
++FOO (long, and, &, 0x2000)
++BAR (long, and, &, 0x2000)
++
++FOO (char, or, |, 0x7)
++SEG (char, or, |, 0x7)
++FOO (short, or, |, 0x2000)
++SEG (short, or, |, 0x2000)
++FOO (int, or, |, 0x2000)
++BAR (int, or, |, 0x2000)
++FOO (long, or, |, 0x2000)
++BAR (long, or, |, 0x2000)
++
++FOO (char, xor, ^, 0x7)
++SEG (char, xor, ^, 0x7)
++FOO (short, xor, ^, 0x2000)
++SEG (short, xor, ^, 0x2000)
++FOO (int, xor, ^, 0x2000)
++BAR (int, xor, ^, 0x2000)
++FOO (long, xor, ^, 0x2000)
++BAR (long, xor, ^, 0x2000)
++
++FOO (char, shl, <<, 0x7)
++SEG (char, shl, <<, 0x7)
++FOO (short, shl, <<, 0x7)
++SEG (short, shl, <<, 0x7)
++FOO (int, shl, <<, 0x7)
++SEG (int, shl, <<, 0x7)
++BAR (int, shl, <<, 0x7)
++FOO (long, shl, <<, 0x7)
++SEG (long, shl, <<, 0x7)
++BAR (long, shl, <<, 0x7)
++
++FOO (char, sar, >>, 0x7)
++SEG (char, sar, >>, 0x7)
++FOO (short, sar, >>, 0x7)
++SEG (short, sar, >>, 0x7)
++FOO (int, sar, >>, 0x7)
++SEG (int, sar, >>, 0x7)
++BAR (int, sar, >>, 0x7)
++FOO (long, sar, >>, 0x7)
++SEG (long, sar, >>, 0x7)
++BAR (long, sar, >>, 0x7)
++
++/* { dg-final { scan-assembler-not "mov"} } */
+diff --git a/gcc/testsuite/gcc.target/i386/apx-ndd-seg-3.c b/gcc/testsuite/gcc.target/i386/apx-ndd-seg-3.c
+new file mode 100644
+index 00000000000..e7d9c3ca11a
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/apx-ndd-seg-3.c
+@@ -0,0 +1,14 @@
++/* PR target/113711 */
++/* { dg-do assemble { target { apxf && { ! ia32 } } } } */
++/* { dg-options "-mapxf -O2" } */
++
++typedef signed __int128 S;
++int o;
++
++S
++qux (void)
++{
++  S z;
++  o = __builtin_add_overflow (*(S __seg_fs *) 0x1000, 0x200, &z);
++  return z;
++}
+diff --git a/gcc/testsuite/gcc.target/i386/apx-ndd-seg-4.c b/gcc/testsuite/gcc.target/i386/apx-ndd-seg-4.c
+new file mode 100644
+index 00000000000..a60c4d7d9b6
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/apx-ndd-seg-4.c
+@@ -0,0 +1,9 @@
++/* PR target/113711 */
++/* { dg-do assemble { target { apxf && { ! ia32 } } } } */
++/* { dg-options "-mapxf -O2" } */
++
++unsigned __int128
++foo (void)
++{
++  return *((unsigned __int128 __seg_fs *) 0x1000) + 0x2000;
++}
+diff --git a/gcc/testsuite/gcc.target/i386/apx-ndd-tls-1.c b/gcc/testsuite/gcc.target/i386/apx-ndd-tls-1.c
+new file mode 100644
+index 00000000000..5bf57a76ef7
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/apx-ndd-tls-1.c
+@@ -0,0 +1,41 @@
++/* PR target/113733 */
++/* { dg-do assemble { target { apxf && { ! ia32 } } } } */
++/* { dg-require-effective-target tls } */
++/* { dg-options "-mapxf -O3 -w" } */
++
++extern __thread int a, j;
++enum b
++{
++  c,
++  d
++};
++struct e
++{
++  long f;
++  struct
++  {
++    char g[1024];
++  };
++} typedef h ();
++long i;
++int o (char *);
++static enum b
++k (int *p)
++{
++  h l;
++  struct e n;
++  do
++    {
++      l (n, n.f, p);
++      char **m;
++      for (; *m; ++m)
++        if (o (*m))
++          i = j;
++    }
++  while (d);
++}
++void
++getgrouplist ()
++{
++  k (&a);
++}
+diff --git a/gcc/testsuite/gcc.target/i386/apx-ndd-tls-2.c b/gcc/testsuite/gcc.target/i386/apx-ndd-tls-2.c
+new file mode 100644
+index 00000000000..1fadd1275e5
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/apx-ndd-tls-2.c
+@@ -0,0 +1,18 @@
++/* PR target/113711 */
++/* { dg-do assemble { target { apxf && { ! ia32 } } } } */
++/* { dg-require-effective-target tls } */
++/* { dg-options "-mapxf -O2" } */
++
++__thread int a = 255; 
++__thread int *b;
++int *volatile a_in_other_thread = (int *) 12345;
++
++void *
++thread_func (void *arg)
++{
++  a_in_other_thread = &a;
++  a+=11144;
++  *((int *) arg) = a;
++
++  return (void *)0;
++}
+diff --git a/gcc/testsuite/gcc.target/i386/apx-ndd-tls-3.c b/gcc/testsuite/gcc.target/i386/apx-ndd-tls-3.c
+new file mode 100644
+index 00000000000..e7374b44825
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/apx-ndd-tls-3.c
+@@ -0,0 +1,16 @@
++/* PR target/113711 */
++/* { dg-do assemble { target { apxf && { ! ia32 } } } } */
++/* { dg-require-effective-target tls } */
++/* { dg-options "-mapxf -O2" } */
++
++typedef signed __int128 S;
++__thread S var;
++int o;
++
++S
++qux (void)
++{
++  S z;
++  o = __builtin_add_overflow (var, 0x200, &z);
++  return z;
++}
+diff --git a/gcc/testsuite/gcc.target/i386/apx-ndd-tls-4.c b/gcc/testsuite/gcc.target/i386/apx-ndd-tls-4.c
+new file mode 100644
+index 00000000000..999fd06c8a9
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/apx-ndd-tls-4.c
+@@ -0,0 +1,11 @@
++/* { dg-do assemble { target { apxf && { ! ia32 } } } } */
++/* { dg-require-effective-target tls } */
++/* { dg-options "-mapxf -O2" } */
++
++__thread unsigned __int128 x;
++
++unsigned __int128
++foo (void)
++{
++  return x + 0x2000;
++}
+diff --git a/gcc/testsuite/gcc.target/i386/apx-ndd-x32-1.c b/gcc/testsuite/gcc.target/i386/apx-ndd-x32-1.c
+new file mode 100644
+index 00000000000..4280d400458
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/apx-ndd-x32-1.c
+@@ -0,0 +1,49 @@
++/* PR target/113711 */
++/* { dg-do assemble { target { apxf && { ! ia32 } } } } */
++/* { dg-require-effective-target maybe_x32 } */
++/* { dg-options "-mapxf -O2 -mx32" } */
++
++#include <stdint.h>
++
++#define FOO(TYPE, OP_NAME, OP, IMM)			\
++TYPE							\
++foo_##OP_NAME##_##TYPE (int off, TYPE *ptr)		\
++{							\
++  TYPE b = ptr[off + 0x100] + IMM;			\
++  return b;						\
++}			
++
++FOO (char, add, +, 0x7)
++FOO (short, add, +, 0x2000)
++FOO (int, add, +, 0x2000)
++FOO (int64_t, add, +, 0x2000)
++
++FOO (char, sub, -, 0x7)
++FOO (short, sub, -, 0x2000)
++FOO (int, sub, -, 0x2000)
++FOO (int64_t, sub, -, 0x2000)
++
++FOO (char, and, &, 0x7)
++FOO (short, and, &, 0x2000)
++FOO (int, and, &, 0x2000)
++FOO (long, and, &, 0x2000)
++
++FOO (char, or, |, 0x7)
++FOO (short, or, |, 0x2000)
++FOO (int, or, |, 0x2000)
++FOO (int64_t, or, |, 0x2000)
++
++FOO (char, xor, ^, 0x7)
++FOO (short, xor, ^, 0x2000)
++FOO (int, xor, ^, 0x2000)
++FOO (long, xor, ^, 0x2000)
++
++FOO (char, shl, <<, 0x7)
++FOO (short, shl, <<, 0x7)
++FOO (int, shl, <<, 0x7)
++FOO (int64_t, shl, <<, 0x7)
++
++FOO (char, sar, >>, 0x7)
++FOO (short, sar, >>, 0x7)
++FOO (int, sar, >>, 0x7)
++FOO (int64_t, sar, >>, 0x7)
