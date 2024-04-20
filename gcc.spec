@@ -94,7 +94,7 @@ Provides:       g77-symlinks
 Provides:       g++-symlinks
 Provides:       g++
 Provides:       gfortran
-
+Provides:	gcc14 gcc14-dev
 %description
 GNU cc and gcc C compilers.
 
