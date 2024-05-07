@@ -4,7 +4,7 @@
 %define libstdcxx_full 6.0.28
 %define isl_version 0.24
 %define gccver 14
-%define gccpath gcc-14.1
+%define gccpath gcc-14.1.0
 # Highest optimisation ABI we target
 %define mtune sapphirerapids
 
