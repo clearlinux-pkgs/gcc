@@ -1,0 +1,390 @@
+Georg-Johann Lay (1):
+      AVR: ipa/92606 - Don't optimize PROGMEM data against non-PROGMEM.
+
+Jakub Jelinek (2):
+      gimple-ssa-sprintf: Use [0, 1] range for %lc with (wint_t) 0 argument [PR114876]
+      libgomp: Add gfx90c, 1036 and 1103 declare variant tests
+
+Patrick Palka (1):
+      c++/modules: imported spec befriending class tmpl [PR114889]
+
+Richard Biener (1):
+      Bump BASE-VER
+
+diff --git a/gcc/BASE-VER b/gcc/BASE-VER
+index 7b3b6e02bb3..26f2bbc1975 100644
+--- a/gcc/BASE-VER
++++ b/gcc/BASE-VER
+@@ -1 +1 @@
+-14.1.0
++14.1.1
+diff --git a/gcc/config/avr/avr.cc b/gcc/config/avr/avr.cc
+index 510e4cea19f..74924ab0565 100644
+--- a/gcc/config/avr/avr.cc
++++ b/gcc/config/avr/avr.cc
+@@ -1140,6 +1140,12 @@ avr_option_override (void)
+   if (targetm.addr_space.zero_address_valid (ADDR_SPACE_GENERIC))
+     flag_delete_null_pointer_checks = 0;
+ 
++  /* PR ipa/92606: Inter-procedural analysis optimizes data across
++     address-spaces and PROGMEM.  As of v14, the PROGMEM part is
++     still not fixed (and there is still no target hook as proposed
++     in PR92932).  Just disable respective bogus optimization.  */
++  flag_ipa_icf_variables = 0;
++
+   if (flag_pic == 1)
+     warning (OPT_fpic, "%<-fpic%> is not supported");
+   if (flag_pic == 2)
+diff --git a/gcc/cp/module.cc b/gcc/cp/module.cc
+index c35e70b8cb8..3bf863e15d4 100644
+--- a/gcc/cp/module.cc
++++ b/gcc/cp/module.cc
+@@ -12498,6 +12498,8 @@ trees_in::read_class_def (tree defn, tree maybe_template)
+ 	  for (; friend_classes; friend_classes = TREE_CHAIN (friend_classes))
+ 	    {
+ 	      tree f = TREE_VALUE (friend_classes);
++	      if (TREE_CODE (f) == TEMPLATE_DECL)
++		f = TREE_TYPE (f);
+ 
+ 	      if (CLASS_TYPE_P (f))
+ 		{
+diff --git a/gcc/gimple-ssa-sprintf.cc b/gcc/gimple-ssa-sprintf.cc
+index abb934b08d5..3b19f4d3f35 100644
+--- a/gcc/gimple-ssa-sprintf.cc
++++ b/gcc/gimple-ssa-sprintf.cc
+@@ -2177,8 +2177,7 @@ format_character (const directive &dir, tree arg, pointer_query &ptr_qry)
+ 
+   res.knownrange = true;
+ 
+-  if (dir.specifier == 'C'
+-      || dir.modifier == FMT_LEN_l)
++  if (dir.specifier == 'C' || dir.modifier == FMT_LEN_l)
+     {
+       /* A wide character can result in as few as zero bytes.  */
+       res.range.min = 0;
+@@ -2189,10 +2188,13 @@ format_character (const directive &dir, tree arg, pointer_query &ptr_qry)
+ 	{
+ 	  if (min == 0 && max == 0)
+ 	    {
+-	      /* The NUL wide character results in no bytes.  */
+-	      res.range.max = 0;
+-	      res.range.likely = 0;
+-	      res.range.unlikely = 0;
++	      /* In strict reading of older ISO C or POSIX, this required
++		 no characters to be emitted.  ISO C23 changes that, so
++		 does POSIX, to match what has been implemented in most of the
++		 implementations, namely emitting a single NUL character.
++		 Let's use 0 for minimum and 1 for all the other values.  */
++	      res.range.max = 1;
++	      res.range.likely = res.range.unlikely = 1;
+ 	    }
+ 	  else if (min >= 0 && min < 128)
+ 	    {
+@@ -2200,11 +2202,12 @@ format_character (const directive &dir, tree arg, pointer_query &ptr_qry)
+ 		 is not a 1-to-1 mapping to the source character set or
+ 		 if the source set is not ASCII.  */
+ 	      bool one_2_one_ascii
+-		= (target_to_host_charmap[0] == 1 && target_to_host ('a') == 97);
++		= (target_to_host_charmap[0] == 1
++		   && target_to_host ('a') == 97);
+ 
+ 	      /* A wide character in the ASCII range most likely results
+ 		 in a single byte, and only unlikely in up to MB_LEN_MAX.  */
+-	      res.range.max = one_2_one_ascii ? 1 : target_mb_len_max ();;
++	      res.range.max = one_2_one_ascii ? 1 : target_mb_len_max ();
+ 	      res.range.likely = 1;
+ 	      res.range.unlikely = target_mb_len_max ();
+ 	      res.mayfail = !one_2_one_ascii;
+@@ -2235,7 +2238,6 @@ format_character (const directive &dir, tree arg, pointer_query &ptr_qry)
+       /* A plain '%c' directive.  Its output is exactly 1.  */
+       res.range.min = res.range.max = 1;
+       res.range.likely = res.range.unlikely = 1;
+-      res.knownrange = true;
+     }
+ 
+   /* Bump up the byte counters if WIDTH is greater.  */
+diff --git a/gcc/testsuite/g++.dg/modules/friend-8_a.H b/gcc/testsuite/g++.dg/modules/friend-8_a.H
+new file mode 100644
+index 00000000000..b07ea25adfb
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/modules/friend-8_a.H
+@@ -0,0 +1,23 @@
++// PR c++/114889
++// { dg-additional-options "-fmodule-header" }
++// { dg-module-cmi {} }
++
++template<class, class>
++struct _Hashtable;
++
++template<class _Key, class _Val>
++struct _Map_base {
++  void f() {
++    _Hashtable<_Key, _Val> __h;
++    __h._M_hash_code(0);
++  }
++};
++
++template<class _Key, class _Value>
++struct _Hashtable {
++  template<class, class> friend struct _Map_base;
++protected:
++  void _M_hash_code(int);
++};
++
++inline _Hashtable<int, int> m;
+diff --git a/gcc/testsuite/g++.dg/modules/friend-8_b.C b/gcc/testsuite/g++.dg/modules/friend-8_b.C
+new file mode 100644
+index 00000000000..b04280bc91a
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/modules/friend-8_b.C
+@@ -0,0 +1,9 @@
++// PR c++/114889
++// { dg-additional-options "-fmodules-ts" }
++
++import "friend-8_a.H";
++
++int main() {
++  _Map_base<int, int> m;
++  m.f();
++}
+diff --git a/gcc/testsuite/gcc.dg/pr114876.c b/gcc/testsuite/gcc.dg/pr114876.c
+new file mode 100644
+index 00000000000..7bb380aa29e
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/pr114876.c
+@@ -0,0 +1,34 @@
++/* PR tree-optimization/114876 */
++/* { dg-do compile } */
++/* { dg-options "-O2 -fdump-tree-optimized" } */
++/* { dg-final { scan-tree-dump-not "return \[01\];" "optimized" } } */
++/* { dg-final { scan-tree-dump "return 3;" "optimized" } } */
++/* { dg-final { scan-tree-dump "return 4;" "optimized" } } */
++
++int
++foo (void)
++{
++  char buf[64];
++  return __builtin_sprintf (buf, "%lc%lc%lc", (__WINT_TYPE__) 0, (__WINT_TYPE__) 0, (__WINT_TYPE__) 0);
++}
++
++int
++bar (void)
++{
++  char buf[64];
++  return __builtin_sprintf (buf, "%c%c%c", 0, 0, 0);
++}
++
++int
++baz (void)
++{
++  char buf[64];
++  return __builtin_sprintf (buf, "%lc%lc%lca", (__WINT_TYPE__) 0, (__WINT_TYPE__) 0, (__WINT_TYPE__) 0);
++}
++
++int
++qux (void)
++{
++  char buf[64];
++  return __builtin_sprintf (buf, "%c%c%ca", 0, 0, 0);
++}
+diff --git a/gcc/testsuite/gcc.dg/tree-ssa/builtin-sprintf-warn-1.c b/gcc/testsuite/gcc.dg/tree-ssa/builtin-sprintf-warn-1.c
+index 0cc03ff2de8..6cb2acb7f87 100644
+--- a/gcc/testsuite/gcc.dg/tree-ssa/builtin-sprintf-warn-1.c
++++ b/gcc/testsuite/gcc.dg/tree-ssa/builtin-sprintf-warn-1.c
+@@ -200,11 +200,11 @@ void test_sprintf_chk_c_const (void)
+   T (3, "%c%c", '1', '2');
+ 
+   /* Wide characters.  */
+-  T (0, "%lc",     (wint_t)0);   /* { dg-warning "nul past the end" } */
+-  T (1, "%lc",     (wint_t)0);
+-  T (1, "%lc%lc",  (wint_t)0, (wint_t)0);
++  T (0, "%lc",     (wint_t)0);   /* { dg-warning ".%lc. directive writing up to 1 bytes into a region of size 0" } */
++  T (1, "%lc",     (wint_t)0);   /* { dg-warning "nul past the end" } */
++  T (1, "%lc%lc",  (wint_t)0, (wint_t)0);   /* { dg-warning ".%lc. directive writing up to 1 bytes into a region of size between 0 and 1" } */
+   T (2, "%lc",     (wint_t)0);
+-  T (2, "%lc%lc",  (wint_t)0, (wint_t)0);
++  T (2, "%lc%lc",  (wint_t)0, (wint_t)0);   /* { dg-warning "nul past the end" } */
+ 
+   /* The following could result in as few as no bytes and in as many as
+      MB_CUR_MAX, but since the MB_CUR_MAX value is a runtime property
+@@ -1550,7 +1550,7 @@ void test_snprintf_c_const (char *d)
+ 
+   /* Wide characters.  */
+   T (0, "%lc",  (wint_t)0);
+-  T (1, "%lc",  (wint_t)0);
++  T (1, "%lc",  (wint_t)0);      /* { dg-warning "output may be truncated before the last format character" } */
+   T (2, "%lc",  (wint_t)0);
+ 
+   /* The following could result in as few as a single byte and in as many
+@@ -1603,7 +1603,7 @@ void test_snprintf_chk_c_const (void)
+ 
+   /* Wide characters.  */
+   T (0, "%lc",  (wint_t)0);
+-  T (1, "%lc",  (wint_t)0);
++  T (1, "%lc",  (wint_t)0);      /* { dg-warning "output may be truncated before the last format character" } */
+   T (2, "%lc",  (wint_t)0);
+ 
+   /* The following could result in as few as a single byte and in as many
+diff --git a/gcc/testsuite/gcc.target/avr/torture/pr92606.c b/gcc/testsuite/gcc.target/avr/torture/pr92606.c
+new file mode 100644
+index 00000000000..cc07128c73b
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/avr/torture/pr92606.c
+@@ -0,0 +1,57 @@
++/* { dg-do run } */
++
++typedef __UINT16_TYPE__ uint16_t;
++typedef __UINT32_TYPE__ uint32_t;
++
++typedef uint32_t T;
++
++#define NI __attribute__((noinline,noclone))
++
++
++#ifndef __AVR_TINY__
++#define read_u32(X)                                                     \
++    (__extension__(                                                     \
++        {                                                               \
++            uint16_t __addr16 = (uint16_t)(X);                          \
++            uint32_t __result;                                          \
++            __asm__ __volatile__ ("lpm %A0, Z+" "\n\t"                  \
++                                  "lpm %B0, Z+" "\n\t"                  \
++                                  "lpm %C0, Z+" "\n\t"                  \
++                                  "lpm %D0, Z" "\n\t"                   \
++                                  : "=r" (__result), "+z" (__addr16));  \
++            __result;                                                   \
++        }))
++#else
++NI uint32_t read_u32 (const uint32_t *p)
++{
++	return *p;
++}
++#endif
++
++static const __attribute((progmem)) T xyz_prog[] = { 123, 123, 123 };
++T xyz[] = { 123, 123, 123 };
++volatile int x = 0;
++
++NI void prf (T f)
++{
++    if (f != 123)
++        __builtin_abort();
++}
++
++NI void func_progmem()
++{
++    prf (read_u32 (&xyz_prog[0]));
++}
++
++NI void func_ram()
++{
++    prf (xyz[x]);
++}
++
++int main (void)
++{
++    func_progmem();
++    func_ram();
++
++	return 0;
++}
+diff --git a/libgomp/testsuite/libgomp.c/declare-variant-4-gfx1036.c b/libgomp/testsuite/libgomp.c/declare-variant-4-gfx1036.c
+new file mode 100644
+index 00000000000..93b8641b3e1
+--- /dev/null
++++ b/libgomp/testsuite/libgomp.c/declare-variant-4-gfx1036.c
+@@ -0,0 +1,8 @@
++/* { dg-do link { target { offload_target_amdgcn } } } */
++/* { dg-additional-options -foffload=amdgcn-amdhsa } */
++/* { dg-additional-options -foffload=-march=gfx1036 } */
++/* { dg-additional-options "-foffload=-fdump-tree-optimized" } */
++
++#include "declare-variant-4.h"
++
++/* { dg-final { only_for_offload_target amdgcn-amdhsa scan-offload-tree-dump "= gfx1036 \\(\\);" "optimized" } } */
+diff --git a/libgomp/testsuite/libgomp.c/declare-variant-4-gfx1103.c b/libgomp/testsuite/libgomp.c/declare-variant-4-gfx1103.c
+new file mode 100644
+index 00000000000..6a6dc4fba3f
+--- /dev/null
++++ b/libgomp/testsuite/libgomp.c/declare-variant-4-gfx1103.c
+@@ -0,0 +1,8 @@
++/* { dg-do link { target { offload_target_amdgcn } } } */
++/* { dg-additional-options -foffload=amdgcn-amdhsa } */
++/* { dg-additional-options -foffload=-march=gfx1103 } */
++/* { dg-additional-options "-foffload=-fdump-tree-optimized" } */
++
++#include "declare-variant-4.h"
++
++/* { dg-final { only_for_offload_target amdgcn-amdhsa scan-offload-tree-dump "= gfx1103 \\(\\);" "optimized" } } */
+diff --git a/libgomp/testsuite/libgomp.c/declare-variant-4-gfx90c.c b/libgomp/testsuite/libgomp.c/declare-variant-4-gfx90c.c
+new file mode 100644
+index 00000000000..44629a806b4
+--- /dev/null
++++ b/libgomp/testsuite/libgomp.c/declare-variant-4-gfx90c.c
+@@ -0,0 +1,8 @@
++/* { dg-do link { target { offload_target_amdgcn } } } */
++/* { dg-additional-options -foffload=amdgcn-amdhsa } */
++/* { dg-additional-options -foffload=-march=gfx90c } */
++/* { dg-additional-options "-foffload=-fdump-tree-optimized" } */
++
++#include "declare-variant-4.h"
++
++/* { dg-final { only_for_offload_target amdgcn-amdhsa scan-offload-tree-dump "= gfx90c \\(\\);" "optimized" } } */
+diff --git a/libgomp/testsuite/libgomp.c/declare-variant-4.h b/libgomp/testsuite/libgomp.c/declare-variant-4.h
+index d2e9194bf5b..f244d09c655 100644
+--- a/libgomp/testsuite/libgomp.c/declare-variant-4.h
++++ b/libgomp/testsuite/libgomp.c/declare-variant-4.h
+@@ -35,6 +35,13 @@ gfx90a (void)
+   return 0x90a;
+ }
+ 
++__attribute__ ((noipa))
++int
++gfx90c (void)
++{
++  return 0x90c;
++}
++
+ __attribute__ ((noipa))
+ int
+ gfx1030 (void)
+@@ -42,6 +49,13 @@ gfx1030 (void)
+   return 0x1030;
+ }
+ 
++__attribute__ ((noipa))
++int
++gfx1036 (void)
++{
++  return 0x1036;
++}
++
+ __attribute__ ((noipa))
+ int
+ gfx1100 (void)
+@@ -49,6 +63,13 @@ gfx1100 (void)
+   return 0x1100;
+ }
+ 
++__attribute__ ((noipa))
++int
++gfx1103 (void)
++{
++  return 0x1103;
++}
++
+ #ifdef USE_FIJI_FOR_GFX803
+ #pragma omp declare variant(gfx803) match(device = {isa("fiji")})
+ #else
+@@ -58,8 +79,11 @@ gfx1100 (void)
+ #pragma omp declare variant(gfx906) match(device = {isa("gfx906")})
+ #pragma omp declare variant(gfx908) match(device = {isa("gfx908")})
+ #pragma omp declare variant(gfx90a) match(device = {isa("gfx90a")})
++#pragma omp declare variant(gfx90c) match(device = {isa("gfx90c")})
+ #pragma omp declare variant(gfx1030) match(device = {isa("gfx1030")})
++#pragma omp declare variant(gfx1036) match(device = {isa("gfx1036")})
+ #pragma omp declare variant(gfx1100) match(device = {isa("gfx1100")})
++#pragma omp declare variant(gfx1103) match(device = {isa("gfx1103")})
+ __attribute__ ((noipa))
+ int
+ f (void)
