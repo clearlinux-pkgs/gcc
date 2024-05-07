@@ -11,7 +11,7 @@ touch timestamp
 #bash hj.sh
 
 export GCCGIT=~/git/gcc
-export GCCVER=13.1.0
+export GCCVER=14.1.0
 
 GCCTAG=releases/gcc-"${GCCVER}"
 GCCBRANCH=origin/releases/gcc-"$(echo "$GCCVER" | sed 's/\..*//')"
