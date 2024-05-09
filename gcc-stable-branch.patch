@@ -1,9 +1,34 @@
-Georg-Johann Lay (1):
-      AVR: ipa/92606 - Don't optimize PROGMEM data against non-PROGMEM.
+Andrew Pinski (1):
+      c++/c-common: Fix convert_vector_to_array_for_subscript for qualified vector types [PR89224]
 
-Jakub Jelinek (2):
+GCC Administrator (1):
+      Daily bump.
+
+Gaius Mulley (1):
+      [PR modula2/113768][PR modula2/114133] bugfix constants must be cast prior to vararg call
+
+Georg-Johann Lay (4):
+      AVR: ipa/92606 - Don't optimize PROGMEM data against non-PROGMEM.
+      AVR: target/114981 - Support __builtin_powi[l] / __powidf2.
+      AVR: target/114975 - Add combine-pattern for __popcountqi2.
+      AVR: target/114975 - Add combine-pattern for __parityqi2.
+
+Harald Anlauf (1):
+      Fortran: fix issues with class(*) assignment [PR114827]
+
+Iain Sandoe (1):
+      Objective-C, NeXT, v2: Correct a regression in code-gen.
+
+Jakub Jelinek (6):
       gimple-ssa-sprintf: Use [0, 1] range for %lc with (wint_t) 0 argument [PR114876]
       libgomp: Add gfx90c, 1036 and 1103 declare variant tests
+      tree-inline: Remove .ASAN_MARK calls when inlining functions into no_sanitize callers [PR114956]
+      expansion: Use __trunchfbf2 calls rather than __extendhfbf2 [PR114907]
+      reassoc: Fix up optimize_range_tests_to_bit_test [PR114965]
+      testsuite: Fix up vector-subaccess-1.C test for ia32 [PR89224]
+
+Nathaniel Shead (1):
+      c++/modules: Stream unmergeable temporaries by value again [PR114856]
 
 Patrick Palka (1):
       c++/modules: imported spec befriending class tmpl [PR114889]
@@ -11,6 +36,21 @@ Patrick Palka (1):
 Richard Biener (1):
       Bump BASE-VER
 
+diff --git a/contrib/ChangeLog b/contrib/ChangeLog
+index 181382620fd..fd3cb331675 100644
+--- a/contrib/ChangeLog
++++ b/contrib/ChangeLog
+@@ -1,3 +1,10 @@
++2024-05-07  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2024-05-07  Jakub Jelinek  <jakub@redhat.com>
++
++	* gennews (files): Add files for GCC 14.
++
+ 2024-05-07  Release Manager
+ 
+ 	* GCC 14.1.0 released.
 diff --git a/gcc/BASE-VER b/gcc/BASE-VER
 index 7b3b6e02bb3..26f2bbc1975 100644
 --- a/gcc/BASE-VER
@@ -18,6 +58,124 @@ index 7b3b6e02bb3..26f2bbc1975 100644
 @@ -1 +1 @@
 -14.1.0
 +14.1.1
+diff --git a/gcc/ChangeLog b/gcc/ChangeLog
+index 54959a4831c..f93f8c0fbf9 100644
+--- a/gcc/ChangeLog
++++ b/gcc/ChangeLog
+@@ -1,3 +1,70 @@
++2024-05-09  Georg-Johann Lay  <avr@gjlay.de>
++
++	Backported from master:
++	2024-05-08  Georg-Johann Lay  <avr@gjlay.de>
++
++	PR target/114975
++	* config/avr/avr.md: Add combine pattern for
++	8-bit parity detection.
++
++2024-05-09  Georg-Johann Lay  <avr@gjlay.de>
++
++	Backported from master:
++	2024-05-08  Georg-Johann Lay  <avr@gjlay.de>
++
++	PR target/114975
++	* config/avr/avr.md: Add combine pattern for
++	8-bit popcount detection.
++
++2024-05-08  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2024-05-08  Jakub Jelinek  <jakub@redhat.com>
++
++	PR tree-optimization/114965
++	* tree-ssa-reassoc.cc (optimize_range_tests_to_bit_test): Don't try to
++	optimize away exp - lowi subtraction from shift count unless entry
++	test is emitted or unless r.upper_bound () is smaller than prec.
++
++2024-05-07  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2024-05-07  Jakub Jelinek  <jakub@redhat.com>
++
++	PR middle-end/114907
++	* expr.cc (convert_mode_scalar): Use trunc_optab rather than
++	sext_optab for HF->BF conversions.
++	* optabs-libfuncs.cc (gen_trunc_conv_libfunc): Likewise.
++
++2024-05-07  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2024-05-07  Jakub Jelinek  <jakub@redhat.com>
++
++	PR sanitizer/114956
++	* tree-inline.cc: Include asan.h.
++	(copy_bb): Remove also .ASAN_MARK calls if id->dst_fn has asan/hwasan
++	sanitization disabled.
++
++2024-05-07  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2024-04-30  Jakub Jelinek  <jakub@redhat.com>
++
++	PR tree-optimization/114876
++	* gimple-ssa-sprintf.cc (format_character): For min == 0 && max == 0,
++	set max, likely and unlikely members to 1 rather than 0.  Remove
++	useless res.knownrange = true;.  Formatting fixes.
++
++2024-05-07  Georg-Johann Lay  <avr@gjlay.de>
++
++	Backported from master:
++	2024-05-06  Georg-Johann Lay  <avr@gjlay.de>
++
++	PR ipa/92606
++	* config/avr/avr.cc (avr_option_override): Set
++	flag_ipa_icf_variables = 0.
++
+ 2024-05-07  Release Manager
+ 
+ 	* GCC 14.1.0 released.
+diff --git a/gcc/c-family/ChangeLog b/gcc/c-family/ChangeLog
+index db02f97ceae..32c99208947 100644
+--- a/gcc/c-family/ChangeLog
++++ b/gcc/c-family/ChangeLog
+@@ -1,3 +1,12 @@
++2024-05-07  Andrew Pinski  <quic_apinski@quicinc.com>
++
++	Backported from master:
++	2024-05-07  Andrew Pinski  <quic_apinski@quicinc.com>
++
++	PR c++/89224
++	* c-common.cc (convert_vector_to_array_for_subscript): Call build_qualified_type
++	for the inner type.
++
+ 2024-05-07  Release Manager
+ 
+ 	* GCC 14.1.0 released.
+diff --git a/gcc/c-family/c-common.cc b/gcc/c-family/c-common.cc
+index 01e3d247fc2..d14591c7bd3 100644
+--- a/gcc/c-family/c-common.cc
++++ b/gcc/c-family/c-common.cc
+@@ -8959,6 +8959,7 @@ convert_vector_to_array_for_subscript (location_t loc,
+   if (gnu_vector_type_p (TREE_TYPE (*vecp)))
+     {
+       tree type = TREE_TYPE (*vecp);
++      tree newitype;
+ 
+       ret = !lvalue_p (*vecp);
+ 
+@@ -8973,8 +8974,12 @@ convert_vector_to_array_for_subscript (location_t loc,
+ 	 for function parameters.  */
+       c_common_mark_addressable_vec (*vecp);
+ 
++      /* Make sure qualifiers are copied from the vector type to the new element
++	 of the array type.  */
++      newitype = build_qualified_type (TREE_TYPE (type), TYPE_QUALS (type));
++
+       *vecp = build1 (VIEW_CONVERT_EXPR,
+-		      build_array_type_nelts (TREE_TYPE (type),
++		      build_array_type_nelts (newitype,
+ 					      TYPE_VECTOR_SUBPARTS (type)),
+ 		      *vecp);
+     }
 diff --git a/gcc/config/avr/avr.cc b/gcc/config/avr/avr.cc
 index 510e4cea19f..74924ab0565 100644
 --- a/gcc/config/avr/avr.cc
@@ -35,6 +193,132 @@ index 510e4cea19f..74924ab0565 100644
    if (flag_pic == 1)
      warning (OPT_fpic, "%<-fpic%> is not supported");
    if (flag_pic == 2)
+diff --git a/gcc/config/avr/avr.md b/gcc/config/avr/avr.md
+index 97f42be7729..d4fcff46123 100644
+--- a/gcc/config/avr/avr.md
++++ b/gcc/config/avr/avr.md
+@@ -8418,7 +8418,22 @@
+    (set (match_dup 0)
+         (reg:HI 24))])
+ 
+-(define_insn_and_split "*parityqihi2"
++(define_insn_and_split "*parityqihi2.1"
++  [(set (match_operand:HI 0 "register_operand"            "=r")
++        (zero_extend:HI
++         (parity:QI (match_operand:QI 1 "register_operand" "r"))))
++   (clobber (reg:HI 24))]
++  "!reload_completed"
++  { gcc_unreachable(); }
++  "&& 1"
++  [(set (reg:QI 24)
++        (match_dup 1))
++   (set (reg:HI 24)
++        (zero_extend:HI (parity:QI (reg:QI 24))))
++   (set (match_dup 0)
++        (reg:HI 24))])
++
++(define_insn_and_split "*parityqihi2.2"
+   [(set (match_operand:HI 0 "register_operand"           "=r")
+         (parity:HI (match_operand:QI 1 "register_operand" "r")))
+    (clobber (reg:HI 24))]
+@@ -8527,6 +8542,19 @@
+     operands[2] = gen_reg_rtx (HImode);
+   })
+ 
++(define_insn_and_split "*popcounthi2.split8"
++  [(set (reg:HI 24)
++        (zero_extend:HI (popcount:QI (match_operand:QI 0 "register_operand"))))]
++  "! reload_completed"
++  { gcc_unreachable(); }
++  "&& 1"
++  [(set (reg:QI 24)
++        (match_dup 0))
++   (set (reg:QI 24)
++        (popcount:QI (reg:QI 24)))
++   (set (reg:QI 25)
++        (const_int 0))])
++
+ (define_insn_and_split "*popcounthi2.libgcc_split"
+   [(set (reg:HI 24)
+         (popcount:HI (reg:HI 24)))]
+diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
+index 5158ee1133c..9059d4935ae 100644
+--- a/gcc/cp/ChangeLog
++++ b/gcc/cp/ChangeLog
+@@ -1,3 +1,32 @@
++2024-05-07  Andrew Pinski  <quic_apinski@quicinc.com>
++
++	Backported from master:
++	2024-05-07  Andrew Pinski  <quic_apinski@quicinc.com>
++
++	PR c++/89224
++	* constexpr.cc (cxx_eval_array_reference): Compare main variants
++	for the vector/array types instead of the types directly.
++
++2024-05-07  Nathaniel Shead  <nathanieloshead@gmail.com>
++
++	Backported from master:
++	2024-05-07  Nathaniel Shead  <nathanieloshead@gmail.com>
++
++	PR c++/114856
++	* call.cc (make_temporary_var_for_ref_to_temp): Set context for
++	temporaries with linkage.
++	* init.cc (create_temporary_var): Revert to only set context
++	when in a function decl.
++
++2024-05-07  Patrick Palka  <ppalka@redhat.com>
++
++	Backported from master:
++	2024-04-30  Patrick Palka  <ppalka@redhat.com>
++
++	PR c++/114889
++	* module.cc (trees_in::read_class_def): Look through
++	TEMPLATE_DECL when adding to CLASSTYPE_BEFRIENDING_CLASSES.
++
+ 2024-05-07  Release Manager
+ 
+ 	* GCC 14.1.0 released.
+diff --git a/gcc/cp/call.cc b/gcc/cp/call.cc
+index dbdd7c29fe8..38b9c4f0860 100644
+--- a/gcc/cp/call.cc
++++ b/gcc/cp/call.cc
+@@ -13800,6 +13800,9 @@ make_temporary_var_for_ref_to_temp (tree decl, tree type)
+       tree name = mangle_ref_init_variable (decl);
+       DECL_NAME (var) = name;
+       SET_DECL_ASSEMBLER_NAME (var, name);
++
++      /* Set the context to make the variable mergeable in modules.  */
++      DECL_CONTEXT (var) = current_scope ();
+     }
+   else
+     /* Create a new cleanup level if necessary.  */
+diff --git a/gcc/cp/constexpr.cc b/gcc/cp/constexpr.cc
+index 8078b31544d..4a5444e0258 100644
+--- a/gcc/cp/constexpr.cc
++++ b/gcc/cp/constexpr.cc
+@@ -4430,7 +4430,8 @@ cxx_eval_array_reference (const constexpr_ctx *ctx, tree t,
+   if (!lval
+       && TREE_CODE (ary) == VIEW_CONVERT_EXPR
+       && VECTOR_TYPE_P (TREE_TYPE (TREE_OPERAND (ary, 0)))
+-      && TREE_TYPE (t) == TREE_TYPE (TREE_TYPE (TREE_OPERAND (ary, 0))))
++      && (TYPE_MAIN_VARIANT (TREE_TYPE (t))
++	  == TYPE_MAIN_VARIANT (TREE_TYPE (TREE_TYPE (TREE_OPERAND (ary, 0))))))
+     ary = TREE_OPERAND (ary, 0);
+ 
+   tree oldidx = TREE_OPERAND (t, 1);
+diff --git a/gcc/cp/init.cc b/gcc/cp/init.cc
+index a93ce00800c..e758a8c8568 100644
+--- a/gcc/cp/init.cc
++++ b/gcc/cp/init.cc
+@@ -4287,7 +4287,7 @@ create_temporary_var (tree type)
+   TREE_USED (decl) = 1;
+   DECL_ARTIFICIAL (decl) = 1;
+   DECL_IGNORED_P (decl) = 1;
+-  DECL_CONTEXT (decl) = current_scope ();
++  DECL_CONTEXT (decl) = current_function_decl;
+ 
+   return decl;
+ }
 diff --git a/gcc/cp/module.cc b/gcc/cp/module.cc
 index c35e70b8cb8..3bf863e15d4 100644
 --- a/gcc/cp/module.cc
@@ -48,6 +332,87 @@ index c35e70b8cb8..3bf863e15d4 100644
  
  	      if (CLASS_TYPE_P (f))
  		{
+diff --git a/gcc/expr.cc b/gcc/expr.cc
+index d4414e242cb..9f66d479445 100644
+--- a/gcc/expr.cc
++++ b/gcc/expr.cc
+@@ -355,8 +355,16 @@ convert_mode_scalar (rtx to, rtx from, int unsignedp)
+ 		      && REAL_MODE_FORMAT (from_mode) == &ieee_half_format));
+ 
+       if (GET_MODE_PRECISION (from_mode) == GET_MODE_PRECISION (to_mode))
+-	/* Conversion between decimal float and binary float, same size.  */
+-	tab = DECIMAL_FLOAT_MODE_P (from_mode) ? trunc_optab : sext_optab;
++	{
++	  if (REAL_MODE_FORMAT (to_mode) == &arm_bfloat_half_format
++	      && REAL_MODE_FORMAT (from_mode) == &ieee_half_format)
++	    /* libgcc implements just __trunchfbf2, not __extendhfbf2.  */
++	    tab = trunc_optab;
++	  else
++	    /* Conversion between decimal float and binary float, same
++	       size.  */
++	    tab = DECIMAL_FLOAT_MODE_P (from_mode) ? trunc_optab : sext_optab;
++	}
+       else if (GET_MODE_PRECISION (from_mode) < GET_MODE_PRECISION (to_mode))
+ 	tab = sext_optab;
+       else
+diff --git a/gcc/fortran/trans-array.cc b/gcc/fortran/trans-array.cc
+index 30b84762346..7ec33fb1598 100644
+--- a/gcc/fortran/trans-array.cc
++++ b/gcc/fortran/trans-array.cc
+@@ -11278,6 +11278,19 @@ gfc_alloc_allocatable_for_assignment (gfc_loopinfo *loop,
+ 	gfc_add_modify (&fblock, linfo->delta[dim], tmp);
+     }
+ 
++  /* Take into account _len of unlimited polymorphic entities, so that span
++     for array descriptors and allocation sizes are computed correctly.  */
++  if (UNLIMITED_POLY (expr2))
++    {
++      tree len = gfc_class_len_get (TREE_OPERAND (desc2, 0));
++      len = fold_build2_loc (input_location, MAX_EXPR, size_type_node,
++			     fold_convert (size_type_node, len),
++			     size_one_node);
++      elemsize2 = fold_build2_loc (input_location, MULT_EXPR,
++				   gfc_array_index_type, elemsize2,
++				   fold_convert (gfc_array_index_type, len));
++    }
++
+   if (GFC_DESCRIPTOR_TYPE_P (TREE_TYPE (desc)))
+     gfc_conv_descriptor_span_set (&fblock, desc, elemsize2);
+ 
+@@ -11324,6 +11337,9 @@ gfc_alloc_allocatable_for_assignment (gfc_loopinfo *loop,
+ 	    gfc_add_modify (&fblock, tmp,
+ 			    fold_convert (TREE_TYPE (tmp),
+ 					  TYPE_SIZE_UNIT (type)));
++	  else if (UNLIMITED_POLY (expr2))
++	    gfc_add_modify (&fblock, tmp,
++			    gfc_class_len_get (TREE_OPERAND (desc2, 0)));
+ 	  else
+ 	    gfc_add_modify (&fblock, tmp,
+ 			    build_int_cst (TREE_TYPE (tmp), 0));
+diff --git a/gcc/fortran/trans-expr.cc b/gcc/fortran/trans-expr.cc
+index 0280c441ced..bc8eb419cff 100644
+--- a/gcc/fortran/trans-expr.cc
++++ b/gcc/fortran/trans-expr.cc
+@@ -11991,6 +11991,19 @@ trans_class_assignment (stmtblock_t *block, gfc_expr *lhs, gfc_expr *rhs,
+ 	old_vptr = build_int_cst (TREE_TYPE (vptr), 0);
+ 
+       size = gfc_vptr_size_get (rhs_vptr);
++
++      /* Take into account _len of unlimited polymorphic entities.
++	 TODO: handle class(*) allocatable function results on rhs.  */
++      if (UNLIMITED_POLY (rhs) && rhs->expr_type == EXPR_VARIABLE)
++	{
++	  tree len = trans_get_upoly_len (block, rhs);
++	  len = fold_build2_loc (input_location, MAX_EXPR, size_type_node,
++				 fold_convert (size_type_node, len),
++				 size_one_node);
++	  size = fold_build2_loc (input_location, MULT_EXPR, TREE_TYPE (size),
++				  size, fold_convert (TREE_TYPE (size), len));
++	}
++
+       tmp = lse->expr;
+       class_han = GFC_CLASS_TYPE_P (TREE_TYPE (tmp))
+ 	  ? gfc_class_data_get (tmp) : tmp;
 diff --git a/gcc/gimple-ssa-sprintf.cc b/gcc/gimple-ssa-sprintf.cc
 index abb934b08d5..3b19f4d3f35 100644
 --- a/gcc/gimple-ssa-sprintf.cc
@@ -103,6 +468,191 @@ index abb934b08d5..3b19f4d3f35 100644
      }
  
    /* Bump up the byte counters if WIDTH is greater.  */
+diff --git a/gcc/objc/ChangeLog b/gcc/objc/ChangeLog
+index 2fbbca705cc..5b84cd89217 100644
+--- a/gcc/objc/ChangeLog
++++ b/gcc/objc/ChangeLog
+@@ -1,3 +1,13 @@
++2024-05-08  Iain Sandoe  <iain@sandoe.co.uk>
++
++	Backported from master:
++	2024-05-02  Iain Sandoe  <iain@sandoe.co.uk>
++
++	* objc-next-runtime-abi-02.cc (WEAK_PROTOCOLS_AFTER): New.
++	(next_runtime_abi_02_protocol_decl): Use WEAK_PROTOCOLS_AFTER
++	to determine this ABI change.
++	(build_v2_protocol_list_address_table): Likewise.
++
+ 2024-05-07  Release Manager
+ 
+ 	* GCC 14.1.0 released.
+diff --git a/gcc/objc/objc-next-runtime-abi-02.cc b/gcc/objc/objc-next-runtime-abi-02.cc
+index cdf559b9bea..248ef641281 100644
+--- a/gcc/objc/objc-next-runtime-abi-02.cc
++++ b/gcc/objc/objc-next-runtime-abi-02.cc
+@@ -72,6 +72,7 @@ along with GCC; see the file COPYING3.  If not see
+ #define TAG_MSGSENDSUPER_STRET	"objc_msgSendSuper2_stret"
+ 
+ #define USE_FIXUP_BEFORE	100600
++#define WEAK_PROTOCOLS_AFTER	100700
+ #define TAG_FIXUP		"_fixup"
+ 
+ 
+@@ -1025,7 +1026,7 @@ next_runtime_abi_02_protocol_decl (tree p)
+   /* static struct _objc_protocol _OBJC_Protocol_<mumble>; */
+   snprintf (buf, BUFSIZE, "_OBJC_Protocol_%s",
+ 	    IDENTIFIER_POINTER (PROTOCOL_NAME (p)));
+-  if (flag_next_runtime >= USE_FIXUP_BEFORE)
++  if (flag_next_runtime >= WEAK_PROTOCOLS_AFTER)
+     {
+       decl = create_hidden_decl (objc_v2_protocol_template, buf);
+       DECL_WEAK (decl) = true;
+@@ -2315,7 +2316,7 @@ build_v2_protocol_list_address_table (void)
+       gcc_assert (ref->id && TREE_CODE (ref->id) == PROTOCOL_INTERFACE_TYPE);
+       snprintf (buf, BUFSIZE, "_OBJC_LabelProtocol_%s",
+ 		IDENTIFIER_POINTER (PROTOCOL_NAME (ref->id)));
+-      if (flag_next_runtime >= USE_FIXUP_BEFORE)
++      if (flag_next_runtime >= WEAK_PROTOCOLS_AFTER)
+ 	{
+ 	  decl = create_hidden_decl (objc_protocol_type, buf, /*is def=*/true);
+ 	  DECL_WEAK (decl) = true;
+diff --git a/gcc/optabs-libfuncs.cc b/gcc/optabs-libfuncs.cc
+index 02e9bf6ea5a..26729910d92 100644
+--- a/gcc/optabs-libfuncs.cc
++++ b/gcc/optabs-libfuncs.cc
+@@ -589,7 +589,9 @@ gen_trunc_conv_libfunc (convert_optab tab,
+   if (GET_MODE_CLASS (float_tmode) != GET_MODE_CLASS (float_fmode))
+     gen_interclass_conv_libfunc (tab, opname, float_tmode, float_fmode);
+ 
+-  if (GET_MODE_PRECISION (float_fmode) <= GET_MODE_PRECISION (float_tmode))
++  if (GET_MODE_PRECISION (float_fmode) <= GET_MODE_PRECISION (float_tmode)
++      && (REAL_MODE_FORMAT (float_tmode) != &arm_bfloat_half_format
++	  || REAL_MODE_FORMAT (float_fmode) != &ieee_half_format))
+     return;
+ 
+   if (GET_MODE_CLASS (float_tmode) == GET_MODE_CLASS (float_fmode))
+diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
+index 0e93e0d4d4e..332a8e8a839 100644
+--- a/gcc/testsuite/ChangeLog
++++ b/gcc/testsuite/ChangeLog
+@@ -1,3 +1,117 @@
++2024-05-09  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2024-05-09  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/89224
++	* g++.dg/torture/vector-subaccess-1.C: Add -Wno-psabi as additional
++	options.
++
++2024-05-09  Georg-Johann Lay  <avr@gjlay.de>
++
++	Backported from master:
++	2024-05-08  Georg-Johann Lay  <avr@gjlay.de>
++
++	PR target/114975
++	* gcc.target/avr/pr114975-parity.c: New test.
++
++2024-05-09  Georg-Johann Lay  <avr@gjlay.de>
++
++	Backported from master:
++	2024-05-08  Georg-Johann Lay  <avr@gjlay.de>
++
++	PR target/114975
++	* gcc.target/avr/pr114975-popcount.c: New test.
++
++2024-05-09  Georg-Johann Lay  <avr@gjlay.de>
++
++	Backported from master:
++	2024-05-08  Georg-Johann Lay  <avr@gjlay.de>
++
++	PR target/114981
++	* gcc.target/avr/pr114981-powil.c: New test.
++
++2024-05-08  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2024-05-08  Jakub Jelinek  <jakub@redhat.com>
++
++	PR tree-optimization/114965
++	* gcc.c-torture/execute/pr114965.c: New test.
++
++2024-05-07  Andrew Pinski  <quic_apinski@quicinc.com>
++
++	Backported from master:
++	2024-05-07  Andrew Pinski  <quic_apinski@quicinc.com>
++
++	PR c++/89224
++	* g++.dg/torture/vector-subaccess-1.C: New test.
++	* gcc.dg/pr83415.c: Change warning to error.
++
++2024-05-07  Nathaniel Shead  <nathanieloshead@gmail.com>
++
++	Backported from master:
++	2024-05-07  Nathaniel Shead  <nathanieloshead@gmail.com>
++
++	PR c++/114856
++	* g++.dg/modules/pr114856.h: New test.
++	* g++.dg/modules/pr114856_a.H: New test.
++	* g++.dg/modules/pr114856_b.C: New test.
++
++2024-05-07  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2024-05-07  Jakub Jelinek  <jakub@redhat.com>
++
++	PR middle-end/114907
++	* gcc.dg/pr114907.c: New test.
++
++2024-05-07  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2024-05-07  Jakub Jelinek  <jakub@redhat.com>
++
++	PR sanitizer/114956
++	* gcc.dg/asan/pr114956.c: New test.
++
++2024-05-07  Gaius Mulley  <gaiusmod2@gmail.com>
++
++	PR modula2/113768
++	PR modula2/114133
++	* gm2/extensions/run/pass/callingc10.mod: Convert constant literal
++	numbers into INTEGER.
++	* gm2/extensions/run/pass/callingc11.mod: Ditto.
++	* gm2/extensions/run/pass/vararg2.mod: Ditto.
++	* gm2/iso/run/pass/packed.mod: Emit a printf as a runtime
++	diagnostic.
++
++2024-05-07  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2024-04-30  Jakub Jelinek  <jakub@redhat.com>
++
++	PR tree-optimization/114876
++	* gcc.dg/pr114876.c: New test.
++	* gcc.dg/tree-ssa/builtin-sprintf-warn-1.c: Adjust expected
++	diagnostics.
++
++2024-05-07  Patrick Palka  <ppalka@redhat.com>
++
++	Backported from master:
++	2024-04-30  Patrick Palka  <ppalka@redhat.com>
++
++	PR c++/114889
++	* g++.dg/modules/friend-8_a.H: New test.
++	* g++.dg/modules/friend-8_b.C: New test.
++
++2024-05-07  Georg-Johann Lay  <avr@gjlay.de>
++
++	Backported from master:
++	2024-05-06  Georg-Johann Lay  <avr@gjlay.de>
++
++	PR ipa/92606
++	* gcc.target/avr/torture/pr92606.c: New test.
++
+ 2024-05-07  Release Manager
+ 
+ 	* GCC 14.1.0 released.
 diff --git a/gcc/testsuite/g++.dg/modules/friend-8_a.H b/gcc/testsuite/g++.dg/modules/friend-8_a.H
 new file mode 100644
 index 00000000000..b07ea25adfb
@@ -147,6 +697,144 @@ index 00000000000..b04280bc91a
 +  _Map_base<int, int> m;
 +  m.f();
 +}
+diff --git a/gcc/testsuite/g++.dg/modules/pr114856.h b/gcc/testsuite/g++.dg/modules/pr114856.h
+new file mode 100644
+index 00000000000..b1a3c2cd834
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/modules/pr114856.h
+@@ -0,0 +1,12 @@
++// PR c++/114856
++
++#include <initializer_list>
++struct A {
++  ~A();
++};
++struct V {
++  V(std::initializer_list<A>);
++};
++struct data {
++  V v{{}};
++};
+diff --git a/gcc/testsuite/g++.dg/modules/pr114856_a.H b/gcc/testsuite/g++.dg/modules/pr114856_a.H
+new file mode 100644
+index 00000000000..6195277dbde
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/modules/pr114856_a.H
+@@ -0,0 +1,5 @@
++// PR c++/114856
++// { dg-additional-options "-fmodule-header" }
++// { dg-module-cmi {} }
++
++#include "pr114856.h"
+diff --git a/gcc/testsuite/g++.dg/modules/pr114856_b.C b/gcc/testsuite/g++.dg/modules/pr114856_b.C
+new file mode 100644
+index 00000000000..f81dc8b81d5
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/modules/pr114856_b.C
+@@ -0,0 +1,5 @@
++// PR c++/114856
++// { dg-additional-options "-fmodules-ts" }
++
++#include "pr114856.h"
++import "pr114856_a.H";
+diff --git a/gcc/testsuite/g++.dg/torture/vector-subaccess-1.C b/gcc/testsuite/g++.dg/torture/vector-subaccess-1.C
+new file mode 100644
+index 00000000000..4b909dae492
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/torture/vector-subaccess-1.C
+@@ -0,0 +1,24 @@
++/* PR c++/89224 */
++/* { dg-additional-options "-Wno-psabi" } */
++
++/* The access of `vector[i]` has the same qualifiers as the original
++   vector which was missing. */
++
++typedef __attribute__((vector_size(16))) unsigned char  Int8x8_t;
++
++template <class T>
++void g(T &x) {
++    __builtin_abort();
++}
++template <class T>
++void g(const T &x) {
++  __builtin_exit(0);
++}
++void f(const Int8x8_t x) {
++  g(x[0]);
++}
++int main(void)
++{
++    Int8x8_t x ={};
++    f(x);
++}
+diff --git a/gcc/testsuite/gcc.c-torture/execute/pr114965.c b/gcc/testsuite/gcc.c-torture/execute/pr114965.c
+new file mode 100644
+index 00000000000..89d68e18701
+--- /dev/null
++++ b/gcc/testsuite/gcc.c-torture/execute/pr114965.c
+@@ -0,0 +1,30 @@
++/* PR tree-optimization/114965 */
++
++static void
++foo (const char *x)
++{
++
++  char a = '0';
++  while (1)
++    {
++      switch (*x)
++	{
++	case '_':
++	case '+':
++	  a = *x;
++	  x++;
++	  continue;
++	default:
++	  break;
++	}
++      break;
++    }
++  if (a == '0' || a == '+')
++    __builtin_abort ();
++}
++
++int
++main ()
++{
++  foo ("_");
++}
+diff --git a/gcc/testsuite/gcc.dg/asan/pr114956.c b/gcc/testsuite/gcc.dg/asan/pr114956.c
+new file mode 100644
+index 00000000000..fb87d514f25
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/asan/pr114956.c
+@@ -0,0 +1,26 @@
++/* PR sanitizer/114956 */
++/* { dg-do compile } */
++/* { dg-options "-O2 -fsanitize=address,null" } */
++
++int **a;
++void qux (int *);
++
++__attribute__((always_inline)) static inline int *
++foo (void)
++{
++  int b[1];
++  qux (b);
++  return a[1];
++}
++
++__attribute__((no_sanitize_address)) void
++bar (void)
++{
++  *a = foo ();
++}
++
++void
++baz (void)
++{
++  bar ();
++}
 diff --git a/gcc/testsuite/gcc.dg/pr114876.c b/gcc/testsuite/gcc.dg/pr114876.c
 new file mode 100644
 index 00000000000..7bb380aa29e
@@ -187,6 +875,51 @@ index 00000000000..7bb380aa29e
 +  char buf[64];
 +  return __builtin_sprintf (buf, "%c%c%ca", 0, 0, 0);
 +}
+diff --git a/gcc/testsuite/gcc.dg/pr114907.c b/gcc/testsuite/gcc.dg/pr114907.c
+new file mode 100644
+index 00000000000..628746e1f8c
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/pr114907.c
+@@ -0,0 +1,27 @@
++/* PR middle-end/114907 */
++/* { dg-do run } */
++/* { dg-options "" } */
++/* { dg-add-options float16 } */
++/* { dg-require-effective-target float16_runtime } */
++/* { dg-add-options bfloat16 } */
++/* { dg-require-effective-target bfloat16_runtime } */
++
++__attribute__((noipa)) _Float16
++foo (__bf16 x)
++{
++  return (_Float16) x;
++}
++
++__attribute__((noipa)) __bf16
++bar (_Float16 x)
++{
++  return (__bf16) x;
++}
++
++int
++main ()
++{
++  if (foo (11.125bf16) != 11.125f16
++      || bar (11.125f16) != 11.125bf16)
++    __builtin_abort ();
++}
+diff --git a/gcc/testsuite/gcc.dg/pr83415.c b/gcc/testsuite/gcc.dg/pr83415.c
+index 5934c16d97c..2fc85031505 100644
+--- a/gcc/testsuite/gcc.dg/pr83415.c
++++ b/gcc/testsuite/gcc.dg/pr83415.c
+@@ -7,6 +7,6 @@ int
+ main (int argc, short *argv[])
+ {
+   int i = argc;
+-  y[i] = 7 - i; /* { dg-warning "read-only" } */
++  y[i] = 7 - i; /* { dg-error "read-only" } */
+   return 0;
+ }
 diff --git a/gcc/testsuite/gcc.dg/tree-ssa/builtin-sprintf-warn-1.c b/gcc/testsuite/gcc.dg/tree-ssa/builtin-sprintf-warn-1.c
 index 0cc03ff2de8..6cb2acb7f87 100644
 --- a/gcc/testsuite/gcc.dg/tree-ssa/builtin-sprintf-warn-1.c
@@ -225,6 +958,91 @@ index 0cc03ff2de8..6cb2acb7f87 100644
    T (2, "%lc",  (wint_t)0);
  
    /* The following could result in as few as a single byte and in as many
+diff --git a/gcc/testsuite/gcc.target/avr/pr114975-parity.c b/gcc/testsuite/gcc.target/avr/pr114975-parity.c
+new file mode 100644
+index 00000000000..767ced0a464
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/avr/pr114975-parity.c
+@@ -0,0 +1,17 @@
++/* { dg-do compile } */
++/* { dg-additional-options "-Os" } */
++
++typedef __UINT8_TYPE__ uint8_t;
++
++uint8_t use_pary1 (int y, uint8_t x)
++{
++    return 1 + __builtin_parity (x);
++}
++
++uint8_t use_pary2 (uint8_t x)
++{
++	x += 1;
++    return 1 - __builtin_parity (x);
++}
++
++/* { dg-final { scan-assembler-times "__parityqi2" 2 } } */
+diff --git a/gcc/testsuite/gcc.target/avr/pr114975-popcount.c b/gcc/testsuite/gcc.target/avr/pr114975-popcount.c
+new file mode 100644
+index 00000000000..87eb56b56c5
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/avr/pr114975-popcount.c
+@@ -0,0 +1,17 @@
++/* { dg-do compile } */
++/* { dg-additional-options "-Os" } */
++
++typedef __UINT8_TYPE__ uint8_t;
++
++uint8_t use_pop1 (int y, uint8_t x)
++{
++    return 1 + __builtin_popcount (x);
++}
++
++uint8_t use_pop2 (uint8_t x)
++{
++	x += 1;
++    return 1 - __builtin_popcount (x);
++}
++
++/* { dg-final { scan-assembler-times "__popcountqi2" 2 } } */
+diff --git a/gcc/testsuite/gcc.target/avr/pr114981-powil.c b/gcc/testsuite/gcc.target/avr/pr114981-powil.c
+new file mode 100644
+index 00000000000..70f8e796c65
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/avr/pr114981-powil.c
+@@ -0,0 +1,33 @@
++/* { dg-do run { target { ! avr_tiny } } } */
++/* { dg-additional-options "-Os" } */
++
++const long double vals[] =
++  {
++    0.0625L, -0.125L, 0.25L, -0.5L,
++    1.0L,
++    -2.0L, 4.0L, -8.0L, 16.0L
++  };
++
++#define ARRAY_SIZE(X) ((int) (sizeof(X) / sizeof(*X)))
++
++__attribute__((noinline,noclone))
++void test1 (long double x)
++{
++  int i;
++
++  for (i = 0; i < ARRAY_SIZE (vals); ++i)
++    {
++      long double val0 = vals[i];
++      long double val1 = __builtin_powil (x, i - 4);
++      __asm ("" : "+r" (val0));
++
++      if (val0 != val1)
++	__builtin_exit (__LINE__);
++    }
++}
++
++int main (void)
++{
++  test1 (-2.0L);
++  return 0;
++}
 diff --git a/gcc/testsuite/gcc.target/avr/torture/pr92606.c b/gcc/testsuite/gcc.target/avr/torture/pr92606.c
 new file mode 100644
 index 00000000000..cc07128c73b
@@ -288,6 +1106,413 @@ index 00000000000..cc07128c73b
 +
 +	return 0;
 +}
+diff --git a/gcc/testsuite/gfortran.dg/asan/unlimited_polymorphic_34.f90 b/gcc/testsuite/gfortran.dg/asan/unlimited_polymorphic_34.f90
+new file mode 100644
+index 00000000000..c69158a1b55
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/asan/unlimited_polymorphic_34.f90
+@@ -0,0 +1,135 @@
++! { dg-do run }
++! PR fortran/114827 - issues with class(*) assignment found by valgrind
++!
++! Contributed by Neil Carlson <neil.n.carlson@gmail.com>
++
++program main
++  implicit none
++  call run
++  call run1
++  call run2
++contains
++  ! Scalar tests
++  subroutine run ()
++    character(*),        parameter :: c = 'fubarfubarfubarfubarfubarfu'
++    character(*,kind=4), parameter :: d = 4_"abcdef"
++    complex,             parameter :: z = (1.,2.)
++    class(*),          allocatable :: y
++
++    call foo (c, y)
++    select type (y)
++    type is (character(*))
++!      print *, y(5:6)                  ! ICE (-> pr114874)
++       if (y /= c) stop 1
++    class default
++       stop 2
++    end select
++
++    call foo (z, y)
++    select type (y)
++    type is (complex)
++       if (y /= z) stop 3
++    class default
++       stop 4
++    end select
++
++    call foo (d, y)
++    select type (y)
++    type is (character(*,kind=4))
++!      print *, y                       ! NAG fails here
++       if (y /= d) stop 5
++    class default
++       stop 6
++    end select
++  end subroutine 
++  !
++  subroutine foo (a, b)
++    class(*), intent(in)  :: a
++    class(*), allocatable :: b
++    b = a
++  end subroutine
++
++  ! Rank-1 tests
++  subroutine run1 ()
++    character(*),        parameter :: c(*) = ['fubar','snafu']
++    character(*,kind=4), parameter :: d(*) = [4_"abc",4_"def"]
++    real,                parameter :: r(*) = [1.,2.,3.]
++    class(*),          allocatable :: y(:)
++
++    call foo1 (c, y)
++    select type (y)
++    type is (character(*))
++!      print *, ">",y(2)(1:3),"<  >", c(2)(1:3), "<"
++       if (any (y    /= c))        stop 11
++       if (y(2)(1:3) /= c(2)(1:3)) stop 12
++    class default
++       stop 13
++    end select
++
++    call foo1 (r, y)
++    select type (y)
++    type is (real)
++       if (any (y /= r)) stop 14
++    class default
++       stop 15
++    end select
++
++    call foo1 (d, y)
++    select type (y)
++    type is (character(*,kind=4))
++!      print *, ">",y(2)(2:3),"<  >", d(2)(2:3), "<"
++       if (any (y /= d)) stop 16
++    class default
++       stop 17
++    end select
++  end subroutine 
++  !
++  subroutine foo1 (a, b)
++    class(*), intent(in)  :: a(:)
++    class(*), allocatable :: b(:)
++    b = a
++  end subroutine
++
++  ! Rank-2 tests
++  subroutine run2 ()
++    character(7) :: c(2,3)
++    complex      :: z(3,3)
++    integer      :: i, j
++    class(*), allocatable :: y(:,:)
++
++    c = reshape (['fubar11','snafu21',&
++                  'fubar12','snafu22',&
++                  'fubar13','snafu23'],shape(c))
++    call foo2 (c, y)
++    select type (y)
++    type is (character(*))
++!      print *, y(2,1)
++       if (y(2,1) /= c(2,1)) stop 21
++       if (any (y /= c))     stop 22
++    class default
++       stop 23
++    end select
++
++    do    j = 1, size (z,2)
++       do i = 1, size (z,1)
++          z(i,j) = cmplx (i,j)
++       end do
++    end do
++    call foo2 (z, y)
++    select type (y)
++    type is (complex)
++!      print *, y(2,1)
++       if (any (y%re /= z%re)) stop 24
++       if (any (y%im /= z%im)) stop 25
++    class default
++       stop 26
++    end select
++  end subroutine 
++  !
++  subroutine foo2 (a, b)
++    class(*), intent(in)  :: a(:,:)
++    class(*), allocatable :: b(:,:)
++    b = a
++  end subroutine
++
++end program
+diff --git a/gcc/testsuite/gm2/extensions/run/pass/callingc10.mod b/gcc/testsuite/gm2/extensions/run/pass/callingc10.mod
+index 3a2d3e210dc..0c26fedf845 100644
+--- a/gcc/testsuite/gm2/extensions/run/pass/callingc10.mod
++++ b/gcc/testsuite/gm2/extensions/run/pass/callingc10.mod
+@@ -4,13 +4,13 @@ FROM cvararg IMPORT funcptr ;
+ FROM SYSTEM IMPORT ADR ;
+ 
+ BEGIN
+-   IF funcptr (1, "hello", 5) = 1
++   IF funcptr (INTEGER (1), "hello", INTEGER (5)) = INTEGER (1)
+    THEN
+    END ;
+-   IF funcptr (1, "hello" + " ", 6) = 1
++   IF funcptr (INTEGER (1), "hello" + " ", INTEGER (6)) = INTEGER (1)
+    THEN
+    END ;
+-   IF funcptr (1, "hello" + " " + "world", 11) = 1
++   IF funcptr (INTEGER (1), "hello" + " " + "world", INTEGER (11)) = INTEGER (1)
+    THEN
+    END
+ END callingc10.
+diff --git a/gcc/testsuite/gm2/extensions/run/pass/callingc11.mod b/gcc/testsuite/gm2/extensions/run/pass/callingc11.mod
+index 9b8cb82d645..d71026ee35d 100644
+--- a/gcc/testsuite/gm2/extensions/run/pass/callingc11.mod
++++ b/gcc/testsuite/gm2/extensions/run/pass/callingc11.mod
+@@ -5,13 +5,13 @@ FROM SYSTEM IMPORT ADR ;
+ FROM strconst IMPORT WORLD ;
+ 
+ BEGIN
+-   IF funcptr (1, "hello", 5) = 1
++   IF funcptr (INTEGER (1), "hello", INTEGER (5)) = INTEGER (1)
+    THEN
+    END ;
+-   IF funcptr (1, "hello" + " ", 6) = 1
++   IF funcptr (INTEGER (1), "hello" + " ", INTEGER (6)) = INTEGER (1)
+    THEN
+    END ;
+-   IF funcptr (1, "hello" + " " + WORLD, 11) = 1
++   IF funcptr (INTEGER (1), "hello" + " " + WORLD, INTEGER (11)) = INTEGER (1)
+    THEN
+    END
+ END callingc11.
+diff --git a/gcc/testsuite/gm2/extensions/run/pass/vararg2.mod b/gcc/testsuite/gm2/extensions/run/pass/vararg2.mod
+index e26ed096fb8..05f7074a459 100644
+--- a/gcc/testsuite/gm2/extensions/run/pass/vararg2.mod
++++ b/gcc/testsuite/gm2/extensions/run/pass/vararg2.mod
+@@ -21,13 +21,13 @@ FROM cvararg IMPORT funcptr ;
+ FROM SYSTEM IMPORT ADR ;
+ 
+ BEGIN
+-   IF funcptr(1, ADR("hello world"), 11)=1
++   IF funcptr(INTEGER (1), ADR("hello world"), INTEGER (11))=INTEGER (1)
+    THEN
+    END ;
+-   IF funcptr(1, ADR("hello"), 5)=1
++   IF funcptr(INTEGER (1), ADR("hello"), INTEGER (5))=INTEGER (1)
+    THEN
+    END ;
+-   IF funcptr(1, ADR("/etc/passwd"), 11)=1
++   IF funcptr(INTEGER (1), ADR("/etc/passwd"), INTEGER (11))=INTEGER (1)
+    THEN
+    END
+ END vararg2.
+diff --git a/gcc/testsuite/gm2/iso/run/pass/packed.mod b/gcc/testsuite/gm2/iso/run/pass/packed.mod
+index 401a6998f71..3dad71e60a1 100644
+--- a/gcc/testsuite/gm2/iso/run/pass/packed.mod
++++ b/gcc/testsuite/gm2/iso/run/pass/packed.mod
+@@ -38,7 +38,9 @@ PROCEDURE test ;
+ VAR
+    v: CARDINAL ;
+ BEGIN
++   printf ("testing to see BITSET{0} = CARDINAL (1)...");
+    Assert(CAST(CARDINAL, BITSET{0}) = VAL(CARDINAL, 1), __FILE__, __LINE__) ;
++   printf ("yes\n");
+    v := MAX(CARDINAL)-1 ;
+    WHILE v>0 DO
+       Assert(CAST(CARDINAL, SHIFT(CAST(BITSET, v), -1)) = v DIV 2, __FILE__, __LINE__) ;
+diff --git a/gcc/tree-inline.cc b/gcc/tree-inline.cc
+index 238afb7de80..5f427608d77 100644
+--- a/gcc/tree-inline.cc
++++ b/gcc/tree-inline.cc
+@@ -65,6 +65,7 @@ along with GCC; see the file COPYING3.  If not see
+ #include "symbol-summary.h"
+ #include "symtab-thunks.h"
+ #include "symtab-clones.h"
++#include "asan.h"
+ 
+ /* I'm not real happy about this, but we need to handle gimple and
+    non-gimple trees.  */
+@@ -2226,13 +2227,26 @@ copy_bb (copy_body_data *id, basic_block bb,
+ 	    }
+ 	  else if (call_stmt
+ 		   && id->call_stmt
+-		   && gimple_call_internal_p (stmt)
+-		   && gimple_call_internal_fn (stmt) == IFN_TSAN_FUNC_EXIT)
+-	    {
+-	      /* Drop TSAN_FUNC_EXIT () internal calls during inlining.  */
+-	      gsi_remove (&copy_gsi, false);
+-	      continue;
+-	    }
++		   && gimple_call_internal_p (stmt))
++	    switch (gimple_call_internal_fn (stmt))
++	      {
++	      case IFN_TSAN_FUNC_EXIT:
++		/* Drop .TSAN_FUNC_EXIT () internal calls during inlining.  */
++		gsi_remove (&copy_gsi, false);
++		continue;
++	      case IFN_ASAN_MARK:
++		/* Drop .ASAN_MARK internal calls during inlining into
++		   no_sanitize functions.  */
++		if (!sanitize_flags_p (SANITIZE_ADDRESS, id->dst_fn)
++		    && !sanitize_flags_p (SANITIZE_HWADDRESS, id->dst_fn))
++		  {
++		    gsi_remove (&copy_gsi, false);
++		    continue;
++		  }
++		break;
++	      default:
++		break;
++	      }
+ 
+ 	  /* Statements produced by inlining can be unfolded, especially
+ 	     when we constant propagated some operands.  We can't fold
+diff --git a/gcc/tree-ssa-reassoc.cc b/gcc/tree-ssa-reassoc.cc
+index 61f54f07b57..556ecdebe2d 100644
+--- a/gcc/tree-ssa-reassoc.cc
++++ b/gcc/tree-ssa-reassoc.cc
+@@ -3418,7 +3418,8 @@ optimize_range_tests_to_bit_test (enum tree_code opcode, int first, int length,
+ 	     We can avoid then subtraction of the minimum value, but the
+ 	     mask constant could be perhaps more expensive.  */
+ 	  if (compare_tree_int (lowi, 0) > 0
+-	      && compare_tree_int (high, prec) < 0)
++	      && compare_tree_int (high, prec) < 0
++	      && (entry_test_needed || wi::ltu_p (r.upper_bound (), prec)))
+ 	    {
+ 	      int cost_diff;
+ 	      HOST_WIDE_INT m = tree_to_uhwi (lowi);
+diff --git a/libgcc/config/avr/libf7/ChangeLog b/libgcc/config/avr/libf7/ChangeLog
+index a10d7c818e0..91e79641f24 100644
+--- a/libgcc/config/avr/libf7/ChangeLog
++++ b/libgcc/config/avr/libf7/ChangeLog
+@@ -1,3 +1,14 @@
++2024-05-09  Georg-Johann Lay  <avr@gjlay.de>
++
++	Backported from master:
++	2024-05-08  Georg-Johann Lay  <avr@gjlay.de>
++
++	PR target/114981
++	* libf7-common.mk (F7_ASM_PARTS): Add D_powi
++	* libf7-asm.sx (F7MOD_D_powi_, __powidf2): New module and function.
++	* libf7.c (f7_powi): Fix last (wrong) statement.
++	Tweak trivial multiplications with 1.0.
++
+ 2024-05-07  Release Manager
+ 
+ 	* GCC 14.1.0 released.
+diff --git a/libgcc/config/avr/libf7/libf7-asm.sx b/libgcc/config/avr/libf7/libf7-asm.sx
+index 1ab91270cb2..1f8f60ab282 100644
+--- a/libgcc/config/avr/libf7/libf7-asm.sx
++++ b/libgcc/config/avr/libf7/libf7-asm.sx
+@@ -1877,4 +1877,16 @@ ENDF call_ddd
+ 
+ #include "f7-wraps.h"
+ 
++;;; Some additional, singular wraps that don't match any pattern.
++
++;; double __powidf2 (double, int)  ; __builtin_powi
++#ifdef F7MOD_D_powi_
++_DEFUN __powidf2
++    .global F7_NAME(powi)
++    ldi     ZH,     hi8(gs(F7_NAME(powi)))
++    ldi     ZL,     lo8(gs(F7_NAME(powi)))
++    F7jmp   call_ddx
++_ENDF __powidf2
++#endif /* F7MOD_D_powi_ */
++
+ #endif /* !AVR_TINY */
+diff --git a/libgcc/config/avr/libf7/libf7-common.mk b/libgcc/config/avr/libf7/libf7-common.mk
+index d541b48ff3c..5d411071c8e 100644
+--- a/libgcc/config/avr/libf7/libf7-common.mk
++++ b/libgcc/config/avr/libf7/libf7-common.mk
+@@ -22,7 +22,7 @@ F7_ASM_PARTS += addsub_mant_scaled store load
+ F7_ASM_PARTS += to_integer to_unsigned clz normalize_with_carry normalize
+ F7_ASM_PARTS += store_expo sqrt16 sqrt_approx div
+ 
+-F7_ASM_PARTS += D_class D_fma
++F7_ASM_PARTS += D_class D_fma D_powi
+ F7_ASM_PARTS += D_isnan D_isinf D_isfinite D_signbit D_copysign D_neg D_fabs
+ 
+ F7_ASM_PARTS += call_dd call_ddd
+diff --git a/libgcc/config/avr/libf7/libf7.c b/libgcc/config/avr/libf7/libf7.c
+index 369dbe24103..375becb854c 100644
+--- a/libgcc/config/avr/libf7/libf7.c
++++ b/libgcc/config/avr/libf7/libf7.c
+@@ -1752,20 +1752,33 @@ void f7_powi (f7_t *cc, const f7_t *aa, int ii)
+ {
+   uint16_t u16 = ii;
+   f7_t xx27, *xx2 = &xx27;
++  bool cc_is_one = true;
++  bool expo_is_neg = false;
+ 
+   if (ii < 0)
+-    u16 = -u16;
++    {
++      u16 = -u16;
++      expo_is_neg = true;
++    }
+ 
+   f7_copy (xx2, aa);
+ 
+-  f7_set_u16 (cc, 1);
+-
+   while (1)
+     {
+       if (u16 & 1)
+-	f7_Imul (cc, xx2);
++	{
++	  if (cc_is_one)
++	    {
++	      // C *= X2 simplifies to C = X2.
++	      f7_copy (cc, xx2);
++	      cc_is_one = false;
++	    }
++	  else
++	    f7_Imul (cc, xx2);
++	}
+ 
+-      if (! f7_is_nonzero (cc))
++      if (! cc_is_one
++	  && ! f7_is_nonzero (cc))
+ 	break;
+ 
+       u16 >>= 1;
+@@ -1774,8 +1787,10 @@ void f7_powi (f7_t *cc, const f7_t *aa, int ii)
+       f7_Isquare (xx2);
+     }
+ 
+-  if (ii < 0)
+-    f7_div1 (xx2, aa);
++  if (cc_is_one)
++    f7_set_u16 (cc, 1);
++  else if (expo_is_neg)
++    f7_div1 (cc, cc);
+ }
+ #endif // F7MOD_powi_
+ 
+diff --git a/libgomp/ChangeLog b/libgomp/ChangeLog
+index 0f53355ede1..555f1f126f2 100644
+--- a/libgomp/ChangeLog
++++ b/libgomp/ChangeLog
+@@ -1,3 +1,15 @@
++2024-05-07  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2024-05-02  Jakub Jelinek  <jakub@redhat.com>
++
++	* testsuite/libgomp.c/declare-variant-4.h (gfx90c, gfx1036, gfx1103):
++	New functions.
++	(f): Add #pragma omp declare variant directives for those.
++	* testsuite/libgomp.c/declare-variant-4-gfx90c.c: New test.
++	* testsuite/libgomp.c/declare-variant-4-gfx1036.c: New test.
++	* testsuite/libgomp.c/declare-variant-4-gfx1103.c: New test.
++
+ 2024-05-07  Release Manager
+ 
+ 	* GCC 14.1.0 released.
 diff --git a/libgomp/testsuite/libgomp.c/declare-variant-4-gfx1036.c b/libgomp/testsuite/libgomp.c/declare-variant-4-gfx1036.c
 new file mode 100644
 index 00000000000..93b8641b3e1
