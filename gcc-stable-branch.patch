@@ -7,11 +7,12 @@ GCC Administrator (1):
 Gaius Mulley (1):
       [PR modula2/113768][PR modula2/114133] bugfix constants must be cast prior to vararg call
 
-Georg-Johann Lay (4):
+Georg-Johann Lay (5):
       AVR: ipa/92606 - Don't optimize PROGMEM data against non-PROGMEM.
       AVR: target/114981 - Support __builtin_powi[l] / __powidf2.
       AVR: target/114975 - Add combine-pattern for __popcountqi2.
       AVR: target/114975 - Add combine-pattern for __parityqi2.
+      AVR: target/114981 - Tweak __builtin_powif / __powisf2
 
 Harald Anlauf (1):
       Fortran: fix issues with class(*) assignment [PR114827]
@@ -19,13 +20,14 @@ Harald Anlauf (1):
 Iain Sandoe (1):
       Objective-C, NeXT, v2: Correct a regression in code-gen.
 
-Jakub Jelinek (6):
+Jakub Jelinek (7):
       gimple-ssa-sprintf: Use [0, 1] range for %lc with (wint_t) 0 argument [PR114876]
       libgomp: Add gfx90c, 1036 and 1103 declare variant tests
       tree-inline: Remove .ASAN_MARK calls when inlining functions into no_sanitize callers [PR114956]
       expansion: Use __trunchfbf2 calls rather than __extendhfbf2 [PR114907]
       reassoc: Fix up optimize_range_tests_to_bit_test [PR114965]
       testsuite: Fix up vector-subaccess-1.C test for ia32 [PR89224]
+      c++, mingw: Fix up types of dtor hooks to __cxa_{,thread_}atexit/__cxa_throw on mingw ia32 [PR114968]
 
 Nathaniel Shead (1):
       c++/modules: Stream unmergeable temporaries by value again [PR114856]
@@ -35,6 +37,9 @@ Patrick Palka (1):
 
 Richard Biener (1):
       Bump BASE-VER
+
+Xi Ruoyao (1):
+      driver: Move -fdiagnostics-urls= early like -fdiagnostics-color= [PR114980]
 
 diff --git a/contrib/ChangeLog b/contrib/ChangeLog
 index 181382620fd..fd3cb331675 100644
@@ -241,6 +246,40 @@ index 97f42be7729..d4fcff46123 100644
  (define_insn_and_split "*popcounthi2.libgcc_split"
    [(set (reg:HI 24)
          (popcount:HI (reg:HI 24)))]
+diff --git a/gcc/config/i386/i386.cc b/gcc/config/i386/i386.cc
+index 4d6b2b98761..fbd9b4dac2e 100644
+--- a/gcc/config/i386/i386.cc
++++ b/gcc/config/i386/i386.cc
+@@ -25799,6 +25799,20 @@ ix86_bitint_type_info (int n, struct bitint_info *info)
+   return true;
+ }
+ 
++/* Returns modified FUNCTION_TYPE for cdtor callabi.  */
++tree
++ix86_cxx_adjust_cdtor_callabi_fntype (tree fntype)
++{
++  if (TARGET_64BIT
++      || TARGET_RTD
++      || ix86_function_type_abi (fntype) != MS_ABI)
++    return fntype;
++  /* For 32-bit MS ABI add thiscall attribute.  */
++  tree attribs = tree_cons (get_identifier ("thiscall"), NULL_TREE,
++			    TYPE_ATTRIBUTES (fntype));
++  return build_type_attribute_variant (fntype, attribs);
++}
++
+ /* Implement PUSH_ROUNDING.  On 386, we have pushw instruction that
+    decrements by exactly 2 no matter what the position was, there is no pushb.
+ 
+@@ -26410,6 +26424,8 @@ static const scoped_attribute_specs *const ix86_attribute_table[] =
+ #define TARGET_C_EXCESS_PRECISION ix86_get_excess_precision
+ #undef TARGET_C_BITINT_TYPE_INFO
+ #define TARGET_C_BITINT_TYPE_INFO ix86_bitint_type_info
++#undef TARGET_CXX_ADJUST_CDTOR_CALLABI_FNTYPE
++#define TARGET_CXX_ADJUST_CDTOR_CALLABI_FNTYPE ix86_cxx_adjust_cdtor_callabi_fntype
+ #undef TARGET_PROMOTE_PROTOTYPES
+ #define TARGET_PROMOTE_PROTOTYPES hook_bool_const_tree_true
+ #undef TARGET_PUSH_ARGUMENT
 diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
 index 5158ee1133c..9059d4935ae 100644
 --- a/gcc/cp/ChangeLog
@@ -306,6 +345,198 @@ index 8078b31544d..4a5444e0258 100644
      ary = TREE_OPERAND (ary, 0);
  
    tree oldidx = TREE_OPERAND (t, 1);
+diff --git a/gcc/cp/cp-tree.h b/gcc/cp/cp-tree.h
+index a226a0a9fb6..64760a40215 100644
+--- a/gcc/cp/cp-tree.h
++++ b/gcc/cp/cp-tree.h
+@@ -369,8 +369,7 @@ extern GTY(()) tree cp_global_trees[CPTI_MAX];
+ #define throw_fn			cp_global_trees[CPTI_THROW_FN]
+ #define rethrow_fn			cp_global_trees[CPTI_RETHROW_FN]
+ 
+-/* The type of the function-pointer argument to "__cxa_atexit" (or
+-   "std::atexit", if "__cxa_atexit" is not being used).  */
++/* The type of the function-pointer argument to "std::atexit".  */
+ #define atexit_fn_ptr_type_node         cp_global_trees[CPTI_ATEXIT_FN_PTR_TYPE]
+ 
+ /* A pointer to `std::atexit'.  */
+@@ -385,7 +384,8 @@ extern GTY(()) tree cp_global_trees[CPTI_MAX];
+ /* The declaration of the dynamic_cast runtime.  */
+ #define dynamic_cast_node		cp_global_trees[CPTI_DCAST]
+ 
+-/* The type of a destructor.  */
++/* The type of a destructor, passed to __cxa_atexit, __cxa_thread_atexit
++   or __cxa_throw.  */
+ #define cleanup_type			cp_global_trees[CPTI_CLEANUP_TYPE]
+ 
+ /* The type of the vtt parameter passed to subobject constructors and
+@@ -7065,6 +7065,7 @@ extern tree check_default_argument		(tree, tree, tsubst_flags_t);
+ extern int wrapup_namespace_globals		();
+ extern tree create_implicit_typedef		(tree, tree);
+ extern int local_variable_p			(const_tree);
++extern tree get_cxa_atexit_fn_ptr_type		();
+ extern tree register_dtor_fn			(tree);
+ extern tmpl_spec_kind current_tmpl_spec_kind	(int);
+ extern tree cxx_builtin_function		(tree decl);
+diff --git a/gcc/cp/decl.cc b/gcc/cp/decl.cc
+index 2af026d255d..fea66e838ce 100644
+--- a/gcc/cp/decl.cc
++++ b/gcc/cp/decl.cc
+@@ -93,7 +93,7 @@ static void record_key_method_defined (tree);
+ static tree create_array_type_for_decl (tree, tree, tree, location_t);
+ static tree get_atexit_node (void);
+ static tree get_dso_handle_node (void);
+-static tree start_cleanup_fn (void);
++static tree start_cleanup_fn (bool);
+ static void end_cleanup_fn (void);
+ static tree cp_make_fname_decl (location_t, tree, int);
+ static void initialize_predefined_identifiers (void);
+@@ -9647,34 +9647,39 @@ declare_global_var (tree name, tree type)
+   return decl;
+ }
+ 
+-/* Returns the type for the argument to "__cxa_atexit" (or "atexit",
+-   if "__cxa_atexit" is not being used) corresponding to the function
++/* Returns the type for the argument to "atexit" corresponding to the function
+    to be called when the program exits.  */
+ 
+ static tree
+-get_atexit_fn_ptr_type (void)
++get_atexit_fn_ptr_type ()
+ {
+-  tree fn_type;
+-
+   if (!atexit_fn_ptr_type_node)
+     {
+-      tree arg_type;
+-      if (flag_use_cxa_atexit 
+-	  && !targetm.cxx.use_atexit_for_cxa_atexit ())
+-	/* The parameter to "__cxa_atexit" is "void (*)(void *)".  */
+-	arg_type = ptr_type_node;
+-      else
+-	/* The parameter to "atexit" is "void (*)(void)".  */
+-	arg_type = NULL_TREE;
+-      
+-      fn_type = build_function_type_list (void_type_node,
+-					  arg_type, NULL_TREE);
++      tree fn_type = build_function_type_list (void_type_node, NULL_TREE);
+       atexit_fn_ptr_type_node = build_pointer_type (fn_type);
+     }
+ 
+   return atexit_fn_ptr_type_node;
+ }
+ 
++/* Returns the type for the argument to "__cxa_atexit", "__cxa_thread_atexit"
++   or "__cxa_throw" corresponding to the destructor to be called when the
++   program exits.  */
++
++tree
++get_cxa_atexit_fn_ptr_type ()
++{
++  if (!cleanup_type)
++    {
++      tree fntype = build_function_type_list (void_type_node,
++					      ptr_type_node, NULL_TREE);
++      fntype = targetm.cxx.adjust_cdtor_callabi_fntype (fntype);
++      cleanup_type = build_pointer_type (fntype);
++    }
++
++  return cleanup_type;
++}
++
+ /* Returns a pointer to the `atexit' function.  Note that if
+    FLAG_USE_CXA_ATEXIT is nonzero, then this will actually be the new
+    `__cxa_atexit' function specified in the IA64 C++ ABI.  */
+@@ -9705,7 +9710,7 @@ get_atexit_node (void)
+       use_aeabi_atexit = targetm.cxx.use_aeabi_atexit ();
+       /* First, build the pointer-to-function type for the first
+ 	 argument.  */
+-      fn_ptr_type = get_atexit_fn_ptr_type ();
++      fn_ptr_type = get_cxa_atexit_fn_ptr_type ();
+       /* Then, build the rest of the argument types.  */
+       argtype2 = ptr_type_node;
+       if (use_aeabi_atexit)
+@@ -9788,7 +9793,7 @@ get_thread_atexit_node (void)
+ 
+      int __cxa_thread_atexit (void (*)(void *), void *, void *) */
+   tree fn_type = build_function_type_list (integer_type_node,
+-					   get_atexit_fn_ptr_type (),
++					   get_cxa_atexit_fn_ptr_type (),
+ 					   ptr_type_node, ptr_type_node,
+ 					   NULL_TREE);
+ 
+@@ -9830,12 +9835,13 @@ get_dso_handle_node (void)
+ }
+ 
+ /* Begin a new function with internal linkage whose job will be simply
+-   to destroy some particular variable.  */
++   to destroy some particular variable.  OB_PARM is true if object pointer
++   is passed to the cleanup function, otherwise no argument is passed.  */
+ 
+ static GTY(()) int start_cleanup_cnt;
+ 
+ static tree
+-start_cleanup_fn (void)
++start_cleanup_fn (bool ob_parm)
+ {
+   char name[32];
+ 
+@@ -9846,8 +9852,9 @@ start_cleanup_fn (void)
+ 
+   /* Build the name of the function.  */
+   sprintf (name, "__tcf_%d", start_cleanup_cnt++);
++  tree fntype = TREE_TYPE (ob_parm ? get_cxa_atexit_fn_ptr_type ()
++				   : get_atexit_fn_ptr_type ());
+   /* Build the function declaration.  */
+-  tree fntype = TREE_TYPE (get_atexit_fn_ptr_type ());
+   tree fndecl = build_lang_decl (FUNCTION_DECL, get_identifier (name), fntype);
+   DECL_CONTEXT (fndecl) = FROB_CONTEXT (current_namespace);
+   /* It's a function with internal linkage, generated by the
+@@ -9860,7 +9867,7 @@ start_cleanup_fn (void)
+      emissions this way.  */
+   DECL_DECLARED_INLINE_P (fndecl) = 1;
+   DECL_INTERFACE_KNOWN (fndecl) = 1;
+-  if (flag_use_cxa_atexit && !targetm.cxx.use_atexit_for_cxa_atexit ())
++  if (ob_parm)
+     {
+       /* Build the parameter.  */
+       tree parmdecl = cp_build_parm_decl (fndecl, NULL_TREE, ptr_type_node);
+@@ -9937,8 +9944,8 @@ register_dtor_fn (tree decl)
+       build_cleanup (decl);
+   
+       /* Now start the function.  */
+-      cleanup = start_cleanup_fn ();
+-      
++      cleanup = start_cleanup_fn (ob_parm);
++
+       /* Now, recompute the cleanup.  It may contain SAVE_EXPRs that refer
+ 	 to the original function, rather than the anonymous one.  That
+ 	 will make the back end think that nested functions are in use,
+@@ -9967,7 +9974,7 @@ register_dtor_fn (tree decl)
+     {
+       /* We must convert CLEANUP to the type that "__cxa_atexit"
+ 	 expects.  */
+-      cleanup = build_nop (get_atexit_fn_ptr_type (), cleanup);
++      cleanup = build_nop (get_cxa_atexit_fn_ptr_type (), cleanup);
+       /* "__cxa_atexit" will pass the address of DECL to the
+ 	 cleanup function.  */
+       mark_used (decl);
+diff --git a/gcc/cp/except.cc b/gcc/cp/except.cc
+index f1ffda22fd3..1eb3ba53b4b 100644
+--- a/gcc/cp/except.cc
++++ b/gcc/cp/except.cc
+@@ -645,11 +645,7 @@ build_throw (location_t loc, tree exp, tsubst_flags_t complain)
+ 
+       /* The CLEANUP_TYPE is the internal type of a destructor.  */
+       if (!cleanup_type)
+-	{
+-	  tree tmp = build_function_type_list (void_type_node,
+-					       ptr_type_node, NULL_TREE);
+-	  cleanup_type = build_pointer_type (tmp);
+-	}
++	cleanup_type = get_cxa_atexit_fn_ptr_type ();
+ 
+       if (!throw_fn)
+ 	{
 diff --git a/gcc/cp/init.cc b/gcc/cp/init.cc
 index a93ce00800c..e758a8c8568 100644
 --- a/gcc/cp/init.cc
@@ -332,6 +563,38 @@ index c35e70b8cb8..3bf863e15d4 100644
  
  	      if (CLASS_TYPE_P (f))
  		{
+diff --git a/gcc/doc/tm.texi b/gcc/doc/tm.texi
+index c8b8b126b24..cd50078227d 100644
+--- a/gcc/doc/tm.texi
++++ b/gcc/doc/tm.texi
+@@ -11117,6 +11117,14 @@ shared libraries are run in the correct order when the libraries are
+ unloaded. The default is to return false.
+ @end deftypefn
+ 
++@deftypefn {Target Hook} tree TARGET_CXX_ADJUST_CDTOR_CALLABI_FNTYPE (tree @var{fntype})
++This hook returns a possibly modified @code{FUNCTION_TYPE} for arguments
++to @code{__cxa_atexit}, @code{__cxa_thread_atexit} or @code{__cxa_throw}
++function pointers.  ABIs like mingw32 require special attributes to be added
++to function types pointed to by arguments of these functions.
++The default is to return the passed argument unmodified.
++@end deftypefn
++
+ @deftypefn {Target Hook} void TARGET_CXX_ADJUST_CLASS_AT_DEFINITION (tree @var{type})
+ @var{type} is a C++ class (i.e., RECORD_TYPE or UNION_TYPE) that has just
+ been defined.  Use this hook to make adjustments to the class (eg, tweak
+diff --git a/gcc/doc/tm.texi.in b/gcc/doc/tm.texi.in
+index 658e1e63371..058bd56487a 100644
+--- a/gcc/doc/tm.texi.in
++++ b/gcc/doc/tm.texi.in
+@@ -7223,6 +7223,8 @@ floating-point support; they are not included in this mechanism.
+ 
+ @hook TARGET_CXX_USE_ATEXIT_FOR_CXA_ATEXIT
+ 
++@hook TARGET_CXX_ADJUST_CDTOR_CALLABI_FNTYPE
++
+ @hook TARGET_CXX_ADJUST_CLASS_AT_DEFINITION
+ 
+ @hook TARGET_CXX_DECL_MANGLING_CONTEXT
 diff --git a/gcc/expr.cc b/gcc/expr.cc
 index d4414e242cb..9f66d479445 100644
 --- a/gcc/expr.cc
@@ -531,6 +794,106 @@ index 02e9bf6ea5a..26729910d92 100644
      return;
  
    if (GET_MODE_CLASS (float_tmode) == GET_MODE_CLASS (float_fmode))
+diff --git a/gcc/opts-common.cc b/gcc/opts-common.cc
+index 4a2dff243b0..2d1e86ff94f 100644
+--- a/gcc/opts-common.cc
++++ b/gcc/opts-common.cc
+@@ -1152,6 +1152,7 @@ prune_options (struct cl_decoded_option **decoded_options,
+   unsigned int options_to_prepend = 0;
+   unsigned int Wcomplain_wrong_lang_idx = 0;
+   unsigned int fdiagnostics_color_idx = 0;
++  unsigned int fdiagnostics_urls_idx = 0;
+ 
+   /* Remove arguments which are negated by others after them.  */
+   new_decoded_options_count = 0;
+@@ -1185,6 +1186,12 @@ prune_options (struct cl_decoded_option **decoded_options,
+ 	    ++options_to_prepend;
+ 	  fdiagnostics_color_idx = i;
+ 	  continue;
++	case OPT_fdiagnostics_urls_:
++	  gcc_checking_assert (i != 0);
++	  if (fdiagnostics_urls_idx == 0)
++	    ++options_to_prepend;
++	  fdiagnostics_urls_idx = i;
++	  continue;
+ 
+ 	default:
+ 	  gcc_assert (opt_idx < cl_options_count);
+@@ -1248,6 +1255,12 @@ keep:
+ 	    = old_decoded_options[fdiagnostics_color_idx];
+ 	  new_decoded_options_count++;
+ 	}
++      if (fdiagnostics_urls_idx != 0)
++	{
++	  new_decoded_options[argv_0 + options_prepended++]
++	    = old_decoded_options[fdiagnostics_urls_idx];
++	  new_decoded_options_count++;
++	}
+       gcc_checking_assert (options_to_prepend == options_prepended);
+     }
+ 
+diff --git a/gcc/target.def b/gcc/target.def
+index fdad7bbc93e..c27df8095be 100644
+--- a/gcc/target.def
++++ b/gcc/target.def
+@@ -6498,7 +6498,7 @@ is in effect.  The default is to return false to use @code{__cxa_atexit}.",
+  hook_bool_void_false)
+ 
+ /* Returns true if target may use atexit in the same manner as
+-   __cxa_atexit  to register static destructors.  */
++   __cxa_atexit to register static destructors.  */
+ DEFHOOK
+ (use_atexit_for_cxa_atexit,
+  "This hook returns true if the target @code{atexit} function can be used\n\
+@@ -6509,6 +6509,17 @@ unloaded. The default is to return false.",
+  bool, (void),
+  hook_bool_void_false)
+ 
++/* Returns modified FUNCTION_TYPE for cdtor callabi.  */
++DEFHOOK
++(adjust_cdtor_callabi_fntype,
++ "This hook returns a possibly modified @code{FUNCTION_TYPE} for arguments\n\
++to @code{__cxa_atexit}, @code{__cxa_thread_atexit} or @code{__cxa_throw}\n\
++function pointers.  ABIs like mingw32 require special attributes to be added\n\
++to function types pointed to by arguments of these functions.\n\
++The default is to return the passed argument unmodified.",
++ tree, (tree fntype),
++ default_cxx_adjust_cdtor_callabi_fntype)
++
+ DEFHOOK
+ (adjust_class_at_definition,
+ "@var{type} is a C++ class (i.e., RECORD_TYPE or UNION_TYPE) that has just\n\
+diff --git a/gcc/targhooks.cc b/gcc/targhooks.cc
+index 8c84deea97d..fb339bf75dd 100644
+--- a/gcc/targhooks.cc
++++ b/gcc/targhooks.cc
+@@ -329,6 +329,14 @@ default_cxx_get_cookie_size (tree type)
+   return cookie_size;
+ }
+ 
++/* Returns modified FUNCTION_TYPE for cdtor callabi.  */
++
++tree
++default_cxx_adjust_cdtor_callabi_fntype (tree fntype)
++{
++  return fntype;
++}
++
+ /* Return true if a parameter must be passed by reference.  This version
+    of the TARGET_PASS_BY_REFERENCE hook uses just MUST_PASS_IN_STACK.  */
+ 
+diff --git a/gcc/targhooks.h b/gcc/targhooks.h
+index ca289f30eda..85f3817c176 100644
+--- a/gcc/targhooks.h
++++ b/gcc/targhooks.h
+@@ -65,6 +65,7 @@ extern machine_mode default_mode_for_suffix (char);
+ 
+ extern tree default_cxx_guard_type (void);
+ extern tree default_cxx_get_cookie_size (tree);
++extern tree default_cxx_adjust_cdtor_callabi_fntype (tree);
+ 
+ extern bool hook_pass_by_reference_must_pass_in_stack
+   (cumulative_args_t, const function_arg_info &);
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
 index 0e93e0d4d4e..332a8e8a839 100644
 --- a/gcc/testsuite/ChangeLog
@@ -1004,6 +1367,45 @@ index 00000000000..87eb56b56c5
 +}
 +
 +/* { dg-final { scan-assembler-times "__popcountqi2" 2 } } */
+diff --git a/gcc/testsuite/gcc.target/avr/pr114981-powif.c b/gcc/testsuite/gcc.target/avr/pr114981-powif.c
+new file mode 100644
+index 00000000000..191dcc61e6d
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/avr/pr114981-powif.c
+@@ -0,0 +1,33 @@
++/* { dg-do run { target { ! avr_tiny } } } */
++/* { dg-additional-options "-Os" } */
++
++const float vals[] =
++  {
++    0.0625f, -0.125f, 0.25f, -0.5f,
++    1.0f,
++    -2.0f, 4.0f, -8.0f, 16.0f
++  };
++
++#define ARRAY_SIZE(X) ((int) (sizeof(X) / sizeof(*X)))
++
++__attribute__((noinline,noclone))
++void test1 (float x)
++{
++  int i;
++
++  for (i = 0; i < ARRAY_SIZE (vals); ++i)
++    {
++      float val0 = vals[i];
++      float val1 = __builtin_powif (x, i - 4);
++      __asm ("" : "+r" (val0));
++
++      if (val0 != val1)
++	__builtin_exit (__LINE__);
++    }
++}
++
++int main (void)
++{
++  test1 (-2.0f);
++  return 0;
++}
 diff --git a/gcc/testsuite/gcc.target/avr/pr114981-powil.c b/gcc/testsuite/gcc.target/avr/pr114981-powil.c
 new file mode 100644
 index 00000000000..70f8e796c65
@@ -1384,6 +1786,176 @@ index 61f54f07b57..556ecdebe2d 100644
  	    {
  	      int cost_diff;
  	      HOST_WIDE_INT m = tree_to_uhwi (lowi);
+diff --git a/libgcc/config/avr/lib1funcs.S b/libgcc/config/avr/lib1funcs.S
+index af4d7d97016..a0854139a0a 100644
+--- a/libgcc/config/avr/lib1funcs.S
++++ b/libgcc/config/avr/lib1funcs.S
+@@ -80,6 +80,11 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
+ #endif
+ .endm
+ 
++.macro	mov4  r_dest, r_src
++    wmov \r_dest,   \r_src
++    wmov \r_dest+2, \r_src+2
++.endm
++
+ #if defined (__AVR_HAVE_JMP_CALL__)
+ #define XCALL call
+ #define XJMP  jmp
+@@ -3312,4 +3317,153 @@ ENDF __fmul
+ #undef C0
+ #undef C1
+ 
++
++
++/**********************************
++ * Floating-Point
++ **********************************/
++
++#if defined (L_powif)
++#ifndef __AVR_TINY__
++
++;; float output and arg #1
++#define A0      22
++#define A1      A0 + 1
++#define A2      A0 + 2
++#define A3      A0 + 3
++
++;; float arg #2
++#define B0      18
++#define B1      B0 + 1
++#define B2      B0 + 2
++#define B3      B0 + 3
++
++;; float X: input and iterated squares
++#define X0      10
++#define X1      X0 + 1
++#define X2      X0 + 2
++#define X3      X0 + 3
++
++;; float Y: expand result
++#define Y0      14
++#define Y1      Y0 + 1
++#define Y2      Y0 + 2
++#define Y3      Y0 + 3
++
++;; .7 = Sign of I.
++;; .0 == 0  =>  Y = 1.0f implicitly.
++#define Flags       R9
++#define Y_set       0
++
++;;;  Integer exponent input.
++#define I0      28
++#define I1      I0+1
++
++#define ONE     0x3f800000
++
++DEFUN __powisf2
++    ;; Save 11 Registers: R9...R17, R28, R29
++    do_prologue_saves 11
++
++    ;; Fill local vars with input parameters.
++    wmov    I0, 20
++    mov4    X0, A0
++    ;; Save sign of exponent for later.
++    mov     Flags,  I1
++    ;; I := abs (I)
++    tst     I1
++    brpl 1f
++    NEG2    I0
++1:
++    ;; Y := (I % 2) ? X : 1.0f
++    ;; (When we come from below, this is like SET, i.e. Flags.Y_set := 1).
++    bst     I0, 0
++    ;; Flags.Y_set = false means that we have to assume Y = 1.0f below.
++    bld     Flags,  Y_set
++2:  ;; We have A == X when we come from above.
++    mov4    Y0, A0
++
++.Loop:
++    ;; while (I >>= 1)
++    lsr     I1
++    ror     I0
++    sbiw    I0, 0
++    breq .Loop_done
++
++    ;; X := X * X
++    mov4    A0, X0
++#ifdef __WITH_AVRLIBC__
++    XCALL   squaref
++#else
++    mov4    B0, X0
++    XCALL   __mulsf3
++#endif /* Have AVR-LibC? */
++    mov4    X0, A0
++
++    ;; if (I % 2 == 1)  Y := Y * X
++    bst     I0, 0
++    brtc .Loop
++    bst     Flags, Y_set
++    ;; When Y is not set  =>  Y := Y * X = 1.0f * X (= A)
++    ;; Plus, we have to set Y_set = 1 (= I0.0)
++    brtc 1b
++    ;; Y is already set: Y := X * Y (= A * Y)
++    mov4    B0, Y0
++    XCALL   __mulsf3
++    rjmp 2b
++
++    ;; End while
++.Loop_done:
++
++    ;; A := 1.0f
++    ldi     A3, hhi8(ONE)
++    ldi     A2, hlo8(ONE)
++    ldi     A1, hi8(ONE)
++    ldi     A0, lo8(ONE)
++
++    ;; When Y is still not set, the result is 1.0f (= A).
++    bst     Flags, Y_set
++    brtc .Lret
++
++    ;; if (I was < 0) Y = 1.0f / Y
++    tst     Flags
++    brmi 1f
++    ;; A := Y
++    mov4    A0, Y0
++    rjmp .Lret
++1:  ;; A := 1 / Y = A / Y
++    mov4    B0, Y0
++    XCALL   __divsf3
++
++.Lret:
++    do_epilogue_restores 11
++ENDF __powisf2
++
++#undef A0
++#undef A1
++#undef A2
++#undef A3
++
++#undef B0
++#undef B1
++#undef B2
++#undef B3
++
++#undef X0
++#undef X1
++#undef X2
++#undef X3
++
++#undef Y0
++#undef Y1
++#undef Y2
++#undef Y3
++
++#undef I0
++#undef I1
++#undef ONE
++
++#endif /* __AVR_TINY__ */
++#endif /* L_powif */
++
+ #include "lib1funcs-fixed.S"
 diff --git a/libgcc/config/avr/libf7/ChangeLog b/libgcc/config/avr/libf7/ChangeLog
 index a10d7c818e0..91e79641f24 100644
 --- a/libgcc/config/avr/libf7/ChangeLog
@@ -1493,6 +2065,28 @@ index 369dbe24103..375becb854c 100644
  }
  #endif // F7MOD_powi_
  
+diff --git a/libgcc/config/avr/t-avr b/libgcc/config/avr/t-avr
+index ed84b3f342e..971a092aceb 100644
+--- a/libgcc/config/avr/t-avr
++++ b/libgcc/config/avr/t-avr
+@@ -68,7 +68,8 @@ LIB1ASMFUNCS += \
+ 	_bswapdi2 \
+ 	_ashldi3 _ashrdi3 _lshrdi3 _rotldi3 \
+ 	_adddi3 _adddi3_s8 _subdi3 \
+-	_cmpdi2 _cmpdi2_s8
++	_cmpdi2 _cmpdi2_s8 \
++	_powif
+ endif
+ 
+ # Fixed point routines in avr/lib1funcs-fixed.S
+@@ -110,6 +111,7 @@ LIB2FUNCS_EXCLUDE = \
+ 	_moddi3 _umoddi3 \
+ 	_clz \
+ 	_clrsbdi2 \
++	_powisf2
+ 
+ 
+ ifeq ($(long_double_type_size),32)
 diff --git a/libgomp/ChangeLog b/libgomp/ChangeLog
 index 0f53355ede1..555f1f126f2 100644
 --- a/libgomp/ChangeLog
