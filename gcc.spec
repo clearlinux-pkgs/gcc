@@ -38,7 +38,6 @@ Patch15  : 0001-Ignore-Werror-if-GCC_IGNORE_WERROR-environment-varia.patch
 Patch16  : 0001-Always-use-z-now-when-linking-with-pie.patch
 Patch19  : tune-inline.patch
 Patch20  : vectorcost.patch
-Patch21  : x86-always-generate-branch-hint.patch
 Patch22  : compilespeed.patch
 Patch23  : spr-default-tuning.patch
 Patch24  : 0001-Enforce-debug-level-when-CLEAR_DEBUG_TERSE-is-set.patch
@@ -254,7 +253,6 @@ GNU cc and gcc C compilers.
 %patch16 -p1
 %patch19 -p1
 #%patch20 -p1
-%patch21 -p1
 %patch22 -p1
 %patch23 -p1
 %patch24 -p1
