@@ -14,7 +14,7 @@
 
 Name     : gcc
 Version  : 14.1.0
-Release  : 1911
+Release  : 1912
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://gcc.gnu.org/pub/gcc/releases/gcc-14.1.0/gcc-14.1.0.tar.xz 
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.24.tar.bz2
