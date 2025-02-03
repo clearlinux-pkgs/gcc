@@ -646,6 +646,8 @@ rm -rf %{buildroot}-v4/usr/lib32
 rm -f %{buildroot}-v3/usr/lib64/libstdc++.so.*-gdb.py
 rm -f %{buildroot}-v4/usr/lib64/libstdc++.so.*-gdb.py
 
+rm -f %{buildroot}/usr/lib64/gcc/x86_64-generic-linux/*/include-fixed/pthread.h 
+
 /usr/bin/elf-move.py avx2 %{buildroot}-v3 %{buildroot} %{buildroot}/usr/share/clear/filemap/filemap-%{name} --skip --path /usr/lib64/gcc/x86_64-generic-linux/%{gccver}/plugin/include/configargs.h
 /usr/bin/elf-move.py avx512 %{buildroot}-v4 %{buildroot} %{buildroot}/usr/share/clear/filemap/filemap-%{name} --skip --path /usr/lib64/gcc/x86_64-generic-linux/%{gccver}/plugin/include/configargs.h
 
