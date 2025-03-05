@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e -o pipefail
 
-if ! test `find "timestamp" -mmin +3000`
+if ! test `find "timestamp" -mmin +13000`
 then
     echo "not old enough"
     exit
