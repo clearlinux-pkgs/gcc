@@ -282,8 +282,8 @@ mkdir ../gcc-build
 pushd ../gcc-build
 unset CFLAGS
 unset CXXFLAGS
-export CFLAGS="-march=westmere -g1 -O3 -fstack-protector -Wl,-z -Wl,now -Wl,-z -Wl,relro  -Wl,-z,max-page-size=0x1000 -mtune=sapphirerapids  -fPIC -falign-functions=32  -gz=zstd -gno-column-info -gno-variable-location-views"
-export CXXFLAGS="-march=westmere -g1 -O3  -Wl,-z,max-page-size=0x1000 -mtune=sapphirerapids  -fPIC  -gz=zstd -gno-column-info -gno-variable-location-view"
+export CFLAGS="-march=westmere -g1 -O3 -fstack-protector -Wl,-z -Wl,now -Wl,-z -Wl,relro  -Wl,-z,max-page-size=0x1000 -mtune=sapphirerapids  -fPIC -falign-functions=32  -gz=zstd -gno-column-info -gno-variable-location-views "
+export CXXFLAGS="-march=westmere -g1 -O3  -Wl,-z,max-page-size=0x1000 -mtune=sapphirerapids  -fPIC  -gz=zstd -gno-column-info -gno-variable-location-views "
 export CFLAGS_FOR_TARGET="$CFLAGS"
 export CXXFLAGS_FOR_TARGET="$CXXFLAGS"
 export FFLAGS_FOR_TARGET="$FFLAGS"
@@ -341,8 +341,8 @@ mkdir ../gcc-build-avx2
 pushd ../gcc-build-avx2
 unset CFLAGS
 unset CXXFLAGS
-export CFLAGS="-march=ivybridge -g -O3 -fstack-protector -Wl,-z -Wl,now -Wl,-z -Wl,relro  -Wl,-z,max-page-size=0x1000  -gz=zstd -gno-column-info -gno-variable-location-view"
-export CXXFLAGS="-march=ivybridge -g -O3  -Wl,-z,max-page-size=0x1000  -gz=zstd -gno-column-info -gno-variable-location-view"
+export CFLAGS="-march=ivybridge -g -O3 -fstack-protector -Wl,-z -Wl,now -Wl,-z -Wl,relro  -Wl,-z,max-page-size=0x1000  -gz=zstd -gno-column-info -gno-variable-location-views "
+export CXXFLAGS="-march=ivybridge -g -O3  -Wl,-z,max-page-size=0x1000  -gz=zstd -gno-column-info -gno-variable-location-views "
 export CFLAGS_FOR_TARGET="$CFLAGS -march=haswell -mtune=sapphirerapids  -fno-semantic-interposition "
 export CXXFLAGS_FOR_TARGET="$CXXFLAGS -march=haswell -mtune=sapphirerapids  -fno-semantic-interposition "
 export FFLAGS_FOR_TARGET="$FFLAGS -march=haswell -mtune=sapphirerapids  -fno-semantic-interposition "
@@ -400,8 +400,8 @@ mkdir ../gcc-build-avx512
 pushd ../gcc-build-avx512
 unset CFLAGS
 unset CXXFLAGS
-export CFLAGS="-march=ivybridge -g -O3 -fstack-protector -Wl,-z -Wl,now -Wl,-z -Wl,relro  -Wl,-z,max-page-size=0x1000  -gz=zstd -gno-column-info -gno-variable-location-view"
-export CXXFLAGS="-march=ivybridge -g -O3  -Wl,-z,max-page-size=0x1000  -gz=zstd -gno-column-info -gno-variable-location-view"
+export CFLAGS="-march=ivybridge -g -O3 -fstack-protector -Wl,-z -Wl,now -Wl,-z -Wl,relro  -Wl,-z,max-page-size=0x1000  -gz=zstd -gno-column-info -gno-variable-location-views "
+export CXXFLAGS="-march=ivybridge -g -O3  -Wl,-z,max-page-size=0x1000  -gz=zstd -gno-column-info -gno-variable-location-views "
 export CFLAGS_FOR_TARGET="$CFLAGS -march=x86-64-v4 -mtune=sapphirerapids -fno-semantic-interposition "
 export CXXFLAGS_FOR_TARGET="$CXXFLAGS -march=x86-64-v4 -mtune=sapphirerapids -fno-semantic-interposition "
 export FFLAGS_FOR_TARGET="$FFLAGS -march=x86-64-v4 -mtune=sapphirerapids -fno-semantic-interposition "
