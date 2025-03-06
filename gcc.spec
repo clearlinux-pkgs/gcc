@@ -117,6 +117,7 @@ Requires:       gcc-libs-math = %{version}-%{release}
 Requires:       libstdc++ = %{version}-%{release}
 Requires:       gcc-jit = %{version}-%{release}
 Requires:       gcc = %{version}-%{release}
+Requires:	gcc-libgfortran = %{version}-%{release}
 
 %description -n gcc-dev
 GNU cc and gcc C compilers dev files
@@ -157,6 +158,14 @@ Provides:       libssp0
 Provides:       libgomp1
 
 %description -n libgcc1
+GNU cc and gcc C compilers.
+
+%package libgfortran
+License:        GPL-3.0-with-GCC-exception and GPL-3.0
+Summary:        GNU cc and gcc C compilers
+Group:          devel
+
+%description libgfortran
 GNU cc and gcc C compilers.
 
 %package libgcc32
@@ -977,7 +986,6 @@ rm -f %{buildroot}-v*/usr/lib64/*.a
 /usr/lib64/libatomic*.so.*
 /usr/lib64/libitm*.so.*
 /usr/lib64/libquadmath*.so.*
-/usr/lib64/libgfortran*.so.*
 
 #avx2
 /V3/usr/lib64/libssp.so*
@@ -985,7 +993,6 @@ rm -f %{buildroot}-v*/usr/lib64/*.a
 /V3/usr/lib64/libatomic*.so.*
 /V3/usr/lib64/libitm*.so.*
 /V3/usr/lib64/libquadmath*.so.*
-/V3/usr/lib64/libgfortran*.so.*
 
 #avx512
 /V4/usr/lib64/libssp.so*
@@ -993,6 +1000,10 @@ rm -f %{buildroot}-v*/usr/lib64/*.a
 /V4/usr/lib64/libatomic*.so.*
 /V4/usr/lib64/libitm*.so.*
 /V4/usr/lib64/libquadmath*.so.*
+
+%files libgfortran
+/usr/lib64/libgfortran*.so.*
+/V3/usr/lib64/libgfortran*.so.*
 /V4/usr/lib64/libgfortran*.so.*
 
 %files libgcc32
