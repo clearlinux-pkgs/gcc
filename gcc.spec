@@ -4,7 +4,7 @@
 %define libstdcxx_full 6.0.28
 %define isl_version 0.24
 %define gccver 14
-%define gccpath gcc-14.1.0
+%define gccpath gcc-15.1.0
 # Highest optimisation ABI we target
 %define mtune sapphirerapids
 
@@ -18,10 +18,10 @@
 
 
 Name     : gcc
-Version  : 14.1.0
-Release  : 1947
+Version  : 15.1.0
+Release  : 1948
 URL      : http://www.gnu.org/software/gcc/
-Source0  : https://gcc.gnu.org/pub/gcc/releases/gcc-14.1.0/gcc-14.1.0.tar.xz 
+Source0  : https://gcc.gnu.org/pub/gcc/releases/gcc-15.1.0/gcc-15.1.0.tar.xz 
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.24.tar.bz2
 Source2  : DATESTAMP
 Source3  : REVISION
