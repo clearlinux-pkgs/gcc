@@ -3,7 +3,7 @@
 %define libstdcxx_maj 6
 %define libstdcxx_full 6.0.28
 %define isl_version 0.24
-%define gccver 14
+%define gccver 15
 %define gccpath gcc-15.1.0
 # Highest optimisation ABI we target
 %define mtune sapphirerapids
@@ -98,7 +98,7 @@ Provides:       g77-symlinks
 Provides:       g++-symlinks
 Provides:       g++
 Provides:       gfortran
-Provides:	gcc14 gcc14-dev
+Provides:	gcc15 gcc15-dev
 Obsoletes:	gcc14
 %description
 GNU cc and gcc C compilers.
@@ -1034,6 +1034,8 @@ rm -f %{buildroot}-v*/usr/lib64/*.a
 
 %files -n libstdc++
 /usr/lib64/libstdc++.so.*
+/usr/lib32/libstdc++.modules.json
+/usr/lib64/libstdc++.modules.json
 
 #avx2
 /V3/usr/lib64/libstdc++.so.*
