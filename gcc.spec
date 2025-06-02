@@ -19,7 +19,7 @@
 
 Name     : gcc
 Version  : 15.1.0
-Release  : 1950
+Release  : 1951
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://gcc.gnu.org/pub/gcc/releases/gcc-15.1.0/gcc-15.1.0.tar.xz 
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.24.tar.bz2
